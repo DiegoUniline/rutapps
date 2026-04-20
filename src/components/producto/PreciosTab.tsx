@@ -169,7 +169,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
   function renderModal() {
     if (!showModal) return null;
     return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+      <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
         <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-[600px]" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h3 className="text-[15px] font-semibold">Crear regla de precio</h3>
@@ -261,148 +261,154 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
     );
   }
 
+  const allRulesFlat = useMemo(() => {
+    const arr: any[] = [];
+    Array.from(grouped.entries()).forEach(([tarifaId, { nombre, rules }]) => {
+      rules.forEach(r => arr.push({ ...r, _tarifaId: tarifaId, _tarifaNombre: nombre }));
+    });
+    return arr;
+  }, [grouped]);
+
   return (
     <div className="space-y-3">
-      {Array.from(grouped.entries()).map(([tarifaId, { nombre, rules }]) => (
-        <div key={tarifaId}>
-          <div className="flex items-center gap-4 mb-1">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground"
-              onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{nombre}</h4>
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-              <span>Costo: <strong className="text-foreground">{cs}{(form.costo ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
-              {form.tiene_iva && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IVA {form.iva_pct ?? 16}%</span>}
-              {form.tiene_ieps && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IEPS {form.ieps_pct ?? 0}%</span>}
-              {!form.tiene_iva && !form.tiene_ieps && <span>Sin impuestos</span>}
-            </div>
-          </div>
-          <div className="overflow-x-auto border border-border rounded">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Aplica</th>
-                  <th className="th-odoo text-left">Lista</th>
-                  <th className="th-odoo text-left">Tipo</th>
-                  <th className="th-odoo text-right">Valor</th>
-                  <th className="th-odoo text-center">Redondeo</th>
-                  <th className="th-odoo text-center">Base</th>
-                  <th className="th-odoo text-right">Precio s/imp</th>
-                  <th className="th-odoo text-right">Precio c/imp</th>
-                  <th className="th-odoo text-right">Ganancia $</th>
-                  <th className="th-odoo text-right">Ganancia %</th>
-                  <th className="th-odoo text-right">Comisión %</th>
-                  <th className="th-odoo w-10"></th>
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        <span>Costo: <strong className="text-foreground">{cs}{(form.costo ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+        {form.tiene_iva && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IVA {form.iva_pct ?? 16}%</span>}
+        {form.tiene_ieps && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IEPS {form.ieps_pct ?? 0}%</span>}
+        {!form.tiene_iva && !form.tiene_ieps && <span>Sin impuestos</span>}
+      </div>
+      <div className="overflow-x-auto border border-border rounded">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-table-border">
+              <th className="th-odoo text-left">Tarifa</th>
+              <th className="th-odoo text-left">Aplica</th>
+              <th className="th-odoo text-left">Lista</th>
+              <th className="th-odoo text-left">Tipo</th>
+              <th className="th-odoo text-right">Valor</th>
+              <th className="th-odoo text-center">Redondeo</th>
+              <th className="th-odoo text-center">Base</th>
+              <th className="th-odoo text-right">Precio s/imp</th>
+              <th className="th-odoo text-right">Precio c/imp</th>
+              <th className="th-odoo text-right">Ganancia $</th>
+              <th className="th-odoo text-right">Ganancia %</th>
+              <th className="th-odoo text-right">Comisión %</th>
+              <th className="th-odoo w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {allRulesFlat.map((linea: any) => {
+              const tarifaId = linea._tarifaId;
+              const tarifaNombre = linea._tarifaNombre;
+              const isEditing = editingId === linea.id;
+              const currentVals = isEditing ? editVal : linea;
+              const costo = form.costo ?? 0;
+              const ivaPct = form.tiene_iva ? (form.iva_pct ?? 16) : 0;
+              const iepsPct = form.tiene_ieps ? (form.ieps_pct ?? 0) : 0;
+              const taxMult = 1 + (ivaPct + iepsPct) / 100;
+              const basePrecio = ((isEditing ? (editVal.base_precio ?? linea.base_precio) : linea.base_precio) ?? 'sin_impuestos') as string;
+              const redondeoVal = ((isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno') as string;
+              const redondeoLabel = ({ arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' } as Record<string, string>)[redondeoVal] ?? '— Ninguno';
+              const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
+
+              const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
+              const pr = form.precio_principal ?? 0;
+              let rawSinImp = 0;
+              if (srcLinea.tipo_calculo === 'margen_costo') rawSinImp = Math.max(costo * (1 + ((srcLinea.margen_pct as number) ?? 0) / 100), (srcLinea.precio_minimo as number) ?? 0);
+              else if (srcLinea.tipo_calculo === 'descuento_precio') rawSinImp = Math.max(pr * (1 - ((srcLinea.descuento_pct as number) ?? 0) / 100), (srcLinea.precio_minimo as number) ?? 0);
+              else rawSinImp = Math.max((srcLinea.precio as number) ?? 0, (srcLinea.precio_minimo as number) ?? 0);
+
+              let precioSinImp: number, precioConImp: number;
+              if (basePrecio === 'con_impuestos') {
+                precioConImp = applyRedondeo(rawSinImp * taxMult, srcLinea.redondeo as string ?? 'ninguno');
+                precioSinImp = precioConImp / taxMult;
+              } else {
+                precioSinImp = applyRedondeo(rawSinImp, srcLinea.redondeo as string ?? 'ninguno');
+                precioConImp = precioSinImp * taxMult;
+              }
+
+              const ganancia = precioSinImp - costo;
+              const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
+              const listaName = linea.lista_precios?.nombre;
+              const esPrincipal = linea.lista_precios?.es_principal;
+
+              const cellClick = (col: string) => (e: React.MouseEvent) => {
+                e.stopPropagation();
+                if (editingId === linea.id && editingCol === col) return;
+                if (editingId && editingId !== linea.id) saveEdit(editingId);
+                startEdit(linea, col);
+              };
+
+              const handleBlur = () => { setTimeout(() => saveEdit(linea.id), 150); };
+
+              return (
+                <tr key={linea.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                  <td className="py-1.5 px-3 text-xs font-medium cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{tarifaNombre}</td>
+                  <td className="py-1.5 px-3 cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${linea.aplica_a === 'producto' ? 'bg-primary/10 text-primary' : linea.aplica_a === 'categoria' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{aplica_label(linea)}</span>
+                  </td>
+                  <td className="py-1.5 px-3 text-xs cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
+                    {listaName ? <span className="flex items-center gap-1">{esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}{listaName}</span> : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-xs" onClick={cellClick('tipo')}>
+                    {isEditing && editingCol === 'tipo' ? (
+                      <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={currentVals.tipo_calculo as string}
+                        onChange={e => setEditVal(p => ({ ...p, tipo_calculo: e.target.value }))} onBlur={handleBlur}>
+                        <option value="precio_fijo">Precio fijo</option><option value="margen_costo">Fórmula (margen)</option><option value="descuento_precio">Descuento</option>
+                      </select>
+                    ) : <span className="inline-edit-idle text-muted-foreground">{calcLabel(isEditing ? { ...linea, ...editVal } : linea)}</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-right" onClick={cellClick('valor')}>
+                    {isEditing && editingCol === 'valor' ? (
+                      <input autoFocus type="number" className="input-odoo py-0.5 text-[12px] w-20 text-right"
+                        value={(currentVals.tipo_calculo === 'precio_fijo' ? currentVals.precio : currentVals.tipo_calculo === 'margen_costo' ? currentVals.margen_pct : currentVals.descuento_pct) as number}
+                        onChange={e => { const v = +e.target.value; setEditVal(p => ({ ...p, ...(p.tipo_calculo === 'precio_fijo' ? { precio: v } : p.tipo_calculo === 'margen_costo' ? { margen_pct: v } : { descuento_pct: v }) })); }}
+                        onBlur={handleBlur} onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }} />
+                    ) : (
+                      <span className="inline-edit-idle font-mono text-muted-foreground">
+                        {linea.tipo_calculo === 'precio_fijo' ? `${cs} ${(linea.precio ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : linea.tipo_calculo === 'margen_costo' ? `${linea.margen_pct}%` : `${linea.descuento_pct}%`}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1.5 px-3 text-center text-xs" onClick={cellClick('redondeo')}>
+                    {isEditing && editingCol === 'redondeo' ? (
+                      <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.redondeo as string) ?? 'ninguno'}
+                        onChange={e => setEditVal(p => ({ ...p, redondeo: e.target.value }))} onBlur={handleBlur}>
+                        <option value="ninguno">Ninguno</option><option value="arriba">Arriba</option><option value="abajo">Abajo</option><option value="cercano">Cercano</option>
+                      </select>
+                    ) : <span className="inline-edit-idle text-muted-foreground">{redondeoLabel}</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-center" onClick={cellClick('base')}>
+                    {isEditing && editingCol === 'base' ? (
+                      <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
+                        onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
+                        <option value="sin_impuestos">Sin impuestos</option><option value="con_impuestos">Con impuestos</option>
+                      </select>
+                    ) : <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">{cs} {precioSinImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{cs} {precioConImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{cs} {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
+                  <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
+                    {isEditing && editingCol === 'comision' ? (
+                      <input autoFocus type="number" className="input-odoo py-0.5 text-[12px] w-16 text-right" value={(currentVals.comision_pct as number) || ''}
+                        onChange={e => setEditVal(p => ({ ...p, comision_pct: +e.target.value }))} onBlur={handleBlur}
+                        onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }} />
+                    ) : <span className="inline-edit-idle font-mono text-xs text-primary">{linea.comision_pct ? `${linea.comision_pct}%` : '—'}</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {rules.map((linea: any) => {
-                  const isEditing = editingId === linea.id;
-                  const currentVals = isEditing ? editVal : linea;
-                  const costo = form.costo ?? 0;
-                  const ivaPct = form.tiene_iva ? (form.iva_pct ?? 16) : 0;
-                  const iepsPct = form.tiene_ieps ? (form.ieps_pct ?? 0) : 0;
-                  const taxMult = 1 + (ivaPct + iepsPct) / 100;
-                  const basePrecio = ((isEditing ? (editVal.base_precio ?? linea.base_precio) : linea.base_precio) ?? 'sin_impuestos') as string;
-                  const redondeoVal = ((isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno') as string;
-                  const redondeoLabel = ({ arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' } as Record<string, string>)[redondeoVal] ?? '— Ninguno';
-                  const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
-
-                  const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
-                  const pr = form.precio_principal ?? 0;
-                  let rawSinImp = 0;
-                  if (srcLinea.tipo_calculo === 'margen_costo') rawSinImp = Math.max(costo * (1 + ((srcLinea.margen_pct as number) ?? 0) / 100), (srcLinea.precio_minimo as number) ?? 0);
-                  else if (srcLinea.tipo_calculo === 'descuento_precio') rawSinImp = Math.max(pr * (1 - ((srcLinea.descuento_pct as number) ?? 0) / 100), (srcLinea.precio_minimo as number) ?? 0);
-                  else rawSinImp = Math.max((srcLinea.precio as number) ?? 0, (srcLinea.precio_minimo as number) ?? 0);
-
-                  let precioSinImp: number, precioConImp: number;
-                  if (basePrecio === 'con_impuestos') {
-                    precioConImp = applyRedondeo(rawSinImp * taxMult, srcLinea.redondeo as string ?? 'ninguno');
-                    precioSinImp = precioConImp / taxMult;
-                  } else {
-                    precioSinImp = applyRedondeo(rawSinImp, srcLinea.redondeo as string ?? 'ninguno');
-                    precioConImp = precioSinImp * taxMult;
-                  }
-
-                  const ganancia = precioSinImp - costo;
-                  const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
-                  const listaName = linea.lista_precios?.nombre;
-                  const esPrincipal = linea.lista_precios?.es_principal;
-
-                  const cellClick = (col: string) => (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    if (editingId === linea.id && editingCol === col) return;
-                    if (editingId && editingId !== linea.id) saveEdit(editingId);
-                    startEdit(linea, col);
-                  };
-
-                  const handleBlur = () => { setTimeout(() => saveEdit(linea.id), 150); };
-
-                  return (
-                    <tr key={linea.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                      <td className="py-1.5 px-3 cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${linea.aplica_a === 'producto' ? 'bg-primary/10 text-primary' : linea.aplica_a === 'categoria' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{aplica_label(linea)}</span>
-                      </td>
-                      <td className="py-1.5 px-3 text-xs cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
-                        {listaName ? <span className="flex items-center gap-1">{esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}{listaName}</span> : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="py-1.5 px-3 text-xs" onClick={cellClick('tipo')}>
-                        {isEditing && editingCol === 'tipo' ? (
-                          <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={currentVals.tipo_calculo as string}
-                            onChange={e => setEditVal(p => ({ ...p, tipo_calculo: e.target.value }))} onBlur={handleBlur}>
-                            <option value="precio_fijo">Precio fijo</option><option value="margen_costo">Fórmula (margen)</option><option value="descuento_precio">Descuento</option>
-                          </select>
-                        ) : <span className="inline-edit-idle text-muted-foreground">{calcLabel(isEditing ? { ...linea, ...editVal } : linea)}</span>}
-                      </td>
-                      <td className="py-1.5 px-3 text-right" onClick={cellClick('valor')}>
-                        {isEditing && editingCol === 'valor' ? (
-                          <input autoFocus type="number" className="input-odoo py-0.5 text-[12px] w-20 text-right"
-                            value={(currentVals.tipo_calculo === 'precio_fijo' ? currentVals.precio : currentVals.tipo_calculo === 'margen_costo' ? currentVals.margen_pct : currentVals.descuento_pct) as number}
-                            onChange={e => { const v = +e.target.value; setEditVal(p => ({ ...p, ...(p.tipo_calculo === 'precio_fijo' ? { precio: v } : p.tipo_calculo === 'margen_costo' ? { margen_pct: v } : { descuento_pct: v }) })); }}
-                            onBlur={handleBlur} onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }} />
-                        ) : (
-                          <span className="inline-edit-idle font-mono text-muted-foreground">
-                            {linea.tipo_calculo === 'precio_fijo' ? `${cs} ${(linea.precio ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : linea.tipo_calculo === 'margen_costo' ? `${linea.margen_pct}%` : `${linea.descuento_pct}%`}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-1.5 px-3 text-center text-xs" onClick={cellClick('redondeo')}>
-                        {isEditing && editingCol === 'redondeo' ? (
-                          <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.redondeo as string) ?? 'ninguno'}
-                            onChange={e => setEditVal(p => ({ ...p, redondeo: e.target.value }))} onBlur={handleBlur}>
-                            <option value="ninguno">Ninguno</option><option value="arriba">Arriba</option><option value="abajo">Abajo</option><option value="cercano">Cercano</option>
-                          </select>
-                        ) : <span className="inline-edit-idle text-muted-foreground">{redondeoLabel}</span>}
-                      </td>
-                      <td className="py-1.5 px-3 text-center" onClick={cellClick('base')}>
-                        {isEditing && editingCol === 'base' ? (
-                          <select autoFocus className="input-odoo py-0.5 text-[12px] w-full" value={(currentVals.base_precio as string) ?? 'sin_impuestos'}
-                            onChange={e => setEditVal(p => ({ ...p, base_precio: e.target.value }))} onBlur={handleBlur}>
-                            <option value="sin_impuestos">Sin impuestos</option><option value="con_impuestos">Con impuestos</option>
-                          </select>
-                        ) : <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
-                      </td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">{cs} {precioSinImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{cs} {precioConImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{cs} {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
-                      <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
-                        {isEditing && editingCol === 'comision' ? (
-                          <input autoFocus type="number" className="input-odoo py-0.5 text-[12px] w-16 text-right" value={(currentVals.comision_pct as number) || ''}
-                            onChange={e => setEditVal(p => ({ ...p, comision_pct: +e.target.value }))} onBlur={handleBlur}
-                            onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }} />
-                        ) : <span className="inline-edit-idle font-mono text-xs text-primary">{linea.comision_pct ? `${linea.comision_pct}%` : '—'}</span>}
-                      </td>
-                      <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-3.5 w-3.5" /></button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-      {grouped.size === 0 && <p className="text-sm text-muted-foreground py-2">Sin reglas de precio aplicables a este producto.</p>}
+              );
+            })}
+            {allRulesFlat.length === 0 && (
+              <tr><td colSpan={13} className="text-center py-4 text-muted-foreground text-xs">Sin reglas de precio aplicables a este producto.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
       {!isNew && (
         <button className="odoo-link" onClick={() => { setNewRule(p => ({ ...p, precio_minimo: form.costo ?? 0 })); setShowModal(true); }}>Agregar un precio</button>
       )}
