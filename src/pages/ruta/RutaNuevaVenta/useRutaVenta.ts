@@ -700,6 +700,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     handleSave,
     // Insights & smart actions
     insights, bannerDismissed, setBannerDismissed,
-    applySmartSuggestion, repeatLastSale, findProductByCode,
+    applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
   };
 }
