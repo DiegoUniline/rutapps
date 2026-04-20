@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
 import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
+import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
