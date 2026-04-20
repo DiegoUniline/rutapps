@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const PER_USER_QUOTA = 30; // optimizaciones incluidas por usuario activo / mes
 const MAX_WAYPOINTS_PER_REQUEST = 23; // Google Routes hard limit is 25 incl. origin/destination
+const REAL_MATRIX_MAX_STOPS = 60; // arriba de esto usamos Haversine para no disparar costo
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = LatLng & { id: string };
