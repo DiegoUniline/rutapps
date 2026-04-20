@@ -58,7 +58,7 @@ export function StepProductos(props: Props) {
     // keep scanner open for rapid scanning
   };
 
-  const showBanner = !bannerDismissed && cart.filter(c => !c.es_cambio).length === 0;
+  const showBanner = !bannerDismissed;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
