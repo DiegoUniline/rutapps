@@ -774,7 +774,7 @@ export default function TarifaFormPage() {
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
     if (l.tipo_calculo === 'descuento_precio') return `-${l.descuento_pct}% s/precio`;
-    return `$ {fmt(l.precio)}`;
+    return fmt(l.precio ?? 0);
   };
 
   const getAplicaBadge = (aplica: AplicaATarifa) => {
