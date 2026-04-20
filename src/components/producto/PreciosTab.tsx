@@ -190,7 +190,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                 </select>
               </div>
               <div className="odoo-field-row">
-                <span className="odoo-field-label">Precio mínimo</span>
+                <span className="odoo-field-label">Costo</span>
                 <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio_minimo}
                   onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
               </div>
