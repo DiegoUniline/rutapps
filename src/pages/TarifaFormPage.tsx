@@ -1174,6 +1174,20 @@ export default function TarifaFormPage() {
           ]}
         />
       </div>
+      <AlertDialog open={confirmAllProdsOpen} onOpenChange={setConfirmAllProdsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cargar todos los productos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se agregarán <strong>{pendingUnusedProds?.length ?? 0}</strong> reglas (una por producto). ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLoadAllProducts}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
