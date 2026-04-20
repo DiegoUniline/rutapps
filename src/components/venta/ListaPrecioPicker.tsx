@@ -54,12 +54,15 @@ export function ListaPrecioPicker({
     enabled: !!empresa?.id && open,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const [{ data: tarifas }, { data: listas }, { data: rules }] = await Promise.all([
-        supabase.from('tarifas').select('id, nombre, activa').eq('empresa_id', empresa!.id).eq('activa', true),
+      const { data: tarifas } = await supabase.from('tarifas').select('id, nombre, activa').eq('empresa_id', empresa!.id).eq('activa', true);
+      const tarifaIds = (tarifas ?? []).map((t: any) => t.id);
+      const [{ data: listas }, { data: rules }] = await Promise.all([
         supabase.from('lista_precios').select('id, nombre, tarifa_id, es_principal, activa').eq('empresa_id', empresa!.id),
-        supabase.from('tarifa_lineas')
-          .select('tarifa_id, aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
-          .in('tarifa_id', ((await supabase.from('tarifas').select('id').eq('empresa_id', empresa!.id).eq('activa', true)).data ?? []).map((t: any) => t.id)),
+        tarifaIds.length
+          ? supabase.from('tarifa_lineas')
+              .select('tarifa_id, aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+              .in('tarifa_id', tarifaIds)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       return {
         tarifas: tarifas ?? [],
