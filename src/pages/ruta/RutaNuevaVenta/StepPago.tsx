@@ -42,7 +42,26 @@ const METODOS = [
   { value: 'tarjeta' as const, label: 'Tarjeta', Icon: CreditCard },
 ];
 
-const BILLETES = [50, 100, 200, 500];
+/**
+ * Build dynamic quick-bill amounts based on the remaining total.
+ * Always offers: Exact, +$10 round, +$50 round, next 100s.
+ */
+function getDynamicBills(total: number): { label: string; amount: number }[] {
+  if (total <= 0) return [];
+  const r = (n: number, base: number) => Math.ceil(n / base) * base;
+  const bills: { label: string; amount: number }[] = [
+    { label: 'Exacto', amount: Math.round(total * 100) / 100 },
+  ];
+  const seen = new Set<number>([bills[0].amount]);
+  const candidates = [r(total, 10), r(total + 5, 50), r(total + 20, 100), r(total + 100, 200), r(total + 250, 500)];
+  candidates.forEach(c => {
+    if (c > total && !seen.has(c) && bills.length < 5) {
+      bills.push({ label: `$${c}`, amount: c });
+      seen.add(c);
+    }
+  });
+  return bills.slice(0, 5);
+}
 
 export function StepPago(props: Props) {
   const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;

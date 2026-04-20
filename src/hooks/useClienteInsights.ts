@@ -1,0 +1,159 @@
+import { useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { usePromocionesActivas } from '@/hooks/usePromociones';
+
+interface SuggestedItem {
+  producto_id: string;
+  cantidad: number;
+  source: 'manual' | 'historial';
+}
+
+interface MissedProduct {
+  producto_id: string;
+  nombre: string;
+  diasSinPedir: number;
+  ultimaCantidad: number;
+}
+
+/**
+ * Centralized client insights for the mobile sales flow:
+ *  - Smart suggested order (manual list + last 3 sales avg)
+ *  - Last sale items (for "Repetir última venta")
+ *  - Days since last visit
+ *  - Missed products (used to buy, no longer ordering)
+ *  - Active promotions applicable to this client / zone
+ */
+export function useClienteInsights(clienteId: string | null, clienteData?: any) {
+  const { empresa } = useAuth();
+  const enabled = !!empresa?.id && !!clienteId;
+
+  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, { enabled });
+  const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled });
+  const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: promosAll } = usePromocionesActivas();
+
+  // ── Client's recent sales (sorted desc) ──
+  const clientSales = useMemo(() => {
+    if (!ventas || !clienteId) return [] as any[];
+    return (ventas as any[])
+      .filter(v => v.cliente_id === clienteId
+        && ['confirmado', 'entregado', 'facturado'].includes(v.status)
+        && v.tipo !== 'saldo_inicial')
+      .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  }, [ventas, clienteId]);
+
+  // ── Last sale + lineas (for "Repetir última venta") ──
+  const lastSaleLineas = useMemo(() => {
+    if (!clientSales.length || !ventaLineas) return [] as any[];
+    const lastId = clientSales[0]?.id;
+    return (ventaLineas as any[]).filter(l => l.venta_id === lastId);
+  }, [clientSales, ventaLineas]);
+
+  // ── Suggested order: manual first, fallback to avg of last 3 sales ──
+  const suggested: SuggestedItem[] = useMemo(() => {
+    // 1. Manual list
+    if (pedidoSugeridoRaw && pedidoSugeridoRaw.length > 0) {
+      return (pedidoSugeridoRaw as any[]).map(ps => ({
+        producto_id: ps.producto_id,
+        cantidad: Number(ps.cantidad) || 1,
+        source: 'manual' as const,
+      }));
+    }
+    // 2. Average of last 3 sales
+    if (!clientSales.length || !ventaLineas) return [];
+    const last3 = clientSales.slice(0, 3).map(v => v.id);
+    if (!last3.length) return [];
+    const lineas = (ventaLineas as any[]).filter(l => last3.includes(l.venta_id));
+    const map = new Map<string, { sum: number; count: number }>();
+    lineas.forEach(l => {
+      const ex = map.get(l.producto_id);
+      if (ex) { ex.sum += Number(l.cantidad) || 0; ex.count += 1; }
+      else map.set(l.producto_id, { sum: Number(l.cantidad) || 0, count: 1 });
+    });
+    const out: SuggestedItem[] = [];
+    map.forEach((v, k) => {
+      const avg = Math.max(1, Math.round(v.sum / Math.max(1, last3.length)));
+      out.push({ producto_id: k, cantidad: avg, source: 'historial' });
+    });
+    return out;
+  }, [pedidoSugeridoRaw, clientSales, ventaLineas]);
+
+  // ── Days since last visit ──
+  const diasSinVisita = useMemo(() => {
+    if (!clientSales.length) return null;
+    const last = clientSales[0]?.fecha;
+    if (!last) return null;
+    const diff = Date.now() - new Date(last).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  }, [clientSales]);
+
+  // ── Missed products: bought before but not in last 2 visits ──
+  const missedProducts: MissedProduct[] = useMemo(() => {
+    if (!clientSales.length || !ventaLineas || !productos) return [];
+    const recentIds = new Set(clientSales.slice(0, 2).map(v => v.id));
+    const olderIds = new Set(clientSales.slice(2, 6).map(v => v.id));
+    if (!olderIds.size) return [];
+    const recentProds = new Set<string>();
+    const olderProds = new Map<string, { qty: number; lastDate: string }>();
+    (ventaLineas as any[]).forEach(l => {
+      if (recentIds.has(l.venta_id)) recentProds.add(l.producto_id);
+      if (olderIds.has(l.venta_id)) {
+        const sale = clientSales.find(s => s.id === l.venta_id);
+        const prev = olderProds.get(l.producto_id);
+        if (!prev || (sale?.fecha ?? '') > prev.lastDate) {
+          olderProds.set(l.producto_id, { qty: Number(l.cantidad) || 0, lastDate: sale?.fecha ?? '' });
+        }
+      }
+    });
+    const out: MissedProduct[] = [];
+    olderProds.forEach((v, pid) => {
+      if (recentProds.has(pid)) return;
+      const prod = (productos as any[]).find(p => p.id === pid);
+      if (!prod) return;
+      const days = v.lastDate ? Math.floor((Date.now() - new Date(v.lastDate).getTime()) / 86400000) : 0;
+      out.push({ producto_id: pid, nombre: prod.nombre, diasSinPedir: days, ultimaCantidad: v.qty });
+    });
+    return out.sort((a, b) => a.diasSinPedir - b.diasSinPedir).slice(0, 5);
+  }, [clientSales, ventaLineas, productos]);
+
+  // ── Pending balance ──
+  const saldoPendiente = useMemo(() => {
+    if (!ventas || !clienteId) return 0;
+    return (ventas as any[])
+      .filter(v => v.cliente_id === clienteId
+        && (v.saldo_pendiente ?? 0) > 0
+        && ['confirmado', 'entregado', 'facturado'].includes(v.status))
+      .reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  }, [ventas, clienteId]);
+
+  // ── Credit info ──
+  const creditoInfo = useMemo(() => {
+    if (!clienteData?.credito) return null;
+    const limite = clienteData.limite_credito ?? 0;
+    const disponible = Math.max(0, limite - saldoPendiente);
+    return { limite, disponible, dias: clienteData.dias_credito ?? 0 };
+  }, [clienteData, saldoPendiente]);
+
+  // ── Promotions applicable to this client / zona ──
+  const promosAplicables = useMemo(() => {
+    if (!promosAll) return [];
+    const zonaId = clienteData?.zona_id ?? null;
+    return promosAll.filter((p: any) => {
+      const okCli = !p.cliente_id || p.cliente_id === clienteId;
+      const okZona = !p.zona_id || p.zona_id === zonaId;
+      return okCli && okZona;
+    });
+  }, [promosAll, clienteData, clienteId]);
+
+  return {
+    suggested,
+    lastSaleLineas,
+    diasSinVisita,
+    missedProducts,
+    saldoPendiente,
+    creditoInfo,
+    promosAplicables,
+  };
+}
