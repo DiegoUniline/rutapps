@@ -74,7 +74,38 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           <div>
             <label className="text-[10px] text-muted-foreground block">Precio</label>
             {readOnly ? <span className="text-sm">{fmt(price)}</span> : (
-              <input type="number" inputMode="decimal" className="inline-edit-input text-sm text-right !py-1 w-full" value={l.precio_unitario ?? ''} onChange={e => onUpdateLine(idx, 'precio_unitario', e.target.value)} min="0" step="0.01" onFocus={e => e.target.select()} />
+              <div className="space-y-1">
+                <input
+                  type="number" inputMode="decimal" className="inline-edit-input text-sm text-right !py-1 w-full"
+                  value={l.precio_unitario ?? ''}
+                  onChange={e => {
+                    onUpdateLine(idx, 'precio_unitario', e.target.value);
+                    if (setLineas) {
+                      setLineas(prev => {
+                        const next = [...prev];
+                        (next[idx] as any).precio_manual = true;
+                        return next;
+                      });
+                    }
+                  }}
+                  min="0" step="0.01" onFocus={e => e.target.select()}
+                />
+                {setLineas && (
+                  <ListaPrecioPicker
+                    producto={prod}
+                    currentListaPrecioId={(l as any).lista_precio_id ?? null}
+                    isManual={!!(l as any).precio_manual}
+                    compact
+                    onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice) => {
+                      setLineas(prev => {
+                        const next = [...prev];
+                        (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
+                        return next;
+                      });
+                    }}
+                  />
+                )}
+              </div>
             )}
           </div>
           <div>
