@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
+import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
@@ -563,6 +564,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
         <NotificationRuntime overlaysOnly />
+        <PendingInvoiceModal />
         <Suspense fallback={null}>
           <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
         </Suspense>
@@ -663,6 +665,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <NotificationRuntime overlaysOnly />
+      <PendingInvoiceModal />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
       </Suspense>
