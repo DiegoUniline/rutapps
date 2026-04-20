@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { useAuth } from '@/contexts/AuthContext';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -773,11 +774,19 @@ export default function TarifaFormPage() {
 
   // ── Load all products button ──
   const [loadingAllProds, setLoadingAllProds] = useState(false);
-  const handleLoadAllProducts = async () => {
+  const [confirmAllProdsOpen, setConfirmAllProdsOpen] = useState(false);
+  const [pendingUnusedProds, setPendingUnusedProds] = useState<typeof productosDisp>([]);
+  const handleLoadAllProducts = () => {
     if (!id || isNew || !productosDisp) return;
     const unusedProds = productosDisp.filter(p => !usedProdIds.has(p.id));
     if (unusedProds.length === 0) { toast.info('Todos los productos ya tienen regla'); return; }
-    if (!window.confirm(`Se agregarán ${unusedProds.length} reglas (una por producto). ¿Continuar?`)) return;
+    setPendingUnusedProds(unusedProds);
+    setConfirmAllProdsOpen(true);
+  };
+  const confirmLoadAllProducts = async () => {
+    const unusedProds = pendingUnusedProds;
+    setConfirmAllProdsOpen(false);
+    if (!unusedProds || unusedProds.length === 0) return;
     setLoadingAllProds(true);
     try {
       for (const prod of unusedProds) {
@@ -1166,6 +1175,20 @@ export default function TarifaFormPage() {
           ]}
         />
       </div>
+      <AlertDialog open={confirmAllProdsOpen} onOpenChange={setConfirmAllProdsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cargar todos los productos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se agregarán <strong>{pendingUnusedProds?.length ?? 0}</strong> reglas (una por producto). ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLoadAllProducts}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
