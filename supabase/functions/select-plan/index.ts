@@ -78,14 +78,36 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!profile?.empresa_id) throw new Error("Sin empresa");
 
-    // Get plan details
-    const { data: plan, error: planErr } = await supabase
-      .from("planes")
+    // Get plan details — try `subscription_plans` first (used by frontend),
+    // then fall back to legacy `planes` table.
+    let plan: any = null;
+    const { data: spPlan } = await supabase
+      .from("subscription_plans")
       .select("*")
       .eq("id", plan_id)
       .eq("activo", true)
-      .single();
-    if (planErr || !plan) throw new Error("Plan no encontrado o inactivo");
+      .maybeSingle();
+
+    if (spPlan) {
+      // Normalise to the shape the rest of this function expects
+      plan = {
+        id: spPlan.id,
+        nombre: spPlan.nombre,
+        activo: spPlan.activo,
+        stripe_price_id: spPlan.stripe_price_id,
+        precio_base_mes: spPlan.precio_por_usuario,
+      };
+    } else {
+      const { data: legacyPlan } = await supabase
+        .from("planes")
+        .select("*")
+        .eq("id", plan_id)
+        .eq("activo", true)
+        .maybeSingle();
+      plan = legacyPlan;
+    }
+
+    if (!plan) throw new Error("Plan no encontrado o inactivo");
 
     log("Plan selected", { plan: plan.nombre, qty, empresa: profile.empresa_id });
 
