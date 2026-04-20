@@ -119,40 +119,26 @@ Deno.serve(async (req) => {
 
     const rules: Rule[] = (tarifaRules ?? []) as Rule[];
 
-    // 4. Determine which product IDs to include
-    // Collect explicit product_ids from rules
-    const explicitProdIds = new Set<string>();
-    const hasGlobalOrCatRule = rules.some((r) => r.aplica_a === "todos" || r.aplica_a === "categoria");
-
-    rules.forEach((r) => {
-      (r.producto_ids ?? []).forEach((id: string) => explicitProdIds.add(id));
-    });
-
-    // 5. Fetch products
-    let query = supabase
+    // 4. Fetch ALL active products for the empresa (no filter by rules)
+    const { data: productos } = await supabase
       .from("productos")
       .select("id, nombre, codigo, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, status, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio")
       .eq("empresa_id", lista.empresa_id)
       .eq("status", "activo")
-      .eq("se_puede_vender", true);
-
-    // If only product-specific rules, filter to those IDs
-    if (!hasGlobalOrCatRule && explicitProdIds.size > 0) {
-      query = query.in("id", [...explicitProdIds]);
-    }
-
-    const { data: productos } = await query.limit(500);
+      .eq("se_puede_vender", true)
+      .limit(2000);
 
     if (!productos || productos.length === 0) {
       return json({ empresa, lista_nombre: lista.nombre, productos: [], categorias: [], marcas: [] });
     }
 
-    // 6. Get clasificaciones and marcas names
+    // 5. Get clasificaciones, marcas, unidades, and stock totals
     const clasifIds = [...new Set(productos.map((p: any) => p.clasificacion_id).filter(Boolean))];
     const marcaIds = [...new Set(productos.map((p: any) => p.marca_id).filter(Boolean))];
     const unidadIds = [...new Set(productos.map((p: any) => p.unidad_venta_id).filter(Boolean))];
+    const prodIds = productos.map((p: any) => p.id);
 
-    const [clasifRes, marcaRes, unidadRes] = await Promise.all([
+    const [clasifRes, marcaRes, unidadRes, stockRes] = await Promise.all([
       clasifIds.length > 0
         ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds)
         : { data: [] },
@@ -162,17 +148,22 @@ Deno.serve(async (req) => {
       unidadIds.length > 0
         ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds)
         : { data: [] },
+      supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", prodIds),
     ]);
 
     const clasifMap = new Map((clasifRes.data ?? []).map((c: any) => [c.id, c.nombre]));
     const marcaMap = new Map((marcaRes.data ?? []).map((m: any) => [m.id, m.nombre]));
     const unidadMap = new Map((unidadRes.data ?? []).map((u: any) => [u.id, u.abreviatura]));
+    const stockMap = new Map<string, number>();
+    (stockRes.data ?? []).forEach((s: any) => {
+      stockMap.set(s.producto_id, (stockMap.get(s.producto_id) ?? 0) + Number(s.cantidad ?? 0));
+    });
 
-    // 7. Enrich products with resolved prices
+    // 6. Enrich products with resolved prices and stock
     const enriched = productos
       .map((p: any) => {
         const precio = resolvePrice(rules, p as Prod, lista.id);
-        if (precio <= 0) return null; // Skip products with no valid price
+        const stock = stockMap.get(p.id) ?? 0;
         return {
           id: p.id,
           nombre: p.nombre,
@@ -182,9 +173,9 @@ Deno.serve(async (req) => {
           imagen_url: p.imagen_url,
           unidad_venta: unidadMap.get(p.unidad_venta_id) ?? null,
           precio,
+          stock,
         };
       })
-      .filter(Boolean)
       .sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
     const categorias = [...new Set(enriched.map((p: any) => p.categoria).filter(Boolean))].sort();
