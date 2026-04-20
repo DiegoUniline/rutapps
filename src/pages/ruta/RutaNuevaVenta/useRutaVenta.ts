@@ -246,11 +246,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return stockAbordo.get(productoId) ?? 0;
   };
 
-  /** Apply the smart suggested order (manual list or last-3 average) */
-  const applySmartSuggestion = () => {
-    if (!productos || !insights.suggested.length) return;
+  /** Apply a list of suggested items into the cart */
+  const applySuggestionList = (items: { producto_id: string; cantidad: number }[], label: string) => {
+    if (!productos || !items.length) return;
     const newItems: CartItem[] = [];
-    insights.suggested.forEach(s => {
+    items.forEach(s => {
       const prod = (productos as any[]).find(p => p.id === s.producto_id);
       if (!prod) return;
       const pf = resolvePricingFull(prod);
@@ -270,8 +270,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
     setBannerDismissed(true);
-    toast.success(`${newItems.length} productos cargados`);
+    toast.success(`${newItems.length} productos cargados (${label})`);
   };
+
+  /** Backwards-compatible: smart pick (manual list preferred, fallback to historial) */
+  const applySmartSuggestion = () => applySuggestionList(insights.suggested, insights.manualList.length > 0 ? 'lista' : 'historial');
+  /** Apply ONLY the manually configured list */
+  const applyManualList = () => applySuggestionList(insights.manualList, 'lista configurada');
+  /** Apply ONLY the historical average */
+  const applyHistorialAvg = () => applySuggestionList(insights.historialAvg, 'promedio historial');
 
   /** Repeat the client's last sale */
   const repeatLastSale = () => {
@@ -693,6 +700,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     handleSave,
     // Insights & smart actions
     insights, bannerDismissed, setBannerDismissed,
-    applySmartSuggestion, repeatLastSale, findProductByCode,
+    applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
   };
 }

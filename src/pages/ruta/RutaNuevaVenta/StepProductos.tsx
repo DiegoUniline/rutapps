@@ -28,10 +28,11 @@ interface Props {
   usandoAlmacen: boolean;
   fmt: (n: number) => string;
   // Smart actions
-  insights: { suggested: any[]; lastSaleLineas: any[] };
+  insights: { suggested: any[]; manualList: any[]; historialAvg: any[]; lastSaleLineas: any[] };
   bannerDismissed: boolean;
   setBannerDismissed: (v: boolean) => void;
-  applySmartSuggestion: () => void;
+  applyManualList: () => void;
+  applyHistorialAvg: () => void;
   repeatLastSale: () => void;
   findProductByCode: (code: string) => any | null;
   setItemQty: (pid: string, qty: number, esCambio?: boolean) => void;
@@ -43,7 +44,7 @@ export function StepProductos(props: Props) {
     cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart,
     getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
-    applySmartSuggestion, repeatLastSale, findProductByCode, setItemQty,
+    applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
   } = props;
   const { symbol: s } = useCurrency();
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -75,12 +76,11 @@ export function StepProductos(props: Props) {
 
       {showBanner && (
         <PedidoSugeridoBanner
-          hasSuggestion={insights.suggested.length > 0}
-          hasLastSale={insights.lastSaleLineas.length > 0}
-          suggestedSource={insights.suggested[0]?.source ?? null}
-          suggestedCount={insights.suggested.length}
+          manualCount={insights.manualList.length}
+          historialCount={insights.historialAvg.length}
           lastSaleCount={insights.lastSaleLineas.length}
-          onApplySuggestion={applySmartSuggestion}
+          onApplyManual={applyManualList}
+          onApplyHistorial={applyHistorialAvg}
           onRepeatLastSale={repeatLastSale}
           onDismiss={() => setBannerDismissed(true)}
         />

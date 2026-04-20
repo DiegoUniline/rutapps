@@ -51,17 +51,18 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
     return (ventaLineas as any[]).filter(l => l.venta_id === lastId);
   }, [clientSales, ventaLineas]);
 
-  // ── Suggested order: manual first, fallback to avg of last 3 sales ──
-  const suggested: SuggestedItem[] = useMemo(() => {
-    // 1. Manual list
-    if (pedidoSugeridoRaw && pedidoSugeridoRaw.length > 0) {
-      return (pedidoSugeridoRaw as any[]).map(ps => ({
-        producto_id: ps.producto_id,
-        cantidad: Number(ps.cantidad) || 1,
-        source: 'manual' as const,
-      }));
-    }
-    // 2. Average of last 3 sales
+  // ── Manual configured list (cliente_pedido_sugerido) ──
+  const manualList: SuggestedItem[] = useMemo(() => {
+    if (!pedidoSugeridoRaw || pedidoSugeridoRaw.length === 0) return [];
+    return (pedidoSugeridoRaw as any[]).map(ps => ({
+      producto_id: ps.producto_id,
+      cantidad: Number(ps.cantidad) || 1,
+      source: 'manual' as const,
+    }));
+  }, [pedidoSugeridoRaw]);
+
+  // ── Historical average from last 3 sales ──
+  const historialAvg: SuggestedItem[] = useMemo(() => {
     if (!clientSales.length || !ventaLineas) return [];
     const last3 = clientSales.slice(0, 3).map(v => v.id);
     if (!last3.length) return [];
@@ -78,7 +79,10 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
       out.push({ producto_id: k, cantidad: avg, source: 'historial' });
     });
     return out;
-  }, [pedidoSugeridoRaw, clientSales, ventaLineas]);
+  }, [clientSales, ventaLineas]);
+
+  // Backwards-compatible: prefer manual, fallback to historial
+  const suggested: SuggestedItem[] = manualList.length > 0 ? manualList : historialAvg;
 
   // ── Days since last visit ──
   const diasSinVisita = useMemo(() => {
@@ -149,6 +153,8 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
 
   return {
     suggested,
+    manualList,
+    historialAvg,
     lastSaleLineas,
     diasSinVisita,
     missedProducts,
