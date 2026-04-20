@@ -12,6 +12,7 @@ interface Producto {
   imagen_url: string | null;
   unidad_venta: string | null;
   precio: number;
+  stock: number;
 }
 
 interface CartItem {
