@@ -48,7 +48,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       const [lRes, pRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, productos(nombre, unidad_granel)')
+          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, lista_precio_id, precio_manual, productos(nombre, unidad_granel), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -202,6 +202,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
                         <th className="text-left py-1 font-medium">Producto</th>
+                        <th className="text-left py-1 font-medium">Lista</th>
                         <th className="text-right py-1 font-medium w-16">Precio</th>
                         <th className="text-right py-1 font-medium w-14">Cant</th>
                         <th className="text-center py-1 font-medium w-10">Ud</th>
@@ -213,9 +214,12 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                     <tbody>
                       {lineas.map((l: any) => {
                         const descMonto = (l.subtotal ?? 0) * ((l.descuento_pct ?? 0) / 100);
+                        const lp = (l as any).lista_precios;
+                        const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? '—');
                         return (
                           <tr key={l.id} className="border-b border-border/40">
                             <td className="py-1.5">{(l.productos as any)?.nombre ?? '—'}</td>
+                            <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                             <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
                             <td className="text-center py-1.5 text-muted-foreground">{(l.productos as any)?.unidad_granel || 'Pzs'}</td>
@@ -226,7 +230,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                         );
                       })}
                       {lineas.length === 0 && (
-                        <tr><td colSpan={7} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                        <tr><td colSpan={8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
                       )}
                     </tbody>
                   </table>
