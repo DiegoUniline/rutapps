@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Zap, ShoppingCart, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -32,15 +32,15 @@ export default function RouteOptimizationQuotaWidget() {
     },
   });
 
-  // Detectar regreso desde Stripe
-  if (typeof window !== 'undefined') {
+  // Detectar regreso desde Stripe (efecto, no durante render)
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
     const recarga = params.get('recarga');
     if (recarga === 'ok' && sessionId) {
-      // limpiar URL
       window.history.replaceState({}, '', window.location.pathname);
-      supabase.functions.invoke('verify-route-credits', { body: { session_id: sessionId } })
+      supabase.functions
+        .invoke('verify-route-credits', { body: { session_id: sessionId } })
         .then(({ data, error }) => {
           if (!error && data?.status === 'paid') {
             toast.success('¡Recarga aplicada! +100 optimizaciones disponibles');
@@ -54,7 +54,7 @@ export default function RouteOptimizationQuotaWidget() {
       window.history.replaceState({}, '', window.location.pathname);
       toast.info('Recarga cancelada');
     }
-  }
+  }, [refetch]);
 
   const handleBuy = async () => {
     setBuying(true);
@@ -88,13 +88,13 @@ export default function RouteOptimizationQuotaWidget() {
   return (
     <div className={cn(
       "bg-card/95 backdrop-blur-sm border rounded-xl px-3 py-2 shadow-sm",
-      noQuota ? "border-destructive/40" : lowQuota ? "border-amber-500/40" : "border-border"
+      noQuota ? "border-destructive/40" : lowQuota ? "border-warning/40" : "border-border"
     )}>
       <div className="flex items-center gap-3">
         <div className={cn(
           "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
           noQuota ? "bg-destructive/10 text-destructive" :
-          lowQuota ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
+          lowQuota ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
         )}>
           <Zap className="h-3.5 w-3.5" />
         </div>
@@ -106,7 +106,7 @@ export default function RouteOptimizationQuotaWidget() {
             {data.usadas_mes_actual} <span className="text-muted-foreground font-medium">/ {data.cuota_total}</span>
             <span className={cn(
               "ml-2 text-[11px] font-semibold",
-              noQuota ? "text-destructive" : lowQuota ? "text-amber-600" : "text-emerald-600"
+              noQuota ? "text-destructive" : lowQuota ? "text-warning" : "text-primary"
             )}>
               {data.disponibles} disponibles
             </span>
@@ -115,7 +115,7 @@ export default function RouteOptimizationQuotaWidget() {
             <div
               className={cn(
                 "h-full transition-all",
-                noQuota ? "bg-destructive" : lowQuota ? "bg-amber-500" : "bg-primary"
+                noQuota ? "bg-destructive" : lowQuota ? "bg-warning" : "bg-primary"
               )}
               style={{ width: `${pct}%` }}
             />
