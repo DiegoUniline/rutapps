@@ -75,6 +75,8 @@ export function StepProductos(props: Props) {
         )}
       </div>
 
+      <SaldoPendienteBanner saldoPendiente={insights.saldoPendiente} creditoInfo={insights.creditoInfo} />
+
       {showBanner && (
         <PedidoSugeridoBanner
           manualCount={insights.manualList.length}
