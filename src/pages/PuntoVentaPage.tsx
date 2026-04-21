@@ -803,6 +803,7 @@ export default function PuntoVentaPage() {
         lineas: cart.map(item => {
           const chargedLineTotal = getChargedLineTotal(item);
           const breakdown = splitFinalGross(item, chargedLineTotal);
+          const prod: any = productos?.find((p: any) => p.id === item.producto_id);
           return {
             nombre: item.nombre,
             cantidad: item.cantidad,
@@ -812,6 +813,7 @@ export default function PuntoVentaPage() {
             ieps_monto: breakdown.ieps,
             total: chargedLineTotal,
             producto_id: item.producto_id,
+            precio_sugerido_publico: Number(prod?.precio_sugerido_publico) || 0,
           };
         }),
         subtotal: totals.subtotal,
