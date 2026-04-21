@@ -37,6 +37,7 @@ function useCuentasCobrar(search: string) {
         .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, clientes(nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .gt('saldo_pendiente', 0)
+        .neq('status', 'cancelado')
         .order('fecha', { ascending: true });
       const { data, error } = await q;
       if (error) throw error;
