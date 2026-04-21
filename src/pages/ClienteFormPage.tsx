@@ -730,9 +730,36 @@ export default function ClienteFormPage() {
               {/* Add product */}
               <div className="mb-3">
                 {!showPedidoSearch ? (
-                  <button onClick={() => setShowPedidoSearch(true)} className="btn-odoo-secondary text-[12px]">
-                    <Plus className="h-3.5 w-3.5" /> Agregar producto
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button onClick={() => setShowPedidoSearch(true)} className="btn-odoo-secondary text-[12px]">
+                      <Plus className="h-3.5 w-3.5" /> Agregar producto
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!productosSelect?.length) return;
+                        const existing = new Set(pedidoItems.map(i => i.producto_id));
+                        const nuevos = productosSelect
+                          .filter(p => !existing.has(p.id))
+                          .map(p => ({ producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1 }));
+                        if (!nuevos.length) return;
+                        setPedidoItems(prev => [...prev, ...nuevos]);
+                        setPedidoDirty(true);
+                      }}
+                      disabled={!productosSelect?.length}
+                      className="btn-odoo-secondary text-[12px] disabled:opacity-50"
+                      title="Agrega todos los productos disponibles con cantidad 1; podrás ajustar las cantidades después"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Cargar todos los productos
+                    </button>
+                    {pedidoItems.length > 0 && (
+                      <button
+                        onClick={() => { setPedidoItems([]); setPedidoDirty(true); }}
+                        className="btn-odoo-secondary text-[12px] text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Vaciar
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="border border-border rounded-md p-2.5 bg-accent/20">
                     <div className="flex items-center gap-2 mb-2">
