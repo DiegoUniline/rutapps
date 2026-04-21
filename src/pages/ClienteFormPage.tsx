@@ -832,7 +832,7 @@ export default function ClienteFormPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pedidoItems.map((item, idx) => {
+                    {pedidoItemsSorted.map((item, idx) => {
                       const precio = getPrecioFinal(item.producto_id);
                       const subtotal = precio * (Number(item.cantidad) || 0);
                       return (
