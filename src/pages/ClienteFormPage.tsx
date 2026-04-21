@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
+import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
