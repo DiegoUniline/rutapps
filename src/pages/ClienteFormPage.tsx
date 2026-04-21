@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { usePermisos } from '@/hooks/usePermisos';
 import { compressPhoto } from '@/lib/imageCompressor';
