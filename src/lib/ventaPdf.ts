@@ -48,6 +48,7 @@ interface VentaPdfParams {
     iva_pct: number;
     ieps_pct: number;
     total: number;
+    precio_sugerido_publico?: number;
   }[];
   pagos: {
     fecha: string;
