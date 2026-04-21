@@ -98,12 +98,14 @@ type CatalogTable = 'marcas' | 'clasificaciones' | 'proveedores' | 'listas' | 'u
 
 async function resolveOrCreate(
   table: CatalogTable,
-  nombre: string | undefined | null,
+  nombre: string | number | undefined | null,
   empresaId: string,
   cache: Map<string, Map<string, string>>,
 ): Promise<string | null> {
-  if (!nombre || !nombre.trim()) return null;
-  const key = nombre.trim().toLowerCase();
+  if (nombre == null) return null;
+  const nombreStr = String(nombre).trim();
+  if (!nombreStr) return null;
+  const key = nombreStr.toLowerCase();
 
   // Check cache
   if (!cache.has(table)) cache.set(table, new Map());
@@ -114,7 +116,7 @@ async function resolveOrCreate(
   const { data: existing } = await (supabase.from(table) as any)
     .select('id, nombre')
     .eq('empresa_id', empresaId)
-    .ilike('nombre', nombre.trim());
+    .ilike('nombre', nombreStr);
 
   if (existing && existing.length > 0) {
     tableCache.set(key, existing[0].id);
@@ -123,11 +125,11 @@ async function resolveOrCreate(
 
   // Create
   const { data: created, error } = await (supabase.from(table) as any)
-    .insert({ nombre: nombre.trim(), empresa_id: empresaId })
+    .insert({ nombre: nombreStr, empresa_id: empresaId })
     .select('id')
     .single();
 
-  if (error) throw new Error(`No se pudo crear ${table}: ${nombre} - ${error.message}`);
+  if (error) throw new Error(`No se pudo crear ${table}: ${nombreStr} - ${error.message}`);
   tableCache.set(key, created.id);
   return created.id;
 }
