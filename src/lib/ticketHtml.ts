@@ -34,6 +34,7 @@ export interface TicketLinea {
   descuento_pct?: number;
   esCambio?: boolean;
   producto_id?: string;
+  precio_sugerido_publico?: number;
 }
 
 export interface TicketPromo {
