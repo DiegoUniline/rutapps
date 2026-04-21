@@ -19,8 +19,8 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
 
   const ventasData = (ventas ?? []).slice(0, 20) as any[];
   const cobrosData = (cobros ?? []).slice(0, 10) as any[];
-  const saldoTotal = ventasData.filter(v => (v.saldo_pendiente ?? 0) > 0).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
   const ventasValidas = ventasData.filter(v => v.status !== 'cancelado');
+  const saldoTotal = ventasValidas.filter(v => (v.saldo_pendiente ?? 0) > 0).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
   const totalComprado = ventasValidas.reduce((s, v) => s + (v.total ?? 0), 0);
   const numVentas = ventasValidas.length;
   const ultimaVisita = ventasValidas.find(v => ['confirmado', 'entregado', 'facturado'].includes(v.status))?.fecha ?? null;
