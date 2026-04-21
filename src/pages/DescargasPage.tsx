@@ -483,6 +483,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   ...(incluirStock && stockItems.length > 0 ? {
                     stockAlmacen: { almacenNombre, lineas: stockItems },
                   } : {}),
+                  abonosClientes,
                 });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
