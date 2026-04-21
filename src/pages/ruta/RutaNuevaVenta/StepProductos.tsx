@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
+import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
