@@ -312,7 +312,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       });
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
-    setBannerDismissed(true);
     toast.success(`${newItems.length} productos de la última venta`);
   };
 
