@@ -341,7 +341,6 @@ export default function RutaClientes() {
                 )}
 
                 <button onClick={() => {
-                  markVisited(c.id);
                   navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
                 }}
                   className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform shrink-0">
