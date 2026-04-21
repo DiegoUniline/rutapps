@@ -247,6 +247,24 @@ export default function ClienteFormPage() {
   const fachadaInputRef = useRef<HTMLInputElement>(null);
   const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
+  // Tarifa rules for resolving final price according to client's lista de precios
+  const { data: tarifaRules } = useQuery({
+    queryKey: ['tarifa_lineas_pedido', form.tarifa_id],
+    enabled: !!form.tarifa_id,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', form.tarifa_id!);
+      return (data ?? []) as TarifaLineaRule[];
+    },
+  });
+
+  const getPrecioFinal = (productoId: string): number => {
+    const p = productosSelect?.find(p => p.id === productoId);
+    if (!p) return 0;
+    const pricing = resolveProductPricing(tarifaRules ?? [], p as any, (form as any).lista_precio_id ?? null);
+    return pricing.displayPrice;
+  };
+
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
   const [pedidoSearch, setPedidoSearch] = useState('');
