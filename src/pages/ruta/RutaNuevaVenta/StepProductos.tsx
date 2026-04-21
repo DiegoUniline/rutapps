@@ -29,7 +29,7 @@ interface Props {
   usandoAlmacen: boolean;
   fmt: (n: number) => string;
   // Smart actions
-  insights: { suggested: any[]; manualList: any[]; historialAvg: any[]; lastSaleLineas: any[] };
+  insights: { suggested: any[]; manualList: any[]; historialAvg: any[]; lastSaleLineas: any[]; saldoPendiente: number; creditoInfo: { limite: number; disponible: number; dias: number } | null };
   bannerDismissed: boolean;
   setBannerDismissed: (v: boolean) => void;
   applyManualList: () => void;
