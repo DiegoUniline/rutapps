@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
+import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
@@ -28,7 +29,7 @@ interface Props {
   usandoAlmacen: boolean;
   fmt: (n: number) => string;
   // Smart actions
-  insights: { suggested: any[]; manualList: any[]; historialAvg: any[]; lastSaleLineas: any[] };
+  insights: { suggested: any[]; manualList: any[]; historialAvg: any[]; lastSaleLineas: any[]; saldoPendiente: number; creditoInfo: { limite: number; disponible: number; dias: number } | null };
   bannerDismissed: boolean;
   setBannerDismissed: (v: boolean) => void;
   applyManualList: () => void;
@@ -73,6 +74,8 @@ export function StepProductos(props: Props) {
           </div>
         )}
       </div>
+
+      <SaldoPendienteBanner saldoPendiente={insights.saldoPendiente} creditoInfo={insights.creditoInfo} />
 
       {showBanner && (
         <PedidoSugeridoBanner
