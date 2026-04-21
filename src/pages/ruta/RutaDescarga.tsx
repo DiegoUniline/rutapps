@@ -280,7 +280,6 @@ export default function RutaDescarga() {
             {fmt(totalEfectivo)}
           </p>
         </div>
-        </div>
 
         {/* Bills */}
         <div className="bg-card border border-border rounded-xl p-3">
