@@ -362,7 +362,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
     y += 5;
   }
 
-
+  if (notas) {
     y = drawNotes(doc, y, notas, 'Observaciones del vendedor');
   }
   if (notasSupervisor) {
