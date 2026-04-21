@@ -75,6 +75,12 @@ export interface LiquidacionPdfParams {
     almacenNombre: string;
     lineas: { nombre: string; codigo: string; cantidad: number }[];
   };
+  /** Informativo: abonos recibidos por cliente y su saldo pendiente actual */
+  abonosClientes?: {
+    cliente: string;
+    abonado: number;
+    saldoPendiente: number;
+  }[];
 }
 
 export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promise<Blob> {
