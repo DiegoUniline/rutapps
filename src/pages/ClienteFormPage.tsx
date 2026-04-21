@@ -298,12 +298,14 @@ export default function ClienteFormPage() {
 
   useEffect(() => {
     if (pedidoSugerido) {
-      setPedidoItems(pedidoSugerido.map(ps => ({
+      const mapped = pedidoSugerido.map(ps => ({
         producto_id: ps.producto_id,
         nombre: ps.productos?.nombre ?? '',
         codigo: ps.productos?.codigo ?? '',
         cantidad: ps.cantidad,
-      })));
+      }));
+      mapped.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+      setPedidoItems(mapped);
     }
   }, [pedidoSugerido]);
 
