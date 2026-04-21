@@ -801,7 +801,7 @@ export default function ClienteFormPage() {
                           className="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent text-[12px] flex justify-between text-foreground"
                         >
                           <span className="truncate">{p.codigo} — {p.nombre}</span>
-                          <span className="text-muted-foreground shrink-0 ml-2">{currFmt((p.precio_principal ?? 0))}</span>
+                          <span className="text-muted-foreground shrink-0 ml-2">{currFmt(getPrecioFinal(p.id))}</span>
                         </button>
                       ))}
                       {filteredPedidoProducts?.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-2">Sin resultados</p>}
@@ -825,8 +825,7 @@ export default function ClienteFormPage() {
                   </thead>
                   <tbody>
                     {pedidoItems.map((item, idx) => {
-                      const prod = productosSelect?.find(p => p.id === item.producto_id);
-                      const precio = Number(prod?.precio_principal ?? 0);
+                      const precio = getPrecioFinal(item.producto_id);
                       const subtotal = precio * (Number(item.cantidad) || 0);
                       return (
                         <tr key={item.producto_id} className="border-b border-border/40">
@@ -877,8 +876,7 @@ export default function ClienteFormPage() {
                       </td>
                       <td className="py-2 text-right text-[14px] font-bold text-primary">
                         {currFmt(pedidoItems.reduce((s, i) => {
-                          const p = productosSelect?.find(p => p.id === i.producto_id);
-                          return s + (Number(p?.precio_principal ?? 0) * (Number(i.cantidad) || 0));
+                          return s + (getPrecioFinal(i.producto_id) * (Number(i.cantidad) || 0));
                         }, 0))}
                       </td>
                       <td></td>
