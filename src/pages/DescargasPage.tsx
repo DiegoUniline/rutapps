@@ -227,6 +227,34 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const abonosClientesList = Object.values(abonosPorClienteMap);
   const clienteIdsAbonos = abonosClientesList.map(a => a.cliente_id).filter(Boolean) as string[];
 
+  // Saldo pendiente actual de los clientes con abonos (informativo)
+  const { data: saldosClientes } = useQuery({
+    queryKey: ['descarga-saldos-clientes', descarga.empresa_id, clienteIdsAbonos.slice().sort().join(',')],
+    enabled: clienteIdsAbonos.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('cliente_id, saldo_pendiente')
+        .eq('empresa_id', descarga.empresa_id)
+        .in('cliente_id', clienteIdsAbonos)
+        .neq('status', 'cancelado')
+        .gt('saldo_pendiente', 0);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const saldoPorCliente: Record<string, number> = {};
+  (saldosClientes || []).forEach((v: any) => {
+    saldoPorCliente[v.cliente_id] = (saldoPorCliente[v.cliente_id] || 0) + (Number(v.saldo_pendiente) || 0);
+  });
+  const abonosClientes = abonosClientesList
+    .map(a => ({
+      cliente: a.cliente,
+      abonado: a.abonado,
+      saldoPendiente: a.cliente_id ? (saldoPorCliente[a.cliente_id] || 0) : 0,
+    }))
+    .sort((a, b) => a.cliente.localeCompare(b.cliente));
+
   // Aggregate products sold
   const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
   ventasActivas.forEach((v: any) => {
