@@ -215,6 +215,18 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto);
   });
 
+  // Abonos por cliente (informativo): suma cobros del periodo agrupados por cliente + saldo actual
+  const abonosPorClienteMap: Record<string, { cliente: string; cliente_id: string | null; abonado: number }> = {};
+  (cobros || []).forEach((c: any) => {
+    const nombre = c.clientes?.nombre ?? '—';
+    const cid = (c as any).cliente_id ?? null;
+    const key = cid || nombre;
+    if (!abonosPorClienteMap[key]) abonosPorClienteMap[key] = { cliente: nombre, cliente_id: cid, abonado: 0 };
+    abonosPorClienteMap[key].abonado += Number(c.monto) || 0;
+  });
+  const abonosClientesList = Object.values(abonosPorClienteMap);
+  const clienteIdsAbonos = abonosClientesList.map(a => a.cliente_id).filter(Boolean) as string[];
+
   // Aggregate products sold
   const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
   ventasActivas.forEach((v: any) => {
