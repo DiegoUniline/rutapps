@@ -1037,50 +1037,111 @@ export default function PuntoVentaPage() {
             </div>
           )}
 
-          {/* Product grid */}
+          {/* Product list */}
           <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
-            <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'} gap-1.5`}>
-              {filteredProducts.map(p => {
-                const inCart = cart.find(c => c.producto_id === p.id);
-                const stock = p.cantidad ?? 0;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    className={`relative rounded-lg border p-2 text-left transition-all active:scale-[0.97] hover:shadow-sm ${
-                      inCart
-                        ? 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20'
-                        : 'border-border bg-card hover:border-primary/20'
-                    }`}
-                  >
-                    {inCart && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shadow-sm">
-                        {inCart.cantidad}
-                      </div>
+            {isMobile ? (
+              <div className="border border-border rounded-lg overflow-hidden bg-card">
+                <table className="w-full text-[12px]">
+                  <thead className="bg-accent/40 text-muted-foreground sticky top-0">
+                    <tr>
+                      <th className="text-left px-2 py-1.5 font-medium">Producto</th>
+                      <th className="text-right px-2 py-1.5 font-medium w-16">Precio</th>
+                      <th className="text-right px-2 py-1.5 font-medium w-12">Stock</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(p => {
+                      const inCart = cart.find(c => c.producto_id === p.id);
+                      const stock = p.cantidad ?? 0;
+                      const unidad = (p as any).es_granel ? (p as any).unidad_granel : 'pz';
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => addToCart(p)}
+                          className={`border-t border-border/50 active:bg-accent/60 cursor-pointer ${inCart ? 'bg-primary/[0.04]' : ''}`}
+                        >
+                          <td className="px-2 py-1.5">
+                            <div className="flex items-center gap-1.5">
+                              {inCart && (
+                                <span className="shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+                                  {inCart.cantidad}
+                                </span>
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground truncate leading-tight">{p.nombre}</p>
+                                <p className="text-[9px] text-muted-foreground font-mono">{p.codigo}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-bold text-primary whitespace-nowrap">
+                            {fmtM(getProductPricing(p).displayPrice)}
+                            <span className="text-[8px] font-normal text-muted-foreground ml-0.5">/{unidad}</span>
+                          </td>
+                          <td className={`px-2 py-1.5 text-right font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                            {fmtNum(stock)}
+                          </td>
+                          <td className="px-1 py-1.5 text-right">
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground inline" />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredProducts.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-12 text-center">
+                          <Package className="h-8 w-8 text-muted-foreground/30 mx-auto mb-1.5" />
+                          <p className="text-[12px] text-muted-foreground">No se encontraron productos</p>
+                        </td>
+                      </tr>
                     )}
-                    {p.imagen_url ? (
-                      <div className="w-full aspect-[4/3] rounded bg-accent/50 mb-1 flex items-center justify-center overflow-hidden">
-                        <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-1.5">
+                {filteredProducts.map(p => {
+                  const inCart = cart.find(c => c.producto_id === p.id);
+                  const stock = p.cantidad ?? 0;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => addToCart(p)}
+                      className={`relative rounded-lg border p-2 text-left transition-all active:scale-[0.97] hover:shadow-sm ${
+                        inCart
+                          ? 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20'
+                          : 'border-border bg-card hover:border-primary/20'
+                      }`}
+                    >
+                      {inCart && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shadow-sm">
+                          {inCart.cantidad}
+                        </div>
+                      )}
+                      {p.imagen_url ? (
+                        <div className="w-full aspect-[4/3] rounded bg-accent/50 mb-1 flex items-center justify-center overflow-hidden">
+                          <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      ) : null}
+                      <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
+                      <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                      <div className="flex items-baseline justify-between mt-0.5">
+                        <span className="text-[11px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[7px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
+                        <span className={`text-[8px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                          {fmtNum(stock)}
+                        </span>
                       </div>
-                    ) : null}
-                    <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                    <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
-                    <div className="flex items-baseline justify-between mt-0.5">
-                      <span className="text-[11px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[7px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
-                      <span className={`text-[8px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                        {fmtNum(stock)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-              {filteredProducts.length === 0 && (
-                <div className="col-span-full py-16 text-center">
-                  <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
-                  <p className="text-[13px] text-muted-foreground">No se encontraron productos</p>
-                </div>
-              )}
-            </div>
+                    </button>
+                  );
+                })}
+                {filteredProducts.length === 0 && (
+                  <div className="col-span-full py-16 text-center">
+                    <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-[13px] text-muted-foreground">No se encontraron productos</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
