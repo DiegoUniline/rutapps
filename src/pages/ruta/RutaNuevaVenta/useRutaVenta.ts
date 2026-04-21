@@ -276,7 +276,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       });
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
-    setBannerDismissed(true);
     let msg = `${newItems.length} productos cargados (${label})`;
     if (cappedCount > 0) msg += ` · ${cappedCount} ajustados al stock`;
     if (skippedCount > 0) msg += ` · ${skippedCount} sin stock`;
@@ -313,7 +312,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       });
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
-    setBannerDismissed(true);
     toast.success(`${newItems.length} productos de la última venta`);
   };
 
