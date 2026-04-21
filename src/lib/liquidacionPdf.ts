@@ -334,7 +334,35 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
       },
     );
   }
-  if (notas) {
+
+  // ═══ ABONOS POR CLIENTE (informativo) ═══
+  if (params.abonosClientes && params.abonosClientes.length > 0) {
+    y = checkPageBreak(doc, y, 30);
+    y = await drawCleanTable(doc, y,
+      ['Cliente', 'Abonado en periodo', 'Saldo pendiente actual', 'Estado'],
+      params.abonosClientes.map(a => [
+        a.cliente,
+        { content: `${sym}${fmtCurrency(a.abonado)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${sym}${fmtCurrency(a.saldoPendiente)}`, styles: { halign: 'right' } },
+        {
+          content: a.saldoPendiente <= 0.009 ? 'Liquidado' : 'Pendiente',
+          styles: { halign: 'center', fontStyle: 'bold', textColor: a.saldoPendiente <= 0.009 ? C.green : C.muted },
+        },
+      ]),
+      {
+        1: { cellWidth: 36, halign: 'right' },
+        2: { cellWidth: 38, halign: 'right' },
+        3: { cellWidth: 24, halign: 'center' },
+      },
+    );
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...C.muted);
+    doc.text('* Sección informativa: estos importes no afectan el cuadre de efectivo.', ML, y);
+    y += 5;
+  }
+
+
     y = drawNotes(doc, y, notas, 'Observaciones del vendedor');
   }
   if (notasSupervisor) {
