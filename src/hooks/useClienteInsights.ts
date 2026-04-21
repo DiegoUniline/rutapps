@@ -64,11 +64,15 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
   }, [ventas, clienteId]);
 
   // ── Last sale + lineas (for "Repetir última venta") ──
+  // Prefer offline cache; fall back to online fetch if cache is cold/empty.
   const lastSaleLineas = useMemo(() => {
-    if (!clientSales.length || !ventaLineas) return [] as any[];
-    const lastId = clientSales[0]?.id;
-    return (ventaLineas as any[]).filter(l => l.venta_id === lastId);
-  }, [clientSales, ventaLineas]);
+    if (clientSales.length && ventaLineas) {
+      const lastId = clientSales[0]?.id;
+      const offline = (ventaLineas as any[]).filter(l => l.venta_id === lastId);
+      if (offline.length > 0) return offline;
+    }
+    return lastSaleOnline?.lineas ?? [];
+  }, [clientSales, ventaLineas, lastSaleOnline]);
 
   // ── Manual configured list (cliente_pedido_sugerido) ──
   const manualList: SuggestedItem[] = useMemo(() => {
