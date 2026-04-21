@@ -133,7 +133,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
-        .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
+        .select('id, monto, metodo_pago, fecha, cliente_id, clientes(nombre), referencia')
         .eq('empresa_id', descarga.empresa_id)
         .eq('user_id', vendedorProfile!.user_id)
         .neq('status', 'cancelado')
