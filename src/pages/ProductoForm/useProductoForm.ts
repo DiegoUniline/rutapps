@@ -25,7 +25,7 @@ async function quickCreateCatalog(
 }
 
 export const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }> = {
-  codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
+  codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0, precio_sugerido_publico: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
   manejar_lotes: false, factor_conversion: 1, permitir_descuento: false,
