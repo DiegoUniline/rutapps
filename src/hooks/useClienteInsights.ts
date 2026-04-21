@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { usePromocionesActivas } from '@/hooks/usePromociones';
+import { supabase } from '@/lib/supabase';
 
 interface SuggestedItem {
   producto_id: string;
@@ -16,14 +18,6 @@ interface MissedProduct {
   ultimaCantidad: number;
 }
 
-/**
- * Centralized client insights for the mobile sales flow:
- *  - Smart suggested order (manual list + last 3 sales avg)
- *  - Last sale items (for "Repetir última venta")
- *  - Days since last visit
- *  - Missed products (used to buy, no longer ordering)
- *  - Active promotions applicable to this client / zone
- */
 export function useClienteInsights(clienteId: string | null, clienteData?: any) {
   const { empresa } = useAuth();
   const enabled = !!empresa?.id && !!clienteId;
@@ -33,6 +27,31 @@ export function useClienteInsights(clienteId: string | null, clienteData?: any) 
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const { data: promosAll } = usePromocionesActivas();
+
+  // Online fallback: ensures "Repetir última venta" works even when offline cache is cold.
+  const { data: lastSaleOnline } = useQuery({
+    queryKey: ['cliente-last-sale', empresa?.id, clienteId],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: vs } = await supabase
+        .from('ventas')
+        .select('id, fecha, status, tipo')
+        .eq('empresa_id', empresa!.id)
+        .eq('cliente_id', clienteId!)
+        .in('status', ['confirmado', 'entregado', 'facturado'])
+        .neq('tipo', 'saldo_inicial')
+        .order('fecha', { ascending: false })
+        .limit(1);
+      const last = vs?.[0];
+      if (!last) return { lineas: [] as any[] };
+      const { data: ls } = await supabase
+        .from('venta_lineas')
+        .select('producto_id, cantidad, venta_id')
+        .eq('venta_id', last.id);
+      return { lineas: ls ?? [] };
+    },
+  });
 
   // ── Client's recent sales (sorted desc) ──
   const clientSales = useMemo(() => {
