@@ -798,39 +798,73 @@ export default function ClienteFormPage() {
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-1.5 font-medium">Producto</th>
                       <th className="text-left py-1.5 font-medium w-20">Código</th>
+                      <th className="text-right py-1.5 font-medium w-24">Precio</th>
                       <th className="text-center py-1.5 font-medium w-28">Cantidad</th>
+                      <th className="text-right py-1.5 font-medium w-24">Subtotal</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pedidoItems.map(item => (
-                      <tr key={item.producto_id} className="border-b border-border/40">
-                        <td className="py-1.5 text-foreground">{item.nombre}</td>
-                        <td className="py-1.5 text-muted-foreground font-mono">{item.codigo}</td>
-                        <td className="py-1.5">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad - 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80">
-                              <Minus className="h-3 w-3" />
+                    {pedidoItems.map((item, idx) => {
+                      const prod = productosSelect?.find(p => p.id === item.producto_id);
+                      const precio = Number(prod?.precio_principal ?? 0);
+                      const subtotal = precio * (Number(item.cantidad) || 0);
+                      return (
+                        <tr key={item.producto_id} className="border-b border-border/40">
+                          <td className="py-1.5 text-foreground">{item.nombre}</td>
+                          <td className="py-1.5 text-muted-foreground font-mono">{item.codigo}</td>
+                          <td className="py-1.5 text-right text-muted-foreground">{currFmt(precio)}</td>
+                          <td className="py-1.5">
+                            <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad - 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80" tabIndex={-1}>
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <input
+                                type="number"
+                                data-pedido-qty-idx={idx}
+                                className="w-12 text-center bg-transparent text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={item.cantidad}
+                                onFocus={e => e.currentTarget.select()}
+                                onChange={e => updatePedidoQty(item.producto_id, parseInt(e.target.value) || 0)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const next = document.querySelector<HTMLInputElement>(`input[data-pedido-qty-idx="${idx + 1}"]`);
+                                    if (next) { next.focus(); next.select(); }
+                                    else (e.currentTarget as HTMLInputElement).blur();
+                                  }
+                                }}
+                              />
+                              <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad + 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80" tabIndex={-1}>
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-1.5 text-right font-medium text-foreground">{currFmt(subtotal)}</td>
+                          <td className="py-1.5">
+                            <button onClick={() => removePedidoItem(item.producto_id)} className="text-destructive hover:text-destructive/80" tabIndex={-1}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                            <input
-                              type="number"
-                              className="w-12 text-center bg-transparent text-foreground font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.cantidad}
-                              onChange={e => updatePedidoQty(item.producto_id, parseInt(e.target.value) || 0)}
-                            />
-                            <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad + 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80">
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="py-1.5">
-                          <button onClick={() => removePedidoItem(item.producto_id)} className="text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border">
+                      <td colSpan={3} className="py-2 text-right text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Estimado del pedido</td>
+                      <td className="py-2 text-center text-[11px] text-muted-foreground">
+                        {pedidoItems.reduce((s, i) => s + (Number(i.cantidad) || 0), 0)} u.
+                      </td>
+                      <td className="py-2 text-right text-[14px] font-bold text-primary">
+                        {currFmt(pedidoItems.reduce((s, i) => {
+                          const p = productosSelect?.find(p => p.id === i.producto_id);
+                          return s + (Number(p?.precio_principal ?? 0) * (Number(i.cantidad) || 0));
+                        }, 0))}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
                 </table>
               ) : (
                 <p className="text-[12px] text-muted-foreground text-center py-6 border border-dashed border-border rounded-md">
