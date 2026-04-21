@@ -447,6 +447,12 @@ export default function ClienteFormPage() {
     setPedidoDirty(true);
   };
 
+  // Always render alphabetically (A-Z) by product name
+  const pedidoItemsSorted = useMemo(
+    () => [...pedidoItems].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [pedidoItems],
+  );
+
   const filteredPedidoProducts = productosSelect?.filter(p =>
     !pedidoSearch || p.nombre.toLowerCase().includes(pedidoSearch.toLowerCase()) || p.codigo.toLowerCase().includes(pedidoSearch.toLowerCase())
   ).filter(p => !pedidoItems.find(i => i.producto_id === p.id));
