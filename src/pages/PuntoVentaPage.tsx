@@ -1656,6 +1656,7 @@ export default function PuntoVentaPage() {
                       iva_monto: l.iva_monto,
                       ieps_monto: l.ieps_monto,
                       producto_id: l.producto_id,
+                      precio_sugerido_publico: l.precio_sugerido_publico,
                     })),
                     montoRecibido: lastVentaData.montoRecibido,
                     cambio: lastVentaData.cambio,
