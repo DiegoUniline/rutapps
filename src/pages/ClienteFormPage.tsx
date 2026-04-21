@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { usePermisos } from '@/hooks/usePermisos';
 import { compressPhoto } from '@/lib/imageCompressor';
@@ -298,12 +298,14 @@ export default function ClienteFormPage() {
 
   useEffect(() => {
     if (pedidoSugerido) {
-      setPedidoItems(pedidoSugerido.map(ps => ({
+      const mapped = pedidoSugerido.map(ps => ({
         producto_id: ps.producto_id,
         nombre: ps.productos?.nombre ?? '',
         codigo: ps.productos?.codigo ?? '',
         cantidad: ps.cantidad,
-      })));
+      }));
+      mapped.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+      setPedidoItems(mapped);
     }
   }, [pedidoSugerido]);
 
@@ -444,6 +446,12 @@ export default function ClienteFormPage() {
     setPedidoItems(prev => prev.filter(i => i.producto_id !== productoId));
     setPedidoDirty(true);
   };
+
+  // Always render alphabetically (A-Z) by product name
+  const pedidoItemsSorted = useMemo(
+    () => [...pedidoItems].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [pedidoItems],
+  );
 
   const filteredPedidoProducts = productosSelect?.filter(p =>
     !pedidoSearch || p.nombre.toLowerCase().includes(pedidoSearch.toLowerCase()) || p.codigo.toLowerCase().includes(pedidoSearch.toLowerCase())
@@ -824,7 +832,7 @@ export default function ClienteFormPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pedidoItems.map((item, idx) => {
+                    {pedidoItemsSorted.map((item, idx) => {
                       const precio = getPrecioFinal(item.producto_id);
                       const subtotal = precio * (Number(item.cantidad) || 0);
                       return (
