@@ -55,6 +55,7 @@ interface PedidoPdfParams {
     ieps_pct: number;
     total: number;
     producto_id?: string;
+    precio_sugerido_publico?: number;
   }[];
   entregas: {
     folio: string;
@@ -121,6 +122,7 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
 
   // ── PRODUCTS TABLE (with inline promo rows) ──
+  const showSugerido = lineas.some(l => (l.precio_sugerido_publico ?? 0) > 0);
   const tableRows: any[][] = [];
   for (const l of lineas) {
     tableRows.push([
@@ -134,6 +136,11 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
         : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
       { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
       { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
+      ...(showSugerido ? [
+        (l.precio_sugerido_publico ?? 0) > 0
+          ? { content: `${s}${fmtCurrency(l.precio_sugerido_publico!)}`, styles: { halign: 'right', fontStyle: 'bold' as const } }
+          : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
+      ] : []),
       { content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]);
     // Insert promo sub-rows for this product
@@ -141,14 +148,14 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     for (const lp of linePromos) {
       tableRows.push([
         '',
-        { content: `🏷️ ${lp.descripcion}`, colSpan: 6, styles: { textColor: [30, 130, 76], fontStyle: 'italic', fontSize: 7 } },
+        { content: `🏷️ ${lp.descripcion}`, colSpan: showSugerido ? 7 : 6, styles: { textColor: [30, 130, 76], fontStyle: 'italic', fontSize: 7 } },
         '',
         { content: `-${s}${fmtCurrency(lp.descuento)}`, styles: { halign: 'right', textColor: [30, 130, 76], fontStyle: 'bold', fontSize: 7 } },
       ]);
     }
   }
   y = await drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
+    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', ...(showSugerido ? ['Sug. público'] : []), 'Importe'],
     tableRows,
     {
       0: { cellWidth: 20 },
@@ -158,7 +165,7 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
       5: { cellWidth: 14, halign: 'center' },
       6: { cellWidth: 14, halign: 'center' },
       7: { cellWidth: 14, halign: 'center' },
-      8: { cellWidth: 24, halign: 'right' },
+      ...(showSugerido ? { 8: { cellWidth: 22, halign: 'right' as const }, 9: { cellWidth: 22, halign: 'right' as const } } : { 8: { cellWidth: 24, halign: 'right' as const } }),
     },
   );
 

@@ -130,7 +130,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio')
+        .select('id, codigo, nombre, precio_principal, precio_sugerido_publico, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -601,7 +601,7 @@ export default function PuntoVentaPage() {
         venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
         clienteNombre: lastVentaData.clienteNombre,
         vendedorNombre: profile?.nombre ?? '',
-        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
+        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
         saldoAnterior: lastVentaData.saldoAnterior,
         saldoNuevo: lastVentaData.saldoNuevoCalc,
@@ -803,6 +803,7 @@ export default function PuntoVentaPage() {
         lineas: cart.map(item => {
           const chargedLineTotal = getChargedLineTotal(item);
           const breakdown = splitFinalGross(item, chargedLineTotal);
+          const prod: any = productos?.find((p: any) => p.id === item.producto_id);
           return {
             nombre: item.nombre,
             cantidad: item.cantidad,
@@ -812,6 +813,7 @@ export default function PuntoVentaPage() {
             ieps_monto: breakdown.ieps,
             total: chargedLineTotal,
             producto_id: item.producto_id,
+            precio_sugerido_publico: Number(prod?.precio_sugerido_publico) || 0,
           };
         }),
         subtotal: totals.subtotal,
@@ -1654,6 +1656,7 @@ export default function PuntoVentaPage() {
                       iva_monto: l.iva_monto,
                       ieps_monto: l.ieps_monto,
                       producto_id: l.producto_id,
+                      precio_sugerido_publico: l.precio_sugerido_publico,
                     })),
                     montoRecibido: lastVentaData.montoRecibido,
                     cambio: lastVentaData.cambio,
@@ -1681,7 +1684,7 @@ export default function PuntoVentaPage() {
                     venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
                     clienteNombre: lastVentaData.clienteNombre,
                     vendedorNombre: profile?.nombre ?? '',
-                    lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
+                    lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,
                     saldoNuevo: lastVentaData.saldoNuevoCalc,

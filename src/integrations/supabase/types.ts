@@ -3379,6 +3379,7 @@ export type Database = {
           pct_comision: number | null
           permitir_descuento: boolean | null
           precio_principal: number | null
+          precio_sugerido_publico: number
           proveedor_id: string | null
           se_puede_comprar: boolean | null
           se_puede_inventariar: boolean | null
@@ -3431,6 +3432,7 @@ export type Database = {
           pct_comision?: number | null
           permitir_descuento?: boolean | null
           precio_principal?: number | null
+          precio_sugerido_publico?: number
           proveedor_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null
@@ -3483,6 +3485,7 @@ export type Database = {
           pct_comision?: number | null
           permitir_descuento?: boolean | null
           precio_principal?: number | null
+          precio_sugerido_publico?: number
           proveedor_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null

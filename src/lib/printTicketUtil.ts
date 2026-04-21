@@ -110,6 +110,7 @@ export function buildTicketDataFromVenta(params: {
     ieps_monto?: number;
     descuento_pct?: number;
     producto_id?: string;
+    precio_sugerido_publico?: number;
   }>;
   montoRecibido?: number;
   cambio?: number;
@@ -150,6 +151,7 @@ export function buildTicketDataFromVenta(params: {
       ieps_monto: l.ieps_monto ?? 0,
       descuento_pct: l.descuento_pct ?? 0,
       producto_id: l.producto_id,
+      precio_sugerido_publico: l.precio_sugerido_publico,
     })),
     subtotal: venta.subtotal ?? 0,
     iva: venta.iva_total ?? 0,

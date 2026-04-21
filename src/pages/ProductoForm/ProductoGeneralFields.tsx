@@ -86,6 +86,14 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
         />
         <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+        <OdooField
+          label="Precio sugerido público"
+          value={(form as any).precio_sugerido_publico}
+          type="number"
+          help
+          onChange={v => set('precio_sugerido_publico' as any, +v)}
+          format={v => `${symbol} ${(Number(v) || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+        />
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />
