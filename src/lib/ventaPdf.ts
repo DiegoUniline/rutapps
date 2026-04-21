@@ -102,8 +102,10 @@ export async function generarVentaPdf(params: VentaPdfParams): Promise<Blob> {
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
 
   // ── PRODUCTS TABLE ──
+  const showSugerido = lineas.some(l => (l.precio_sugerido_publico ?? 0) > 0);
+  const head = ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', ...(showSugerido ? ['Sug. público'] : []), 'Importe'];
   y = await drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
+    head,
     lineas.map(l => [
       { content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } },
       l.nombre,
@@ -115,6 +117,11 @@ export async function generarVentaPdf(params: VentaPdfParams): Promise<Blob> {
         : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
       { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
       { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
+      ...(showSugerido ? [
+        (l.precio_sugerido_publico ?? 0) > 0
+          ? { content: `${s}${fmtCurrency(l.precio_sugerido_publico!)}`, styles: { halign: 'right', textColor: C.text, fontStyle: 'bold' as const } }
+          : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
+      ] : []),
       { content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
@@ -125,7 +132,7 @@ export async function generarVentaPdf(params: VentaPdfParams): Promise<Blob> {
       5: { cellWidth: 14, halign: 'center' },
       6: { cellWidth: 14, halign: 'center' },
       7: { cellWidth: 14, halign: 'center' },
-      8: { cellWidth: 24, halign: 'right' },
+      ...(showSugerido ? { 8: { cellWidth: 22, halign: 'right' as const }, 9: { cellWidth: 22, halign: 'right' as const } } : { 8: { cellWidth: 24, halign: 'right' as const } }),
     },
   );
 
