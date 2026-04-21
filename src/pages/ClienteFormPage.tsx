@@ -416,11 +416,8 @@ export default function ClienteFormPage() {
   };
 
   const updatePedidoQty = (productoId: string, qty: number) => {
-    if (qty <= 0) {
-      setPedidoItems(prev => prev.filter(i => i.producto_id !== productoId));
-    } else {
-      setPedidoItems(prev => prev.map(i => i.producto_id === productoId ? { ...i, cantidad: qty } : i));
-    }
+    const safe = isNaN(qty) || qty < 0 ? 0 : qty;
+    setPedidoItems(prev => prev.map(i => i.producto_id === productoId ? { ...i, cantidad: safe } : i));
     setPedidoDirty(true);
   };
 
