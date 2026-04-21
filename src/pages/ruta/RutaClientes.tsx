@@ -64,6 +64,20 @@ export default function RutaClientes() {
     refetchInterval: 60_000,
   });
 
+  // Reconcile: drop local visits that have NO DB record (ghost visits from cancelled flows)
+  useEffect(() => {
+    if (!dbVisitas) return;
+    const dbSet = new Set((dbVisitas as any[]).map(v => v.cliente_id).filter(Boolean));
+    setLocalVisited(prev => {
+      const cleaned = new Set([...prev].filter(id => dbSet.has(id)));
+      if (cleaned.size !== prev.size) {
+        saveLocalVisitedSet(cleaned);
+        return cleaned;
+      }
+      return prev;
+    });
+  }, [dbVisitas]);
+
   // Merge DB visits + local (offline) visits
   const visited = useMemo(() => {
     const merged = new Set(localVisited);
