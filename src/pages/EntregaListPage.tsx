@@ -117,9 +117,8 @@ export default function EntregaListPage() {
         const eid = (entrega as any).id;
         const estatus = (entrega as any).status;
 
-        // If borrador → surtir (deduct stock, mark lines, set surtido)
+        // If borrador → surtir (deduct stock atomically via RPC, mark lines, set surtido)
         if (estatus === 'borrador') {
-          // Get lines
           const { data: lineas } = await supabase
             .from('entrega_lineas')
             .select('id, producto_id, cantidad_pedida, hecho')
@@ -127,42 +126,23 @@ export default function EntregaListPage() {
 
           const pendientes = (lineas ?? []).filter((l: any) => !l.hecho);
 
-          // Validate stock
+          // Use atomic RPC for each line — this correctly:
+          //  • locks stock_almacen row (FOR UPDATE) preventing race conditions
+          //  • deducts from stock_almacen (per-warehouse stock used by Ubicaciones view)
+          //  • inserts movimiento in kardex
+          //  • updates entrega_lineas (cantidad_entregada, almacen_origen_id, hecho)
+          //  • validates stock against vender_sin_stock flag
           for (const l of pendientes) {
-            const { data: prod } = await supabase.from('productos').select('cantidad, nombre').eq('id', l.producto_id).single();
-            const stock = prod?.cantidad ?? 0;
-            if (l.cantidad_pedida > stock) {
-              throw new Error(`Stock insuficiente para "${prod?.nombre}". Disponible: ${stock}, Pedido: ${l.cantidad_pedida}`);
-            }
-          }
-
-          // Process
-          for (const l of pendientes) {
-            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-            const stock = prod?.cantidad ?? 0;
-
-            await supabase.from('productos').update({
-              cantidad: Math.max(0, stock - l.cantidad_pedida),
-            } as any).eq('id', l.producto_id);
-
-            await supabase.from('entrega_lineas').update({
-              cantidad_entregada: l.cantidad_pedida,
-              almacen_origen_id: almacenId,
-              hecho: true,
-            } as any).eq('id', l.id);
-
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id,
-              tipo: 'salida',
-              producto_id: l.producto_id,
-              cantidad: l.cantidad_pedida,
-              almacen_origen_id: almacenId,
-              referencia_tipo: 'entrega',
-              referencia_id: eid,
-              user_id: user?.id,
-              fecha: today,
-              notas: 'Surtido rápido masivo',
-            } as any);
+            const { error: rpcError } = await supabase.rpc('surtir_linea_entrega', {
+              p_linea_id: l.id,
+              p_producto_id: l.producto_id,
+              p_almacen_origen_id: almacenId,
+              p_cantidad_surtida: l.cantidad_pedida,
+              p_entrega_id: eid,
+              p_empresa_id: empresa!.id,
+              p_user_id: user?.id,
+            });
+            if (rpcError) throw new Error(rpcError.message);
           }
 
           // Update status
