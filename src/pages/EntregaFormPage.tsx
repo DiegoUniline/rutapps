@@ -26,6 +26,10 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const STEPS: { key: StatusEntrega; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
@@ -113,10 +117,12 @@ export default function EntregaFormPage() {
   };
 
   // Mark a line as "not fulfilled" — sets cantidad_entregada=0 + hecho=true, no stock movement
-  const handleNoSurtirLinea = async (idx: number) => {
+  const [noSurtirIdx, setNoSurtirIdx] = useState<number | null>(null);
+  const confirmNoSurtirLinea = async () => {
+    if (noSurtirIdx === null) return;
+    const idx = noSurtirIdx;
     const l = lineas[idx];
-    if (!l.id) return;
-    if (!confirm('¿Marcar esta línea como NO surtida? No se descontará stock y la entrega podrá continuar sin este producto.')) return;
+    if (!l?.id) { setNoSurtirIdx(null); return; }
     try {
       const { error } = await supabase
         .from('entrega_lineas')
@@ -132,6 +138,8 @@ export default function EntregaFormPage() {
       qc.invalidateQueries({ queryKey: ['entrega'] });
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setNoSurtirIdx(null);
     }
   };
 
@@ -610,7 +618,7 @@ export default function EntregaFormPage() {
                               variant="ghost"
                               className="text-[11px] h-7 text-muted-foreground hover:text-destructive"
                               title="Marcar como no surtida (no se descuenta stock)"
-                              onClick={() => handleNoSurtirLinea(idx)}
+                              onClick={() => setNoSurtirIdx(idx)}
                             >
                               <X className="h-3 w-3" /> No surtir
                             </Button>
@@ -764,6 +772,23 @@ export default function EntregaFormPage() {
         tipo="entrega"
         referencia_id={form.id}
       />
+
+      {/* Confirm "No surtir" línea */}
+      <AlertDialog open={noSurtirIdx !== null} onOpenChange={(o) => { if (!o) setNoSurtirIdx(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Marcar línea como no surtida?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No se descontará stock de ningún almacén y la entrega podrá continuar sin este producto.
+              La línea quedará registrada con cantidad <span className="font-semibold text-foreground">0</span> para trazabilidad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNoSurtirLinea}>Sí, no surtir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
