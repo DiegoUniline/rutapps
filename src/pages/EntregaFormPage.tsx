@@ -618,7 +618,7 @@ export default function EntregaFormPage() {
                               variant="ghost"
                               className="text-[11px] h-7 text-muted-foreground hover:text-destructive"
                               title="Marcar como no surtida (no se descuenta stock)"
-                              onClick={() => handleNoSurtirLinea(idx)}
+                              onClick={() => setNoSurtirIdx(idx)}
                             >
                               <X className="h-3 w-3" /> No surtir
                             </Button>
