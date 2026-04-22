@@ -104,6 +104,54 @@ export default function RutaEntregaDetalle() {
     setSaving(true);
     try {
       const now = new Date().toISOString();
+
+      // 1) Descontar del almacén del vendedor (ruta) las cantidades realmente surtidas.
+      //    Esto reemplaza el descuento que antes hacía el trigger del pedido,
+      //    el cual ya no corre cuando hay entregas asociadas.
+      const vendedorId = (entrega as any)?.vendedor_ruta_id || (entrega as any)?.vendedor_id;
+      if (vendedorId) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('almacen_id')
+          .eq('id', vendedorId)
+          .maybeSingle();
+        const almacenVendedorId = prof?.almacen_id;
+
+        if (almacenVendedorId) {
+          const lineasSurtidas = (lineas ?? []).filter(
+            (l: any) => l.hecho && Number(l.cantidad_entregada) > 0
+          );
+          for (const l of lineasSurtidas) {
+            const cant = Number(l.cantidad_entregada) || 0;
+            const { data: sa } = await supabase
+              .from('stock_almacen')
+              .select('id, cantidad')
+              .eq('almacen_id', almacenVendedorId)
+              .eq('producto_id', l.producto_id)
+              .maybeSingle();
+            if (sa) {
+              await supabase.from('stock_almacen').update({
+                cantidad: Math.max(0, Number(sa.cantidad) - cant),
+                updated_at: new Date().toISOString(),
+              } as any).eq('id', sa.id);
+            }
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: (entrega as any).empresa_id,
+              tipo: 'salida',
+              producto_id: l.producto_id,
+              cantidad: cant,
+              almacen_origen_id: almacenVendedorId,
+              referencia_tipo: 'entrega',
+              referencia_id: id!,
+              user_id: user?.id ?? null,
+              fecha: now.slice(0, 10),
+              notas: `Entrega ${(entrega as any).folio ?? ''} (descuento ruta)`,
+            } as any);
+          }
+        }
+      }
+
+      // 2) Marcar la entrega como hecha
       const { error } = await supabase.from('entregas')
         .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
         .eq('id', id!);
@@ -115,6 +163,8 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-venta'] });
       queryClient.invalidateQueries({ queryKey: ['venta'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
