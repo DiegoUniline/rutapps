@@ -772,6 +772,23 @@ export default function EntregaFormPage() {
         tipo="entrega"
         referencia_id={form.id}
       />
+
+      {/* Confirm "No surtir" línea */}
+      <AlertDialog open={noSurtirIdx !== null} onOpenChange={(o) => { if (!o) setNoSurtirIdx(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Marcar línea como no surtida?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No se descontará stock de ningún almacén y la entrega podrá continuar sin este producto.
+              La línea quedará registrada con cantidad <span className="font-semibold text-foreground">0</span> para trazabilidad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNoSurtirLinea}>Sí, no surtir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
