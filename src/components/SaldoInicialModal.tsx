@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Loader2 } from 'lucide-react';
+import { todayInTimezone } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -20,7 +21,7 @@ export default function SaldoInicialModal({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const [clienteId, setClienteId] = useState('');
   const [monto, setMonto] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(todayInTimezone(empresa?.zona_horaria));
   const [concepto, setConcepto] = useState('Saldo anterior');
   const [saving, setSaving] = useState(false);
 
@@ -46,7 +47,7 @@ export default function SaldoInicialModal({ open, onOpenChange }: Props) {
   const reset = () => {
     setClienteId('');
     setMonto('');
-    setFecha(new Date().toISOString().slice(0, 10));
+    setFecha(todayInTimezone(empresa?.zona_horaria));
     setConcepto('Saldo anterior');
   };
 

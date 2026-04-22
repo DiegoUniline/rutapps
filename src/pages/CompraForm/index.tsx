@@ -8,16 +8,19 @@ import { CompraHeader } from './CompraHeader';
 import { CompraLineasTab } from './CompraLineasTab';
 import { CompraPagosTab } from './CompraPagosTab';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
+import { todayInTimezone } from '@/lib/utils';
 
 export default function CompraFormPage() {
   const h = useCompraForm();
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const [activeTab, setActiveTab] = useState('lineas');
   if (!h.isNew && h.isLoading) return <div className="p-6"><TableSkeleton rows={6} cols={4} /></div>;
 
   return (
     <><div className="p-4 space-y-4 min-h-full">
-      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
+      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: todayInTimezone(empresa?.zona_horaria), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

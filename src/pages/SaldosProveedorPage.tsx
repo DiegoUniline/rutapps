@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate, cn } from '@/lib/utils';
+import { fmtDate, cn, todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft,
@@ -157,7 +157,7 @@ export default function SaldosProveedorPage() {
           empresa_id: empresa.id, compra_id: c.id, proveedor_id: selectedId,
           user_id: user.id, monto: c.montoAplicar, metodo_pago: metodoPago,
           referencia: referencia || null, notas: notas || null,
-          fecha: new Date().toISOString().slice(0, 10),
+          fecha: todayInTimezone(empresa?.zona_horaria),
         } as any);
         if (pagoErr) throw pagoErr;
         const nuevoSaldo = Math.max(0, c.saldo_pendiente - c.montoAplicar);
