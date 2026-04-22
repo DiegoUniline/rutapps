@@ -231,7 +231,7 @@ export default function AplicarPagosPage() {
           },
           cobro: {
             id: cobro.id,
-            fecha: new Date().toISOString().slice(0, 10),
+            fecha: todayInTimezone(empresa.zona_horaria),
             monto: totalDistribuido,
             metodo_pago: metodoPago,
             referencia,

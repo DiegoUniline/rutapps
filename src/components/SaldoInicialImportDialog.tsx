@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
 import { parseFile, type ImportColumn } from '@/lib/importUtils';
+import { todayInTimezone } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
 const SALDO_COLUMNS: ImportColumn[] = [
@@ -96,7 +97,7 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
       }
 
       // Parse fecha
-      let fecha = new Date().toISOString().slice(0, 10);
+      let fecha = todayInTimezone(empresa?.zona_horaria);
       const rawFecha = row.fecha ?? row.Fecha;
       if (rawFecha) {
         const d = new Date(rawFecha);

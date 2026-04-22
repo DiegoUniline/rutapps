@@ -20,6 +20,7 @@ import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
+import { todayLocal } from '@/lib/utils';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
@@ -28,7 +29,7 @@ const defaultCliente: Partial<Cliente> = {
   requiere_factura: false, facturama_rfc: '', facturama_razon_social: '',
   facturama_regimen_fiscal: '', facturama_uso_cfdi: '', facturama_cp: '',
   facturama_correo_facturacion: '',
-  fecha_alta: new Date().toISOString().slice(0, 10),
+  fecha_alta: todayLocal(),
 };
 
 const statusSteps = [

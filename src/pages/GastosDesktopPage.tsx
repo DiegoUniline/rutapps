@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -42,7 +42,7 @@ export default function GastosDesktopPage() {
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState(todayInTimezone(empresa?.zona_horaria));
   const [notas, setNotas] = useState('');
 
   const saveGasto = useMutation({
