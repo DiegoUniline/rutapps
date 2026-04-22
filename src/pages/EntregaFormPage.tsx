@@ -595,17 +595,31 @@ export default function EntregaFormPage() {
                       </td>
                       <td className="py-1.5 px-2">
                         {!l.hecho && isBorrador && l.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-[11px] h-7"
-                            disabled={surtirLineaMut.isPending}
-                            onClick={() => handleSurtirLinea(idx)}
-                          >
-                            Surtir
-                          </Button>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-[11px] h-7"
+                              disabled={surtirLineaMut.isPending}
+                              onClick={() => handleSurtirLinea(idx)}
+                            >
+                              Surtir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-[11px] h-7 text-muted-foreground hover:text-destructive"
+                              title="Marcar como no surtida (no se descuenta stock)"
+                              onClick={() => handleNoSurtirLinea(idx)}
+                            >
+                              <X className="h-3 w-3" /> No surtir
+                            </Button>
+                          </div>
                         )}
-                        {l.hecho && (
+                        {l.hecho && cantEntregada === 0 && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                        )}
+                        {l.hecho && cantEntregada > 0 && (
                           <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">Surtido</Badge>
                         )}
                       </td>
