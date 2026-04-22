@@ -105,11 +105,19 @@ export default function RutaEntregaDetalle() {
     try {
       const now = new Date().toISOString();
 
+      // 0) Idempotencia: si ya hay movimientos de salida para esta entrega, no descontamos otra vez
+      const { data: movsExistentes } = await supabase
+        .from('movimientos_inventario')
+        .select('id')
+        .eq('referencia_tipo', 'entrega')
+        .eq('referencia_id', id!)
+        .eq('tipo', 'salida')
+        .limit(1);
+      const yaDescontado = (movsExistentes ?? []).length > 0;
+
       // 1) Descontar del almacén del vendedor (ruta) las cantidades realmente surtidas.
-      //    Esto reemplaza el descuento que antes hacía el trigger del pedido,
-      //    el cual ya no corre cuando hay entregas asociadas.
       const vendedorId = (entrega as any)?.vendedor_ruta_id || (entrega as any)?.vendedor_id;
-      if (vendedorId) {
+      if (!yaDescontado && vendedorId) {
         const { data: prof } = await supabase
           .from('profiles')
           .select('almacen_id')
@@ -151,11 +159,13 @@ export default function RutaEntregaDetalle() {
         }
       }
 
-      // 2) Marcar la entrega como hecha
-      const { error } = await supabase.from('entregas')
-        .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
-        .eq('id', id!);
-      if (error) throw error;
+      // 2) Marcar la entrega como hecha (solo si no lo está ya)
+      if (entrega.status !== 'hecho') {
+        const { error } = await supabase.from('entregas')
+          .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
+          .eq('id', id!);
+        if (error) throw error;
+      }
 
       toast.success('¡Entrega completada!');
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
