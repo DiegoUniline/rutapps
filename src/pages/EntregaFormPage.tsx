@@ -112,6 +112,29 @@ export default function EntregaFormPage() {
     setShowSurtirDialog(true);
   };
 
+  // Mark a line as "not fulfilled" — sets cantidad_entregada=0 + hecho=true, no stock movement
+  const handleNoSurtirLinea = async (idx: number) => {
+    const l = lineas[idx];
+    if (!l.id) return;
+    if (!confirm('¿Marcar esta línea como NO surtida? No se descontará stock y la entrega podrá continuar sin este producto.')) return;
+    try {
+      const { error } = await supabase
+        .from('entrega_lineas')
+        .update({ cantidad_entregada: 0, hecho: true } as any)
+        .eq('id', l.id);
+      if (error) throw error;
+      toast.success('Línea marcada como no surtida');
+      setLineas(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: 0 };
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   // Surtir all pending lines (after confirming almacén)
   const handleSurtirTodoConfirmado = async () => {
     if (!surtirAlmacenId) {
@@ -572,17 +595,31 @@ export default function EntregaFormPage() {
                       </td>
                       <td className="py-1.5 px-2">
                         {!l.hecho && isBorrador && l.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-[11px] h-7"
-                            disabled={surtirLineaMut.isPending}
-                            onClick={() => handleSurtirLinea(idx)}
-                          >
-                            Surtir
-                          </Button>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-[11px] h-7"
+                              disabled={surtirLineaMut.isPending}
+                              onClick={() => handleSurtirLinea(idx)}
+                            >
+                              Surtir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-[11px] h-7 text-muted-foreground hover:text-destructive"
+                              title="Marcar como no surtida (no se descuenta stock)"
+                              onClick={() => handleNoSurtirLinea(idx)}
+                            >
+                              <X className="h-3 w-3" /> No surtir
+                            </Button>
+                          </div>
                         )}
-                        {l.hecho && (
+                        {l.hecho && cantEntregada === 0 && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                        )}
+                        {l.hecho && cantEntregada > 0 && (
                           <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">Surtido</Badge>
                         )}
                       </td>
