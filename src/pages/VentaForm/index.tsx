@@ -23,7 +23,7 @@ import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, todayInTimezone } from '@/lib/utils';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -132,7 +132,7 @@ export default function VentaFormPage() {
               monto: apply,
               metodo_pago: pago.metodo,
               referencia: pago.referencia || null,
-              fecha: new Date().toISOString().slice(0, 10),
+              fecha: todayInTimezone(empresa?.zona_horaria),
             }).select('id').single();
 
             if (cobroData) {

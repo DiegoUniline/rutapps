@@ -6,7 +6,7 @@ import { useVenta } from '@/hooks/useVentas';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { fmtDate, roundMoney } from '@/lib/utils';
+import { fmtDate, roundMoney, todayInTimezone } from '@/lib/utils';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { printTicket } from '@/lib/printTicketUtil';
 import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetoothPrinter';
@@ -169,7 +169,7 @@ export function useVentaDetalle() {
     setSaving(true);
     try {
       if (!empresa?.id) throw new Error('Sin empresa');
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: roundMoney(totalACobrar), metodo_pago: metodoPago, referencia: referenciaPago || null }).select('id').single();
+      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: roundMoney(totalACobrar), metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(empresa.zona_horaria) }).select('id').single();
       if (cobroErr) throw cobroErr;
       const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
       const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
