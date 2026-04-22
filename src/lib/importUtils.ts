@@ -7,6 +7,7 @@
  */
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { todayLocal } from '@/lib/utils';
 
 // ─── Types ──────────────────────────────────────────────────────
 export interface ImportResult {
@@ -268,7 +269,7 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
           producto_id: productId,
           tipo: stockDiff > 0 ? 'entrada' : 'salida',
           cantidad: Math.abs(stockDiff),
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: todayLocal(),
           referencia_tipo: 'ajuste',
           notas: 'Importación masiva de productos',
           user_id: userId,
