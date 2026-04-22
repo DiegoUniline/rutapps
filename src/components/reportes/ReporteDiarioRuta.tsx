@@ -313,7 +313,7 @@ export default function ReporteDiarioRuta() {
       ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
       ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
       ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${fmt(totalDevCredito)}`) : ''}
-      <tr class="res-total"><td>Efectivo esperado</td><td>${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
+      <tr class="res-total"><td>Efectivo esperado</td><td>${fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
     </table></div>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
@@ -773,7 +773,7 @@ export default function ReporteDiarioRuta() {
               )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
-                <span>{fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
+                <span>{fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
               </div>
             </div>
           </div>
