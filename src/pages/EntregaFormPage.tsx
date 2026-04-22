@@ -26,6 +26,10 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const STEPS: { key: StatusEntrega; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
