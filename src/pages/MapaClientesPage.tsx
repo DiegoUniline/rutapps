@@ -10,7 +10,7 @@ import {
   Search, Filter, MapPin, X, Users, Loader2, CheckCircle2, Navigation,
   Route, Info, Clock, TrendingUp, MapPinOff, Eye, EyeOff, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, todayInTimezone } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import MyLocationMarker from '@/components/MyLocationMarker';
@@ -140,7 +140,7 @@ export default function MapaClientesPage() {
     enabled: !!empresa?.id,
     refetchInterval: 15000,
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayInTimezone(empresa?.zona_horaria);
       const { data } = await supabase
         .from('ventas')
         .select('cliente_id')

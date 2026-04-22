@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { todayInTimezone } from '@/lib/utils';
 
 export interface Promocion {
   id: string;
@@ -52,7 +53,7 @@ export function usePromocionesActivas() {
     queryKey: ['promociones-activas', empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayInTimezone(empresa?.zona_horaria);
       const { data, error } = await supabase
         .from('promociones')
         .select('*')
@@ -144,7 +145,7 @@ export function evaluatePromociones(
   zonaId?: string,
 ): PromoResult[] {
   const results: PromoResult[] = [];
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInTimezone();
   const diaHoy = DIAS_MAP[new Date().getDay()];
 
   const activePromos = promociones
