@@ -255,6 +255,26 @@ export default function EntregaFormPage() {
     enabled: !!surtirAlmacenId && showSurtirDialog,
   });
 
+  // Stock per (almacen_origen_id) selected in lines — only fetch when at least one line has origen
+  const lineaOrigenIds = Array.from(new Set(
+    lineas.map((l: any) => l.almacen_origen_id).filter(Boolean)
+  )) as string[];
+  const { data: stockPorAlmacenLineas } = useQuery({
+    queryKey: ['stock_almacen_lineas', lineaOrigenIds.sort().join(',')],
+    queryFn: async () => {
+      if (lineaOrigenIds.length === 0) return [];
+      const { data } = await supabase
+        .from('stock_almacen')
+        .select('producto_id, almacen_id, cantidad')
+        .in('almacen_id', lineaOrigenIds);
+      return data ?? [];
+    },
+    enabled: lineaOrigenIds.length > 0,
+  });
+  const stockLineasMap = new Map<string, number>(
+    (stockPorAlmacenLineas ?? []).map((s: any) => [`${s.almacen_id}:${s.producto_id}`, Number(s.cantidad) ?? 0])
+  );
+
   if (!isNew && isLoading) {
     return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
@@ -443,7 +463,10 @@ export default function EntregaFormPage() {
               <tbody>
                 {lineas.map((l: any, idx: number) => {
                   const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
-                  const stock = prod?.cantidad ?? 0;
+                  const origenId = l.almacen_origen_id ?? null;
+                  const stock = origenId && l.producto_id
+                    ? (stockLineasMap.get(`${origenId}:${l.producto_id}`) ?? 0)
+                    : null;
                   const cantPedida = Number(l.cantidad_pedida) || 0;
                   const cantEntregada = Number(l.cantidad_entregada) || 0;
                   const almNombre = l.almacenes?.nombre;
@@ -452,7 +475,7 @@ export default function EntregaFormPage() {
                     <tr key={l.id ?? idx} className={cn(
                       "border-b border-table-border transition-colors group",
                       l.hecho && "bg-primary/5",
-                      !l.hecho && cantPedida > stock && "bg-destructive/5"
+                      !l.hecho && stock !== null && cantPedida > stock && "bg-destructive/5"
                     )}>
                       <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                       <td className="py-1 px-2">
@@ -496,9 +519,13 @@ export default function EntregaFormPage() {
                         )}
                       </td>
                       <td className="py-1.5 px-2 text-right text-[12px]">
-                        <span className={cn(cantPedida > stock && !l.hecho ? 'text-destructive font-medium' : 'text-muted-foreground')}>
-                          {stock}
-                        </span>
+                        {stock === null ? (
+                          <span className="text-muted-foreground/50 italic text-[11px]">Elige origen</span>
+                        ) : (
+                          <span className={cn(cantPedida > stock && !l.hecho ? 'text-destructive font-medium' : 'text-muted-foreground')}>
+                            {stock}
+                          </span>
+                        )}
                       </td>
                       <td className="py-1.5 px-2 text-right text-[12px]">
                         {isNew && !l.id ? (
