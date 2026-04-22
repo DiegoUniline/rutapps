@@ -105,19 +105,9 @@ export default function RutaEntregaDetalle() {
     try {
       const now = new Date().toISOString();
 
-      // 0) Idempotencia: si ya hay movimientos de salida para esta entrega, no descontamos otra vez
-      const { data: movsExistentes } = await supabase
-        .from('movimientos_inventario')
-        .select('id')
-        .eq('referencia_tipo', 'entrega')
-        .eq('referencia_id', id!)
-        .eq('tipo', 'salida')
-        .limit(1);
-      const yaDescontado = (movsExistentes ?? []).length > 0;
-
       // 1) Descontar del almacén del vendedor (ruta) las cantidades realmente surtidas.
       const vendedorId = (entrega as any)?.vendedor_ruta_id || (entrega as any)?.vendedor_id;
-      if (!yaDescontado && vendedorId) {
+      if (vendedorId) {
         const { data: prof } = await supabase
           .from('profiles')
           .select('almacen_id')
@@ -126,7 +116,18 @@ export default function RutaEntregaDetalle() {
         const almacenVendedorId = prof?.almacen_id;
 
         if (almacenVendedorId) {
-          const lineasSurtidas = (lineas ?? []).filter(
+          // Idempotencia: solo bloquear si YA hay salidas registradas desde ESTE almacén de ruta
+          const { data: movsRuta } = await supabase
+            .from('movimientos_inventario')
+            .select('id')
+            .eq('referencia_tipo', 'entrega')
+            .eq('referencia_id', id!)
+            .eq('tipo', 'salida')
+            .eq('almacen_origen_id', almacenVendedorId)
+            .limit(1);
+          const yaDescontadoRuta = (movsRuta ?? []).length > 0;
+
+          const lineasSurtidas = yaDescontadoRuta ? [] : (lineas ?? []).filter(
             (l: any) => l.hecho && Number(l.cantidad_entregada) > 0
           );
           for (const l of lineasSurtidas) {
