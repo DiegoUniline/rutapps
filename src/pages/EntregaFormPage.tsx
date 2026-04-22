@@ -112,6 +112,29 @@ export default function EntregaFormPage() {
     setShowSurtirDialog(true);
   };
 
+  // Mark a line as "not fulfilled" — sets cantidad_entregada=0 + hecho=true, no stock movement
+  const handleNoSurtirLinea = async (idx: number) => {
+    const l = lineas[idx];
+    if (!l.id) return;
+    if (!confirm('¿Marcar esta línea como NO surtida? No se descontará stock y la entrega podrá continuar sin este producto.')) return;
+    try {
+      const { error } = await supabase
+        .from('entrega_lineas')
+        .update({ cantidad_entregada: 0, hecho: true } as any)
+        .eq('id', l.id);
+      if (error) throw error;
+      toast.success('Línea marcada como no surtida');
+      setLineas(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: 0 };
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   // Surtir all pending lines (after confirming almacén)
   const handleSurtirTodoConfirmado = async () => {
     if (!surtirAlmacenId) {
