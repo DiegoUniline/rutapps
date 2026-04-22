@@ -519,9 +519,13 @@ export default function EntregaFormPage() {
                         )}
                       </td>
                       <td className="py-1.5 px-2 text-right text-[12px]">
-                        <span className={cn(cantPedida > stock && !l.hecho ? 'text-destructive font-medium' : 'text-muted-foreground')}>
-                          {stock}
-                        </span>
+                        {stock === null ? (
+                          <span className="text-muted-foreground/50 italic text-[11px]">Elige origen</span>
+                        ) : (
+                          <span className={cn(cantPedida > stock && !l.hecho ? 'text-destructive font-medium' : 'text-muted-foreground')}>
+                            {stock}
+                          </span>
+                        )}
                       </td>
                       <td className="py-1.5 px-2 text-right text-[12px]">
                         {isNew && !l.id ? (
