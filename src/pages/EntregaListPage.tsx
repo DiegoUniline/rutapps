@@ -174,6 +174,9 @@ export default function EntregaListPage() {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['inventario'] });
+      qc.invalidateQueries({ queryKey: ['kardex-ubicacion'] });
       setSelectedIds(new Set());
       setShowSurtirDialog(false);
       setAlmacenId('');
