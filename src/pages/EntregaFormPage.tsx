@@ -463,7 +463,10 @@ export default function EntregaFormPage() {
               <tbody>
                 {lineas.map((l: any, idx: number) => {
                   const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
-                  const stock = prod?.cantidad ?? 0;
+                  const origenId = l.almacen_origen_id ?? null;
+                  const stock = origenId && l.producto_id
+                    ? (stockLineasMap.get(`${origenId}:${l.producto_id}`) ?? 0)
+                    : null;
                   const cantPedida = Number(l.cantidad_pedida) || 0;
                   const cantEntregada = Number(l.cantidad_entregada) || 0;
                   const almNombre = l.almacenes?.nombre;
@@ -472,7 +475,7 @@ export default function EntregaFormPage() {
                     <tr key={l.id ?? idx} className={cn(
                       "border-b border-table-border transition-colors group",
                       l.hecho && "bg-primary/5",
-                      !l.hecho && cantPedida > stock && "bg-destructive/5"
+                      !l.hecho && stock !== null && cantPedida > stock && "bg-destructive/5"
                     )}>
                       <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                       <td className="py-1 px-2">
