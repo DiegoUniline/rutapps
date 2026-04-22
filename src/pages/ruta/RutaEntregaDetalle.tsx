@@ -109,19 +109,12 @@ export default function RutaEntregaDetalle() {
         .eq('id', id!);
       if (error) throw error;
 
-      // Also mark the linked venta as entregado if still confirmado
-      if (entrega?.pedido_id) {
-        await supabase.from('ventas')
-          .update({ status: 'entregado' } as any)
-          .eq('id', entrega.pedido_id)
-          .in('status', ['confirmado']);
-      }
-
       toast.success('¡Entrega completada!');
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-venta'] });
       queryClient.invalidateQueries({ queryKey: ['venta'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
