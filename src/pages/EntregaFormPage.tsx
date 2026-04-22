@@ -255,6 +255,26 @@ export default function EntregaFormPage() {
     enabled: !!surtirAlmacenId && showSurtirDialog,
   });
 
+  // Stock per (almacen_origen_id) selected in lines — only fetch when at least one line has origen
+  const lineaOrigenIds = Array.from(new Set(
+    lineas.map((l: any) => l.almacen_origen_id).filter(Boolean)
+  )) as string[];
+  const { data: stockPorAlmacenLineas } = useQuery({
+    queryKey: ['stock_almacen_lineas', lineaOrigenIds.sort().join(',')],
+    queryFn: async () => {
+      if (lineaOrigenIds.length === 0) return [];
+      const { data } = await supabase
+        .from('stock_almacen')
+        .select('producto_id, almacen_id, cantidad')
+        .in('almacen_id', lineaOrigenIds);
+      return data ?? [];
+    },
+    enabled: lineaOrigenIds.length > 0,
+  });
+  const stockLineasMap = new Map<string, number>(
+    (stockPorAlmacenLineas ?? []).map((s: any) => [`${s.almacen_id}:${s.producto_id}`, Number(s.cantidad) ?? 0])
+  );
+
   if (!isNew && isLoading) {
     return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
