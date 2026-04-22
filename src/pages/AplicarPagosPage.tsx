@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate, cn, roundMoney } from '@/lib/utils';
+import { fmtDate, cn, roundMoney, todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Search, Banknote, Building2, CreditCard, Wallet, Check, ArrowLeft, AlertTriangle, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -194,7 +194,7 @@ export default function AplicarPagosPage() {
         metodo_pago: metodoPago,
         referencia: referencia || null,
         notas: notas || null,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: todayInTimezone(empresa.zona_horaria),
       }).select('id').single();
       if (cobroErr) throw cobroErr;
 

@@ -558,7 +558,7 @@ export function useVentaForm() {
   const handleAddPago = async (monto: number, metodo: string, referencia: string) => {
     if (!form.id || !form.cliente_id || !user?.id || !empresa?.id) return;
     if (monto > saldoPendiente + 0.01) { toast.error('El monto excede el saldo pendiente'); return; }
-    const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: form.cliente_id, monto, metodo_pago: metodo, referencia: referencia || null, user_id: user.id }).select('id').single();
+    const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: form.cliente_id, monto, metodo_pago: metodo, referencia: referencia || null, user_id: user.id, fecha: todayLocal() }).select('id').single();
     if (cobroErr) throw cobroErr;
     const { error: appErr } = await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: form.id, monto_aplicado: monto });
     if (appErr) throw appErr;
