@@ -117,10 +117,12 @@ export default function EntregaFormPage() {
   };
 
   // Mark a line as "not fulfilled" — sets cantidad_entregada=0 + hecho=true, no stock movement
-  const handleNoSurtirLinea = async (idx: number) => {
+  const [noSurtirIdx, setNoSurtirIdx] = useState<number | null>(null);
+  const confirmNoSurtirLinea = async () => {
+    if (noSurtirIdx === null) return;
+    const idx = noSurtirIdx;
     const l = lineas[idx];
-    if (!l.id) return;
-    if (!confirm('¿Marcar esta línea como NO surtida? No se descontará stock y la entrega podrá continuar sin este producto.')) return;
+    if (!l?.id) { setNoSurtirIdx(null); return; }
     try {
       const { error } = await supabase
         .from('entrega_lineas')
@@ -136,6 +138,8 @@ export default function EntregaFormPage() {
       qc.invalidateQueries({ queryKey: ['entrega'] });
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setNoSurtirIdx(null);
     }
   };
 
