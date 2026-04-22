@@ -773,7 +773,7 @@ export default function ReporteDiarioRuta() {
               )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
-                <span>{fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
+                <span>{fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
               </div>
             </div>
           </div>
