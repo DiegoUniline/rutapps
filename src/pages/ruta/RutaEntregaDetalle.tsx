@@ -187,6 +187,9 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
       queryClient.invalidateQueries({ queryKey: ['productos'] });
+      if (goToCobrarAfter && pedidoId) {
+        navigate(`/ruta/ventas/${pedidoId}`);
+      }
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
