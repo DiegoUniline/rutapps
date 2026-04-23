@@ -101,7 +101,17 @@ export default function RutaEntregaDetalle() {
   const ventaTotal = venta?.total ?? 0;
   const ventaSaldo = venta?.saldo_pendiente ?? 0;
 
-  const marcarEntregado = async () => {
+  const handleMarcarClick = () => {
+    // If there's any pending balance (this order or other accounts), prompt
+    const tienePendiente = (ventaSaldo > 0) || (totalSaldoPendiente > 0);
+    if (tienePendiente) {
+      setShowCobrarPrompt(true);
+      return;
+    }
+    void marcarEntregado();
+  };
+
+  const marcarEntregado = async (goToCobrarAfter = false) => {
     setSaving(true);
     try {
       const now = new Date().toISOString();
