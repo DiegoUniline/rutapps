@@ -485,8 +485,8 @@ export default function RutaEntregaDetalle() {
               <FileText className="h-5 w-5" /> Ver pedido
             </button>
           ) : (
-            <button onClick={marcarEntregado} disabled={saving}
-              className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
+            <button onClick={handleMarcarClick} disabled={saving}
+              className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
               {saving ? 'Entregando...' : 'Marcar como entregado'}
             </button>
