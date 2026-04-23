@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useVehiculos, useUpsertVehiculo, useDeleteVehiculo, type Vehiculo } from '@/hooks/useVehiculos';
-import { useUsuarios } from '@/hooks/useUsuarios';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
