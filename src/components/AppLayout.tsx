@@ -21,6 +21,7 @@ import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import { Search } from 'lucide-react';
+import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
