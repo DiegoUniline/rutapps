@@ -16,13 +16,13 @@ import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega
 import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive' }> = {
+const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
   surtido: { label: 'Surtido', variant: 'default' },
   asignado: { label: 'Asignado', variant: 'default' },
   cargado: { label: 'Cargado', variant: 'default' },
   en_ruta: { label: 'En ruta', variant: 'default' },
-  hecho: { label: 'Entregado', variant: 'outline' },
+  hecho: { label: 'Entregado', variant: 'outline', className: 'bg-success text-success-foreground border-transparent hover:bg-success/90' },
   cancelado: { label: 'Cancelado', variant: 'destructive' },
 };
 
@@ -432,7 +432,7 @@ export default function EntregaListPage() {
                     className="text-center py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
                   >
-                    <Badge variant={badge.variant} className="text-[10px]">{badge.label}</Badge>
+                    <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
                   </TableCell>
                 </TableRow>
               );
