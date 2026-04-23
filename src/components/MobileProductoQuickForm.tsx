@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Save, Loader2, Camera, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Save, Loader2, Camera, Lock } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
