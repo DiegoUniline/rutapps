@@ -4,9 +4,16 @@ import { cn } from '@/lib/utils';
 import RutaClientes from './RutaClientes';
 import RutaEntregas from './RutaEntregas';
 import RutaNavegacionPage from './RutaNavegacionPage';
+import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Empresa de prueba — quitar este filtro para liberar a todos
+const EMPRESA_PRUEBA_JORNADA = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
 
 export default function RutaClientesEntregas() {
   const [tab, setTab] = useState<'clientes' | 'entregas' | 'navegacion'>('clientes');
+  const { empresa } = useAuth();
+  const showJornadaBanner = empresa?.id === EMPRESA_PRUEBA_JORNADA;
 
   // When navegacion tab is active, render full-screen without tabs
   if (tab === 'navegacion') {
@@ -19,6 +26,11 @@ export default function RutaClientesEntregas() {
 
   return (
     <div className="flex flex-col h-full">
+      {showJornadaBanner && (
+        <div className="px-4 pt-3">
+          <RutaSesionBanner />
+        </div>
+      )}
       {/* Tabs */}
         <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5">
         <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
