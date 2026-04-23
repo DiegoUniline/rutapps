@@ -1,12 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw, Camera, MapPin, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
+import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion';
+import { uploadOdometroFoto } from '@/lib/rutaFotos';
+import { locationService } from '@/lib/locationService';
 
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
@@ -22,6 +25,36 @@ export default function RutaDescarga() {
 
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
+  const [kmFin, setKmFin] = useState<string>('');
+  const [fotoFin, setFotoFin] = useState<File | null>(null);
+  const [fotoFinPreview, setFotoFinPreview] = useState<string>('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: sesionActiva } = useRutaSesionActiva();
+  const cerrarSesion = useCerrarRutaSesion();
+
+  // Pre-fill KM fin with vehicle's last km when sesion loads
+  useEffect(() => {
+    if (sesionActiva && !kmFin) setKmFin(String(sesionActiva.km_inicio));
+  }, [sesionActiva]);
+
+  // Capture GPS
+  useEffect(() => {
+    locationService.startWatching();
+    const c = locationService.getLastKnownLocation();
+    if (c) setCoords(c);
+    const off = locationService.onUpdate((loc) => setCoords(loc));
+    return off;
+  }, []);
+
+  const onFotoFinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFotoFin(f);
+    setFotoFinPreview(URL.createObjectURL(f));
+  };
+
 
   // Get user's profile id (profile.id IS the vendedor_id now)
   const { data: myProfile } = useQuery({
@@ -185,8 +218,16 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
-      const diferencia = totalEfectivo - efectivoEsperado;
+      // Validate route session closing if active
+      if (sesionActiva) {
+        const km = parseFloat(kmFin);
+        if (!Number.isFinite(km) || km < sesionActiva.km_inicio) {
+          throw new Error(`KM final debe ser mayor o igual a ${sesionActiva.km_inicio}`);
+        }
+        if (!fotoFin) throw new Error('Toma la foto del odómetro final');
+      }
 
+      const diferencia = totalEfectivo - efectivoEsperado;
       const vId = cargaActiva?.vendedor_id || myProfile?.id || null;
 
       const insertData: any = {
@@ -211,11 +252,30 @@ export default function RutaDescarga() {
         .select()
         .single();
       if (error) throw error;
+
+      // Close route session
+      if (sesionActiva && fotoFin) {
+        setUploading(true);
+        try {
+          const fotoUrl = await uploadOdometroFoto(fotoFin, empresa!.id, 'fin');
+          await cerrarSesion.mutateAsync({
+            id: sesionActiva.id,
+            km_fin: parseFloat(kmFin),
+            lat_fin: coords?.lat ?? null,
+            lng_fin: coords?.lng ?? null,
+            foto_fin_url: fotoUrl,
+            notas_fin: notas || null,
+          });
+        } finally {
+          setUploading(false);
+        }
+      }
     },
     onSuccess: () => {
       toast.success('Liquidación enviada ✓');
       qc.invalidateQueries({ queryKey: ['mi-descarga-hoy'] });
       qc.invalidateQueries({ queryKey: ['descargas'] });
+      qc.invalidateQueries({ queryKey: ['ruta-sesion-activa'] });
       nav('/ruta');
     },
     onError: (e: any) => toast.error(e.message),
@@ -272,6 +332,62 @@ export default function RutaDescarga() {
             Cuenta los billetes y monedas que tienes. Solo ingresa las cantidades reales.
           </p>
         </div>
+
+        {/* Cierre de jornada — KM final + foto */}
+        {sesionActiva && (
+          <div className="bg-card border border-border rounded-xl p-3 space-y-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Truck className="h-3 w-3" /> Cierre de jornada — {sesionActiva.vehiculos?.alias || 'Vehículo'}
+            </p>
+
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1">KM inicial: <span className="font-semibold text-foreground tabular-nums">{Number(sesionActiva.km_inicio).toLocaleString()}</span></p>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={kmFin}
+                onChange={e => setKmFin(e.target.value)}
+                placeholder="KM final"
+                className="w-full bg-accent/40 rounded-md px-3 py-2.5 text-[16px] font-bold text-foreground tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {kmFin && parseFloat(kmFin) >= sesionActiva.km_inicio && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Recorridos: <span className="font-semibold text-foreground">{(parseFloat(kmFin) - sesionActiva.km_inicio).toLocaleString()} km</span>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Camera className="h-3 w-3" /> Foto del odómetro final
+              </p>
+              {fotoFinPreview ? (
+                <div className="relative">
+                  <img src={fotoFinPreview} alt="Odómetro" className="w-full max-h-48 object-cover rounded-lg" />
+                  <button
+                    onClick={() => { setFotoFin(null); setFotoFinPreview(''); }}
+                    className="absolute top-2 right-2 bg-background/90 text-foreground text-[11px] font-semibold px-2 py-1 rounded-md"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-border rounded-lg py-4 cursor-pointer hover:bg-accent/30 transition-colors">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-[12px] text-muted-foreground">Tomar foto</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={onFotoFinChange} className="hidden" />
+                </label>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px]">
+              <MapPin className={`h-3.5 w-3.5 ${coords ? 'text-success' : 'text-muted-foreground'}`} />
+              <span className={coords ? 'text-foreground' : 'text-muted-foreground'}>
+                {coords ? 'Ubicación detectada' : 'Esperando ubicación GPS...'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Running total */}
         <div className="bg-card border border-border rounded-xl p-4 text-center">
@@ -402,11 +518,11 @@ export default function RutaDescarga() {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <button
           onClick={() => { if (!checkAlmacen()) return; submitMutation.mutate(); }}
-          disabled={!hasConteo || submitMutation.isPending}
+          disabled={!hasConteo || submitMutation.isPending || uploading || (!!sesionActiva && (!fotoFin || !kmFin))}
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
           <Send className="h-4 w-4" />
-          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${fmt(totalEfectivo)}`}
+          {uploading ? 'Subiendo foto...' : submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${fmt(totalEfectivo)}`}
         </button>
       </div>
     </div>

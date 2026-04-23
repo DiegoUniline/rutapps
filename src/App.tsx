@@ -396,6 +396,7 @@ function AppRoutes() {
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
         <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
         <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+        <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
       </Routes>
@@ -441,6 +442,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
       <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
       <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+      <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
 
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />
@@ -551,6 +553,8 @@ function desktopRoutes() {
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
       <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
+      <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
+      <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
       <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
       <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />

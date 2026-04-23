@@ -4,6 +4,7 @@ import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPinned, RotateCc
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
@@ -50,6 +51,8 @@ export default function RutaDashboard() {
           Hola, {profile?.nombre?.split(' ')[0] ?? 'Vendedor'} 👋
         </h1>
       </div>
+
+      <RutaSesionBanner />
 
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
         <div className="flex items-center gap-2 mb-1">
