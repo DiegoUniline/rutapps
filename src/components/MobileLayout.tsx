@@ -38,13 +38,19 @@ export default function MobileLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { profile } = useAuth();
+  const { profile, empresa } = useAuth();
   const { hasPermiso } = usePermisos();
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Bloqueo por jornada (solo empresa de prueba)
+  const requireJornada = empresa?.id === EMPRESA_PRUEBA_JORNADA;
+  const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
+  const isRutaPermitida = RUTAS_PERMITIDAS_SIN_JORNADA.some(p => location.pathname.startsWith(p));
+  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && !isRutaPermitida;
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
