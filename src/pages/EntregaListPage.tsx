@@ -22,7 +22,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'defa
   asignado: { label: 'Asignado', variant: 'default' },
   cargado: { label: 'Cargado', variant: 'default' },
   en_ruta: { label: 'En ruta', variant: 'default' },
-  hecho: { label: 'Hecho', variant: 'outline' },
+  hecho: { label: 'Entregado', variant: 'outline' },
   cancelado: { label: 'Cancelado', variant: 'destructive' },
 };
 
