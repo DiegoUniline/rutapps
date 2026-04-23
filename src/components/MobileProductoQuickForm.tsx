@@ -268,9 +268,9 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 <input className={inputCls} placeholder="01010101" value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} />
               </Field>
               <Field label="Unidad SAT">
-                <select className={selectCls} value={form.unidad_sat_id ?? ''} onChange={e => set('unidad_sat_id', e.target.value || null)}>
+                <select className={selectCls} value={form.udem_sat_id ?? ''} onChange={e => set('udem_sat_id', e.target.value || null)}>
                   <option value="">— Seleccionar —</option>
-                  {unidadesSat?.slice(0, 50).map(u => <option key={u.id} value={u.id}>{u.clave} - {u.descripcion}</option>)}
+                  {unidadesSat?.slice(0, 50).map(u => <option key={u.id} value={u.id}>{u.clave} - {u.nombre}</option>)}
                 </select>
               </Field>
               <div className="flex items-center justify-between">
