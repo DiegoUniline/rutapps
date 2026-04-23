@@ -26,6 +26,11 @@ export default function RutaClientesEntregas() {
 
   return (
     <div className="flex flex-col h-full">
+      {showJornadaBanner && (
+        <div className="px-4 pt-3">
+          <RutaSesionBanner />
+        </div>
+      )}
       {/* Tabs */}
         <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5">
         <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
