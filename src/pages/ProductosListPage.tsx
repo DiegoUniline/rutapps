@@ -254,11 +254,19 @@ export default function ProductosListPage() {
               </button>
             </>
           )}
-          <button onClick={() => navigate('/productos/nuevo')} className="btn-odoo-primary shrink-0">
+          <button
+            onClick={() => isMobile ? setMobileNewOpen(true) : navigate('/productos/nuevo')}
+            className="btn-odoo-primary shrink-0"
+          >
             <Plus className="h-3.5 w-3.5" /> Nuevo
           </button>
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
+        <MobileProductoQuickForm
+          open={mobileNewOpen}
+          onOpenChange={setMobileNewOpen}
+          onCreated={(id) => navigate(`/productos/${id}`)}
+        />
       </div>
 
       {isLoading ? (
