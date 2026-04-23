@@ -181,7 +181,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         onOpenAutoFocus={e => e.preventDefault()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background sticky top-0 z-10">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background shrink-0">
           <button
             onClick={handleClose}
             className="h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform"
@@ -191,14 +191,32 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           <h2 className="text-base font-bold text-foreground flex-1 truncate">
             {savedId ? form.nombre || 'Producto' : 'Nuevo producto'}
           </h2>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {savedId ? 'Actualizar' : 'Guardar'}
-          </button>
+        </div>
+
+        {/* Tabs nav */}
+        <div className="border-b border-border bg-card shrink-0 overflow-x-auto">
+          <div className="flex gap-0 min-w-max">
+            {tabs.map(t => {
+              const isActive = activeTab === t.id;
+              const isLocked = t.locked;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  className={cn(
+                    "px-3 h-11 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1",
+                    isActive
+                      ? "text-primary border-primary"
+                      : "text-muted-foreground border-transparent hover:text-foreground"
+                  )}
+                >
+                  {isLocked && <Lock className="h-3 w-3" />}
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Body */}
