@@ -112,7 +112,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         }
         return updates;
       });
-      setOpenSections({ basico: true, precio: true });
+      setActiveTab('basico');
     }
   }, [open, almacenes, unidades]);
 
