@@ -51,6 +51,8 @@ export default function RutaDashboard() {
         </h1>
       </div>
 
+      <RutaSesionBanner />
+
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-4 w-4" />

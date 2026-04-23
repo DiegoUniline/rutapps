@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
       { label: 'Dashboard', path: '/logistica/dashboard' },
       { label: 'Pedidos pendientes', path: '/logistica/pedidos' },
       { label: 'Entregas', path: '/logistica/entregas' },
+      { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
     ],
@@ -143,6 +144,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'General', path: '/configuracion' },
       { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
+      { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
