@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -11,6 +11,12 @@ import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
+import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
+
+// Empresa de prueba para el bloqueo de jornada — quitar para liberar a todos
+const EMPRESA_PRUEBA_JORNADA = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
+// Rutas permitidas sin jornada activa
+const RUTAS_PERMITIDAS_SIN_JORNADA = ['/ruta/iniciar', '/ruta/perfil', '/ruta/sincronizar'];
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
