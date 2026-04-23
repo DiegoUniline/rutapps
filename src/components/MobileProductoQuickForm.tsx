@@ -54,34 +54,11 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
-function Section({
-  title, open, onToggle, locked, lockedMsg, children,
-}: { title: string; open: boolean; onToggle: () => void; locked?: boolean; lockedMsg?: string; children?: React.ReactNode }) {
+function LockedNotice({ message }: { message: string }) {
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={locked}
-        className={cn(
-          "w-full flex items-center justify-between px-3 py-3 text-sm font-semibold",
-          locked ? "text-muted-foreground bg-muted/30" : "text-foreground bg-card hover:bg-muted/50"
-        )}
-      >
-        <span className="flex items-center gap-2">
-          {locked && <Lock className="h-3.5 w-3.5" />}
-          {title}
-        </span>
-        {!locked && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-      </button>
-      {locked && lockedMsg && (
-        <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/20 border-t border-border">{lockedMsg}</div>
-      )}
-      {open && !locked && (
-        <div className="px-3 py-3 space-y-3 bg-background border-t border-border animate-in slide-in-from-top-1 duration-150">
-          {children}
-        </div>
-      )}
+    <div className="flex items-center gap-2 px-3 py-4 rounded-lg bg-muted/30 border border-border text-xs text-muted-foreground">
+      <Lock className="h-3.5 w-3.5 shrink-0" />
+      <span>{message}</span>
     </div>
   );
 }
