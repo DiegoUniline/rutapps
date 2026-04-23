@@ -26,7 +26,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
 
   // Count visible data columns for the empty/footer colSpan
-  const dataCols = ['folio','tipo','cliente','vendedor','condicion','fecha','subtotal','descuento','iva','total','saldo','status']
+  const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','saldo','status']
     .filter(k => v(k)).length;
   const totalCols = 1 /* checkbox */ + dataCols + 1 /* chevron */;
 
@@ -41,6 +41,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           {v('tipo') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>}
           {v('cliente') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>}
           {v('vendedor') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>}
+          {v('almacen') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Almacén</th>}
           {v('condicion') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>}
           {v('fecha') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha / Hora</th>}
           {v('subtotal') && <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>}
@@ -86,6 +87,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 )}
                 {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.clientes?.nombre || (row.cliente_id ? '—' : 'Público en general')}</td>}
                 {v('vendedor') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedores?.nombre ?? '—'}</td>}
+                {v('almacen') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
                 {v('fecha') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>}
                 {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(row.subtotal)}</td>}
