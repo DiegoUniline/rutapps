@@ -224,7 +224,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </div>
 
           {/* ── Información básica ── */}
-          <Section title="Información básica" open={!!openSections.basico} onToggle={() => toggleSection('basico')}>
+          <TabPanel id="basico" active={activeTab}> toggleSection('basico')}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Código" required>
                 <input className={inputCls} placeholder="SKU" value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
@@ -279,10 +279,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 </select>
               </Field>
             )}
-          </Section>
+          </TabPanel>
 
           {/* ── Precio y costo ── */}
-          <Section title="Precio y costo" open={!!openSections.precio} onToggle={() => toggleSection('precio')}>
+          <TabPanel id="precio" active={activeTab}> toggleSection('precio')}>
             <Field label="Modo de precio">
               <div className="grid grid-cols-2 gap-2">
                 {(['directo', 'listas'] as const).map(mode => (
@@ -319,25 +319,22 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 <option value="ultimo_compra">Último costo (compra directa)</option>
               </select>
             </Field>
-          </Section>
+          </TabPanel>
 
           {/* ── Reglas de precio (solo si listas y guardado) ── */}
           {(form as any).usa_listas_precio && (
-            <Section
-              title="Reglas de precio"
-              open={!!openSections.reglas}
-              onToggle={() => toggleSection('reglas')}
+            <TabPanel id="reglas" active={activeTab}> toggleSection('reglas')}
               locked={isNew}
               lockedMsg="Guarda el producto primero para configurar reglas por lista."
             >
               <div className="-mx-1 overflow-x-auto">
                 <PreciosTab form={form} tarifaLineas={tarifaLineas} tarifasDisp={tarifasDisp as any} productoId={savedId} isNew={isNew} navigate={navigate} />
               </div>
-            </Section>
+            </TabPanel>
           )}
 
           {/* ── Fiscal ── */}
-          <Section title="Fiscal (SAT, IVA, IEPS)" open={!!openSections.fiscal} onToggle={() => toggleSection('fiscal')}>
+          <TabPanel id="fiscal" active={activeTab}> toggleSection('fiscal')}>
             <Field label="Clave SAT">
               <input className={inputCls} placeholder="01010101" value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} />
             </Field>
@@ -381,10 +378,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
               </>
             )}
             <ToggleRow label="Costo incluye impuestos" value={!!form.costo_incluye_impuestos} onChange={() => set('costo_incluye_impuestos', !form.costo_incluye_impuestos)} />
-          </Section>
+          </TabPanel>
 
           {/* ── Comisiones ── */}
-          <Section title="Comisiones" open={!!openSections.comisiones} onToggle={() => toggleSection('comisiones')}>
+          <TabPanel id="comisiones" active={activeTab}> toggleSection('comisiones')}>
             <ToggleRow label="Maneja comisión" value={!!form.tiene_comision} onChange={() => set('tiene_comision', !form.tiene_comision)} />
             {form.tiene_comision && (
               (form as any).usa_listas_precio ? (
@@ -410,10 +407,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 </>
               )
             )}
-          </Section>
+          </TabPanel>
 
           {/* ── Inventario ── */}
-          <Section title="Inventario" open={!!openSections.inventario} onToggle={() => toggleSection('inventario')}>
+          <TabPanel id="inventario" active={activeTab}> toggleSection('inventario')}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Stock inicial">
                 <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.cantidad ?? 0} onChange={e => set('cantidad', +e.target.value)} />
@@ -446,13 +443,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 ))}
               </div>
             </div>
-          </Section>
+          </TabPanel>
 
           {/* ── Proveedores (solo después de guardar) ── */}
-          <Section
-            title="Proveedores"
-            open={!!openSections.proveedores}
-            onToggle={() => toggleSection('proveedores')}
+          <TabPanel id="proveedores" active={activeTab}> toggleSection('proveedores')}
             locked={isNew}
             lockedMsg="Guarda el producto primero para asignar proveedores."
           >
@@ -468,20 +462,17 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 onCreateProveedor={async () => undefined}
               />
             </div>
-          </Section>
+          </TabPanel>
 
           {/* ── Kardex (solo después de guardar) ── */}
-          <Section
-            title="Kardex"
-            open={!!openSections.kardex}
-            onToggle={() => toggleSection('kardex')}
+          <TabPanel id="kardex" active={activeTab}> toggleSection('kardex')}
             locked={isNew}
             lockedMsg="Guarda el producto primero para ver el kardex."
           >
             <div className="-mx-1 overflow-x-auto">
               <KardexTab productoId={savedId} isNew={isNew} />
             </div>
-          </Section>
+          </TabPanel>
 
           <div className="h-4" />
         </div>
