@@ -174,6 +174,24 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   const ivaTipo = (form as any).usa_listas_precio ? 'listas' : 'directo';
   const setModoPrecio = (mode: 'directo' | 'listas') => setForm(f => ({ ...f, usa_listas_precio: mode === 'listas' } as any));
 
+  const tabs = useMemo(() => {
+    const base = [
+      { id: 'basico', label: 'Básico', locked: false },
+      { id: 'precio', label: 'Precio', locked: false },
+    ];
+    if ((form as any).usa_listas_precio) {
+      base.push({ id: 'reglas', label: 'Reglas', locked: isNew });
+    }
+    base.push(
+      { id: 'fiscal', label: 'Fiscal', locked: false },
+      { id: 'comisiones', label: 'Comisiones', locked: false },
+      { id: 'inventario', label: 'Inventario', locked: false },
+      { id: 'proveedores', label: 'Proveedores', locked: isNew },
+      { id: 'kardex', label: 'Kardex', locked: isNew },
+    );
+    return base;
+  }, [(form as any).usa_listas_precio, isNew]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
