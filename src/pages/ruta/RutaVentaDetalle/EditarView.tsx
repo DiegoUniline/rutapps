@@ -68,9 +68,9 @@ function CondicionSection({ editCondicion, setEditCondicion, clienteData, saldoP
       </div>
       {editCondicion === 'credito' && clienteData && (
         <div className={`mt-2.5 rounded-lg px-2.5 py-2 text-[11px] space-y-1 ${excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'}`}>
-          <div className="flex justify-between"><span className="text-muted-foreground">Límite</span><span className="font-medium text-foreground">{s}{fmt(clienteData.limite_credito ?? 0)}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Saldo otras ventas</span><span className="font-medium text-foreground">{s}{fmt(saldoPendienteOtras)}</span></div>
-          <div className="flex justify-between border-t border-border/40 pt-1"><span className="text-muted-foreground">Disponible</span><span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>{s}{fmt(creditoDisponible)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Límite</span><span className="font-medium text-foreground">{fmt(clienteData.limite_credito ?? 0)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Saldo otras ventas</span><span className="font-medium text-foreground">{fmt(saldoPendienteOtras)}</span></div>
+          <div className="flex justify-between border-t border-border/40 pt-1"><span className="text-muted-foreground">Disponible</span><span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>{fmt(creditoDisponible)}</span></div>
           {excedeCredito && <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total excede el crédito disponible</p>}
         </div>
       )}
@@ -92,7 +92,7 @@ function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowPr
           return (
             <div key={`${item.producto_id}-${idx}`} className="rounded-lg border border-border/60 p-2.5">
               <div className="flex items-start justify-between gap-2 mb-1.5">
-                <div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10px] text-muted-foreground">{item.codigo} · {s}{fmt(item.precio_unitario)} / {item.unidad}</p></div>
+                <div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10px] text-muted-foreground">{item.codigo} · {fmt(item.precio_unitario)} / {item.unidad}</p></div>
                 <button onClick={() => removeEditLine(idx)} className="p-1"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
               </div>
               <div className="flex items-center justify-between">
@@ -101,7 +101,7 @@ function ProductosSection({ editLineas, updateEditQty, removeEditLine, setShowPr
                   <span className="text-[13px] font-bold w-8 text-center text-foreground">{item.cantidad}</span>
                   <button onClick={() => updateEditQty(idx, 1)} className="p-1.5"><Plus className="h-3 w-3" /></button>
                 </div>
-                <span className="text-[14px] font-bold text-foreground">{s}{fmt(lineTotal)}</span>
+                <span className="text-[14px] font-bold text-foreground">{fmt(lineTotal)}</span>
               </div>
             </div>
           );
@@ -131,7 +131,7 @@ function ProductPicker({ setShowProductSearch, setSearchProducto, searchProducto
                 <div className="flex-1 min-w-0" onClick={() => !inEdit && addProductToEdit(p)}>
                   <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                   <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
-                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{fmt(p.precio_principal ?? 0)}</p>
+                  <p className="text-[13px] font-bold text-foreground mt-px">{fmt(p.precio_principal ?? 0)}</p>
                 </div>
                 {inEdit ? (
                   <div className="flex items-center gap-0.5 shrink-0">
@@ -153,7 +153,7 @@ function ProductPicker({ setShowProductSearch, setSearchProducto, searchProducto
         <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
           <button onClick={() => { setShowProductSearch(false); setSearchProducto(''); }} className="w-full bg-primary text-primary-foreground rounded-xl py-3 flex items-center justify-between px-4 active:scale-[0.98] shadow-lg shadow-primary/20">
             <div className="flex items-center gap-1.5"><Package className="h-4 w-4 opacity-80" /><span className="text-[13px] font-medium">{editLineas.length} productos</span></div>
-            <span className="text-[14px] font-bold">{s}{fmt(editTotals.total)}</span>
+            <span className="text-[14px] font-bold">{fmt(editTotals.total)}</span>
           </button>
         </div>
       )}
@@ -173,9 +173,9 @@ function NotasSection({ editNotas, setEditNotas }: { editNotas: string; setEditN
 function TotalesSection({ editTotals, fmt, s }: { editTotals: { subtotal: number; iva: number; total: number }; fmt: (n: number) => string; s: string }) {
   return (
     <section className="bg-card rounded-xl border border-border p-3.5 space-y-1.5">
-      <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(editTotals.subtotal)}</span></div>
-      {editTotals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(editTotals.iva)}</span></div>}
-      <div className="flex justify-between items-baseline pt-1.5 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(editTotals.total)}</span></div>
+      <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">{fmt(editTotals.subtotal)}</span></div>
+      {editTotals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">{fmt(editTotals.iva)}</span></div>}
+      <div className="flex justify-between items-baseline pt-1.5 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[20px] font-bold text-primary tabular-nums">{fmt(editTotals.total)}</span></div>
     </section>
   );
 }

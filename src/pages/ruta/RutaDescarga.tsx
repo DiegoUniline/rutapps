@@ -315,7 +315,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -357,7 +357,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -406,7 +406,7 @@ export default function RutaDescarga() {
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
           <Send className="h-4 w-4" />
-          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${s}${fmt(totalEfectivo)}`}
+          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${fmt(totalEfectivo)}`}
         </button>
       </div>
     </div>

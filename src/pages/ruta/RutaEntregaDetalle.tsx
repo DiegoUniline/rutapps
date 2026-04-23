@@ -288,7 +288,7 @@ export default function RutaEntregaDetalle() {
   const handleShareTicket = async () => {
     const td = getTicketData();
     if (!td) return;
-    const fmtM = (n: number) => `${s}${fmt(n)}`;
+    const fmtM = (n: number) => `${fmt(n)}`;
     const text = [
       td.empresa.nombre, td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '', td.empresa.direccion ?? '',
       '─'.repeat(30), `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
@@ -383,8 +383,8 @@ export default function RutaEntregaDetalle() {
         {venta && (
           <div className="bg-card border border-border rounded-xl p-4 text-center">
             <p className="text-[11px] text-muted-foreground mb-1">Total del pedido</p>
-            <p className="text-[28px] font-bold text-foreground">{s} {fmt(ventaTotal)}</p>
-            {ventaSaldo > 0 && <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {s} {fmt(ventaSaldo)}</p>}
+            <p className="text-[28px] font-bold text-foreground">{fmt(ventaTotal)}</p>
+            {ventaSaldo > 0 && <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {fmt(ventaSaldo)}</p>}
           </div>
         )}
 
@@ -417,10 +417,10 @@ export default function RutaEntregaDetalle() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{prod?.nombre ?? '—'}</p>
-                      <p className="text-[11px] text-muted-foreground">{l.cantidad_entregada || l.cantidad_pedida} × {s} {fmt(precio)}</p>
+                      <p className="text-[11px] text-muted-foreground">{l.cantidad_entregada || l.cantidad_pedida} × {fmt(precio)}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[14px] font-bold text-foreground">{s} {fmt(total)}</p>
+                      <p className="text-[14px] font-bold text-foreground">{fmt(total)}</p>
                       {l.hecho && <span className="text-[9px] text-green-600 font-medium">✓ Surtido</span>}
                     </div>
                   </div>
@@ -438,10 +438,10 @@ export default function RutaEntregaDetalle() {
                 {showTax ? 'Con impuestos' : 'Sin impuestos'}
               </button>
             </div>
-            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{s} {fmt(venta.subtotal ?? 0)}</span></div>}
-            {showTax && (venta.iva_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{s} {fmt(venta.iva_total ?? 0)}</span></div>}
-            {showTax && ((venta as any).ieps_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{s} {fmt((venta as any).ieps_total ?? 0)}</span></div>}
-            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{s} {fmt(ventaTotal)}</span></div>
+            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{fmt(venta.subtotal ?? 0)}</span></div>}
+            {showTax && (venta.iva_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{fmt(venta.iva_total ?? 0)}</span></div>}
+            {showTax && ((venta as any).ieps_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{fmt((venta as any).ieps_total ?? 0)}</span></div>}
+            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(ventaTotal)}</span></div>
           </div>
         )}
 
@@ -452,13 +452,13 @@ export default function RutaEntregaDetalle() {
               {(otrasPendientes ?? []).filter(v => (v.saldo_pendiente ?? 0) > 0).slice(0, 5).map(v => (
                 <div key={v.id} className="flex justify-between text-[12px]">
                   <span className="text-foreground">{v.folio ?? '—'} <span className="text-muted-foreground">({fmtDate(v.fecha)})</span></span>
-                  <span className="font-medium text-destructive">{s} {fmt(v.saldo_pendiente ?? 0)}</span>
+                  <span className="font-medium text-destructive">{fmt(v.saldo_pendiente ?? 0)}</span>
                 </div>
               ))}
             </div>
             <div className="border-t border-destructive/20 mt-2 pt-2 flex justify-between">
               <span className="text-[12px] font-semibold text-foreground">Total pendiente</span>
-              <span className="text-[13px] font-bold text-destructive">{s} {fmt(totalSaldoPendiente)}</span>
+              <span className="text-[13px] font-bold text-destructive">{fmt(totalSaldoPendiente)}</span>
             </div>
           </div>
         )}
@@ -476,7 +476,7 @@ export default function RutaEntregaDetalle() {
           {totalSaldoPendiente > 0 && !isDelivered && (
             <button onClick={goToCobrar}
               className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5">
-              <Banknote className="h-4 w-4" /> Cobrar {s}{fmt(totalSaldoPendiente)}
+              <Banknote className="h-4 w-4" /> Cobrar {fmt(totalSaldoPendiente)}
             </button>
           )}
           {isDelivered ? (
@@ -502,7 +502,7 @@ export default function RutaEntregaDetalle() {
               <button onClick={() => setShowCobrarPrompt(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
             <p className="text-[13px] text-muted-foreground">
-              Este cliente tiene un saldo pendiente de <span className="font-bold text-destructive">{s}{fmt(Math.max(ventaSaldo, totalSaldoPendiente))}</span>.
+              Este cliente tiene un saldo pendiente de <span className="font-bold text-destructive">{fmt(Math.max(ventaSaldo, totalSaldoPendiente))}</span>.
               ¿Deseas cobrarlo ahora o marcar como entregado y cobrar después?
             </p>
             <div className="flex flex-col gap-2 pt-1">

@@ -126,9 +126,9 @@ export function StepPago(props: Props) {
           </div>
           {condicionPago === 'credito' && clienteCredito && (
             <div className={`mt-2.5 rounded-md px-2.5 py-2 text-[11px] space-y-1 ${excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'}`}>
-              <div className="flex justify-between"><span className="text-muted-foreground">Límite</span><span className="font-medium text-foreground">{s}{fmt(clienteCredito.limite)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Saldo pendiente</span><span className="font-medium text-foreground">{s}{fmt(saldoPendienteTotal)}</span></div>
-              <div className="flex justify-between border-t border-border/40 pt-1"><span className="text-muted-foreground">Disponible</span><span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600'}`}>{s}{fmt(creditoDisponible)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Límite</span><span className="font-medium text-foreground">{fmt(clienteCredito.limite)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Saldo pendiente</span><span className="font-medium text-foreground">{fmt(saldoPendienteTotal)}</span></div>
+              <div className="flex justify-between border-t border-border/40 pt-1"><span className="text-muted-foreground">Disponible</span><span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600'}`}>{fmt(creditoDisponible)}</span></div>
               {excedeCredito && <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total excede el crédito disponible</p>}
             </div>
           )}
@@ -139,7 +139,7 @@ export function StepPago(props: Props) {
             <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cuentas pendientes ({cuentasPendientes.length})</p><button onClick={liquidarTodas} className="text-[10.5px] text-primary font-semibold">Liquidar todas</button></div>
             <div className="space-y-1.5">{cuentasPendientes.map(cuenta => (
               <div key={cuenta.id} className="rounded-md border border-border/60 p-2.5">
-                <div className="flex items-center justify-between mb-1.5"><div><span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span><span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span></div><span className="text-[11px] font-medium text-destructive">Debe: {s}{fmt(cuenta.saldo_pendiente)}</span></div>
+                <div className="flex items-center justify-between mb-1.5"><div><span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span><span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span></div><span className="text-[11px] font-medium text-destructive">Debe: {fmt(cuenta.saldo_pendiente)}</span></div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => updateCuentaMonto(cuenta.id, cuenta.saldo_pendiente)} className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${cuenta.montoAplicar === cuenta.saldo_pendiente ? 'bg-primary text-primary-foreground' : 'bg-accent/60 text-foreground'}`}>Liquidar</button>
                   <div className="flex-1 relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">{s}</span><input type="number" inputMode="decimal" className="w-full bg-accent/40 rounded-md pl-5 pr-2 py-1.5 text-[12px] text-foreground font-medium focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={cuenta.montoAplicar || ''} placeholder="0.00" onChange={e => updateCuentaMonto(cuenta.id, parseFloat(e.target.value) || 0)} /></div>
@@ -147,7 +147,7 @@ export function StepPago(props: Props) {
                 </div>
               </div>
             ))}</div>
-            {totalAplicarCuentas > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{s}{fmt(totalAplicarCuentas)}</span></div>}
+            {totalAplicarCuentas > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{fmt(totalAplicarCuentas)}</span></div>}
           </section>
         )}
 
@@ -234,7 +234,7 @@ export function StepPago(props: Props) {
           {cambio > 0 && (
             <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2 mt-2">
               <span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-              <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{s}{fmt(cambio)}</span>
+              <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{fmt(cambio)}</span>
             </div>
           )}
 
@@ -242,7 +242,7 @@ export function StepPago(props: Props) {
           {restante > 0.01 && pagos.length > 0 && (
             <div className="flex justify-between bg-amber-50 dark:bg-amber-950/30 rounded-md px-2.5 py-2 mt-2">
               <span className="text-[12px] text-amber-700 dark:text-amber-400 font-medium">Falta por cubrir</span>
-              <span className="text-[14px] text-amber-700 dark:text-amber-400 font-bold">{s}{fmt(restante)}</span>
+              <span className="text-[14px] text-amber-700 dark:text-amber-400 font-bold">{fmt(restante)}</span>
             </div>
           )}
         </section>
@@ -252,12 +252,12 @@ export function StepPago(props: Props) {
         {/* Totals summary */}
         <section className="bg-card rounded-lg p-3">
           <div className="space-y-1">
-            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Venta actual</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(totals.subtotal)}</span></div>
+            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Venta actual</span><span className="font-medium text-foreground tabular-nums">{fmt(totals.subtotal)}</span></div>
             {descPromos > 0 && (
-              <div className="flex justify-between text-[11px]"><span className="text-emerald-600 dark:text-emerald-400">🏷️ Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{s}{fmt(descPromos)}</span></div>
+              <div className="flex justify-between text-[11px]"><span className="text-emerald-600 dark:text-emerald-400">🏷️ Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(descPromos)}</span></div>
             )}
             {descDevolucion > 0 && (
-              <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{s}{fmt(descDevolucion)}</span></div>
+              <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{fmt(descDevolucion)}</span></div>
             )}
             {devoluciones.length > 0 && (
               <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
@@ -275,7 +275,7 @@ export function StepPago(props: Props) {
             )}
             {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
             {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
-            {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(totalAplicarCuentas)}</span></div>}
+            {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{fmt(totalAplicarCuentas)}</span></div>}
 
             {/* Payment lines summary */}
             {pagos.length > 0 && (
@@ -284,13 +284,13 @@ export function StepPago(props: Props) {
                 {pagos.map((p, i) => (
                   <div key={p.id} className="flex justify-between text-[11px]">
                     <span className="text-muted-foreground capitalize">{p.metodo_pago}{p.referencia ? ` · ${p.referencia}` : ''}</span>
-                    <span className="font-medium text-foreground tabular-nums">{s}{fmt(p.monto)}</span>
+                    <span className="font-medium text-foreground tabular-nums">{fmt(p.monto)}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          {totalACobrar > 0 && <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total a cobrar</span><span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(totalACobrar)}</span></div>}
+          {totalACobrar > 0 && <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total a cobrar</span><span className="text-[20px] font-bold text-primary tabular-nums">{fmt(totalACobrar)}</span></div>}
           {totalACobrar === 0 && (condicionPago === 'credito' || condicionPago === 'por_definir') && <div className="mt-2 pt-2 border-t border-border/60"><p className="text-[12px] text-muted-foreground text-center">{condicionPago === 'credito' ? 'No hay cobro por ahora — se registra a crédito' : 'No hay cobro por ahora — pago por definir'}</p></div>}
         </section>
       </div>
