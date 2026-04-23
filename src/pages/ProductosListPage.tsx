@@ -15,6 +15,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -83,6 +84,7 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
   const { clasificaciones, marcas } = useProductoFilterOptions();
 
@@ -252,11 +254,19 @@ export default function ProductosListPage() {
               </button>
             </>
           )}
-          <button onClick={() => navigate('/productos/nuevo')} className="btn-odoo-primary shrink-0">
+          <button
+            onClick={() => isMobile ? setMobileNewOpen(true) : navigate('/productos/nuevo')}
+            className="btn-odoo-primary shrink-0"
+          >
             <Plus className="h-3.5 w-3.5" /> Nuevo
           </button>
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
+        <MobileProductoQuickForm
+          open={mobileNewOpen}
+          onOpenChange={setMobileNewOpen}
+          onCreated={(id) => navigate(`/productos/${id}`)}
+        />
       </div>
 
       {isLoading ? (
