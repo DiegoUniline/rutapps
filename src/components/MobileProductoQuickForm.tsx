@@ -63,6 +63,14 @@ function LockedNotice({ message }: { message: string }) {
   );
 }
 
+function TabPanel({
+  id, active, locked, lockedMsg, children,
+}: { id: string; active: string; locked?: boolean; lockedMsg?: string; children?: React.ReactNode }) {
+  if (active !== id) return null;
+  if (locked) return <LockedNotice message={lockedMsg || 'Guarda primero el producto.'} />;
+  return <div className="space-y-3 animate-in fade-in duration-150">{children}</div>;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
