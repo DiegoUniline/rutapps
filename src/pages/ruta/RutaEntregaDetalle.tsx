@@ -42,6 +42,7 @@ export default function RutaEntregaDetalle() {
   const [ecPdfBlob, setEcPdfBlob] = useState<Blob | null>(null);
   const [showEcPreview, setShowEcPreview] = useState(false);
   const [showTax, setShowTax] = useState(true);
+  const [showCobrarPrompt, setShowCobrarPrompt] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
