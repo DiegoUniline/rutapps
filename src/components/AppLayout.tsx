@@ -21,6 +21,7 @@ import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import { Search } from 'lucide-react';
+import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -477,6 +478,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <div className="px-2 py-2 mb-1">
                     <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
                     <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
+                    <div className="text-[10px] text-sidebar-foreground/40 truncate mt-0.5">v{APP_VERSION} · {APP_BUILD_DATE}</div>
                   </div>
                   <div className="flex gap-0.5">
                     <button
@@ -611,6 +613,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="px-2 py-2 mb-1">
               <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
               <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
+              <div className="text-[10px] text-sidebar-foreground/40 truncate mt-0.5">v{APP_VERSION} · {APP_BUILD_DATE}</div>
             </div>
           )}
           <div className={cn("flex gap-0.5", collapsed ? "flex-col items-center" : "")}>
