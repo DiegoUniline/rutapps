@@ -1,8 +1,11 @@
-import { X, Edit2, Shield, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Edit2, Shield, ShieldCheck, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AvatarUploader from '@/components/AvatarUploader';
 import type { ProfileUser, AuthUser, Almacen, EditForm } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Props {
   editingUser: ProfileUser;
@@ -17,12 +20,61 @@ interface Props {
   onClose: () => void;
 }
 
+interface VehiculoLite { id: string; alias: string; placa: string | null; vendedor_default_id: string | null; }
+
 export default function EditUserModal({ editingUser, editForm, setEditForm, savingUser, authUsers, activeRoles, almacenes, ownerUserId, onSave, onClose }: Props) {
   const isOwner = ownerUserId === editingUser.user_id;
+  const [vehiculos, setVehiculos] = useState<VehiculoLite[]>([]);
+  const [vehiculoId, setVehiculoId] = useState<string>('');
+  const [initialVehiculoId, setInitialVehiculoId] = useState<string>('');
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data } = await supabase
+        .from('vehiculos')
+        .select('id, alias, placa, vendedor_default_id, empresa_id')
+        .eq('empresa_id', (editingUser as any).empresa_id ?? undefined as any);
+      if (cancel) return;
+      // Fallback: if empresa_id no está en editingUser, traemos por asignación al user
+      let list: VehiculoLite[] = (data as any) || [];
+      if (!list.length) {
+        const { data: all } = await supabase.from('vehiculos').select('id, alias, placa, vendedor_default_id');
+        list = (all as any) || [];
+      }
+      setVehiculos(list);
+      const mine = list.find(v => v.vendedor_default_id === editingUser.id);
+      setVehiculoId(mine?.id || '');
+      setInitialVehiculoId(mine?.id || '');
+    })();
+    return () => { cancel = true; };
+  }, [editingUser.id]);
 
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value.replace(/\D/g, '').slice(0, 4);
     setEditForm({ ...editForm, pin_code: v });
+  };
+
+  const handleSaveAll = async () => {
+    // Actualizar asignación de vehículo si cambió
+    if (vehiculoId !== initialVehiculoId) {
+      try {
+        // Liberar el anterior
+        if (initialVehiculoId) {
+          await supabase.from('vehiculos').update({ vendedor_default_id: null }).eq('id', initialVehiculoId);
+        }
+        // Asignar el nuevo (y desasignar a otros que lo tuvieran)
+        if (vehiculoId) {
+          await supabase.from('vehiculos').update({ vendedor_default_id: null }).eq('vendedor_default_id', editingUser.id);
+          await supabase.from('vehiculos').update({ vendedor_default_id: editingUser.id }).eq('id', vehiculoId);
+        } else {
+          await supabase.from('vehiculos').update({ vendedor_default_id: null }).eq('vendedor_default_id', editingUser.id);
+        }
+      } catch (e: any) {
+        toast.error('No se pudo guardar el vehículo: ' + (e.message || ''));
+      }
+    }
+    onSave();
   };
 
   return (
@@ -86,6 +138,25 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
             </select>
           </div>
           <div>
+            <label className="label-odoo flex items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5 text-primary" /> Vehículo asignado
+            </label>
+            <select className="input-odoo w-full" value={vehiculoId} onChange={e => setVehiculoId(e.target.value)}>
+              <option value="">Sin vehículo asignado</option>
+              {vehiculos.map(v => {
+                const ocupadoPorOtro = v.vendedor_default_id && v.vendedor_default_id !== editingUser.id;
+                return (
+                  <option key={v.id} value={v.id}>
+                    {v.alias}{v.placa ? ` (${v.placa})` : ''}{ocupadoPorOtro ? ' — ya asignado a otro' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Es el vehículo que se preselecciona al iniciar la jornada de ruta. Puedes cambiarlo en cualquier momento.
+            </p>
+          </div>
+          <div>
             <label className="label-odoo">Estado</label>
             {isOwner ? (
               <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed">
@@ -121,7 +192,7 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
         </div>
         <div className="p-5 border-t border-border flex gap-2 justify-end">
           <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
-          <button onClick={onSave} disabled={savingUser} className="btn-odoo-primary text-sm">
+          <button onClick={handleSaveAll} disabled={savingUser} className="btn-odoo-primary text-sm">
             {savingUser ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
