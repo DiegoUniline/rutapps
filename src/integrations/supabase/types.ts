@@ -2115,6 +2115,7 @@ export type Database = {
           email: string
           estado: string | null
           id: string
+          jornada_permite_sin_vehiculo: boolean
           logo_url: string | null
           moneda: string
           nombre: string
@@ -2140,6 +2141,7 @@ export type Database = {
           email: string
           estado?: string | null
           id?: string
+          jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre: string
@@ -2165,6 +2167,7 @@ export type Database = {
           email?: string
           estado?: string | null
           id?: string
+          jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre?: string

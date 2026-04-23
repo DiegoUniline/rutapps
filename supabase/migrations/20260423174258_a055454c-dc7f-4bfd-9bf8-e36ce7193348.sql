@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN IF NOT EXISTS jornada_permite_sin_vehiculo boolean NOT NULL DEFAULT false;
