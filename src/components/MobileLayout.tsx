@@ -173,9 +173,41 @@ export default function MobileLayout() {
       <OfflineBanner />
 
       {/* Content area */}
-      <main className="flex-1 overflow-auto pb-16">
+      <main className="flex-1 overflow-auto pb-16 relative">
         <Outlet />
         <UnilineFooter />
+
+        {/* Bloqueo total: requiere iniciar jornada */}
+        {bloqueado && (
+          <div className="fixed inset-0 top-0 z-[80] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in">
+            <div
+              className="w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center"
+              style={{ background: 'linear-gradient(135deg, hsl(38 95% 55%), hsl(20 95% 55%))', color: 'hsl(0 0% 100%)' }}
+            >
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-9 w-9" />
+              </div>
+              <h2 className="text-[20px] font-extrabold mb-1">Inicia tu jornada</h2>
+              <p className="text-[13px] opacity-95 mb-5">
+                Para registrar ventas, entregas, cobros o cualquier movimiento, primero debes iniciar tu jornada con vehículo, KM y foto del odómetro.
+              </p>
+              <button
+                onClick={() => navigate('/ruta/iniciar')}
+                className="w-full bg-white text-foreground rounded-xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md"
+                style={{ color: 'hsl(20 95% 35%)' }}
+              >
+                <Play className="h-5 w-5 fill-current" />
+                Iniciar jornada ahora
+              </button>
+            </div>
+            <button
+              onClick={() => navigate('/ruta/perfil')}
+              className="mt-4 text-[12px] text-muted-foreground underline"
+            >
+              Ir a mi perfil
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Bottom navigation */}
