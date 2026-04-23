@@ -510,6 +510,24 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
 
           <div className="h-4" />
         </div>
+
+        {/* Footer Save */}
+        <div className="border-t border-border bg-background px-3 py-3 shrink-0 flex gap-2">
+          <button
+            onClick={handleClose}
+            className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm font-semibold active:scale-95 transition-transform"
+          >
+            Cerrar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 h-11 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {savedId ? 'Actualizar producto' : 'Guardar producto'}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
