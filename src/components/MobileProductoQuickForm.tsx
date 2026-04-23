@@ -452,37 +452,16 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           {/* ── Inventario ── */}
           <TabPanel id="inventario" active={activeTab}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Stock inicial">
-                <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.cantidad ?? 0} onChange={e => set('cantidad', +e.target.value)} />
-              </Field>
               <Field label="Stock mínimo">
                 <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.min ?? 0} onChange={e => set('min', +e.target.value)} />
               </Field>
+              <Field label="Stock máximo">
+                <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.max ?? 0} onChange={e => set('max', +e.target.value)} />
+              </Field>
             </div>
-            <Field label="Stock máximo">
-              <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.max ?? 0} onChange={e => set('max', +e.target.value)} />
-            </Field>
             <ToggleRow label="Vender sin stock" value={!!form.vender_sin_stock} onChange={() => set('vender_sin_stock', !form.vender_sin_stock)} />
-            <ToggleRow label="Manejar lotes" value={!!form.manejar_lotes} onChange={() => set('manejar_lotes', !form.manejar_lotes)} />
             <ToggleRow label="Se puede vender" value={!!form.se_puede_vender} onChange={() => set('se_puede_vender', !form.se_puede_vender)} />
             <ToggleRow label="Se puede comprar" value={!!form.se_puede_comprar} onChange={() => set('se_puede_comprar', !form.se_puede_comprar)} />
-            {/* Almacenes */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Almacenes</label>
-              <div className="flex items-center gap-3 mb-1">
-                <button type="button" onClick={() => set('almacenes', almacenes?.map(a => a.id) ?? [])} className="text-xs text-primary">Todos</button>
-                <button type="button" onClick={() => set('almacenes', [])} className="text-xs text-muted-foreground">Ninguno</button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {almacenes?.map(a => (
-                  <label key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-border bg-card text-xs">
-                    <input type="checkbox" checked={form.almacenes?.includes(a.id) ?? false}
-                      onChange={e => { const c = form.almacenes ?? []; set('almacenes', e.target.checked ? [...c, a.id] : c.filter(x => x !== a.id)); }} />
-                    <span className="truncate">{a.nombre}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
           </TabPanel>
 
           {/* ── Proveedores (solo después de guardar) ── */}
