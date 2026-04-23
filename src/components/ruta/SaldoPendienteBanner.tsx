@@ -26,13 +26,13 @@ export default function SaldoPendienteBanner({ saldoPendiente, creditoInfo, onCo
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-semibold text-foreground">
-            Adeuda <span className={sinCredito ? 'text-destructive' : 'text-amber-700 dark:text-amber-400'}>{s}{fmt(saldoPendiente)}</span>
+            Adeuda <span className={sinCredito ? 'text-destructive' : 'text-amber-700 dark:text-amber-400'}>{fmt(saldoPendiente)}</span>
           </p>
           {creditoInfo ? (
             <p className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">
               {sinCredito
-                ? <>Sin crédito disponible · Límite {s}{fmt(creditoInfo.limite)}</>
-                : <>Crédito disponible: <b className="text-foreground">{s}{fmt(creditoInfo.disponible)}</b> de {s}{fmt(creditoInfo.limite)}</>}
+                ? <>Sin crédito disponible · Límite {fmt(creditoInfo.limite)}</>
+                : <>Crédito disponible: <b className="text-foreground">{fmt(creditoInfo.disponible)}</b> de {fmt(creditoInfo.limite)}</>}
             </p>
           ) : (
             <p className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">Cliente sin línea de crédito</p>

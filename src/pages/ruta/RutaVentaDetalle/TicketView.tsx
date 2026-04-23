@@ -29,8 +29,8 @@ export function TicketView({ ticketData, clienteNombre, lineas, ventaTotal, sald
           <div className="bg-green-600 dark:bg-green-700 px-5 py-6 text-center">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3"><Check className="h-7 w-7 text-white" /></div>
             <p className="text-white/80 text-[12px] font-medium">Cobro exitoso</p>
-            <p className="text-white text-[32px] font-bold mt-1">{s}{fmt(ticketData.monto)}</p>
-            {ticketData.cambio > 0 && <p className="text-white/70 text-[13px] mt-1">Cambio: {s}{fmt(ticketData.cambio)}</p>}
+            <p className="text-white text-[32px] font-bold mt-1">{fmt(ticketData.monto)}</p>
+            {ticketData.cambio > 0 && <p className="text-white/70 text-[13px] mt-1">Cambio: {fmt(ticketData.cambio)}</p>}
           </div>
 
           <div className="px-5 py-4 space-y-3">
@@ -46,9 +46,9 @@ export function TicketView({ ticketData, clienteNombre, lineas, ventaTotal, sald
                   <div key={i} className="flex justify-between text-[12px] py-0.5">
                     <span className="text-foreground">{a.folio}</span>
                     <div className="text-right">
-                      <span className="text-foreground font-medium">{s}{fmt(a.monto)}</span>
+                      <span className="text-foreground font-medium">{fmt(a.monto)}</span>
                       {a.saldoRestante > 0.01 && (
-                        <span className="text-destructive text-[10px] ml-1.5">pend. {s}{fmt(a.saldoRestante)}</span>
+                        <span className="text-destructive text-[10px] ml-1.5">pend. {fmt(a.saldoRestante)}</span>
                       )}
                       {a.saldoRestante <= 0.01 && (
                         <span className="text-green-600 dark:text-green-400 text-[10px] ml-1.5">✓ Liquidada</span>
@@ -65,17 +65,17 @@ export function TicketView({ ticketData, clienteNombre, lineas, ventaTotal, sald
               {lineas.map((l: any) => (
                 <div key={l.id} className="flex justify-between text-[12px] py-0.5">
                   <span className="text-foreground truncate flex-1 mr-2">{l.cantidad}x {l.productos?.nombre ?? l.descripcion ?? '—'}</span>
-                  <span className="text-foreground font-medium shrink-0">{s}{fmt(l.total ?? 0)}</span>
+                  <span className="text-foreground font-medium shrink-0">{fmt(l.total ?? 0)}</span>
                 </div>
               ))}
               <div className="flex justify-between text-[13px] font-bold mt-2 pt-2 border-t border-dashed border-border">
                 <span className="text-foreground">Total venta</span>
-                <span className="text-foreground">{s}{fmt(ventaTotal)}</span>
+                <span className="text-foreground">{fmt(ventaTotal)}</span>
               </div>
               {(saldoPendiente ?? 0) > 0 && (
                 <div className="flex justify-between text-[12px] font-semibold mt-1">
                   <span className="text-destructive">Saldo pendiente</span>
-                  <span className="text-destructive">{s}{fmt(saldoPendiente!)}</span>
+                  <span className="text-destructive">{fmt(saldoPendiente!)}</span>
                 </div>
               )}
             </div>
