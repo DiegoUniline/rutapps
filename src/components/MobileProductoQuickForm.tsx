@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Save, Loader2, Camera, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Save, Loader2, Camera, Lock } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -54,36 +54,21 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
-function Section({
-  title, open, onToggle, locked, lockedMsg, children,
-}: { title: string; open: boolean; onToggle: () => void; locked?: boolean; lockedMsg?: string; children?: React.ReactNode }) {
+function LockedNotice({ message }: { message: string }) {
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={locked}
-        className={cn(
-          "w-full flex items-center justify-between px-3 py-3 text-sm font-semibold",
-          locked ? "text-muted-foreground bg-muted/30" : "text-foreground bg-card hover:bg-muted/50"
-        )}
-      >
-        <span className="flex items-center gap-2">
-          {locked && <Lock className="h-3.5 w-3.5" />}
-          {title}
-        </span>
-        {!locked && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-      </button>
-      {locked && lockedMsg && (
-        <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/20 border-t border-border">{lockedMsg}</div>
-      )}
-      {open && !locked && (
-        <div className="px-3 py-3 space-y-3 bg-background border-t border-border animate-in slide-in-from-top-1 duration-150">
-          {children}
-        </div>
-      )}
+    <div className="flex items-center gap-2 px-3 py-4 rounded-lg bg-muted/30 border border-border text-xs text-muted-foreground">
+      <Lock className="h-3.5 w-3.5 shrink-0" />
+      <span>{message}</span>
     </div>
   );
+}
+
+function TabPanel({
+  id, active, locked, lockedMsg, children,
+}: { id: string; active: string; locked?: boolean; lockedMsg?: string; children?: React.ReactNode }) {
+  if (active !== id) return null;
+  if (locked) return <LockedNotice message={lockedMsg || 'Guarda primero el producto.'} />;
+  return <div className="space-y-3 animate-in fade-in duration-150">{children}</div>;
 }
 
 interface Props {
@@ -116,13 +101,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    basico: true, precio: true,
-  });
+  const [activeTab, setActiveTab] = useState<string>('basico');
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof Producto, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-  const toggleSection = (key: string) => setOpenSections(p => ({ ...p, [key]: !p[key] }));
 
   // Reset on close + smart defaults on open
   useEffect(() => {
@@ -138,7 +120,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         }
         return updates;
       });
-      setOpenSections({ basico: true, precio: true });
+      setActiveTab('basico');
     }
   }, [open, almacenes, unidades]);
 
@@ -192,6 +174,24 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   const ivaTipo = (form as any).usa_listas_precio ? 'listas' : 'directo';
   const setModoPrecio = (mode: 'directo' | 'listas') => setForm(f => ({ ...f, usa_listas_precio: mode === 'listas' } as any));
 
+  const tabs = useMemo(() => {
+    const base = [
+      { id: 'basico', label: 'Básico', locked: false },
+      { id: 'precio', label: 'Precio', locked: false },
+    ];
+    if ((form as any).usa_listas_precio) {
+      base.push({ id: 'reglas', label: 'Reglas', locked: isNew });
+    }
+    base.push(
+      { id: 'fiscal', label: 'Fiscal', locked: false },
+      { id: 'comisiones', label: 'Comisiones', locked: false },
+      { id: 'inventario', label: 'Inventario', locked: false },
+      { id: 'proveedores', label: 'Proveedores', locked: isNew },
+      { id: 'kardex', label: 'Kardex', locked: isNew },
+    );
+    return base;
+  }, [(form as any).usa_listas_precio, isNew]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
@@ -199,7 +199,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
         onOpenAutoFocus={e => e.preventDefault()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background sticky top-0 z-10">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background shrink-0">
           <button
             onClick={handleClose}
             className="h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform"
@@ -209,48 +209,65 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           <h2 className="text-base font-bold text-foreground flex-1 truncate">
             {savedId ? form.nombre || 'Producto' : 'Nuevo producto'}
           </h2>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {savedId ? 'Actualizar' : 'Guardar'}
-          </button>
+        </div>
+
+        {/* Tabs nav */}
+        <div className="border-b border-border bg-card shrink-0 overflow-x-auto">
+          <div className="flex gap-0 min-w-max">
+            {tabs.map(t => {
+              const isActive = activeTab === t.id;
+              const isLocked = t.locked;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  className={cn(
+                    "px-3 h-11 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1",
+                    isActive
+                      ? "text-primary border-primary"
+                      : "text-muted-foreground border-transparent hover:text-foreground"
+                  )}
+                >
+                  {isLocked && <Lock className="h-3 w-3" />}
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-          {/* Imagen + Estado */}
-          <div className="flex items-center gap-3 bg-card border border-border rounded-lg p-3">
-            <div className="h-16 w-16 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
-              {form.imagen_url ? (
-                <img src={form.imagen_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <Camera className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex-1 space-y-1">
-              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploadingImage}
-                className="h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium text-foreground active:scale-95 transition-transform disabled:opacity-60 w-full"
-              >
-                {uploadingImage ? 'Subiendo…' : form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
-              </button>
-              <select className="w-full h-9 px-2 rounded-lg border border-input bg-background text-xs text-foreground"
-                value={form.status ?? 'activo'} onChange={e => set('status', e.target.value as any)}>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-                <option value="borrador">Borrador</option>
-              </select>
-            </div>
-          </div>
-
           {/* ── Información básica ── */}
-          <Section title="Información básica" open={!!openSections.basico} onToggle={() => toggleSection('basico')}>
+          <TabPanel id="basico" active={activeTab}>
+            {/* Imagen + Estado */}
+            <div className="flex items-center gap-3 bg-card border border-border rounded-lg p-3">
+              <div className="h-16 w-16 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
+                {form.imagen_url ? (
+                  <img src={form.imagen_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <Camera className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium text-foreground active:scale-95 transition-transform disabled:opacity-60 w-full"
+                >
+                  {uploadingImage ? 'Subiendo…' : form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
+                </button>
+                <select className="w-full h-9 px-2 rounded-lg border border-input bg-background text-xs text-foreground"
+                  value={form.status ?? 'activo'} onChange={e => set('status', e.target.value as any)}>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="borrador">Borrador</option>
+                </select>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Código" required>
                 <input className={inputCls} placeholder="SKU" value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
@@ -305,10 +322,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 </select>
               </Field>
             )}
-          </Section>
+          </TabPanel>
 
           {/* ── Precio y costo ── */}
-          <Section title="Precio y costo" open={!!openSections.precio} onToggle={() => toggleSection('precio')}>
+          <TabPanel id="precio" active={activeTab}>
             <Field label="Modo de precio">
               <div className="grid grid-cols-2 gap-2">
                 {(['directo', 'listas'] as const).map(mode => (
@@ -345,25 +362,19 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 <option value="ultimo_compra">Último costo (compra directa)</option>
               </select>
             </Field>
-          </Section>
+          </TabPanel>
 
           {/* ── Reglas de precio (solo si listas y guardado) ── */}
           {(form as any).usa_listas_precio && (
-            <Section
-              title="Reglas de precio"
-              open={!!openSections.reglas}
-              onToggle={() => toggleSection('reglas')}
-              locked={isNew}
-              lockedMsg="Guarda el producto primero para configurar reglas por lista."
-            >
+            <TabPanel id="reglas" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para configurar reglas por lista.">
               <div className="-mx-1 overflow-x-auto">
                 <PreciosTab form={form} tarifaLineas={tarifaLineas} tarifasDisp={tarifasDisp as any} productoId={savedId} isNew={isNew} navigate={navigate} />
               </div>
-            </Section>
+            </TabPanel>
           )}
 
           {/* ── Fiscal ── */}
-          <Section title="Fiscal (SAT, IVA, IEPS)" open={!!openSections.fiscal} onToggle={() => toggleSection('fiscal')}>
+          <TabPanel id="fiscal" active={activeTab}>
             <Field label="Clave SAT">
               <input className={inputCls} placeholder="01010101" value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} />
             </Field>
@@ -407,10 +418,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
               </>
             )}
             <ToggleRow label="Costo incluye impuestos" value={!!form.costo_incluye_impuestos} onChange={() => set('costo_incluye_impuestos', !form.costo_incluye_impuestos)} />
-          </Section>
+          </TabPanel>
 
           {/* ── Comisiones ── */}
-          <Section title="Comisiones" open={!!openSections.comisiones} onToggle={() => toggleSection('comisiones')}>
+          <TabPanel id="comisiones" active={activeTab}>
             <ToggleRow label="Maneja comisión" value={!!form.tiene_comision} onChange={() => set('tiene_comision', !form.tiene_comision)} />
             {form.tiene_comision && (
               (form as any).usa_listas_precio ? (
@@ -436,10 +447,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 </>
               )
             )}
-          </Section>
+          </TabPanel>
 
           {/* ── Inventario ── */}
-          <Section title="Inventario" open={!!openSections.inventario} onToggle={() => toggleSection('inventario')}>
+          <TabPanel id="inventario" active={activeTab}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Stock inicial">
                 <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.cantidad ?? 0} onChange={e => set('cantidad', +e.target.value)} />
@@ -472,16 +483,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 ))}
               </div>
             </div>
-          </Section>
+          </TabPanel>
 
           {/* ── Proveedores (solo después de guardar) ── */}
-          <Section
-            title="Proveedores"
-            open={!!openSections.proveedores}
-            onToggle={() => toggleSection('proveedores')}
-            locked={isNew}
-            lockedMsg="Guarda el producto primero para asignar proveedores."
-          >
+          <TabPanel id="proveedores" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para asignar proveedores.">
             <div className="-mx-1 overflow-x-auto">
               <ProveedoresTab
                 productoId={savedId}
@@ -494,22 +499,34 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
                 onCreateProveedor={async () => undefined}
               />
             </div>
-          </Section>
+          </TabPanel>
 
           {/* ── Kardex (solo después de guardar) ── */}
-          <Section
-            title="Kardex"
-            open={!!openSections.kardex}
-            onToggle={() => toggleSection('kardex')}
-            locked={isNew}
-            lockedMsg="Guarda el producto primero para ver el kardex."
-          >
+          <TabPanel id="kardex" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para ver el kardex.">
             <div className="-mx-1 overflow-x-auto">
               <KardexTab productoId={savedId} isNew={isNew} />
             </div>
-          </Section>
+          </TabPanel>
 
           <div className="h-4" />
+        </div>
+
+        {/* Footer Save */}
+        <div className="border-t border-border bg-background px-3 py-3 shrink-0 flex gap-2">
+          <button
+            onClick={handleClose}
+            className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm font-semibold active:scale-95 transition-transform"
+          >
+            Cerrar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 h-11 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {savedId ? 'Actualizar producto' : 'Guardar producto'}
+          </button>
         </div>
       </DialogContent>
     </Dialog>
