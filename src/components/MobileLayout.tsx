@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -11,6 +11,12 @@ import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
+import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
+
+// Empresa de prueba para el bloqueo de jornada — quitar para liberar a todos
+const EMPRESA_PRUEBA_JORNADA = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
+// Rutas permitidas sin jornada activa
+const RUTAS_PERMITIDAS_SIN_JORNADA = ['/ruta/iniciar', '/ruta/perfil', '/ruta/sincronizar'];
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
@@ -32,13 +38,19 @@ export default function MobileLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { profile } = useAuth();
+  const { profile, empresa } = useAuth();
   const { hasPermiso } = usePermisos();
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Bloqueo por jornada (solo empresa de prueba)
+  const requireJornada = empresa?.id === EMPRESA_PRUEBA_JORNADA;
+  const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
+  const isRutaPermitida = RUTAS_PERMITIDAS_SIN_JORNADA.some(p => location.pathname.startsWith(p));
+  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && !isRutaPermitida;
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
@@ -161,9 +173,41 @@ export default function MobileLayout() {
       <OfflineBanner />
 
       {/* Content area */}
-      <main className="flex-1 overflow-auto pb-16">
+      <main className="flex-1 overflow-auto pb-16 relative">
         <Outlet />
         <UnilineFooter />
+
+        {/* Bloqueo total: requiere iniciar jornada */}
+        {bloqueado && (
+          <div className="fixed inset-0 top-0 z-[80] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in">
+            <div
+              className="w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center"
+              style={{ background: 'linear-gradient(135deg, hsl(38 95% 55%), hsl(20 95% 55%))', color: 'hsl(0 0% 100%)' }}
+            >
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-9 w-9" />
+              </div>
+              <h2 className="text-[20px] font-extrabold mb-1">Inicia tu jornada</h2>
+              <p className="text-[13px] opacity-95 mb-5">
+                Para registrar ventas, entregas, cobros o cualquier movimiento, primero debes iniciar tu jornada con vehículo, KM y foto del odómetro.
+              </p>
+              <button
+                onClick={() => navigate('/ruta/iniciar')}
+                className="w-full bg-white text-foreground rounded-xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md"
+                style={{ color: 'hsl(20 95% 35%)' }}
+              >
+                <Play className="h-5 w-5 fill-current" />
+                Iniciar jornada ahora
+              </button>
+            </div>
+            <button
+              onClick={() => navigate('/ruta/perfil')}
+              className="mt-4 text-[12px] text-muted-foreground underline"
+            >
+              Ir a mi perfil
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Bottom navigation */}
