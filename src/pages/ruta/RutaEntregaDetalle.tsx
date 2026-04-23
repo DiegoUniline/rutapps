@@ -494,6 +494,40 @@ export default function RutaEntregaDetalle() {
         </div>
       </div>
 
+      {showCobrarPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowCobrarPrompt(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground">Saldo pendiente</h3>
+              <button onClick={() => setShowCobrarPrompt(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              Este cliente tiene un saldo pendiente de <span className="font-bold text-destructive">{s}{fmt(Math.max(ventaSaldo, totalSaldoPendiente))}</span>.
+              ¿Deseas cobrarlo ahora o marcar como entregado y cobrar después?
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={() => { setShowCobrarPrompt(false); void marcarEntregado(true); }}
+                disabled={saving}
+                className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <Banknote className="h-4 w-4" /> Entregar y cobrar
+              </button>
+              <button
+                onClick={() => { setShowCobrarPrompt(false); void marcarEntregado(false); }}
+                disabled={saving}
+                className="w-full bg-success text-success-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <Check className="h-4 w-4" /> Solo entregar (cobrar después)
+              </button>
+              <button
+                onClick={() => setShowCobrarPrompt(false)}
+                className="w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={cliente?.telefono ?? ''} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
