@@ -70,6 +70,7 @@ export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: bool
   { key: 'tipo', label: 'Tipo', defaultVisible: true },
   { key: 'cliente', label: 'Cliente', required: true, defaultVisible: true },
   { key: 'vendedor', label: 'Vendedor', defaultVisible: true },
+  { key: 'almacen', label: 'Almacén', defaultVisible: true },
   { key: 'condicion', label: 'Condición', defaultVisible: true },
   { key: 'fecha', label: 'Fecha / Hora', defaultVisible: true },
   { key: 'subtotal', label: 'Subtotal', defaultVisible: true },
