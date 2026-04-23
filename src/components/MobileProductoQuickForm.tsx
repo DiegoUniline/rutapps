@@ -232,7 +232,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </div>
 
           {/* ── Información básica ── */}
-          <TabPanel id="basico" active={activeTab}> toggleSection('basico')}>
+          <TabPanel id="basico" active={activeTab}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Código" required>
                 <input className={inputCls} placeholder="SKU" value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
@@ -290,7 +290,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </TabPanel>
 
           {/* ── Precio y costo ── */}
-          <TabPanel id="precio" active={activeTab}> toggleSection('precio')}>
+          <TabPanel id="precio" active={activeTab}>
             <Field label="Modo de precio">
               <div className="grid grid-cols-2 gap-2">
                 {(['directo', 'listas'] as const).map(mode => (
@@ -342,7 +342,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           )}
 
           {/* ── Fiscal ── */}
-          <TabPanel id="fiscal" active={activeTab}> toggleSection('fiscal')}>
+          <TabPanel id="fiscal" active={activeTab}>
             <Field label="Clave SAT">
               <input className={inputCls} placeholder="01010101" value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} />
             </Field>
@@ -389,7 +389,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </TabPanel>
 
           {/* ── Comisiones ── */}
-          <TabPanel id="comisiones" active={activeTab}> toggleSection('comisiones')}>
+          <TabPanel id="comisiones" active={activeTab}>
             <ToggleRow label="Maneja comisión" value={!!form.tiene_comision} onChange={() => set('tiene_comision', !form.tiene_comision)} />
             {form.tiene_comision && (
               (form as any).usa_listas_precio ? (
@@ -418,7 +418,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </TabPanel>
 
           {/* ── Inventario ── */}
-          <TabPanel id="inventario" active={activeTab}> toggleSection('inventario')}>
+          <TabPanel id="inventario" active={activeTab}>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Stock inicial">
                 <input className={inputCls} type="number" inputMode="decimal" step="0.001" placeholder="0" value={form.cantidad ?? 0} onChange={e => set('cantidad', +e.target.value)} />
