@@ -3977,7 +3977,7 @@ export type Database = {
           notas_inicio: string | null
           status: string
           updated_at: string
-          vehiculo_id: string
+          vehiculo_id: string | null
           vendedor_id: string
         }
         Insert: {
@@ -4001,7 +4001,7 @@ export type Database = {
           notas_inicio?: string | null
           status?: string
           updated_at?: string
-          vehiculo_id: string
+          vehiculo_id?: string | null
           vendedor_id: string
         }
         Update: {
@@ -4025,7 +4025,7 @@ export type Database = {
           notas_inicio?: string | null
           status?: string
           updated_at?: string
-          vehiculo_id?: string
+          vehiculo_id?: string | null
           vendedor_id?: string
         }
         Relationships: [
