@@ -127,6 +127,9 @@ import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
 import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
 import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
+import RutaIniciarPage from "@/pages/ruta/RutaIniciarPage";
+const VehiculosPage = lazy(() => import("@/pages/VehiculosPage"));
+const JornadasRutaPage = lazy(() => import("@/pages/JornadasRutaPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

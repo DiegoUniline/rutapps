@@ -3946,6 +3946,110 @@ export type Database = {
           },
         ]
       }
+      ruta_sesiones: {
+        Row: {
+          carga_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          fin_at: string | null
+          foto_fin_url: string | null
+          foto_inicio_url: string | null
+          id: string
+          inicio_at: string
+          km_fin: number | null
+          km_inicio: number
+          km_recorridos: number | null
+          lat_fin: number | null
+          lat_inicio: number | null
+          lng_fin: number | null
+          lng_inicio: number | null
+          notas_fin: string | null
+          notas_inicio: string | null
+          status: string
+          updated_at: string
+          vehiculo_id: string
+          vendedor_id: string
+        }
+        Insert: {
+          carga_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          fin_at?: string | null
+          foto_fin_url?: string | null
+          foto_inicio_url?: string | null
+          id?: string
+          inicio_at?: string
+          km_fin?: number | null
+          km_inicio: number
+          km_recorridos?: number | null
+          lat_fin?: number | null
+          lat_inicio?: number | null
+          lng_fin?: number | null
+          lng_inicio?: number | null
+          notas_fin?: string | null
+          notas_inicio?: string | null
+          status?: string
+          updated_at?: string
+          vehiculo_id: string
+          vendedor_id: string
+        }
+        Update: {
+          carga_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          fin_at?: string | null
+          foto_fin_url?: string | null
+          foto_inicio_url?: string | null
+          id?: string
+          inicio_at?: string
+          km_fin?: number | null
+          km_inicio?: number
+          km_recorridos?: number | null
+          lat_fin?: number | null
+          lat_inicio?: number | null
+          lng_fin?: number | null
+          lng_inicio?: number | null
+          notas_fin?: string | null
+          notas_inicio?: string | null
+          status?: string
+          updated_at?: string
+          vehiculo_id?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ruta_sesiones_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruta_sesiones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruta_sesiones_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruta_sesiones_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solicitudes_pago: {
         Row: {
           aprobado_por: string | null
@@ -4845,6 +4949,78 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculos: {
+        Row: {
+          alias: string
+          anio: number | null
+          capacidad_kg: number | null
+          created_at: string
+          empresa_id: string
+          foto_url: string | null
+          id: string
+          km_actual: number
+          marca: string | null
+          modelo: string | null
+          notas: string | null
+          placa: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          vendedor_default_id: string | null
+        }
+        Insert: {
+          alias: string
+          anio?: number | null
+          capacidad_kg?: number | null
+          created_at?: string
+          empresa_id: string
+          foto_url?: string | null
+          id?: string
+          km_actual?: number
+          marca?: string | null
+          modelo?: string | null
+          notas?: string | null
+          placa?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          vendedor_default_id?: string | null
+        }
+        Update: {
+          alias?: string
+          anio?: number | null
+          capacidad_kg?: number | null
+          created_at?: string
+          empresa_id?: string
+          foto_url?: string | null
+          id?: string
+          km_actual?: number
+          marca?: string | null
+          modelo?: string | null
+          notas?: string | null
+          placa?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          vendedor_default_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_vendedor_default_id_fkey"
+            columns: ["vendedor_default_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
