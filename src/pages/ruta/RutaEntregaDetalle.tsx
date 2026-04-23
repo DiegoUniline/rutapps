@@ -42,6 +42,7 @@ export default function RutaEntregaDetalle() {
   const [ecPdfBlob, setEcPdfBlob] = useState<Blob | null>(null);
   const [showEcPreview, setShowEcPreview] = useState(false);
   const [showTax, setShowTax] = useState(true);
+  const [showCobrarPrompt, setShowCobrarPrompt] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
@@ -100,7 +101,17 @@ export default function RutaEntregaDetalle() {
   const ventaTotal = venta?.total ?? 0;
   const ventaSaldo = venta?.saldo_pendiente ?? 0;
 
-  const marcarEntregado = async () => {
+  const handleMarcarClick = () => {
+    // If there's any pending balance (this order or other accounts), prompt
+    const tienePendiente = (ventaSaldo > 0) || (totalSaldoPendiente > 0);
+    if (tienePendiente) {
+      setShowCobrarPrompt(true);
+      return;
+    }
+    void marcarEntregado();
+  };
+
+  const marcarEntregado = async (goToCobrarAfter = false) => {
     setSaving(true);
     try {
       const now = new Date().toISOString();
@@ -176,6 +187,9 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
       queryClient.invalidateQueries({ queryKey: ['productos'] });
+      if (goToCobrarAfter && pedidoId) {
+        navigate(`/ruta/ventas/${pedidoId}`);
+      }
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
@@ -471,14 +485,48 @@ export default function RutaEntregaDetalle() {
               <FileText className="h-5 w-5" /> Ver pedido
             </button>
           ) : (
-            <button onClick={marcarEntregado} disabled={saving}
-              className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
+            <button onClick={handleMarcarClick} disabled={saving}
+              className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
               {saving ? 'Entregando...' : 'Marcar como entregado'}
             </button>
           )}
         </div>
       </div>
+
+      {showCobrarPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowCobrarPrompt(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground">Saldo pendiente</h3>
+              <button onClick={() => setShowCobrarPrompt(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              Este cliente tiene un saldo pendiente de <span className="font-bold text-destructive">{s}{fmt(Math.max(ventaSaldo, totalSaldoPendiente))}</span>.
+              ¿Deseas cobrarlo ahora o marcar como entregado y cobrar después?
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={() => { setShowCobrarPrompt(false); void marcarEntregado(true); }}
+                disabled={saving}
+                className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <Banknote className="h-4 w-4" /> Entregar y cobrar
+              </button>
+              <button
+                onClick={() => { setShowCobrarPrompt(false); void marcarEntregado(false); }}
+                disabled={saving}
+                className="w-full bg-success text-success-foreground rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <Check className="h-4 w-4" /> Solo entregar (cobrar después)
+              </button>
+              <button
+                onClick={() => setShowCobrarPrompt(false)}
+                className="w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={cliente?.telefono ?? ''} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
     </div>
