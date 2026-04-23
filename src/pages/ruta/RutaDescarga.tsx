@@ -218,8 +218,16 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
-      const diferencia = totalEfectivo - efectivoEsperado;
+      // Validate route session closing if active
+      if (sesionActiva) {
+        const km = parseFloat(kmFin);
+        if (!Number.isFinite(km) || km < sesionActiva.km_inicio) {
+          throw new Error(`KM final debe ser mayor o igual a ${sesionActiva.km_inicio}`);
+        }
+        if (!fotoFin) throw new Error('Toma la foto del odómetro final');
+      }
 
+      const diferencia = totalEfectivo - efectivoEsperado;
       const vId = cargaActiva?.vendedor_id || myProfile?.id || null;
 
       const insertData: any = {
@@ -244,11 +252,30 @@ export default function RutaDescarga() {
         .select()
         .single();
       if (error) throw error;
+
+      // Close route session
+      if (sesionActiva && fotoFin) {
+        setUploading(true);
+        try {
+          const fotoUrl = await uploadOdometroFoto(fotoFin, empresa!.id, 'fin');
+          await cerrarSesion.mutateAsync({
+            id: sesionActiva.id,
+            km_fin: parseFloat(kmFin),
+            lat_fin: coords?.lat ?? null,
+            lng_fin: coords?.lng ?? null,
+            foto_fin_url: fotoUrl,
+            notas_fin: notas || null,
+          });
+        } finally {
+          setUploading(false);
+        }
+      }
     },
     onSuccess: () => {
       toast.success('Liquidación enviada ✓');
       qc.invalidateQueries({ queryKey: ['mi-descarga-hoy'] });
       qc.invalidateQueries({ queryKey: ['descargas'] });
+      qc.invalidateQueries({ queryKey: ['ruta-sesion-activa'] });
       nav('/ruta');
     },
     onError: (e: any) => toast.error(e.message),
