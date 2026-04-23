@@ -1,0 +1,1 @@
+DELETE FROM public.ruta_sesiones WHERE fin_at IS NULL OR status IN ('abierta','en_ruta');
