@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -34,20 +34,26 @@ export default function RutaDescarga() {
   const { data: sesionActiva } = useRutaSesionActiva();
   const cerrarSesion = useCerrarRutaSesion();
 
-  // Pre-fill KM fin with current km_actual
-  useState(() => {
+  // Pre-fill KM fin with vehicle's last km when sesion loads
+  useEffect(() => {
     if (sesionActiva && !kmFin) setKmFin(String(sesionActiva.km_inicio));
-    return undefined;
-  });
+  }, [sesionActiva]);
 
   // Capture GPS
-  useMemo(() => {
+  useEffect(() => {
     locationService.startWatching();
     const c = locationService.getLastKnownLocation();
     if (c) setCoords(c);
     const off = locationService.onUpdate((loc) => setCoords(loc));
     return off;
   }, []);
+
+  const onFotoFinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFotoFin(f);
+    setFotoFinPreview(URL.createObjectURL(f));
+  };
 
 
   // Get user's profile id (profile.id IS the vendedor_id now)
