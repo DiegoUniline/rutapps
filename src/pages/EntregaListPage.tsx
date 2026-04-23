@@ -364,6 +364,7 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
               <TableHead className="text-[11px]">Almacén origen</TableHead>
+              <TableHead className="text-[11px]">Almacén destino</TableHead>
               <TableHead className="text-[11px]">Ruta asignada</TableHead>
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
@@ -371,11 +372,11 @@ export default function EntregaListPage() {
           </TableHeader>
           <TableBody>
             {isLoading && (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay entregas
                 </TableCell>
@@ -384,6 +385,34 @@ export default function EntregaListPage() {
             {filtered.map((e: any) => {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
               const canSelect = selectableIds.has(e.id);
+
+              // Derive unique origin warehouses from lines (real source of stock)
+              const lineOrigins = new Map<string, string>();
+              for (const l of (e.entrega_lineas ?? [])) {
+                const id = l?.almacen_origen_id;
+                const nombre = l?.almacenes?.nombre;
+                if (id && nombre) lineOrigins.set(id, nombre);
+              }
+              const originNames = Array.from(lineOrigins.values());
+              const headerOriginName = e.almacenes?.nombre as string | undefined;
+
+              let originLabel: string;
+              let originTitle: string | undefined;
+              if (originNames.length === 0) {
+                originLabel = headerOriginName ?? '—';
+              } else if (originNames.length === 1) {
+                originLabel = originNames[0];
+              } else {
+                originLabel = `${originNames[0]} +${originNames.length - 1}`;
+                originTitle = originNames.join(', ');
+              }
+
+              // Destino = almacén-ruta del vendedor asignado (vendedor_ruta_id) o, si no hay, del vendedor original
+              const destinoNombre =
+                e.vendedor_ruta?.almacen_destino?.nombre ??
+                e.vendedores?.almacen_destino?.nombre ??
+                null;
+
               return (
                 <TableRow
                   key={e.id}
@@ -419,7 +448,12 @@ export default function EntregaListPage() {
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.almacenes?.nombre ?? '—'}</TableCell>
+                    title={originTitle}
+                  >{originLabel}</TableCell>
+                  <TableCell
+                    className="text-[12px] text-muted-foreground py-2"
+                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
+                  >{destinoNombre ?? '—'}</TableCell>
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}

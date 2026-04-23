@@ -17,7 +17,7 @@ export function useEntregasList(search?: string, vendedorFilter?: string, status
       return fetchAllPages((from, to) => {
         let q = supabase
           .from('entregas')
-          .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), ventas!entregas_pedido_id_fkey(folio), almacenes(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')
+          .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre, almacen_destino:almacenes!profiles_almacen_id_fkey(id, nombre)), ventas!entregas_pedido_id_fkey(folio), almacenes(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre, almacen_destino:almacenes!profiles_almacen_id_fkey(id, nombre)), entrega_lineas(almacen_origen_id, almacenes:almacen_origen_id(id, nombre))')
           .eq('empresa_id', empresa!.id)
           .order('created_at', { ascending: false })
           .range(from, to);
