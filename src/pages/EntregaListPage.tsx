@@ -432,7 +432,7 @@ export default function EntregaListPage() {
                     className="text-center py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
                   >
-                    <Badge variant={badge.variant} className="text-[10px]">{badge.label}</Badge>
+                    <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
                   </TableCell>
                 </TableRow>
               );
