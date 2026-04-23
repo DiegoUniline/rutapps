@@ -282,6 +282,8 @@ export default function EntregaListPage() {
           { key: 'surtido', label: 'Surtidos', count: counts.surtido },
           { key: 'asignado', label: 'Asignados', count: counts.asignado },
           { key: 'cargado', label: 'Cargados', count: counts.cargado },
+          { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
+          { key: 'hecho', label: 'Entregadas', count: counts.hecho },
         ].map(tab => (
           <button
             key={tab.key}
