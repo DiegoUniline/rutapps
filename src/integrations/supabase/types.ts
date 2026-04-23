@@ -2122,6 +2122,8 @@ export type Database = {
           owner_user_id: string | null
           razon_social: string | null
           regimen_fiscal: string | null
+          requiere_jornada_desde: string | null
+          requiere_jornada_ruta: boolean
           rfc: string | null
           telefono: string
           ticket_ancho: string
@@ -2145,6 +2147,8 @@ export type Database = {
           owner_user_id?: string | null
           razon_social?: string | null
           regimen_fiscal?: string | null
+          requiere_jornada_desde?: string | null
+          requiere_jornada_ruta?: boolean
           rfc?: string | null
           telefono: string
           ticket_ancho?: string
@@ -2168,6 +2172,8 @@ export type Database = {
           owner_user_id?: string | null
           razon_social?: string | null
           regimen_fiscal?: string | null
+          requiere_jornada_desde?: string | null
+          requiere_jornada_ruta?: boolean
           rfc?: string | null
           telefono?: string
           ticket_ancho?: string
