@@ -331,10 +331,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
 
           {/* ── Reglas de precio (solo si listas y guardado) ── */}
           {(form as any).usa_listas_precio && (
-            <TabPanel id="reglas" active={activeTab}> toggleSection('reglas')}
-              locked={isNew}
-              lockedMsg="Guarda el producto primero para configurar reglas por lista."
-            >
+            <TabPanel id="reglas" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para configurar reglas por lista.">
               <div className="-mx-1 overflow-x-auto">
                 <PreciosTab form={form} tarifaLineas={tarifaLineas} tarifasDisp={tarifasDisp as any} productoId={savedId} isNew={isNew} navigate={navigate} />
               </div>
@@ -454,10 +451,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </TabPanel>
 
           {/* ── Proveedores (solo después de guardar) ── */}
-          <TabPanel id="proveedores" active={activeTab}> toggleSection('proveedores')}
-            locked={isNew}
-            lockedMsg="Guarda el producto primero para asignar proveedores."
-          >
+          <TabPanel id="proveedores" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para asignar proveedores.">
             <div className="-mx-1 overflow-x-auto">
               <ProveedoresTab
                 productoId={savedId}
@@ -473,10 +467,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
           </TabPanel>
 
           {/* ── Kardex (solo después de guardar) ── */}
-          <TabPanel id="kardex" active={activeTab}> toggleSection('kardex')}
-            locked={isNew}
-            lockedMsg="Guarda el producto primero para ver el kardex."
-          >
+          <TabPanel id="kardex" active={activeTab} locked={isNew} lockedMsg="Guarda el producto primero para ver el kardex.">
             <div className="-mx-1 overflow-x-auto">
               <KardexTab productoId={savedId} isNew={isNew} />
             </div>
