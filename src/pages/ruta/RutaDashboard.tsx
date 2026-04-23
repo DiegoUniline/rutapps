@@ -4,6 +4,7 @@ import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPinned, RotateCc
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
