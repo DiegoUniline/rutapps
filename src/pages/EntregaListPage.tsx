@@ -61,6 +61,8 @@ export default function EntregaListPage() {
     surtido: allEntregas?.filter(e => (e as any).status === 'surtido').length ?? 0,
     asignado: allEntregas?.filter(e => (e as any).status === 'asignado').length ?? 0,
     cargado: allEntregas?.filter(e => (e as any).status === 'cargado').length ?? 0,
+    en_ruta: allEntregas?.filter(e => (e as any).status === 'en_ruta').length ?? 0,
+    hecho: allEntregas?.filter(e => (e as any).status === 'hecho').length ?? 0,
   };
 
   // Filter locally by selected tab
