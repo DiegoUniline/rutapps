@@ -93,13 +93,10 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    basico: true, precio: true,
-  });
+  const [activeTab, setActiveTab] = useState<string>('basico');
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof Producto, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-  const toggleSection = (key: string) => setOpenSections(p => ({ ...p, [key]: !p[key] }));
 
   // Reset on close + smart defaults on open
   useEffect(() => {
