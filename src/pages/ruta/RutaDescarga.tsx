@@ -25,6 +25,30 @@ export default function RutaDescarga() {
 
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
+  const [kmFin, setKmFin] = useState<string>('');
+  const [fotoFin, setFotoFin] = useState<File | null>(null);
+  const [fotoFinPreview, setFotoFinPreview] = useState<string>('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: sesionActiva } = useRutaSesionActiva();
+  const cerrarSesion = useCerrarRutaSesion();
+
+  // Pre-fill KM fin with current km_actual
+  useState(() => {
+    if (sesionActiva && !kmFin) setKmFin(String(sesionActiva.km_inicio));
+    return undefined;
+  });
+
+  // Capture GPS
+  useMemo(() => {
+    locationService.startWatching();
+    const c = locationService.getLastKnownLocation();
+    if (c) setCoords(c);
+    const off = locationService.onUpdate((loc) => setCoords(loc));
+    return off;
+  }, []);
+
 
   // Get user's profile id (profile.id IS the vendedor_id now)
   const { data: myProfile } = useQuery({
