@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw, Camera, MapPin, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
+import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion';
+import { uploadOdometroFoto } from '@/lib/rutaFotos';
+import { locationService } from '@/lib/locationService';
 
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
