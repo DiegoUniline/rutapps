@@ -15,7 +15,15 @@ import { toast } from 'sonner';
 
 export default function VehiculosPage() {
   const { data: vehiculos = [], isLoading } = useVehiculos();
-  const { usuarios = [] } = useUsuarios() as any;
+  const { empresa } = useAuth();
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ['vehiculos-usuarios-asignables', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+      return data || [];
+    },
+  });
   const upsert = useUpsertVehiculo();
   const del = useDeleteVehiculo();
   const [editing, setEditing] = useState<Partial<Vehiculo> | null>(null);
