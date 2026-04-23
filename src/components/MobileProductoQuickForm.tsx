@@ -221,36 +221,35 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-          {/* Imagen + Estado */}
-          <div className="flex items-center gap-3 bg-card border border-border rounded-lg p-3">
-            <div className="h-16 w-16 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
-              {form.imagen_url ? (
-                <img src={form.imagen_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <Camera className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex-1 space-y-1">
-              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploadingImage}
-                className="h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium text-foreground active:scale-95 transition-transform disabled:opacity-60 w-full"
-              >
-                {uploadingImage ? 'Subiendo…' : form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
-              </button>
-              <select className="w-full h-9 px-2 rounded-lg border border-input bg-background text-xs text-foreground"
-                value={form.status ?? 'activo'} onChange={e => set('status', e.target.value as any)}>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-                <option value="borrador">Borrador</option>
-              </select>
-            </div>
-          </div>
-
           {/* ── Información básica ── */}
           <TabPanel id="basico" active={activeTab}>
+            {/* Imagen + Estado */}
+            <div className="flex items-center gap-3 bg-card border border-border rounded-lg p-3">
+              <div className="h-16 w-16 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
+                {form.imagen_url ? (
+                  <img src={form.imagen_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <Camera className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="h-9 px-3 rounded-lg border border-border bg-background text-xs font-medium text-foreground active:scale-95 transition-transform disabled:opacity-60 w-full"
+                >
+                  {uploadingImage ? 'Subiendo…' : form.imagen_url ? 'Cambiar imagen' : 'Subir imagen'}
+                </button>
+                <select className="w-full h-9 px-2 rounded-lg border border-input bg-background text-xs text-foreground"
+                  value={form.status ?? 'activo'} onChange={e => set('status', e.target.value as any)}>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="borrador">Borrador</option>
+                </select>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Código" required>
                 <input className={inputCls} placeholder="SKU" value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
