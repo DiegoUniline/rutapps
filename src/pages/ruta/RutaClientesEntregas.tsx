@@ -5,15 +5,12 @@ import RutaClientes from './RutaClientes';
 import RutaEntregas from './RutaEntregas';
 import RutaNavegacionPage from './RutaNavegacionPage';
 import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
-import { useAuth } from '@/contexts/AuthContext';
-
-// Empresa de prueba — quitar este filtro para liberar a todos
-const EMPRESA_PRUEBA_JORNADA = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
+import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 
 export default function RutaClientesEntregas() {
   const [tab, setTab] = useState<'clientes' | 'entregas' | 'navegacion'>('clientes');
-  const { empresa } = useAuth();
-  const showJornadaBanner = empresa?.id === EMPRESA_PRUEBA_JORNADA;
+  const { requireJornada } = useEmpresaJornadaConfig();
+  const showJornadaBanner = requireJornada;
 
   // When navegacion tab is active, render full-screen without tabs
   if (tab === 'navegacion') {

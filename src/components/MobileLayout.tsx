@@ -12,9 +12,8 @@ import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
+import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 
-// Empresa de prueba para el bloqueo de jornada — quitar para liberar a todos
-const EMPRESA_PRUEBA_JORNADA = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
 // Rutas permitidas sin jornada activa
 const RUTAS_PERMITIDAS_SIN_JORNADA = ['/ruta/iniciar', '/ruta/perfil', '/ruta/sincronizar'];
 
@@ -38,16 +37,16 @@ export default function MobileLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { profile, empresa } = useAuth();
+  const { profile } = useAuth();
   const { hasPermiso } = usePermisos();
+  const { requireJornada } = useEmpresaJornadaConfig();
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Bloqueo por jornada (solo empresa de prueba)
-  const requireJornada = empresa?.id === EMPRESA_PRUEBA_JORNADA;
+  // Bloqueo por jornada (configurable por empresa)
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
   const isRutaPermitida = RUTAS_PERMITIDAS_SIN_JORNADA.some(p => location.pathname.startsWith(p));
   const bloqueado = requireJornada && !sesionLoading && !sesionActiva && !isRutaPermitida;

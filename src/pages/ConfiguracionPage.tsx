@@ -4,7 +4,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users, MapPin } from 'lucide-react';
+import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users, MapPin, Smartphone, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CURRENCIES } from '@/lib/currency';
 import SubscriptionCard from '@/components/SubscriptionCard';
@@ -311,6 +311,8 @@ export default function ConfiguracionPage() {
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
   const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('80');
+  const [requiereJornadaRuta, setRequiereJornadaRuta] = useState(false);
+  const [requiereJornadaDesde, setRequiereJornadaDesde] = useState<string>('');
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -347,13 +349,15 @@ export default function ConfiguracionPage() {
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
     setTicketAncho((config as any).ticket_ancho ?? '80');
+    setRequiereJornadaRuta(!!(config as any).requiere_jornada_ruta);
+    setRequiereJornadaDesde(((config as any).requiere_jornada_desde as string | null) ?? '');
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -394,6 +398,8 @@ export default function ConfiguracionPage() {
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
         ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
         ticket_ancho: ticketAncho,
+        requiere_jornada_ruta: requiereJornadaRuta,
+        requiere_jornada_desde: requiereJornadaRuta ? (requiereJornadaDesde || null) : null,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -401,6 +407,7 @@ export default function ConfiguracionPage() {
       toast.success('Configuración guardada');
       qc.invalidateQueries({ queryKey: ['empresa-config'] });
       qc.invalidateQueries({ queryKey: ['empresa'] });
+      qc.invalidateQueries({ queryKey: ['empresa-jornada'] });
       setLogoFile(null);
     },
     onError: (e: any) => {
@@ -442,6 +449,7 @@ export default function ConfiguracionPage() {
           <TabsTrigger value="ticket" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Ticket</TabsTrigger>
           <TabsTrigger value="visibilidad" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Visibilidad</TabsTrigger>
           <TabsTrigger value="fiscal" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Fiscal y dirección</TabsTrigger>
+          <TabsTrigger value="movil" className="gap-1.5"><Smartphone className="h-3.5 w-3.5" /> App móvil</TabsTrigger>
         </TabsList>
 
         {/* ── TAB: Empresa ── */}
@@ -682,6 +690,57 @@ export default function ConfiguracionPage() {
               {field('estado', 'Estado', 'Jalisco')}
               {field('cp', 'Código postal', '44100')}
             </div>
+          </div>
+        </TabsContent>
+
+        {/* ── TAB: App móvil de ruta ── */}
+        <TabsContent value="movil" className="space-y-5 mt-4 max-w-xl">
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Smartphone className="h-4 w-4" /> App móvil de ruta
+            </h3>
+
+            <div className="flex items-start justify-between gap-4 py-2">
+              <div className="flex-1">
+                <div className="text-[13px] font-medium text-foreground">
+                  Exigir iniciar jornada
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Cuando esté activo, los vendedores no podrán vender, entregar ni cobrar en la app móvil hasta iniciar su jornada (vehículo, KM y foto del odómetro).
+                </p>
+              </div>
+              <Switch
+                checked={requiereJornadaRuta}
+                onCheckedChange={(v) => {
+                  setRequiereJornadaRuta(v);
+                  if (v && !requiereJornadaDesde) {
+                    const mañana = new Date();
+                    mañana.setDate(mañana.getDate() + 1);
+                    setRequiereJornadaDesde(mañana.toISOString().slice(0, 10));
+                  }
+                }}
+              />
+            </div>
+
+            {requiereJornadaRuta && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">
+                  Aplica a partir de
+                </label>
+                <Input
+                  type="date"
+                  value={requiereJornadaDesde}
+                  onChange={(e) => setRequiereJornadaDesde(e.target.value)}
+                  className="text-[13px] max-w-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+                  <span>
+                    Recomendado: elige una fecha futura (por ejemplo mañana) para que tus vendedores tengan tiempo de prepararse. Déjalo vacío para aplicar de inmediato.
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
