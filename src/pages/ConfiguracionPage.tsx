@@ -313,6 +313,7 @@ export default function ConfiguracionPage() {
   const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('80');
   const [requiereJornadaRuta, setRequiereJornadaRuta] = useState(false);
   const [requiereJornadaDesde, setRequiereJornadaDesde] = useState<string>('');
+  const [permiteSinVehiculo, setPermiteSinVehiculo] = useState(false);
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -351,13 +352,14 @@ export default function ConfiguracionPage() {
     setTicketAncho((config as any).ticket_ancho ?? '80');
     setRequiereJornadaRuta(!!(config as any).requiere_jornada_ruta);
     setRequiereJornadaDesde(((config as any).requiere_jornada_desde as string | null) ?? '');
+    setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -400,6 +402,7 @@ export default function ConfiguracionPage() {
         ticket_ancho: ticketAncho,
         requiere_jornada_ruta: requiereJornadaRuta,
         requiere_jornada_desde: requiereJornadaRuta ? (requiereJornadaDesde || null) : null,
+        jornada_permite_sin_vehiculo: permiteSinVehiculo,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -723,22 +726,39 @@ export default function ConfiguracionPage() {
             </div>
 
             {requiereJornadaRuta && (
-              <div className="mt-4 pt-4 border-t border-border">
-                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">
-                  Aplica a partir de
-                </label>
-                <Input
-                  type="date"
-                  value={requiereJornadaDesde}
-                  onChange={(e) => setRequiereJornadaDesde(e.target.value)}
-                  className="text-[13px] max-w-xs"
-                />
-                <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-                  <span>
-                    Recomendado: elige una fecha futura (por ejemplo mañana) para que tus vendedores tengan tiempo de prepararse. Déjalo vacío para aplicar de inmediato.
-                  </span>
-                </p>
+              <div className="mt-4 pt-4 border-t border-border space-y-4">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">
+                    Aplica a partir de
+                  </label>
+                  <Input
+                    type="date"
+                    value={requiereJornadaDesde}
+                    onChange={(e) => setRequiereJornadaDesde(e.target.value)}
+                    className="text-[13px] max-w-xs"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+                    <span>
+                      Recomendado: elige una fecha futura (por ejemplo mañana) para que tus vendedores tengan tiempo de prepararse. Déjalo vacío para aplicar de inmediato.
+                    </span>
+                  </p>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 pt-3 border-t border-border">
+                  <div className="flex-1">
+                    <div className="text-[13px] font-medium text-foreground">
+                      Permitir jornada sin vehículo
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Útil si algunos vendedores andan a pie, en bicicleta o en moto propia. Cuando esté activo, podrán iniciar jornada sin elegir vehículo (no se pedirá KM ni foto del odómetro).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={permiteSinVehiculo}
+                    onCheckedChange={setPermiteSinVehiculo}
+                  />
+                </div>
               </div>
             )}
           </div>
