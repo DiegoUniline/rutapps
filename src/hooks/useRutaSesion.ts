@@ -58,8 +58,8 @@ export function useAbrirRutaSesion() {
 
   return useMutation({
     mutationFn: async (input: {
-      vehiculo_id: string;
-      km_inicio: number;
+      vehiculo_id: string | null;
+      km_inicio: number | null;
       lat_inicio?: number | null;
       lng_inicio?: number | null;
       foto_inicio_url?: string | null;

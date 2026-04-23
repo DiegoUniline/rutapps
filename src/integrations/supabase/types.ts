@@ -2115,6 +2115,7 @@ export type Database = {
           email: string
           estado: string | null
           id: string
+          jornada_permite_sin_vehiculo: boolean
           logo_url: string | null
           moneda: string
           nombre: string
@@ -2140,6 +2141,7 @@ export type Database = {
           email: string
           estado?: string | null
           id?: string
+          jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre: string
@@ -2165,6 +2167,7 @@ export type Database = {
           email?: string
           estado?: string | null
           id?: string
+          jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre?: string
@@ -3974,7 +3977,7 @@ export type Database = {
           notas_inicio: string | null
           status: string
           updated_at: string
-          vehiculo_id: string
+          vehiculo_id: string | null
           vendedor_id: string
         }
         Insert: {
@@ -3998,7 +4001,7 @@ export type Database = {
           notas_inicio?: string | null
           status?: string
           updated_at?: string
-          vehiculo_id: string
+          vehiculo_id?: string | null
           vendedor_id: string
         }
         Update: {
@@ -4022,7 +4025,7 @@ export type Database = {
           notas_inicio?: string | null
           status?: string
           updated_at?: string
-          vehiculo_id?: string
+          vehiculo_id?: string | null
           vendedor_id?: string
         }
         Relationships: [
