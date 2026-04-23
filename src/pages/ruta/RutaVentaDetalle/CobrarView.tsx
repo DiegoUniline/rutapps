@@ -80,7 +80,7 @@ export function CobrarView(p: Props) {
                 <span className="text-[11px] font-semibold text-foreground">{p.venta.folio ?? '—'}</span>
                 <span className="text-[9px] ml-1.5 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">ACTUAL</span>
               </div>
-              <span className="text-[11px] font-medium text-destructive">Debe: {s}{p.fmt(p.saldoActual)}</span>
+              <span className="text-[11px] font-medium text-destructive">Debe: {p.fmt(p.saldoActual)}</span>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => p.updateMontoAplicarActual(p.saldoActual)} className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${p.montoAplicarActual === p.saldoActual ? 'bg-primary text-primary-foreground' : 'bg-accent/60 text-foreground'}`}>Liquidar</button>
@@ -91,7 +91,7 @@ export function CobrarView(p: Props) {
               {p.montoAplicarActual > 0 && <button onClick={() => p.updateMontoAplicarActual(0)} className="text-[10px] text-destructive font-medium">Quitar</button>}
             </div>
             {p.montoAplicarActual < p.saldoActual && (
-              <p className="text-[9px] text-muted-foreground mt-1.5">Quedará pendiente: {s}{p.fmt(p.saldoActual - p.montoAplicarActual)}</p>
+              <p className="text-[9px] text-muted-foreground mt-1.5">Quedará pendiente: {p.fmt(p.saldoActual - p.montoAplicarActual)}</p>
             )}
           </div>
 
@@ -111,7 +111,7 @@ export function CobrarView(p: Props) {
                     <div key={cuenta.id} className="rounded-lg border border-border/60 p-2.5">
                       <div className="flex items-center justify-between mb-1.5">
                         <div><span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span><span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span></div>
-                        <span className="text-[11px] font-medium text-destructive">Debe: {s}{p.fmt(cuenta.saldo_pendiente)}</span>
+                        <span className="text-[11px] font-medium text-destructive">Debe: {p.fmt(cuenta.saldo_pendiente)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => p.updateCuentaMonto(cuenta.id, cuenta.saldo_pendiente)} className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${cuenta.montoAplicar === cuenta.saldo_pendiente ? 'bg-primary text-primary-foreground' : 'bg-accent/60 text-foreground'}`}>Liquidar</button>
@@ -122,7 +122,7 @@ export function CobrarView(p: Props) {
                   ))}
                 </div>
               )}
-              {p.totalAplicarOtras > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{s}{p.fmt(p.totalAplicarOtras)}</span></div>}
+              {p.totalAplicarOtras > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{p.fmt(p.totalAplicarOtras)}</span></div>}
             </>
           )}
         </section>
@@ -130,23 +130,23 @@ export function CobrarView(p: Props) {
         {/* 4. Resumen */}
         <section className="bg-card rounded-xl border border-border p-3.5">
           <div className="space-y-1">
-            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Aplicado a esta venta</span><span className="font-medium text-foreground tabular-nums">{s}{p.fmt(p.montoAplicarActual)}</span></div>
-            {p.totalAplicarOtras > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Aplicado a cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{s}{p.fmt(p.totalAplicarOtras)}</span></div>}
+            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Aplicado a esta venta</span><span className="font-medium text-foreground tabular-nums">{p.fmt(p.montoAplicarActual)}</span></div>
+            {p.totalAplicarOtras > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Aplicado a cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{p.fmt(p.totalAplicarOtras)}</span></div>}
           </div>
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60">
             <span className="text-[13px] font-semibold text-foreground">Total a cobrar</span>
-            <span className="text-[20px] font-bold text-primary tabular-nums">{s}{p.fmt(p.totalACobrar)}</span>
+            <span className="text-[20px] font-bold text-primary tabular-nums">{p.fmt(p.totalACobrar)}</span>
           </div>
           {p.metodoPago === 'efectivo' && p.cambio > 0 && (
             <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2 mt-2">
               <span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-              <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{s}{p.fmt(p.cambio)}</span>
+              <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{p.fmt(p.cambio)}</span>
             </div>
           )}
           {p.montoAplicarActual < p.saldoActual && (
             <div className="flex justify-between bg-amber-50 dark:bg-amber-950/30 rounded-md px-2.5 py-2 mt-2">
               <span className="text-[12px] text-amber-700 dark:text-amber-400 font-medium">Saldo pendiente esta venta</span>
-              <span className="text-[14px] text-amber-700 dark:text-amber-400 font-bold">{s}{p.fmt(p.saldoActual - p.montoAplicarActual)}</span>
+              <span className="text-[14px] text-amber-700 dark:text-amber-400 font-bold">{p.fmt(p.saldoActual - p.montoAplicarActual)}</span>
             </div>
           )}
         </section>
@@ -156,7 +156,7 @@ export function CobrarView(p: Props) {
       <div className="sticky bottom-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
         <button onClick={p.handleCobrar} disabled={p.saving || p.totalACobrar <= 0 || (parseFloat(p.montoRecibido) || 0) < p.totalACobrar - 0.01}
           className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-          <Check className="h-4 w-4" />{p.saving ? 'Procesando...' : `Cobrar ${s}${p.fmt(p.totalACobrar)}`}
+          <Check className="h-4 w-4" />{p.saving ? 'Procesando...' : `Cobrar ${p.fmt(p.totalACobrar)}`}
         </button>
       </div>
     </div>
