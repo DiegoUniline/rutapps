@@ -118,7 +118,7 @@ function Kpi({ icon, label, value, tone, raw }: { icon: React.ReactNode; label: 
   return (
     <div className={`rounded-lg border p-2.5 ${cls}`}>
       <div className="flex items-center gap-1 text-[11px] font-semibold opacity-90">{icon}{label}</div>
-      <div className="text-base font-bold tabular-nums mt-0.5">{raw ? value : fmtMoney(value)}</div>
+      <div className="text-base font-bold tabular-nums mt-0.5">{raw ? value : _fmt(value)}</div>
     </div>
   );
 }
@@ -163,10 +163,10 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
               <td className="px-3 py-2">{t.cajero_nombre}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(t.abierto_at)}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{t.cerrado_at ? fmtDate(t.cerrado_at) : '—'}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.fondo_inicial)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{t.total_efectivo_esperado != null ? fmtMoney(t.total_efectivo_esperado) : '—'}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.fondo_inicial)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{t.total_efectivo_esperado != null ? _fmt(t.total_efectivo_esperado) : '—'}</td>
               <td className={`px-3 py-2 text-right tabular-nums font-semibold ${t.diferencia == null ? '' : Number(t.diferencia) === 0 ? 'text-success' : Number(t.diferencia) < 0 ? 'text-destructive' : 'text-warning'}`}>
-                {t.diferencia != null ? fmtMoney(t.diferencia) : '—'}
+                {t.diferencia != null ? _fmt(t.diferencia) : '—'}
               </td>
               <td className="px-3 py-2 text-center">
                 {t.status === 'abierto'
@@ -212,13 +212,13 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(t.cerrado_at)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_efectivo_esperado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_efectivo_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_tarjeta_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_transferencia_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_otros_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_efectivo_esperado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_efectivo_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_tarjeta_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_transferencia_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_otros_contado ?? 0)}</td>
               <td className={`px-3 py-2 text-right tabular-nums font-semibold ${Number(t.diferencia ?? 0) === 0 ? 'text-success' : Number(t.diferencia) < 0 ? 'text-destructive' : 'text-warning'}`}>
-                {fmtMoney(t.diferencia ?? 0)}
+                {_fmt(t.diferencia ?? 0)}
               </td>
               <td className="px-3 py-2 text-center">
                 <Button size="sm" variant="ghost" onClick={() => onView(t.id)} className="h-7 px-2"><Eye className="h-3.5 w-3.5" /></Button>
@@ -282,7 +282,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
                   <td className="px-3 py-2">{r.caja_turnos?.caja_nombre ?? '—'}</td>
                   <td className="px-3 py-2">{r.user_nombre}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.motivo || '—'}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.monto)}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.monto)}</td>
                 </tr>
               ))}
             </tbody>
@@ -353,7 +353,7 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
                 <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
                 <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.total)}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -428,7 +428,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                         <td className="px-2 py-1.5 tabular-nums">{fmtDate(m.created_at)}</td>
                         <td className="px-2 py-1.5 capitalize">{m.tipo}</td>
                         <td className="px-2 py-1.5 text-muted-foreground">{m.motivo || '—'}</td>
-                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(m.monto)}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(m.monto)}</td>
                       </tr>
                     ))}
                     {!q.data?.movs.length && <tr><td colSpan={4} className="px-2 py-3 text-center text-muted-foreground">Sin movimientos.</td></tr>}
@@ -452,7 +452,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                         <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>
                         <td className="px-2 py-1.5 capitalize">{v.status}</td>
-                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(v.total)}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(v.total)}</td>
                       </tr>
                     ))}
                     {!q.data?.ventas.length && <tr><td colSpan={7} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
@@ -477,7 +477,7 @@ function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: s
   return (
     <div className={`rounded-lg border p-3 ${cls}`}>
       <div className="flex items-center gap-1.5 text-xs font-semibold opacity-90">{icon}{label}</div>
-      <div className="text-xl font-bold tabular-nums mt-1">{fmtMoney(value)}</div>
+      <div className="text-xl font-bold tabular-nums mt-1">{_fmt(value)}</div>
     </div>
   );
 }
