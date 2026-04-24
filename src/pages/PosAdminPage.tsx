@@ -299,12 +299,25 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, status, condicion_pago, turno_id, cliente:clientes(nombre), caja_turnos(caja_nombre)')
+        .select('id, folio, fecha, created_at, total, status, condicion_pago, turno_id, vendedor_id, cliente:clientes(nombre), caja_turnos(caja_nombre, cajero_id)')
         .eq('empresa_id', empresaId)
         .eq('origen', 'pos')
-        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(300);
-      return data ?? [];
+      const rows = (data ?? []) as any[];
+      const userIds = Array.from(new Set([
+        ...rows.map(r => r.vendedor_id).filter(Boolean),
+        ...rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean),
+      ]));
+      const { data: profiles } = userIds.length
+        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', userIds)
+        : { data: [] as any[] };
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+      return rows.map(r => ({
+        ...r,
+        vendedor_nombre: nameMap.get(r.vendedor_id) ?? '—',
+        cajero_nombre: nameMap.get(r.caja_turnos?.cajero_id) ?? '—',
+      }));
     },
   });
   const rows = (q.data ?? []) as any[];
@@ -321,7 +334,9 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
               <th className="text-left px-3 py-2">Folio</th>
               <th className="text-left px-3 py-2">Fecha</th>
               <th className="text-left px-3 py-2">Cliente</th>
+              <th className="text-left px-3 py-2">Vendedor</th>
               <th className="text-left px-3 py-2">Caja</th>
+              <th className="text-left px-3 py-2">Cajero</th>
               <th className="text-left px-3 py-2">Pago</th>
               <th className="text-left px-3 py-2">Estado</th>
               <th className="text-right px-3 py-2">Total</th>
@@ -331,9 +346,11 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
             {rows.map(r => (
               <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
                 <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
-                <td className="px-3 py-2 text-xs tabular-nums">{r.fecha}</td>
+                <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.created_at || r.fecha)}</td>
                 <td className="px-3 py-2">{r.cliente?.nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-xs">{r.vendedor_nombre}</td>
                 <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
                 <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.total)}</td>
