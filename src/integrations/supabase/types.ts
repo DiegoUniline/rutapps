@@ -5573,6 +5573,7 @@ export type Database = {
           ieps_total: number | null
           iva_total: number | null
           notas: string | null
+          origen: string | null
           pedido_origen_id: string | null
           requiere_factura: boolean | null
           saldo_pendiente: number | null
@@ -5581,6 +5582,7 @@ export type Database = {
           tarifa_id: string | null
           tipo: Database["public"]["Enums"]["tipo_venta"]
           total: number | null
+          turno_id: string | null
           vendedor_id: string | null
         }
         Insert: {
@@ -5604,6 +5606,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          origen?: string | null
           pedido_origen_id?: string | null
           requiere_factura?: boolean | null
           saldo_pendiente?: number | null
@@ -5612,6 +5615,7 @@ export type Database = {
           tarifa_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_venta"]
           total?: number | null
+          turno_id?: string | null
           vendedor_id?: string | null
         }
         Update: {
@@ -5635,6 +5639,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          origen?: string | null
           pedido_origen_id?: string | null
           requiere_factura?: boolean | null
           saldo_pendiente?: number | null
@@ -5643,6 +5648,7 @@ export type Database = {
           tarifa_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_venta"]
           total?: number | null
+          turno_id?: string | null
           vendedor_id?: string | null
         }
         Relationships: [
@@ -5679,6 +5685,13 @@ export type Database = {
             columns: ["tarifa_id"]
             isOneToOne: false
             referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "caja_turnos"
             referencedColumns: ["id"]
           },
           {
