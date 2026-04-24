@@ -542,6 +542,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
 }
 
 function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: 'primary' | 'success' | 'warning' | 'destructive' }) {
+  const { fmt: _fmt } = useCurrency();
   const cls = {
     primary: 'bg-primary/10 text-primary border-primary/30',
     success: 'bg-success/10 text-success border-success/30',
