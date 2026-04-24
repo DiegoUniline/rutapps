@@ -108,6 +108,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="campanas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Radio className="h-4 w-4" /> Campañas WA
               </TabsTrigger>
+              <TabsTrigger value="pos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Calculator className="h-4 w-4" /> Punto de Venta
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
