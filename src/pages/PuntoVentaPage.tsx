@@ -1101,7 +1101,7 @@ export default function PuntoVentaPage() {
           </div>
 
           {/* Product list */}
-          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
+          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-32' : 'pb-4'}`}>
             {(isMobile || productView === 'table') ? (
               <div className="border border-border rounded-lg overflow-hidden bg-card">
                 <table className="w-full text-[12px]">
