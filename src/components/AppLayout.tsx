@@ -20,7 +20,6 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
-import FavoritesBar from '@/components/FavoritesBar';
 import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
@@ -500,19 +499,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ...baseVisibleNavItems.slice(insertAt),
     ];
   }, [baseVisibleNavItems, favorites]);
-
-  // Build flat options for the favorites picker from base nav items
-  const favOptions = useMemo(() => {
-    const opts: { label: string; path: string; group?: string }[] = [];
-    baseVisibleNavItems.forEach(item => {
-      if (item.children && item.children.length > 0) {
-        item.children.forEach(c => opts.push({ label: c.label, path: c.path, group: item.label }));
-      } else {
-        opts.push({ label: item.label, path: item.path, group: 'Principal' });
-      }
-    });
-    return opts;
-  }, [baseVisibleNavItems]);
 
   const closeMobile = () => setMobileOpen(false);
 
