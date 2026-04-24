@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { fmtMoney } from '@/lib/currency';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Calculator, Receipt, ArrowDownCircle, ArrowUpCircle, Banknote, ShoppingCart,
   Clock, CheckCircle2, ClipboardList, Eye, Wallet, CreditCard, Smartphone, MoreHorizontal, ExternalLink,
@@ -109,6 +109,7 @@ function KpisRow({ empresaId }: { empresaId: string }) {
 }
 
 function Kpi({ icon, label, value, tone, raw }: { icon: React.ReactNode; label: string; value: number; tone: 'primary'|'success'|'warning'|'destructive'; raw?: boolean }) {
+  const { fmt: _fmt } = useCurrency();
   const cls = {
     primary: 'bg-primary/10 text-primary border-primary/30',
     success: 'bg-success/10 text-success border-success/30',
@@ -118,7 +119,7 @@ function Kpi({ icon, label, value, tone, raw }: { icon: React.ReactNode; label: 
   return (
     <div className={`rounded-lg border p-2.5 ${cls}`}>
       <div className="flex items-center gap-1 text-[11px] font-semibold opacity-90">{icon}{label}</div>
-      <div className="text-base font-bold tabular-nums mt-0.5">{raw ? value : fmtMoney(value)}</div>
+      <div className="text-base font-bold tabular-nums mt-0.5">{raw ? value : _fmt(value)}</div>
     </div>
   );
 }
@@ -136,6 +137,7 @@ async function fetchTurnos(empresaId: string, soloCerrados = false) {
 }
 
 function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({ queryKey: ['pos-admin-turnos', empresaId], queryFn: () => fetchTurnos(empresaId) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
@@ -163,10 +165,10 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
               <td className="px-3 py-2">{t.cajero_nombre}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(t.abierto_at)}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{t.cerrado_at ? fmtDate(t.cerrado_at) : '—'}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.fondo_inicial)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{t.total_efectivo_esperado != null ? fmtMoney(t.total_efectivo_esperado) : '—'}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.fondo_inicial)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{t.total_efectivo_esperado != null ? _fmt(t.total_efectivo_esperado) : '—'}</td>
               <td className={`px-3 py-2 text-right tabular-nums font-semibold ${t.diferencia == null ? '' : Number(t.diferencia) === 0 ? 'text-success' : Number(t.diferencia) < 0 ? 'text-destructive' : 'text-warning'}`}>
-                {t.diferencia != null ? fmtMoney(t.diferencia) : '—'}
+                {t.diferencia != null ? _fmt(t.diferencia) : '—'}
               </td>
               <td className="px-3 py-2 text-center">
                 {t.status === 'abierto'
@@ -185,6 +187,7 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 }
 
 function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({ queryKey: ['pos-admin-cortes', empresaId], queryFn: () => fetchTurnos(empresaId, true) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
@@ -212,13 +215,13 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
               <td className="px-3 py-2 font-medium">{t.caja_nombre}</td>
               <td className="px-3 py-2">{t.cajero_nombre}</td>
               <td className="px-3 py-2 text-xs tabular-nums">{fmtDate(t.cerrado_at)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_efectivo_esperado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_efectivo_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_tarjeta_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_transferencia_contado ?? 0)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmtMoney(t.total_otros_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_efectivo_esperado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_efectivo_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_tarjeta_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_transferencia_contado ?? 0)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{_fmt(t.total_otros_contado ?? 0)}</td>
               <td className={`px-3 py-2 text-right tabular-nums font-semibold ${Number(t.diferencia ?? 0) === 0 ? 'text-success' : Number(t.diferencia) < 0 ? 'text-destructive' : 'text-warning'}`}>
-                {fmtMoney(t.diferencia ?? 0)}
+                {_fmt(t.diferencia ?? 0)}
               </td>
               <td className="px-3 py-2 text-center">
                 <Button size="sm" variant="ghost" onClick={() => onView(t.id)} className="h-7 px-2"><Eye className="h-3.5 w-3.5" /></Button>
@@ -232,6 +235,7 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 }
 
 function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'deposito' | 'retiro' | 'gasto' }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-movs', empresaId, tipo],
     queryFn: async () => {
@@ -282,7 +286,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
                   <td className="px-3 py-2">{r.caja_turnos?.caja_nombre ?? '—'}</td>
                   <td className="px-3 py-2">{r.user_nombre}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.motivo || '—'}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.monto)}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.monto)}</td>
                 </tr>
               ))}
             </tbody>
@@ -294,6 +298,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
 }
 
 function VentasPosPanel({ empresaId }: { empresaId: string }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-ventas', empresaId],
     queryFn: async () => {
@@ -305,18 +310,44 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
         .order('created_at', { ascending: false })
         .limit(300);
       const rows = (data ?? []) as any[];
-      const userIds = Array.from(new Set([
-        ...rows.map(r => r.vendedor_id).filter(Boolean),
-        ...rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean),
-      ]));
-      const { data: profiles } = userIds.length
-        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', userIds)
-        : { data: [] as any[] };
-      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Vendedor_id refers to profiles.id; cajero_id refers to profiles.user_id
+      const vendedorIds = Array.from(new Set(rows.map(r => r.vendedor_id).filter(Boolean)));
+      const cajeroUserIds = Array.from(new Set(rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean)));
+
+      const [profilesById, profilesByUserId] = await Promise.all([
+        vendedorIds.length
+          ? supabase.from('profiles').select('id, nombre').in('id', vendedorIds)
+          : Promise.resolve({ data: [] as any[] }),
+        cajeroUserIds.length
+          ? supabase.from('profiles').select('user_id, nombre').in('user_id', cajeroUserIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const vendMap = new Map((profilesById.data ?? []).map((p: any) => [p.id, p.nombre]));
+      const cajMap = new Map((profilesByUserId.data ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Métodos de pago: from cobros via cobro_aplicaciones
+      const ventaIds = rows.map(r => r.id);
+      let metodosMap = new Map<string, string[]>();
+      if (ventaIds.length) {
+        const { data: apps } = await supabase
+          .from('cobro_aplicaciones')
+          .select('venta_id, cobros(metodo_pago)')
+          .in('venta_id', ventaIds);
+        for (const a of (apps ?? []) as any[]) {
+          const m = a.cobros?.metodo_pago;
+          if (!m) continue;
+          const arr = metodosMap.get(a.venta_id) ?? [];
+          if (!arr.includes(m)) arr.push(m);
+          metodosMap.set(a.venta_id, arr);
+        }
+      }
+
       return rows.map(r => ({
         ...r,
-        vendedor_nombre: nameMap.get(r.vendedor_id) ?? '—',
-        cajero_nombre: nameMap.get(r.caja_turnos?.cajero_id) ?? '—',
+        vendedor_nombre: vendMap.get(r.vendedor_id) ?? '—',
+        cajero_nombre: cajMap.get(r.caja_turnos?.cajero_id) ?? '—',
+        metodos_pago: metodosMap.get(r.id) ?? [],
       }));
     },
   });
@@ -337,7 +368,8 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
               <th className="text-left px-3 py-2">Vendedor</th>
               <th className="text-left px-3 py-2">Caja</th>
               <th className="text-left px-3 py-2">Cajero</th>
-              <th className="text-left px-3 py-2">Pago</th>
+              <th className="text-left px-3 py-2">Condición</th>
+              <th className="text-left px-3 py-2">Métodos de pago</th>
               <th className="text-left px-3 py-2">Estado</th>
               <th className="text-right px-3 py-2">Total</th>
             </tr>
@@ -352,8 +384,17 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
                 <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
                 <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
+                <td className="px-3 py-2 text-xs">
+                  {r.metodos_pago.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {r.metodos_pago.map((m: string) => (
+                        <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-muted-foreground">—</span>}
+                </td>
                 <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.total)}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -364,6 +405,7 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
 }
 
 function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClose: () => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-turno-detalle', turnoId],
     queryFn: async () => {
@@ -374,12 +416,35 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
         .from('ventas')
         .select('id, folio, fecha, created_at, total, condicion_pago, status, vendedor_id, cliente:clientes(nombre)')
         .eq('turno_id', turnoId).order('created_at', { ascending: false });
+      // vendedor_id refers to profiles.id
       const vendedorIds = Array.from(new Set((ventas ?? []).map((v: any) => v.vendedor_id).filter(Boolean)));
       const { data: profiles } = vendedorIds.length
-        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', vendedorIds)
+        ? await supabase.from('profiles').select('id, nombre').in('id', vendedorIds)
         : { data: [] as any[] };
-      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
-      const ventasEnriched = (ventas ?? []).map((v: any) => ({ ...v, vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—' }));
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.id, p.nombre]));
+
+      // Métodos de pago por venta
+      const ventaIds = (ventas ?? []).map((v: any) => v.id);
+      let metodosMap = new Map<string, string[]>();
+      if (ventaIds.length) {
+        const { data: apps } = await supabase
+          .from('cobro_aplicaciones')
+          .select('venta_id, cobros(metodo_pago)')
+          .in('venta_id', ventaIds);
+        for (const a of (apps ?? []) as any[]) {
+          const m = a.cobros?.metodo_pago;
+          if (!m) continue;
+          const arr = metodosMap.get(a.venta_id) ?? [];
+          if (!arr.includes(m)) arr.push(m);
+          metodosMap.set(a.venta_id, arr);
+        }
+      }
+
+      const ventasEnriched = (ventas ?? []).map((v: any) => ({
+        ...v,
+        vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—',
+        metodos_pago: metodosMap.get(v.id) ?? [],
+      }));
       return { turno, movs: movs ?? [], ventas: ventasEnriched };
     },
     enabled: !!turnoId,
@@ -428,7 +493,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                         <td className="px-2 py-1.5 tabular-nums">{fmtDate(m.created_at)}</td>
                         <td className="px-2 py-1.5 capitalize">{m.tipo}</td>
                         <td className="px-2 py-1.5 text-muted-foreground">{m.motivo || '—'}</td>
-                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(m.monto)}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(m.monto)}</td>
                       </tr>
                     ))}
                     {!q.data?.movs.length && <tr><td colSpan={4} className="px-2 py-3 text-center text-muted-foreground">Sin movimientos.</td></tr>}
@@ -441,7 +506,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
+                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Condición</th><th className="text-left px-2 py-1.5">Métodos</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
                   </thead>
                   <tbody>
                     {(q.data?.ventas ?? []).map((v: any) => (
@@ -451,11 +516,20 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                         <td className="px-2 py-1.5">{v.cliente?.nombre ?? '—'}</td>
                         <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>
+                        <td className="px-2 py-1.5">
+                          {v.metodos_pago?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {v.metodos_pago.map((m: string) => (
+                                <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
+                              ))}
+                            </div>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
                         <td className="px-2 py-1.5 capitalize">{v.status}</td>
-                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(v.total)}</td>
+                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(v.total)}</td>
                       </tr>
                     ))}
-                    {!q.data?.ventas.length && <tr><td colSpan={7} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
+                    {!q.data?.ventas.length && <tr><td colSpan={8} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
                   </tbody>
                 </table>
               </Card>
@@ -468,6 +542,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
 }
 
 function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: 'primary' | 'success' | 'warning' | 'destructive' }) {
+  const { fmt: _fmt } = useCurrency();
   const cls = {
     primary: 'bg-primary/10 text-primary border-primary/30',
     success: 'bg-success/10 text-success border-success/30',
@@ -477,7 +552,7 @@ function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: s
   return (
     <div className={`rounded-lg border p-3 ${cls}`}>
       <div className="flex items-center gap-1.5 text-xs font-semibold opacity-90">{icon}{label}</div>
-      <div className="text-xl font-bold tabular-nums mt-1">{fmtMoney(value)}</div>
+      <div className="text-xl font-bold tabular-nums mt-1">{_fmt(value)}</div>
     </div>
   );
 }
