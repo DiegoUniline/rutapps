@@ -20,7 +20,6 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
-import FavoritesBar from '@/components/FavoritesBar';
 import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
@@ -38,7 +37,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
-  { label: 'Favoritos', icon: Star, path: '/favoritos', highlight: 'amber' },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
   { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green' },
   { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
@@ -288,23 +286,32 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
             const childActive = location.pathname === childPath ||
               (location.pathname + location.search === child.path) ||
               (child.path.includes('?tab=') && location.pathname === basePath && child.path.includes('tab=productos') && !location.search);
+            const isPlaceholder = child.label === 'Sin favoritos aún';
             return (
               <div key={child.path} className="group relative flex items-center">
-                <Link
-                  to={child.path}
-                  onClick={onNavigate}
-                  className={cn(
-                    "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
-                    childActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
-                  )}
-                >
-                  {child.label}
-                </Link>
-                <div className="absolute right-1">
-                  <FavStar path={child.path} label={child.label} />
-                </div>
+                {isPlaceholder ? (
+                  <div className="block px-2.5 py-1.5 rounded-md text-[12px] flex-1 min-w-0 truncate text-sidebar-foreground/40 italic">
+                    {child.label}
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      to={child.path}
+                      onClick={onNavigate}
+                      className={cn(
+                        "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
+                        childActive
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                    <div className="absolute right-1">
+                      <FavStar path={child.path} label={child.label} />
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
@@ -479,20 +486,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
+  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
+  const { favorites } = useFavorites();
 
-  // Build flat options for the favorites picker from visible nav items
-  const favOptions = useMemo(() => {
-    const opts: { label: string; path: string; group?: string }[] = [];
-    visibleNavItems.forEach(item => {
-      if (item.children && item.children.length > 0) {
-        item.children.forEach(c => opts.push({ label: c.label, path: c.path, group: item.label }));
-      } else {
-        opts.push({ label: item.label, path: item.path, group: 'Principal' });
-      }
-    });
-    return opts;
-  }, [visibleNavItems]);
+  // Inject Favoritos as a dynamic module right after Dashboard with user favorites as children
+  const visibleNavItems = useMemo(() => {
+    const favItem: NavItem = {
+      label: 'Favoritos',
+      icon: Star,
+      path: '/favoritos',
+      highlight: 'amber',
+      children: favorites.length > 0
+        ? favorites.map(f => ({ label: f.label, path: f.path }))
+        : [{ label: 'Sin favoritos aún', path: '/favoritos' }],
+    };
+    const dashIdx = baseVisibleNavItems.findIndex(i => i.path === '/dashboard');
+    const insertAt = dashIdx >= 0 ? dashIdx + 1 : 0;
+    return [
+      ...baseVisibleNavItems.slice(0, insertAt),
+      favItem,
+      ...baseVisibleNavItems.slice(insertAt),
+    ];
+  }, [baseVisibleNavItems, favorites]);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -590,7 +605,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <SuperAdminEmpresaSelector />
-        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1 overflow-auto pb-16">
           {children}
@@ -712,7 +726,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0">
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
         </div>
-        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1">
           {children}
