@@ -74,7 +74,16 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); onToggleOne(row.id); }}>
                   <input type="checkbox" checked={selected.has(row.id)} onChange={() => onToggleOne(row.id)} className="rounded border-input" />
                 </td>
-                {v('folio') && <td className="py-2 px-3 font-mono text-xs font-medium">{row.folio || row.id.slice(0, 8)}</td>}
+                {v('folio') && (
+                  <td className="py-2 px-3 font-mono text-xs font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <span>{row.folio || row.id.slice(0, 8)}</span>
+                      {row.origen === 'pos' && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 uppercase tracking-wider">POS</span>
+                      )}
+                    </div>
+                  </td>
+                )}
                 {v('tipo') && (
                   <td className="py-2 px-3">
                     <span className={cn(
