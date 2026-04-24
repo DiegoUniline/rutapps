@@ -1101,7 +1101,7 @@ export default function PuntoVentaPage() {
           </div>
 
           {/* Product list */}
-          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
+          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-32' : 'pb-4'}`}>
             {(isMobile || productView === 'table') ? (
               <div className="border border-border rounded-lg overflow-hidden bg-card">
                 <table className="w-full text-[12px]">
@@ -1214,17 +1214,52 @@ export default function PuntoVentaPage() {
           </div>
         </div>
 
-        {/* ─── Mobile floating cart button ─── */}
-        {isMobile && mobileView === 'products' && cart.length > 0 && (
-          <button
-            onClick={() => setMobileView('cart')}
-            className="fixed bottom-6 right-4 z-40 bg-primary text-primary-foreground rounded-2xl px-5 py-3.5 shadow-xl shadow-primary/30 flex items-center gap-2.5 active:scale-95 transition-transform"
+        {/* ─── Mobile bottom navigation bar ─── */}
+        {isMobile && mobileView === 'products' && (
+          <nav
+            className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.06)]"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
-            <Receipt className="h-5 w-5" />
-            <span className="text-[14px] font-bold">{fmtM(totals.total)}</span>
-            <span className="bg-primary-foreground/20 text-primary-foreground text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">{cart.length}</span>
-          </button>
+            <div className="grid grid-cols-3 gap-1 px-2 py-1.5">
+              <button
+                onClick={() => setShowClientes(true)}
+                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg active:bg-accent/60 transition-colors"
+              >
+                <User className="h-5 w-5 text-foreground" />
+                <span className="text-[10px] font-semibold text-foreground truncate max-w-[100px]">
+                  {clienteNombre === 'Público general' ? 'Cliente' : clienteNombre}
+                </span>
+              </button>
+              <button
+                onClick={() => document.getElementById('pos-search')?.focus()}
+                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg bg-accent/40 active:bg-accent/70 transition-colors"
+              >
+                <Search className="h-5 w-5 text-primary" />
+                <span className="text-[10px] font-semibold text-primary">Buscar</span>
+              </button>
+              <button
+                onClick={() => cart.length > 0 && setMobileView('cart')}
+                disabled={cart.length === 0}
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg transition-all ${
+                  cart.length > 0
+                    ? 'bg-primary text-primary-foreground active:scale-95 shadow-sm'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                <Receipt className="h-5 w-5" />
+                <span className="text-[10px] font-bold">
+                  {cart.length > 0 ? fmtM(totals.total) : 'Cobrar'}
+                </span>
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-card">
+                    {cart.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </nav>
         )}
+
 
         {/* ─── RIGHT: Cart ─── */}
         <div className={`${isMobile ? (mobileView === 'cart' ? 'fixed inset-0 z-50 flex' : 'hidden') : 'w-[380px] xl:w-[420px] flex shrink-0'} flex-col bg-card`}>
