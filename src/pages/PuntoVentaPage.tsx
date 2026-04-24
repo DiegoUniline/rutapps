@@ -65,6 +65,7 @@ export default function PuntoVentaPage() {
   const scanRef = useRef<HTMLInputElement>(null);
   const { enabled: turnosEnabled, turno: turnoActivo } = useCajaTurno();
   const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
