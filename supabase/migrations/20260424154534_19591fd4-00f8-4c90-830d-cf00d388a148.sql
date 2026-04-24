@@ -108,3 +108,8 @@ CREATE POLICY "caja_mov_update_empresa"
 CREATE POLICY "caja_mov_delete_empresa"
   ON public.caja_movimientos FOR DELETE TO authenticated
   USING (empresa_id = public.get_my_empresa_id());
+
+-- 6) Activar flag solo para Mi Empresa Demo
+UPDATE public.empresas
+  SET pos_turnos_habilitado = true
+  WHERE id = '6d849e12-6437-4b24-917d-a89cc9b2fa88';
