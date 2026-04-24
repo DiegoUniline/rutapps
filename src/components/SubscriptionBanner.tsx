@@ -1,10 +1,18 @@
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePermisos } from '@/hooks/usePermisos';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { AlertTriangle, Clock, CreditCard, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function SubscriptionBanner() {
   const { daysLeft, status } = useSubscription();
+  const { isOwner } = usePermisos();
+  const isMobile = useIsMobile();
+
+  // Solo visible para el dueño/admin de la empresa y únicamente en escritorio
+  if (isMobile) return null;
+  if (!isOwner) return null;
 
   if (daysLeft === null || daysLeft > 7) return null;
   if (status === 'active' && daysLeft > 7) return null;
