@@ -38,6 +38,11 @@ interface Props {
   repeatLastSale: () => void;
   findProductByCode: (code: string) => any | null;
   setItemQty: (pid: string, qty: number, esCambio?: boolean) => void;
+  // Price overrides
+  getSuggestedPrice: (pid: string) => number;
+  setItemPriceManual: (pid: string, price: number) => void;
+  setItemPriceFromLista: (pid: string, listaPrecioId: string | null, tarifaId: string | null, unitPrice: number, listaNombre: string) => void;
+  resetItemToSuggested: (pid: string) => void;
 }
 
 export function StepProductos(props: Props) {
