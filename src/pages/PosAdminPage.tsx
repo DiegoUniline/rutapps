@@ -441,20 +441,21 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
+                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
                   </thead>
                   <tbody>
                     {(q.data?.ventas ?? []).map((v: any) => (
                       <tr key={v.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 font-mono">{v.folio}</td>
-                        <td className="px-2 py-1.5 tabular-nums">{v.fecha}</td>
+                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(v.created_at || v.fecha)}</td>
                         <td className="px-2 py-1.5">{v.cliente?.nombre ?? '—'}</td>
+                        <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>
                         <td className="px-2 py-1.5 capitalize">{v.status}</td>
                         <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(v.total)}</td>
                       </tr>
                     ))}
-                    {!q.data?.ventas.length && <tr><td colSpan={6} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
+                    {!q.data?.ventas.length && <tr><td colSpan={7} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
                   </tbody>
                 </table>
               </Card>
