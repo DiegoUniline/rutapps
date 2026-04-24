@@ -197,8 +197,12 @@ export function useRoles() {
     setRoleName(role.nombre);
     setRoleDesc(role.descripcion || '');
     setRoleMovil(role.acceso_ruta_movil);
-    const isSoloMovil = role.solo_movil || permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+    const rolePerms = permisos.filter(p => p.role_id === role.id && p.permitido);
+    const isSoloMovil = role.solo_movil || rolePerms.some(p => p.modulo === 'solo_movil' && p.accion === 'ver');
+    // Solo POS: tiene solo el permiso pos.ver y nada más
+    const isSoloPos = !isSoloMovil && rolePerms.length > 0 && rolePerms.every(p => p.modulo === 'pos') && rolePerms.some(p => p.modulo === 'pos' && p.accion === 'ver');
     setRoleSoloMovil(isSoloMovil);
+    setRoleSoloPos(isSoloPos);
     setShowRoleForm(true);
   }, [permisos]);
 
@@ -209,12 +213,14 @@ export function useRoles() {
     setRoleDesc('');
     setRoleMovil(false);
     setRoleSoloMovil(false);
+    setRoleSoloPos(false);
   }, []);
 
   return {
     roles, permisos, savingPermisos,
     editingRole, roleName, setRoleName, roleDesc, setRoleDesc,
     roleMovil, setRoleMovil, roleSoloMovil, setRoleSoloMovil,
+    roleSoloPos, setRoleSoloPos,
     showRoleForm, rolesTab, setRolesTab,
     loadRoles, resetRoleForm, saveRoleWithSoloMovil, toggleRoleActivo,
     togglePermiso, toggleAllGroup, toggleAllModule,
