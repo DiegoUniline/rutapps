@@ -63,8 +63,8 @@ export function useRoles() {
       const roleData = {
         nombre: roleName,
         descripcion: roleDesc || null,
-        acceso_ruta_movil: roleMovil || roleSoloMovil,
-        solo_movil: roleSoloMovil,
+        acceso_ruta_movil: roleSoloPos ? false : (roleMovil || roleSoloMovil),
+        solo_movil: roleSoloMovil && !roleSoloPos,
       };
       if (editingRole) {
         await supabase.from('roles').update(roleData).eq('id', editingRole.id);
@@ -72,7 +72,7 @@ export function useRoles() {
         const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, ...roleData }).select('id').single();
         roleId = data?.id;
       }
-      if (roleId && roleSoloMovil) {
+      if (roleId && roleSoloMovil && !roleSoloPos) {
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: true }).eq('id', existing.id);
@@ -85,12 +85,17 @@ export function useRoles() {
           await supabase.from('role_permisos').update({ permitido: false }).eq('id', existing.id);
         }
       }
+      // Solo Punto de Venta: limpiar todos los permisos y dejar solo pos.ver
+      if (roleId && roleSoloPos) {
+        await supabase.from('role_permisos').delete().eq('role_id', roleId);
+        await supabase.from('role_permisos').insert({ role_id: roleId, modulo: 'pos', accion: 'ver', permitido: true });
+      }
       toast.success('Rol guardado');
       resetRoleForm();
       reload();
       notifyPermisosChanged();
     } catch (e: any) { toast.error(e.message); }
-  }, [roleName, roleDesc, roleMovil, roleSoloMovil, editingRole, empresa?.id, permisos, resetRoleForm, notifyPermisosChanged]);
+  }, [roleName, roleDesc, roleMovil, roleSoloMovil, roleSoloPos, editingRole, empresa?.id, permisos, resetRoleForm, notifyPermisosChanged]);
 
   const toggleRoleActivo = useCallback(async (id: string, currentActivo: boolean, reload: () => void) => {
     const newVal = !currentActivo;
