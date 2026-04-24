@@ -21,6 +21,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
 import { AbrirTurnoModal as AbrirTurnoModalForPrompt } from '@/components/pos/AbrirTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
