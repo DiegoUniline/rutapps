@@ -625,14 +625,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         for (const pago of pagos) {
           if (pago.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
-          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: pago.monto, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
+          // Track applications first to determine the actual covered amount
+          // (the cobro must reflect only what was applied, not the cash received — change is not part of the cobro)
+          const aplicaciones: Array<{ venta_id: string; monto: number }> = [];
           let remaining = pago.monto;
 
           // First apply to current sale
           if (saleRemaining > 0 && remaining > 0) {
             const apply = Math.min(remaining, saleRemaining);
-            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ventaId, monto_aplicado: apply, created_at: new Date().toISOString() });
+            aplicaciones.push({ venta_id: ventaId, monto: apply });
             saleRemaining -= apply;
             remaining -= apply;
           }
@@ -644,10 +646,20 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             const cuentaRemaining = cuenta.montoAplicar - alreadyApplied;
             if (cuentaRemaining <= 0.01) { cuentaIdx++; continue; }
             const apply = Math.min(remaining, cuentaRemaining);
-            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: apply, created_at: new Date().toISOString() });
+            aplicaciones.push({ venta_id: cuenta.id, monto: apply });
             accountApplied.set(cuenta.id, alreadyApplied + apply);
             remaining -= apply;
             if (alreadyApplied + apply >= cuenta.montoAplicar - 0.01) cuentaIdx++;
+          }
+
+          // Cobro = sum of applications (excludes change given back)
+          const montoCobro = roundMoney(aplicaciones.reduce((s, a) => s + a.monto, 0));
+          if (montoCobro <= 0) continue;
+
+          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+
+          for (const ap of aplicaciones) {
+            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: new Date().toISOString() });
           }
         }
 
