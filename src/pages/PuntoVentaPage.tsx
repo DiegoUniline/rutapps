@@ -97,6 +97,11 @@ export default function PuntoVentaPage() {
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
   const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
+  const [showAbrirTurno, setShowAbrirTurno] = useState(false);
+  const [showCerrarTurno, setShowCerrarTurno] = useState(false);
+  const [showVentasTurno, setShowVentasTurno] = useState(false);
+  const [movTipo, setMovTipo] = useState<null | 'retiro' | 'deposito' | 'gasto'>(null);
   const [productView, setProductView] = useState<'cards' | 'table'>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('pos-product-view') : null;
     return (saved === 'table' || saved === 'cards') ? saved : 'cards';
