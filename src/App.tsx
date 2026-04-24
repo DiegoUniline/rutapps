@@ -106,6 +106,7 @@ const PagosProveedoresPage = lazy(() => import("@/pages/PagosProveedoresPage"));
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
 // PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
 const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
+const LogisticaReportesPage = lazy(() => import("@/pages/logistica/LogisticaReportesPage"));
 
 // Mobile ruta pages — eagerly loaded so they work fully offline
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
@@ -538,6 +539,7 @@ function desktopRoutes() {
       <Route path="/pos/admin" element={<Suspense fallback={<PageLoader />}><PosAdminPage /></Suspense>} />
       <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
       <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
+      <Route path="/logistica/reportes" element={<LogisticaReportesPage />} />
       <Route path="/ventas/:id" element={<VentaFormPage />} />
       {/* Parent menu redirects (avoid 404 when clicking parent group) */}
       <Route path="/almacen" element={<Navigate to="/almacen/inventario" replace />} />
