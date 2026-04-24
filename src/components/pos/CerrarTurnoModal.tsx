@@ -84,10 +84,10 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           <div className="text-xs text-muted-foreground">
             Caja: <span className="font-medium text-foreground">{turno.caja_nombre}</span> · Fondo inicial: <span className="font-medium text-foreground">{fmtMoney(turno.fondo_inicial)}</span>
           </div>
-          <Row label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
-          <Row label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
-          <Row label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
-          <Row label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
+          <ArqueoRow label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
+          <ArqueoRow label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
+          <ArqueoRow label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
+          <ArqueoRow label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
           <div className="border-t border-border pt-3 mt-2 space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Total esperado</span><span className="font-medium">{fmtMoney(totalEsperado)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Total contado</span><span className="font-medium">{fmtMoney(totalContado)}</span></div>
