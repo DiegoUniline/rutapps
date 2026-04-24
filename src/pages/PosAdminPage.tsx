@@ -299,12 +299,25 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, status, condicion_pago, turno_id, cliente:clientes(nombre), caja_turnos(caja_nombre)')
+        .select('id, folio, fecha, created_at, total, status, condicion_pago, turno_id, vendedor_id, cliente:clientes(nombre), caja_turnos(caja_nombre, cajero_id)')
         .eq('empresa_id', empresaId)
         .eq('origen', 'pos')
-        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(300);
-      return data ?? [];
+      const rows = (data ?? []) as any[];
+      const userIds = Array.from(new Set([
+        ...rows.map(r => r.vendedor_id).filter(Boolean),
+        ...rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean),
+      ]));
+      const { data: profiles } = userIds.length
+        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', userIds)
+        : { data: [] as any[] };
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+      return rows.map(r => ({
+        ...r,
+        vendedor_nombre: nameMap.get(r.vendedor_id) ?? '—',
+        cajero_nombre: nameMap.get(r.caja_turnos?.cajero_id) ?? '—',
+      }));
     },
   });
   const rows = (q.data ?? []) as any[];
@@ -321,7 +334,9 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
               <th className="text-left px-3 py-2">Folio</th>
               <th className="text-left px-3 py-2">Fecha</th>
               <th className="text-left px-3 py-2">Cliente</th>
+              <th className="text-left px-3 py-2">Vendedor</th>
               <th className="text-left px-3 py-2">Caja</th>
+              <th className="text-left px-3 py-2">Cajero</th>
               <th className="text-left px-3 py-2">Pago</th>
               <th className="text-left px-3 py-2">Estado</th>
               <th className="text-right px-3 py-2">Total</th>
@@ -331,9 +346,11 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
             {rows.map(r => (
               <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
                 <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
-                <td className="px-3 py-2 text-xs tabular-nums">{r.fecha}</td>
+                <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.created_at || r.fecha)}</td>
                 <td className="px-3 py-2">{r.cliente?.nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-xs">{r.vendedor_nombre}</td>
                 <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
+                <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
                 <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(r.total)}</td>
@@ -355,9 +372,15 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
       const { data: movs } = await supabase.from('caja_movimientos').select('*').eq('turno_id', turnoId).order('created_at', { ascending: false });
       const { data: ventas } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, condicion_pago, status, cliente:clientes(nombre)')
-        .eq('turno_id', turnoId).order('fecha', { ascending: false });
-      return { turno, movs: movs ?? [], ventas: ventas ?? [] };
+        .select('id, folio, fecha, created_at, total, condicion_pago, status, vendedor_id, cliente:clientes(nombre)')
+        .eq('turno_id', turnoId).order('created_at', { ascending: false });
+      const vendedorIds = Array.from(new Set((ventas ?? []).map((v: any) => v.vendedor_id).filter(Boolean)));
+      const { data: profiles } = vendedorIds.length
+        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', vendedorIds)
+        : { data: [] as any[] };
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+      const ventasEnriched = (ventas ?? []).map((v: any) => ({ ...v, vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—' }));
+      return { turno, movs: movs ?? [], ventas: ventasEnriched };
     },
     enabled: !!turnoId,
   });
@@ -418,20 +441,21 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
+                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
                   </thead>
                   <tbody>
                     {(q.data?.ventas ?? []).map((v: any) => (
                       <tr key={v.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 font-mono">{v.folio}</td>
-                        <td className="px-2 py-1.5 tabular-nums">{v.fecha}</td>
+                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(v.created_at || v.fecha)}</td>
                         <td className="px-2 py-1.5">{v.cliente?.nombre ?? '—'}</td>
+                        <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>
                         <td className="px-2 py-1.5 capitalize">{v.status}</td>
                         <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmtMoney(v.total)}</td>
                       </tr>
                     ))}
-                    {!q.data?.ventas.length && <tr><td colSpan={6} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
+                    {!q.data?.ventas.length && <tr><td colSpan={7} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
                   </tbody>
                 </table>
               </Card>
@@ -458,7 +482,20 @@ function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: s
   );
 }
 
+function pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
 function fmtDate(iso: string) {
-  try { return new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }); }
-  catch { return iso; }
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch { return iso; }
+}
+function fmtDateOnly(iso: string) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  } catch { return iso; }
 }
