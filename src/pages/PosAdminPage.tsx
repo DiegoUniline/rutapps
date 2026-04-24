@@ -372,9 +372,15 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
       const { data: movs } = await supabase.from('caja_movimientos').select('*').eq('turno_id', turnoId).order('created_at', { ascending: false });
       const { data: ventas } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, condicion_pago, status, cliente:clientes(nombre)')
-        .eq('turno_id', turnoId).order('fecha', { ascending: false });
-      return { turno, movs: movs ?? [], ventas: ventas ?? [] };
+        .select('id, folio, fecha, created_at, total, condicion_pago, status, vendedor_id, cliente:clientes(nombre)')
+        .eq('turno_id', turnoId).order('created_at', { ascending: false });
+      const vendedorIds = Array.from(new Set((ventas ?? []).map((v: any) => v.vendedor_id).filter(Boolean)));
+      const { data: profiles } = vendedorIds.length
+        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', vendedorIds)
+        : { data: [] as any[] };
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+      const ventasEnriched = (ventas ?? []).map((v: any) => ({ ...v, vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—' }));
+      return { turno, movs: movs ?? [], ventas: ventasEnriched };
     },
     enabled: !!turnoId,
   });
