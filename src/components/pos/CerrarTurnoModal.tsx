@@ -14,6 +14,14 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
+const ArqueoRow = ({ label, esperadoVal, val, onChange }: { label: string; esperadoVal: number; val: string; onChange: (v: string) => void }) => (
+  <div className="grid grid-cols-3 gap-2 items-center">
+    <Label className="text-sm">{label}</Label>
+    <div className="text-xs text-muted-foreground text-right">Esperado: <span className="font-medium text-foreground">{fmtMoney(esperadoVal)}</span></div>
+    <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
+  </div>
+);
+
 export function CerrarTurnoModal({ open, onOpenChange }: Props) {
   const { turno, cerrarTurno, computeArqueo } = useCajaTurno();
   const [esperado, setEsperado] = useState({ efectivo_esperado: 0, tarjeta_esperado: 0, transferencia_esperado: 0, otros_esperado: 0 });
@@ -64,14 +72,6 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
 
   if (!turno) return null;
 
-  const Row = ({ label, esperadoVal, val, onChange }: { label: string; esperadoVal: number; val: string; onChange: (v: string) => void }) => (
-    <div className="grid grid-cols-3 gap-2 items-center">
-      <Label className="text-sm">{label}</Label>
-      <div className="text-xs text-muted-foreground text-right">Esperado: <span className="font-medium text-foreground">{fmtMoney(esperadoVal)}</span></div>
-      <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
-    </div>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -84,10 +84,10 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           <div className="text-xs text-muted-foreground">
             Caja: <span className="font-medium text-foreground">{turno.caja_nombre}</span> · Fondo inicial: <span className="font-medium text-foreground">{fmtMoney(turno.fondo_inicial)}</span>
           </div>
-          <Row label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
-          <Row label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
-          <Row label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
-          <Row label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
+          <ArqueoRow label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
+          <ArqueoRow label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
+          <ArqueoRow label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
+          <ArqueoRow label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
           <div className="border-t border-border pt-3 mt-2 space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Total esperado</span><span className="font-medium">{fmtMoney(totalEsperado)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Total contado</span><span className="font-medium">{fmtMoney(totalContado)}</span></div>
