@@ -177,76 +177,72 @@ export function StepPago(props: Props) {
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos recibidos</p>
 
-          {pagos.length === 0 && totalACobrar > 0 && (
-            <p className="text-[11px] text-muted-foreground text-center py-2 mb-2">Agrega al menos un método de pago</p>
-          )}
-
           {/* Existing payment lines */}
           <div className="space-y-2 mb-2.5">
-            {pagos.map((pago, idx) => (
-              <div key={pago.id} className="rounded-md border border-border/60 p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Pago {idx + 1}</span>
-                  <button onClick={() => removePago(pago.id)} className="text-destructive hover:text-destructive/80 active:scale-95">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                {/* Method selector */}
-                <div className="flex gap-1.5">
-                  {METODOS.map(({ value, label, Icon }) => (
-                    <button key={value} onClick={() => updatePago(pago.id, 'metodo_pago', value)} className={`flex-1 py-2 rounded-md text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${pago.metodo_pago === value ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
-                      <Icon className="h-4 w-4" />{label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <label className="text-[10px] text-muted-foreground font-medium">Monto</label>
-                  <div className="relative mt-0.5">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
-                    <input
-                      type="number" inputMode="decimal"
-                      className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={pago.monto || ''}
-                      placeholder="0.00"
-                      onChange={e => updatePago(pago.id, 'monto', parseFloat(e.target.value) || 0)}
-                    />
+            {pagos.map((pago) => {
+              const meta = METODOS.find(m => m.value === pago.metodo_pago)!;
+              const Icon = meta.Icon;
+              return (
+                <div key={pago.id} className="rounded-md border border-border/60 p-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-[12.5px] font-semibold text-foreground">{meta.label}</span>
+                    </div>
+                    {pagos.length > 1 && (
+                      <button onClick={() => removePago(pago.id)} className="text-destructive hover:text-destructive/80 active:scale-95">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Quick bill buttons for efectivo - dynamic based on remaining */}
-                  {pago.metodo_pago === 'efectivo' && (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {getDynamicBills(restante + pago.monto).map(b => (
-                        <button key={b.label} onClick={() => updatePago(pago.id, 'monto', b.amount)}
-                          className={`flex-1 min-w-[60px] py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${pago.monto === b.amount ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
-                          {b.label === 'Exacto' ? b.label : `${s}${b.amount}`}
-                        </button>
-                      ))}
+                  {/* Amount */}
+                  <div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
+                      <input
+                        type="number" inputMode="decimal"
+                        className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={pago.monto || ''}
+                        placeholder="0.00"
+                        onChange={e => updatePago(pago.id, 'monto', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    {/* Quick bill buttons for efectivo - dynamic based on remaining */}
+                    {pago.metodo_pago === 'efectivo' && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {getDynamicBills(restante + pago.monto).map(b => (
+                          <button key={b.label} onClick={() => updatePago(pago.id, 'monto', b.amount)}
+                            className={`flex-1 min-w-[60px] py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${pago.monto === b.amount ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
+                            {b.label === 'Exacto' ? b.label : `${s}${b.amount}`}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reference for non-cash */}
+                  {pago.metodo_pago !== 'efectivo' && (
+                    <div>
+                      <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
+                      <input type="text" className="w-full mt-0.5 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={pago.referencia} placeholder="No. de referencia" onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
                     </div>
                   )}
                 </div>
-
-                {/* Reference for non-cash */}
-                {pago.metodo_pago !== 'efectivo' && (
-                  <div>
-                    <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
-                    <input type="text" className="w-full mt-0.5 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={pago.referencia} placeholder="No. de referencia" onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Add payment button */}
-          {totalACobrar > 0 && (
-            <div className="flex gap-1.5">
-              {METODOS.map(({ value, label, Icon }) => (
+          {/* Add other methods - only those not yet used */}
+          {totalACobrar > 0 && metodosDisponibles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {metodosDisponibles.map(({ value, label, Icon }) => (
                 <button key={value} onClick={() => addPagoLinea(value)}
-                  className="flex-1 py-2.5 rounded-md text-[10px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 bg-accent/40 text-foreground border border-dashed border-border hover:bg-accent/70">
-                  <div className="flex items-center gap-0.5"><Plus className="h-3 w-3" /><Icon className="h-3.5 w-3.5" /></div>
-                  {label}
+                  className="flex-1 min-w-[80px] py-2 px-3 rounded-full text-[11px] font-semibold transition-all active:scale-95 flex items-center justify-center gap-1 bg-accent/40 text-foreground border border-dashed border-border hover:bg-accent/70 hover:border-primary/40">
+                  <Plus className="h-3 w-3" /><Icon className="h-3.5 w-3.5" /> {label}
                 </button>
               ))}
             </div>
