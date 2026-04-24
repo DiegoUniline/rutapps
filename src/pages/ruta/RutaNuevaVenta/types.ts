@@ -82,6 +82,8 @@ export const MOTIVOS: { value: MotivoDevolucion; label: string }[] = [
   { value: 'otro', label: 'Otro' },
 ];
 
+export type DescuentoExtraTipo = 'monto' | 'porcentaje';
+
 export const ACCIONES: { value: AccionDevolucion; label: string; icon: string; desc: string }[] = [
   { value: 'reposicion', label: 'Reposición', icon: '🔄', desc: 'Reponer con otro producto sin cargo' },
   { value: 'nota_credito', label: 'Nota de crédito', icon: '📝', desc: 'Saldo a favor del cliente' },
