@@ -313,7 +313,8 @@ export function usePermisos(): UsePermisosReturn {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   }, [refetch]);
 
-  const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo);
+  // Para owners, no aplica solo_movil. Para roles solo_movil, redirigir directo a /ruta.
+  const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo, !isOwner && roleSoloMovil);
 
   return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload, firstAccessibleRoute };
 }
