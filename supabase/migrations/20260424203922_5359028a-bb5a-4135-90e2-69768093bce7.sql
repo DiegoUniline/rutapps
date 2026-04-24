@@ -1,0 +1,1 @@
+UPDATE public.empresas SET pos_turnos_habilitado = true WHERE id = 'ec9a6de4-a03a-4512-b711-a111e9988f1d';
