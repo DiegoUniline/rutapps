@@ -282,6 +282,25 @@ export async function generarReporteDiarioPdf(data: ReporteDiarioPdfData): Promi
     );
   }
 
+  // ── Abonos a crédito previo ──
+  if (data.abonosCreditoPrevio && data.abonosCreditoPrevio.items.length > 0) {
+    const abp = data.abonosCreditoPrevio;
+    sectionTitle(`Abonos a crédito previo (${abp.items.length}) — ${abp.clientesUnicos} cliente(s)`);
+    drawTable(
+      ['Cliente', 'Venta', 'F. Venta', 'Días', 'Método', 'Ref.', 'Monto'],
+      abp.items.map(a => [
+        a.cliente,
+        a.venta_folio,
+        a.venta_fecha,
+        { content: String(a.dias_atraso), styles: { halign: 'right' } },
+        a.metodo_pago,
+        a.referencia || '—',
+        { content: fmt(a.monto_aplicado), styles: { halign: 'right' } },
+      ]),
+      ['', '', '', '', '', { content: 'Total abonos', styles: { halign: 'right' } }, { content: fmt(abp.totalMonto), styles: { halign: 'right' } }],
+    );
+  }
+
   // ── Resumen final ──
   sectionTitle('Resumen del período');
   const resumenRows: any[][] = [
