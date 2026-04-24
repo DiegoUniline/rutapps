@@ -378,6 +378,14 @@ export function useValidarEntrega() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ entregaId }: { entregaId: string }) => {
+      // Validación previa: solo se puede validar una entrega cargada
+      const { data: cur } = await supabase.from('entregas')
+        .select('status, folio').eq('id', entregaId).single();
+      if (!cur) throw new Error('Entrega no encontrada');
+      if (!['cargado', 'en_ruta'].includes(cur.status as string)) {
+        throw new Error(`No se puede validar la entrega ${cur.folio || ''}: primero debe estar cargada (estado actual: ${cur.status}).`);
+      }
+
       const { error } = await supabase.from('entregas').update({
         status: 'hecho',
         validado_at: new Date().toISOString(),
