@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
+import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
