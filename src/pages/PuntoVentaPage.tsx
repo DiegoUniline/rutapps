@@ -58,6 +58,8 @@ export default function PuntoVentaPage() {
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
+  const { enabled: turnosEnabled, turno: turnoActivo } = useCajaTurno();
+  const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
@@ -618,6 +620,11 @@ export default function PuntoVentaPage() {
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
+    if (turnosEnabled && !turnoActivo) {
+      toast.error('Debes abrir un turno antes de cobrar');
+      setShowAbrirTurnoPrompt(true);
+      return;
+    }
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
