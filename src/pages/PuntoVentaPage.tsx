@@ -174,12 +174,18 @@ export default function PuntoVentaPage() {
     },
   });
 
-  // Merge: use warehouse stock when user has almacen_id, otherwise global
+  // Merge: use warehouse stock when user has almacen_id with data, otherwise fall back to global product stock
   const productos = useMemo(() => {
     if (!productosRaw) return undefined;
     if (!almacenId) return productosRaw;
     const stockMap = new Map((stockAlmacen ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0]));
-    return productosRaw.map(p => ({ ...p, cantidad: stockMap.get(p.id) ?? 0 }));
+    // If this warehouse has no stock_almacen rows at all, fall back to the product's global cantidad
+    // to mirror /almacen/inventario behavior and avoid showing 0 when the company hasn't migrated to per-warehouse stock.
+    const hasWarehouseStock = stockMap.size > 0;
+    return productosRaw.map(p => ({
+      ...p,
+      cantidad: hasWarehouseStock ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
+    }));
   }, [productosRaw, stockAlmacen, almacenId]);
 
   // Clients
