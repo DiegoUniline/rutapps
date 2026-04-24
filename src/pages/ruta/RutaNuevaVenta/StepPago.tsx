@@ -197,6 +197,67 @@ export function StepPago(props: Props) {
           </section>
         )}
 
+        {/* Total a cobrar — encabezado prominente */}
+        {totalACobrar > 0 && (
+          <section className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg px-3 py-3 text-center">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Total a cobrar</p>
+            <p className="text-[26px] font-bold text-primary tabular-nums leading-tight">{fmt(totalACobrar)}</p>
+          </section>
+        )}
+
+        {/* Descuento al total (gateado por permiso) */}
+        {canApplyDiscount ? (
+          <section className="bg-card rounded-lg p-3 border border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+              <Tag className="h-3 w-3" /> Descuento al total (opcional)
+            </p>
+            <div className="flex items-stretch gap-1.5 mb-2">
+              <div className="inline-flex bg-accent/40 rounded-md p-0.5">
+                <button type="button" onClick={() => setDescuentoExtraTipo('monto')}
+                  className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
+                    descuentoExtraTipo === 'monto' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
+                  {s}
+                </button>
+                <button type="button" onClick={() => setDescuentoExtraTipo('porcentaje')}
+                  className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
+                    descuentoExtraTipo === 'porcentaje' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
+                  %
+                </button>
+              </div>
+              <input type="number" inputMode="decimal" step="0.01" min="0"
+                max={descuentoExtraTipo === 'porcentaje' ? 100 : undefined}
+                value={descuentoExtraValor || ''}
+                onChange={(e) => setDescuentoExtraValor(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="0"
+                className="flex-1 bg-accent/40 rounded-md px-2.5 py-1.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 text-right tabular-nums"
+              />
+              {descuentoExtraValor > 0 && (
+                <button type="button" onClick={() => { setDescuentoExtraValor(0); setDescuentoExtraMotivo(''); }}
+                  className="px-2 text-[11px] text-muted-foreground hover:text-destructive">Quitar</button>
+              )}
+            </div>
+            {descExtraAmt > 0 && (
+              <>
+                <input type="text" value={descuentoExtraMotivo}
+                  onChange={(e) => setDescuentoExtraMotivo(e.target.value)}
+                  placeholder="Motivo del descuento (obligatorio)"
+                  maxLength={120}
+                  className={cn("w-full bg-accent/40 rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 transition-colors",
+                    requiresMotivo ? 'ring-1.5 ring-destructive/60 focus:ring-destructive/60' : 'focus:ring-primary/40')}
+                />
+                {requiresMotivo && <p className="text-[10px] text-destructive mt-1">⚠ Captura el motivo para continuar</p>}
+              </>
+            )}
+          </section>
+        ) : (
+          <section className="bg-muted/30 rounded-lg p-2.5 border border-dashed border-border flex items-center gap-2">
+            <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+            <p className="text-[10.5px] text-muted-foreground">
+              Para aplicar descuentos, pide a tu administrador el permiso <span className="font-semibold">"Aplicar descuento al total"</span>.
+            </p>
+          </section>
+        )}
+
         {/* Payment lines section */}
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos recibidos</p>
