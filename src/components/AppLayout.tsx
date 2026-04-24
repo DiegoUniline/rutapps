@@ -20,6 +20,7 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
+import FavoritesBar from '@/components/FavoritesBar';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
