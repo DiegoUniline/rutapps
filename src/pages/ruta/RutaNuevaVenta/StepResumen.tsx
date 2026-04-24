@@ -96,7 +96,7 @@ export function StepResumen(props: Props) {
                     descuentoExtraTipo === 'monto' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
                   aria-label="Monto fijo"
                 >
-                  <DollarSign className="h-3 w-3" /> {s}
+                  {s}
                 </button>
                 <button
                   type="button"
