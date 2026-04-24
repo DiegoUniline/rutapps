@@ -147,7 +147,7 @@ export default function RutaStock() {
         suggestedPrice={detalleProducto?.precio_principal ?? 0}
         isManual={false}
         currentListaPrecioId={null}
-        canEdit={canChangePrice}
+        canEdit={false}
         onSelectLista={() => {}}
         onSetManualPrice={() => {}}
         onResetToSuggested={() => {}}
