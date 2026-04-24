@@ -1964,31 +1964,3 @@ export default function PuntoVentaPage() {
     </div>
   );
 }
-
-
-function SheetActionButton({
-  icon, label, tone, onClick, fullWidth,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  tone: 'primary' | 'warning' | 'muted' | 'destructive';
-  onClick: () => void;
-  fullWidth?: boolean;
-}) {
-  const toneCls = {
-    primary: 'bg-primary/10 text-primary border-primary/30 active:bg-primary/20',
-    warning: 'bg-warning/10 text-warning border-warning/30 active:bg-warning/20',
-    muted: 'bg-muted text-foreground border-border active:bg-accent',
-    destructive: 'bg-destructive/10 text-destructive border-destructive/30 active:bg-destructive/20',
-  }[tone];
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${fullWidth ? 'col-span-2' : ''} flex items-center justify-center gap-2 px-3 py-3.5 rounded-xl border font-semibold text-[13px] transition-colors active:scale-[0.98] ${toneCls}`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
