@@ -105,7 +105,7 @@ export function StepResumen(props: Props) {
                     descuentoExtraTipo === 'porcentaje' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
                   aria-label="Porcentaje"
                 >
-                  <Percent className="h-3 w-3" /> %
+                  %
                 </button>
               </div>
               <input
