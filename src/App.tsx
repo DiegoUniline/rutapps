@@ -64,6 +64,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const FavoritosPage = lazy(() => import("@/pages/FavoritosPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
@@ -479,6 +480,7 @@ function desktopRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/favoritos" element={<FavoritosPage />} />
       <Route path="/supervisor" element={<SupervisorDashboardPage />} />
       <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
       <Route path="/productos" element={<ProductosListPage />} />
