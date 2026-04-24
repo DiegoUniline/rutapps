@@ -80,16 +80,13 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           <div className="text-xs text-muted-foreground">
             Caja: <span className="font-medium text-foreground">{turno.caja_nombre}</span> · Fondo inicial: <span className="font-medium text-foreground">{fmtMoney(turno.fondo_inicial)}</span>
           </div>
-          <ArqueoRow label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
-          <ArqueoRow label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
-          <ArqueoRow label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
-          <ArqueoRow label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
-          <div className="border-t border-border pt-3 mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Total esperado</span><span className="font-medium">{fmtMoney(totalEsperado)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Total contado</span><span className="font-medium">{fmtMoney(totalContado)}</span></div>
-            <div className={`flex justify-between text-base font-bold ${diferencia === 0 ? 'text-foreground' : diferencia > 0 ? 'text-primary' : 'text-destructive'}`}>
-              <span>Diferencia</span><span>{fmtMoney(diferencia)}</span>
-            </div>
+          <ArqueoRow label="Efectivo" val={efectivo} onChange={setEfectivo} />
+          <ArqueoRow label="Tarjeta" val={tarjeta} onChange={setTarjeta} />
+          <ArqueoRow label="Transferencia" val={transfer} onChange={setTransfer} />
+          <ArqueoRow label="Otros" val={otros} onChange={setOtros} />
+          <div className="border-t border-border pt-3 mt-2 text-sm">
+            <div className="flex justify-between text-base font-bold"><span>Total contado</span><span>{fmtMoney(totalContado)}</span></div>
+            <p className="text-xs text-muted-foreground mt-1">El comparativo con lo esperado se calculará al cerrar el turno.</p>
           </div>
           <div>
             <Label>Notas de cierre</Label>
