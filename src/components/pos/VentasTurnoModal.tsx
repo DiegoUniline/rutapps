@@ -84,9 +84,8 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
         .from('ventas')
         .select('id, folio, total, status, created_at, cliente:clientes(nombre)')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', user!.id)
+        .eq('turno_id', turno!.id)
         .eq('origen', 'pos')
-        .gte('created_at', turno!.abierto_at)
         .order('created_at', { ascending: false });
       return (data ?? []) as VentaPosRow[];
     },
