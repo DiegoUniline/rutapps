@@ -275,7 +275,7 @@ export function StepPago(props: Props) {
                 <button type="button" onClick={() => setDescuentoExtraTipo('porcentaje')}
                   className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
                     descuentoExtraTipo === 'porcentaje' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
-                  <Percent className="h-3 w-3" /> %
+                  %
                 </button>
               </div>
               <input type="number" inputMode="decimal" step="0.01" min="0"
