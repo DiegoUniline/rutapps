@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -20,6 +20,7 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
+import FavoritesBar from '@/components/FavoritesBar';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
@@ -444,6 +445,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
+  // Build flat options for the favorites picker from visible nav items
+  const favOptions = useMemo(() => {
+    const opts: { label: string; path: string; group?: string }[] = [];
+    visibleNavItems.forEach(item => {
+      if (item.children && item.children.length > 0) {
+        item.children.forEach(c => opts.push({ label: c.label, path: c.path, group: item.label }));
+      } else {
+        opts.push({ label: item.label, path: item.path, group: 'Principal' });
+      }
+    });
+    return opts;
+  }, [visibleNavItems]);
+
   const closeMobile = () => setMobileOpen(false);
 
   // Mobile layout with hamburger
@@ -540,6 +554,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <SuperAdminEmpresaSelector />
+        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1 overflow-auto pb-16">
           {children}
@@ -661,6 +676,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0">
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
         </div>
+        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1">
           {children}
