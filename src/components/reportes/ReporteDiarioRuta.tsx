@@ -33,10 +33,16 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
+  const usuarioOpts = [
+    { value: 'all', label: '🌐 Todos los usuarios (Master)' },
+    ...(usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre })),
+  ];
+  const isAll = usuarioId === 'all';
   const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
   const selectedUserId = selectedProfile?.user_id ?? usuarioId;
   const selectedVendedorId = usuarioId; // profile.id IS the vendedor_id
+  // Para queries por user_id (cobros, visitas) cuando "todos": lista de user_ids de la empresa
+  const allUserIds = (usuarios || []).map((u: any) => u.user_id).filter(Boolean);
 
   const enabled = !!empresa?.id && !!usuarioId && !!fechaInicio && !!fechaFin;
 
