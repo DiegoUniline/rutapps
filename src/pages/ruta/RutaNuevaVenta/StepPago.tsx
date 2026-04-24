@@ -23,7 +23,7 @@ interface Props {
   setPagos: (fn: PagoLinea[] | ((prev: PagoLinea[]) => PagoLinea[])) => void;
   notas: string;
   setNotas: (v: string) => void;
-  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number };
+  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number; descuentoExtra?: number };
   totalACobrar: number;
   cambio: number;
   saving: boolean;
@@ -34,6 +34,14 @@ interface Props {
   handleSave: () => Promise<void>;
   navigate: (to: any) => void;
   fmt: (n: number) => string;
+  // Descuento extra
+  canApplyDiscount: boolean;
+  descuentoExtraTipo: DescuentoExtraTipo;
+  setDescuentoExtraTipo: (t: DescuentoExtraTipo) => void;
+  descuentoExtraValor: number;
+  setDescuentoExtraValor: (v: number) => void;
+  descuentoExtraMotivo: string;
+  setDescuentoExtraMotivo: (v: string) => void;
 }
 
 const METODOS = [
