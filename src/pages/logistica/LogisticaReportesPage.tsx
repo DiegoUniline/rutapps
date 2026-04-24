@@ -24,7 +24,7 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
       const cargas = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('cargas')
-          .select('id, fecha, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre, unidad))')
+          .select('id, fecha, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))')
           .eq('empresa_id', empresaId!)
           .gte('fecha', desde)
           .lte('fecha', hasta)
@@ -50,7 +50,7 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
           if (!pid) continue;
           const codigo = l.productos?.codigo ?? '';
           const nombre = l.productos?.nombre ?? '';
-          const unidad = l.productos?.unidad ?? '';
+          
           const cant = Number(l.cantidad_cargada) || 0;
           const vend = Number(l.cantidad_vendida) || 0;
           const dev = Number(l.cantidad_devuelta) || 0;
@@ -60,7 +60,7 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
           if (grp) {
             grp.cargado += cant; grp.vendido += vend; grp.devuelto += dev;
           } else {
-            byVendedor[vid].productos.set(pid, { codigo, nombre, unidad, cargado: cant, vendido: vend, devuelto: dev });
+            byVendedor[vid].productos.set(pid, { codigo, nombre, cargado: cant, vendido: vend, devuelto: dev });
           }
           byVendedor[vid].totalCargado += cant;
           byVendedor[vid].totalVendido += vend;
@@ -71,7 +71,7 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
           if (cg) {
             cg.cargado += cant; cg.vendido += vend; cg.devuelto += dev;
           } else {
-            consolidado.set(pid, { codigo, nombre, unidad, cargado: cant, vendido: vend, devuelto: dev });
+            consolidado.set(pid, { codigo, nombre, cargado: cant, vendido: vend, devuelto: dev });
           }
         }
       }
@@ -105,7 +105,7 @@ function usePedidosEntregar(empresaId: string | undefined, desde: string, hasta:
       const ventas = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, clientes(nombre, direccion, telefono), vendedores:profiles!vendedor_id(nombre), venta_lineas(cantidad, total, productos(codigo, nombre, unidad))')
+          .select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, clientes(nombre, direccion, telefono), vendedores:profiles!vendedor_id(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))')
           .eq('empresa_id', empresaId!)
           .eq('tipo', 'pedido')
           .neq('status', 'cancelado')
