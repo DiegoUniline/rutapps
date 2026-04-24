@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
         }
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
-        let orderedWp: Waypoint[];
+        let orderedWp: Waypoint[] = r.waypoints;
         let optMethod: "real_matrix" | "haversine" | "preserved" = "haversine";
         if (preserveOrder) {
           orderedWp = r.waypoints;
