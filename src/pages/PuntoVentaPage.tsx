@@ -708,6 +708,8 @@ export default function PuntoVentaPage() {
         condicion_pago: condicion,
         entrega_inmediata: true,
         status: 'confirmado',
+        origen: 'pos',
+        turno_id: turnoActivo?.id ?? null,
         almacen_id: almacenId,
         subtotal: totals.subtotal,
         iva_total: totals.iva,
