@@ -48,6 +48,7 @@ export default function RolesTab({
   roles, permisos, savingPermisos, rolesTab, setRolesTab,
   showRoleForm, editingRole, roleName, setRoleName, roleDesc, setRoleDesc,
   roleMovil, setRoleMovil, roleSoloMovil, setRoleSoloMovil,
+  roleSoloPos, setRoleSoloPos,
   onNewRole, onCloseRoleForm, onSaveRole, onEditRole, onToggleActivo,
   onTogglePermiso, onToggleAllModule, onToggleAllGroup,
 }: Props) {
