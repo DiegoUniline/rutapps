@@ -38,7 +38,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
-  { label: 'Favoritos', icon: Star, path: '/favoritos', highlight: 'amber' },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
   { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green' },
   { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
