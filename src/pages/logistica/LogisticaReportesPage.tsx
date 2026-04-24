@@ -332,7 +332,6 @@ function ProductosTable({ rows }: { rows: any[] }) {
           <tr className="text-[10px] text-muted-foreground uppercase">
             <th className="text-left px-3 py-2">Código</th>
             <th className="text-left px-3 py-2">Producto</th>
-            <th className="text-left px-3 py-2">Unidad</th>
             <th className="text-right px-3 py-2">Cargado</th>
             <th className="text-right px-3 py-2">Vendido</th>
             <th className="text-right px-3 py-2">Devuelto</th>
@@ -343,7 +342,6 @@ function ProductosTable({ rows }: { rows: any[] }) {
             <tr key={i} className="border-t border-border/50">
               <td className="px-3 py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
               <td className="px-3 py-1.5">{p.nombre}</td>
-              <td className="px-3 py-1.5 text-muted-foreground">{p.unidad || '—'}</td>
               <td className="px-3 py-1.5 text-right font-semibold">{p.cargado.toLocaleString()}</td>
               <td className="px-3 py-1.5 text-right">{p.vendido.toLocaleString()}</td>
               <td className="px-3 py-1.5 text-right">{p.devuelto.toLocaleString()}</td>
