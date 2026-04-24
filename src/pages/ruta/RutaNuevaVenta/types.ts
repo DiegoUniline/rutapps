@@ -20,6 +20,12 @@ export interface CartItem {
   /** Rounding rule from tarifa */
   redondeo?: string;
   display_unit_price?: number;
+  /** True when user manually overrode the unit price */
+  precio_manual?: boolean;
+  /** Active price list applied to this line (null = base / suggested tarifa) */
+  lista_precio_id?: string | null;
+  /** Friendly label of the applied list (for UI badges) */
+  lista_nombre?: string | null;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';
