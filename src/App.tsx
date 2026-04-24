@@ -106,6 +106,7 @@ const PagosProveedoresPage = lazy(() => import("@/pages/PagosProveedoresPage"));
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
 // PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
 const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
+const LogisticaReportesPage = lazy(() => import("@/pages/logistica/LogisticaReportesPage"));
 
 // Mobile ruta pages — eagerly loaded so they work fully offline
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
