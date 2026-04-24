@@ -802,5 +802,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
     // Price overrides
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
+    // Permisos
+    canChangePrice, canApplyDiscount,
+    // Descuento extra
+    descuentoExtraTipo, setDescuentoExtraTipo,
+    descuentoExtraValor, setDescuentoExtraValor,
+    descuentoExtraMotivo, setDescuentoExtraMotivo,
   };
 }
