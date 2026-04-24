@@ -448,6 +448,7 @@ export default function ReporteDiarioRuta() {
       ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
       ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
       ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${fmt(totalDevCredito)}`) : ''}
+      ${totalAbonosPrevios > 0 ? resumenRow('Abonos a crédito previo', `${fmt(totalAbonosPrevios)} (${clientesQueAbonaron} cli)`) : ''}
       <tr class="res-total"><td>Efectivo esperado</td><td>${fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
     </table></div>`;
 
