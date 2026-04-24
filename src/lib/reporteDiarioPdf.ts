@@ -45,6 +45,11 @@ export interface ReporteDiarioPdfData {
   gastos: { concepto?: string; notas?: string | null; monto: number }[];
   devoluciones: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[];
   visitasSinCompra: { cliente?: string; motivo?: string | null; notas?: string | null }[];
+  abonosCreditoPrevio?: {
+    items: { cliente: string; venta_folio: string; venta_fecha: string; metodo_pago: string; referencia: string | null; monto_aplicado: number; dias_atraso: number }[];
+    totalMonto: number;
+    clientesUnicos: number;
+  };
   stock?: { items: { codigo: string; nombre: string; cantidad: number }[]; almacenNombre: string };
 }
 
