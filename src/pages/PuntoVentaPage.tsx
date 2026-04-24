@@ -1760,6 +1760,29 @@ export default function PuntoVentaPage() {
 
       {/* Prompt to open shift when trying to charge without one */}
       <AbrirTurnoModalForPrompt open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <LogOut className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center">Cerrar sesión</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              ¿Estás seguro de que quieres cerrar tu sesión en el punto de venta?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => signOut()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
