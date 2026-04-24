@@ -520,6 +520,7 @@ export default function ReporteDiarioRuta() {
       ${gastosHtml}
       ${devsHtml}
       ${visitasHtml}
+      ${abonosHtml}
       ${resumenHtml}
       <div class="doc-footer">Este documento es una representación impresa. Generado por Rutapp · ${new Date().toLocaleString('es-MX')}</div>
     </body></html>`);
