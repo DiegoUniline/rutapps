@@ -16,8 +16,8 @@ interface Props {
 
 const META = {
   retiro:   { label: 'Retiro de efectivo', icon: ArrowUp,  color: 'text-destructive' },
-  deposito: { label: 'Depósito a caja',    icon: ArrowDown, color: 'text-emerald-600' },
-  gasto:    { label: 'Gasto de caja',      icon: Receipt,  color: 'text-amber-600' },
+  deposito: { label: 'Depósito a caja',    icon: ArrowDown, color: 'text-primary' },
+  gasto:    { label: 'Gasto de caja',      icon: Receipt,  color: 'text-muted-foreground' },
 } as const;
 
 export function MovimientoCajaModal({ open, onOpenChange, tipo }: Props) {

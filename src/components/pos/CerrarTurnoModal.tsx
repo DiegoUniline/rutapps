@@ -91,7 +91,7 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           <div className="border-t border-border pt-3 mt-2 space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Total esperado</span><span className="font-medium">{fmtMoney(totalEsperado)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Total contado</span><span className="font-medium">{fmtMoney(totalContado)}</span></div>
-            <div className={`flex justify-between text-base font-bold ${diferencia === 0 ? 'text-foreground' : diferencia > 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+            <div className={`flex justify-between text-base font-bold ${diferencia === 0 ? 'text-foreground' : diferencia > 0 ? 'text-primary' : 'text-destructive'}`}>
               <span>Diferencia</span><span>{fmtMoney(diferencia)}</span>
             </div>
           </div>
