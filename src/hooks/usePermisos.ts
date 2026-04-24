@@ -36,7 +36,12 @@ const ROUTE_PRIORITY: Array<{ modulo: string; path: string }> = [
   { modulo: 'configuracion.suscripcion', path: '/mi-suscripcion' },
 ];
 
-export function getFirstAccessibleRoute(hasModulo: (m: string) => boolean): string {
+export function getFirstAccessibleRoute(
+  hasModulo: (m: string) => boolean,
+  isSoloMovil: boolean = false,
+): string {
+  // Solo vista móvil tiene prioridad absoluta sobre cualquier permiso residual
+  if (isSoloMovil) return '/ruta';
   for (const { modulo, path } of ROUTE_PRIORITY) {
     if (hasModulo(modulo)) return path;
   }
