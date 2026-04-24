@@ -9,11 +9,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
   ListOrdered, ArrowDown, ArrowUp, Receipt, Ban, ShoppingCart,
-  ChevronDown, ChevronRight, Loader2,
+  ChevronDown, ChevronRight, Loader2, Search, X,
 } from 'lucide-react';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface Props {
   open: boolean;
@@ -54,6 +55,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const enabled = !!open && !!turno?.id;
 
@@ -103,6 +105,61 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const cobros = cobrosQuery.data ?? [];
   const movs = movsQuery.data ?? [];
   const ventasPos = ventasPosQuery.data ?? [];
+
+  // Productos por venta (para búsqueda por nombre de producto)
+  const ventaIds = ventasPos.map(v => v.id);
+  const productosPorVentaQuery = useQuery({
+    queryKey: ['turno-ventas-pos-productos', turno?.id, ventaIds.join(',')],
+    enabled: enabled && ventaIds.length > 0,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const { data } = await supabase
+        .from('venta_lineas')
+        .select('venta_id, productos(nombre)')
+        .in('venta_id', ventaIds);
+      const map: Record<string, string[]> = {};
+      for (const l of (data ?? []) as any[]) {
+        const n = l.productos?.nombre;
+        if (!n) continue;
+        (map[l.venta_id] ??= []).push(n);
+      }
+      return map;
+    },
+  });
+
+  // Métodos de pago por venta (para búsqueda)
+  const metodosPorVentaQuery = useQuery({
+    queryKey: ['turno-ventas-pos-metodos', turno?.id, ventaIds.join(',')],
+    enabled: enabled && ventaIds.length > 0,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('venta_id, cobros(metodo_pago)')
+        .in('venta_id', ventaIds);
+      const map: Record<string, string[]> = {};
+      for (const a of (data ?? []) as any[]) {
+        const m = a.cobros?.metodo_pago;
+        if (!m) continue;
+        const arr = (map[a.venta_id] ??= []);
+        if (!arr.includes(m)) arr.push(m);
+      }
+      return map;
+    },
+  });
+
+  const productosMap = productosPorVentaQuery.data ?? {};
+  const metodosMap = metodosPorVentaQuery.data ?? {};
+
+  const ventasPosFiltradas = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return ventasPos;
+    return ventasPos.filter(v => {
+      const folio = (v.folio || '').toLowerCase();
+      const cli = (v.cliente?.nombre || '').toLowerCase();
+      const prods = (productosMap[v.id] || []).join(' ').toLowerCase();
+      const mets = (metodosMap[v.id] || []).join(' ').toLowerCase();
+      return folio.includes(s) || cli.includes(s) || prods.includes(s) || mets.includes(s);
+    });
+  }, [ventasPos, search, productosMap, metodosMap]);
 
   const totalVentas = ventasPos.filter(v => v.status !== 'cancelado').reduce((s, v) => s + Number(v.total || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
@@ -174,14 +231,14 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl w-[96vw] max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0">
-          <DialogHeader className="px-5 py-4 border-b border-border bg-card">
+        <DialogContent className="max-w-6xl w-[96vw] max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 bg-background">
+          <DialogHeader className="px-5 py-4 border-b border-border bg-background">
             <DialogTitle className="flex items-center gap-2 text-base">
               <ListOrdered className="h-5 w-5 text-primary" /> Movimientos del turno · {turno.caja_nombre}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="px-5 py-3 border-b border-border bg-muted/30">
+          <div className="px-5 py-3 border-b border-border bg-background">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <SumCard label="Ventas POS" value={totalVentas} tone="primary" icon={<ShoppingCart className="h-3.5 w-3.5" />} fmt={fmt} />
               <SumCard label="Cobros" value={totalCobros} tone="primary" fmt={fmt} />
@@ -191,20 +248,40 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          <Tabs defaultValue="ventas" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="mx-5 mt-3 self-start">
-              <TabsTrigger value="ventas" className="gap-1.5"><ShoppingCart className="h-3.5 w-3.5" /> Ventas POS ({ventasPos.length})</TabsTrigger>
-              <TabsTrigger value="cobros" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Cobros ({cobros.length})</TabsTrigger>
-              <TabsTrigger value="movs" className="gap-1.5"><ArrowDown className="h-3.5 w-3.5" /> Movimientos caja ({movs.length})</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="ventas" className="flex-1 overflow-hidden flex flex-col bg-background">
+            <div className="px-5 pt-3 flex items-center justify-between gap-3 flex-wrap">
+              <TabsList>
+                <TabsTrigger value="ventas" className="gap-1.5"><ShoppingCart className="h-3.5 w-3.5" /> Ventas POS ({ventasPos.length})</TabsTrigger>
+                <TabsTrigger value="cobros" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Cobros ({cobros.length})</TabsTrigger>
+                <TabsTrigger value="movs" className="gap-1.5"><ArrowDown className="h-3.5 w-3.5" /> Movimientos caja ({movs.length})</TabsTrigger>
+              </TabsList>
+              <div className="relative flex-1 min-w-[240px] max-w-md">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar folio, cliente, producto o método..."
+                  className="h-9 pl-8 pr-8 text-xs bg-background"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
 
-            <TabsContent value="ventas" className="flex-1 overflow-y-auto px-5 py-3 mt-0">
-              {ventasPos.length === 0 ? (
-                <Empty text="Sin ventas POS en este turno" />
+            <TabsContent value="ventas" className="flex-1 overflow-y-auto px-5 py-3 mt-0 bg-background">
+              {ventasPosFiltradas.length === 0 ? (
+                <Empty text={search ? 'Sin resultados para la búsqueda' : 'Sin ventas POS en este turno'} />
               ) : (
-                <div className="border border-border rounded-lg overflow-hidden">
+                <div className="border border-border rounded-lg overflow-hidden bg-background">
                   <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground text-xs">
+                    <thead className="bg-background text-muted-foreground text-xs border-b border-border">
                       <tr>
                         <th className="w-8 px-2 py-2"></th>
                         <th className="text-left px-3 py-2">Hora</th>
@@ -217,7 +294,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {ventasPos.map(v => {
+                      {ventasPosFiltradas.map(v => {
                         const isCancelled = v.status === 'cancelado';
                         const isExpanded = expandedId === v.id;
                         return (
