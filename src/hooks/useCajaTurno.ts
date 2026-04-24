@@ -39,7 +39,23 @@ export interface CajaMovimiento {
 export function useCajaTurno() {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
-  const enabled = !!user?.id && !!empresa?.id && !!(empresa as any)?.pos_turnos_habilitado;
+
+  // Fetch the empresa-level flag directly to avoid relying on the cached AuthContext object,
+  // which doesn't include `pos_turnos_habilitado` in its SELECT.
+  const flagQuery = useQuery({
+    queryKey: ['empresa-pos-turnos-flag', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<boolean> => {
+      const { data } = await supabase
+        .from('empresas')
+        .select('pos_turnos_habilitado')
+        .eq('id', empresa!.id)
+        .maybeSingle();
+      return !!(data as any)?.pos_turnos_habilitado;
+    },
+  });
+  const enabled = !!user?.id && !!empresa?.id && !!flagQuery.data;
 
   const turnoQuery = useQuery({
     queryKey: ['caja-turno-activo', user?.id, empresa?.id],
