@@ -125,6 +125,7 @@ export default function SuperAdminPage() {
             <TabsContent value="incompletos"><AdminRegistrosIncompletosTab /></TabsContent>
             <TabsContent value="cupones"><AdminCuponesTab /></TabsContent>
             <TabsContent value="campanas"><AdminWaCampaignsTab /></TabsContent>
+            <TabsContent value="pos"><AdminPosTab /></TabsContent>
           </Tabs>
         )}
       </div>
