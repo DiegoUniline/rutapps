@@ -19,6 +19,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
+import { AbrirTurnoModal as AbrirTurnoModalForPrompt } from '@/components/pos/AbrirTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 
 const CATALOG_STALE = 5 * 60 * 1000;
@@ -1719,13 +1720,8 @@ export default function PuntoVentaPage() {
       )}
 
       {/* Prompt to open shift when trying to charge without one */}
-      {showAbrirTurnoPrompt && (
-        <AbrirTurnoModalLazy open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
-      )}
+      <AbrirTurnoModalForPrompt open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
     </div>
   );
 }
-
-// Lazy import to avoid circular load
-import { AbrirTurnoModal as AbrirTurnoModalLazy } from '@/components/pos/AbrirTurnoModal';
 
