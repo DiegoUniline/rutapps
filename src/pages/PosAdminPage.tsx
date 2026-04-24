@@ -187,6 +187,7 @@ function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 }
 
 function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({ queryKey: ['pos-admin-cortes', empresaId], queryFn: () => fetchTurnos(empresaId, true) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
