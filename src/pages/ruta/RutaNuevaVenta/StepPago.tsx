@@ -83,6 +83,13 @@ export function StepPago(props: Props) {
   const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
   const restante = Math.max(0, totalACobrar - totalPagos);
 
+  // Auto-inicializar con Efectivo cuando hay total y no hay pagos
+  React.useEffect(() => {
+    if (totalACobrar > 0 && pagos.length === 0) {
+      setPagos([{ id: crypto.randomUUID(), metodo_pago: 'efectivo', monto: totalACobrar, referencia: '' }]);
+    }
+  }, [totalACobrar, pagos.length, setPagos]);
+
   const addPagoLinea = (metodo: PagoLinea['metodo_pago']) => {
     setPagos(prev => [...prev, { id: crypto.randomUUID(), metodo_pago: metodo, monto: restante, referencia: '' }]);
   };
@@ -94,6 +101,10 @@ export function StepPago(props: Props) {
   const removePago = (id: string) => {
     setPagos(prev => prev.filter(p => p.id !== id));
   };
+
+  // Métodos disponibles para agregar (que no estén ya en uso)
+  const metodosUsados = new Set(pagos.map(p => p.metodo_pago));
+  const metodosDisponibles = METODOS.filter(m => !metodosUsados.has(m.value));
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
