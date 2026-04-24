@@ -1,61 +1,62 @@
-# Problema
+# Fix: Solo Vista Móvil debe tener prioridad absoluta sobre POS
 
-Los agentes de ventas de RubiPets (y cualquier rol sin permiso de `dashboard.ver`) parecen quedar bloqueados en el POS. La causa raíz es que **toda la app redirige a `/dashboard` de forma hardcodeada**:
+## Problema
+Cuando un rol cambia de "Solo POS" a "Solo Vista Móvil":
+1. El permiso `pos.ver` queda residual en `role_permisos`
+2. `getFirstAccessibleRoute` itera `ROUTE_PRIORITY` y encuentra `pos` antes de evaluar el flag `solo_movil`
+3. Resultado: el usuario es redirigido a `/pos` en vez de `/ruta`
 
-- `src/App.tsx` líneas 500-501: `/` y `/login` → `Navigate to="/dashboard"`
-- `src/components/PermissionGuard.tsx` línea 33: cualquier ruta sin permiso → `Navigate to="/dashboard"`
+## Solución
 
-Como `PermissionGuard` también protege `/dashboard`, el usuario sin ese permiso entra en un loop / pantalla en blanco. El POS funciona solo porque lo abren manualmente desde el sidebar.
+### A) Código — `src/hooks/usePermisos.ts`
+Modificar `getFirstAccessibleRoute` para que reciba también el flag `roleSoloMovil` y haga short-circuit:
 
-# Solución
+```typescript
+export function getFirstAccessibleRoute(
+  hasModulo: (m: string) => boolean,
+  isSoloMovil: boolean = false
+): string {
+  // Solo vista móvil tiene prioridad absoluta
+  if (isSoloMovil) return '/ruta';
+  
+  for (const { modulo, path } of ROUTE_PRIORITY) {
+    if (hasModulo(modulo)) return path;
+  }
+  return '/configuracion-inicial';
+}
+```
 
-Calcular dinámicamente la **primera ruta accesible** para el usuario según sus permisos y usarla en todos los redirects.
+Y en el hook:
+```typescript
+const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo, roleSoloMovil);
+```
 
-## 1) `src/hooks/usePermisos.ts`
+Buscar también todos los call-sites de `getFirstAccessibleRoute` (probablemente en `App.tsx` o `LoginPage.tsx`) y pasarles el segundo argumento si lo usan directamente.
 
-Agregar helper `getFirstAccessibleRoute(hasModulo)` que recorre una lista priorizada de módulos y devuelve la primera ruta cuyo permiso `ver` el usuario tenga:
+### B) Base de datos — Limpieza de permisos residuales
+Ejecutar (vía migración o insert tool) para todos los roles con `solo_movil = true`:
 
-Orden de prioridad (de más operativo a más administrativo):
-1. `dashboard` → `/dashboard`
-2. `pos` → `/pos`
-3. `ventas` → `/ventas`
-4. `clientes` → `/clientes`
-5. `logistica.dashboard` → `/logistica/dashboard`
-6. `logistica.pedidos` → `/logistica/pedidos`
-7. `logistica.entregas` → `/logistica/entregas`
-8. `almacen.inventario` → `/almacen/inventario`
-9. `catalogo.productos` → `/productos`
-10. `reportes.generales` → `/reportes`
-11. `configuracion.suscripcion` → `/mi-suscripcion`
+```sql
+-- Eliminar permisos de escritorio que conflictúan con solo_movil
+DELETE FROM public.role_permisos rp
+USING public.roles r
+WHERE rp.role_id = r.id
+  AND r.solo_movil = true
+  AND rp.modulo IN ('pos', 'dashboard', 'ventas', 'clientes', 'supervisor');
 
-Fallback final: `/configuracion-inicial` (siempre accesible).
+-- Asegurar que tengan solo_movil.ver = true
+INSERT INTO public.role_permisos (role_id, modulo, accion, permitido)
+SELECT id, 'solo_movil', 'ver', true 
+FROM public.roles 
+WHERE solo_movil = true
+ON CONFLICT (role_id, modulo, accion) DO UPDATE SET permitido = true;
+```
 
-Exponerlo desde el hook como `firstAccessibleRoute: string` (memoizado).
+## Resultado esperado
+- Cualquier rol marcado como `solo_movil = true` redirige a `/ruta` sin importar qué permisos residuales tenga.
+- Andrey (y cualquier futuro caso similar) funcionará correctamente al alternar entre tipos de rol.
+- Los datos quedan consistentes para todas las empresas.
 
-## 2) `src/components/PermissionGuard.tsx`
-
-- Reemplazar `<Navigate to="/dashboard" replace />` por `<Navigate to={firstAccessibleRoute} replace />`.
-- Si la ruta actual ya coincide con `firstAccessibleRoute`, mostrar un mensaje "No tienes acceso a esta sección" en lugar de redirigir (previene loops).
-
-## 3) `src/App.tsx`
-
-- Crear componente interno `HomeRedirect` que use `usePermisos` + `useSubscription` y haga `<Navigate to={firstAccessibleRoute} replace />`.
-- Reemplazar las dos rutas hardcodeadas:
-  - `<Route path="/" element={<HomeRedirect />} />`
-  - `<Route path="/login" element={<HomeRedirect />} />`
-- Mantener el comportamiento existente de "solo móvil" (redirect a `/ruta`) y de bloqueo por suscripción (redirect a `/subscription-blocked`) — `HomeRedirect` debe respetarlos primero.
-
-## 4) Verificación
-
-- Owner / super-admin → siguen entrando a `/dashboard` (tienen todos los permisos, dashboard es el primero de la lista).
-- Agente de ventas RubiPets (sin dashboard, con POS + ventas + clientes) → entra directo a `/pos`, y el sidebar le permite navegar a Ventas/Clientes sin redirects extraños.
-- Usuario "Solo vista móvil" → sigue yendo a `/ruta` (lógica existente intacta).
-- Usuario sin ningún permiso → cae en `/configuracion-inicial` con mensaje claro en vez de pantalla en blanco.
-
-# Archivos a modificar
-
-- `src/hooks/usePermisos.ts` — agregar helper + exponer `firstAccessibleRoute`
-- `src/components/PermissionGuard.tsx` — usar redirect dinámico
-- `src/App.tsx` — `HomeRedirect` para `/` y `/login`
-
-No se requieren cambios de base de datos ni migraciones.
+## Archivos afectados
+- `src/hooks/usePermisos.ts` (lógica de routing)
+- Migración SQL (limpieza de datos)
