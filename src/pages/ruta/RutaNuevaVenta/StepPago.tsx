@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock } from 'lucide-react';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea, DescuentoExtraTipo } from './types';
 import { ACCIONES } from './types';
 
