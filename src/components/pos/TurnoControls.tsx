@@ -32,8 +32,8 @@ export function TurnoControls() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20">
-            <Wallet className="h-3.5 w-3.5 text-emerald-600" />
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 border-primary/50 bg-primary/10 hover:bg-primary/20">
+            <Wallet className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11px] font-semibold">Turno · {fmtMoney(turno.fondo_inicial)}</span>
             <ChevronDown className="h-3 w-3" />
           </Button>
@@ -42,13 +42,13 @@ export function TurnoControls() {
           <DropdownMenuLabel className="text-xs">{turno.caja_nombre}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setMovTipo('deposito')}>
-            <ArrowDown className="h-4 w-4 text-emerald-600 mr-2" /> Depósito a caja
+            <ArrowDown className="h-4 w-4 text-primary mr-2" /> Depósito a caja
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMovTipo('retiro')}>
             <ArrowUp className="h-4 w-4 text-destructive mr-2" /> Retiro de efectivo
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMovTipo('gasto')}>
-            <Receipt className="h-4 w-4 text-amber-600 mr-2" /> Gasto de caja
+            <Receipt className="h-4 w-4 text-muted-foreground mr-2" /> Gasto de caja
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setOpenCerrar(true)} className="text-destructive">
