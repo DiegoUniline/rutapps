@@ -905,7 +905,50 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
-          {/* Resumen final */}
+          {/* Abonos a crédito previo */}
+          {abonosCreditoPrevio.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <CreditCard className="h-3.5 w-3.5" /> Abonos a crédito previo ({abonosCreditoPrevio.length}) — {clientesQueAbonaron} cliente(s)
+              </h2>
+              <p className="text-[10px] text-muted-foreground mb-2">
+                Clientes con ventas a crédito anteriores al rango que abonaron en este período.
+              </p>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Venta</th>
+                    <th className="text-left py-1.5">F. Venta</th>
+                    <th className="text-right py-1.5">Días</th>
+                    <th className="text-left py-1.5">Método</th>
+                    <th className="text-left py-1.5">Ref.</th>
+                    <th className="text-right py-1.5">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {abonosCreditoPrevio.map((a, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1">{a.cliente}</td>
+                      <td className="py-1 font-mono">{a.venta_folio}</td>
+                      <td className="py-1 text-muted-foreground">{a.venta_fecha}</td>
+                      <td className="py-1 text-right font-semibold">{a.dias_atraso}</td>
+                      <td className="py-1 capitalize">{a.metodo_pago}</td>
+                      <td className="py-1 text-muted-foreground font-mono">{a.referencia || '—'}</td>
+                      <td className="py-1 text-right font-semibold">{fmt(a.monto_aplicado)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-bold">
+                    <td colSpan={6} className="py-1.5 text-right text-muted-foreground text-[10px]">Total abonos:</td>
+                    <td className="py-1.5 text-right">{fmt(totalAbonosPrevios)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
