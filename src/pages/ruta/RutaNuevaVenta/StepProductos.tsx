@@ -156,9 +156,15 @@ export function StepProductos(props: Props) {
         {filteredProductos?.map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
-          const stockLabel = tipoVenta === 'venta_directa' ? `${maxQty} ${usandoAlmacen ? 'en almacén' : 'a bordo'}` : `${p.cantidad ?? 0} en almacén`;
-          const stockOk = tipoVenta === 'pedido' || maxQty > 0;
-          const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty;
+          // Show real stock, not Infinity (which appears when vender_sin_stock is enabled)
+          const realStock = tipoVenta === 'venta_directa'
+            ? (stockAbordo.get(p.id) ?? 0)
+            : (p.cantidad ?? 0);
+          const stockLabel = tipoVenta === 'venta_directa'
+            ? `${realStock} ${usandoAlmacen ? 'en almacén' : 'a bordo'}`
+            : `${realStock} en almacén`;
+          const stockOk = tipoVenta === 'pedido' || realStock > 0 || !!p.vender_sin_stock;
+          const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty && maxQty !== Infinity;
           const isManual = !!inCart?.precio_manual;
           const hasLista = !!inCart?.lista_precio_id;
           const displayPrice = inCart?.precio_unitario ?? (p.precio_principal ?? 0);
