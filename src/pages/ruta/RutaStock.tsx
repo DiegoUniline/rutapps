@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
+import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 
 export default function RutaStock() {
   const { empresa, profile } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermiso, isOwner } = usePermisos();
+  const canViewPrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermiso('productos', 'ver');
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
   const [search, setSearch] = useState('');
+  const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
   const almacenId = profile?.almacen_id;
 
   const { data: productos, isLoading } = useOfflineQuery('productos', {
@@ -80,6 +86,7 @@ export default function RutaStock() {
                 <th className="text-left font-semibold text-muted-foreground px-2 py-1.5">Producto</th>
                 <th className="text-right font-semibold text-muted-foreground px-2 py-1.5 w-[70px]">Stock</th>
                 <th className="text-right font-semibold text-muted-foreground px-2 py-1.5 w-[80px]">Precio</th>
+                <th className="px-1 py-1.5 w-[36px]"></th>
               </tr>
             </thead>
             <tbody>
@@ -110,6 +117,17 @@ export default function RutaStock() {
                     <td className="px-2 py-2 text-right tabular-nums text-foreground">
                       {fmt(p.precio_principal ?? 0)}
                     </td>
+                    <td className="px-1 py-2 text-center">
+                      {canViewPrice && (
+                        <button
+                          onClick={() => setDetalleProducto(p)}
+                          aria-label="Ver detalle y precios"
+                          className="w-7 h-7 rounded-md bg-accent/60 hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all mx-auto"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -121,6 +139,20 @@ export default function RutaStock() {
           <p className="text-center text-muted-foreground text-[13px] py-8">No hay productos</p>
         )}
       </div>
+
+      <ProductoDetalleModal
+        open={!!detalleProducto}
+        onClose={() => setDetalleProducto(null)}
+        producto={detalleProducto}
+        currentUnitPrice={detalleProducto?.precio_principal ?? 0}
+        suggestedPrice={detalleProducto?.precio_principal ?? 0}
+        isManual={false}
+        currentListaPrecioId={null}
+        canEdit={canChangePrice}
+        onSelectLista={() => {}}
+        onSetManualPrice={() => {}}
+        onResetToSuggested={() => {}}
+      />
     </div>
   );
 }
