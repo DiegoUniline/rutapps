@@ -494,11 +494,17 @@ function GuardedDesktopRoutes() {
   );
 }
 
+function HomeRedirect() {
+  const { firstAccessibleRoute, loading } = usePermisos();
+  if (loading) return null;
+  return <Navigate to={firstAccessibleRoute} replace />;
+}
+
 function desktopRoutes() {
   return (
     <>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/login" element={<HomeRedirect />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/supervisor" element={<SupervisorDashboardPage />} />
       <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
