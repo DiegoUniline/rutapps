@@ -35,9 +35,9 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
       });
 
       // Por vendedor → productos
-      const byVendedor: Record<string, { vendedorId: string; vendedor: string; productos: Map<string, { codigo: string; nombre: string; unidad: string; cargado: number; vendido: number; devuelto: number }>; totalCargado: number; totalVendido: number; totalDevuelto: number }> = {};
+      const byVendedor: Record<string, { vendedorId: string; vendedor: string; productos: Map<string, { codigo: string; nombre: string; cargado: number; vendido: number; devuelto: number }>; totalCargado: number; totalVendido: number; totalDevuelto: number }> = {};
       // Consolidado global
-      const consolidado = new Map<string, { codigo: string; nombre: string; unidad: string; cargado: number; vendido: number; devuelto: number }>();
+      const consolidado = new Map<string, { codigo: string; nombre: string; cargado: number; vendido: number; devuelto: number }>();
 
       for (const c of cargas) {
         const vid = c.vendedor_id ?? 'sin';
