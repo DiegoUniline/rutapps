@@ -445,6 +445,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
+  // Build flat options for the favorites picker from visible nav items
+  const favOptions = useMemo(() => {
+    const opts: { label: string; path: string; group?: string }[] = [];
+    visibleNavItems.forEach(item => {
+      if (item.children && item.children.length > 0) {
+        item.children.forEach(c => opts.push({ label: c.label, path: c.path, group: item.label }));
+      } else {
+        opts.push({ label: item.label, path: item.path, group: 'Principal' });
+      }
+    });
+    return opts;
+  }, [visibleNavItems]);
+
   const closeMobile = () => setMobileOpen(false);
 
   // Mobile layout with hamburger
