@@ -903,6 +903,8 @@ export default function PuntoVentaPage() {
             <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
           </div>
           <div className="flex-1" />
+          {/* Shift controls */}
+          <TurnoControls />
           {/* Sin impuestos switch */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground font-medium hidden sm:inline">Sin imp.</span>
