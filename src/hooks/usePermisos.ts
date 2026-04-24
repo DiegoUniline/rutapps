@@ -233,18 +233,22 @@ export const PATH_MODULE_MAP: Record<string, string> = {
 interface PermisosData {
   hasRole: boolean;
   permisos: Permiso[];
+  /** Source of truth for "Solo vista móvil" — read directly from roles table */
+  roleSoloMovil: boolean;
 }
 
 async function fetchPermisos(userId: string): Promise<PermisosData> {
   const { data: userRole } = await supabase
     .from('user_roles')
-    .select('role_id')
+    .select('role_id, roles(solo_movil)')
     .eq('user_id', userId)
     .maybeSingle();
 
   if (!userRole?.role_id) {
-    return { hasRole: false, permisos: [] };
+    return { hasRole: false, permisos: [], roleSoloMovil: false };
   }
+
+  const roleSoloMovil = !!(userRole as any).roles?.solo_movil;
 
   const rolePermisos = await fetchAllPages<Permiso>((from, to) =>
     supabase.from('role_permisos')
@@ -253,7 +257,7 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
       .range(from, to)
   );
 
-  return { hasRole: true, permisos: rolePermisos };
+  return { hasRole: true, permisos: rolePermisos, roleSoloMovil };
 }
 
 export function usePermisos(): UsePermisosReturn {
@@ -271,16 +275,19 @@ export function usePermisos(): UsePermisosReturn {
 
   const hasRole = data?.hasRole ?? null;
   const permisos = data?.permisos ?? [];
+  const roleSoloMovil = data?.roleSoloMovil ?? false;
 
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
     // Owner always has full access and is never restricted
     if (isOwner) {
       return modulo === 'solo_movil' ? false : true;
     }
-    // 'solo_movil' is a restrictive flag — only true when explicitly granted
+    // 'solo_movil' is a restrictive flag — source of truth is roles.solo_movil column
     if (modulo === 'solo_movil') {
       if (hasRole === false) return false;
       if (hasRole === null) return false;
+      // Trust the roles table flag OR an explicit permission row (whichever is true)
+      if (roleSoloMovil) return true;
       const perm = permisos.find(p => p.modulo === 'solo_movil' && p.accion === accion);
       return perm?.permitido ?? false;
     }
@@ -289,7 +296,7 @@ export function usePermisos(): UsePermisosReturn {
     // Each module requires its own explicit permission — no parent fallback
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     return perm?.permitido ?? false;
-  }, [permisos, hasRole, isOwner]);
+  }, [permisos, hasRole, isOwner, roleSoloMovil]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
     if (!modulo) return true;
