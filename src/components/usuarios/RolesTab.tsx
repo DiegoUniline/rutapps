@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Shield, Edit2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, X } from 'lucide-react';
+import { Plus, Shield, Edit2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, X, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones } from '@/hooks/usePermisos';
 import type { Role, RolePermiso } from '@/hooks/useRoles';
