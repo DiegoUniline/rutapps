@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,10 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
   Calculator, Receipt, ArrowDownCircle, ArrowUpCircle, Banknote, ShoppingCart,
   Clock, CheckCircle2, ClipboardList, Eye, Wallet, CreditCard, Smartphone, MoreHorizontal, ExternalLink,
+  ChevronDown, ChevronRight, Loader2, Search, X,
 } from 'lucide-react';
 
 const TAB_TO_PARAM: Record<string, string> = {
@@ -236,6 +239,10 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 
 function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'deposito' | 'retiro' | 'gasto' }) {
   const { fmt: _fmt } = useCurrency();
+  const [search, setSearch] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
   const q = useQuery({
     queryKey: ['pos-admin-movs', empresaId, tipo],
     queryFn: async () => {
@@ -245,7 +252,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
         .eq('empresa_id', empresaId)
         .eq('tipo', tipo)
         .order('created_at', { ascending: false })
-        .limit(300);
+        .limit(500);
       const userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id).filter(Boolean)));
       const { data: profiles } = userIds.length
         ? await supabase.from('profiles').select('user_id, nombre').in('user_id', userIds)
@@ -255,7 +262,20 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
     },
   });
 
-  const rows = (q.data ?? []) as any[];
+  const allRows = (q.data ?? []) as any[];
+  const rows = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null;
+    const toTs = to ? new Date(to + 'T23:59:59').getTime() : null;
+    return allRows.filter(r => {
+      if (s && !((r.motivo || '').toLowerCase().includes(s) || (r.user_nombre || '').toLowerCase().includes(s) || (r.caja_turnos?.caja_nombre || '').toLowerCase().includes(s))) return false;
+      const t = new Date(r.created_at).getTime();
+      if (fromTs && t < fromTs) return false;
+      if (toTs && t > toTs) return false;
+      return true;
+    });
+  }, [allRows, search, from, to]);
+
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
   const total = rows.reduce((s, r) => s + (Number(r.monto) || 0), 0);
   const tone = tipo === 'deposito' ? 'success' : tipo === 'retiro' ? 'warning' : 'destructive';
@@ -265,6 +285,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
   return (
     <div className="space-y-3">
       <SumCard icon={icon} label={`Total ${labelTipo} (${rows.length})`} value={total} tone={tone} />
+      <FiltersBar search={search} onSearch={setSearch} from={from} onFrom={setFrom} to={to} onTo={setTo} placeholder="Buscar por motivo, usuario o caja..." />
       {!rows.length ? (
         <Card className="p-6 text-center text-sm text-muted-foreground">Sin {labelTipo.toLowerCase()} registrados.</Card>
       ) : (
@@ -299,6 +320,13 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
 
 function VentasPosPanel({ empresaId }: { empresaId: string }) {
   const { fmt: _fmt } = useCurrency();
+  const [search, setSearch] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [metodoFilter, setMetodoFilter] = useState<string>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const q = useQuery({
     queryKey: ['pos-admin-ventas', empresaId],
     queryFn: async () => {
@@ -308,10 +336,9 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
         .eq('empresa_id', empresaId)
         .eq('origen', 'pos')
         .order('created_at', { ascending: false })
-        .limit(300);
+        .limit(500);
       const rows = (data ?? []) as any[];
 
-      // Vendedor_id refers to profiles.id; cajero_id refers to profiles.user_id
       const vendedorIds = Array.from(new Set(rows.map(r => r.vendedor_id).filter(Boolean)));
       const cajeroUserIds = Array.from(new Set(rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean)));
 
@@ -326,7 +353,6 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
       const vendMap = new Map((profilesById.data ?? []).map((p: any) => [p.id, p.nombre]));
       const cajMap = new Map((profilesByUserId.data ?? []).map((p: any) => [p.user_id, p.nombre]));
 
-      // Métodos de pago: from cobros via cobro_aplicaciones
       const ventaIds = rows.map(r => r.id);
       let metodosMap = new Map<string, string[]>();
       if (ventaIds.length) {
@@ -351,56 +377,277 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
       }));
     },
   });
-  const rows = (q.data ?? []) as any[];
+  const allRows = (q.data ?? []) as any[];
+
+  const metodosOptions = useMemo(() => {
+    const set = new Set<string>();
+    allRows.forEach(r => r.metodos_pago.forEach((m: string) => set.add(m)));
+    return Array.from(set);
+  }, [allRows]);
+
+  const rows = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null;
+    const toTs = to ? new Date(to + 'T23:59:59').getTime() : null;
+    return allRows.filter(r => {
+      if (s) {
+        const hay = `${r.folio || ''} ${r.cliente?.nombre || ''} ${r.vendedor_nombre || ''} ${r.cajero_nombre || ''} ${r.caja_turnos?.caja_nombre || ''}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      const t = new Date(r.created_at || r.fecha).getTime();
+      if (fromTs && t < fromTs) return false;
+      if (toTs && t > toTs) return false;
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (metodoFilter !== 'all' && !r.metodos_pago.includes(metodoFilter)) return false;
+      return true;
+    });
+  }, [allRows, search, from, to, statusFilter, metodoFilter]);
+
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
-  if (!rows.length) return <Card className="p-6 text-center text-sm text-muted-foreground">Sin ventas POS registradas.</Card>;
-  const total = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
+  const total = rows.filter(r => r.status !== 'cancelado').reduce((s, r) => s + (Number(r.total) || 0), 0);
+
   return (
     <div className="space-y-3">
       <SumCard icon={<ShoppingCart className="h-4 w-4" />} label={`Total ventas POS (${rows.length})`} value={total} tone="primary" />
-      <Card className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-xs">
-            <tr>
-              <th className="text-left px-3 py-2">Folio</th>
-              <th className="text-left px-3 py-2">Fecha</th>
-              <th className="text-left px-3 py-2">Cliente</th>
-              <th className="text-left px-3 py-2">Vendedor</th>
-              <th className="text-left px-3 py-2">Caja</th>
-              <th className="text-left px-3 py-2">Cajero</th>
-              <th className="text-left px-3 py-2">Condición</th>
-              <th className="text-left px-3 py-2">Métodos de pago</th>
-              <th className="text-left px-3 py-2">Estado</th>
-              <th className="text-right px-3 py-2">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.id} className="border-t border-border/50 hover:bg-muted/30">
-                <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
-                <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.created_at || r.fecha)}</td>
-                <td className="px-3 py-2">{r.cliente?.nombre ?? '—'}</td>
-                <td className="px-3 py-2 text-xs">{r.vendedor_nombre}</td>
-                <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
-                <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
-                <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.metodos_pago.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {r.metodos_pago.map((m: string) => (
-                        <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
-                      ))}
-                    </div>
-                  ) : <span className="text-muted-foreground">—</span>}
-                </td>
-                <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.total)}</td>
+      <FiltersBar
+        search={search} onSearch={setSearch}
+        from={from} onFrom={setFrom}
+        to={to} onTo={setTo}
+        placeholder="Buscar folio, cliente, vendedor, cajero o caja..."
+        extra={
+          <>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="confirmado">Confirmado</SelectItem>
+                <SelectItem value="borrador">Borrador</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={metodoFilter} onValueChange={setMetodoFilter}>
+              <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder="Método" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los métodos</SelectItem>
+                {metodosOptions.map(m => (
+                  <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
+      {!rows.length ? (
+        <Card className="p-6 text-center text-sm text-muted-foreground">Sin ventas POS que coincidan con los filtros.</Card>
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs">
+              <tr>
+                <th className="w-8 px-2 py-2"></th>
+                <th className="text-left px-3 py-2">Folio</th>
+                <th className="text-left px-3 py-2">Fecha</th>
+                <th className="text-left px-3 py-2">Cliente</th>
+                <th className="text-left px-3 py-2">Vendedor</th>
+                <th className="text-left px-3 py-2">Caja</th>
+                <th className="text-left px-3 py-2">Cajero</th>
+                <th className="text-left px-3 py-2">Condición</th>
+                <th className="text-left px-3 py-2">Métodos de pago</th>
+                <th className="text-left px-3 py-2">Estado</th>
+                <th className="text-right px-3 py-2">Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+            </thead>
+            <tbody>
+              {rows.map(r => {
+                const isExpanded = expandedId === r.id;
+                const isCancelled = r.status === 'cancelado';
+                return (
+                  <>
+                    <tr
+                      key={r.id}
+                      className={`border-t border-border/50 hover:bg-muted/30 cursor-pointer ${isExpanded ? 'bg-muted/40' : ''}`}
+                      onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                    >
+                      <td className="px-2 py-2 text-muted-foreground">
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
+                      <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.created_at || r.fecha)}</td>
+                      <td className="px-3 py-2">{r.cliente?.nombre ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs">{r.vendedor_nombre}</td>
+                      <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
+                      <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {r.metodos_pago.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {r.metodos_pago.map((m: string) => (
+                              <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
+                            ))}
+                          </div>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className={`text-xs capitalize ${isCancelled ? 'bg-destructive/10 text-destructive border-destructive/30' : ''}`}>{r.status}</Badge>
+                      </td>
+                      <td className={`px-3 py-2 text-right font-semibold tabular-nums ${isCancelled ? 'line-through text-muted-foreground' : ''}`}>{_fmt(r.total)}</td>
+                    </tr>
+                    {isExpanded && <VentaExpandedRow ventaId={r.id} fmt={_fmt} />}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
+  );
+}
+
+function FiltersBar({
+  search, onSearch, from, onFrom, to, onTo, placeholder, extra,
+}: {
+  search: string; onSearch: (v: string) => void;
+  from: string; onFrom: (v: string) => void;
+  to: string; onTo: (v: string) => void;
+  placeholder: string; extra?: React.ReactNode;
+}) {
+  const hasFilters = !!(search || from || to);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative flex-1 min-w-[220px]">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="h-9 pl-8 text-xs" />
+      </div>
+      <Input type="date" value={from} onChange={(e) => onFrom(e.target.value)} className="h-9 w-[150px] text-xs" />
+      <span className="text-xs text-muted-foreground">a</span>
+      <Input type="date" value={to} onChange={(e) => onTo(e.target.value)} className="h-9 w-[150px] text-xs" />
+      {extra}
+      {hasFilters && (
+        <Button size="sm" variant="ghost" onClick={() => { onSearch(''); onFrom(''); onTo(''); }} className="h-9 gap-1 text-xs">
+          <X className="h-3.5 w-3.5" /> Limpiar
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number | null | undefined) => string }) {
+  const q = useQuery({
+    queryKey: ['pos-admin-venta-detalle', ventaId],
+    queryFn: async () => {
+      const [lRes, pRes, hRes] = await Promise.all([
+        supabase.from('venta_lineas')
+          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, total, productos(nombre, unidad_granel)')
+          .eq('venta_id', ventaId).order('created_at'),
+        supabase.from('cobro_aplicaciones')
+          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia)')
+          .eq('venta_id', ventaId).order('created_at'),
+        supabase.from('venta_historial')
+          .select('id, accion, user_nombre, created_at, detalles')
+          .eq('venta_id', ventaId).order('created_at', { ascending: false }),
+      ]);
+      return { lineas: lRes.data ?? [], pagos: pRes.data ?? [], historial: hRes.data ?? [] };
+    },
+  });
+
+  return (
+    <tr>
+      <td colSpan={11} className="p-0 bg-muted/20 border-t border-border/50">
+        <div className="px-5 py-3">
+          {q.isLoading ? (
+            <div className="text-xs text-muted-foreground py-2 flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Cargando detalles...</div>
+          ) : (
+            <Tabs defaultValue="productos">
+              <TabsList className="h-8">
+                <TabsTrigger value="productos" className="text-xs h-7">Productos ({q.data?.lineas.length ?? 0})</TabsTrigger>
+                <TabsTrigger value="pagos" className="text-xs h-7">Pagos ({q.data?.pagos.length ?? 0})</TabsTrigger>
+                <TabsTrigger value="historial" className="text-xs h-7">Historial ({q.data?.historial.length ?? 0})</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="productos" className="mt-2">
+                {q.data?.lineas.length ? (
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b border-border/50">
+                        <th className="text-left py-1.5 font-medium">Producto</th>
+                        <th className="text-right py-1.5 font-medium w-16">Cant</th>
+                        <th className="text-center py-1.5 font-medium w-12">Ud</th>
+                        <th className="text-right py-1.5 font-medium w-20">Precio</th>
+                        <th className="text-right py-1.5 font-medium w-16">Desc</th>
+                        <th className="text-right py-1.5 font-medium w-20">IVA</th>
+                        <th className="text-right py-1.5 font-medium w-24">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {q.data.lineas.map((l: any) => (
+                        <tr key={l.id} className="border-b border-border/30">
+                          <td className="py-1.5">{l.productos?.nombre ?? '—'}</td>
+                          <td className="py-1.5 text-right tabular-nums">{l.cantidad}</td>
+                          <td className="py-1.5 text-center text-muted-foreground">{l.productos?.unidad_granel || 'Pzs'}</td>
+                          <td className="py-1.5 text-right tabular-nums">{fmt(l.precio_unitario)}</td>
+                          <td className="py-1.5 text-right tabular-nums text-muted-foreground">{(l.descuento_pct ?? 0) > 0 ? `${l.descuento_pct}%` : '—'}</td>
+                          <td className="py-1.5 text-right tabular-nums">{fmt(l.iva_monto)}</td>
+                          <td className="py-1.5 text-right font-semibold tabular-nums">{fmt(l.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <div className="text-xs text-muted-foreground py-3 text-center">Sin productos</div>}
+              </TabsContent>
+
+              <TabsContent value="pagos" className="mt-2">
+                {q.data?.pagos.length ? (
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b border-border/50">
+                        <th className="text-left py-1.5 font-medium">Método</th>
+                        <th className="text-left py-1.5 font-medium">Referencia</th>
+                        <th className="text-left py-1.5 font-medium">Fecha</th>
+                        <th className="text-right py-1.5 font-medium">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {q.data.pagos.map((p: any) => (
+                        <tr key={p.id} className="border-b border-border/30">
+                          <td className="py-1.5 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
+                          <td className="py-1.5 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
+                          <td className="py-1.5 text-muted-foreground">{fmtDate(p.cobros?.fecha)}</td>
+                          <td className="py-1.5 text-right font-semibold tabular-nums">{fmt(p.monto_aplicado)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <div className="text-xs text-muted-foreground py-3 text-center">Sin pagos registrados</div>}
+              </TabsContent>
+
+              <TabsContent value="historial" className="mt-2">
+                {q.data?.historial.length ? (
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b border-border/50">
+                        <th className="text-left py-1.5 font-medium">Fecha</th>
+                        <th className="text-left py-1.5 font-medium">Acción</th>
+                        <th className="text-left py-1.5 font-medium">Usuario</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {q.data.historial.map((h: any) => (
+                        <tr key={h.id} className="border-b border-border/30">
+                          <td className="py-1.5 tabular-nums text-muted-foreground">{fmtDate(h.created_at)}</td>
+                          <td className="py-1.5 capitalize">{h.accion}</td>
+                          <td className="py-1.5">{h.user_nombre || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <div className="text-xs text-muted-foreground py-3 text-center">Sin historial</div>}
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }
 
