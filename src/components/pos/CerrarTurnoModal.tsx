@@ -33,12 +33,9 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    computeArqueo().then((r) => {
-      setEsperado(r);
-      setTarjeta(r.tarjeta_esperado.toFixed(2));
-      setTransfer(r.transferencia_esperado.toFixed(2));
-      setOtros(r.otros_esperado.toFixed(2));
-    });
+    // Calcular esperados internamente para guardar al cerrar, pero NO mostrarlos al cajero
+    computeArqueo().then(setEsperado);
+    setEfectivo(''); setTarjeta(''); setTransfer(''); setOtros(''); setNotas('');
   }, [open]);
 
   const efectivoNum = parseFloat(efectivo) || 0;
