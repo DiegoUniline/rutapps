@@ -32,6 +32,8 @@ interface Props {
   setRoleMovil: (v: boolean) => void;
   roleSoloMovil: boolean;
   setRoleSoloMovil: (v: boolean) => void;
+  roleSoloPos: boolean;
+  setRoleSoloPos: (v: boolean) => void;
   onNewRole: () => void;
   onCloseRoleForm: () => void;
   onSaveRole: () => void;
