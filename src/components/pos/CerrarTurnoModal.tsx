@@ -14,10 +14,9 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-const ArqueoRow = ({ label, esperadoVal, val, onChange }: { label: string; esperadoVal: number; val: string; onChange: (v: string) => void }) => (
-  <div className="grid grid-cols-3 gap-2 items-center">
+const ArqueoRow = ({ label, val, onChange }: { label: string; val: string; onChange: (v: string) => void }) => (
+  <div className="grid grid-cols-2 gap-2 items-center">
     <Label className="text-sm">{label}</Label>
-    <div className="text-xs text-muted-foreground text-right">Esperado: <span className="font-medium text-foreground">{fmtMoney(esperadoVal)}</span></div>
     <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
   </div>
 );
@@ -34,12 +33,9 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    computeArqueo().then((r) => {
-      setEsperado(r);
-      setTarjeta(r.tarjeta_esperado.toFixed(2));
-      setTransfer(r.transferencia_esperado.toFixed(2));
-      setOtros(r.otros_esperado.toFixed(2));
-    });
+    // Calcular esperados internamente para guardar al cerrar, pero NO mostrarlos al cajero
+    computeArqueo().then(setEsperado);
+    setEfectivo(''); setTarjeta(''); setTransfer(''); setOtros(''); setNotas('');
   }, [open]);
 
   const efectivoNum = parseFloat(efectivo) || 0;
@@ -84,16 +80,13 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
           <div className="text-xs text-muted-foreground">
             Caja: <span className="font-medium text-foreground">{turno.caja_nombre}</span> · Fondo inicial: <span className="font-medium text-foreground">{fmtMoney(turno.fondo_inicial)}</span>
           </div>
-          <ArqueoRow label="Efectivo" esperadoVal={esperado.efectivo_esperado} val={efectivo} onChange={setEfectivo} />
-          <ArqueoRow label="Tarjeta" esperadoVal={esperado.tarjeta_esperado} val={tarjeta} onChange={setTarjeta} />
-          <ArqueoRow label="Transferencia" esperadoVal={esperado.transferencia_esperado} val={transfer} onChange={setTransfer} />
-          <ArqueoRow label="Otros" esperadoVal={esperado.otros_esperado} val={otros} onChange={setOtros} />
-          <div className="border-t border-border pt-3 mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Total esperado</span><span className="font-medium">{fmtMoney(totalEsperado)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Total contado</span><span className="font-medium">{fmtMoney(totalContado)}</span></div>
-            <div className={`flex justify-between text-base font-bold ${diferencia === 0 ? 'text-foreground' : diferencia > 0 ? 'text-primary' : 'text-destructive'}`}>
-              <span>Diferencia</span><span>{fmtMoney(diferencia)}</span>
-            </div>
+          <ArqueoRow label="Efectivo" val={efectivo} onChange={setEfectivo} />
+          <ArqueoRow label="Tarjeta" val={tarjeta} onChange={setTarjeta} />
+          <ArqueoRow label="Transferencia" val={transfer} onChange={setTransfer} />
+          <ArqueoRow label="Otros" val={otros} onChange={setOtros} />
+          <div className="border-t border-border pt-3 mt-2 text-sm">
+            <div className="flex justify-between text-base font-bold"><span>Total contado</span><span>{fmtMoney(totalContado)}</span></div>
+            <p className="text-xs text-muted-foreground mt-1">El comparativo con lo esperado se calculará al cerrar el turno.</p>
           </div>
           <div>
             <Label>Notas de cierre</Label>
