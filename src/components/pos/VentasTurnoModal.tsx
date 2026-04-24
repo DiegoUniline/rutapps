@@ -445,14 +445,9 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
           {q.isLoading ? (
             <div className="text-xs text-muted-foreground py-2 flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Cargando detalles...</div>
           ) : (
-            <Tabs defaultValue="productos">
-              <TabsList className="h-8">
-                <TabsTrigger value="productos" className="text-xs h-7">Productos ({q.data?.lineas.length ?? 0})</TabsTrigger>
-                <TabsTrigger value="pagos" className="text-xs h-7">Pagos ({q.data?.pagos.length ?? 0})</TabsTrigger>
-                <TabsTrigger value="historial" className="text-xs h-7">Historial ({q.data?.historial.length ?? 0})</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="productos" className="mt-2">
+            <div className="space-y-4">
+              <section>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Productos ({q.data?.lineas.length ?? 0})</h4>
                 {q.data?.lineas.length ? (
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
@@ -481,9 +476,10 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
                     </tbody>
                   </table>
                 ) : <Empty text="Sin productos" />}
-              </TabsContent>
+              </section>
 
-              <TabsContent value="pagos" className="mt-2">
+              <section>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Pagos ({q.data?.pagos.length ?? 0})</h4>
                 {q.data?.pagos.length ? (
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
@@ -506,10 +502,11 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
                     </tbody>
                   </table>
                 ) : <Empty text="Sin pagos registrados" />}
-              </TabsContent>
+              </section>
 
-              <TabsContent value="historial" className="mt-2">
-                {q.data?.historial.length ? (
+              {(q.data?.historial.length ?? 0) > 0 && (
+                <section>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Historial ({q.data?.historial.length ?? 0})</h4>
                   <table className="w-full text-xs">
                     <thead className="text-muted-foreground">
                       <tr className="border-b border-border/50">
@@ -519,7 +516,7 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
                       </tr>
                     </thead>
                     <tbody>
-                      {q.data.historial.map((h: any) => (
+                      {q.data!.historial.map((h: any) => (
                         <tr key={h.id} className="border-b border-border/30">
                           <td className="py-1.5 tabular-nums text-muted-foreground">{fmtTime(h.created_at)}</td>
                           <td className="py-1.5 capitalize">{h.accion}</td>
@@ -528,9 +525,9 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
                       ))}
                     </tbody>
                   </table>
-                ) : <Empty text="Sin historial" />}
-              </TabsContent>
-            </Tabs>
+                </section>
+              )}
+            </div>
           )}
         </div>
       </td>
