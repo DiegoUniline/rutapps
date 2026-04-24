@@ -14,6 +14,14 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
+const ArqueoRow = ({ label, esperadoVal, val, onChange }: { label: string; esperadoVal: number; val: string; onChange: (v: string) => void }) => (
+  <div className="grid grid-cols-3 gap-2 items-center">
+    <Label className="text-sm">{label}</Label>
+    <div className="text-xs text-muted-foreground text-right">Esperado: <span className="font-medium text-foreground">{fmtMoney(esperadoVal)}</span></div>
+    <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
+  </div>
+);
+
 export function CerrarTurnoModal({ open, onOpenChange }: Props) {
   const { turno, cerrarTurno, computeArqueo } = useCajaTurno();
   const [esperado, setEsperado] = useState({ efectivo_esperado: 0, tarjeta_esperado: 0, transferencia_esperado: 0, otros_esperado: 0 });
