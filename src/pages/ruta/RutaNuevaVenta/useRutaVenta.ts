@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { todayInTimezone , todayLocal } from '@/lib/utils';
+import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
-import { roundMoney } from '@/lib/currency';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
