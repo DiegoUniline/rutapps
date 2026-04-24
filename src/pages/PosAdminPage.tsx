@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { fmtMoney } from '@/lib/currency';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Calculator, Receipt, ArrowDownCircle, ArrowUpCircle, Banknote, ShoppingCart,
   Clock, CheckCircle2, ClipboardList, Eye, Wallet, CreditCard, Smartphone, MoreHorizontal, ExternalLink,
