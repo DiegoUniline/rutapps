@@ -427,6 +427,15 @@ export default function ReporteDiarioRuta() {
         ))
       : '';
 
+    // Abonos a crédito previo
+    const abonosHtml = abonosCreditoPrevio.length > 0
+      ? sec(`Abonos a crédito previo (${abonosCreditoPrevio.length}) — ${clientesQueAbonaron} cliente(s)`, makeTable(
+          ['Cliente', 'Venta', 'F. Venta', 'Días', 'Método', 'Ref.', 'Monto'],
+          abonosCreditoPrevio.map(a => [a.cliente, a.venta_folio, a.venta_fecha, String(a.dias_atraso), a.metodo_pago, a.referencia || '—', `${fmt(a.monto_aplicado)}`]),
+          ['', '', '', '', '', 'Total abonos', `${fmt(totalAbonosPrevios)}`]
+        ))
+      : '';
+
     // Resumen final
     const resumenRow = (label: string, value: string) => `<tr><td class="res-label">${label}</td><td class="res-value">${value}</td></tr>`;
     const resumenHtml = `<div class="section"><h2>Resumen del período</h2><table class="resumen">
