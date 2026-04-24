@@ -63,7 +63,10 @@ export function StepProductos(props: Props) {
     const prod = findProductByCode(code);
     if (!prod) { toast.error(`Sin coincidencias para "${code}"`); return; }
     addToCart(prod);
-    toast.success(`+ ${prod.nombre}`);
+    toast.success(`+ ${prod.nombre}`, {
+      action: { label: 'Deshacer', onClick: () => removeFromCart(prod.id) },
+      duration: 4000,
+    });
     // keep scanner open for rapid scanning
   };
 
