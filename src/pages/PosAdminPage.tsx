@@ -137,6 +137,7 @@ async function fetchTurnos(empresaId: string, soloCerrados = false) {
 }
 
 function TurnosPanel({ empresaId, onView }: { empresaId: string; onView: (id: string) => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({ queryKey: ['pos-admin-turnos', empresaId], queryFn: () => fetchTurnos(empresaId) });
   const turnos = q.data ?? [];
   if (q.isLoading) return <Card className="p-6 text-center text-sm text-muted-foreground">Cargando...</Card>;
