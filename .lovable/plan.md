@@ -1,40 +1,61 @@
+# Problema
 
+Los agentes de ventas de RubiPets (y cualquier rol sin permiso de `dashboard.ver`) parecen quedar bloqueados en el POS. La causa raíz es que **toda la app redirige a `/dashboard` de forma hardcodeada**:
 
-## Liberar "Iniciar jornada" como configuración por empresa
+- `src/App.tsx` líneas 500-501: `/` y `/login` → `Navigate to="/dashboard"`
+- `src/components/PermissionGuard.tsx` línea 33: cualquier ruta sin permiso → `Navigate to="/dashboard"`
 
-Hoy el bloqueo de jornada está cableado a un solo `empresa_id` (la tuya, de prueba). Para no romper la operación de quienes ya están vendiendo hoy, lo convertimos en **una opción configurable por empresa**, apagada por defecto, y cada cliente decide si la activa.
+Como `PermissionGuard` también protege `/dashboard`, el usuario sin ese permiso entra en un loop / pantalla en blanco. El POS funciona solo porque lo abren manualmente desde el sidebar.
 
-### Cambios
+# Solución
 
-**1. Base de datos** — agregar columna a `empresas`:
-- `requiere_jornada_ruta` (boolean, default `false`)
-- `requiere_jornada_desde` (date, nullable) — opcional, para que el cliente diga "aplica a partir de mañana"
+Calcular dinámicamente la **primera ruta accesible** para el usuario según sus permisos y usarla en todos los redirects.
 
-**2. Página de Configuración** (`src/pages/ConfiguracionPage.tsx`)
-- Nueva sección "App móvil de ruta" con:
-  - Switch: **"Exigir iniciar jornada (vehículo + KM + foto del odómetro)"**
-  - Si está activo, selector de fecha: **"Aplica a partir de"** (default: mañana)
-  - Texto explicativo: "Cuando esté activo, los vendedores no podrán vender, entregar ni cobrar hasta iniciar su jornada en la app móvil."
+## 1) `src/hooks/usePermisos.ts`
 
-**3. Hook de configuración** — pequeño hook `useEmpresaJornadaConfig()` que lee `requiere_jornada_ruta` y `requiere_jornada_desde` desde `empresas`, con cache de React Query (`['empresa-jornada', empresaId]`).
+Agregar helper `getFirstAccessibleRoute(hasModulo)` que recorre una lista priorizada de módulos y devuelve la primera ruta cuyo permiso `ver` el usuario tenga:
 
-**4. `MobileLayout.tsx`** — reemplazar la constante hardcoded `EMPRESA_PRUEBA_JORNADA` por la config de la empresa:
-- `requireJornada = config.requiere_jornada_ruta && (!config.requiere_jornada_desde || hoy >= requiere_jornada_desde)`
-- El resto de la lógica (overlay, rutas permitidas) queda igual.
+Orden de prioridad (de más operativo a más administrativo):
+1. `dashboard` → `/dashboard`
+2. `pos` → `/pos`
+3. `ventas` → `/ventas`
+4. `clientes` → `/clientes`
+5. `logistica.dashboard` → `/logistica/dashboard`
+6. `logistica.pedidos` → `/logistica/pedidos`
+7. `logistica.entregas` → `/logistica/entregas`
+8. `almacen.inventario` → `/almacen/inventario`
+9. `catalogo.productos` → `/productos`
+10. `reportes.generales` → `/reportes`
+11. `configuracion.suscripcion` → `/mi-suscripcion`
 
-**5. `RutaClientesEntregas.tsx`** — mismo cambio: el banner de jornada se muestra cuando `requireJornada` es true, no por `empresa_id` hardcoded.
+Fallback final: `/configuracion-inicial` (siempre accesible).
 
-### Comportamiento resultante
+Exponerlo desde el hook como `firstAccessibleRoute: string` (memoizado).
 
-- **Por defecto (todas las empresas)**: el banner y el bloqueo NO aparecen → no rompe a nadie.
-- **Tu empresa de prueba**: el migration deja `requiere_jornada_ruta = true` y `requiere_jornada_desde = mañana` para mantener el comportamiento actual sin interrupción hoy.
-- **Cualquier cliente** que quiera la función entra a Configuración, activa el switch, elige fecha → desde esa fecha, sus vendedores deben iniciar jornada para operar.
+## 2) `src/components/PermissionGuard.tsx`
 
-### Archivos a tocar
+- Reemplazar `<Navigate to="/dashboard" replace />` por `<Navigate to={firstAccessibleRoute} replace />`.
+- Si la ruta actual ya coincide con `firstAccessibleRoute`, mostrar un mensaje "No tienes acceso a esta sección" en lugar de redirigir (previene loops).
 
-- Migration: `ALTER TABLE empresas ADD COLUMN requiere_jornada_ruta boolean DEFAULT false, ADD COLUMN requiere_jornada_desde date;` + UPDATE para tu empresa.
-- `src/hooks/useEmpresaJornadaConfig.ts` (nuevo)
-- `src/pages/ConfiguracionPage.tsx` (sección nueva)
-- `src/components/MobileLayout.tsx` (quitar hardcode, usar hook)
-- `src/pages/ruta/RutaClientesEntregas.tsx` (quitar hardcode, usar hook)
+## 3) `src/App.tsx`
 
+- Crear componente interno `HomeRedirect` que use `usePermisos` + `useSubscription` y haga `<Navigate to={firstAccessibleRoute} replace />`.
+- Reemplazar las dos rutas hardcodeadas:
+  - `<Route path="/" element={<HomeRedirect />} />`
+  - `<Route path="/login" element={<HomeRedirect />} />`
+- Mantener el comportamiento existente de "solo móvil" (redirect a `/ruta`) y de bloqueo por suscripción (redirect a `/subscription-blocked`) — `HomeRedirect` debe respetarlos primero.
+
+## 4) Verificación
+
+- Owner / super-admin → siguen entrando a `/dashboard` (tienen todos los permisos, dashboard es el primero de la lista).
+- Agente de ventas RubiPets (sin dashboard, con POS + ventas + clientes) → entra directo a `/pos`, y el sidebar le permite navegar a Ventas/Clientes sin redirects extraños.
+- Usuario "Solo vista móvil" → sigue yendo a `/ruta` (lógica existente intacta).
+- Usuario sin ningún permiso → cae en `/configuracion-inicial` con mensaje claro en vez de pantalla en blanco.
+
+# Archivos a modificar
+
+- `src/hooks/usePermisos.ts` — agregar helper + exponer `firstAccessibleRoute`
+- `src/components/PermissionGuard.tsx` — usar redirect dinámico
+- `src/App.tsx` — `HomeRedirect` para `/` y `/login`
+
+No se requieren cambios de base de datos ni migraciones.
