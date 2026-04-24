@@ -231,7 +231,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl w-[96vw] max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 bg-background">
+        <DialogContent className="max-w-none w-screen h-screen sm:rounded-none overflow-hidden flex flex-col p-0 gap-0 bg-background">
           <DialogHeader className="px-5 py-4 border-b border-border bg-background">
             <DialogTitle className="flex items-center gap-2 text-base">
               <ListOrdered className="h-5 w-5 text-primary" /> Movimientos del turno · {turno.caja_nombre}
