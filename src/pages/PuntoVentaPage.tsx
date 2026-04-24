@@ -1309,8 +1309,18 @@ export default function PuntoVentaPage() {
               <span className="text-[24px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
             </div>
 
+            {turnosEnabled && !turnoActivo && cart.length > 0 && (
+              <div className="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-[12px] text-warning-foreground flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-warning shrink-0" />
+                <span>Debes <strong>abrir un turno</strong> antes de cobrar.</span>
+              </div>
+            )}
             <button
               onClick={() => {
+                if (turnosEnabled && !turnoActivo) {
+                  setShowAbrirTurnoPrompt(true);
+                  return;
+                }
                 setPayMode('efectivo');
                 setPayEfectivo(totals.total.toFixed(2));
                 setPayTransferencia('');
@@ -1325,11 +1335,25 @@ export default function PuntoVentaPage() {
                 setShowPago(true);
               }}
               disabled={cart.length === 0}
-              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+              className={cn(
+                "w-full rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg flex items-center justify-center gap-2",
+                turnosEnabled && !turnoActivo
+                  ? "bg-warning text-warning-foreground shadow-warning/20"
+                  : "bg-primary text-primary-foreground shadow-primary/20"
+              )}
             >
-              <CreditCard className="h-5 w-5" />
-              Cobrar {fmtM(totals.total)}
-              <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
+              {turnosEnabled && !turnoActivo ? (
+                <>
+                  <Lock className="h-5 w-5" />
+                  Abrir turno para cobrar
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5" />
+                  Cobrar {fmtM(totals.total)}
+                  <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
+                </>
+              )}
             </button>
           </div>
         </div>
