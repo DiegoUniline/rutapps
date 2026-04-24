@@ -322,6 +322,9 @@ export function StepPago(props: Props) {
             {descDevolucion > 0 && (
               <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{fmt(descDevolucion)}</span></div>
             )}
+            {descExtraAmt > 0 && (
+              <div className="flex justify-between text-[11px]"><span className="text-rose-600 dark:text-rose-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Descuento {descuentoExtraTipo === 'porcentaje' ? `(${descuentoExtraValor}%)` : ''}</span><span className="font-medium text-rose-600 dark:text-rose-400 tabular-nums">-{fmt(descExtraAmt)}</span></div>
+            )}
             {devoluciones.length > 0 && (
               <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
                 <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Devoluciones ({devoluciones.reduce((s, d) => s + d.cantidad, 0)} uds)</p>
