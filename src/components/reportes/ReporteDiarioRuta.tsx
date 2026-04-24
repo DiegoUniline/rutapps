@@ -420,9 +420,14 @@ export default function ReporteDiarioRuta() {
           <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock en almacén</Label>
         </div>
         {enabled && (
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir reporte
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir
+            </Button>
+            <Button variant="default" size="sm" onClick={handleDownloadPdf}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Descargar PDF
+            </Button>
+          </>
         )}
       </div>
 
