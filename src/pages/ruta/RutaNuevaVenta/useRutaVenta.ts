@@ -11,10 +11,11 @@ import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type 
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
-import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
+import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useClienteInsights } from '@/hooks/useClienteInsights';
+import { usePermisos } from '@/hooks/usePermisos';
 import { STEPS } from './types';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
@@ -49,6 +50,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
+  // Descuento extra al total (gateado por permiso 'ventas.aplicar_descuento')
+  const [descuentoExtraTipo, setDescuentoExtraTipo] = useState<DescuentoExtraTipo>('monto');
+  const [descuentoExtraValor, setDescuentoExtraValor] = useState<number>(0);
+  const [descuentoExtraMotivo, setDescuentoExtraMotivo] = useState<string>('');
+
+  const { hasPermiso, isOwner } = usePermisos();
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
+  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
