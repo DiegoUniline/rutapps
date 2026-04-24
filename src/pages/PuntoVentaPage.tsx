@@ -18,6 +18,9 @@ import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { TurnoControls } from '@/components/pos/TurnoControls';
+import { AbrirTurnoModal as AbrirTurnoModalForPrompt } from '@/components/pos/AbrirTurnoModal';
+import { useCajaTurno } from '@/hooks/useCajaTurno';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -56,6 +59,8 @@ export default function PuntoVentaPage() {
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
+  const { enabled: turnosEnabled, turno: turnoActivo } = useCajaTurno();
+  const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
@@ -616,6 +621,11 @@ export default function PuntoVentaPage() {
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
+    if (turnosEnabled && !turnoActivo) {
+      toast.error('Debes abrir un turno antes de cobrar');
+      setShowAbrirTurnoPrompt(true);
+      return;
+    }
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
@@ -894,6 +904,8 @@ export default function PuntoVentaPage() {
             <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
           </div>
           <div className="flex-1" />
+          {/* Shift controls */}
+          <TurnoControls />
           {/* Sin impuestos switch */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground font-medium hidden sm:inline">Sin imp.</span>
@@ -1706,6 +1718,10 @@ export default function PuntoVentaPage() {
           </div>
         </div>
       )}
+
+      {/* Prompt to open shift when trying to charge without one */}
+      <AbrirTurnoModalForPrompt open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
     </div>
   );
 }
+

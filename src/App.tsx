@@ -191,6 +191,10 @@ function AppRoutes() {
   useBootstrapPrefetch();
 
   const isSoloMovil = user && !permisosLoading && hasPermiso('solo_movil', 'ver');
+  // POS-only: user that can ONLY access the POS (no admin desktop, no mobile route)
+  const canDashboard = user && !permisosLoading && hasPermiso('dashboard', 'ver');
+  const canPos = user && !permisosLoading && hasPermiso('pos', 'ver');
+  const isSoloPos = !!(user && !permisosLoading && canPos && !canDashboard && !isSoloMovil);
 
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
@@ -400,6 +404,21 @@ function AppRoutes() {
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
       </Routes>
+      </>
+    );
+  }
+
+  // POS-only — user can only access /pos (kiosk mode)
+  if (isSoloPos) {
+    return (
+      <>
+        <SubscriptionBanner />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/pos" element={<PuntoVentaPage />} />
+            <Route path="*" element={<Navigate to="/pos" replace />} />
+          </Routes>
+        </Suspense>
       </>
     );
   }
