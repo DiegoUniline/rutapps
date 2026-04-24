@@ -9,11 +9,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
   ListOrdered, ArrowDown, ArrowUp, Receipt, Ban, ShoppingCart,
-  ChevronDown, ChevronRight, Loader2,
+  ChevronDown, ChevronRight, Loader2, Search, X,
 } from 'lucide-react';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface Props {
   open: boolean;
