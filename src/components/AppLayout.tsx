@@ -38,7 +38,18 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green' },
+  {
+    label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green',
+    children: [
+      { label: 'Abrir caja (POS)', path: '/pos' },
+      { label: 'Turnos', path: '/pos/admin?tab=turnos' },
+      { label: 'Cortes / Arqueos', path: '/pos/admin?tab=cortes' },
+      { label: 'Depósitos', path: '/pos/admin?tab=depositos' },
+      { label: 'Retiros', path: '/pos/admin?tab=retiros' },
+      { label: 'Gastos', path: '/pos/admin?tab=gastos' },
+      { label: 'Ventas POS', path: '/pos/admin?tab=ventas' },
+    ],
+  },
   { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
   // ── Datos clave ──
   { label: 'Clientes', icon: Users, path: '/clientes', highlight: 'violet' },
