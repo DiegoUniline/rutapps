@@ -535,6 +535,7 @@ function desktopRoutes() {
       <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider blocking><MapaClientesPage /></GoogleMapsProvider>} />
       <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider blocking><MapaVentasPage /></GoogleMapsProvider>} />
       <Route path="/ventas/promociones" element={<PromocionesPage />} />
+      <Route path="/pos/admin" element={<Suspense fallback={<PageLoader />}><PosAdminPage /></Suspense>} />
       <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
       <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
       <Route path="/ventas/:id" element={<VentaFormPage />} />
