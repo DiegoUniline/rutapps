@@ -301,5 +301,7 @@ export function usePermisos(): UsePermisosReturn {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   }, [refetch]);
 
-  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload };
+  const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo);
+
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload, firstAccessibleRoute };
 }
