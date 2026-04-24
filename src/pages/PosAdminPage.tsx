@@ -506,7 +506,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
               <Card className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50">
-                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Pago</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
+                    <tr><th className="text-left px-2 py-1.5">Folio</th><th className="text-left px-2 py-1.5">Fecha</th><th className="text-left px-2 py-1.5">Cliente</th><th className="text-left px-2 py-1.5">Vendedor</th><th className="text-left px-2 py-1.5">Condición</th><th className="text-left px-2 py-1.5">Métodos</th><th className="text-left px-2 py-1.5">Estado</th><th className="text-right px-2 py-1.5">Total</th></tr>
                   </thead>
                   <tbody>
                     {(q.data?.ventas ?? []).map((v: any) => (
@@ -516,11 +516,20 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                         <td className="px-2 py-1.5">{v.cliente?.nombre ?? '—'}</td>
                         <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>
+                        <td className="px-2 py-1.5">
+                          {v.metodos_pago?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {v.metodos_pago.map((m: string) => (
+                                <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
+                              ))}
+                            </div>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
                         <td className="px-2 py-1.5 capitalize">{v.status}</td>
                         <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{_fmt(v.total)}</td>
                       </tr>
                     ))}
-                    {!q.data?.ventas.length && <tr><td colSpan={7} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
+                    {!q.data?.ventas.length && <tr><td colSpan={8} className="px-2 py-3 text-center text-muted-foreground">Sin ventas en este turno.</td></tr>}
                   </tbody>
                 </table>
               </Card>
