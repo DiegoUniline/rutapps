@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
   Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut,
-  LayoutGrid, List as ListIcon,
+  LayoutGrid, List as ListIcon, MoreHorizontal, ArrowDown, ArrowUp, ListOrdered, LockOpen,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +20,12 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
-import { AbrirTurnoModal as AbrirTurnoModalForPrompt } from '@/components/pos/AbrirTurnoModal';
+import { AbrirTurnoModal as AbrirTurnoModalForPrompt, AbrirTurnoModal } from '@/components/pos/AbrirTurnoModal';
+import { CerrarTurnoModal } from '@/components/pos/CerrarTurnoModal';
+import { MovimientoCajaModal } from '@/components/pos/MovimientoCajaModal';
+import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -93,6 +97,11 @@ export default function PuntoVentaPage() {
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
   const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
+  const [showAbrirTurno, setShowAbrirTurno] = useState(false);
+  const [showCerrarTurno, setShowCerrarTurno] = useState(false);
+  const [showVentasTurno, setShowVentasTurno] = useState(false);
+  const [movTipo, setMovTipo] = useState<null | 'retiro' | 'deposito' | 'gasto'>(null);
   const [productView, setProductView] = useState<'cards' | 'table'>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('pos-product-view') : null;
     return (saved === 'table' || saved === 'cards') ? saved : 'cards';
@@ -1231,11 +1240,11 @@ export default function PuntoVentaPage() {
                 </span>
               </button>
               <button
-                onClick={() => document.getElementById('pos-search')?.focus()}
-                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg bg-accent/40 active:bg-accent/70 transition-colors"
+                onClick={() => setShowMoreSheet(true)}
+                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg active:bg-accent/60 transition-colors"
               >
-                <Search className="h-5 w-5 text-primary" />
-                <span className="text-[10px] font-semibold text-primary">Buscar</span>
+                <MoreHorizontal className="h-5 w-5 text-foreground" />
+                <span className="text-[10px] font-semibold text-foreground">Más</span>
               </button>
               <button
                 onClick={() => cart.length > 0 && setMobileView('cart')}
@@ -1836,6 +1845,100 @@ export default function PuntoVentaPage() {
       {/* Prompt to open shift when trying to charge without one */}
       <AbrirTurnoModalForPrompt open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
 
+      {/* Mobile "More actions" sheet — shift management for street vendors */}
+      <Sheet open={showMoreSheet} onOpenChange={setShowMoreSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 max-h-[80vh]">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-left text-[15px] font-bold">Más acciones</SheetTitle>
+          </SheetHeader>
+          <div className="p-4 space-y-4 overflow-y-auto" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            {turnosEnabled && turnoActivo && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-bold text-primary truncate">{turnoActivo.caja_nombre}</div>
+                  <div className="text-[10px] text-muted-foreground">Fondo: {fmtM(turnoActivo.fondo_inicial)}</div>
+                </div>
+              </div>
+            )}
+
+            {turnosEnabled && !turnoActivo && (
+              <button
+                onClick={() => { setShowMoreSheet(false); setShowAbrirTurno(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-[13px] active:scale-[0.98] transition-transform"
+              >
+                <LockOpen className="h-5 w-5" />
+                Abrir turno de caja
+              </button>
+            )}
+
+            {turnosEnabled && turnoActivo && (
+              <div className="grid grid-cols-2 gap-2">
+                <SheetActionButton
+                  icon={<ArrowDown className="h-5 w-5" />}
+                  label="Depósito"
+                  tone="primary"
+                  onClick={() => { setShowMoreSheet(false); setMovTipo('deposito'); }}
+                />
+                <SheetActionButton
+                  icon={<ArrowUp className="h-5 w-5" />}
+                  label="Retiro"
+                  tone="warning"
+                  onClick={() => { setShowMoreSheet(false); setMovTipo('retiro'); }}
+                />
+                <SheetActionButton
+                  icon={<Receipt className="h-5 w-5" />}
+                  label="Gasto"
+                  tone="muted"
+                  onClick={() => { setShowMoreSheet(false); setMovTipo('gasto'); }}
+                />
+                <SheetActionButton
+                  icon={<ListOrdered className="h-5 w-5" />}
+                  label="Ventas turno"
+                  tone="muted"
+                  onClick={() => { setShowMoreSheet(false); setShowVentasTurno(true); }}
+                />
+                <SheetActionButton
+                  icon={<LockIcon className="h-5 w-5" />}
+                  label="Cerrar turno"
+                  tone="destructive"
+                  onClick={() => { setShowMoreSheet(false); setShowCerrarTurno(true); }}
+                  fullWidth
+                />
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-border space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[12px] font-medium text-foreground">Sin impuestos</span>
+                <Switch checked={sinImpuestos} onCheckedChange={setSinImpuestos} />
+              </div>
+              <button
+                onClick={() => { setShowMoreSheet(false); clearAll(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-muted hover:bg-accent text-foreground font-medium text-[13px] active:scale-[0.98] transition-transform"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+                Limpiar venta
+              </button>
+              <button
+                onClick={() => { setShowMoreSheet(false); setShowLogoutConfirm(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-muted hover:bg-accent text-foreground font-medium text-[13px] active:scale-[0.98] transition-transform"
+              >
+                <LogOut className="h-4 w-4 text-destructive" />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AbrirTurnoModal open={showAbrirTurno} onOpenChange={setShowAbrirTurno} />
+      <CerrarTurnoModal open={showCerrarTurno} onOpenChange={setShowCerrarTurno} />
+      <VentasTurnoModal open={showVentasTurno} onOpenChange={setShowVentasTurno} />
+      {movTipo && (
+        <MovimientoCajaModal open={!!movTipo} onOpenChange={(v) => !v && setMovTipo(null)} tipo={movTipo} />
+      )}
+
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
@@ -1862,3 +1965,30 @@ export default function PuntoVentaPage() {
   );
 }
 
+
+function SheetActionButton({
+  icon, label, tone, onClick, fullWidth,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tone: 'primary' | 'warning' | 'muted' | 'destructive';
+  onClick: () => void;
+  fullWidth?: boolean;
+}) {
+  const toneCls = {
+    primary: 'bg-primary/10 text-primary border-primary/30 active:bg-primary/20',
+    warning: 'bg-warning/10 text-warning border-warning/30 active:bg-warning/20',
+    muted: 'bg-muted text-foreground border-border active:bg-accent',
+    destructive: 'bg-destructive/10 text-destructive border-destructive/30 active:bg-destructive/20',
+  }[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${fullWidth ? 'col-span-2' : ''} flex items-center justify-center gap-2 px-3 py-3.5 rounded-xl border font-semibold text-[13px] transition-colors active:scale-[0.98] ${toneCls}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
