@@ -783,5 +783,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     // Insights & smart actions
     insights, bannerDismissed, setBannerDismissed,
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
+    // Price overrides
+    getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
   };
 }
