@@ -43,6 +43,8 @@ interface Props {
   setItemPriceManual: (pid: string, price: number) => void;
   setItemPriceFromLista: (pid: string, listaPrecioId: string | null, tarifaId: string | null, unitPrice: number, listaNombre: string) => void;
   resetItemToSuggested: (pid: string) => void;
+  /** True if user can change prices (else "ojito" stays read-only) */
+  canChangePrice: boolean;
 }
 
 export function StepProductos(props: Props) {
@@ -53,6 +55,7 @@ export function StepProductos(props: Props) {
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
+    canChangePrice,
   } = props;
   const { symbol: s } = useCurrency();
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -245,6 +248,7 @@ export function StepProductos(props: Props) {
         suggestedPrice={detalleProducto ? getSuggestedPrice(detalleProducto.id) : 0}
         isManual={!!(detalleProducto && getItemInCart(detalleProducto.id)?.precio_manual)}
         currentListaPrecioId={detalleProducto ? (getItemInCart(detalleProducto.id)?.lista_precio_id ?? null) : null}
+        canEdit={canChangePrice}
         onSelectLista={(listaId, tarifaId, unitPrice, listaNombre) => detalleProducto && setItemPriceFromLista(detalleProducto.id, listaId, tarifaId, unitPrice, listaNombre)}
         onSetManualPrice={(price) => detalleProducto && setItemPriceManual(detalleProducto.id, price)}
         onResetToSuggested={() => detalleProducto && resetItemToSuggested(detalleProducto.id)}

@@ -30,6 +30,8 @@ interface Props {
   isManual: boolean;
   /** Currently active lista_precio_id (if any) */
   currentListaPrecioId?: string | null;
+  /** When false the modal stays read-only (no list switching, no manual entry) */
+  canEdit?: boolean;
   /** Apply a price from a list (or back to suggested) */
   onSelectLista: (
     listaPrecioId: string | null,
@@ -49,7 +51,7 @@ interface Props {
  */
 export function ProductoDetalleModal({
   open, onClose, producto, currentUnitPrice, suggestedPrice, isManual,
-  currentListaPrecioId, onSelectLista, onSetManualPrice, onResetToSuggested,
+  currentListaPrecioId, canEdit = true, onSelectLista, onSetManualPrice, onResetToSuggested,
 }: Props) {
   const { empresa } = useAuth();
   const { fmt, symbol } = useCurrency();
@@ -223,7 +225,7 @@ export function ProductoDetalleModal({
                   </p>
                 </div>
               </div>
-              {(isManual || currentListaPrecioId) && (
+              {(isManual || currentListaPrecioId) && canEdit && (
                 <button
                   onClick={() => { onResetToSuggested(); onClose(); }}
                   className="mt-2.5 w-full text-[11px] font-medium text-primary py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 active:scale-[0.98] transition-all"
@@ -237,7 +239,7 @@ export function ProductoDetalleModal({
           {/* Other price lists */}
           <div className="px-4 pt-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
-              Otras listas de precios
+              {canEdit ? 'Otras listas de precios' : 'Listas de precios disponibles'}
             </p>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               {options.length === 0 && (
@@ -245,19 +247,8 @@ export function ProductoDetalleModal({
               )}
               {options.map(opt => {
                 const isCurrent = !isManual && opt.lista_precio_id === currentListaPrecioId;
-                return (
-                  <button
-                    key={opt.lista_precio_id ?? 'base'}
-                    type="button"
-                    onClick={() => {
-                      onSelectLista(opt.lista_precio_id, opt.tarifa_id, opt.unitPrice, opt.lista_nombre);
-                      onClose();
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors active:bg-accent border-b border-border/60 last:border-0",
-                      isCurrent && "bg-primary/5",
-                    )}
-                  >
+                const content = (
+                  <>
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       {isCurrent && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                       {opt.es_principal && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
@@ -274,44 +265,81 @@ export function ProductoDetalleModal({
                         <div className="text-[9px] text-muted-foreground">neto: {fmt(opt.unitPrice)}</div>
                       )}
                     </div>
+                  </>
+                );
+                if (!canEdit) {
+                  return (
+                    <div
+                      key={opt.lista_precio_id ?? 'base'}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-2 px-3 py-2.5 border-b border-border/60 last:border-0 opacity-80",
+                        isCurrent && "bg-primary/5",
+                      )}
+                    >
+                      {content}
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={opt.lista_precio_id ?? 'base'}
+                    type="button"
+                    onClick={() => {
+                      onSelectLista(opt.lista_precio_id, opt.tarifa_id, opt.unitPrice, opt.lista_nombre);
+                      onClose();
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors active:bg-accent border-b border-border/60 last:border-0",
+                      isCurrent && "bg-primary/5",
+                    )}
+                  >
+                    {content}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Manual price */}
-          <div className="px-4 pt-3 pb-4">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
-              Precio manual
-            </p>
-            <div className="rounded-xl border border-border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-muted-foreground">{symbol}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-accent/60 rounded-lg pl-7 pr-3 py-2.5 text-[15px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
-                </div>
-                <button
-                  onClick={handleApplyManual}
-                  className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-[13px] font-semibold active:scale-95 transition-transform shadow-sm shadow-primary/20"
-                >
-                  Aplicar
-                </button>
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1.5">
-                El precio manual reemplaza la tarifa para esta venta solamente.
+          {/* Manual price (only if user can edit) */}
+          {canEdit ? (
+            <div className="px-4 pt-3 pb-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
+                Precio manual
               </p>
+              <div className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-muted-foreground">{symbol}</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      value={manualInput}
+                      onChange={(e) => setManualInput(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-accent/60 rounded-lg pl-7 pr-3 py-2.5 text-[15px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                  </div>
+                  <button
+                    onClick={handleApplyManual}
+                    className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-[13px] font-semibold active:scale-95 transition-transform shadow-sm shadow-primary/20"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  El precio manual reemplaza la tarifa para esta venta solamente.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="px-4 pt-3 pb-4">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+                🔒 No tienes permiso para cambiar precios. Pide a tu administrador el permiso <span className="font-semibold">"Cambiar precio en venta"</span>.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

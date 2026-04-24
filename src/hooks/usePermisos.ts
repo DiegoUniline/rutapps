@@ -41,6 +41,8 @@ export const MODULOS: ModuloDef[] = [
   { id: 'ventas.devoluciones', label: 'Devoluciones', group: 'Ventas' },
   { id: 'ventas.cobranza', label: 'Cobranza', group: 'Ventas' },
   { id: 'ventas.promociones', label: 'Promociones', group: 'Ventas' },
+  { id: 'ventas.cambiar_precio', label: 'Cambiar precio en venta', group: 'Ventas' },
+  { id: 'ventas.aplicar_descuento', label: 'Aplicar descuento al total', group: 'Ventas' },
   { id: 'pos', label: 'Punto de venta', group: 'Ventas' },
 
   // Clientes
@@ -117,6 +119,8 @@ export const ACCIONES_POR_MODULO: Record<string, string[]> = {
   pos: ['ver'],
   control: ['ver'],
   'ventas.reporte_diario': ['ver'],
+  'ventas.cambiar_precio': ['ver'],
+  'ventas.aplicar_descuento': ['ver'],
   'logistica.dashboard': ['ver'],
   'logistica.monitor': ['ver'],
   'logistica.mapa_clientes': ['ver'],

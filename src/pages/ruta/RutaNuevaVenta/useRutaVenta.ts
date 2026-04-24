@@ -11,10 +11,11 @@ import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type 
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
-import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
+import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useClienteInsights } from '@/hooks/useClienteInsights';
+import { usePermisos } from '@/hooks/usePermisos';
 import { STEPS } from './types';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
@@ -49,6 +50,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
+  // Descuento extra al total (gateado por permiso 'ventas.aplicar_descuento')
+  const [descuentoExtraTipo, setDescuentoExtraTipo] = useState<DescuentoExtraTipo>('monto');
+  const [descuentoExtraValor, setDescuentoExtraValor] = useState<number>(0);
+  const [descuentoExtraMotivo, setDescuentoExtraMotivo] = useState<string>('');
+
+  const { hasPermiso, isOwner } = usePermisos();
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
+  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
@@ -429,10 +438,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       descuentoPromo += lp.effectiveDiscount;
       items += item.cantidad;
     });
-    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion);
-    const total = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion) };
-  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos]);
+    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
+    // Solo aplica si tiene permiso y valor > 0
+    const extraVal = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
+    const extraAmt = extraVal > 0
+      ? r2(descuentoExtraTipo === 'porcentaje' ? preExtra * (extraVal / 100) : Math.min(extraVal, preExtra))
+      : 0;
+    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion + extraAmt);
+    const total = r2(Math.max(0, preExtra - extraAmt));
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion), descuentoExtra: extraAmt };
+  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
@@ -592,7 +607,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const applyPayment = totalACobrar > 0;
       // saldo_pendiente starts as full total; will be reduced after payments are applied
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      const extraAmtSaved = (totals as any).descuentoExtra ?? 0;
+      const extraValSaved = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
@@ -785,5 +802,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
     // Price overrides
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
+    // Permisos
+    canChangePrice, canApplyDiscount,
+    // Descuento extra
+    descuentoExtraTipo, setDescuentoExtraTipo,
+    descuentoExtraValor, setDescuentoExtraValor,
+    descuentoExtraMotivo, setDescuentoExtraMotivo,
   };
 }

@@ -5422,6 +5422,7 @@ export type Database = {
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           created_at: string
           descuento_extra: number
+          descuento_extra_motivo: string | null
           descuento_extra_tipo: string
           descuento_total: number | null
           empresa_id: string
@@ -5452,6 +5453,7 @@ export type Database = {
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
           descuento_extra?: number
+          descuento_extra_motivo?: string | null
           descuento_extra_tipo?: string
           descuento_total?: number | null
           empresa_id: string
@@ -5482,6 +5484,7 @@ export type Database = {
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
           descuento_extra?: number
+          descuento_extra_motivo?: string | null
           descuento_extra_tipo?: string
           descuento_total?: number | null
           empresa_id?: string
