@@ -235,6 +235,7 @@ function CortesPanel({ empresaId, onView }: { empresaId: string; onView: (id: st
 }
 
 function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'deposito' | 'retiro' | 'gasto' }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-movs', empresaId, tipo],
     queryFn: async () => {
