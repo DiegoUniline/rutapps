@@ -202,6 +202,73 @@ export default function ReporteDiarioRuta() {
   const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
+  const handleDownloadPdf = async () => {
+    try {
+      toast.loading('Generando PDF...', { id: 'pdf-diario' });
+      const blob = await generarReporteDiarioPdf({
+        empresa: {
+          nombre: empresa?.nombre,
+          razon_social: (empresa as any)?.razon_social,
+          rfc: empresa?.rfc,
+          direccion: empresa?.direccion,
+          colonia: (empresa as any)?.colonia,
+          ciudad: empresa?.ciudad,
+          estado: empresa?.estado,
+          cp: empresa?.cp,
+          telefono: empresa?.telefono,
+          moneda: empresa?.moneda,
+        },
+        usuarioNombre,
+        fechaLabel,
+        totals: {
+          totalVentas, totalContado, totalCredito, totalCancelado,
+          totalCobros, totalGastos, totalDevUnidades, totalDevCredito,
+          clientesVisitados: clientesVisitados.size,
+          visitasSinCompra: visitasSinCompra.length,
+          cobrosPorMetodo,
+          countVentas: ventasActivas.length,
+          countContado: ventasContado.length,
+          countCredito: ventasCredito.length,
+          countCobros: (cobros || []).length,
+          countGastos: (gastos || []).length,
+          countDevoluciones: (devoluciones || []).length,
+        },
+        ventasActivas: ventasActivas.map((v: any) => ({
+          folio: v.folio, cliente: v.clientes?.nombre, condicion_pago: v.condicion_pago, total: Number(v.total) || 0,
+        })),
+        ventasCanceladas: ventasCanceladas.map((v: any) => ({
+          folio: v.folio, cliente: v.clientes?.nombre, total: Number(v.total) || 0,
+        })),
+        productos: productosArr,
+        cobros: (cobros || []).map((c: any) => ({
+          cliente: c.clientes?.nombre, metodo_pago: c.metodo_pago, referencia: c.referencia, monto: Number(c.monto) || 0,
+        })),
+        gastos: (gastos || []).map((g: any) => ({
+          concepto: g.concepto, notas: g.notas, monto: Number(g.monto) || 0,
+        })),
+        devoluciones: devLineas,
+        visitasSinCompra: visitasSinCompra.map((v: any) => ({
+          cliente: v.clientes?.nombre, motivo: v.motivo, notas: v.notas,
+        })),
+        stock: incluirStock && stockItems.length > 0
+          ? { items: stockItems, almacenNombre: rptAlmacenNombre }
+          : undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_${usuarioNombre.replace(/\s+/g, '_')}_${fechaLabel.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('PDF descargado', { id: 'pdf-diario' });
+    } catch (err: any) {
+      console.error('[ReporteDiarioRuta] PDF error:', err);
+      toast.error(err?.message || 'Error al generar PDF', { id: 'pdf-diario' });
+    }
+  };
+
   const handlePrint = () => {
     const win = window.open('', '_blank');
     if (!win) return;
