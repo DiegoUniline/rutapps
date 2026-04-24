@@ -683,6 +683,83 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
 
+  /** Compute the suggested (tarifa-based) price for a product */
+  const getSuggestedPrice = (productoId: string): number => {
+    const prod = productos?.find((p: any) => p.id === productoId);
+    if (!prod) return 0;
+    return resolvePricingFull(prod).unitPrice;
+  };
+
+  /** Set unit price manually for a product (creates the cart line if missing) */
+  const setItemPriceManual = (productoId: string, price: number) => {
+    const prod = productos?.find((p: any) => p.id === productoId);
+    if (!prod) return;
+    setCart(prev => {
+      const existing = prev.find(c => c.producto_id === productoId && !c.es_cambio);
+      if (existing) {
+        return prev.map(c => c.producto_id === productoId && !c.es_cambio
+          ? { ...c, precio_unitario: price, precio_manual: true, lista_precio_id: null, lista_nombre: null }
+          : c);
+      }
+      return [...prev, {
+        producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
+        precio_unitario: price, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        unidad_id: prod.unidad_venta_id ?? undefined,
+        tiene_iva: prod.tiene_iva ?? false,
+        iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
+        tiene_ieps: prod.tiene_ieps ?? false,
+        ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_manual: true, lista_precio_id: null, lista_nombre: null,
+      }];
+    });
+    toast.success(`Precio actualizado: $${price.toFixed(2)}`);
+  };
+
+  /** Apply a price-list price to a product (creates the cart line if missing) */
+  const setItemPriceFromLista = (
+    productoId: string,
+    listaPrecioId: string | null,
+    _tarifaId: string | null,
+    unitPrice: number,
+    listaNombre: string,
+  ) => {
+    const prod = productos?.find((p: any) => p.id === productoId);
+    if (!prod) return;
+    setCart(prev => {
+      const existing = prev.find(c => c.producto_id === productoId && !c.es_cambio);
+      if (existing) {
+        return prev.map(c => c.producto_id === productoId && !c.es_cambio
+          ? { ...c, precio_unitario: unitPrice, precio_manual: false, lista_precio_id: listaPrecioId, lista_nombre: listaNombre }
+          : c);
+      }
+      return [...prev, {
+        producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
+        precio_unitario: unitPrice, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        unidad_id: prod.unidad_venta_id ?? undefined,
+        tiene_iva: prod.tiene_iva ?? false,
+        iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
+        tiene_ieps: prod.tiene_ieps ?? false,
+        ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_manual: false, lista_precio_id: listaPrecioId, lista_nombre: listaNombre,
+      }];
+    });
+    toast.success(`Precio aplicado: ${listaNombre}`);
+  };
+
+  /** Reset a product to its suggested (tarifa) price */
+  const resetItemToSuggested = (productoId: string) => {
+    const prod = productos?.find((p: any) => p.id === productoId);
+    if (!prod) return;
+    const pf = resolvePricingFull(prod);
+    setCart(prev => prev.map(c => c.producto_id === productoId && !c.es_cambio
+      ? { ...c, precio_unitario: pf.unitPrice, precio_unitario_sin_redondeo: pf.rawUnitPrice,
+          precio_display_sin_redondeo: pf.rawDisplayPrice, base_precio: pf.basePrecio,
+          redondeo: pf.redondeo, precio_manual: false, lista_precio_id: null, lista_nombre: null }
+      : c));
+    toast.success('Precio restablecido al sugerido');
+  };
+
+
   return {
     navigate, empresa, user, profile, urlClienteId,
     step, setStep, clienteId, setClienteId, clienteNombre, setClienteNombre,
