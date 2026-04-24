@@ -1107,44 +1107,50 @@ export default function PuntoVentaPage() {
                 <table className="w-full text-[12px]">
                   <thead className="bg-accent/40 text-muted-foreground sticky top-0">
                     <tr>
-                      <th className="text-left px-2 py-1.5 font-medium">Producto</th>
-                      <th className="text-right px-2 py-1.5 font-medium w-16">Precio</th>
-                      <th className="text-right px-2 py-1.5 font-medium w-12">Stock</th>
-                      <th className="w-8"></th>
+                      <th className="text-left px-3 py-2 font-medium">Producto</th>
+                      <th className="text-left px-2 py-2 font-medium hidden sm:table-cell">Lista</th>
+                      <th className="text-right px-2 py-2 font-medium w-24">Precio</th>
+                      <th className="text-right px-2 py-2 font-medium w-14">Stock</th>
+                      <th className="w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredProducts.map(p => {
                       const inCart = cart.find(c => c.producto_id === p.id);
                       const stock = p.cantidad ?? 0;
-                      const unidad = (p as any).es_granel ? (p as any).unidad_granel : 'pz';
+                      const unidad = (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz';
+                      const pricing = getProductPricing(p);
+                      const listaNombre = clienteListaNombre || defaultListaNombre || 'General';
                       return (
                         <tr
                           key={p.id}
                           onClick={() => addToCart(p)}
-                          className={`border-t border-border/50 active:bg-accent/60 cursor-pointer ${inCart ? 'bg-primary/[0.04]' : ''}`}
+                          className={`border-t border-border/50 hover:bg-accent/40 active:bg-accent/60 cursor-pointer transition-colors ${inCart ? 'bg-primary/[0.04]' : ''}`}
                         >
-                          <td className="px-2 py-1.5">
-                            <div className="flex items-center gap-1.5">
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               {inCart && (
-                                <span className="shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+                                <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                                   {inCart.cantidad}
                                 </span>
                               )}
-                              <div className="min-w-0">
-                                <p className="font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                                <p className="text-[9px] text-muted-foreground font-mono">{p.codigo}</p>
-                              </div>
+                              <span className="font-medium text-foreground truncate">{p.nombre}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{p.codigo}</span>
                             </div>
                           </td>
-                          <td className="px-2 py-1.5 text-right font-bold text-primary whitespace-nowrap">
-                            {fmtM(getProductPricing(p).displayPrice)}
-                            <span className="text-[8px] font-normal text-muted-foreground ml-0.5">/{unidad}</span>
+                          <td className="px-2 py-2 hidden sm:table-cell">
+                            <span className="inline-flex items-center rounded-md bg-accent/60 text-foreground/70 px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[140px]">
+                              {listaNombre}
+                            </span>
                           </td>
-                          <td className={`px-2 py-1.5 text-right font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                            {fmtNum(stock)}
+                          <td className="px-2 py-2 text-right font-bold text-primary whitespace-nowrap">
+                            {fmtM(pricing.displayPrice)}
+                            <span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{unidad}</span>
                           </td>
-                          <td className="px-1 py-1.5 text-right">
+                          <td className={`px-2 py-2 text-right font-semibold whitespace-nowrap ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                            {fmtNum(stock)} <span className="text-[9px] font-normal text-muted-foreground">{unidad}</span>
+                          </td>
+                          <td className="px-2 py-2 text-right">
                             <Plus className="h-3.5 w-3.5 text-muted-foreground inline" />
                           </td>
                         </tr>
