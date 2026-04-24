@@ -438,10 +438,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       descuentoPromo += lp.effectiveDiscount;
       items += item.cantidad;
     });
-    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion);
-    const total = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion) };
-  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos]);
+    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
+    // Solo aplica si tiene permiso y valor > 0
+    const extraVal = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
+    const extraAmt = extraVal > 0
+      ? r2(descuentoExtraTipo === 'porcentaje' ? preExtra * (extraVal / 100) : Math.min(extraVal, preExtra))
+      : 0;
+    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion + extraAmt);
+    const total = r2(Math.max(0, preExtra - extraAmt));
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion), descuentoExtra: extraAmt };
+  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
