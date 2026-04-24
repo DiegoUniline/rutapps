@@ -819,26 +819,13 @@ export default function PuntoVentaPage() {
         for (const split of splitsToUse) {
           if (split.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
-          const { error: cobErr } = await supabase.from('cobros').insert({
-            id: cobroId,
-            empresa_id: empresa.id,
-            cliente_id: clienteCobroId,
-            user_id: user.id,
-            monto: split.monto,
-            metodo_pago: split.metodo,
-            referencia: split.referencia || null,
-            fecha: today,
-          });
-          if (cobErr) continue;
-
           let remaining = split.monto;
+          const splitApplications: { venta_id: string; monto_aplicado: number }[] = [];
 
           // First apply to current sale
           if (saleRemainingPOS > 0 && remaining > 0) {
             const apply = Math.min(remaining, saleRemainingPOS);
-            await supabase.from('cobro_aplicaciones').insert({
-              cobro_id: cobroId, venta_id: ventaId, monto_aplicado: apply,
-            });
+            splitApplications.push({ venta_id: ventaId, monto_aplicado: apply });
             saleRemainingPOS -= apply;
             remaining -= apply;
           }
@@ -850,12 +837,32 @@ export default function PuntoVentaPage() {
             const pvRemaining = pv.saldo_pendiente - alreadyApplied;
             if (pvRemaining <= 0.01) { pendingIdx++; continue; }
             const apply = Math.min(remaining, pvRemaining);
-            await supabase.from('cobro_aplicaciones').insert({
-              cobro_id: cobroId, venta_id: pv.id, monto_aplicado: apply,
-            });
+            splitApplications.push({ venta_id: pv.id, monto_aplicado: apply });
             accountAppliedPOS.set(pv.id, alreadyApplied + apply);
             remaining -= apply;
             if (alreadyApplied + apply >= pv.saldo_pendiente - 0.01) pendingIdx++;
+          }
+
+          // Cobro monto = sólo lo que realmente se aplicó (excluye cambio devuelto)
+          const montoCobro = r2(splitApplications.reduce((s, a) => s + a.monto_aplicado, 0));
+          if (montoCobro <= 0) continue;
+
+          const { error: cobErr } = await supabase.from('cobros').insert({
+            id: cobroId,
+            empresa_id: empresa.id,
+            cliente_id: clienteCobroId,
+            user_id: user.id,
+            monto: montoCobro,
+            metodo_pago: split.metodo,
+            referencia: split.referencia || null,
+            fecha: today,
+          });
+          if (cobErr) continue;
+
+          if (splitApplications.length > 0) {
+            await supabase.from('cobro_aplicaciones').insert(
+              splitApplications.map(a => ({ cobro_id: cobroId, ...a }))
+            );
           }
         }
         totalAppliedToAccountsPOS = [...accountAppliedPOS.values()].reduce((s, v) => s + v, 0);
