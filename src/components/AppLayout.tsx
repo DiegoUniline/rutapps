@@ -478,12 +478,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
+  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
+  const { favorites } = useFavorites();
 
-  // Build flat options for the favorites picker from visible nav items
+  // Inject Favoritos as a dynamic module right after Dashboard with user favorites as children
+  const visibleNavItems = useMemo(() => {
+    const favItem: NavItem = {
+      label: 'Favoritos',
+      icon: Star,
+      path: '/favoritos',
+      highlight: 'amber',
+      children: favorites.length > 0
+        ? favorites.map(f => ({ label: f.label, path: f.path }))
+        : [{ label: 'Sin favoritos aún', path: '/favoritos' }],
+    };
+    const dashIdx = baseVisibleNavItems.findIndex(i => i.path === '/dashboard');
+    const insertAt = dashIdx >= 0 ? dashIdx + 1 : 0;
+    return [
+      ...baseVisibleNavItems.slice(0, insertAt),
+      favItem,
+      ...baseVisibleNavItems.slice(insertAt),
+    ];
+  }, [baseVisibleNavItems, favorites]);
+
+  // Build flat options for the favorites picker from base nav items
   const favOptions = useMemo(() => {
     const opts: { label: string; path: string; group?: string }[] = [];
-    visibleNavItems.forEach(item => {
+    baseVisibleNavItems.forEach(item => {
       if (item.children && item.children.length > 0) {
         item.children.forEach(c => opts.push({ label: c.label, path: c.path, group: item.label }));
       } else {
@@ -491,7 +512,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
     });
     return opts;
-  }, [visibleNavItems]);
+  }, [baseVisibleNavItems]);
 
   const closeMobile = () => setMobileOpen(false);
 
