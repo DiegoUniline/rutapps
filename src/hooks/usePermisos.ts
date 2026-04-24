@@ -17,6 +17,30 @@ interface UsePermisosReturn {
   hasModulo: (modulo: string) => boolean;
   isOwner: boolean;
   reload: () => void;
+  /** First route the user can access, based on their permissions. */
+  firstAccessibleRoute: string;
+}
+
+/** Priority list of modules → routes used to compute the home redirect. */
+const ROUTE_PRIORITY: Array<{ modulo: string; path: string }> = [
+  { modulo: 'dashboard', path: '/dashboard' },
+  { modulo: 'pos', path: '/pos' },
+  { modulo: 'ventas', path: '/ventas' },
+  { modulo: 'clientes', path: '/clientes' },
+  { modulo: 'logistica.dashboard', path: '/logistica/dashboard' },
+  { modulo: 'logistica.pedidos', path: '/logistica/pedidos' },
+  { modulo: 'logistica.entregas', path: '/logistica/entregas' },
+  { modulo: 'almacen.inventario', path: '/almacen/inventario' },
+  { modulo: 'catalogo.productos', path: '/productos' },
+  { modulo: 'reportes.generales', path: '/reportes' },
+  { modulo: 'configuracion.suscripcion', path: '/mi-suscripcion' },
+];
+
+export function getFirstAccessibleRoute(hasModulo: (m: string) => boolean): string {
+  for (const { modulo, path } of ROUTE_PRIORITY) {
+    if (hasModulo(modulo)) return path;
+  }
+  return '/configuracion-inicial';
 }
 
 /**
@@ -277,5 +301,7 @@ export function usePermisos(): UsePermisosReturn {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   }, [refetch]);
 
-  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload };
+  const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo);
+
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload, firstAccessibleRoute };
 }
