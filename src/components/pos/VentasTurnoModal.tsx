@@ -55,6 +55,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const enabled = !!open && !!turno?.id;
 
