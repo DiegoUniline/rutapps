@@ -286,23 +286,32 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
             const childActive = location.pathname === childPath ||
               (location.pathname + location.search === child.path) ||
               (child.path.includes('?tab=') && location.pathname === basePath && child.path.includes('tab=productos') && !location.search);
+            const isPlaceholder = child.label === 'Sin favoritos aún';
             return (
               <div key={child.path} className="group relative flex items-center">
-                <Link
-                  to={child.path}
-                  onClick={onNavigate}
-                  className={cn(
-                    "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
-                    childActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
-                  )}
-                >
-                  {child.label}
-                </Link>
-                <div className="absolute right-1">
-                  <FavStar path={child.path} label={child.label} />
-                </div>
+                {isPlaceholder ? (
+                  <div className="block px-2.5 py-1.5 rounded-md text-[12px] flex-1 min-w-0 truncate text-sidebar-foreground/40 italic">
+                    {child.label}
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      to={child.path}
+                      onClick={onNavigate}
+                      className={cn(
+                        "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
+                        childActive
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                    <div className="absolute right-1">
+                      <FavStar path={child.path} label={child.label} />
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
