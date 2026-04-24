@@ -617,6 +617,13 @@ export default function ReporteDiarioRuta() {
               <div className="text-[9px] text-muted-foreground uppercase">Clientes visitados</div>
               <div className="text-lg font-bold text-foreground">{clientesVisitados.size}</div>
             </div>
+            {totalAbonosPrevios > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-center">
+                <div className="text-[9px] text-amber-700 dark:text-amber-400 uppercase font-semibold">Abonos crédito previo</div>
+                <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{fmt(totalAbonosPrevios)}</div>
+                <div className="text-[9px] text-amber-700/70 dark:text-amber-400/70">{clientesQueAbonaron} cliente(s) · {abonosCreditoPrevio.length} abono(s)</div>
+              </div>
+            )}
           </div>
 
           {/* Stock en almacén */}
