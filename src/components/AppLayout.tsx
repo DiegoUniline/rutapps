@@ -291,7 +291,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
         )}
       </button>
       {open && !collapsed && (
-        <div className="ml-4 pl-3 border-l border-sidebar-border/50 space-y-0.5 mt-0.5">
+        <div className="ml-[22px] pl-3 border-l border-sidebar-border/60 mt-0.5">
           {item.children!.map(child => {
             const childPath = child.path.split('?')[0];
             const childActive = location.pathname === childPath ||
@@ -301,7 +301,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
             return (
               <div key={child.path} className="group relative flex items-center">
                 {isPlaceholder ? (
-                  <div className="block px-2.5 py-1.5 rounded-md text-[12px] flex-1 min-w-0 truncate text-sidebar-foreground/40 italic">
+                  <div className="block px-2 py-1 text-[12px] flex-1 min-w-0 truncate text-sidebar-foreground/40 italic">
                     {child.label}
                   </div>
                 ) : (
@@ -310,15 +310,15 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
                       to={child.path}
                       onClick={onNavigate}
                       className={cn(
-                        "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
+                        "block px-2 py-1 text-[12px] transition-colors flex-1 min-w-0 truncate pr-7 rounded",
                         childActive
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
+                          ? "text-primary font-semibold"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
                       )}
                     >
                       {child.label}
                     </Link>
-                    <div className="absolute right-1">
+                    <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <FavStar path={child.path} label={child.label} />
                     </div>
                   </>
