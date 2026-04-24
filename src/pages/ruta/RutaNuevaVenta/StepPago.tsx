@@ -107,37 +107,23 @@ export function StepPago(props: Props) {
   const metodosUsados = new Set(pagos.map(p => p.metodo_pago));
   const metodosDisponibles = METODOS.filter(m => !metodosUsados.has(m.value));
 
+  const [cuentasOpen, setCuentasOpen] = React.useState(false);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-24 space-y-2.5">
-        <section className="bg-card rounded-lg p-3">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tipo de operación</p>
-          <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-md px-3 py-1.5 text-[12px] font-semibold">
-            {tipoVenta === 'venta_directa' ? <ShoppingCart className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
-            {tipoVenta === 'venta_directa' ? 'Venta inmediata' : 'Pedido'}
-          </div>
-          {!entregaInmediata && (
-            <div className="mt-2.5 rounded-md px-2.5 py-2 flex items-start gap-2 bg-accent/50">
-              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground mt-px shrink-0" />
-              <div className="flex-1"><p className="text-[11px] text-muted-foreground leading-snug mb-1.5">Fecha de entrega</p>
-                <input type="date" className="w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
+        {/* Fecha de entrega solo si NO es entrega inmediata (pedido programado) */}
+        {!entregaInmediata && (
+          <section className="bg-card rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground mt-1.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Fecha de entrega</p>
+                <input type="date" className="w-full bg-accent/40 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
               </div>
             </div>
-          )}
-        </section>
-
-        <section className="bg-card rounded-lg p-3">
-          <button onClick={() => setSinImpuestos(!sinImpuestos)} className={`w-full flex items-center justify-between rounded-md px-3 py-2.5 transition-all active:scale-[0.98] ${sinImpuestos ? 'bg-amber-500/15 border border-amber-500/40' : 'bg-accent/50 border border-border/40'}`}>
-            <div className="flex items-center gap-2">
-              <ReceiptText className={`h-4 w-4 ${sinImpuestos ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} />
-              <span className={`text-[12px] font-semibold ${sinImpuestos ? 'text-amber-700 dark:text-amber-300' : 'text-foreground'}`}>Sin impuestos</span>
-            </div>
-            <div className={`w-9 h-5 rounded-full transition-colors relative ${sinImpuestos ? 'bg-amber-500' : 'bg-border'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${sinImpuestos ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </div>
-          </button>
-          {sinImpuestos && <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5 px-1">IVA e IEPS no se cobrarán en esta venta</p>}
-        </section>
+          </section>
+        )}
 
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
@@ -154,22 +140,61 @@ export function StepPago(props: Props) {
               {excedeCredito && <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total excede el crédito disponible</p>}
             </div>
           )}
+
+          {/* Toggle sutil de Sin impuestos */}
+          <button
+            onClick={() => setSinImpuestos(!sinImpuestos)}
+            className="w-full mt-2.5 flex items-center justify-between px-1 py-1.5 group"
+          >
+            <span className={`text-[11px] font-medium flex items-center gap-1.5 ${sinImpuestos ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+              <ReceiptText className="h-3 w-3" /> Sin impuestos
+            </span>
+            <div className={`w-7 h-4 rounded-full transition-colors relative ${sinImpuestos ? 'bg-amber-500' : 'bg-border'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${sinImpuestos ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
         </section>
 
         {cuentasPendientes.length > 0 && (
-          <section className="bg-card rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cuentas pendientes ({cuentasPendientes.length})</p><button onClick={liquidarTodas} className="text-[10.5px] text-primary font-semibold">Liquidar todas</button></div>
-            <div className="space-y-1.5">{cuentasPendientes.map(cuenta => (
-              <div key={cuenta.id} className="rounded-md border border-border/60 p-2.5">
-                <div className="flex items-center justify-between mb-1.5"><div><span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span><span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span></div><span className="text-[11px] font-medium text-destructive">Debe: {fmt(cuenta.saldo_pendiente)}</span></div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateCuentaMonto(cuenta.id, cuenta.saldo_pendiente)} className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${cuenta.montoAplicar === cuenta.saldo_pendiente ? 'bg-primary text-primary-foreground' : 'bg-accent/60 text-foreground'}`}>Liquidar</button>
-                  <div className="flex-1 relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">{s}</span><input type="number" inputMode="decimal" className="w-full bg-accent/40 rounded-md pl-5 pr-2 py-1.5 text-[12px] text-foreground font-medium focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={cuenta.montoAplicar || ''} placeholder="0.00" onChange={e => updateCuentaMonto(cuenta.id, parseFloat(e.target.value) || 0)} /></div>
-                  {cuenta.montoAplicar > 0 && <button onClick={() => updateCuentaMonto(cuenta.id, 0)} className="text-[10px] text-destructive font-medium">Quitar</button>}
-                </div>
+          <section className="bg-card rounded-lg overflow-hidden">
+            <button
+              onClick={() => setCuentasOpen(o => !o)}
+              className="w-full flex items-center justify-between p-3 active:bg-accent/40 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cuentas pendientes</span>
+                <span className="text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">{cuentasPendientes.length}</span>
+                {totalAplicarCuentas > 0 && (
+                  <span className="text-[10.5px] font-semibold text-primary">+{fmt(totalAplicarCuentas)}</span>
+                )}
               </div>
-            ))}</div>
-            {totalAplicarCuentas > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{fmt(totalAplicarCuentas)}</span></div>}
+              <div className="flex items-center gap-2">
+                {!cuentasOpen && (
+                  <span className="text-[10.5px] text-destructive font-medium">
+                    {fmt(cuentasPendientes.reduce((a, c) => a + c.saldo_pendiente, 0))}
+                  </span>
+                )}
+                {cuentasOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            </button>
+            {cuentasOpen && (
+              <div className="px-3 pb-3 -mt-1">
+                <div className="flex justify-end mb-1.5">
+                  <button onClick={liquidarTodas} className="text-[10.5px] text-primary font-semibold">Liquidar todas</button>
+                </div>
+                <div className="space-y-1.5">{cuentasPendientes.map(cuenta => (
+                  <div key={cuenta.id} className="rounded-md border border-border/60 p-2.5">
+                    <div className="flex items-center justify-between mb-1.5"><div><span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span><span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span></div><span className="text-[11px] font-medium text-destructive">Debe: {fmt(cuenta.saldo_pendiente)}</span></div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => updateCuentaMonto(cuenta.id, cuenta.saldo_pendiente)} className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${cuenta.montoAplicar === cuenta.saldo_pendiente ? 'bg-primary text-primary-foreground' : 'bg-accent/60 text-foreground'}`}>Liquidar</button>
+                      <div className="flex-1 relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">{s}</span><input type="number" inputMode="decimal" className="w-full bg-accent/40 rounded-md pl-5 pr-2 py-1.5 text-[12px] text-foreground font-medium focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={cuenta.montoAplicar || ''} placeholder="0.00" onChange={e => updateCuentaMonto(cuenta.id, parseFloat(e.target.value) || 0)} /></div>
+                      {cuenta.montoAplicar > 0 && <button onClick={() => updateCuentaMonto(cuenta.id, 0)} className="text-[10px] text-destructive font-medium">Quitar</button>}
+                    </div>
+                  </div>
+                ))}</div>
+                {totalAplicarCuentas > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">{fmt(totalAplicarCuentas)}</span></div>}
+              </div>
+            )}
           </section>
         )}
 
