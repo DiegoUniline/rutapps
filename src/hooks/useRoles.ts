@@ -53,6 +53,7 @@ export function useRoles() {
     setRoleDesc('');
     setRoleMovil(false);
     setRoleSoloMovil(false);
+    setRoleSoloPos(false);
   }, []);
 
   const saveRoleWithSoloMovil = useCallback(async (reload: () => void) => {
