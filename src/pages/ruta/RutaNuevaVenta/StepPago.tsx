@@ -52,24 +52,23 @@ const METODOS = [
 ];
 
 /**
- * Build dynamic quick-bill amounts based on the remaining total.
- * Always offers: Exact, +$10 round, +$50 round, next 100s.
+ * Quick-bill amounts using ONLY real bill denominations (MXN-style).
+ * Returns Exacto + the 4 next real bills >= total.
  */
+const REAL_BILLS = [20, 50, 100, 200, 500, 1000];
 function getDynamicBills(total: number): { label: string; amount: number }[] {
   if (total <= 0) return [];
-  const r = (n: number, base: number) => Math.ceil(n / base) * base;
-  const bills: { label: string; amount: number }[] = [
-    { label: 'Exacto', amount: Math.round(total * 100) / 100 },
-  ];
-  const seen = new Set<number>([bills[0].amount]);
-  const candidates = [r(total, 10), r(total + 5, 50), r(total + 20, 100), r(total + 100, 200), r(total + 250, 500)];
-  candidates.forEach(c => {
-    if (c > total && !seen.has(c) && bills.length < 5) {
-      bills.push({ label: `$${c}`, amount: c });
-      seen.add(c);
+  const exacto = Math.round(total * 100) / 100;
+  const bills: { label: string; amount: number }[] = [{ label: 'Exacto', amount: exacto }];
+  const seen = new Set<number>([exacto]);
+  for (const b of REAL_BILLS) {
+    if (b > total && !seen.has(b)) {
+      bills.push({ label: `$${b}`, amount: b });
+      seen.add(b);
+      if (bills.length >= 5) break;
     }
-  });
-  return bills.slice(0, 5);
+  }
+  return bills;
 }
 
 export function StepPago(props: Props) {
