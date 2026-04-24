@@ -30,6 +30,8 @@ interface Props {
   isManual: boolean;
   /** Currently active lista_precio_id (if any) */
   currentListaPrecioId?: string | null;
+  /** When false the modal stays read-only (no list switching, no manual entry) */
+  canEdit?: boolean;
   /** Apply a price from a list (or back to suggested) */
   onSelectLista: (
     listaPrecioId: string | null,
@@ -49,7 +51,7 @@ interface Props {
  */
 export function ProductoDetalleModal({
   open, onClose, producto, currentUnitPrice, suggestedPrice, isManual,
-  currentListaPrecioId, onSelectLista, onSetManualPrice, onResetToSuggested,
+  currentListaPrecioId, canEdit = true, onSelectLista, onSetManualPrice, onResetToSuggested,
 }: Props) {
   const { empresa } = useAuth();
   const { fmt, symbol } = useCurrency();
