@@ -96,34 +96,46 @@ export default function RolesTab({
               </div>
               <div>
                 <label className="label-odoo mb-2">Tipo de acceso</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => { setRoleMovil(false); setRoleSoloMovil(false); }}
+                    onClick={() => { setRoleMovil(false); setRoleSoloMovil(false); setRoleSoloPos(false); }}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
-                      !roleSoloMovil ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
+                      !roleSoloMovil && !roleSoloPos ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"
                     )}
                   >
-                    <Shield className={cn("h-6 w-6", !roleSoloMovil ? "text-primary" : "text-muted-foreground")} />
-                    <span className={cn("text-sm font-semibold", !roleSoloMovil ? "text-primary" : "text-foreground")}>Acceso general</span>
-                    <span className="text-[11px] text-muted-foreground leading-tight">Escritorio + móvil. Configura permisos detallados.</span>
+                    <Shield className={cn("h-5 w-5", !roleSoloMovil && !roleSoloPos ? "text-primary" : "text-muted-foreground")} />
+                    <span className={cn("text-xs font-semibold", !roleSoloMovil && !roleSoloPos ? "text-primary" : "text-foreground")}>Acceso general</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Escritorio + móvil. Permisos detallados.</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setRoleSoloMovil(true); setRoleMovil(true); }}
+                    onClick={() => { setRoleSoloMovil(true); setRoleMovil(true); setRoleSoloPos(false); }}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
                       roleSoloMovil ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"
                     )}
                   >
-                    <span className={cn("text-2xl", roleSoloMovil ? "" : "grayscale opacity-60")}>📱</span>
-                    <span className={cn("text-sm font-semibold", roleSoloMovil ? "text-primary" : "text-foreground")}>Solo vista móvil</span>
-                    <span className="text-[11px] text-muted-foreground leading-tight">Solo accede a la app de ruta. Sin permisos de escritorio.</span>
+                    <span className={cn("text-xl leading-none", roleSoloMovil ? "" : "grayscale opacity-60")}>📱</span>
+                    <span className={cn("text-xs font-semibold", roleSoloMovil ? "text-primary" : "text-foreground")}>Solo vista móvil</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">App de ruta. Sin escritorio.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRoleSoloPos(true); setRoleSoloMovil(false); setRoleMovil(false); }}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
+                      roleSoloPos ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"
+                    )}
+                  >
+                    <Calculator className={cn("h-5 w-5", roleSoloPos ? "text-primary" : "text-muted-foreground")} />
+                    <span className={cn("text-xs font-semibold", roleSoloPos ? "text-primary" : "text-foreground")}>Solo Punto de Venta</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Solo POS (kiosko). Sin sidebar.</span>
                   </button>
                 </div>
               </div>
-              {!roleSoloMovil && (
+              {!roleSoloMovil && !roleSoloPos && (
                 <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer bg-accent/30 rounded-lg px-3 py-2.5">
                   <input type="checkbox" checked={roleMovil} onChange={e => setRoleMovil(e.target.checked)} className="rounded border-border" />
                   <span>También tiene acceso a ruta móvil</span>
