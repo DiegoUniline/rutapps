@@ -21,6 +21,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
 import { AbrirTurnoModal as AbrirTurnoModalForPrompt } from '@/components/pos/AbrirTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -61,6 +65,7 @@ export default function PuntoVentaPage() {
   const scanRef = useRef<HTMLInputElement>(null);
   const { enabled: turnosEnabled, turno: turnoActivo } = useCajaTurno();
   const [showAbrirTurnoPrompt, setShowAbrirTurnoPrompt] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
@@ -925,11 +930,7 @@ export default function PuntoVentaPage() {
             Limpiar
           </button>
           <button
-            onClick={async () => {
-              if (confirm('¿Cerrar sesión?')) {
-                await signOut();
-              }
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             className="inline-flex items-center gap-1 h-8 px-2 sm:px-2.5 rounded-md border border-border bg-muted hover:bg-accent text-foreground text-[11px] font-semibold transition-colors shrink-0"
             title="Cerrar sesión"
           >
@@ -1759,6 +1760,29 @@ export default function PuntoVentaPage() {
 
       {/* Prompt to open shift when trying to charge without one */}
       <AbrirTurnoModalForPrompt open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <LogOut className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center">Cerrar sesión</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              ¿Estás seguro de que quieres cerrar tu sesión en el punto de venta?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => signOut()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
