@@ -109,6 +109,7 @@ function KpisRow({ empresaId }: { empresaId: string }) {
 }
 
 function Kpi({ icon, label, value, tone, raw }: { icon: React.ReactNode; label: string; value: number; tone: 'primary'|'success'|'warning'|'destructive'; raw?: boolean }) {
+  const { fmt: _fmt } = useCurrency();
   const cls = {
     primary: 'bg-primary/10 text-primary border-primary/30',
     success: 'bg-success/10 text-success border-success/30',
