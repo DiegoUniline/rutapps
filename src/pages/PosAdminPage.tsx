@@ -405,6 +405,7 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
 }
 
 function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClose: () => void }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-turno-detalle', turnoId],
     queryFn: async () => {
@@ -415,12 +416,35 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
         .from('ventas')
         .select('id, folio, fecha, created_at, total, condicion_pago, status, vendedor_id, cliente:clientes(nombre)')
         .eq('turno_id', turnoId).order('created_at', { ascending: false });
+      // vendedor_id refers to profiles.id
       const vendedorIds = Array.from(new Set((ventas ?? []).map((v: any) => v.vendedor_id).filter(Boolean)));
       const { data: profiles } = vendedorIds.length
-        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', vendedorIds)
+        ? await supabase.from('profiles').select('id, nombre').in('id', vendedorIds)
         : { data: [] as any[] };
-      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
-      const ventasEnriched = (ventas ?? []).map((v: any) => ({ ...v, vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—' }));
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.id, p.nombre]));
+
+      // Métodos de pago por venta
+      const ventaIds = (ventas ?? []).map((v: any) => v.id);
+      let metodosMap = new Map<string, string[]>();
+      if (ventaIds.length) {
+        const { data: apps } = await supabase
+          .from('cobro_aplicaciones')
+          .select('venta_id, cobros(metodo_pago)')
+          .in('venta_id', ventaIds);
+        for (const a of (apps ?? []) as any[]) {
+          const m = a.cobros?.metodo_pago;
+          if (!m) continue;
+          const arr = metodosMap.get(a.venta_id) ?? [];
+          if (!arr.includes(m)) arr.push(m);
+          metodosMap.set(a.venta_id, arr);
+        }
+      }
+
+      const ventasEnriched = (ventas ?? []).map((v: any) => ({
+        ...v,
+        vendedor_nombre: nameMap.get(v.vendedor_id) ?? '—',
+        metodos_pago: metodosMap.get(v.id) ?? [],
+      }));
       return { turno, movs: movs ?? [], ventas: ventasEnriched };
     },
     enabled: !!turnoId,
