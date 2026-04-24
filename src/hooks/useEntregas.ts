@@ -210,23 +210,39 @@ export function useCargarEntrega() {
     mutationFn: async ({ entregaId }: { entregaId: string }) => {
       const { data: entrega } = await supabase
         .from('entregas')
-        .select('id, empresa_id, vendedor_ruta_id, vendedor_id')
+        .select('id, folio, empresa_id, vendedor_ruta_id, vendedor_id, status')
         .eq('id', entregaId)
         .single();
       if (!entrega) throw new Error('Entrega no encontrada');
 
+      const folio = entrega.folio || entregaId.slice(0, 8);
       const vendedorId = entrega.vendedor_ruta_id || entrega.vendedor_id;
-      if (!vendedorId) throw new Error('Falta vendedor/ruta asignado');
+      if (!vendedorId) throw new Error(`No se puede cargar la entrega ${folio}: falta asignar vendedor de ruta.`);
 
       // Get vendedor's almacen_id from profiles
       const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorId).maybeSingle();
       const almacenDestinoId = prof?.almacen_id;
-      if (!almacenDestinoId) throw new Error('El vendedor no tiene almacén asignado');
+      if (!almacenDestinoId) throw new Error(`No se puede cargar la entrega ${folio}: el vendedor no tiene almacén asignado en su perfil.`);
 
       const { data: lineas } = await supabase
         .from('entrega_lineas')
-        .select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id')
+        .select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id, productos(nombre)')
         .eq('entrega_id', entregaId);
+
+      // Validación dura previa: cada línea hecha debe tener almacén origen
+      const lineasHechas = (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0);
+      if (lineasHechas.length === 0) {
+        throw new Error(`No se puede cargar la entrega ${folio}: no hay líneas surtidas. Surte al menos un producto antes de cargar.`);
+      }
+      const sinOrigen = lineasHechas.filter(l => !l.almacen_origen_id);
+      if (sinOrigen.length > 0) {
+        const nombres = sinOrigen
+          .map((l: any) => l.productos?.nombre || l.producto_id)
+          .slice(0, 5)
+          .join(', ');
+        const extra = sinOrigen.length > 5 ? ` y ${sinOrigen.length - 5} más` : '';
+        throw new Error(`No se puede cargar la entrega ${folio}: las siguientes líneas no tienen almacén origen: ${nombres}${extra}.`);
+      }
 
       const today = todayLocal();
 
