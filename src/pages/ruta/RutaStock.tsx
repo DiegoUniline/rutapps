@@ -11,7 +11,6 @@ export default function RutaStock() {
   const { fmt } = useCurrency();
   const { hasPermiso, isOwner } = usePermisos();
   const canViewPrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermiso('productos', 'ver');
-  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
   const [search, setSearch] = useState('');
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
   const almacenId = profile?.almacen_id;
