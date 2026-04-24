@@ -419,6 +419,140 @@ export type Database = {
         }
         Relationships: []
       }
+      caja_movimientos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          monto: number
+          motivo: string | null
+          tipo: string
+          turno_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          monto: number
+          motivo?: string | null
+          tipo: string
+          turno_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          monto?: number
+          motivo?: string | null
+          tipo?: string
+          turno_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caja_movimientos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caja_movimientos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "caja_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caja_turnos: {
+        Row: {
+          abierto_at: string
+          arqueo_denominaciones: Json | null
+          caja_nombre: string
+          cajero_id: string
+          cerrado_at: string | null
+          cerrado_por: string | null
+          created_at: string
+          diferencia: number | null
+          empresa_id: string
+          fondo_inicial: number
+          id: string
+          notas_apertura: string | null
+          notas_cierre: string | null
+          status: string
+          total_efectivo_contado: number | null
+          total_efectivo_esperado: number | null
+          total_otros_contado: number | null
+          total_otros_esperado: number | null
+          total_tarjeta_contado: number | null
+          total_tarjeta_esperado: number | null
+          total_transferencia_contado: number | null
+          total_transferencia_esperado: number | null
+          updated_at: string
+        }
+        Insert: {
+          abierto_at?: string
+          arqueo_denominaciones?: Json | null
+          caja_nombre?: string
+          cajero_id: string
+          cerrado_at?: string | null
+          cerrado_por?: string | null
+          created_at?: string
+          diferencia?: number | null
+          empresa_id: string
+          fondo_inicial?: number
+          id?: string
+          notas_apertura?: string | null
+          notas_cierre?: string | null
+          status?: string
+          total_efectivo_contado?: number | null
+          total_efectivo_esperado?: number | null
+          total_otros_contado?: number | null
+          total_otros_esperado?: number | null
+          total_tarjeta_contado?: number | null
+          total_tarjeta_esperado?: number | null
+          total_transferencia_contado?: number | null
+          total_transferencia_esperado?: number | null
+          updated_at?: string
+        }
+        Update: {
+          abierto_at?: string
+          arqueo_denominaciones?: Json | null
+          caja_nombre?: string
+          cajero_id?: string
+          cerrado_at?: string | null
+          cerrado_por?: string | null
+          created_at?: string
+          diferencia?: number | null
+          empresa_id?: string
+          fondo_inicial?: number
+          id?: string
+          notas_apertura?: string | null
+          notas_cierre?: string | null
+          status?: string
+          total_efectivo_contado?: number | null
+          total_efectivo_esperado?: number | null
+          total_otros_contado?: number | null
+          total_otros_esperado?: number | null
+          total_tarjeta_contado?: number | null
+          total_tarjeta_esperado?: number | null
+          total_transferencia_contado?: number | null
+          total_transferencia_esperado?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caja_turnos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cancellation_requests: {
         Row: {
           cancelled: boolean
@@ -2121,6 +2255,7 @@ export type Database = {
           nombre: string
           notas_ticket: string | null
           owner_user_id: string | null
+          pos_turnos_habilitado: boolean
           razon_social: string | null
           regimen_fiscal: string | null
           requiere_jornada_desde: string | null
@@ -2147,6 +2282,7 @@ export type Database = {
           nombre: string
           notas_ticket?: string | null
           owner_user_id?: string | null
+          pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
           requiere_jornada_desde?: string | null
@@ -2173,6 +2309,7 @@ export type Database = {
           nombre?: string
           notas_ticket?: string | null
           owner_user_id?: string | null
+          pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
           requiere_jornada_desde?: string | null
