@@ -3,7 +3,7 @@ import { todayInTimezone, cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,7 +55,7 @@ type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
 
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
-  const { empresa, user, profile, overrideEmpresaId } = useAuth();
+  const { empresa, user, profile, overrideEmpresaId, signOut } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
@@ -923,6 +923,18 @@ export default function PuntoVentaPage() {
           </button>
           <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline shrink-0">
             Limpiar
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm('¿Cerrar sesión?')) {
+                await signOut();
+              }
+            }}
+            className="inline-flex items-center gap-1 h-8 px-2 sm:px-2.5 rounded-md border border-border bg-muted hover:bg-accent text-foreground text-[11px] font-semibold transition-colors shrink-0"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Salir</span>
           </button>
         </div>
         {/* Info bar: almacén + lista de precio */}
