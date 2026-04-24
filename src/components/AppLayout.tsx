@@ -610,7 +610,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <SuperAdminEmpresaSelector />
-        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1 overflow-auto pb-16">
           {children}
@@ -732,7 +731,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0">
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
         </div>
-        <FavoritesBar options={favOptions} />
         <Breadcrumb />
         <main className="flex-1">
           {children}
