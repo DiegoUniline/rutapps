@@ -52,10 +52,12 @@ export function StepProductos(props: Props) {
     getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
+    getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
   } = props;
   const { symbol: s } = useCurrency();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
+  const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
 
   const handleScan = (code: string) => {
     const prod = findProductByCode(code);
