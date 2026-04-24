@@ -301,7 +301,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
                           <>
                             <tr
                               key={v.id}
-                              className={`border-t border-border/50 hover:bg-muted/30 cursor-pointer ${isExpanded ? 'bg-muted/40' : ''}`}
+                              className={`border-t border-border/50 hover:bg-muted/30 cursor-pointer ${isExpanded ? 'bg-background' : ''}`}
                               onClick={() => setExpandedId(isExpanded ? null : v.id)}
                             >
                               <td className="px-2 py-2 text-muted-foreground">
@@ -440,7 +440,7 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
 
   return (
     <tr>
-      <td colSpan={8} className="p-0 bg-muted/20 border-t border-border/50">
+      <td colSpan={8} className="p-0 bg-background border-t border-border/50">
         <div className="px-5 py-3">
           {q.isLoading ? (
             <div className="text-xs text-muted-foreground py-2 flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Cargando detalles...</div>
