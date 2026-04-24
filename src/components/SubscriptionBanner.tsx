@@ -1,17 +1,14 @@
 import { useSubscription } from '@/hooks/useSubscription';
-import { usePermisos } from '@/hooks/usePermisos';
 import { AlertTriangle, Clock, CreditCard, Zap } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function SubscriptionBanner() {
   const { daysLeft, status } = useSubscription();
-  const { isOwner } = usePermisos();
   const location = useLocation();
 
-  // Ocultar en la vista móvil de ruta; en escritorio solo lo ve el dueño/admin
+  // Ocultar únicamente en la vista móvil de ruta; en escritorio lo ven todos
   if (location.pathname.startsWith('/ruta')) return null;
-  if (!isOwner) return null;
 
   if (daysLeft === null || daysLeft > 7) return null;
   if (status === 'active' && daysLeft > 7) return null;
