@@ -233,18 +233,22 @@ export const PATH_MODULE_MAP: Record<string, string> = {
 interface PermisosData {
   hasRole: boolean;
   permisos: Permiso[];
+  /** Source of truth for "Solo vista móvil" — read directly from roles table */
+  roleSoloMovil: boolean;
 }
 
 async function fetchPermisos(userId: string): Promise<PermisosData> {
   const { data: userRole } = await supabase
     .from('user_roles')
-    .select('role_id')
+    .select('role_id, roles(solo_movil)')
     .eq('user_id', userId)
     .maybeSingle();
 
   if (!userRole?.role_id) {
-    return { hasRole: false, permisos: [] };
+    return { hasRole: false, permisos: [], roleSoloMovil: false };
   }
+
+  const roleSoloMovil = !!(userRole as any).roles?.solo_movil;
 
   const rolePermisos = await fetchAllPages<Permiso>((from, to) =>
     supabase.from('role_permisos')
@@ -253,7 +257,7 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
       .range(from, to)
   );
 
-  return { hasRole: true, permisos: rolePermisos };
+  return { hasRole: true, permisos: rolePermisos, roleSoloMovil };
 }
 
 export function usePermisos(): UsePermisosReturn {
