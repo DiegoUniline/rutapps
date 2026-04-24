@@ -458,7 +458,20 @@ function SumCard({ icon, label, value, tone }: { icon: React.ReactNode; label: s
   );
 }
 
+function pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
 function fmtDate(iso: string) {
-  try { return new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }); }
-  catch { return iso; }
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch { return iso; }
+}
+function fmtDateOnly(iso: string) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  } catch { return iso; }
 }
