@@ -122,12 +122,40 @@ export function StepProductos(props: Props) {
         </div>
       )}
       <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
+        {filteredProductos?.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-accent/60 flex items-center justify-center mb-3">
+              <PackageSearch className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-[14px] font-semibold text-foreground mb-1">
+              {searchProducto ? 'Sin coincidencias' : 'Sin productos disponibles'}
+            </p>
+            <p className="text-[12px] text-muted-foreground max-w-[260px]">
+              {searchProducto
+                ? `No encontramos "${searchProducto}". Prueba con otro nombre o código.`
+                : tipoVenta === 'venta_directa'
+                  ? 'No tienes productos cargados a bordo. Cambia a "Pedido" o realiza una carga.'
+                  : 'Aún no tienes productos en tu catálogo activo.'}
+            </p>
+            {searchProducto && (
+              <button
+                onClick={() => setSearchProducto('')}
+                className="mt-3 text-[12px] font-medium text-primary px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 active:scale-95 transition-all"
+              >
+                Limpiar búsqueda
+              </button>
+            )}
+          </div>
+        )}
         {filteredProductos?.map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
           const stockLabel = tipoVenta === 'venta_directa' ? `${maxQty} ${usandoAlmacen ? 'en almacén' : 'a bordo'}` : `${p.cantidad ?? 0} en almacén`;
           const stockOk = tipoVenta === 'pedido' || maxQty > 0;
           const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty;
+          const isManual = !!inCart?.precio_manual;
+          const hasLista = !!inCart?.lista_precio_id;
+          const displayPrice = inCart?.precio_unitario ?? (p.precio_principal ?? 0);
           return (
             <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inCart ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
               <div className="flex items-center gap-2.5">
@@ -137,8 +165,30 @@ export function StepProductos(props: Props) {
                     <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span><span className="text-[10px] text-muted-foreground">·</span>
                     <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                   </div>
-                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{(p.precio_principal ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{p.es_granel ? p.unidad_granel : ((p.unidades as any)?.abreviatura || 'pz')}</span></p>
+                  <div className="flex items-center gap-1.5 mt-px">
+                    <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
+                      {s}{displayPrice.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      <span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{p.es_granel ? p.unidad_granel : ((p.unidades as any)?.abreviatura || 'pz')}</span>
+                    </p>
+                    {isManual && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium">
+                        <Pencil className="h-2 w-2" /> Manual
+                      </span>
+                    )}
+                    {hasLista && !isManual && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium max-w-[80px]">
+                        <Tag className="h-2 w-2 shrink-0" /><span className="truncate">{inCart?.lista_nombre}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDetalleProducto(p); }}
+                  aria-label="Ver detalle y precios"
+                  className="w-8 h-8 rounded-lg bg-accent/60 hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all shrink-0"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
                 {inCart ? (
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => inCart.cantidad === 1 ? removeFromCart(p.id) : updateQty(p.id, -1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
@@ -182,6 +232,19 @@ export function StepProductos(props: Props) {
         maxValue={tipoVenta === 'venta_directa' && keypadFor && !keypadFor.granel ? keypadFor.max : undefined}
         onClose={() => setKeypadFor(null)}
         onConfirm={(v) => { if (keypadFor) setItemQty(keypadFor.producto_id, v); }}
+      />
+
+      <ProductoDetalleModal
+        open={!!detalleProducto}
+        onClose={() => setDetalleProducto(null)}
+        producto={detalleProducto}
+        currentUnitPrice={detalleProducto ? (getItemInCart(detalleProducto.id)?.precio_unitario ?? getSuggestedPrice(detalleProducto.id)) : 0}
+        suggestedPrice={detalleProducto ? getSuggestedPrice(detalleProducto.id) : 0}
+        isManual={!!(detalleProducto && getItemInCart(detalleProducto.id)?.precio_manual)}
+        currentListaPrecioId={detalleProducto ? (getItemInCart(detalleProducto.id)?.lista_precio_id ?? null) : null}
+        onSelectLista={(listaId, tarifaId, unitPrice, listaNombre) => detalleProducto && setItemPriceFromLista(detalleProducto.id, listaId, tarifaId, unitPrice, listaNombre)}
+        onSetManualPrice={(price) => detalleProducto && setItemPriceManual(detalleProducto.id, price)}
+        onResetToSuggested={() => detalleProducto && resetItemToSuggested(detalleProducto.id)}
       />
     </div>
   );
