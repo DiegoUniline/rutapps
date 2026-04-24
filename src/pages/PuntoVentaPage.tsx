@@ -930,11 +930,7 @@ export default function PuntoVentaPage() {
             Limpiar
           </button>
           <button
-            onClick={async () => {
-              if (confirm('¿Cerrar sesión?')) {
-                await signOut();
-              }
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             className="inline-flex items-center gap-1 h-8 px-2 sm:px-2.5 rounded-md border border-border bg-muted hover:bg-accent text-foreground text-[11px] font-semibold transition-colors shrink-0"
             title="Cerrar sesión"
           >
