@@ -33,10 +33,16 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
+  const usuarioOpts = [
+    { value: 'all', label: '🌐 Todos los usuarios (Master)' },
+    ...(usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre })),
+  ];
+  const isAll = usuarioId === 'all';
   const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
   const selectedUserId = selectedProfile?.user_id ?? usuarioId;
   const selectedVendedorId = usuarioId; // profile.id IS the vendedor_id
+  // Para queries por user_id (cobros, visitas) cuando "todos": lista de user_ids de la empresa
+  const allUserIds = (usuarios || []).map((u: any) => u.user_id).filter(Boolean);
 
   const enabled = !!empresa?.id && !!usuarioId && !!fechaInicio && !!fechaFin;
 
@@ -45,26 +51,30 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-ventas', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('ventas')
-        .select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
+      let q = (supabase as any).from('ventas')
+        .select('id, folio, total, condicion_pago, status, fecha, cliente_id, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
+      if (!isAll) q = q.eq('vendedor_id', selectedVendedorId);
+      const { data } = await q;
       return data ?? [];
     },
   });
 
-  // --- Cobros ---
+  // --- Cobros (incluye aplicaciones para detectar abonos a crédito previo) ---
   const { data: cobros } = useQuery<any[]>({
     queryKey: ['rpt-diario-cobros', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cobros')
-        .select('id, monto, metodo_pago, referencia, clientes(nombre)')
-        .eq('empresa_id', empresa!.id).eq('user_id', selectedUserId)
+      let q = (supabase as any).from('cobros')
+        .select('id, monto, metodo_pago, referencia, fecha, user_id, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(id, folio, fecha, condicion_pago))')
+        .eq('empresa_id', empresa!.id)
         .neq('status', 'cancelado')
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
+      if (!isAll) q = q.eq('user_id', selectedUserId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -74,11 +84,13 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-gastos', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('gastos')
-        .select('id, monto, concepto, notas')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
+      let q = (supabase as any).from('gastos')
+        .select('id, monto, concepto, notas, vendedor_id, profiles:vendedor_id(nombre)')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
+      if (!isAll) q = q.eq('vendedor_id', selectedVendedorId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -88,10 +100,12 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-devs', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('devoluciones')
-        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
+      let q = (supabase as any).from('devoluciones')
+        .select('id, tipo, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
+      if (!isAll) q = q.eq('vendedor_id', selectedVendedorId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -101,11 +115,13 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-visitas', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('visitas')
-        .select('id, tipo, motivo, notas, clientes(nombre)')
-        .eq('empresa_id', empresa!.id).eq('user_id', selectedUserId)
+      let q = (supabase as any).from('visitas')
+        .select('id, tipo, motivo, notas, user_id, clientes(nombre)')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
+      if (!isAll) q = q.eq('user_id', selectedUserId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -113,7 +129,7 @@ export default function ReporteDiarioRuta() {
   // --- Stock del almacén asignado al vendedor ---
   const { data: rptVendedorAlmacen } = useQuery<any>({
     queryKey: ['rpt-vendedor-almacen', usuarioId],
-    enabled: enabled && incluirStock,
+    enabled: enabled && incluirStock && !isAll,
     queryFn: async () => {
       const { data } = await (supabase as any).from('profiles').select('almacen_id, almacenes(nombre)').eq('id', usuarioId).maybeSingle();
       return data;
@@ -192,6 +208,42 @@ export default function ReporteDiarioRuta() {
   const totalDevUnidades = devLineas.reduce((s, d) => s + d.cantidad, 0);
   const totalDevCredito = devLineas.reduce((s, d) => s + d.monto_credito, 0);
 
+  // === Abonos a CRÉDITO PREVIO (ventas con fecha < inicio del rango) ===
+  // Detalla quién abonó a una venta a crédito anterior, monto aplicado, folio y fecha de la venta original.
+  type AbonoPrevio = {
+    cliente: string;
+    cobro_id: string;
+    metodo_pago: string;
+    referencia: string | null;
+    venta_folio: string;
+    venta_fecha: string;
+    monto_aplicado: number;
+    dias_atraso: number;
+  };
+  const abonosCreditoPrevio: AbonoPrevio[] = [];
+  (cobros || []).forEach((c: any) => {
+    (c.cobro_aplicaciones || []).forEach((ap: any) => {
+      const v = ap.ventas;
+      if (!v?.fecha) return;
+      // Sólo si la venta original es anterior al rango del reporte
+      if (v.fecha >= fechaInicio) return;
+      const dias = Math.max(0, Math.floor((new Date(c.fecha).getTime() - new Date(v.fecha).getTime()) / 86400000));
+      abonosCreditoPrevio.push({
+        cliente: c.clientes?.nombre || '—',
+        cobro_id: c.id,
+        metodo_pago: c.metodo_pago || 'efectivo',
+        referencia: c.referencia || null,
+        venta_folio: v.folio || '—',
+        venta_fecha: v.fecha,
+        monto_aplicado: Number(ap.monto_aplicado) || 0,
+        dias_atraso: dias,
+      });
+    });
+  });
+  abonosCreditoPrevio.sort((a, b) => b.dias_atraso - a.dias_atraso);
+  const totalAbonosPrevios = abonosCreditoPrevio.reduce((s, a) => s + a.monto_aplicado, 0);
+  const clientesQueAbonaron = new Set(abonosCreditoPrevio.map(a => a.cliente)).size;
+
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
     nombre: s.productos?.nombre || '—',
@@ -199,7 +251,9 @@ export default function ReporteDiarioRuta() {
     cantidad: Number(s.cantidad) || 0,
   })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
-  const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
+  const usuarioNombre = isAll
+    ? `Todos los usuarios (${(usuarios || []).length})`
+    : (usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '');
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
   const handleDownloadPdf = async () => {
@@ -250,6 +304,9 @@ export default function ReporteDiarioRuta() {
         visitasSinCompra: visitasSinCompra.map((v: any) => ({
           cliente: v.clientes?.nombre, motivo: v.motivo, notas: v.notas,
         })),
+        abonosCreditoPrevio: abonosCreditoPrevio.length > 0
+          ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
+          : undefined,
         stock: incluirStock && stockItems.length > 0
           ? { items: stockItems, almacenNombre: rptAlmacenNombre }
           : undefined,
@@ -370,6 +427,15 @@ export default function ReporteDiarioRuta() {
         ))
       : '';
 
+    // Abonos a crédito previo
+    const abonosHtml = abonosCreditoPrevio.length > 0
+      ? sec(`Abonos a crédito previo (${abonosCreditoPrevio.length}) — ${clientesQueAbonaron} cliente(s)`, makeTable(
+          ['Cliente', 'Venta', 'F. Venta', 'Días', 'Método', 'Ref.', 'Monto'],
+          abonosCreditoPrevio.map(a => [a.cliente, a.venta_folio, a.venta_fecha, String(a.dias_atraso), a.metodo_pago, a.referencia || '—', `${fmt(a.monto_aplicado)}`]),
+          ['', '', '', '', '', 'Total abonos', `${fmt(totalAbonosPrevios)}`]
+        ))
+      : '';
+
     // Resumen final
     const resumenRow = (label: string, value: string) => `<tr><td class="res-label">${label}</td><td class="res-value">${value}</td></tr>`;
     const resumenHtml = `<div class="section"><h2>Resumen del período</h2><table class="resumen">
@@ -382,6 +448,7 @@ export default function ReporteDiarioRuta() {
       ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
       ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
       ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${fmt(totalDevCredito)}`) : ''}
+      ${totalAbonosPrevios > 0 ? resumenRow('Abonos a crédito previo', `${fmt(totalAbonosPrevios)} (${clientesQueAbonaron} cli)`) : ''}
       <tr class="res-total"><td>Efectivo esperado</td><td>${fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
     </table></div>`;
 
@@ -454,6 +521,7 @@ export default function ReporteDiarioRuta() {
       ${gastosHtml}
       ${devsHtml}
       ${visitasHtml}
+      ${abonosHtml}
       ${resumenHtml}
       <div class="doc-footer">Este documento es una representación impresa. Generado por Rutapp · ${new Date().toLocaleString('es-MX')}</div>
     </body></html>`);
@@ -549,6 +617,13 @@ export default function ReporteDiarioRuta() {
               <div className="text-[9px] text-muted-foreground uppercase">Clientes visitados</div>
               <div className="text-lg font-bold text-foreground">{clientesVisitados.size}</div>
             </div>
+            {totalAbonosPrevios > 0 && (
+              <div className="bg-accent border border-border rounded-lg p-3 text-center">
+                <div className="text-[9px] text-muted-foreground uppercase font-semibold">Abonos crédito previo</div>
+                <div className="text-lg font-bold text-foreground">{fmt(totalAbonosPrevios)}</div>
+                <div className="text-[9px] text-muted-foreground">{clientesQueAbonaron} cliente(s) · {abonosCreditoPrevio.length} abono(s)</div>
+              </div>
+            )}
           </div>
 
           {/* Stock en almacén */}
@@ -830,7 +905,50 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
-          {/* Resumen final */}
+          {/* Abonos a crédito previo */}
+          {abonosCreditoPrevio.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <CreditCard className="h-3.5 w-3.5" /> Abonos a crédito previo ({abonosCreditoPrevio.length}) — {clientesQueAbonaron} cliente(s)
+              </h2>
+              <p className="text-[10px] text-muted-foreground mb-2">
+                Clientes con ventas a crédito anteriores al rango que abonaron en este período.
+              </p>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Venta</th>
+                    <th className="text-left py-1.5">F. Venta</th>
+                    <th className="text-right py-1.5">Días</th>
+                    <th className="text-left py-1.5">Método</th>
+                    <th className="text-left py-1.5">Ref.</th>
+                    <th className="text-right py-1.5">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {abonosCreditoPrevio.map((a, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1">{a.cliente}</td>
+                      <td className="py-1 font-mono">{a.venta_folio}</td>
+                      <td className="py-1 text-muted-foreground">{a.venta_fecha}</td>
+                      <td className="py-1 text-right font-semibold">{a.dias_atraso}</td>
+                      <td className="py-1 capitalize">{a.metodo_pago}</td>
+                      <td className="py-1 text-muted-foreground font-mono">{a.referencia || '—'}</td>
+                      <td className="py-1 text-right font-semibold">{fmt(a.monto_aplicado)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-bold">
+                    <td colSpan={6} className="py-1.5 text-right text-muted-foreground text-[10px]">Total abonos:</td>
+                    <td className="py-1.5 text-right">{fmt(totalAbonosPrevios)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
@@ -844,6 +962,9 @@ export default function ReporteDiarioRuta() {
               <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{totalDevUnidades} uds</span>
               {totalDevCredito > 0 && (
                 <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-{fmt(totalDevCredito)}</span></>
+              )}
+              {totalAbonosPrevios > 0 && (
+                <><span className="text-muted-foreground">Abonos crédito previo:</span><span className="text-right font-semibold">{fmt(totalAbonosPrevios)}</span></>
               )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>

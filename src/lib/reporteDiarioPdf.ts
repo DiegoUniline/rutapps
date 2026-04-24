@@ -45,6 +45,11 @@ export interface ReporteDiarioPdfData {
   gastos: { concepto?: string; notas?: string | null; monto: number }[];
   devoluciones: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[];
   visitasSinCompra: { cliente?: string; motivo?: string | null; notas?: string | null }[];
+  abonosCreditoPrevio?: {
+    items: { cliente: string; venta_folio: string; venta_fecha: string; metodo_pago: string; referencia: string | null; monto_aplicado: number; dias_atraso: number }[];
+    totalMonto: number;
+    clientesUnicos: number;
+  };
   stock?: { items: { codigo: string; nombre: string; cantidad: number }[]; almacenNombre: string };
 }
 
@@ -274,6 +279,25 @@ export async function generarReporteDiarioPdf(data: ReporteDiarioPdfData): Promi
     drawTable(
       ['Cliente', 'Motivo', 'Notas'],
       data.visitasSinCompra.map(v => [v.cliente ?? '—', v.motivo || '—', v.notas || '—']),
+    );
+  }
+
+  // ── Abonos a crédito previo ──
+  if (data.abonosCreditoPrevio && data.abonosCreditoPrevio.items.length > 0) {
+    const abp = data.abonosCreditoPrevio;
+    sectionTitle(`Abonos a crédito previo (${abp.items.length}) — ${abp.clientesUnicos} cliente(s)`);
+    drawTable(
+      ['Cliente', 'Venta', 'F. Venta', 'Días', 'Método', 'Ref.', 'Monto'],
+      abp.items.map(a => [
+        a.cliente,
+        a.venta_folio,
+        a.venta_fecha,
+        { content: String(a.dias_atraso), styles: { halign: 'right' } },
+        a.metodo_pago,
+        a.referencia || '—',
+        { content: fmt(a.monto_aplicado), styles: { halign: 'right' } },
+      ]),
+      ['', '', '', '', '', { content: 'Total abonos', styles: { halign: 'right' } }, { content: fmt(abp.totalMonto), styles: { halign: 'right' } }],
     );
   }
 
