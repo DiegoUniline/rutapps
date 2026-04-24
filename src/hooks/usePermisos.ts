@@ -275,16 +275,19 @@ export function usePermisos(): UsePermisosReturn {
 
   const hasRole = data?.hasRole ?? null;
   const permisos = data?.permisos ?? [];
+  const roleSoloMovil = data?.roleSoloMovil ?? false;
 
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
     // Owner always has full access and is never restricted
     if (isOwner) {
       return modulo === 'solo_movil' ? false : true;
     }
-    // 'solo_movil' is a restrictive flag — only true when explicitly granted
+    // 'solo_movil' is a restrictive flag — source of truth is roles.solo_movil column
     if (modulo === 'solo_movil') {
       if (hasRole === false) return false;
       if (hasRole === null) return false;
+      // Trust the roles table flag OR an explicit permission row (whichever is true)
+      if (roleSoloMovil) return true;
       const perm = permisos.find(p => p.modulo === 'solo_movil' && p.accion === accion);
       return perm?.permitido ?? false;
     }
@@ -293,7 +296,7 @@ export function usePermisos(): UsePermisosReturn {
     // Each module requires its own explicit permission — no parent fallback
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     return perm?.permitido ?? false;
-  }, [permisos, hasRole, isOwner]);
+  }, [permisos, hasRole, isOwner, roleSoloMovil]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
     if (!modulo) return true;
