@@ -64,14 +64,6 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
 
   if (!turno) return null;
 
-  const Row = ({ label, esperadoVal, val, onChange }: { label: string; esperadoVal: number; val: string; onChange: (v: string) => void }) => (
-    <div className="grid grid-cols-3 gap-2 items-center">
-      <Label className="text-sm">{label}</Label>
-      <div className="text-xs text-muted-foreground text-right">Esperado: <span className="font-medium text-foreground">{fmtMoney(esperadoVal)}</span></div>
-      <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
-    </div>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
