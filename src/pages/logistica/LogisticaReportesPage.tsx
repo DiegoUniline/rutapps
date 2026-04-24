@@ -21,14 +21,29 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
     queryKey: ['rep-productos-cargados', empresaId, desde, hasta, vendedorIds.join(',')],
     enabled: !!empresaId,
     queryFn: async () => {
-      const cargas = await fetchAllPages<any>((from, to) => {
+      // "Productos cargados" = productos movidos por el vendedor en su jornada (ventas confirmadas/entregadas).
+      // Sumamos venta_lineas y restamos devolucion_lineas del mismo período/vendedor.
+      const ventas = await fetchAllPages<any>((from, to) => {
         let q = supabase
-          .from('cargas')
-          .select('id, fecha, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))')
+          .from('ventas')
+          .select('id, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, productos(codigo, nombre))')
+          .eq('empresa_id', empresaId!)
+          .eq('es_saldo_inicial', false)
+          .neq('status', 'cancelado')
+          .gte('fecha', desde)
+          .lte('fecha', hasta)
+          .range(from, to);
+        if (vendedorIds.length > 0) q = q.in('vendedor_id', vendedorIds);
+        return q;
+      });
+
+      const devoluciones = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('devoluciones')
+          .select('id, fecha, vendedor_id, devolucion_lineas(producto_id, cantidad, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
           .eq('empresa_id', empresaId!)
           .gte('fecha', desde)
           .lte('fecha', hasta)
-          .order('fecha', { ascending: true })
           .range(from, to);
         if (vendedorIds.length > 0) q = q.in('vendedor_id', vendedorIds);
         return q;
@@ -36,43 +51,53 @@ function useProductosCargados(empresaId: string | undefined, desde: string, hast
 
       // Por vendedor → productos
       const byVendedor: Record<string, { vendedorId: string; vendedor: string; productos: Map<string, { codigo: string; nombre: string; cargado: number; vendido: number; devuelto: number }>; totalCargado: number; totalVendido: number; totalDevuelto: number }> = {};
-      // Consolidado global
       const consolidado = new Map<string, { codigo: string; nombre: string; cargado: number; vendido: number; devuelto: number }>();
 
-      for (const c of cargas) {
-        const vid = c.vendedor_id ?? 'sin';
-        const vname = (c.vendedores as any)?.nombre ?? 'Sin vendedor';
-        if (!byVendedor[vid]) {
-          byVendedor[vid] = { vendedorId: vid, vendedor: vname, productos: new Map(), totalCargado: 0, totalVendido: 0, totalDevuelto: 0 };
-        }
-        for (const l of (c.carga_lineas ?? []) as any[]) {
+      const ensureVendedor = (vid: string, vname: string) => {
+        if (!byVendedor[vid]) byVendedor[vid] = { vendedorId: vid, vendedor: vname, productos: new Map(), totalCargado: 0, totalVendido: 0, totalDevuelto: 0 };
+        return byVendedor[vid];
+      };
+      const ensureProd = (map: Map<string, any>, pid: string, codigo: string, nombre: string) => {
+        let p = map.get(pid);
+        if (!p) { p = { codigo, nombre, cargado: 0, vendido: 0, devuelto: 0 }; map.set(pid, p); }
+        return p;
+      };
+
+      // Vendido (también suma a "cargado" porque lo cargó para vender)
+      for (const v of ventas) {
+        const vid = v.vendedor_id ?? 'sin';
+        const vname = (v.vendedores as any)?.nombre ?? 'Sin vendedor';
+        const grp = ensureVendedor(vid, vname);
+        for (const l of (v.venta_lineas ?? []) as any[]) {
           const pid = l.producto_id;
           if (!pid) continue;
           const codigo = l.productos?.codigo ?? '';
           const nombre = l.productos?.nombre ?? '';
-          
-          const cant = Number(l.cantidad_cargada) || 0;
-          const vend = Number(l.cantidad_vendida) || 0;
-          const dev = Number(l.cantidad_devuelta) || 0;
+          const qty = Number(l.cantidad) || 0;
+          const pv = ensureProd(grp.productos, pid, codigo, nombre);
+          pv.vendido += qty; pv.cargado += qty;
+          grp.totalVendido += qty; grp.totalCargado += qty;
+          const pc = ensureProd(consolidado, pid, codigo, nombre);
+          pc.vendido += qty; pc.cargado += qty;
+        }
+      }
 
-          // por vendedor
-          const grp = byVendedor[vid].productos.get(pid);
-          if (grp) {
-            grp.cargado += cant; grp.vendido += vend; grp.devuelto += dev;
-          } else {
-            byVendedor[vid].productos.set(pid, { codigo, nombre, cargado: cant, vendido: vend, devuelto: dev });
-          }
-          byVendedor[vid].totalCargado += cant;
-          byVendedor[vid].totalVendido += vend;
-          byVendedor[vid].totalDevuelto += dev;
-
-          // consolidado
-          const cg = consolidado.get(pid);
-          if (cg) {
-            cg.cargado += cant; cg.vendido += vend; cg.devuelto += dev;
-          } else {
-            consolidado.set(pid, { codigo, nombre, cargado: cant, vendido: vend, devuelto: dev });
-          }
+      // Devuelto (también suma a "cargado" — lo llevaba pero regresó)
+      for (const d of devoluciones) {
+        const vid = d.vendedor_id ?? 'sin';
+        const grp = byVendedor[vid];
+        if (!grp) continue; // sólo si el vendedor ya tuvo ventas
+        for (const l of (d.devolucion_lineas ?? []) as any[]) {
+          const pid = l.producto_id;
+          if (!pid) continue;
+          const codigo = l.productos?.codigo ?? '';
+          const nombre = l.productos?.nombre ?? '';
+          const qty = Number(l.cantidad) || 0;
+          const pv = ensureProd(grp.productos, pid, codigo, nombre);
+          pv.devuelto += qty; pv.cargado += qty;
+          grp.totalDevuelto += qty; grp.totalCargado += qty;
+          const pc = ensureProd(consolidado, pid, codigo, nombre);
+          pc.devuelto += qty; pc.cargado += qty;
         }
       }
 
