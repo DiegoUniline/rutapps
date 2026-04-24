@@ -1240,11 +1240,11 @@ export default function PuntoVentaPage() {
                 </span>
               </button>
               <button
-                onClick={() => document.getElementById('pos-search')?.focus()}
-                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg bg-accent/40 active:bg-accent/70 transition-colors"
+                onClick={() => setShowMoreSheet(true)}
+                className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg active:bg-accent/60 transition-colors"
               >
-                <Search className="h-5 w-5 text-primary" />
-                <span className="text-[10px] font-semibold text-primary">Buscar</span>
+                <MoreHorizontal className="h-5 w-5 text-foreground" />
+                <span className="text-[10px] font-semibold text-foreground">Más</span>
               </button>
               <button
                 onClick={() => cart.length > 0 && setMobileView('cart')}
