@@ -208,6 +208,42 @@ export default function ReporteDiarioRuta() {
   const totalDevUnidades = devLineas.reduce((s, d) => s + d.cantidad, 0);
   const totalDevCredito = devLineas.reduce((s, d) => s + d.monto_credito, 0);
 
+  // === Abonos a CRÉDITO PREVIO (ventas con fecha < inicio del rango) ===
+  // Detalla quién abonó a una venta a crédito anterior, monto aplicado, folio y fecha de la venta original.
+  type AbonoPrevio = {
+    cliente: string;
+    cobro_id: string;
+    metodo_pago: string;
+    referencia: string | null;
+    venta_folio: string;
+    venta_fecha: string;
+    monto_aplicado: number;
+    dias_atraso: number;
+  };
+  const abonosCreditoPrevio: AbonoPrevio[] = [];
+  (cobros || []).forEach((c: any) => {
+    (c.cobro_aplicaciones || []).forEach((ap: any) => {
+      const v = ap.ventas;
+      if (!v?.fecha) return;
+      // Sólo si la venta original es anterior al rango del reporte
+      if (v.fecha >= fechaInicio) return;
+      const dias = Math.max(0, Math.floor((new Date(c.fecha).getTime() - new Date(v.fecha).getTime()) / 86400000));
+      abonosCreditoPrevio.push({
+        cliente: c.clientes?.nombre || '—',
+        cobro_id: c.id,
+        metodo_pago: c.metodo_pago || 'efectivo',
+        referencia: c.referencia || null,
+        venta_folio: v.folio || '—',
+        venta_fecha: v.fecha,
+        monto_aplicado: Number(ap.monto_aplicado) || 0,
+        dias_atraso: dias,
+      });
+    });
+  });
+  abonosCreditoPrevio.sort((a, b) => b.dias_atraso - a.dias_atraso);
+  const totalAbonosPrevios = abonosCreditoPrevio.reduce((s, a) => s + a.monto_aplicado, 0);
+  const clientesQueAbonaron = new Set(abonosCreditoPrevio.map(a => a.cliente)).size;
+
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
     nombre: s.productos?.nombre || '—',
@@ -215,7 +251,9 @@ export default function ReporteDiarioRuta() {
     cantidad: Number(s.cantidad) || 0,
   })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
-  const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
+  const usuarioNombre = isAll
+    ? `Todos los usuarios (${(usuarios || []).length})`
+    : (usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '');
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
   const handleDownloadPdf = async () => {
