@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
+import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 
 export default function RutaStock() {
   const { empresa, profile } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermiso, isOwner } = usePermisos();
+  const canViewPrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermiso('productos', 'ver');
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
   const [search, setSearch] = useState('');
+  const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
   const almacenId = profile?.almacen_id;
 
   const { data: productos, isLoading } = useOfflineQuery('productos', {
