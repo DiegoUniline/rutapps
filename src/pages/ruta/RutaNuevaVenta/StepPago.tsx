@@ -1,7 +1,7 @@
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate } from '@/lib/utils';
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2 } from 'lucide-react';
-import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea } from './types';
+import { fmtDate, cn } from '@/lib/utils';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock } from 'lucide-react';
+import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea, DescuentoExtraTipo } from './types';
 import { ACCIONES } from './types';
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
   setPagos: (fn: PagoLinea[] | ((prev: PagoLinea[]) => PagoLinea[])) => void;
   notas: string;
   setNotas: (v: string) => void;
-  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number };
+  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number; descuentoExtra?: number };
   totalACobrar: number;
   cambio: number;
   saving: boolean;
@@ -34,6 +34,14 @@ interface Props {
   handleSave: () => Promise<void>;
   navigate: (to: any) => void;
   fmt: (n: number) => string;
+  // Descuento extra
+  canApplyDiscount: boolean;
+  descuentoExtraTipo: DescuentoExtraTipo;
+  setDescuentoExtraTipo: (t: DescuentoExtraTipo) => void;
+  descuentoExtraValor: number;
+  setDescuentoExtraValor: (v: number) => void;
+  descuentoExtraMotivo: string;
+  setDescuentoExtraMotivo: (v: string) => void;
 }
 
 const METODOS = [
@@ -64,8 +72,10 @@ function getDynamicBills(total: number): { label: string; amount: number }[] {
 }
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
   const { symbol: s } = useCurrency();
+  const descExtraAmt = totals.descuentoExtra ?? 0;
+  const requiresMotivo = descExtraAmt > 0 && !descuentoExtraMotivo.trim();
 
   const descDevolucion = totals.descuentoDevolucion ?? 0;
   const descPromos = (totals.descuento ?? 0) - descDevolucion;
@@ -249,6 +259,59 @@ export function StepPago(props: Props) {
 
         <section className="bg-card rounded-lg p-3"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notas</p><textarea className="w-full bg-accent/40 rounded-md px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none" rows={2} placeholder="Instrucciones o comentarios..." value={notas} onChange={e => setNotas(e.target.value)} /></section>
 
+        {/* Descuento al total (gateado por permiso) */}
+        {canApplyDiscount ? (
+          <section className="bg-card rounded-lg p-3 border border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+              <Tag className="h-3 w-3" /> Descuento al total (opcional)
+            </p>
+            <div className="flex items-stretch gap-1.5 mb-2">
+              <div className="inline-flex bg-accent/40 rounded-md p-0.5">
+                <button type="button" onClick={() => setDescuentoExtraTipo('monto')}
+                  className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
+                    descuentoExtraTipo === 'monto' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
+                  <DollarSign className="h-3 w-3" /> {s}
+                </button>
+                <button type="button" onClick={() => setDescuentoExtraTipo('porcentaje')}
+                  className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
+                    descuentoExtraTipo === 'porcentaje' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
+                  <Percent className="h-3 w-3" /> %
+                </button>
+              </div>
+              <input type="number" inputMode="decimal" step="0.01" min="0"
+                max={descuentoExtraTipo === 'porcentaje' ? 100 : undefined}
+                value={descuentoExtraValor || ''}
+                onChange={(e) => setDescuentoExtraValor(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="0"
+                className="flex-1 bg-accent/40 rounded-md px-2.5 py-1.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 text-right tabular-nums"
+              />
+              {descuentoExtraValor > 0 && (
+                <button type="button" onClick={() => { setDescuentoExtraValor(0); setDescuentoExtraMotivo(''); }}
+                  className="px-2 text-[11px] text-muted-foreground hover:text-destructive">Quitar</button>
+              )}
+            </div>
+            {descExtraAmt > 0 && (
+              <>
+                <input type="text" value={descuentoExtraMotivo}
+                  onChange={(e) => setDescuentoExtraMotivo(e.target.value)}
+                  placeholder="Motivo del descuento (obligatorio)"
+                  maxLength={120}
+                  className={cn("w-full bg-accent/40 rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 transition-colors",
+                    requiresMotivo ? 'ring-1.5 ring-destructive/60 focus:ring-destructive/60' : 'focus:ring-primary/40')}
+                />
+                {requiresMotivo && <p className="text-[10px] text-destructive mt-1">⚠ Captura el motivo para continuar</p>}
+              </>
+            )}
+          </section>
+        ) : (
+          <section className="bg-muted/30 rounded-lg p-2.5 border border-dashed border-border flex items-center gap-2">
+            <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+            <p className="text-[10.5px] text-muted-foreground">
+              Para aplicar descuentos, pide a tu administrador el permiso <span className="font-semibold">"Aplicar descuento al total"</span>.
+            </p>
+          </section>
+        )}
+
         {/* Totals summary */}
         <section className="bg-card rounded-lg p-3">
           <div className="space-y-1">
@@ -258,6 +321,9 @@ export function StepPago(props: Props) {
             )}
             {descDevolucion > 0 && (
               <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{fmt(descDevolucion)}</span></div>
+            )}
+            {descExtraAmt > 0 && (
+              <div className="flex justify-between text-[11px]"><span className="text-rose-600 dark:text-rose-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Descuento {descuentoExtraTipo === 'porcentaje' ? `(${descuentoExtraValor}%)` : ''}</span><span className="font-medium text-rose-600 dark:text-rose-400 tabular-nums">-{fmt(descExtraAmt)}</span></div>
             )}
             {devoluciones.length > 0 && (
               <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
@@ -298,7 +364,7 @@ export function StepPago(props: Props) {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <div className="flex gap-2">
           <button onClick={() => navigate(-1)} className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito || (tipoVenta === 'venta_directa' && condicionPago === 'contado' && totalACobrar > 0 && totalPagos < totalACobrar - 0.01)} className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"><Save className="h-4 w-4" />{saving ? 'Guardando...' : 'Guardar'}</button>
+          <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito || requiresMotivo || (tipoVenta === 'venta_directa' && condicionPago === 'contado' && totalACobrar > 0 && totalPagos < totalACobrar - 0.01)} className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"><Save className="h-4 w-4" />{saving ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </div>
     </div>
