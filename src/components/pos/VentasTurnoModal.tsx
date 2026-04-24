@@ -106,6 +106,61 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
   const movs = movsQuery.data ?? [];
   const ventasPos = ventasPosQuery.data ?? [];
 
+  // Productos por venta (para búsqueda por nombre de producto)
+  const ventaIds = ventasPos.map(v => v.id);
+  const productosPorVentaQuery = useQuery({
+    queryKey: ['turno-ventas-pos-productos', turno?.id, ventaIds.join(',')],
+    enabled: enabled && ventaIds.length > 0,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const { data } = await supabase
+        .from('venta_lineas')
+        .select('venta_id, productos(nombre)')
+        .in('venta_id', ventaIds);
+      const map: Record<string, string[]> = {};
+      for (const l of (data ?? []) as any[]) {
+        const n = l.productos?.nombre;
+        if (!n) continue;
+        (map[l.venta_id] ??= []).push(n);
+      }
+      return map;
+    },
+  });
+
+  // Métodos de pago por venta (para búsqueda)
+  const metodosPorVentaQuery = useQuery({
+    queryKey: ['turno-ventas-pos-metodos', turno?.id, ventaIds.join(',')],
+    enabled: enabled && ventaIds.length > 0,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('venta_id, cobros(metodo_pago)')
+        .in('venta_id', ventaIds);
+      const map: Record<string, string[]> = {};
+      for (const a of (data ?? []) as any[]) {
+        const m = a.cobros?.metodo_pago;
+        if (!m) continue;
+        const arr = (map[a.venta_id] ??= []);
+        if (!arr.includes(m)) arr.push(m);
+      }
+      return map;
+    },
+  });
+
+  const productosMap = productosPorVentaQuery.data ?? {};
+  const metodosMap = metodosPorVentaQuery.data ?? {};
+
+  const ventasPosFiltradas = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return ventasPos;
+    return ventasPos.filter(v => {
+      const folio = (v.folio || '').toLowerCase();
+      const cli = (v.cliente?.nombre || '').toLowerCase();
+      const prods = (productosMap[v.id] || []).join(' ').toLowerCase();
+      const mets = (metodosMap[v.id] || []).join(' ').toLowerCase();
+      return folio.includes(s) || cli.includes(s) || prods.includes(s) || mets.includes(s);
+    });
+  }, [ventasPos, search, productosMap, metodosMap]);
+
   const totalVentas = ventasPos.filter(v => v.status !== 'cancelado').reduce((s, v) => s + Number(v.total || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
   const totalDepositos = movs.filter(m => m.tipo === 'deposito').reduce((s, m) => s + Number(m.monto || 0), 0);
