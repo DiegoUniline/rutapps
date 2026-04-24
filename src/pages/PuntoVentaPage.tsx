@@ -92,6 +92,13 @@ export default function PuntoVentaPage() {
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
   const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const [productView, setProductView] = useState<'cards' | 'table'>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('pos-product-view') : null;
+    return (saved === 'table' || saved === 'cards') ? saved : 'cards';
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('pos-product-view', productView);
+  }, [productView]);
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [payMode, setPayMode] = useState<PayMode>('efectivo');
   const [clienteCredito, setClienteCredito] = useState(false);
