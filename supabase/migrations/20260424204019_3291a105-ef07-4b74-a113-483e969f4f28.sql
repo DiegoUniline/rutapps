@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ALTER COLUMN pos_turnos_habilitado SET DEFAULT true;
