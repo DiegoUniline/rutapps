@@ -21,6 +21,7 @@ import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import FavoritesBar from '@/components/FavoritesBar';
+import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
@@ -184,6 +185,29 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
   }, []);
 }
 
+function FavStar({ path, label }: { path: string; label: string }) {
+  const { isFavorite, add, remove } = useFavorites();
+  const fav = isFavorite(path);
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fav) remove(path); else add({ path, label });
+      }}
+      className={cn(
+        "p-1 rounded transition-all shrink-0",
+        fav
+          ? "text-warning opacity-100"
+          : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-warning"
+      )}
+      title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+    >
+      <Star className="h-3 w-3" fill={fav ? 'currentColor' : 'none'} />
+    </button>
+  );
+}
+
 function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
   const location = useLocation();
   const basePath = item.path.split('?')[0];
@@ -201,31 +225,38 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
     };
     const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
-      <Link
-        to={item.path}
-        onClick={onNavigate}
-        className={cn(
-          "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
-          collapsed ? "justify-center px-2" : "",
-          isActive
-            ? hl
-              ? hl.active
-              : "bg-primary/10 text-primary font-semibold"
-            : hl
-              ? hl.idle
-              : item.accent
-                ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
+      <div className="group relative flex items-center">
+        <Link
+          to={item.path}
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all flex-1 min-w-0",
+            collapsed ? "justify-center px-2" : "",
+            isActive
+              ? hl
+                ? hl.active
+                : "bg-primary/10 text-primary font-semibold"
+              : hl
+                ? hl.idle
+                : item.accent
+                  ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
+          )}
+          title={collapsed ? item.label : undefined}
+        >
+          <item.icon className={cn(
+            "h-4 w-4 shrink-0",
+            item.accent && !isActive && "text-primary/70",
+            hl && !isActive && hl.icon
+          )} />
+          {!collapsed && <span className="truncate">{item.label}</span>}
+        </Link>
+        {!collapsed && item.path !== '/favoritos' && (
+          <div className="absolute right-2">
+            <FavStar path={item.path} label={item.label} />
+          </div>
         )}
-        title={collapsed ? item.label : undefined}
-      >
-        <item.icon className={cn(
-          "h-4 w-4 shrink-0",
-          item.accent && !isActive && "text-primary/70",
-          hl && !isActive && hl.icon
-        )} />
-        {!collapsed && <span>{item.label}</span>}
-      </Link>
+      </div>
     );
   }
 
@@ -258,19 +289,23 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
               (location.pathname + location.search === child.path) ||
               (child.path.includes('?tab=') && location.pathname === basePath && child.path.includes('tab=productos') && !location.search);
             return (
-              <Link
-                key={child.path}
-                to={child.path}
-                onClick={onNavigate}
-                className={cn(
-                  "block px-2.5 py-1.5 rounded-md text-[12px] transition-all",
-                  childActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
-                )}
-              >
-                {child.label}
-              </Link>
+              <div key={child.path} className="group relative flex items-center">
+                <Link
+                  to={child.path}
+                  onClick={onNavigate}
+                  className={cn(
+                    "block px-2.5 py-1.5 rounded-md text-[12px] transition-all flex-1 min-w-0 truncate pr-7",
+                    childActive
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
+                  )}
+                >
+                  {child.label}
+                </Link>
+                <div className="absolute right-1">
+                  <FavStar path={child.path} label={child.label} />
+                </div>
+              </div>
             );
           })}
         </div>
