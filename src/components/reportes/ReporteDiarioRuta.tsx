@@ -304,6 +304,9 @@ export default function ReporteDiarioRuta() {
         visitasSinCompra: visitasSinCompra.map((v: any) => ({
           cliente: v.clientes?.nombre, motivo: v.motivo, notas: v.notas,
         })),
+        abonosCreditoPrevio: abonosCreditoPrevio.length > 0
+          ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
+          : undefined,
         stock: incluirStock && stockItems.length > 0
           ? { items: stockItems, almacenNombre: rptAlmacenNombre }
           : undefined,
