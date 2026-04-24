@@ -80,7 +80,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
     queryKey: ['turno-ventas-pos', turno?.id],
     enabled,
     queryFn: async (): Promise<VentaPosRow[]> => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('ventas')
         .select('id, folio, total, status, created_at, cliente:clientes(nombre)')
         .eq('empresa_id', empresa!.id)
@@ -88,7 +88,7 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
         .eq('origen', 'pos')
         .gte('created_at', turno!.abierto_at)
         .order('created_at', { ascending: false });
-      return (data ?? []) as any;
+      return (data ?? []) as VentaPosRow[];
     },
   });
 
