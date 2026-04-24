@@ -270,7 +270,7 @@ export function StepPago(props: Props) {
                 <button type="button" onClick={() => setDescuentoExtraTipo('monto')}
                   className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
                     descuentoExtraTipo === 'monto' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
-                  <DollarSign className="h-3 w-3" /> {s}
+                  {s}
                 </button>
                 <button type="button" onClick={() => setDescuentoExtraTipo('porcentaje')}
                   className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
