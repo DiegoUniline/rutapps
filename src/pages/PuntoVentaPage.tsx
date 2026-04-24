@@ -3,7 +3,8 @@ import { todayInTimezone, cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse, Lock as LockIcon, LogOut,
+  LayoutGrid, List as ListIcon,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
