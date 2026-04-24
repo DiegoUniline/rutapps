@@ -24,6 +24,7 @@ export function useRoles() {
   const [roleDesc, setRoleDesc] = useState('');
   const [roleMovil, setRoleMovil] = useState(false);
   const [roleSoloMovil, setRoleSoloMovil] = useState(false);
+  const [roleSoloPos, setRoleSoloPos] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [rolesTab, setRolesTab] = useState<'activos' | 'inactivos'>('activos');
 
@@ -52,6 +53,7 @@ export function useRoles() {
     setRoleDesc('');
     setRoleMovil(false);
     setRoleSoloMovil(false);
+    setRoleSoloPos(false);
   }, []);
 
   const saveRoleWithSoloMovil = useCallback(async (reload: () => void) => {
@@ -61,8 +63,8 @@ export function useRoles() {
       const roleData = {
         nombre: roleName,
         descripcion: roleDesc || null,
-        acceso_ruta_movil: roleMovil || roleSoloMovil,
-        solo_movil: roleSoloMovil,
+        acceso_ruta_movil: roleSoloPos ? false : (roleMovil || roleSoloMovil),
+        solo_movil: roleSoloMovil && !roleSoloPos,
       };
       if (editingRole) {
         await supabase.from('roles').update(roleData).eq('id', editingRole.id);
@@ -70,7 +72,7 @@ export function useRoles() {
         const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, ...roleData }).select('id').single();
         roleId = data?.id;
       }
-      if (roleId && roleSoloMovil) {
+      if (roleId && roleSoloMovil && !roleSoloPos) {
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: true }).eq('id', existing.id);
@@ -83,12 +85,17 @@ export function useRoles() {
           await supabase.from('role_permisos').update({ permitido: false }).eq('id', existing.id);
         }
       }
+      // Solo Punto de Venta: limpiar todos los permisos y dejar solo pos.ver
+      if (roleId && roleSoloPos) {
+        await supabase.from('role_permisos').delete().eq('role_id', roleId);
+        await supabase.from('role_permisos').insert({ role_id: roleId, modulo: 'pos', accion: 'ver', permitido: true });
+      }
       toast.success('Rol guardado');
       resetRoleForm();
       reload();
       notifyPermisosChanged();
     } catch (e: any) { toast.error(e.message); }
-  }, [roleName, roleDesc, roleMovil, roleSoloMovil, editingRole, empresa?.id, permisos, resetRoleForm, notifyPermisosChanged]);
+  }, [roleName, roleDesc, roleMovil, roleSoloMovil, roleSoloPos, editingRole, empresa?.id, permisos, resetRoleForm, notifyPermisosChanged]);
 
   const toggleRoleActivo = useCallback(async (id: string, currentActivo: boolean, reload: () => void) => {
     const newVal = !currentActivo;
@@ -190,8 +197,12 @@ export function useRoles() {
     setRoleName(role.nombre);
     setRoleDesc(role.descripcion || '');
     setRoleMovil(role.acceso_ruta_movil);
-    const isSoloMovil = role.solo_movil || permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+    const rolePerms = permisos.filter(p => p.role_id === role.id && p.permitido);
+    const isSoloMovil = role.solo_movil || rolePerms.some(p => p.modulo === 'solo_movil' && p.accion === 'ver');
+    // Solo POS: tiene solo el permiso pos.ver y nada más
+    const isSoloPos = !isSoloMovil && rolePerms.length > 0 && rolePerms.every(p => p.modulo === 'pos') && rolePerms.some(p => p.modulo === 'pos' && p.accion === 'ver');
     setRoleSoloMovil(isSoloMovil);
+    setRoleSoloPos(isSoloPos);
     setShowRoleForm(true);
   }, [permisos]);
 
@@ -202,12 +213,14 @@ export function useRoles() {
     setRoleDesc('');
     setRoleMovil(false);
     setRoleSoloMovil(false);
+    setRoleSoloPos(false);
   }, []);
 
   return {
     roles, permisos, savingPermisos,
     editingRole, roleName, setRoleName, roleDesc, setRoleDesc,
     roleMovil, setRoleMovil, roleSoloMovil, setRoleSoloMovil,
+    roleSoloPos, setRoleSoloPos,
     showRoleForm, rolesTab, setRolesTab,
     loadRoles, resetRoleForm, saveRoleWithSoloMovil, toggleRoleActivo,
     togglePermiso, toggleAllGroup, toggleAllModule,

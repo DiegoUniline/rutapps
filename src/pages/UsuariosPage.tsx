@@ -72,6 +72,7 @@ export default function UsuariosPage() {
           roleDesc={rolesHook.roleDesc} setRoleDesc={rolesHook.setRoleDesc}
           roleMovil={rolesHook.roleMovil} setRoleMovil={rolesHook.setRoleMovil}
           roleSoloMovil={rolesHook.roleSoloMovil} setRoleSoloMovil={rolesHook.setRoleSoloMovil}
+          roleSoloPos={rolesHook.roleSoloPos} setRoleSoloPos={rolesHook.setRoleSoloPos}
           onNewRole={rolesHook.openNewRole}
           onCloseRoleForm={rolesHook.resetRoleForm}
           onSaveRole={() => rolesHook.saveRoleWithSoloMovil(reload)}
