@@ -1717,6 +1717,15 @@ export default function PuntoVentaPage() {
           </div>
         </div>
       )}
+
+      {/* Prompt to open shift when trying to charge without one */}
+      {showAbrirTurnoPrompt && (
+        <AbrirTurnoModalLazy open={showAbrirTurnoPrompt} onOpenChange={setShowAbrirTurnoPrompt} />
+      )}
     </div>
   );
 }
+
+// Lazy import to avoid circular load
+import { AbrirTurnoModal as AbrirTurnoModalLazy } from '@/components/pos/AbrirTurnoModal';
+
