@@ -24,6 +24,7 @@ export function useRoles() {
   const [roleDesc, setRoleDesc] = useState('');
   const [roleMovil, setRoleMovil] = useState(false);
   const [roleSoloMovil, setRoleSoloMovil] = useState(false);
+  const [roleSoloPos, setRoleSoloPos] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [rolesTab, setRolesTab] = useState<'activos' | 'inactivos'>('activos');
 
