@@ -466,7 +466,7 @@ function VentaExpanded({ ventaId, fmt }: { ventaId: string; fmt: (v: number | nu
                         <tr key={l.id} className="border-b border-border/30">
                           <td className="py-1.5">{l.productos?.nombre ?? '—'}</td>
                           <td className="py-1.5 text-right tabular-nums">{l.cantidad}</td>
-                          <td className="py-1.5 text-center text-muted-foreground">{l.productos?.unidad_granel || 'Pzs'}</td>
+                          <td className="py-1.5 text-center text-muted-foreground">{l.productos?.es_granel ? (l.productos?.unidad_granel || 'kg') : 'Pz'}</td>
                           <td className="py-1.5 text-right tabular-nums">{fmt(l.precio_unitario)}</td>
                           <td className="py-1.5 text-right tabular-nums text-muted-foreground">{(l.descuento_pct ?? 0) > 0 ? `${l.descuento_pct}%` : '—'}</td>
                           <td className="py-1.5 text-right tabular-nums">{fmt(l.iva_monto)}</td>
