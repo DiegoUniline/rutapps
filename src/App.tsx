@@ -408,6 +408,21 @@ function AppRoutes() {
     );
   }
 
+  // POS-only — user can only access /pos (kiosk mode)
+  if (isSoloPos) {
+    return (
+      <>
+        <SubscriptionBanner />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/pos" element={<PuntoVentaPage />} />
+            <Route path="*" element={<Navigate to="/pos" replace />} />
+          </Routes>
+        </Suspense>
+      </>
+    );
+  }
+
   return (
     <>
       <SubscriptionBanner />
