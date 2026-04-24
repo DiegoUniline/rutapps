@@ -55,7 +55,7 @@ type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
 
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
-  const { empresa, user, profile, overrideEmpresaId } = useAuth();
+  const { empresa, user, profile, overrideEmpresaId, signOut } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
