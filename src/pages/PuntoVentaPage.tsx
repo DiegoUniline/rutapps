@@ -1044,45 +1044,65 @@ export default function PuntoVentaPage() {
             </div>
           )}
 
-          {/* Category cards */}
-          {clasificaciones && clasificaciones.length > 0 && (
-            <div className="px-3 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto scrollbar-none">
-              <button
-                onClick={() => { setFilterClasificacion(null); setFilterMarca(null); }}
-                className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
-                  !filterClasificacion
-                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                    : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
-                }`}
-              >
-                Todos
-              </button>
-              {clasificaciones.map(c => {
-                const isActive = filterClasificacion === c.id;
-                const count = productos?.filter(p => p.clasificacion_id === c.id && (p.vender_sin_stock || (p.cantidad ?? 0) > 0)).length ?? 0;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setFilterClasificacion(isActive ? null : c.id)}
-                    className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
-                      isActive
-                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                        : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
-                    }`}
-                  >
-                    {c.nombre}
-                    <span className={`ml-1.5 text-[9px] font-medium ${isActive ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Category cards + view toggle */}
+          <div className="px-3 sm:px-4 pb-2 flex items-center gap-2">
+            {clasificaciones && clasificaciones.length > 0 && (
+              <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-none">
+                <button
+                  onClick={() => { setFilterClasificacion(null); setFilterMarca(null); }}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
+                    !filterClasificacion
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                      : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
+                  }`}
+                >
+                  Todos
+                </button>
+                {clasificaciones.map(c => {
+                  const isActive = filterClasificacion === c.id;
+                  const count = productos?.filter(p => p.clasificacion_id === c.id && (p.vender_sin_stock || (p.cantidad ?? 0) > 0)).length ?? 0;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setFilterClasificacion(isActive ? null : c.id)}
+                      className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
+                      }`}
+                    >
+                      {c.nombre}
+                      <span className={`ml-1.5 text-[9px] font-medium ${isActive ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!isMobile && (
+              <div className="shrink-0 inline-flex rounded-lg border border-border bg-card p-0.5">
+                <button
+                  onClick={() => setProductView('cards')}
+                  title="Ver como tarjetas"
+                  className={`p-1.5 rounded-md transition-colors ${productView === 'cards' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setProductView('table')}
+                  title="Ver como tabla"
+                  className={`p-1.5 rounded-md transition-colors ${productView === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}
+                >
+                  <ListIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Product list */}
           <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
-            {isMobile ? (
+            {(isMobile || productView === 'table') ? (
               <div className="border border-border rounded-lg overflow-hidden bg-card">
                 <table className="w-full text-[12px]">
                   <thead className="bg-accent/40 text-muted-foreground sticky top-0">
