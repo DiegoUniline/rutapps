@@ -1311,7 +1311,7 @@ export default function PuntoVentaPage() {
 
             {turnosEnabled && !turnoActivo && cart.length > 0 && (
               <div className="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-[12px] text-warning-foreground flex items-center gap-2">
-                <Lock className="h-3.5 w-3.5 text-warning shrink-0" />
+                <LockIcon className="h-3.5 w-3.5 text-warning shrink-0" />
                 <span>Debes <strong>abrir un turno</strong> antes de cobrar.</span>
               </div>
             )}
@@ -1344,7 +1344,7 @@ export default function PuntoVentaPage() {
             >
               {turnosEnabled && !turnoActivo ? (
                 <>
-                  <Lock className="h-5 w-5" />
+                  <LockIcon className="h-5 w-5" />
                   Abrir turno para cobrar
                 </>
               ) : (
