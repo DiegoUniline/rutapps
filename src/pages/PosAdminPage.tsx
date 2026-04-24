@@ -298,6 +298,7 @@ function MovimientosPanel({ empresaId, tipo }: { empresaId: string; tipo: 'depos
 }
 
 function VentasPosPanel({ empresaId }: { empresaId: string }) {
+  const { fmt: _fmt } = useCurrency();
   const q = useQuery({
     queryKey: ['pos-admin-ventas', empresaId],
     queryFn: async () => {
@@ -309,18 +310,44 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
         .order('created_at', { ascending: false })
         .limit(300);
       const rows = (data ?? []) as any[];
-      const userIds = Array.from(new Set([
-        ...rows.map(r => r.vendedor_id).filter(Boolean),
-        ...rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean),
-      ]));
-      const { data: profiles } = userIds.length
-        ? await supabase.from('profiles').select('user_id, nombre').in('user_id', userIds)
-        : { data: [] as any[] };
-      const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Vendedor_id refers to profiles.id; cajero_id refers to profiles.user_id
+      const vendedorIds = Array.from(new Set(rows.map(r => r.vendedor_id).filter(Boolean)));
+      const cajeroUserIds = Array.from(new Set(rows.map(r => r.caja_turnos?.cajero_id).filter(Boolean)));
+
+      const [profilesById, profilesByUserId] = await Promise.all([
+        vendedorIds.length
+          ? supabase.from('profiles').select('id, nombre').in('id', vendedorIds)
+          : Promise.resolve({ data: [] as any[] }),
+        cajeroUserIds.length
+          ? supabase.from('profiles').select('user_id, nombre').in('user_id', cajeroUserIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const vendMap = new Map((profilesById.data ?? []).map((p: any) => [p.id, p.nombre]));
+      const cajMap = new Map((profilesByUserId.data ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Métodos de pago: from cobros via cobro_aplicaciones
+      const ventaIds = rows.map(r => r.id);
+      let metodosMap = new Map<string, string[]>();
+      if (ventaIds.length) {
+        const { data: apps } = await supabase
+          .from('cobro_aplicaciones')
+          .select('venta_id, cobros(metodo_pago)')
+          .in('venta_id', ventaIds);
+        for (const a of (apps ?? []) as any[]) {
+          const m = a.cobros?.metodo_pago;
+          if (!m) continue;
+          const arr = metodosMap.get(a.venta_id) ?? [];
+          if (!arr.includes(m)) arr.push(m);
+          metodosMap.set(a.venta_id, arr);
+        }
+      }
+
       return rows.map(r => ({
         ...r,
-        vendedor_nombre: nameMap.get(r.vendedor_id) ?? '—',
-        cajero_nombre: nameMap.get(r.caja_turnos?.cajero_id) ?? '—',
+        vendedor_nombre: vendMap.get(r.vendedor_id) ?? '—',
+        cajero_nombre: cajMap.get(r.caja_turnos?.cajero_id) ?? '—',
+        metodos_pago: metodosMap.get(r.id) ?? [],
       }));
     },
   });
@@ -341,7 +368,8 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
               <th className="text-left px-3 py-2">Vendedor</th>
               <th className="text-left px-3 py-2">Caja</th>
               <th className="text-left px-3 py-2">Cajero</th>
-              <th className="text-left px-3 py-2">Pago</th>
+              <th className="text-left px-3 py-2">Condición</th>
+              <th className="text-left px-3 py-2">Métodos de pago</th>
               <th className="text-left px-3 py-2">Estado</th>
               <th className="text-right px-3 py-2">Total</th>
             </tr>
@@ -356,6 +384,15 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
                 <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
                 <td className="px-3 py-2 text-xs">{r.cajero_nombre}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.condicion_pago}</td>
+                <td className="px-3 py-2 text-xs">
+                  {r.metodos_pago.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {r.metodos_pago.map((m: string) => (
+                        <Badge key={m} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{m}</Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-muted-foreground">—</span>}
+                </td>
                 <td className="px-3 py-2"><Badge variant="outline" className="text-xs capitalize">{r.status}</Badge></td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">{_fmt(r.total)}</td>
               </tr>
