@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator } from 'lucide-react';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
@@ -18,6 +18,7 @@ import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncompletosTab';
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
 import AdminWaCampaignsTab from '@/components/admin/AdminWaCampaignsTab';
+import AdminPosTab from '@/components/admin/AdminPosTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
@@ -107,6 +108,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="campanas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Radio className="h-4 w-4" /> Campañas WA
               </TabsTrigger>
+              <TabsTrigger value="pos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Calculator className="h-4 w-4" /> Punto de Venta
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -121,6 +125,7 @@ export default function SuperAdminPage() {
             <TabsContent value="incompletos"><AdminRegistrosIncompletosTab /></TabsContent>
             <TabsContent value="cupones"><AdminCuponesTab /></TabsContent>
             <TabsContent value="campanas"><AdminWaCampaignsTab /></TabsContent>
+            <TabsContent value="pos"><AdminPosTab /></TabsContent>
           </Tabs>
         )}
       </div>
