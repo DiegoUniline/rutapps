@@ -72,8 +72,10 @@ function getDynamicBills(total: number): { label: string; amount: number }[] {
 }
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
   const { symbol: s } = useCurrency();
+  const descExtraAmt = totals.descuentoExtra ?? 0;
+  const requiresMotivo = descExtraAmt > 0 && !descuentoExtraMotivo.trim();
 
   const descDevolucion = totals.descuentoDevolucion ?? 0;
   const descPromos = (totals.descuento ?? 0) - descDevolucion;
