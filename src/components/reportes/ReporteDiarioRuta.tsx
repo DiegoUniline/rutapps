@@ -963,6 +963,9 @@ export default function ReporteDiarioRuta() {
               {totalDevCredito > 0 && (
                 <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-{fmt(totalDevCredito)}</span></>
               )}
+              {totalAbonosPrevios > 0 && (
+                <><span className="text-muted-foreground">Abonos crédito previo:</span><span className="text-right font-semibold">{fmt(totalAbonosPrevios)}</span></>
+              )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
                 <span>{fmt((cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
