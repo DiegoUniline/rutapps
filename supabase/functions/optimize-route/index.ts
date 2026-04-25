@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("empresa_id", profile.empresa_id)
-      .eq("activo", true);
+      .eq("estado", "activo");
     const baseQuota = (activeUsers ?? 0) * PER_USER_QUOTA;
 
     const { data: rechargeRows } = await supabase
