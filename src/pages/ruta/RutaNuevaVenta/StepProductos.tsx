@@ -174,8 +174,13 @@ export function StepProductos(props: Props) {
                 <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && addToCart(p)}>
                   <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                   <div className="flex items-center gap-1.5 mt-px">
-                    <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span><span className="text-[10px] text-muted-foreground">·</span>
-                    <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
+                    {tipoVenta !== 'pedido' && (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                        <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 mt-px">
                     <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
