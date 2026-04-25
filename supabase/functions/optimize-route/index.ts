@@ -415,29 +415,86 @@ Deno.serve(async (req) => {
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
         let orderedWp: Waypoint[] = r.waypoints;
-        let optMethod: "real_matrix" | "haversine" | "preserved" = "haversine";
+        let optMethod: "real_matrix" | "haversine" | "preserved" | "colonia_grouped" = "haversine";
         if (preserveOrder) {
           orderedWp = r.waypoints;
           optMethod = "preserved";
         } else {
-          // Intentar matriz REAL por calle si hay API key y la ruta es razonable
-          let usedReal = false;
-          if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
-            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
-            if (matrix) {
-              const n = r.waypoints.length + 1;
-              const nn = nearestNeighborOrderMatrix(n, matrix);
-              const optimized = twoOptImproveMatrix(matrix, nn);
-              orderedWp = optimized.map(idx => r.waypoints[idx]);
-              optMethod = "real_matrix";
-              usedReal = true;
+          // Detectar si los waypoints traen colonia → agrupar para no saltar entre colonias.
+          const withColonia = r.waypoints.filter(w => w.colonia && String(w.colonia).trim() !== "");
+          const useColoniaGrouping = withColonia.length >= Math.ceil(r.waypoints.length * 0.6) && r.waypoints.length >= 3;
+
+          if (useColoniaGrouping) {
+            // Agrupar por colonia (los sin colonia van a un bucket "__sin__")
+            const groups = new Map<string, Waypoint[]>();
+            for (const w of r.waypoints) {
+              const key = (w.colonia && String(w.colonia).trim()) || "__sin__";
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key)!.push(w);
             }
-          }
-          if (!usedReal) {
-            const nn = nearestNeighborOrder(r.origin, r.waypoints);
-            const optimized = twoOptImprove(r.origin, r.waypoints, nn);
-            orderedWp = optimized.map(idx => r.waypoints[idx]);
-            optMethod = "haversine";
+
+            // Centroide por colonia
+            const centroids = new Map<string, LatLng>();
+            for (const [k, list] of groups.entries()) {
+              const lat = list.reduce((s, p) => s + p.lat, 0) / list.length;
+              const lng = list.reduce((s, p) => s + p.lng, 0) / list.length;
+              centroids.set(k, { lat, lng });
+            }
+
+            // Orden de colonias por nearest neighbour desde el origen
+            const remaining = new Set(groups.keys());
+            const coloniaOrder: string[] = [];
+            let cursor: LatLng = r.origin;
+            while (remaining.size > 0) {
+              let bestKey: string | null = null;
+              let bestDist = Infinity;
+              for (const k of remaining) {
+                const d = haversine(cursor, centroids.get(k)!);
+                if (d < bestDist) { bestDist = d; bestKey = k; }
+              }
+              if (!bestKey) break;
+              coloniaOrder.push(bestKey);
+              remaining.delete(bestKey);
+              cursor = centroids.get(bestKey)!;
+            }
+
+            // Dentro de cada colonia: NN + 2-opt usando como origen la posición previa
+            const finalOrder: Waypoint[] = [];
+            let prev: LatLng = r.origin;
+            for (const k of coloniaOrder) {
+              const wps = groups.get(k)!;
+              if (wps.length === 1) {
+                finalOrder.push(wps[0]);
+                prev = wps[0];
+                continue;
+              }
+              const nn = nearestNeighborOrder(prev, wps);
+              const opt = twoOptImprove(prev, wps, nn);
+              for (const idx of opt) finalOrder.push(wps[idx]);
+              prev = wps[opt[opt.length - 1]];
+            }
+            orderedWp = finalOrder;
+            optMethod = "colonia_grouped";
+          } else {
+            // Intentar matriz REAL por calle si hay API key y la ruta es razonable
+            let usedReal = false;
+            if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
+              const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
+              if (matrix) {
+                const n = r.waypoints.length + 1;
+                const nn = nearestNeighborOrderMatrix(n, matrix);
+                const optimized = twoOptImproveMatrix(matrix, nn);
+                orderedWp = optimized.map(idx => r.waypoints[idx]);
+                optMethod = "real_matrix";
+                usedReal = true;
+              }
+            }
+            if (!usedReal) {
+              const nn = nearestNeighborOrder(r.origin, r.waypoints);
+              const optimized = twoOptImprove(r.origin, r.waypoints, nn);
+              orderedWp = optimized.map(idx => r.waypoints[idx]);
+              optMethod = "haversine";
+            }
           }
         }
         console.log(`Route ${r.key}: method=${optMethod}, stops=${r.waypoints.length}`);
