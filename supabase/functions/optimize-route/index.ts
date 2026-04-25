@@ -11,7 +11,7 @@ const MAX_WAYPOINTS_PER_REQUEST = 23; // Google Routes hard limit is 25 incl. or
 const REAL_MATRIX_MAX_STOPS = 60; // arriba de esto usamos Haversine para no disparar costo
 
 type LatLng = { lat: number; lng: number };
-type Waypoint = LatLng & { id: string };
+type Waypoint = LatLng & { id: string; colonia?: string | null };
 
 function haversine(a: LatLng, b: LatLng): number {
   const R = 6371000;
