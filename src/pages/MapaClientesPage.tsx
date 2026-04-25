@@ -457,7 +457,7 @@ export default function MapaClientesPage() {
         return {
           key: g.vendedor_id,
           origin: { lat: origin.lat, lng: origin.lng },
-          waypoints: g.clientes.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng })),
+          waypoints: g.clientes.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng, colonia: c.colonia ?? null })),
           _origin_full: origin,
           _vendedor_nombre: g.vendedor_nombre,
         };
