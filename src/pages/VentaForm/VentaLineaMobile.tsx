@@ -32,6 +32,14 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const lineData = l as any;
   const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
+  // Fallback to embedded snapshot from venta_lineas.productos when product is not in productosList
+  // (e.g. inactive/deleted products, or products outside the loaded catalog page)
+  const snapshotProd = lineData.productos;
+  const displayCodigo = prod?.codigo ?? snapshotProd?.codigo ?? '';
+  const displayNombre = prod?.nombre ?? snapshotProd?.nombre ?? '';
+  const displayLabel = displayCodigo || displayNombre
+    ? `${displayCodigo}${displayCodigo && displayNombre ? ' · ' : ''}${displayNombre}`
+    : '—';
 
   if (isEmpty && readOnly) return null;
 
@@ -41,13 +49,13 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
         <div className="flex-1 min-w-0">
           {readOnly ? (
             <>
-              <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
+              <div className="text-sm font-medium truncate">{displayLabel}</div>
               {prod?._stock != null && <div className="text-[10px] text-muted-foreground font-medium">Stock: {prod._stock}</div>}
             </>
           ) : (
             <ProductSearchInput
               products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
-              value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
+              value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : (snapshotProd ? `${snapshotProd.codigo ?? ''}${snapshotProd.codigo && snapshotProd.nombre ? ' · ' : ''}${snapshotProd.nombre ?? ''}` : undefined)}
               onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly}
             />
           )}
