@@ -39,8 +39,20 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterOwn) q = q.eq('vendedor_id', profileId!);
       if (search) {
-        const s = search.replace(/'/g, "''");
-        q = q.or(`folio.ilike.%${s}%,status.ilike.%${s}%,tipo.ilike.%${s}%,condicion_pago.ilike.%${s}%,clientes.nombre.ilike.%${s}%,vendedores.nombre.ilike.%${s}%`);
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [clientesRes, vendedoresRes, almacenesRes] = await Promise.all([
+          supabase.from('clientes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('profiles').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('almacenes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+        ]);
+        const clienteIds = (clientesRes.data ?? []).map((r: any) => r.id);
+        const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
+        const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [`folio.ilike.%${s}%`];
+        if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
+        if (vendedorIds.length) orParts.push(`vendedor_id.in.(${vendedorIds.join(',')})`);
+        if (almacenIds.length) orParts.push(`almacen_id.in.(${almacenIds.join(',')})`);
+        q = q.or(orParts.join(','));
       }
       if (statusFilter && statusFilter !== 'todos') {
         const arr = statusFilter.split(',');
@@ -118,8 +130,21 @@ export function useVentaLineasPaginated(
       if (dateTo) q = q.lte('ventas.fecha', dateTo);
 
       if (search) {
-        const s = search.replace(/'/g, "''");
-        q = q.or(`productos.nombre.ilike.%${s}%,productos.codigo.ilike.%${s}%,ventas.folio.ilike.%${s}%`);
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [productosRes, ventasRes] = await Promise.all([
+          supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
+          supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
+        ]);
+        const productoIds = (productosRes.data ?? []).map((r: any) => r.id);
+        const ventaIds = (ventasRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [];
+        if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
+        if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
+        if (orParts.length === 0) {
+          q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
+        } else {
+          q = q.or(orParts.join(','));
+        }
       }
 
       const { data, error, count } = await q;
