@@ -39,8 +39,20 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterOwn) q = q.eq('vendedor_id', profileId!);
       if (search) {
-        const s = search.replace(/'/g, "''");
-        q = q.or(`folio.ilike.%${s}%,status.ilike.%${s}%,tipo.ilike.%${s}%,condicion_pago.ilike.%${s}%,clientes.nombre.ilike.%${s}%,vendedores.nombre.ilike.%${s}%`);
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [clientesRes, vendedoresRes, almacenesRes] = await Promise.all([
+          supabase.from('clientes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('profiles').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+          supabase.from('almacenes').select('id').eq('empresa_id', empresa!.id).ilike('nombre', `%${s}%`).limit(500),
+        ]);
+        const clienteIds = (clientesRes.data ?? []).map((r: any) => r.id);
+        const vendedorIds = (vendedoresRes.data ?? []).map((r: any) => r.id);
+        const almacenIds = (almacenesRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [`folio.ilike.%${s}%`];
+        if (clienteIds.length) orParts.push(`cliente_id.in.(${clienteIds.join(',')})`);
+        if (vendedorIds.length) orParts.push(`vendedor_id.in.(${vendedorIds.join(',')})`);
+        if (almacenIds.length) orParts.push(`almacen_id.in.(${almacenIds.join(',')})`);
+        q = q.or(orParts.join(','));
       }
       if (statusFilter && statusFilter !== 'todos') {
         const arr = statusFilter.split(',');
