@@ -130,8 +130,21 @@ export function useVentaLineasPaginated(
       if (dateTo) q = q.lte('ventas.fecha', dateTo);
 
       if (search) {
-        const s = search.replace(/'/g, "''");
-        q = q.or(`productos.nombre.ilike.%${s}%,productos.codigo.ilike.%${s}%,ventas.folio.ilike.%${s}%`);
+        const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
+        const [productosRes, ventasRes] = await Promise.all([
+          supabase.from('productos').select('id').eq('empresa_id', empresa!.id).or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%`).limit(500),
+          supabase.from('ventas').select('id').eq('empresa_id', empresa!.id).ilike('folio', `%${s}%`).limit(500),
+        ]);
+        const productoIds = (productosRes.data ?? []).map((r: any) => r.id);
+        const ventaIds = (ventasRes.data ?? []).map((r: any) => r.id);
+        const orParts: string[] = [];
+        if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
+        if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
+        if (orParts.length === 0) {
+          q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
+        } else {
+          q = q.or(orParts.join(','));
+        }
       }
 
       const { data, error, count } = await q;
