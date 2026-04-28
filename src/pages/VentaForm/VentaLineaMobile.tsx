@@ -32,6 +32,14 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const lineData = l as any;
   const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
+  // Fallback to embedded snapshot from venta_lineas.productos when product is not in productosList
+  // (e.g. inactive/deleted products, or products outside the loaded catalog page)
+  const snapshotProd = lineData.productos;
+  const displayCodigo = prod?.codigo ?? snapshotProd?.codigo ?? '';
+  const displayNombre = prod?.nombre ?? snapshotProd?.nombre ?? '';
+  const displayLabel = displayCodigo || displayNombre
+    ? `${displayCodigo}${displayCodigo && displayNombre ? ' · ' : ''}${displayNombre}`
+    : '—';
 
   if (isEmpty && readOnly) return null;
 
