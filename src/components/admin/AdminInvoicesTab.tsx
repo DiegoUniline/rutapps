@@ -323,7 +323,7 @@ export default function AdminInvoicesTab() {
   });
 
   const totalCobrado = filtered
-    .filter(i => i.status === 'paid')
+    .filter(i => i.truly_paid ?? (i.status === 'paid'))
     .reduce((sum, i) => sum + (i.amount_paid || 0), 0) / 100;
 
   const empresaOptions = empresas.map(e => ({ value: e.id, label: `${e.nombre}${e.email ? ` (${e.email})` : ''}` }));
