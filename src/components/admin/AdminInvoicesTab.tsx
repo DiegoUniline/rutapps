@@ -310,10 +310,20 @@ export default function AdminInvoicesTab() {
     return <Badge variant={i.v}>{i.l}</Badge>;
   };
 
-  const filtered = invoices.filter(i =>
-    (i.customer_email || '').toLowerCase().includes(search.toLowerCase()) ||
-    (i.description || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = invoices.filter(i => {
+    const q = search.toLowerCase();
+    return (
+      (i.customer_email || '').toLowerCase().includes(q) ||
+      (i.empresa_nombre || '').toLowerCase().includes(q) ||
+      (i.customer_name || '').toLowerCase().includes(q) ||
+      (i.number || '').toLowerCase().includes(q) ||
+      (i.description || '').toLowerCase().includes(q)
+    );
+  });
+
+  const totalCobrado = filtered
+    .filter(i => i.status === 'paid')
+    .reduce((sum, i) => sum + (i.amount_paid || 0), 0) / 100;
 
   const empresaOptions = empresas.map(e => ({ value: e.id, label: `${e.nombre}${e.email ? ` (${e.email})` : ''}` }));
   const planOptions = plans.map(p => ({
