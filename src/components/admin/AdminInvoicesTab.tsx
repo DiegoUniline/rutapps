@@ -382,15 +382,20 @@ export default function AdminInvoicesTab() {
                   <TableHead>Folio</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Pagado</TableHead>
+                  <TableHead className="text-right">Saldo</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead className="w-32">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin facturas</TableCell></TableRow>
-                ) : filtered.map(inv => (
+                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Sin facturas</TableCell></TableRow>
+                ) : filtered.map(inv => {
+                  const remaining = typeof inv.amount_remaining === 'number' ? inv.amount_remaining : (inv.amount_due - (inv.amount_paid || 0));
+                  const isPaid = inv.truly_paid ?? (remaining === 0 && (inv.amount_paid || 0) > 0);
+                  return (
                   <TableRow key={inv.id}>
                     <TableCell className="text-sm">
                       {inv.empresa_nombre ? (
@@ -402,8 +407,10 @@ export default function AdminInvoicesTab() {
                     <TableCell className="text-sm text-muted-foreground">{inv.customer_email || inv.customer_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{inv.number || '—'}</TableCell>
                     <TableCell className="text-sm truncate max-w-[200px] text-muted-foreground">{inv.description}</TableCell>
-                    <TableCell>{statusBadge(inv.status || 'draft')}</TableCell>
-                    <TableCell className="font-semibold text-right">{fmtMXN((inv.status === 'paid' ? inv.amount_paid : inv.amount_due) / 100)}</TableCell>
+                    <TableCell>{statusBadge(isPaid ? 'paid' : (inv.status || 'draft'))}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtMXN(inv.amount_due / 100)}</TableCell>
+                    <TableCell className="text-right font-medium">{fmtMXN((inv.amount_paid || 0) / 100)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${remaining > 0 ? 'text-destructive' : 'text-primary'}`}>{fmtMXN(remaining / 100)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
