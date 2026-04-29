@@ -437,7 +437,8 @@ export default function AdminInvoicesTab() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
