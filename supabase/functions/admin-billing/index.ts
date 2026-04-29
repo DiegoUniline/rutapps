@@ -184,10 +184,30 @@ Deno.serve(async (req) => {
 
         // Resolution chain: metadata -> factura -> subscription customer -> empresa email
         let resolvedId: string | null = inv?.metadata?.empresa_id || null;
-        if (!resolvedId && inv.id && empresaByStripeInvoice[inv.id]) resolvedId = empresaByStripeInvoice[inv.id];
-        if (!resolvedId && custId && empresaByStripeCustomer[custId]) resolvedId = empresaByStripeCustomer[custId];
+        let matchedByDb = !!resolvedId;
+        if (!resolvedId && inv.id && empresaByStripeInvoice[inv.id]) {
+          resolvedId = empresaByStripeInvoice[inv.id]; matchedByDb = true;
+        }
+        if (!resolvedId && custId && empresaByStripeCustomer[custId]) {
+          resolvedId = empresaByStripeCustomer[custId]; matchedByDb = true;
+        }
         let empresa = resolvedId ? empresaById[resolvedId] : undefined;
         if (!empresa && custEmail) empresa = empresaByEmail[String(custEmail).toLowerCase()];
+
+        // Decide if this is a Rutapp invoice (only Rutapp must show):
+        // a) Linked in DB (metadata, facturas, subscriptions)
+        // b) Product matches RUTAPP_PRODUCT_IDS
+        // c) Description / lines / product name mention 'rutapp'
+        const lineDesc = (inv.lines?.data || [])
+          .map((l: any) => `${l?.description || ''} ${l?.price?.product?.name || ''} ${l?.plan?.nickname || ''}`)
+          .join(' ').toLowerCase();
+        const hasRutappText = lineDesc.includes('rutapp') || lineDesc.includes('rut app');
+        const hasRutappProduct = (inv.lines?.data || []).some((l: any) => {
+          const pid = getProductId(l?.price?.product);
+          return pid ? RUTAPP_PRODUCT_IDS.has(pid) : false;
+        });
+        const isRutapp = matchedByDb || hasRutappProduct || hasRutappText;
+        if (!isRutapp) return null;
 
         return {
           id: inv.id,
@@ -206,7 +226,7 @@ Deno.serve(async (req) => {
           empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
           description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
         };
-      });
+      }).filter((x): x is NonNullable<typeof x> => x !== null);
 
       // Sort by created desc
       mapped.sort((a, b) => (b.created || 0) - (a.created || 0));
