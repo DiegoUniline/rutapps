@@ -91,26 +91,86 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     if (action === "list_all_invoices") {
-      const invoices = await stripe.invoices.list({
-        limit: 100,
-        expand: ["data.lines.data.price"],
+      const statusFilter = url.searchParams.get("status") || "all"; // 'paid' | 'open' | 'all'
+
+      // Paginate through ALL invoices (Stripe caps each page at 100)
+      const allInvoices: any[] = [];
+      let starting_after: string | undefined = undefined;
+      for (let i = 0; i < 20; i++) { // safety cap: up to 2000 invoices
+        const params: any = {
+          limit: 100,
+          expand: ["data.lines.data.price", "data.customer"],
+        };
+        if (starting_after) params.starting_after = starting_after;
+        if (statusFilter !== "all") params.status = statusFilter;
+        const page = await stripe.invoices.list(params);
+        allInvoices.push(...page.data);
+        if (!page.has_more || page.data.length === 0) break;
+        starting_after = page.data[page.data.length - 1].id;
+      }
+
+      const rutappInvoices = allInvoices.filter(isRutappInvoice);
+
+      // Resolve empresa info: by metadata.empresa_id OR by customer email
+      const empresaIdsFromMeta = new Set<string>();
+      const emails = new Set<string>();
+      for (const inv of rutappInvoices) {
+        const eid = inv?.metadata?.empresa_id;
+        if (eid) empresaIdsFromMeta.add(eid);
+        const cust: any = inv.customer;
+        const email = (typeof cust === "object" && cust?.email) || inv.customer_email;
+        if (email) emails.add(String(email).toLowerCase());
+      }
+
+      // Fetch empresas by id
+      const empresaById: Record<string, { id: string; nombre: string; email: string | null }> = {};
+      if (empresaIdsFromMeta.size > 0) {
+        const { data: emps } = await supabase
+          .from("empresas")
+          .select("id, nombre, email")
+          .in("id", [...empresaIdsFromMeta]);
+        for (const e of emps || []) empresaById[e.id] = e as any;
+      }
+      // Fetch empresas by email (fallback for invoices without metadata)
+      const empresaByEmail: Record<string, { id: string; nombre: string; email: string | null }> = {};
+      if (emails.size > 0) {
+        const { data: empsByEmail } = await supabase
+          .from("empresas")
+          .select("id, nombre, email")
+          .in("email", [...emails]);
+        for (const e of empsByEmail || []) {
+          if (e.email) empresaByEmail[e.email.toLowerCase()] = e as any;
+        }
+      }
+
+      const mapped = rutappInvoices.map((inv) => {
+        const cust: any = inv.customer;
+        const custEmail = (typeof cust === "object" && cust?.email) || inv.customer_email || null;
+        const custName = (typeof cust === "object" && cust?.name) || null;
+        const eid = inv?.metadata?.empresa_id || null;
+        let empresa = eid ? empresaById[eid] : undefined;
+        if (!empresa && custEmail) empresa = empresaByEmail[String(custEmail).toLowerCase()];
+        return {
+          id: inv.id,
+          number: inv.number,
+          status: inv.status,
+          amount_due: inv.amount_due,
+          amount_paid: inv.amount_paid,
+          currency: inv.currency,
+          created: inv.created,
+          due_date: inv.due_date,
+          hosted_invoice_url: inv.hosted_invoice_url,
+          invoice_pdf: inv.invoice_pdf,
+          customer_email: custEmail,
+          customer_name: custName,
+          empresa_id: empresa?.id || eid || null,
+          empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
+          description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
+        };
       });
 
-      const rutappInvoices = invoices.data.filter(isRutappInvoice);
-      const mapped = rutappInvoices.map((inv) => ({
-        id: inv.id,
-        number: inv.number,
-        status: inv.status,
-        amount_due: inv.amount_due,
-        amount_paid: inv.amount_paid,
-        currency: inv.currency,
-        created: inv.created,
-        due_date: inv.due_date,
-        hosted_invoice_url: inv.hosted_invoice_url,
-        invoice_pdf: inv.invoice_pdf,
-        customer_email: inv.customer_email,
-        description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
-      }));
+      // Sort by created desc
+      mapped.sort((a, b) => (b.created || 0) - (a.created || 0));
 
       return new Response(JSON.stringify({ invoices: mapped }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
