@@ -157,7 +157,8 @@ Deno.serve(async (req) => {
           ? supabase.from("subscriptions").select("stripe_customer_id, empresa_id").in("stripe_customer_id", [...stripeCustomerIds])
           : Promise.resolve({ data: [] as any[] }),
         emailsArr.length > 0
-          ? supabase.from("empresas").select("id, nombre, email, owner_user_id").ilike("email", "%")
+          ? supabase.from("empresas").select("id, nombre, email, owner_user_id")
+              .or(emailsArr.map(e => `email.ilike.${e}`).join(","))
           : Promise.resolve({ data: [] as any[] }),
         ownerUserIds.length > 0
           ? supabase.from("empresas").select("id, nombre, email, owner_user_id").in("owner_user_id", ownerUserIds)
