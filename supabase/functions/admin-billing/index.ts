@@ -326,25 +326,60 @@ Deno.serve(async (req) => {
     }
 
     if (action === "dashboard_stats") {
-      const [balance, invoicesList, subsList] = await Promise.all([
+      // Paginate all invoices (Stripe limit 100 per page)
+      const allInvoices: any[] = [];
+      let startingAfter: string | undefined;
+      for (let i = 0; i < 20; i++) {
+        const params: any = { limit: 100, expand: ["data.lines.data.price"] };
+        if (startingAfter) params.starting_after = startingAfter;
+        const page = await stripe.invoices.list(params);
+        allInvoices.push(...page.data);
+        if (!page.has_more) break;
+        startingAfter = page.data[page.data.length - 1]?.id;
+      }
+
+      const [balance, subsList] = await Promise.all([
         stripe.balance.retrieve(),
-        stripe.invoices.list({ limit: 100, expand: ["data.lines.data.price"] }),
         stripe.subscriptions.list({ limit: 100, status: "all" }),
       ]);
 
-      const rutappInvoices = invoicesList.data.filter(isRutappInvoice);
+      // Same loose Rutapp criteria as list_all_invoices: text/product match OR DB link
+      const rutappInvoices = allInvoices.filter((inv) => {
+        if (inv?.metadata?.empresa_id) return true;
+        const lineDesc = (inv.lines?.data || [])
+          .map((l: any) => `${l?.description || ''} ${l?.price?.product?.name || ''} ${l?.plan?.nickname || ''}`)
+          .join(' ').toLowerCase();
+        if (lineDesc.includes('rutapp') || lineDesc.includes('rut app')) return true;
+        const hasProd = (inv.lines?.data || []).some((l: any) => {
+          const pid = getProductId(l?.price?.product);
+          return pid ? RUTAPP_PRODUCT_IDS.has(pid) : false;
+        });
+        return hasProd;
+      });
       const rutappSubs = subsList.data.filter(isRutappSubscription);
 
       const mxnBalance = balance.available.find((b) => b.currency === "mxn")?.amount || 0;
       const pendingMxn = balance.pending.find((b) => b.currency === "mxn")?.amount || 0;
 
+      // Truly paid: amount_remaining === 0 AND amount_paid > 0 (real $0 balance)
+      const trulyPaidInvs = rutappInvoices.filter((i) => {
+        const remaining = typeof i.amount_remaining === 'number' ? i.amount_remaining : (i.amount_due - (i.amount_paid || 0));
+        return remaining === 0 && (i.amount_paid || 0) > 0;
+      });
+
       const totalInvoiced = rutappInvoices.reduce((sum, inv) => sum + inv.amount_due, 0);
-      const totalPaid = rutappInvoices
-        .filter((i) => i.status === "paid")
-        .reduce((sum, inv) => sum + inv.amount_paid, 0);
+      const totalPaid = trulyPaidInvs.reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
+      const paidCount = trulyPaidInvs.length;
       const totalOpen = rutappInvoices
-        .filter((i) => i.status === "open")
-        .reduce((sum, inv) => sum + inv.amount_due, 0);
+        .filter((i) => {
+          const remaining = typeof i.amount_remaining === 'number' ? i.amount_remaining : (i.amount_due - (i.amount_paid || 0));
+          return remaining > 0 && i.status !== 'void' && i.status !== 'uncollectible' && i.status !== 'draft';
+        })
+        .reduce((sum, inv) => sum + (typeof inv.amount_remaining === 'number' ? inv.amount_remaining : inv.amount_due), 0);
+      const openCount = rutappInvoices.filter((i) => {
+        const remaining = typeof i.amount_remaining === 'number' ? i.amount_remaining : (i.amount_due - (i.amount_paid || 0));
+        return remaining > 0 && i.status !== 'void' && i.status !== 'uncollectible' && i.status !== 'draft';
+      }).length;
 
       const activeSubs = rutappSubs.filter(
         (s) => s.status === "active" || s.status === "trialing"
@@ -377,7 +412,9 @@ Deno.serve(async (req) => {
           balance_pending: pendingMxn,
           total_invoiced: totalInvoiced,
           total_paid: totalPaid,
+          paid_count: paidCount,
           total_open: totalOpen,
+          open_count: openCount,
           active_subscriptions: activeSubs,
           total_customers: customerIds.size,
           mrr,
