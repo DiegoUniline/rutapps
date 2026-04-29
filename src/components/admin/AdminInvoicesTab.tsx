@@ -21,7 +21,9 @@ interface AdminInvoice {
   id: string; number: string | null; status: string; amount_due: number; amount_paid: number;
   currency: string; created: number; due_date: number | null;
   hosted_invoice_url: string | null; invoice_pdf: string | null;
-  customer_email: string | null; description: string;
+  customer_email: string | null; customer_name?: string | null;
+  empresa_id?: string | null; empresa_nombre?: string | null;
+  description: string;
 }
 
 interface EmpresaOption {
