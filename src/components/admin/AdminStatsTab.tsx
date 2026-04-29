@@ -165,9 +165,9 @@ export default function AdminStatsTab() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Ingresos cobrados" value={fmt(stats.total_paid)} accent="success" />
+        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(stats.total_paid)} hint={stats.paid_count != null ? `${stats.paid_count} facturas pagadas` : undefined} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Facturas abiertas" value={fmt(stats.total_open)} accent="destructive" />
+        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(stats.total_open)} hint={stats.open_count != null ? `${stats.open_count} facturas pendientes` : undefined} accent="destructive" />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
