@@ -109,7 +109,11 @@ Deno.serve(async (req) => {
         starting_after = page.data[page.data.length - 1].id;
       }
 
-      const rutappInvoices = allInvoices.filter(isRutappInvoice);
+      // NOTE: We intentionally do NOT filter by isRutappInvoice here.
+      // The Stripe account is dedicated to Rutapp; older invoices created via
+      // Checkout/Customer Portal lack metadata.empresa_id, so filtering would
+      // exclude legitimate paid invoices. Show them all.
+      const rutappInvoices = allInvoices;
 
       // Resolve empresa info: by metadata.empresa_id OR by customer email
       const empresaIdsFromMeta = new Set<string>();
