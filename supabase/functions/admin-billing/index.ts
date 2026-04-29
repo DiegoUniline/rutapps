@@ -230,12 +230,20 @@ Deno.serve(async (req) => {
         const isRutapp = matchedByDb || hasRutappProduct || hasRutappText;
         if (!isRutapp) return null;
 
+        // Real payment status: amount_remaining === 0 AND amount_paid > 0 means truly paid
+        const amountRemaining = typeof inv.amount_remaining === 'number' ? inv.amount_remaining : (inv.amount_due - (inv.amount_paid || 0));
+        const trulyPaid = amountRemaining === 0 && (inv.amount_paid || 0) > 0;
+        const realStatus = trulyPaid ? 'paid' : (inv.status || 'open');
+
         return {
           id: inv.id,
           number: inv.number,
-          status: inv.status,
+          status: realStatus,
+          stripe_status: inv.status,
           amount_due: inv.amount_due,
           amount_paid: inv.amount_paid,
+          amount_remaining: amountRemaining,
+          truly_paid: trulyPaid,
           currency: inv.currency,
           created: inv.created,
           due_date: inv.due_date,
