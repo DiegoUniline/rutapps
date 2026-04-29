@@ -336,14 +336,34 @@ export default function AdminInvoicesTab() {
     <>
       <Card className="border border-border/60 shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" /> Facturas ({invoices.length})
-            </CardTitle>
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" /> Facturas ({filtered.length})
+              </CardTitle>
+              {statusFilter === 'paid' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total cobrado: <span className="font-semibold text-foreground">{fmtMXN(totalCobrado)}</span>
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
+                {(['paid', 'open', 'all'] as const).map(s => (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant={statusFilter === s ? 'default' : 'ghost'}
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setStatusFilter(s)}
+                  >
+                    {s === 'paid' ? 'Pagadas' : s === 'open' ? 'Pendientes' : 'Todas'}
+                  </Button>
+                ))}
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-64" />
+                <Input placeholder="Buscar empresa, email, folio..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-72" />
               </div>
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4 mr-1.5" /> Nueva factura
@@ -356,23 +376,33 @@ export default function AdminInvoicesTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Cliente (Stripe)</TableHead>
+                  <TableHead>Folio</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Monto</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead className="w-32">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin facturas</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin facturas</TableCell></TableRow>
                 ) : filtered.map(inv => (
                   <TableRow key={inv.id}>
-                    <TableCell className="text-sm">{inv.customer_email || '—'}</TableCell>
+                    <TableCell className="text-sm">
+                      {inv.empresa_nombre ? (
+                        <span className="font-medium text-foreground">{inv.empresa_nombre}</span>
+                      ) : (
+                        <span className="text-muted-foreground italic">Sin asociar</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{inv.customer_email || inv.customer_name || '—'}</TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">{inv.number || '—'}</TableCell>
                     <TableCell className="text-sm truncate max-w-[200px] text-muted-foreground">{inv.description}</TableCell>
                     <TableCell>{statusBadge(inv.status || 'draft')}</TableCell>
-                    <TableCell className="font-medium">{fmtMXN(inv.amount_due / 100)}</TableCell>
+                    <TableCell className="font-semibold text-right">{fmtMXN((inv.status === 'paid' ? inv.amount_paid : inv.amount_due) / 100)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -388,12 +418,12 @@ export default function AdminInvoicesTab() {
                         )}
                         {inv.hosted_invoice_url && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a>
+                            <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" title="Ver en Stripe"><ExternalLink className="h-3.5 w-3.5" /></a>
                           </Button>
                         )}
                         {inv.invoice_pdf && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer"><Download className="h-3.5 w-3.5" /></a>
+                            <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer" title="Descargar PDF"><Download className="h-3.5 w-3.5" /></a>
                           </Button>
                         )}
                       </div>
