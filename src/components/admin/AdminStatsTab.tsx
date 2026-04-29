@@ -8,8 +8,8 @@ import { es } from 'date-fns/locale';
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
-  total_paid: number; total_open: number; active_subscriptions: number;
-  total_customers: number; mrr: number;
+  total_paid: number; paid_count?: number; total_open: number; open_count?: number;
+  active_subscriptions: number; total_customers: number; mrr: number;
 }
 
 interface FacturamaPlan {
@@ -165,9 +165,9 @@ export default function AdminStatsTab() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Ingresos cobrados" value={fmt(stats.total_paid)} accent="success" />
+        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(stats.total_paid)} hint={stats.paid_count != null ? `${stats.paid_count} facturas pagadas` : undefined} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Facturas abiertas" value={fmt(stats.total_open)} accent="destructive" />
+        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(stats.total_open)} hint={stats.open_count != null ? `${stats.open_count} facturas pendientes` : undefined} accent="destructive" />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -311,8 +311,8 @@ export default function AdminStatsTab() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, accent }: {
-  icon: any; label: string; value: string; accent: 'primary' | 'success' | 'destructive' | 'muted';
+function StatCard({ icon: Icon, label, value, hint, accent }: {
+  icon: any; label: string; value: string; hint?: string; accent: 'primary' | 'success' | 'destructive' | 'muted';
 }) {
   const accentMap = {
     primary: 'text-primary bg-primary/10',
@@ -332,6 +332,7 @@ function StatCard({ icon: Icon, label, value, accent }: {
           <div>
             <div className="text-xl font-bold text-foreground">{value}</div>
             <div className="text-xs text-muted-foreground">{label}</div>
+            {hint && <div className="text-[10px] text-muted-foreground/80 mt-0.5">{hint}</div>}
           </div>
         </div>
       </CardContent>
