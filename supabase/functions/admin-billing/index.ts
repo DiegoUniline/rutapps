@@ -115,45 +115,80 @@ Deno.serve(async (req) => {
       // exclude legitimate paid invoices. Show them all.
       const rutappInvoices = allInvoices;
 
-      // Resolve empresa info: by metadata.empresa_id OR by customer email
+      // Resolve empresa info via 4 strategies (in priority order):
+      // 1. metadata.empresa_id on the invoice
+      // 2. facturas.stripe_invoice_id -> empresa_id
+      // 3. subscriptions.stripe_customer_id -> empresa_id
+      // 4. empresas.email matches customer email
       const empresaIdsFromMeta = new Set<string>();
+      const stripeInvoiceIds = new Set<string>();
+      const stripeCustomerIds = new Set<string>();
       const emails = new Set<string>();
       for (const inv of rutappInvoices) {
         const eid = inv?.metadata?.empresa_id;
         if (eid) empresaIdsFromMeta.add(eid);
+        if (inv.id) stripeInvoiceIds.add(inv.id);
         const cust: any = inv.customer;
+        const custId = typeof cust === "string" ? cust : cust?.id;
+        if (custId) stripeCustomerIds.add(custId);
         const email = (typeof cust === "object" && cust?.email) || inv.customer_email;
         if (email) emails.add(String(email).toLowerCase());
       }
 
-      // Fetch empresas by id
+      const [empsByMetaRes, facturasRes, subsRes, empsByEmailRes] = await Promise.all([
+        empresaIdsFromMeta.size > 0
+          ? supabase.from("empresas").select("id, nombre, email").in("id", [...empresaIdsFromMeta])
+          : Promise.resolve({ data: [] as any[] }),
+        stripeInvoiceIds.size > 0
+          ? supabase.from("facturas").select("stripe_invoice_id, empresa_id").in("stripe_invoice_id", [...stripeInvoiceIds])
+          : Promise.resolve({ data: [] as any[] }),
+        stripeCustomerIds.size > 0
+          ? supabase.from("subscriptions").select("stripe_customer_id, empresa_id").in("stripe_customer_id", [...stripeCustomerIds])
+          : Promise.resolve({ data: [] as any[] }),
+        emails.size > 0
+          ? supabase.from("empresas").select("id, nombre, email").in("email", [...emails])
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const allEmpresaIds = new Set<string>();
+      for (const e of (empsByMetaRes.data || [])) if (e.id) allEmpresaIds.add(e.id);
+      for (const f of (facturasRes.data || [])) if (f.empresa_id) allEmpresaIds.add(f.empresa_id);
+      for (const s of (subsRes.data || [])) if (s.empresa_id) allEmpresaIds.add(s.empresa_id);
+
+      const { data: allEmpresas } = allEmpresaIds.size > 0
+        ? await supabase.from("empresas").select("id, nombre, email").in("id", [...allEmpresaIds])
+        : { data: [] as any[] };
+
       const empresaById: Record<string, { id: string; nombre: string; email: string | null }> = {};
-      if (empresaIdsFromMeta.size > 0) {
-        const { data: emps } = await supabase
-          .from("empresas")
-          .select("id, nombre, email")
-          .in("id", [...empresaIdsFromMeta]);
-        for (const e of emps || []) empresaById[e.id] = e as any;
+      for (const e of (allEmpresas || [])) empresaById[e.id] = e as any;
+      for (const e of (empsByEmailRes.data || [])) empresaById[e.id] = e as any;
+
+      const empresaByStripeInvoice: Record<string, string> = {};
+      for (const f of (facturasRes.data || [])) {
+        if (f.stripe_invoice_id && f.empresa_id) empresaByStripeInvoice[f.stripe_invoice_id] = f.empresa_id;
       }
-      // Fetch empresas by email (fallback for invoices without metadata)
+      const empresaByStripeCustomer: Record<string, string> = {};
+      for (const s of (subsRes.data || [])) {
+        if (s.stripe_customer_id && s.empresa_id) empresaByStripeCustomer[s.stripe_customer_id] = s.empresa_id;
+      }
       const empresaByEmail: Record<string, { id: string; nombre: string; email: string | null }> = {};
-      if (emails.size > 0) {
-        const { data: empsByEmail } = await supabase
-          .from("empresas")
-          .select("id, nombre, email")
-          .in("email", [...emails]);
-        for (const e of empsByEmail || []) {
-          if (e.email) empresaByEmail[e.email.toLowerCase()] = e as any;
-        }
+      for (const e of (empsByEmailRes.data || [])) {
+        if (e.email) empresaByEmail[e.email.toLowerCase()] = e as any;
       }
 
       const mapped = rutappInvoices.map((inv) => {
         const cust: any = inv.customer;
+        const custId = typeof cust === "string" ? cust : cust?.id;
         const custEmail = (typeof cust === "object" && cust?.email) || inv.customer_email || null;
         const custName = (typeof cust === "object" && cust?.name) || null;
-        const eid = inv?.metadata?.empresa_id || null;
-        let empresa = eid ? empresaById[eid] : undefined;
+
+        // Resolution chain: metadata -> factura -> subscription customer -> empresa email
+        let resolvedId: string | null = inv?.metadata?.empresa_id || null;
+        if (!resolvedId && inv.id && empresaByStripeInvoice[inv.id]) resolvedId = empresaByStripeInvoice[inv.id];
+        if (!resolvedId && custId && empresaByStripeCustomer[custId]) resolvedId = empresaByStripeCustomer[custId];
+        let empresa = resolvedId ? empresaById[resolvedId] : undefined;
         if (!empresa && custEmail) empresa = empresaByEmail[String(custEmail).toLowerCase()];
+
         return {
           id: inv.id,
           number: inv.number,
@@ -167,7 +202,7 @@ Deno.serve(async (req) => {
           invoice_pdf: inv.invoice_pdf,
           customer_email: custEmail,
           customer_name: custName,
-          empresa_id: empresa?.id || eid || null,
+          empresa_id: empresa?.id || resolvedId || null,
           empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
           description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
         };
