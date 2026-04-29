@@ -111,7 +111,7 @@ export default function AdminInvoicesTab() {
     enviar_whatsapp: true,
   });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [statusFilter]);
 
   async function load() {
     setLoading(true);
@@ -121,7 +121,7 @@ export default function AdminInvoicesTab() {
           const session = await supabase.auth.getSession();
           const token = session.data.session?.access_token;
           const res = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices`,
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=${statusFilter}`,
             { headers: { 'Authorization': `Bearer ${token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
           );
           return await res.json();
