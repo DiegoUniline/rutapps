@@ -8,8 +8,8 @@ import { es } from 'date-fns/locale';
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
-  total_paid: number; total_open: number; active_subscriptions: number;
-  total_customers: number; mrr: number;
+  total_paid: number; paid_count?: number; total_open: number; open_count?: number;
+  active_subscriptions: number; total_customers: number; mrr: number;
 }
 
 interface FacturamaPlan {
