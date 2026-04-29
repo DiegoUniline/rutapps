@@ -19,6 +19,7 @@ import { es } from 'date-fns/locale';
 
 interface AdminInvoice {
   id: string; number: string | null; status: string; amount_due: number; amount_paid: number;
+  amount_remaining?: number; truly_paid?: boolean; stripe_status?: string;
   currency: string; created: number; due_date: number | null;
   hosted_invoice_url: string | null; invoice_pdf: string | null;
   customer_email: string | null; customer_name?: string | null;
