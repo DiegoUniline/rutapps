@@ -311,8 +311,8 @@ export default function AdminStatsTab() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, accent }: {
-  icon: any; label: string; value: string; accent: 'primary' | 'success' | 'destructive' | 'muted';
+function StatCard({ icon: Icon, label, value, hint, accent }: {
+  icon: any; label: string; value: string; hint?: string; accent: 'primary' | 'success' | 'destructive' | 'muted';
 }) {
   const accentMap = {
     primary: 'text-primary bg-primary/10',
@@ -332,6 +332,7 @@ function StatCard({ icon: Icon, label, value, accent }: {
           <div>
             <div className="text-xl font-bold text-foreground">{value}</div>
             <div className="text-xs text-muted-foreground">{label}</div>
+            {hint && <div className="text-[10px] text-muted-foreground/80 mt-0.5">{hint}</div>}
           </div>
         </div>
       </CardContent>
