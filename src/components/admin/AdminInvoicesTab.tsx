@@ -82,6 +82,7 @@ export default function AdminInvoicesTab() {
   const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'paid' | 'open' | 'all'>('paid');
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
