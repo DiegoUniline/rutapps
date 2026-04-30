@@ -552,11 +552,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   />
                 </div>
                 <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 safe-area-bottom">
-                  <div className="px-2 py-2 mb-1">
+                  <Link
+                    to="/perfil"
+                    onClick={closeMobile}
+                    className="block px-2 py-2 mb-1 rounded-md hover:bg-sidebar-hover transition-colors"
+                  >
                     <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
                     <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
                     <div className="text-[10px] text-sidebar-foreground/40 truncate mt-0.5">v{APP_VERSION} · {APP_BUILD_DATE}</div>
-                  </div>
+                  </Link>
                   <div className="flex gap-0.5">
                     <button
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -687,11 +691,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="border-t border-sidebar-border/30 p-2.5">
           {!collapsed && (
-            <div className="px-2 py-2 mb-1">
+            <Link
+              to="/perfil"
+              className="block px-2 py-2 mb-1 rounded-md hover:bg-sidebar-hover transition-colors"
+              title="Mi perfil"
+            >
               <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
               <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
               <div className="text-[10px] text-sidebar-foreground/40 truncate mt-0.5">v{APP_VERSION} · {APP_BUILD_DATE}</div>
-            </div>
+            </Link>
           )}
           <div className={cn("flex gap-0.5", collapsed ? "flex-col items-center" : "")}>
             <button
