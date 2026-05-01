@@ -50,19 +50,111 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
+    // Helper: count active users for the empresa
+    async function countActiveUsers(): Promise<number> {
+      const { count } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", profile.empresa_id)
+        .eq("estado", "activo");
+      return count || 0;
+    }
+
+    /* ─── Preview quantity change (no side effects) ─── */
+    if (action === "preview_quantity") {
+      const qty = parseInt(new_quantity);
+      if (!qty || qty < 3) throw new Error("Mínimo 3 usuarios");
+
+      const currentQty = sub.max_usuarios || 3;
+      const activeUsers = await countActiveUsers();
+      const isUpgrade = qty > currentQty;
+      const isDowngrade = qty < currentQty;
+
+      // Block downgrade if active users > target
+      if (isDowngrade && activeUsers > qty) {
+        return new Response(JSON.stringify({
+          success: false,
+          can_apply: false,
+          reason: "too_many_active_users",
+          active_users: activeUsers,
+          required_to_deactivate: activeUsers - qty,
+          message: `Tienes ${activeUsers} usuarios activos. Desactiva al menos ${activeUsers - qty} antes de bajar a ${qty}.`,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      let preview: any = {
+        success: true,
+        can_apply: true,
+        current_qty: currentQty,
+        new_qty: qty,
+        active_users: activeUsers,
+        is_upgrade: isUpgrade,
+        is_downgrade: isDowngrade,
+      };
+
+      if (sub.stripe_subscription_id) {
+        const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+        const itemId = stripeSub.items.data[0]?.id;
+        if (itemId) {
+          // Use Stripe upcoming invoice preview to compute prorated charge/credit
+          try {
+            const upcoming = await stripe.invoices.createPreview({
+              subscription: sub.stripe_subscription_id,
+              subscription_details: {
+                items: [{ id: itemId, quantity: qty }],
+                proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
+              },
+            });
+            // Sum proration line items (immediate effect)
+            const prorationLines = (upcoming.lines?.data || []).filter((l: any) => l.proration);
+            const prorationTotal = prorationLines.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+            preview.proration_amount = prorationTotal / 100; // major units
+            preview.next_invoice_total = (upcoming.amount_due || upcoming.total || 0) / 100;
+            preview.currency = upcoming.currency?.toUpperCase() || "MXN";
+            preview.period_end = stripeSub.items.data[0]?.current_period_end
+              ? new Date(stripeSub.items.data[0].current_period_end * 1000).toISOString()
+              : null;
+          } catch (e) {
+            console.error("Preview error:", e);
+            preview.preview_error = (e as Error).message;
+          }
+        }
+      }
+
+      return new Response(JSON.stringify(preview), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     /* ─── Update quantity ─── */
     if (action === "update_quantity") {
       const qty = parseInt(new_quantity);
       if (!qty || qty < 3) throw new Error("Mínimo 3 usuarios");
+
+      const currentQty = sub.max_usuarios || 3;
+      const activeUsers = await countActiveUsers();
+      const isUpgrade = qty > currentQty;
+      const isDowngrade = qty < currentQty;
+
+      // Block downgrade if active users > target
+      if (isDowngrade && activeUsers > qty) {
+        return new Response(JSON.stringify({
+          error: `Tienes ${activeUsers} usuarios activos. Desactiva al menos ${activeUsers - qty} antes de bajar a ${qty}.`,
+          code: "too_many_active_users",
+          active_users: activeUsers,
+        }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
       if (sub.stripe_subscription_id) {
         const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
         const itemId = stripeSub.items.data[0]?.id;
         if (!itemId) throw new Error("No subscription item found");
 
+        // Upgrade => always_invoice (charge immediately).
+        // Downgrade => create_prorations (credit accrues for next invoice, no refund).
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
           items: [{ id: itemId, quantity: qty }],
-          proration_behavior: "create_prorations",
+          proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
         });
       }
 
@@ -71,7 +163,12 @@ Deno.serve(async (req) => {
         .update({ max_usuarios: qty, updated_at: new Date().toISOString() })
         .eq("id", sub.id);
 
-      return new Response(JSON.stringify({ success: true, max_usuarios: qty }), {
+      return new Response(JSON.stringify({
+        success: true,
+        max_usuarios: qty,
+        is_upgrade: isUpgrade,
+        is_downgrade: isDowngrade,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
