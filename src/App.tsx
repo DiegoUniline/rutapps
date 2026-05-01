@@ -185,6 +185,9 @@ const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPa
 function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
   const subscription = useSubscription();
+  const facturaPendiente = useFacturaPendiente();
+  // Bloqueo combinado: suscripción suspendida O factura pendiente vencida
+  const isBlockedTotal = subscription.isBlocked || (!subscription.isSuperAdmin && facturaPendiente.shouldBlock);
   
   const { hasPermiso, loading: permisosLoading } = usePermisos();
   
