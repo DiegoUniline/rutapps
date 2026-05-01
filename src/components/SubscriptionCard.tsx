@@ -99,8 +99,38 @@ export default function SubscriptionCard() {
     }
   }
 
+  // ─── Preview state ───
+  const [preview, setPreview] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Auto-fetch preview when qty changes (debounced)
+  useEffect(() => {
+    if (!showUsers) { setPreview(null); return; }
+    const currentQty = subData?.max_usuarios || 3;
+    if (newQty === currentQty) { setPreview(null); return; }
+    let cancelled = false;
+    setPreviewLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke('manage-subscription', {
+          body: { action: 'preview_quantity', new_quantity: newQty },
+        });
+        if (!cancelled) setPreview(data);
+      } catch {
+        if (!cancelled) setPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [newQty, showUsers, subData?.max_usuarios]);
+
   // ─── Update Users ───
   async function handleUpdateUsers() {
+    if (preview && preview.can_apply === false) {
+      toast.error(preview.message || 'No se puede aplicar el cambio');
+      return;
+    }
     setSavingUsers(true);
     try {
       const { data, error } = await supabase.functions.invoke('manage-subscription', {
@@ -108,8 +138,15 @@ export default function SubscriptionCard() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`Límite actualizado a ${newQty} usuarios`);
+      toast.success(
+        data?.is_upgrade
+          ? `Plan ampliado a ${newQty} usuarios. Se generó factura prorrateada.`
+          : data?.is_downgrade
+            ? `Plan reducido a ${newQty} usuarios. El crédito se aplicará en tu próxima factura.`
+            : `Límite actualizado a ${newQty} usuarios`
+      );
       setShowUsers(false);
+      setPreview(null);
       loadData();
     } catch (e: any) {
       toast.error(e.message);
@@ -308,7 +345,7 @@ export default function SubscriptionCard() {
           <DialogHeader>
             <DialogTitle>Cambiar cantidad de usuarios</DialogTitle>
             <DialogDescription>
-              Se prorrateará el cobro de hoy al día 30 ({remainingDays} días).
+              Subir usuarios genera factura prorrateada inmediata. Bajar aplica crédito a tu próxima factura (sin reembolsos).
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center gap-4 py-4">
@@ -324,11 +361,48 @@ export default function SubscriptionCard() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center">Mínimo 3 usuarios</p>
+
+          {/* Preview */}
+          {previewLoading && (
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Calculando…
+            </div>
+          )}
+          {!previewLoading && preview && preview.can_apply === false && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm space-y-1">
+              <p className="font-semibold text-destructive">No puedes bajar a {newQty} usuarios</p>
+              <p className="text-foreground">
+                Tienes <strong>{preview.active_users}</strong> usuarios activos. Desactiva al menos{' '}
+                <strong>{preview.required_to_deactivate}</strong> primero desde el módulo de usuarios.
+              </p>
+            </div>
+          )}
+          {!previewLoading && preview && preview.can_apply !== false && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1.5">
+              {preview.is_upgrade ? (
+                <>
+                  <p className="font-semibold text-primary">Cobro inmediato prorrateado</p>
+                  <div className="flex justify-between"><span>Cargo hoy:</span><strong>${(preview.proration_amount ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 2 })} {preview.currency || 'MXN'}</strong></div>
+                  <p className="text-xs text-muted-foreground">Se generará una factura por la diferencia hasta el cierre de tu ciclo actual. Tu próxima factura mensual incluirá los {newQty} usuarios completos.</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-primary">Crédito a próxima factura</p>
+                  <div className="flex justify-between"><span>Crédito acumulado:</span><strong className="text-emerald-600">${Math.abs(preview.proration_amount ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 2 })} {preview.currency || 'MXN'}</strong></div>
+                  <p className="text-xs text-muted-foreground">Sin reembolsos. Este monto se descuenta automáticamente en tu próxima factura mensual.</p>
+                </>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUsers(false)}>Cancelar</Button>
-            <Button onClick={handleUpdateUsers} disabled={savingUsers || newQty === (subData?.max_usuarios || 3)}>
+            <Button
+              onClick={handleUpdateUsers}
+              disabled={savingUsers || newQty === (subData?.max_usuarios || 3) || (preview?.can_apply === false)}
+            >
               {savingUsers && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              Actualizar
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>
