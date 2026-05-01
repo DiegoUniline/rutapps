@@ -29,8 +29,13 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2025-08-27.basil" });
 
-    // 1. Void the wrong invoice
-    const voided = await stripe.invoices.voidInvoice(WRONG_INVOICE);
+    // 1. Void the wrong invoice (skip if already voided)
+    let voided: any = { id: WRONG_INVOICE, status: "already_void" };
+    try {
+      voided = await stripe.invoices.voidInvoice(WRONG_INVOICE);
+    } catch (e: any) {
+      console.log("[skip void]", e.message);
+    }
 
     // 2. Create a fresh draft invoice (manual, NOT tied to subscription cycle so it doesn't pull prorations)
     const newInvoice = await stripe.invoices.create({
