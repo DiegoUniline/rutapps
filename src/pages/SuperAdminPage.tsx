@@ -112,6 +112,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="pos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Calculator className="h-4 w-4" /> Punto de Venta
               </TabsTrigger>
+              <TabsTrigger value="inactivos" className="gap-1.5 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
+                <ShieldAlert className="h-4 w-4" /> Inactivos
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
