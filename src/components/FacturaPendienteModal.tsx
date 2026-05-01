@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CreditCard, Clock } from 'lucide-react';
 import { useFacturaPendiente } from '@/hooks/useFacturaPendiente';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney } from '@/lib/currency';
 
 const SNOOZE_KEY = 'factura_pendiente_snooze';
 const SNOOZE_HOURS = 12;
