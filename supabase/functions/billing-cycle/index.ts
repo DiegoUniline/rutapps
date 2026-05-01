@@ -64,6 +64,7 @@ async function scheduleNextRetry(supabase: any, retry: any, errorMsg: string, no
     ultimo_error: errorMsg,
   });
   log("Next retry scheduled", { facturaId: retry.factura_id, intento: nextNum, fecha: next.toISOString().slice(0, 10) });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
