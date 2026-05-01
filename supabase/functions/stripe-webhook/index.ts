@@ -334,12 +334,24 @@ Deno.serve(async (req) => {
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
-          // Update factura
+          // Update factura — match by stripe_invoice_id (set by invoice.finalized handler)
           if (invoice.id) {
-            await supabase.from("facturas")
-              .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
-              .eq("empresa_id", sub.empresa_id)
-              .eq("estado", "procesando");
+            const { data: existingFac } = await supabase
+              .from("facturas")
+              .select("id")
+              .eq("stripe_invoice_id", invoice.id)
+              .maybeSingle();
+            if (existingFac) {
+              await supabase.from("facturas")
+                .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
+                .eq("id", existingFac.id);
+            } else {
+              // Fallback: invoice paid before finalize webhook arrived (rare). Update by procesando.
+              await supabase.from("facturas")
+                .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
+                .eq("empresa_id", sub.empresa_id)
+                .in("estado", ["procesando", "pendiente"]);
+            }
           }
 
           // WhatsApp — always show 1st of next month
