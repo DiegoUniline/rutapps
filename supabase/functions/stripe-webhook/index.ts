@@ -220,6 +220,17 @@ Deno.serve(async (req) => {
         const periodStart = (item0 as any)?.current_period_start ?? (stripeSub as any).current_period_start;
         const periodEnd = (item0 as any)?.current_period_end ?? (stripeSub as any).current_period_end;
 
+        // Resolve our internal plan_id from the Stripe price_id
+        let planId: string | null = null;
+        if (priceId) {
+          const { data: planRow } = await supabase
+            .from("subscription_plans")
+            .select("id")
+            .eq("stripe_price_id", priceId)
+            .maybeSingle();
+          planId = planRow?.id ?? null;
+        }
+
         const updateData: Record<string, any> = {
           status: "active",
           stripe_customer_id: customerId,
@@ -227,6 +238,7 @@ Deno.serve(async (req) => {
           max_usuarios: qty,
           updated_at: new Date().toISOString(),
         };
+        if (planId) updateData.plan_id = planId;
         if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
         if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
