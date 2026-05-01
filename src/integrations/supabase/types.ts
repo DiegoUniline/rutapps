@@ -4459,12 +4459,14 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          acceso_bloqueado: boolean
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           descuento_porcentaje: number | null
           empresa_id: string
           es_manual: boolean | null
+          fecha_vencimiento: string | null
           id: string
           max_usuarios: number
           plan_id: string | null
@@ -4472,15 +4474,18 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           trial_ends_at: string | null
+          ultimo_checkout_session_id: string | null
           updated_at: string
         }
         Insert: {
+          acceso_bloqueado?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           descuento_porcentaje?: number | null
           empresa_id: string
           es_manual?: boolean | null
+          fecha_vencimiento?: string | null
           id?: string
           max_usuarios?: number
           plan_id?: string | null
@@ -4488,15 +4493,18 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           trial_ends_at?: string | null
+          ultimo_checkout_session_id?: string | null
           updated_at?: string
         }
         Update: {
+          acceso_bloqueado?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           descuento_porcentaje?: number | null
           empresa_id?: string
           es_manual?: boolean | null
+          fecha_vencimiento?: string | null
           id?: string
           max_usuarios?: number
           plan_id?: string | null
@@ -4504,6 +4512,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           trial_ends_at?: string | null
+          ultimo_checkout_session_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6163,6 +6172,7 @@ export type Database = {
           usuarios_activos: number
         }[]
       }
+      has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
