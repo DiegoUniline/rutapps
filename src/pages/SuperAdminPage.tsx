@@ -130,6 +130,7 @@ export default function SuperAdminPage() {
             <TabsContent value="cupones"><AdminCuponesTab /></TabsContent>
             <TabsContent value="campanas"><AdminWaCampaignsTab /></TabsContent>
             <TabsContent value="pos"><AdminPosTab /></TabsContent>
+            <TabsContent value="inactivos"><AdminInactivosTab /></TabsContent>
           </Tabs>
         )}
       </div>
