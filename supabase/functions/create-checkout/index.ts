@@ -82,16 +82,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Get the price amount from Stripe
-      try {
-        const stripePrice = await stripe.prices.retrieve(price_id);
-        monthlyPriceCentavos = stripePrice.unit_amount || 0;
-      } catch {
-        monthlyPriceCentavos = 30000; // fallback: $300 MXN
+      // Get the price amount + currency from Stripe (source of truth)
+      const stripePrice = await stripe.prices.retrieve(price_id);
+      monthlyPriceCentavos = stripePrice.unit_amount || 0;
+      var planCurrency: string = stripePrice.currency || "mxn";
+      if (monthlyPriceCentavos <= 0) {
+        throw new Error(`Stripe price ${price_id} returned unit_amount=0. Configuración de plan inválida.`);
       }
+    } else {
+      throw new Error("empresa_id requerido");
     }
 
-    log("Grace check", { daysSinceExpiry, isWithinGrace, monthlyPriceCentavos });
+    log("Grace check", { daysSinceExpiry, isWithinGrace, monthlyPriceCentavos, planCurrency });
 
     // ─── Calculate billing ───
     // POLICY:
@@ -99,8 +101,9 @@ Deno.serve(async (req) => {
     // - Día 5+ (fuera de gracia, suspendido): solo días de uso (3 gracia + hoy → fin de mes)
     // - Próximo 1° del mes: ciclo normal vuelve a cobrar mes completo
     //
-    // Implementación: usamos proration_behavior="none" en la sub (Stripe NO añade prorrateo)
-    // y emitimos un único invoiceItem con el monto exacto a cobrar este primer periodo.
+    // Implementación: la suscripción recurrente tiene billing_cycle_anchor en el próximo día 1°
+    // y proration_behavior="none" => Stripe NO cobra nada por el ítem recurrente HOY.
+    // El primer cobro se hace mediante un Price one-shot inline añadido como segundo line_item.
     const now = new Date();
     const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -112,29 +115,25 @@ Deno.serve(async (req) => {
     let firstChargeDescription = "";
 
     if (isWithinGrace) {
-      // Mes completo
       firstChargeCentavos = monthlyPriceCentavos * quantity;
       firstChargeDescription = `Suscripción mes completo (1 al ${daysInMonth})`;
     } else {
-      // 3 días de gracia + desde hoy hasta fin de mes
       const billedDays = GRACE_DAYS + daysFromTodayToEndOfMonth;
       firstChargeCentavos = dailyRateCentavos * billedDays * quantity;
       firstChargeDescription = `Reactivación: ${GRACE_DAYS} días de gracia + uso del día ${dayOfMonth} al ${daysInMonth} (${billedDays} días)`;
     }
 
-    // Build add_invoice_items entry to charge first period IMMEDIATELY at checkout
-    let firstPeriodInvoiceItem: any = null;
-    if (firstChargeCentavos > 0 && monthlyPriceCentavos > 0) {
-      // Create an inline one-shot price in MXN so it shows up in the Checkout session
+    // Create an inline one-shot Price (no recurring) in the plan's own currency.
+    // Stripe Checkout will sum it with the recurring line_item and charge it NOW.
+    let firstPeriodLineItem: any = null;
+    if (firstChargeCentavos > 0) {
       const oneShotPrice = await stripe.prices.create({
-        currency: "mxn",
+        currency: planCurrency,
         unit_amount: Math.round(firstChargeCentavos / quantity),
-        product_data: {
-          name: firstChargeDescription,
-        },
+        product_data: { name: firstChargeDescription },
       });
-      firstPeriodInvoiceItem = { price: oneShotPrice.id, quantity };
-      log("Created first-period inline price", { priceId: oneShotPrice.id, firstChargeCentavos, quantity });
+      firstPeriodLineItem = { price: oneShotPrice.id, quantity };
+      log("Created first-period inline price", { priceId: oneShotPrice.id, firstChargeCentavos, quantity, planCurrency });
     }
 
     // ─── Check for empresa discount (base + coupon) ───
@@ -228,17 +227,18 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
+    const lineItems: any[] = [{ price: price_id, quantity }];
+    if (firstPeriodLineItem) lineItems.push(firstPeriodLineItem);
+
     const sessionParams: any = {
       customer: customerId,
-      customer_update: { address: "auto", name: "auto" },
-      line_items: [{ price: price_id, quantity }],
+      line_items: lineItems,
       mode: "subscription",
-      currency: "mxn",
       subscription_data: {
         billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        proration_behavior: "none",
+        // proration_behavior is incompatible with one-time line_items in Checkout;
+        // we instead use billing_cycle_anchor + a one-shot line_item to charge the first period.
         metadata: { empresa_id: empresa_id || "" },
-        ...(firstPeriodInvoiceItem ? { add_invoice_items: [firstPeriodInvoiceItem] } : {}),
       },
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/dashboard?checkout=cancelled`,
