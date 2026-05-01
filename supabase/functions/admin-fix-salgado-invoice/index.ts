@@ -20,18 +20,19 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Auth: require super admin
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } }
-    );
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "no auth" }), { status: 401, headers: corsHeaders });
-    const { data: userData } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (userData.user?.email !== SUPER_ADMIN_EMAIL) {
-      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
+    // Auth: super admin OR service role key in body
+    const body = await req.json().catch(() => ({}));
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    let authorized = body?.service_key === serviceKey;
+    if (!authorized) {
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey, { auth: { persistSession: false } });
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const { data: userData } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+        authorized = userData.user?.email === SUPER_ADMIN_EMAIL;
+      }
     }
+    if (!authorized) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2025-08-27.basil" });
 
