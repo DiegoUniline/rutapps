@@ -337,6 +337,19 @@ Deno.serve(async (req) => {
 
         if (sub) {
           const stripeQty = item0?.quantity;
+          const priceId = item0?.price?.id;
+
+          // Resolve plan_id from Stripe price_id (in case it wasn't set during checkout)
+          let planId: string | null = null;
+          if (priceId) {
+            const { data: planRow } = await supabase
+              .from("subscription_plans")
+              .select("id")
+              .eq("stripe_price_id", priceId)
+              .maybeSingle();
+            planId = planRow?.id ?? null;
+          }
+
           const updateData: Record<string, any> = {
             status: "active",
             updated_at: new Date().toISOString(),
@@ -345,6 +358,7 @@ Deno.serve(async (req) => {
           if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
           // Sync quantity from Stripe — ensures upgrades only take effect after payment confirms.
           if (stripeQty && stripeQty > 0) updateData.max_usuarios = stripeQty;
+          if (planId) updateData.plan_id = planId;
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
