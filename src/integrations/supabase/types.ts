@@ -1489,6 +1489,56 @@ export type Database = {
           },
         ]
       }
+      cobro_reintentos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          estado: string
+          factura_id: string
+          id: string
+          intento_num: number
+          procesado_at: string | null
+          proxima_fecha: string
+          stripe_invoice_id: string | null
+          ultimo_error: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          estado?: string
+          factura_id: string
+          id?: string
+          intento_num: number
+          procesado_at?: string | null
+          proxima_fecha: string
+          stripe_invoice_id?: string | null
+          ultimo_error?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          estado?: string
+          factura_id?: string
+          id?: string
+          intento_num?: number
+          procesado_at?: string | null
+          proxima_fecha?: string
+          stripe_invoice_id?: string | null
+          ultimo_error?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobro_reintentos_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cobros: {
         Row: {
           cliente_id: string
