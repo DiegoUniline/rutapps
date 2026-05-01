@@ -51,9 +51,9 @@ Deno.serve(async (req) => {
     await stripe.invoiceItems.create({
       customer: CUSTOMER,
       invoice: newInvoice.id,
-      price: PRICE,
+      pricing: { price: PRICE },
       quantity: QUANTITY,
-    });
+    } as any);
 
     // 4. Finalize it so it gets a hosted_invoice_url
     const finalized = await stripe.invoices.finalizeInvoice(newInvoice.id!, { auto_advance: false });
