@@ -44,7 +44,12 @@ Deno.serve(async (req) => {
       limit: 50,
     });
 
-    const mapped = invoices.data.map((inv) => ({
+    // Excluir facturas anuladas (void), borradores y pagos incompletos sin cobro
+    const visible = invoices.data.filter(
+      (inv) => inv.status !== "void" && inv.status !== "draft"
+    );
+
+    const mapped = visible.map((inv) => ({
       id: inv.id,
       number: inv.number,
       status: inv.status,
