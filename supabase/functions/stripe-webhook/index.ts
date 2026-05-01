@@ -324,12 +324,15 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (sub) {
+          const stripeQty = item0?.quantity;
           const updateData: Record<string, any> = {
             status: "active",
             updated_at: new Date().toISOString(),
           };
           if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
-            if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
+          if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
+          // Sync quantity from Stripe — ensures upgrades only take effect after payment confirms.
+          if (stripeQty && stripeQty > 0) updateData.max_usuarios = stripeQty;
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 

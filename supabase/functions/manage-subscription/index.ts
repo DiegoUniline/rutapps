@@ -150,14 +150,47 @@ Deno.serve(async (req) => {
         const itemId = stripeSub.items.data[0]?.id;
         if (!itemId) throw new Error("No subscription item found");
 
-        // Upgrade => always_invoice (charge immediately).
-        // Downgrade => create_prorations (credit accrues for next invoice, no refund).
+        if (isUpgrade) {
+          // STRICT: charge immediately. If payment fails, do NOT activate extra users.
+          // payment_behavior: "error_if_incomplete" => if the prorated invoice can't be paid
+          // right away, Stripe rejects the update with an error and quantity stays the same.
+          try {
+            await stripe.subscriptions.update(sub.stripe_subscription_id, {
+              items: [{ id: itemId, quantity: qty }],
+              proration_behavior: "always_invoice",
+              payment_behavior: "error_if_incomplete",
+            });
+          } catch (e: any) {
+            const msg = e?.raw?.message || e?.message || "No se pudo procesar el cobro";
+            return new Response(JSON.stringify({
+              error: `No se pudo cobrar la diferencia: ${msg}. Los usuarios extras no se activarán hasta que el pago se confirme. Verifica tu método de pago.`,
+              code: "payment_failed",
+            }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+
+          // Payment succeeded → update local quantity now.
+          await supabase
+            .from("subscriptions")
+            .update({ max_usuarios: qty, updated_at: new Date().toISOString() })
+            .eq("id", sub.id);
+
+          return new Response(JSON.stringify({
+            success: true,
+            max_usuarios: qty,
+            is_upgrade: true,
+            is_downgrade: false,
+            payment_status: "paid",
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        // Downgrade => no charge, just credit for next invoice. Apply immediately.
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
           items: [{ id: itemId, quantity: qty }],
-          proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
+          proration_behavior: "create_prorations",
         });
       }
 
+      // No Stripe sub OR downgrade path => apply quantity locally.
       await supabase
         .from("subscriptions")
         .update({ max_usuarios: qty, updated_at: new Date().toISOString() })
