@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { usePermisos } from "@/hooks/usePermisos";
 import AppLayout from "@/components/AppLayout";
