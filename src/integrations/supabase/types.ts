@@ -6141,6 +6141,10 @@ export type Database = {
         Args: { p_deleted_by: string; p_empresa_id: string }
         Returns: undefined
       }
+      delete_empresas_bulk: {
+        Args: { p_deleted_by: string; p_empresa_ids: string[] }
+        Returns: Json
+      }
       generate_folio: {
         Args: { p_empresa_id: string; p_tipo: string }
         Returns: string
@@ -6158,6 +6162,29 @@ export type Database = {
         Returns: {
           email: string
           user_id: string
+        }[]
+      }
+      get_inactive_empresas: {
+        Args: { p_dias_inactivo?: number; p_dias_vencido?: number }
+        Returns: {
+          current_period_end: string
+          dias_sin_actividad: number
+          dias_vencido: number
+          email: string
+          empresa_created_at: string
+          empresa_id: string
+          fecha_vencimiento: string
+          last_sign_in_at: string
+          last_venta_at: string
+          motivo: string
+          nombre: string
+          owner_email: string
+          status: string
+          telefono: string
+          total_clientes: number
+          total_usuarios: number
+          total_ventas: number
+          trial_ends_at: string
         }[]
       }
       get_my_empresa_id: { Args: never; Returns: string }
