@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.verify-route-credits]
 verify_jwt = false
+
+[functions.daily-billing]
+verify_jwt = false

@@ -4,173 +4,32 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
+
+const TZ = "America/Mexico_City";
 
 const log = (step: string, details?: any) =>
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
-// ── Convert Stripe timestamps to ISO strings without altering dates ──
-function normalizePeriodStart(ts: number): string {
-  return new Date(ts * 1000).toISOString();
-}
-function normalizePeriodEnd(ts: number): string {
-  return new Date(ts * 1000).toISOString();
+function nowInMx(): Date {
+  const s = new Date().toLocaleString("en-US", { timeZone: TZ });
+  return new Date(s);
 }
 
-// ── Stripe error codes → Spanish ──
-const errorMap: Record<string, string> = {
-  card_declined: "Tu tarjeta fue rechazada por el banco",
-  insufficient_funds: "Fondos insuficientes en la tarjeta",
-  expired_card: "Tu tarjeta está vencida",
-  incorrect_cvc: "El código de seguridad (CVC) es incorrecto",
-  processing_error: "Error temporal al procesar el pago",
-  lost_card: "La tarjeta fue reportada como perdida",
-  stolen_card: "La tarjeta fue reportada como robada",
-  generic_decline: "El banco rechazó la transacción",
-  authentication_required: "Se requiere autenticación adicional (3D Secure)",
-  payment_intent_payment_attempt_failed: "No se pudo completar el cobro",
-};
-
-function getErrorMessage(code?: string): string {
-  return errorMap[code || ""] || "Error al procesar el pago";
-}
-
-const ADMIN_PHONE = "523171035768";
-
-// ── Notify admin (super admin) about payment events ──
-async function notifyAdmin(supabase: any, message: string) {
-  try {
-    // Find any empresa to use as context for whatsapp-sender (use first available)
-    const { data: anyEmpresa } = await supabase.from("empresas").select("id").limit(1).single();
-    if (!anyEmpresa?.id) return;
-    await supabase.functions.invoke("whatsapp-sender", {
-      body: { action: "send_text", empresa_id: anyEmpresa.id, phone: ADMIN_PHONE, message },
-    });
-  } catch (e) {
-    log("Admin notify non-blocking error", (e as Error).message);
-  }
-}
-
-// ── WhatsApp helper (with billing_notifications logging) ──
-async function sendWhatsApp(supabase: any, empresaId: string, message: string, tipo: string = "webhook", email?: string, monto_centavos?: number) {
-  let phone: string | null = null;
-  let customerEmail = email || "";
-  let status = "sent";
-
-  try {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("telefono, user_id")
-      .eq("empresa_id", empresaId)
-      .not("telefono", "is", null)
-      .limit(1);
-    phone = profiles?.[0]?.telefono;
-    if (!phone) { status = "error"; return; }
-
-    // Get email if not provided
-    if (!customerEmail && profiles?.[0]?.user_id) {
-      const { data: userData } = await supabase.auth.admin.getUserById(profiles[0].user_id);
-      customerEmail = userData?.user?.email || "";
-    }
-
-    const res = await supabase.functions.invoke("whatsapp-sender", {
-      body: { action: "send_text", empresa_id: empresaId, phone, message },
-    });
-    if (res.error) status = "error";
-  } catch (e) {
-    status = "error";
-    log("WhatsApp non-blocking error", (e as Error).message);
-  } finally {
-    // Always log to billing_notifications
-    try {
-      await supabase.from("billing_notifications").insert({
-        customer_email: customerEmail,
-        customer_phone: phone || "",
-        channel: "whatsapp",
-        tipo,
-        mensaje: message,
-        monto_centavos: monto_centavos || 0,
-        status,
-      });
-    } catch { /* silent */ }
-  }
-}
-
-// ── Find empresa from Stripe customer ──
-async function getEmpresaFromCustomer(
-  stripe: Stripe, supabase: any, customerId: string
-): Promise<{ empresaId: string | null; empresaNombre: string | null }> {
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    if (customer.deleted) return { empresaId: null, empresaNombre: null };
-    const email = (customer as Stripe.Customer).email;
-    if (!email) return { empresaId: null, empresaNombre: null };
-
-    const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users?.users?.find((u: any) => u.email === email);
-    if (!user) return { empresaId: null, empresaNombre: null };
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("empresa_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!profile?.empresa_id) return { empresaId: null, empresaNombre: null };
-
-    const { data: empresa } = await supabase
-      .from("empresas")
-      .select("nombre")
-      .eq("id", profile.empresa_id)
-      .single();
-
-    return { empresaId: profile.empresa_id, empresaNombre: empresa?.nombre || null };
-  } catch {
-    return { empresaId: null, empresaNombre: null };
-  }
-}
-
-async function getEmpresaByStripeSubId(supabase: any, stripeSubId: string) {
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("empresa_id")
-    .eq("stripe_subscription_id", stripeSubId)
-    .maybeSingle();
-  if (!sub?.empresa_id) return { empresaId: null, empresaNombre: null };
-  const { data: empresa } = await supabase
-    .from("empresas")
-    .select("nombre")
-    .eq("id", sub.empresa_id)
-    .single();
-  return { empresaId: sub.empresa_id, empresaNombre: empresa?.nombre || null };
-}
-
-async function getEmpresaByStripeCustomerId(supabase: any, customerId: string) {
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("empresa_id")
-    .eq("stripe_customer_id", customerId)
-    .maybeSingle();
-  if (!sub?.empresa_id) return { empresaId: null, empresaNombre: null };
-  const { data: empresa } = await supabase
-    .from("empresas")
-    .select("nombre")
-    .eq("id", sub.empresa_id)
-    .single();
-  return { empresaId: sub.empresa_id, empresaNombre: empresa?.nombre || null };
+function lastDayOfCurrentMonthMx(): string {
+  const now = nowInMx();
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return last.toISOString().slice(0, 10);
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
   if (!stripeKey || !webhookSecret) {
-    log("ERROR", "Missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET");
-    return new Response("Server misconfigured", { status: 500 });
+    return new Response("Missing config", { status: 500, headers: corsHeaders });
   }
 
   const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -180,377 +39,115 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } }
   );
 
+  const signature = req.headers.get("stripe-signature");
+  if (!signature) return new Response("No signature", { status: 400, headers: corsHeaders });
+
   const body = await req.text();
-  const sig = req.headers.get("stripe-signature");
-  if (!sig) return new Response("No signature", { status: 400 });
 
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err: any) {
-    log("Signature verification failed", err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    console.error("[STRIPE-WEBHOOK] Signature verification failed:", err.message);
+    return new Response(`Bad signature: ${err.message}`, { status: 400, headers: corsHeaders });
   }
 
   log("Event received", { type: event.type, id: event.id });
 
   try {
-    switch (event.type) {
-      // ── Checkout completed → activate subscription ──
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode !== "subscription") break;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const empresa_id = session.metadata?.empresa_id;
+      const stripeSubId = typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription?.id;
+      const stripeCustomerId = typeof session.customer === "string"
+        ? session.customer
+        : session.customer?.id;
 
-        const customerId = session.customer as string;
-        const subscriptionId = session.subscription as string;
-
-        // empresa_id can be in session metadata or subscription metadata
-        const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
-        const empresaId = session.metadata?.empresa_id ||
-          stripeSub.metadata?.empresa_id ||
-          (await getEmpresaFromCustomer(stripe, supabase, customerId)).empresaId;
-
-        if (!empresaId) { log("No empresa_id for checkout"); break; }
-
-        const item0 = stripeSub.items.data[0];
-        const priceId = item0?.price?.id;
-        const qty = item0?.quantity || 3;
-
-        // In Stripe API 2025-08-27.basil, period dates are on items, not top-level
-        const periodStart = (item0 as any)?.current_period_start ?? (stripeSub as any).current_period_start;
-        const periodEnd = (item0 as any)?.current_period_end ?? (stripeSub as any).current_period_end;
-
-        // Resolve our internal plan_id from the Stripe price_id
-        let planId: string | null = null;
-        if (priceId) {
-          const { data: planRow } = await supabase
-            .from("subscription_plans")
-            .select("id")
-            .eq("stripe_price_id", priceId)
-            .maybeSingle();
-          planId = planRow?.id ?? null;
-        }
-
-        const updateData: Record<string, any> = {
-          status: "active",
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          max_usuarios: qty,
-          updated_at: new Date().toISOString(),
-        };
-        if (planId) updateData.plan_id = planId;
-        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
-        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
-
-        await supabase.from("subscriptions").update(updateData).eq("empresa_id", empresaId);
-
-        // NOTE: Do NOT mark facturas as paid here. subscription.updated fires for many reasons
-        // (quantity change, status change, etc.) and does NOT guarantee an invoice was paid.
-        // Only `invoice.paid` should mark facturas as `pagada`.
-
-        // WhatsApp — always show 1st of next month
-        const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
-        const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
-        await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
-          "cobro_exitoso"
-        );
-
-        // Notify admin
-        await notifyAdmin(supabase,
-          `🟢 *COBRO EXITOSO — Nueva suscripción*\n\n🏢 *Empresa:* ${empresa?.nombre || "N/A"}\n👥 *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\n🆔 Stripe Sub: ${subscriptionId}`
-        );
-
-        log("Subscription activated", { empresaId, subscriptionId });
-        break;
-      }
-
-      // ── Invoice finalized → mirror in `facturas` so client sees pending invoice ──
-      case "invoice.finalized": {
-        const invoice = event.data.object as Stripe.Invoice;
-        if (!invoice.subscription) break;
-
-        const subId = typeof invoice.subscription === "string"
-          ? invoice.subscription : invoice.subscription.id;
-
-        const { data: sub } = await supabase
+      if (empresa_id && session.payment_status === "paid") {
+        const venc = lastDayOfCurrentMonthMx();
+        const { error } = await supabase
           .from("subscriptions")
-          .select("id, empresa_id, max_usuarios")
-          .eq("stripe_subscription_id", subId)
-          .maybeSingle();
-
-        if (!sub || !invoice.id) break;
-
-        // Skip if already mirrored
-        const { data: existing } = await supabase
-          .from("facturas")
-          .select("id")
-          .eq("stripe_invoice_id", invoice.id)
-          .maybeSingle();
-        if (existing) break;
-
-        const totalMxn = (invoice.total || 0) / 100;
-        const subtotalMxn = (invoice.subtotal || 0) / 100;
-        const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000).toISOString().slice(0, 10) : null;
-        const periodEnd = invoice.period_end ? new Date(invoice.period_end * 1000).toISOString().slice(0, 10) : null;
-
-        await supabase.from("facturas").insert({
-          empresa_id: sub.empresa_id,
-          suscripcion_id: sub.id,
-          stripe_invoice_id: invoice.id,
-          periodo_inicio: periodStart,
-          periodo_fin: periodEnd,
-          num_usuarios: sub.max_usuarios || 1,
-          precio_unitario: totalMxn / (sub.max_usuarios || 1),
-          descuento_porcentaje: 0,
-          subtotal: subtotalMxn,
-          total: totalMxn,
-          estado: invoice.status === "paid" ? "pagada" : "procesando",
-          es_prorrateo: false,
-          // Política Rutapp: 3 días de gracia desde emisión, después se bloquea acceso
-          fecha_vencimiento: new Date(Date.now() + 3 * 86400000).toISOString(),
-        });
-
-        log("Stripe invoice mirrored to facturas", { invoiceId: invoice.id, empresaId: sub.empresa_id });
-        break;
-      }
-
-      // ── Invoice paid → renew period ──
-      case "invoice.paid": {
-        const invoice = event.data.object as Stripe.Invoice;
-        if (!invoice.subscription) break;
-
-        const subId = typeof invoice.subscription === "string"
-          ? invoice.subscription : invoice.subscription.id;
-
-        const stripeSub = await stripe.subscriptions.retrieve(subId);
-        const item0 = stripeSub.items.data[0];
-        const periodStart = (item0 as any)?.current_period_start ?? (stripeSub as any).current_period_start;
-        const periodEnd = (item0 as any)?.current_period_end ?? (stripeSub as any).current_period_end;
-        const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, subId);
-
-        const { data: sub } = await supabase
-          .from("subscriptions")
-          .select("id, empresa_id")
-          .eq("stripe_subscription_id", subId)
-          .maybeSingle();
-
-        if (sub) {
-          const stripeQty = item0?.quantity;
-          const priceId = item0?.price?.id;
-
-          // Resolve plan_id from Stripe price_id (in case it wasn't set during checkout)
-          let planId: string | null = null;
-          if (priceId) {
-            const { data: planRow } = await supabase
-              .from("subscription_plans")
-              .select("id")
-              .eq("stripe_price_id", priceId)
-              .maybeSingle();
-            planId = planRow?.id ?? null;
-          }
-
-          const updateData: Record<string, any> = {
+          .update({
             status: "active",
+            fecha_vencimiento: venc,
+            acceso_bloqueado: false,
+            stripe_subscription_id: stripeSubId ?? undefined,
+            stripe_customer_id: stripeCustomerId ?? undefined,
+            current_period_end: venc,
             updated_at: new Date().toISOString(),
-          };
-          if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
-          if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
-          // Sync quantity from Stripe — ensures upgrades only take effect after payment confirms.
-          if (stripeQty && stripeQty > 0) updateData.max_usuarios = stripeQty;
-          if (planId) updateData.plan_id = planId;
-
-          await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
-
-          // Update factura — match by stripe_invoice_id (set by invoice.finalized handler)
-          if (invoice.id) {
-            const { data: existingFac } = await supabase
-              .from("facturas")
-              .select("id")
-              .eq("stripe_invoice_id", invoice.id)
-              .maybeSingle();
-            if (existingFac) {
-              await supabase.from("facturas")
-                .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
-                .eq("id", existingFac.id);
-              // Cancel any pending retries for this invoice
-              await supabase.from("cobro_reintentos")
-                .update({ estado: "exitoso", procesado_at: new Date().toISOString() })
-                .eq("factura_id", existingFac.id)
-                .eq("estado", "pendiente");
-            } else {
-              // Fallback: invoice paid before finalize webhook arrived (rare). Update by procesando.
-              await supabase.from("facturas")
-                .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
-                .eq("empresa_id", sub.empresa_id)
-                .in("estado", ["procesando", "pendiente"]);
-            }
-          }
-
-          // WhatsApp — always show 1st of next month
-          const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
-          const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
-          await sendWhatsApp(supabase, sub.empresa_id,
-            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
-            "cobro_exitoso", undefined, invoice.amount_paid || 0
-          );
-
-          // Notify admin
-          await notifyAdmin(supabase,
-            `🟢 *COBRO EXITOSO — Renovación*\n\n🏢 *Empresa:* ${empresaNombre || "N/A"}\n💰 *Monto:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\n🆔 Stripe Sub: ${subId}`
-          );
-
-          log("Invoice paid → subscription renewed", { subId, empresaId: sub.empresa_id });
-        }
-        break;
+          })
+          .eq("empresa_id", empresa_id);
+        if (error) log("Update error", error);
+        else log("Access granted via checkout", { empresa_id, venc });
       }
-
-      // ── Payment failed → mark past_due + schedule retry ──
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        if (!invoice.subscription) break;
-
-        const subId = typeof invoice.subscription === "string"
-          ? invoice.subscription : invoice.subscription.id;
-
-        const { data: sub } = await supabase
-          .from("subscriptions")
-          .select("id, empresa_id")
-          .eq("stripe_subscription_id", subId)
-          .maybeSingle();
-
-        await supabase.from("subscriptions").update({
-          status: "past_due",
-          updated_at: new Date().toISOString(),
-        }).eq("stripe_subscription_id", subId);
-
-        // Schedule retry #1 for tomorrow (day +1)
-        if (sub && invoice.id) {
-          const { data: factura } = await supabase
-            .from("facturas")
-            .select("id")
-            .eq("stripe_invoice_id", invoice.id)
-            .maybeSingle();
-
-          if (factura) {
-            // Avoid duplicate retries for the same invoice
-            const { data: existingRetry } = await supabase
-              .from("cobro_reintentos")
-              .select("id")
-              .eq("factura_id", factura.id)
-              .eq("estado", "pendiente")
-              .limit(1);
-
-            if (!existingRetry || existingRetry.length === 0) {
-              const tomorrow = new Date();
-              tomorrow.setDate(tomorrow.getDate() + 1);
-              await supabase.from("cobro_reintentos").insert({
-                factura_id: factura.id,
-                empresa_id: sub.empresa_id,
-                stripe_invoice_id: invoice.id,
-                intento_num: 1,
-                proxima_fecha: tomorrow.toISOString().slice(0, 10),
-                estado: "pendiente",
-                ultimo_error: invoice.last_finalization_error?.message || "Cobro inicial fallido",
-              });
-              log("Retry #1 scheduled", { facturaId: factura.id, fecha: tomorrow.toISOString().slice(0, 10) });
-            }
-          }
-        }
-
-        log("Payment failed → past_due", { subId });
-        break;
-      }
-
-      // ── Charge failed → WhatsApp notification ──
-      case "charge.failed": {
-        const charge = event.data.object as Stripe.Charge;
-        const customerId = charge.customer as string;
-        if (!customerId) break;
-
-        const { empresaId, empresaNombre } = await getEmpresaByStripeCustomerId(supabase, customerId);
-        if (!empresaId) break;
-
-        const errorCode = charge.failure_code || "generic_decline";
-        const errorMsg = getErrorMessage(errorCode);
-        const monto = (charge.amount / 100).toLocaleString();
-        const moneda = (charge.currency || "mxn").toUpperCase();
-
-        await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`,
-          "cobro_fallido", undefined, charge.amount || 0
-        );
-
-        // Notify admin
-        await notifyAdmin(supabase,
-          `🔴 *COBRO FALLIDO*\n\n🏢 *Empresa:* ${empresaNombre || "N/A"}\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n📋 *Código:* ${errorCode}`
-        );
-
-        log("Charge failed → WhatsApp sent", { empresaId, errorCode });
-        break;
-      }
-
-      // ── Subscription deleted / cancelled ──
-      case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        await supabase.from("subscriptions").update({
-          status: "suspended",
-          updated_at: new Date().toISOString(),
-        }).eq("stripe_subscription_id", sub.id);
-
-        const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, sub.id);
-        if (empresaId) {
-          await sendWhatsApp(supabase, empresaId,
-            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`,
-            "suspension"
-          );
-        }
-
-        log("Subscription deleted → suspended", { subId: sub.id });
-        break;
-      }
-
-      // ── Subscription updated (plan change, qty change) ──
-      case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription;
-        const priceId = sub.items.data[0]?.price?.id;
-        const qty = sub.items.data[0]?.quantity || 3;
-
-        const statusMap: Record<string, string> = {
-          active: "active",
-          past_due: "past_due",
-          canceled: "suspended",
-          unpaid: "past_due",
-          trialing: "trial",
-        };
-
-        const item0 = sub.items.data[0];
-        const periodStart = (item0 as any)?.current_period_start ?? (sub as any).current_period_start;
-        const periodEnd = (item0 as any)?.current_period_end ?? (sub as any).current_period_end;
-
-        const updateData: Record<string, any> = {
-          status: statusMap[sub.status] || sub.status,
-          max_usuarios: qty,
-          updated_at: new Date().toISOString(),
-        };
-        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
-        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
-
-        await supabase.from("subscriptions").update(updateData).eq("stripe_subscription_id", sub.id);
-
-        log("Subscription updated", { subId: sub.id, status: sub.status, qty });
-        break;
-      }
-
-      default:
-        log("Unhandled event type", event.type);
     }
-  } catch (err: any) {
-    log("ERROR processing event", { type: event.type, error: err.message });
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-  }
 
-  return new Response(JSON.stringify({ received: true }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+    if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const stripeCustomerId = typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
+      const stripeSubId = typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription?.id;
+
+      // Find empresa via stripe_subscription_id or stripe_customer_id
+      let empresa_id: string | null = null;
+      if (stripeSubId) {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("empresa_id")
+          .eq("stripe_subscription_id", stripeSubId)
+          .maybeSingle();
+        empresa_id = data?.empresa_id ?? null;
+      }
+      if (!empresa_id && stripeCustomerId) {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("empresa_id")
+          .eq("stripe_customer_id", stripeCustomerId)
+          .maybeSingle();
+        empresa_id = data?.empresa_id ?? null;
+      }
+
+      if (empresa_id) {
+        const venc = lastDayOfCurrentMonthMx();
+        await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            fecha_vencimiento: venc,
+            acceso_bloqueado: false,
+            current_period_end: venc,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("empresa_id", empresa_id);
+        log("Access renewed via invoice", { empresa_id, venc });
+      }
+    }
+
+    if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      const empresa_id = sub.metadata?.empresa_id;
+      if (empresa_id) {
+        await supabase
+          .from("subscriptions")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("empresa_id", empresa_id);
+        log("Subscription cancelled", { empresa_id });
+      }
+    }
+
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error: any) {
+    console.error("[STRIPE-WEBHOOK] Handler error:", error);
+    return new Response(JSON.stringify({ error: error?.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 });

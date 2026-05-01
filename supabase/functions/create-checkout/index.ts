@@ -7,42 +7,71 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GRACE_DAYS = 3;
+const TZ = "America/Mexico_City";
+const GRACE_DAYS_WITH_ACCESS = 3; // días 1, 2 y 3 con acceso
 
 const log = (step: string, details?: any) =>
   console.log(`[CREATE-CHECKOUT] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
+/** Returns Date representing "now" in MX timezone (as if local). */
+function nowInMx(): Date {
+  const s = new Date().toLocaleString("en-US", { timeZone: TZ });
+  return new Date(s);
+}
+
+/** Last day of given month (1=Jan). Returns local Date at 23:59:59. */
+function lastDayOfMonth(year: number, monthZeroBased: number): Date {
+  return new Date(year, monthZeroBased + 1, 0, 23, 59, 59);
+}
+
+/** First day of NEXT month, midnight, as Unix timestamp (seconds). */
+function firstOfNextMonthUnix(now: Date): number {
+  const d = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+  return Math.floor(d.getTime() / 1000);
+}
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY not set");
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY no configurado");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } }
     );
-
     const anonClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!
     );
 
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No autenticado");
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await anonClient.auth.getUser(token);
-    if (userError || !userData.user?.email) throw new Error("No autenticado");
+    const { data: userData, error: userErr } = await anonClient.auth.getUser(token);
+    if (userErr || !userData.user?.email) throw new Error("No autenticado");
 
     const { price_id, quantity, empresa_id } = await req.json();
-    if (!price_id || !quantity) throw new Error("price_id y quantity requeridos");
+    if (!price_id || !quantity || !empresa_id) {
+      throw new Error("price_id, quantity y empresa_id son requeridos");
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Find or create Stripe customer
+    // ── Get Stripe price (source of truth) ──
+    const stripePrice = await stripe.prices.retrieve(price_id);
+    const monthlyPriceCentavos = stripePrice.unit_amount ?? 0;
+    const planCurrency = stripePrice.currency || "mxn";
+    if (monthlyPriceCentavos <= 0) {
+      return new Response(JSON.stringify({ error: `Precio ${price_id} inválido (unit_amount=0)` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Find or create Stripe customer ──
     const customers = await stripe.customers.list({ email: userData.user.email, limit: 1 });
     let customerId: string;
     if (customers.data.length > 0) {
@@ -50,207 +79,164 @@ Deno.serve(async (req) => {
     } else {
       const newCustomer = await stripe.customers.create({
         email: userData.user.email,
-        metadata: { empresa_id: empresa_id || "" },
+        metadata: { empresa_id },
       });
       customerId = newCustomer.id;
     }
 
-    // ─── Determine grace period status ───
-    let daysSinceExpiry = 0;
-    let isWithinGrace = true;
-    let monthlyPriceCentavos = 0;
-
-    if (empresa_id) {
-      const { data: subData } = await supabase
-        .from("subscriptions")
-        .select("status, trial_ends_at, current_period_end")
-        .eq("empresa_id", empresa_id)
-        .maybeSingle();
-
-      if (subData) {
-        const now = new Date();
-        // Determine when access "expired" (trial end or period end)
-        const expiryDate = subData.trial_ends_at
-          ? new Date(subData.trial_ends_at)
-          : subData.current_period_end
-            ? new Date(subData.current_period_end)
-            : null;
-
-        if (expiryDate && expiryDate < now) {
-          daysSinceExpiry = Math.floor((now.getTime() - expiryDate.getTime()) / 86400000);
-          isWithinGrace = daysSinceExpiry <= GRACE_DAYS;
-        }
-      }
-
-      // Get the price amount + currency from Stripe (source of truth)
-      const stripePrice = await stripe.prices.retrieve(price_id);
-      monthlyPriceCentavos = stripePrice.unit_amount || 0;
-      var planCurrency: string = stripePrice.currency || "mxn";
-      if (monthlyPriceCentavos <= 0) {
-        throw new Error(`Stripe price ${price_id} returned unit_amount=0. Configuración de plan inválida.`);
-      }
-    } else {
-      throw new Error("empresa_id requerido");
-    }
-
-    log("Grace check", { daysSinceExpiry, isWithinGrace, monthlyPriceCentavos, planCurrency });
-
-    // ─── Calculate billing ───
-    // POLICY:
-    // - Día 1-4 del mes (dentro de gracia): MES COMPLETO (1° → fin de mes)
-    // - Día 5+ (fuera de gracia, suspendido): solo días de uso (3 gracia + hoy → fin de mes)
-    // - Próximo 1° del mes: ciclo normal vuelve a cobrar mes completo
-    //
-    // Implementación: la suscripción recurrente tiene billing_cycle_anchor en el próximo día 1°
-    // y proration_behavior="none" => Stripe NO cobra nada por el ítem recurrente HOY.
-    // El primer cobro se hace mediante un Price one-shot inline añadido como segundo line_item.
-    const now = new Date();
-    const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    // ── Compute first-period charge ──
+    // Reglas:
+    //  • Días 1-4 del mes: cobra MES COMPLETO.
+    //  • Día 5+ del mes: cobra (3 días gracia + días desde hoy a fin de mes) × tarifaDiaria.
+    //  • La suscripción recurrente arranca el día 1 del mes siguiente vía trial_end
+    //    para que Stripe NO sume nada por su cuenta.
+    const now = nowInMx();
     const dayOfMonth = now.getDate();
-    const daysFromTodayToEndOfMonth = daysInMonth - dayOfMonth + 1; // incluye hoy
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const dailyRateCentavos = Math.round(monthlyPriceCentavos / daysInMonth);
 
-    // Política temporal acordada: cobrar siempre el plan completo en el primer checkout.
-    // (El descuento por días no usados al reactivar lo afinamos después.)
-    let firstChargeCentavos = monthlyPriceCentavos * quantity;
-    let firstChargeDescription = `Suscripción mensual (${quantity} usuario${quantity > 1 ? "s" : ""})`;
+    let firstChargeCentavos: number;
+    let firstChargeDescription: string;
 
-    // Create an inline one-shot Price (no recurring) in the plan's own currency.
-    // Stripe Checkout will sum it with the recurring line_item and charge it NOW.
-    let firstPeriodLineItem: any = null;
-    if (firstChargeCentavos > 0) {
-      const oneShotPrice = await stripe.prices.create({
-        currency: planCurrency,
-        unit_amount: Math.round(firstChargeCentavos / quantity),
-        product_data: { name: firstChargeDescription },
-      });
-      firstPeriodLineItem = { price: oneShotPrice.id, quantity };
-      log("Created first-period inline price", { priceId: oneShotPrice.id, firstChargeCentavos, quantity, planCurrency });
+    if (dayOfMonth <= 4) {
+      firstChargeCentavos = monthlyPriceCentavos;
+      firstChargeDescription = `Suscripción mensual (${quantity} usuario${quantity > 1 ? "s" : ""})`;
+    } else {
+      // 3 días gracia (1-3) que SÍ tuvo acceso + días desde hoy hasta fin de mes
+      const remainingDays = daysInMonth - dayOfMonth + 1; // incluye hoy
+      const billedDays = GRACE_DAYS_WITH_ACCESS + remainingDays;
+      firstChargeCentavos = dailyRateCentavos * billedDays;
+      firstChargeDescription = `Suscripción mensual prorrateada (${billedDays} días, ${quantity} usuario${quantity > 1 ? "s" : ""})`;
     }
 
-    // ─── Check for empresa discount (base + coupon) ───
+    log("Charge calc", {
+      dayOfMonth, daysInMonth, monthlyPriceCentavos, firstChargeCentavos,
+      quantity, planCurrency
+    });
+
+    // ── Create one-shot inline price for the immediate charge ──
+    const oneShotPrice = await stripe.prices.create({
+      currency: planCurrency,
+      unit_amount: firstChargeCentavos, // per-unit; quantity multiplies
+      product_data: { name: firstChargeDescription },
+    });
+
+    // ── Discounts (base + coupon) ──
     let discounts: any[] = [];
-    if (empresa_id) {
-      const { data: subData } = await supabase
-        .from("subscriptions")
-        .select("descuento_porcentaje")
-        .eq("empresa_id", empresa_id)
-        .maybeSingle();
+    const { data: subData } = await supabase
+      .from("subscriptions")
+      .select("descuento_porcentaje")
+      .eq("empresa_id", empresa_id)
+      .maybeSingle();
 
-      const baseDescuento = subData?.descuento_porcentaje || 0;
+    const baseDescuento = subData?.descuento_porcentaje || 0;
 
-      // Check for active coupon
-      const { data: cuponUso } = await supabase
-        .from("cupon_usos")
-        .select("meses_restantes, cupones:cupon_id(descuento_pct, acumulable)")
-        .eq("empresa_id", empresa_id)
-        .order("aplicado_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const { data: cuponUso } = await supabase
+      .from("cupon_usos")
+      .select("meses_restantes, cupones:cupon_id(descuento_pct, acumulable)")
+      .eq("empresa_id", empresa_id)
+      .order("aplicado_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      let cuponDescuento = 0;
-      let cuponMeses: number | null = null;
-      let cuponAcumulable = false;
-
-      if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
-        const cupon = cuponUso.cupones as any;
-        if (cupon) {
-          cuponDescuento = cupon.descuento_pct || 0;
-          cuponMeses = cuponUso.meses_restantes;
-          cuponAcumulable = !!cupon.acumulable;
-          log("Coupon found", { cuponPct: cuponDescuento, meses: cuponMeses, acumulable: cuponAcumulable });
-        }
-      }
-
-      // Build Stripe discounts: separate permanent (base) from temporary (coupon)
-      if (cuponDescuento > 0 && cuponAcumulable && baseDescuento > 0) {
-        // Both active and accumulate: create two separate Stripe coupons
-        const baseCoupon = await stripe.coupons.create({
-          percent_off: baseDescuento,
-          duration: "forever",
-          name: `Descuento empresa ${baseDescuento}%`,
-        });
-        discounts.push({ coupon: baseCoupon.id });
-
-        const tempCoupon = await stripe.coupons.create({
-          percent_off: cuponDescuento,
-          duration: cuponMeses ? "repeating" : "forever",
-          ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
-          name: `Cupón ${cuponDescuento}% (${cuponMeses ? cuponMeses + ' meses' : 'permanente'})`,
-        });
-        discounts.push({ coupon: tempCoupon.id });
-        log("Applied accumulated discounts", { base: baseDescuento, cupon: cuponDescuento, meses: cuponMeses });
-
-      } else if (cuponDescuento > 0 && !cuponAcumulable) {
-        // Non-accumulative: use whichever is higher
-        const finalPct = Math.max(baseDescuento, cuponDescuento);
-        const isFromCupon = cuponDescuento >= baseDescuento;
-        const coupon = await stripe.coupons.create({
-          percent_off: finalPct,
-          duration: isFromCupon && cuponMeses ? "repeating" : "forever",
-          ...(isFromCupon && cuponMeses ? { duration_in_months: cuponMeses } : {}),
-          name: `Descuento ${finalPct}% - ${empresa_id.slice(0, 8)}`,
-        });
-        discounts = [{ coupon: coupon.id }];
-        log("Applied best discount", { finalPct, source: isFromCupon ? 'cupon' : 'base', meses: isFromCupon ? cuponMeses : null });
-
-      } else if (cuponDescuento > 0) {
-        // Only coupon, no base
-        const coupon = await stripe.coupons.create({
-          percent_off: cuponDescuento,
-          duration: cuponMeses ? "repeating" : "forever",
-          ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
-          name: `Cupón ${cuponDescuento}% (${cuponMeses ? cuponMeses + ' meses' : 'permanente'})`,
-        });
-        discounts = [{ coupon: coupon.id }];
-        log("Applied coupon only", { cuponDescuento, meses: cuponMeses });
-
-      } else if (baseDescuento > 0) {
-        // Only base discount, permanent
-        const coupon = await stripe.coupons.create({
-          percent_off: baseDescuento,
-          duration: "forever",
-          name: `Descuento empresa ${baseDescuento}%`,
-        });
-        discounts = [{ coupon: coupon.id }];
-        log("Applied base discount only", { baseDescuento });
+    let cuponDescuento = 0;
+    let cuponMeses: number | null = null;
+    let cuponAcumulable = false;
+    if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
+      const cupon = cuponUso.cupones as any;
+      if (cupon) {
+        cuponDescuento = cupon.descuento_pct || 0;
+        cuponMeses = cuponUso.meses_restantes;
+        cuponAcumulable = !!cupon.acumulable;
       }
     }
 
-    const origin = req.headers.get("origin") || "https://rutapp.mx";
+    if (cuponDescuento > 0 && cuponAcumulable && baseDescuento > 0) {
+      const baseCoupon = await stripe.coupons.create({
+        percent_off: baseDescuento, duration: "forever",
+        name: `Descuento empresa ${baseDescuento}%`,
+      });
+      discounts.push({ coupon: baseCoupon.id });
+      const tempCoupon = await stripe.coupons.create({
+        percent_off: cuponDescuento,
+        duration: cuponMeses ? "repeating" : "forever",
+        ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
+        name: `Cupón ${cuponDescuento}%`,
+      });
+      discounts.push({ coupon: tempCoupon.id });
+    } else if (cuponDescuento > 0 && !cuponAcumulable) {
+      const finalPct = Math.max(baseDescuento, cuponDescuento);
+      const isFromCupon = cuponDescuento >= baseDescuento;
+      const coupon = await stripe.coupons.create({
+        percent_off: finalPct,
+        duration: isFromCupon && cuponMeses ? "repeating" : "forever",
+        ...(isFromCupon && cuponMeses ? { duration_in_months: cuponMeses } : {}),
+        name: `Descuento ${finalPct}%`,
+      });
+      discounts = [{ coupon: coupon.id }];
+    } else if (cuponDescuento > 0) {
+      const coupon = await stripe.coupons.create({
+        percent_off: cuponDescuento,
+        duration: cuponMeses ? "repeating" : "forever",
+        ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
+        name: `Cupón ${cuponDescuento}%`,
+      });
+      discounts = [{ coupon: coupon.id }];
+    } else if (baseDescuento > 0) {
+      const coupon = await stripe.coupons.create({
+        percent_off: baseDescuento, duration: "forever",
+        name: `Descuento empresa ${baseDescuento}%`,
+      });
+      discounts = [{ coupon: coupon.id }];
+    }
 
-    const lineItems: any[] = [{ price: price_id, quantity }];
-    if (firstPeriodLineItem) lineItems.push(firstPeriodLineItem);
+    // ── Build session ──
+    // Subscription with trial_end at first day of next month.
+    // Stripe will charge ONLY the one-shot now, and start recurring on day 1° next month.
+    // No proration, no surprises.
+    const origin = req.headers.get("origin") || "https://rutapp.mx";
+    const trialEndUnix = firstOfNextMonthUnix(now);
 
     const sessionParams: any = {
       customer: customerId,
-      line_items: lineItems,
+      line_items: [
+        { price: price_id, quantity },              // recurrente (mes completo recurrente)
+        { price: oneShotPrice.id, quantity },        // cargo inmediato proporcional o mes completo
+      ],
       mode: "subscription",
       subscription_data: {
-        billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        // proration_behavior is incompatible with one-time line_items in Checkout;
-        // we instead use billing_cycle_anchor + a one-shot line_item to charge the first period.
-        metadata: { empresa_id: empresa_id || "" },
+        trial_end: trialEndUnix,
+        // Stripe NO permite proration_behavior con trial_end; ya no es necesario porque trial=$0
+        metadata: { empresa_id },
       },
-      success_url: `${origin}/dashboard?checkout=success`,
-      cancel_url: `${origin}/dashboard?checkout=cancelled`,
+      success_url: `${origin}/mi-suscripcion?checkout=success`,
+      cancel_url: `${origin}/mi-suscripcion?checkout=cancelled`,
+      metadata: { empresa_id },
     };
 
-    if (discounts.length > 0) {
-      sessionParams.discounts = discounts;
-    }
+    if (discounts.length > 0) sessionParams.discounts = discounts;
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    log("Checkout created", { sessionId: session.id, isWithinGrace, daysSinceExpiry });
+    // Save session ref for webhook reconciliation
+    await supabase
+      .from("subscriptions")
+      .update({ ultimo_checkout_session_id: session.id, updated_at: new Date().toISOString() })
+      .eq("empresa_id", empresa_id);
+
+    log("Session created", {
+      sessionId: session.id,
+      firstChargeCentavos,
+      trialEndUnix,
+      dayOfMonth,
+    });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error create-checkout:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: any) {
+    console.error("[CREATE-CHECKOUT] ERROR:", error?.message, error);
+    return new Response(JSON.stringify({ error: error?.message || "Error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
