@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       customer: CUSTOMER,
       invoice: newInvoice.id,
       currency: "mxn",
-      pricing: { unit_amount_decimal: "30000" },
+      unit_amount_decimal: "30000",
       quantity: QUANTITY,
       description: "Plan Mensual Rutapp - 3 usuarios (Mayo 2026)",
     });
