@@ -608,6 +608,7 @@ const App = () => (
           <AuthProvider>
             <BrowserRouter>
               <AppRoutes />
+              <FacturaPendienteModal />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
