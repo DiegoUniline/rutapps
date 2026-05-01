@@ -74,6 +74,14 @@ Deno.serve(async (req) => {
       log("Subs to invoice", { count: subsToInvoice.length });
 
       for (const sub of subsToInvoice) {
+        // Skip if Stripe handles this subscription — Stripe emits the renewal invoice
+        // automatically and the webhook (invoice.created/paid) syncs it into `facturas`.
+        // Generating it here too would duplicate.
+        if (sub.stripe_subscription_id) {
+          log("Skipped (Stripe handles billing)", { empresa: sub.empresa_id, stripeSub: sub.stripe_subscription_id });
+          continue;
+        }
+
         // Skip if pending invoice already exists for this period
         const { data: existingInv } = await supabase
           .from("facturas")
