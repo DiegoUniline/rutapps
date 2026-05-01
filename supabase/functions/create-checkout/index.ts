@@ -111,17 +111,10 @@ Deno.serve(async (req) => {
     const daysFromTodayToEndOfMonth = daysInMonth - dayOfMonth + 1; // incluye hoy
     const dailyRateCentavos = Math.round(monthlyPriceCentavos / daysInMonth);
 
-    let firstChargeCentavos = 0;
-    let firstChargeDescription = "";
-
-    if (isWithinGrace) {
-      firstChargeCentavos = monthlyPriceCentavos * quantity;
-      firstChargeDescription = `Suscripción mes completo (1 al ${daysInMonth})`;
-    } else {
-      const billedDays = GRACE_DAYS + daysFromTodayToEndOfMonth;
-      firstChargeCentavos = dailyRateCentavos * billedDays * quantity;
-      firstChargeDescription = `Reactivación: ${GRACE_DAYS} días de gracia + uso del día ${dayOfMonth} al ${daysInMonth} (${billedDays} días)`;
-    }
+    // Política temporal acordada: cobrar siempre el plan completo en el primer checkout.
+    // (El descuento por días no usados al reactivar lo afinamos después.)
+    let firstChargeCentavos = monthlyPriceCentavos * quantity;
+    let firstChargeDescription = `Suscripción mensual (${quantity} usuario${quantity > 1 ? "s" : ""})`;
 
     // Create an inline one-shot Price (no recurring) in the plan's own currency.
     // Stripe Checkout will sum it with the recurring line_item and charge it NOW.
