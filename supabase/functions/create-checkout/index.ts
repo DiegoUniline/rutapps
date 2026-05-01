@@ -230,12 +230,15 @@ Deno.serve(async (req) => {
 
     const sessionParams: any = {
       customer: customerId,
+      customer_update: { address: "auto", name: "auto" },
       line_items: [{ price: price_id, quantity }],
       mode: "subscription",
+      currency: "mxn",
       subscription_data: {
         billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
         proration_behavior: "none",
         metadata: { empresa_id: empresa_id || "" },
+        ...(firstPeriodInvoiceItem ? { add_invoice_items: [firstPeriodInvoiceItem] } : {}),
       },
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/dashboard?checkout=cancelled`,
