@@ -47,13 +47,15 @@ Deno.serve(async (req) => {
       metadata: { reason: "manual_replacement_for_voided", original_invoice: WRONG_INVOICE },
     });
 
-    // 3. Add the line item: 3 × $300 = $900 MXN
+    // 3. Add the line item: $900 MXN total (3 usuarios × $300)
     await stripe.invoiceItems.create({
       customer: CUSTOMER,
       invoice: newInvoice.id,
-      pricing: { price: PRICE },
+      currency: "mxn",
+      unit_amount: 30000, // $300 MXN en centavos
       quantity: QUANTITY,
-    } as any);
+      description: "Plan Mensual Rutapp - 3 usuarios (Mayo 2026)",
+    });
 
     // 4. Finalize it so it gets a hosted_invoice_url
     const finalized = await stripe.invoices.finalizeInvoice(newInvoice.id!, { auto_advance: false });
