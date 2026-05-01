@@ -41,6 +41,7 @@ interface FacturaRow {
   es_prorrateo: boolean;
   fecha_emision: string;
   fecha_pago: string | null;
+  stripe_invoice_id: string | null;
 }
 
 const BANK_INFO = {
@@ -122,7 +123,7 @@ export default function MiSuscripcionPage() {
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
-      supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
+      supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
       supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }).limit(1),
     ]);
     setSubData(subRes.data);
@@ -534,6 +535,22 @@ export default function MiSuscripcionPage() {
   async function handlePayInvoice(factura: FacturaRow) {
     setPayingInvoice(factura.id);
     try {
+      // 1) If the invoice already exists in Stripe (e.g. manually created/finalized),
+      //    redirect to its hosted_invoice_url instead of generating a new checkout —
+      //    otherwise the customer would be charged twice.
+      if (factura.stripe_invoice_id) {
+        const { data: invData, error: invErr } = await supabase.functions.invoke('list-invoices');
+        if (invErr) throw invErr;
+        const match = (invData?.invoices || []).find(
+          (i: any) => i.id === factura.stripe_invoice_id
+        );
+        if (match?.hosted_invoice_url && (match.status === 'open' || match.status === 'draft')) {
+          window.location.href = match.hosted_invoice_url;
+          return;
+        }
+      }
+
+      // 2) Fallback: legacy flow — create a fresh checkout session
       const plan = currentPlan || subPlans[0];
       if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
 
