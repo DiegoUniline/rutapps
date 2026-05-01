@@ -288,6 +288,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ═══ PART 4: Process scheduled retries (daily) ═══
+    if (stripe) {
+      const { data: retries } = await supabase
+        .from("cobro_reintentos")
+        .select("id, factura_id, empresa_id, stripe_invoice_id, intento_num, facturas:factura_id(stripe_invoice_id, total)")
+        .eq("estado", "pendiente")
+        .lte("proxima_fecha", today);
+
+      log("Retries to process", { count: retries?.length || 0 });
+
+      for (const retry of retries || []) {
+        const stripeInvId = retry.stripe_invoice_id || (retry.facturas as any)?.stripe_invoice_id;
+        if (!stripeInvId) {
+          await supabase.from("cobro_reintentos")
+            .update({ estado: "fallido", ultimo_error: "Sin stripe_invoice_id", procesado_at: now.toISOString() })
+            .eq("id", retry.id);
+          continue;
+        }
+
+        try {
+          // Attempt to pay the invoice using the customer's default payment method
+          const paid = await stripe.invoices.pay(stripeInvId);
+          log("Retry payment attempt", { retryId: retry.id, invoiceId: stripeInvId, status: paid.status });
+
+          if (paid.status === "paid") {
+            await supabase.from("cobro_reintentos")
+              .update({ estado: "exitoso", procesado_at: now.toISOString() })
+              .eq("id", retry.id);
+            // invoice.paid webhook will handle factura update + WhatsApp
+          } else {
+            // Still not paid — schedule next retry if any remaining
+            await scheduleNextRetry(supabase, retry, "Pago no completado", now);
+          }
+        } catch (e) {
+          const msg = (e as Error).message;
+          log("Retry failed", { retryId: retry.id, error: msg });
+          await scheduleNextRetry(supabase, retry, msg, now);
+        }
+      }
+    }
+
     log("Cycle completed");
 
     return new Response(JSON.stringify({ success: true, timestamp: now.toISOString() }), {
