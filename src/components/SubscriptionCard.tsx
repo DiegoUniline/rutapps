@@ -99,8 +99,38 @@ export default function SubscriptionCard() {
     }
   }
 
+  // ─── Preview state ───
+  const [preview, setPreview] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Auto-fetch preview when qty changes (debounced)
+  useEffect(() => {
+    if (!showUsers) { setPreview(null); return; }
+    const currentQty = subData?.max_usuarios || 3;
+    if (newQty === currentQty) { setPreview(null); return; }
+    let cancelled = false;
+    setPreviewLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke('manage-subscription', {
+          body: { action: 'preview_quantity', new_quantity: newQty },
+        });
+        if (!cancelled) setPreview(data);
+      } catch {
+        if (!cancelled) setPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [newQty, showUsers, subData?.max_usuarios]);
+
   // ─── Update Users ───
   async function handleUpdateUsers() {
+    if (preview && preview.can_apply === false) {
+      toast.error(preview.message || 'No se puede aplicar el cambio');
+      return;
+    }
     setSavingUsers(true);
     try {
       const { data, error } = await supabase.functions.invoke('manage-subscription', {
@@ -108,8 +138,15 @@ export default function SubscriptionCard() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`Límite actualizado a ${newQty} usuarios`);
+      toast.success(
+        data?.is_upgrade
+          ? `Plan ampliado a ${newQty} usuarios. Se generó factura prorrateada.`
+          : data?.is_downgrade
+            ? `Plan reducido a ${newQty} usuarios. El crédito se aplicará en tu próxima factura.`
+            : `Límite actualizado a ${newQty} usuarios`
+      );
       setShowUsers(false);
+      setPreview(null);
       loadData();
     } catch (e: any) {
       toast.error(e.message);
