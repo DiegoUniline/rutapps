@@ -345,6 +345,11 @@ Deno.serve(async (req) => {
               await supabase.from("facturas")
                 .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
                 .eq("id", existingFac.id);
+              // Cancel any pending retries for this invoice
+              await supabase.from("cobro_reintentos")
+                .update({ estado: "exitoso", procesado_at: new Date().toISOString() })
+                .eq("factura_id", existingFac.id)
+                .eq("estado", "pendiente");
             } else {
               // Fallback: invoice paid before finalize webhook arrived (rare). Update by procesando.
               await supabase.from("facturas")
@@ -372,7 +377,7 @@ Deno.serve(async (req) => {
         break;
       }
 
-      // ── Payment failed → mark past_due ──
+      // ── Payment failed → mark past_due + schedule retry ──
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         if (!invoice.subscription) break;
@@ -380,10 +385,50 @@ Deno.serve(async (req) => {
         const subId = typeof invoice.subscription === "string"
           ? invoice.subscription : invoice.subscription.id;
 
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("id, empresa_id")
+          .eq("stripe_subscription_id", subId)
+          .maybeSingle();
+
         await supabase.from("subscriptions").update({
           status: "past_due",
           updated_at: new Date().toISOString(),
         }).eq("stripe_subscription_id", subId);
+
+        // Schedule retry #1 for tomorrow (day +1)
+        if (sub && invoice.id) {
+          const { data: factura } = await supabase
+            .from("facturas")
+            .select("id")
+            .eq("stripe_invoice_id", invoice.id)
+            .maybeSingle();
+
+          if (factura) {
+            // Avoid duplicate retries for the same invoice
+            const { data: existingRetry } = await supabase
+              .from("cobro_reintentos")
+              .select("id")
+              .eq("factura_id", factura.id)
+              .eq("estado", "pendiente")
+              .limit(1);
+
+            if (!existingRetry || existingRetry.length === 0) {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              await supabase.from("cobro_reintentos").insert({
+                factura_id: factura.id,
+                empresa_id: sub.empresa_id,
+                stripe_invoice_id: invoice.id,
+                intento_num: 1,
+                proxima_fecha: tomorrow.toISOString().slice(0, 10),
+                estado: "pendiente",
+                ultimo_error: invoice.last_finalization_error?.message || "Cobro inicial fallido",
+              });
+              log("Retry #1 scheduled", { facturaId: factura.id, fecha: tomorrow.toISOString().slice(0, 10) });
+            }
+          }
+        }
 
         log("Payment failed → past_due", { subId });
         break;
