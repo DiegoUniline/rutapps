@@ -232,11 +232,9 @@ Deno.serve(async (req) => {
 
         await supabase.from("subscriptions").update(updateData).eq("empresa_id", empresaId);
 
-        // Mark pending invoices as paid
-        await supabase.from("facturas")
-          .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
-          .eq("empresa_id", empresaId)
-          .in("estado", ["pendiente", "procesando"]);
+        // NOTE: Do NOT mark facturas as paid here. subscription.updated fires for many reasons
+        // (quantity change, status change, etc.) and does NOT guarantee an invoice was paid.
+        // Only `invoice.paid` should mark facturas as `pagada`.
 
         // WhatsApp — always show 1st of next month
         const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
