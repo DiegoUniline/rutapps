@@ -94,50 +94,43 @@ Deno.serve(async (req) => {
     log("Grace check", { daysSinceExpiry, isWithinGrace, monthlyPriceCentavos });
 
     // ─── Calculate billing ───
+    // POLICY:
+    // - Día 1-4 del mes (dentro de gracia): MES COMPLETO (1° → fin de mes)
+    // - Día 5+ (fuera de gracia, suspendido): solo días de uso (3 gracia + hoy → fin de mes)
+    // - Próximo 1° del mes: ciclo normal vuelve a cobrar mes completo
+    //
+    // Implementación: usamos proration_behavior="none" en la sub (Stripe NO añade prorrateo)
+    // y emitimos un único invoiceItem con el monto exacto a cobrar este primer periodo.
     const now = new Date();
     const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const daysToFirst = Math.ceil((nextFirst.getTime() - now.getTime()) / 86400000);
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dayOfMonth = now.getDate();
+    const daysFromTodayToEndOfMonth = daysInMonth - dayOfMonth + 1; // incluye hoy
+    const dailyRateCentavos = Math.round(monthlyPriceCentavos / daysInMonth);
+
+    let firstChargeCentavos = 0;
+    let firstChargeDescription = "";
 
     if (isWithinGrace) {
-      // WITHIN GRACE (day 1-3): Charge FULL month price.
-      // Stripe will prorate from today to 1st (less than full month),
-      // so we add an invoice item for the difference to reach the full price.
-      const prorationCentavos = Math.round((monthlyPriceCentavos / daysInMonth) * daysToFirst);
-      const surchargePerUser = monthlyPriceCentavos - prorationCentavos;
-
-      if (surchargePerUser > 0) {
-        // Get the product ID from the price
-        const stripePrice = await stripe.prices.retrieve(price_id);
-        const productId = typeof stripePrice.product === "string"
-          ? stripePrice.product
-          : (stripePrice.product as any)?.id;
-
-        await stripe.invoiceItems.create({
-          customer: customerId,
-          amount: surchargePerUser * quantity,
-          currency: "mxn",
-          description: `Días de gracia incluidos (${GRACE_DAYS} días)`,
-          metadata: { empresa_id: empresa_id || "", tipo: "gracia" },
-        });
-        log("Added grace surcharge", { surchargePerUser, total: surchargePerUser * quantity });
-      }
+      // Mes completo
+      firstChargeCentavos = monthlyPriceCentavos * quantity;
+      firstChargeDescription = `Suscripción mes completo (1 al ${daysInMonth})`;
     } else {
-      // PAST GRACE (day 4+): Stripe prorates from today to 1st.
-      // Add an invoice item for the 3 grace days that are owed.
-      const dailyRateCentavos = Math.round(monthlyPriceCentavos / daysInMonth);
-      const graceCharge = dailyRateCentavos * GRACE_DAYS * quantity;
+      // 3 días de gracia + desde hoy hasta fin de mes
+      const billedDays = GRACE_DAYS + daysFromTodayToEndOfMonth;
+      firstChargeCentavos = dailyRateCentavos * billedDays * quantity;
+      firstChargeDescription = `Reactivación: ${GRACE_DAYS} días de gracia + uso del día ${dayOfMonth} al ${daysInMonth} (${billedDays} días)`;
+    }
 
-      if (graceCharge > 0) {
-        await stripe.invoiceItems.create({
-          customer: customerId,
-          amount: graceCharge,
-          currency: "mxn",
-          description: `Cargo por ${GRACE_DAYS} días de gracia`,
-          metadata: { empresa_id: empresa_id || "", tipo: "gracia_adeudo" },
-        });
-        log("Added grace days charge", { dailyRate: dailyRateCentavos, graceCharge });
-      }
+    if (firstChargeCentavos > 0 && monthlyPriceCentavos > 0) {
+      await stripe.invoiceItems.create({
+        customer: customerId,
+        amount: firstChargeCentavos,
+        currency: "mxn",
+        description: firstChargeDescription,
+        metadata: { empresa_id: empresa_id || "", tipo: "primer_periodo" },
+      });
+      log("Added first-period charge", { firstChargeCentavos, isWithinGrace, billedDays: isWithinGrace ? daysInMonth : (GRACE_DAYS + daysFromTodayToEndOfMonth) });
     }
 
     // ─── Check for empresa discount (base + coupon) ───
@@ -237,7 +230,7 @@ Deno.serve(async (req) => {
       mode: "subscription",
       subscription_data: {
         billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        proration_behavior: "create_prorations",
+        proration_behavior: "none",
         metadata: { empresa_id: empresa_id || "" },
       },
       success_url: `${origin}/dashboard?checkout=success`,

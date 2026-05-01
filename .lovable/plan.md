@@ -1,62 +1,64 @@
-# Fix: Solo Vista Móvil debe tener prioridad absoluta sobre POS
+## Política de cobro Rutapp (definitiva)
 
-## Problema
-Cuando un rol cambia de "Solo POS" a "Solo Vista Móvil":
-1. El permiso `pos.ver` queda residual en `role_permisos`
-2. `getFirstAccessibleRoute` itera `ROUTE_PRIORITY` y encuentra `pos` antes de evaluar el flag `solo_movil`
-3. Resultado: el usuario es redirigido a `/pos` en vez de `/ruta`
+Aplicar este modelo a TODAS las suscripciones (Stripe y manuales/OpenPay):
 
-## Solución
+| Fecha pago | Periodo cobrado | Monto |
+|---|---|---|
+| Día 1, 2, 3 o 4 (dentro de gracia) | Mes completo (1 → fin de mes) | Precio mensual completo |
+| Día 5 en adelante (fuera de gracia, suspendido) | Días 1-3 (gracia usada) + desde día de pago hasta fin de mes | Prorrateado al precio diario |
+| Día 1 del siguiente mes | Se vuelve a generar factura completa, sin importar lo anterior | Precio mensual completo |
 
-### A) Código — `src/hooks/usePermisos.ts`
-Modificar `getFirstAccessibleRoute` para que reciba también el flag `roleSoloMovil` y haga short-circuit:
+Fórmula precio diario = `precio_mensual / días_del_mes`. Cobro tardío = `precio_diario × (3 + días_restantes_desde_hoy_hasta_fin_de_mes)`.
 
-```typescript
-export function getFirstAccessibleRoute(
-  hasModulo: (m: string) => boolean,
-  isSoloMovil: boolean = false
-): string {
-  // Solo vista móvil tiene prioridad absoluta
-  if (isSoloMovil) return '/ruta';
-  
-  for (const { modulo, path } of ROUTE_PRIORITY) {
-    if (hasModulo(modulo)) return path;
-  }
-  return '/configuracion-inicial';
-}
-```
+Entre el día 5 y el día que pague: **acceso suspendido** (ya existe). El usuario no usa la app, por eso no se le cobran esos días.
 
-Y en el hook:
-```typescript
-const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo, roleSoloMovil);
-```
+---
 
-Buscar también todos los call-sites de `getFirstAccessibleRoute` (probablemente en `App.tsx` o `LoginPage.tsx`) y pasarles el segundo argumento si lo usan directamente.
+## Cambios necesarios
 
-### B) Base de datos — Limpieza de permisos residuales
-Ejecutar (vía migración o insert tool) para todos los roles con `solo_movil = true`:
+### 1. Arreglar `create-checkout` (cobro al reactivar fuera de gracia)
 
-```sql
--- Eliminar permisos de escritorio que conflictúan con solo_movil
-DELETE FROM public.role_permisos rp
-USING public.roles r
-WHERE rp.role_id = r.id
-  AND r.solo_movil = true
-  AND rp.modulo IN ('pos', 'dashboard', 'ventas', 'clientes', 'supervisor');
+Hoy: cobra "días de gracia" + Stripe prorratea desde hoy a fin de mes con `proration_behavior: create_prorations` y `billing_cycle_anchor` al 1°. Eso suma de más (caso Salgado: $570 extras).
 
--- Asegurar que tengan solo_movil.ver = true
-INSERT INTO public.role_permisos (role_id, modulo, accion, permitido)
-SELECT id, 'solo_movil', 'ver', true 
-FROM public.roles 
-WHERE solo_movil = true
-ON CONFLICT (role_id, modulo, accion) DO UPDATE SET permitido = true;
-```
+Cambio: cuando `daysSinceExpiry > GRACE_DAYS`:
+- Quitar el `invoiceItem` extra de "3 días de gracia".
+- Cambiar a `proration_behavior: "none"` y crear un `invoiceItem` único explícito por:
+  `precio_diario × (3 + días_de_hoy_hasta_fin_de_mes)` × cantidad usuarios, con descripción clara: *"Reactivación: 3 días de gracia + uso del DD al fin de mes"*.
+- Mantener `billing_cycle_anchor` al próximo 1° → así el siguiente ciclo ya cobra mes completo.
+- Cuando esté dentro de gracia (día 1-4): mantener cobro de mes completo, pero también `proration_behavior: "none"` para no duplicar con prorrateo de Stripe. Crear un `invoiceItem` por `precio_completo - prorrateo_de_stripe_cero` = simplemente el mes completo.
 
-## Resultado esperado
-- Cualquier rol marcado como `solo_movil = true` redirige a `/ruta` sin importar qué permisos residuales tenga.
-- Andrey (y cualquier futuro caso similar) funcionará correctamente al alternar entre tipos de rol.
-- Los datos quedan consistentes para todas las empresas.
+Resultado: la primera factura de Stripe será exactamente lo que el usuario debe, sin líneas de proración confusas.
 
-## Archivos afectados
-- `src/hooks/usePermisos.ts` (lógica de routing)
-- Migración SQL (limpieza de datos)
+### 2. Arreglar `billing-cycle` (factura mensual del día 1)
+
+Hoy genera siempre el mes completo. Está bien para suscripciones manuales/OpenPay, pero hay que asegurar que:
+- Si la suscripción tiene `stripe_subscription_id`, NO crear factura local en `facturas`. Stripe ya emite la factura de renovación vía `invoice.created` y el webhook la sincroniza. Hoy crea ambas y por eso aparece en dos lados.
+- Si no hay `stripe_subscription_id` (manual/OpenPay), seguir creando factura local del mes completo.
+
+### 3. Arreglar webhook `stripe-webhook`
+
+Asegurar que cuando llega `invoice.created` / `invoice.finalized` de Stripe:
+- Refleja la factura en tabla `facturas` (upsert por `stripe_invoice_id`).
+- No duplica con la del job billing-cycle.
+
+### 4. Caso Distribuidora Salgado (acción inmediata)
+
+Editar la factura abierta `in_1TS6IC...`:
+- Eliminar la línea de prorrateo extra de $570.
+- Dejar solo el cargo del mes completo de mayo = $900 MXN.
+- Reenviar al cliente.
+
+### 5. Cupones (ya funcionan, solo verificar)
+
+El sistema de cupones que ya existe (`cupones`, `cupon_usos`, `meses_restantes`) ya aplica correctamente al crear checkout y al generar la factura mensual en `billing-cycle`. Lo único: en el nuevo cálculo prorrateado del punto 1, también aplicar el descuento del cupón al `invoiceItem` único (multiplicar por `1 - descuento/100`).
+
+---
+
+## Resumen de archivos a tocar
+
+- `supabase/functions/create-checkout/index.ts` — reescribir lógica de cobro grace/post-grace con `invoiceItem` único y `proration_behavior: "none"`.
+- `supabase/functions/billing-cycle/index.ts` — saltar generación de `facturas` si la sub tiene `stripe_subscription_id` (Stripe ya la emite).
+- `supabase/functions/stripe-webhook/index.ts` — verificar upsert correcto en `facturas` desde `invoice.created`.
+- Acción manual en Stripe: editar invoice `in_1TS6IC...` de Salgado.
+
+Sin cambios de DB. Sin cambios de UI. Todo es lógica de billing.

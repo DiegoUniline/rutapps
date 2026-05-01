@@ -255,6 +255,55 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Invoice finalized → mirror in `facturas` so client sees pending invoice ──
+      case "invoice.finalized": {
+        const invoice = event.data.object as Stripe.Invoice;
+        if (!invoice.subscription) break;
+
+        const subId = typeof invoice.subscription === "string"
+          ? invoice.subscription : invoice.subscription.id;
+
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("id, empresa_id, max_usuarios")
+          .eq("stripe_subscription_id", subId)
+          .maybeSingle();
+
+        if (!sub || !invoice.id) break;
+
+        // Skip if already mirrored
+        const { data: existing } = await supabase
+          .from("facturas")
+          .select("id")
+          .eq("stripe_invoice_id", invoice.id)
+          .maybeSingle();
+        if (existing) break;
+
+        const totalMxn = (invoice.total || 0) / 100;
+        const subtotalMxn = (invoice.subtotal || 0) / 100;
+        const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000).toISOString().slice(0, 10) : null;
+        const periodEnd = invoice.period_end ? new Date(invoice.period_end * 1000).toISOString().slice(0, 10) : null;
+
+        await supabase.from("facturas").insert({
+          empresa_id: sub.empresa_id,
+          suscripcion_id: sub.id,
+          stripe_invoice_id: invoice.id,
+          periodo_inicio: periodStart,
+          periodo_fin: periodEnd,
+          num_usuarios: sub.max_usuarios || 1,
+          precio_unitario: totalMxn / (sub.max_usuarios || 1),
+          descuento_porcentaje: 0,
+          subtotal: subtotalMxn,
+          total: totalMxn,
+          estado: invoice.status === "paid" ? "pagada" : "procesando",
+          es_prorrateo: false,
+          fecha_vencimiento: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
+        });
+
+        log("Stripe invoice mirrored to facturas", { invoiceId: invoice.id, empresaId: sub.empresa_id });
+        break;
+      }
+
       // ── Invoice paid → renew period ──
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
@@ -285,12 +334,24 @@ Deno.serve(async (req) => {
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
-          // Update factura
+          // Update factura — match by stripe_invoice_id (set by invoice.finalized handler)
           if (invoice.id) {
-            await supabase.from("facturas")
-              .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
-              .eq("empresa_id", sub.empresa_id)
-              .eq("estado", "procesando");
+            const { data: existingFac } = await supabase
+              .from("facturas")
+              .select("id")
+              .eq("stripe_invoice_id", invoice.id)
+              .maybeSingle();
+            if (existingFac) {
+              await supabase.from("facturas")
+                .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
+                .eq("id", existingFac.id);
+            } else {
+              // Fallback: invoice paid before finalize webhook arrived (rare). Update by procesando.
+              await supabase.from("facturas")
+                .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
+                .eq("empresa_id", sub.empresa_id)
+                .in("estado", ["procesando", "pendiente"]);
+            }
           }
 
           // WhatsApp — always show 1st of next month

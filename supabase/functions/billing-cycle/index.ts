@@ -74,6 +74,14 @@ Deno.serve(async (req) => {
       log("Subs to invoice", { count: subsToInvoice.length });
 
       for (const sub of subsToInvoice) {
+        // Skip if Stripe handles this subscription — Stripe emits the renewal invoice
+        // automatically and the webhook (invoice.created/paid) syncs it into `facturas`.
+        // Generating it here too would duplicate.
+        if (sub.stripe_subscription_id) {
+          log("Skipped (Stripe handles billing)", { empresa: sub.empresa_id, stripeSub: sub.stripe_subscription_id });
+          continue;
+        }
+
         // Skip if pending invoice already exists for this period
         const { data: existingInv } = await supabase
           .from("facturas")
@@ -159,7 +167,7 @@ Deno.serve(async (req) => {
             descuento_porcentaje: descuento,
             subtotal,
             total,
-            estado: sub.stripe_subscription_id ? "procesando" : "pendiente",
+            estado: "pendiente",
             es_prorrateo: false,
             fecha_vencimiento: new Date(now.getTime() + DIAS_GRACIA * 86400000).toISOString(),
           })
@@ -176,17 +184,11 @@ Deno.serve(async (req) => {
         const empresaNombre = empresa?.nombre || "tu empresa";
         const numFactura = factura?.numero_factura || "N/A";
 
-        // WhatsApp notification
-        if (sub.stripe_subscription_id) {
-          await sendWhatsApp(supabase, sub.empresa_id,
-            `¡Hola! 👋\nTe informamos que hoy se generó tu factura de *${mesActual}* para *${empresaNombre}*.\n📋 *Factura:* ${numFactura}\n💰 *Monto:* $${total.toLocaleString()} MXN\n📦 *Plan:* ${qty} usuarios\n💳 El cobro se procesará automáticamente a tu tarjeta registrada.\nSi tu pago no se procesa, tienes *${DIAS_GRACIA} días de gracia*.`
-          );
-        } else {
-          const fechaLimite = new Date(now.getTime() + DIAS_GRACIA * 86400000).toLocaleDateString("es-MX");
-          await sendWhatsApp(supabase, sub.empresa_id,
-            `¡Hola! 👋\nSe ha generado tu factura de *${mesActual}* para *${empresaNombre}*.\n📋 *Factura:* ${numFactura}\n💰 *Monto:* $${total.toLocaleString()} MXN\n📅 *Fecha límite:* ${fechaLimite}\nTienes *${DIAS_GRACIA} días de gracia* para realizar tu pago.`
-          );
-        }
+        // WhatsApp notification (only manual/OpenPay subs reach this point)
+        const fechaLimite = new Date(now.getTime() + DIAS_GRACIA * 86400000).toLocaleDateString("es-MX");
+        await sendWhatsApp(supabase, sub.empresa_id,
+          `¡Hola! 👋\nSe ha generado tu factura de *${mesActual}* para *${empresaNombre}*.\n📋 *Factura:* ${numFactura}\n💰 *Monto:* $${total.toLocaleString()} MXN\n📅 *Fecha límite:* ${fechaLimite}\nTienes *${DIAS_GRACIA} días de gracia* para realizar tu pago.`
+        );
 
         log("Invoice generated", { empresa: sub.empresa_id, total, numFactura });
       }
