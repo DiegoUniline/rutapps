@@ -345,6 +345,11 @@ Deno.serve(async (req) => {
               await supabase.from("facturas")
                 .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
                 .eq("id", existingFac.id);
+              // Cancel any pending retries for this invoice
+              await supabase.from("cobro_reintentos")
+                .update({ estado: "exitoso", procesado_at: new Date().toISOString() })
+                .eq("factura_id", existingFac.id)
+                .eq("estado", "pendiente");
             } else {
               // Fallback: invoice paid before finalize webhook arrived (rare). Update by procesando.
               await supabase.from("facturas")
