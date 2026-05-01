@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
       mode: "subscription",
       subscription_data: {
         billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        proration_behavior: "create_prorations",
+        proration_behavior: "none",
         metadata: { empresa_id: empresa_id || "" },
       },
       success_url: `${origin}/dashboard?checkout=success`,
