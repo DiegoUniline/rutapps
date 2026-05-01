@@ -1,84 +1,31 @@
-## Análisis de causa raíz
+## Diagnóstico
 
-El checkout de Stripe le muestra **$0** a Inversiones Salgado (y a cualquier empresa que reactive fuera del día 1) en lugar del cobro real (~900 MXN o el equivalente en su moneda).
+Oscar (Inversiones Salgado, customer `cus_UN4lcSwdjlMTOv`) tiene **dos facturas** de $900 en Stripe:
 
-### Por qué pasa
+| Factura | Status | Origen | Acción |
+|---------|--------|--------|--------|
+| `in_1TSK71CUpJnsv7ilp4O4rHzl` | **paid** ✅ | `subscription_create` (checkout corregido) | Dejar como está |
+| `in_1TSIgVCUpJnsv7ilfG6h94vm` (CCO56QMX-0004) | **open** ⚠️ | `manual` (intento previo fallido) | **Anular (void)** |
+| 3 facturas más en `draft` ($0) | draft | manual | **Eliminar (delete)** |
 
-En `supabase/functions/create-checkout/index.ts` la sesión se crea con:
+La factura "pendiente" que ve Oscar es la huérfana del primer intento (cuando aún se creaba `stripe.invoices.create` manual). La suscripción real (`sub_1TSK75...`) está correcta en `trialing` con su pago de $900 ya cobrado.
 
-```
-mode: "subscription"
-line_items: [{ price: price_id, quantity }]      // suscripción mensual ($300 × 3 = $900)
-subscription_data: {
-  billing_cycle_anchor: <próximo día 1>,         // ancla la suscripción al 1° del mes siguiente
-  proration_behavior: "none",                    // NO prorratea
-}
-```
+## Acciones
 
-Combinación venenosa: cuando `billing_cycle_anchor` es futuro y `proration_behavior` es `"none"`, **Stripe NO cobra nada en el primer checkout** por el line_item de la suscripción. La suscripción simplemente queda activa y empieza a cobrar el día del ancla. Por eso el resumen del checkout dice **GTQ/MXN 0.00 vence hoy**.
+1. **Anular factura huérfana en Stripe**
+   - `stripe.invoices.voidInvoice("in_1TSIgVCUpJnsv7ilfG6h94vm")` → status pasa a `void`, desaparece del listado de Oscar como pendiente.
 
-Para resolverlo, el intento previo añadió un `stripe.invoiceItems.create()` separado por el monto del primer periodo (días de gracia + uso del mes). Eso tampoco funciona en Checkout: un invoice item suelto no se adjunta a la sesión de Checkout — solo aparece en la siguiente factura recurrente. Resultado: el cliente ve $0 ahora y el cargo se intenta el día 1.
+2. **Eliminar 3 facturas en `draft` ($0)** que quedaron del intento fallido:
+   - `in_1TSIgHCUpJnsv7ilu6nZYHKg`
+   - `in_1TSIgFCUpJnsv7ilStwnRYd6`
+   - `in_1TSIgDCUpJnsv7ilW5lyC4oF`
 
-Mi último intento usó `subscription_data.add_invoice_items`, pero los logs muestran:
+3. **Verificar `subscriptions` en BD**: confirmar que `fecha_vencimiento` se actualizó vía webhook (logs muestran `Access granted via checkout` para empresa `dad7a4a0...`, validar que sea Oscar).
 
-```
-Received unknown parameter: subscription_data[add_invoice_items]
-```
+4. **Prevención a futuro**: el código actual de `create-checkout` ya NO crea facturas manuales (usa `line_items` one-shot via `stripe.prices.create`). El problema era exclusivo del intento fallido previo. No requiere cambios de código.
 
-Stripe Checkout **no soporta** ese campo en `subscription_data` (sí existe en la API directa de `subscriptions.create`, pero no en sesiones de Checkout). Por eso falló el deploy y volvió al estado anterior con $0.
+## Resultado esperado
 
-### Qué sí funciona en Stripe Checkout
-
-`line_items` acepta múltiples ítems mezclando un precio recurrente con uno o varios precios **one-shot** (no recurrentes). Stripe los suma en el resumen y los cobra inmediatamente al confirmar el pago. Esa es la única forma compatible con `mode: "subscription"` para cobrar un monto adicional en el checkout inicial.
-
-## Solución
-
-Reescribir la lógica de `create-checkout` para que el primer cobro (mes completo o prorrateo de reactivación) viaje como un **`line_item` one-shot** dentro de la misma sesión, en la moneda correcta del plan, en lugar de como `invoiceItem` o `add_invoice_items`.
-
-### Cambios en `supabase/functions/create-checkout/index.ts`
-
-1. **Validar `monthlyPriceCentavos > 0` antes de continuar.** Si la lectura del Price de Stripe falla, abortar con error 400 en lugar de seguir con `0` y emitir un checkout fantasma. Cero tolerancia al fallback de $300 silencioso.
-
-2. **Obtener moneda del plan desde Stripe** (`stripePrice.currency`) y usarla en todos los precios derivados, en lugar de hardcodear `"mxn"`. Así si el plan es MXN, el cobro adicional también es MXN; si algún día se agrega un plan en otra moneda, no se rompe.
-
-3. **Quitar** la creación de `stripe.invoiceItems.create(...)` y el bloque `add_invoice_items`.
-
-4. **Crear un Price one-shot inline** (no recurrente) por el monto del primer periodo y agregarlo como segundo `line_item` de la sesión:
-
-   ```ts
-   const oneShotPrice = await stripe.prices.create({
-     currency: planCurrency,            // misma del plan
-     unit_amount: firstChargePerUserCentavos,
-     product_data: { name: firstChargeDescription },
-     // sin "recurring" => one-shot
-   });
-
-   line_items: [
-     { price: price_id, quantity },          // suscripción recurrente (cobrará el día 1)
-     { price: oneShotPrice.id, quantity },   // cargo del primer periodo (se cobra HOY)
-   ]
-   ```
-
-5. **Mantener** `billing_cycle_anchor: nextFirst` y `proration_behavior: "none"` para que la suscripción recurrente arranque a cobrar el día 1° del mes siguiente sin doble cobro.
-
-6. **Quitar** `currency: "mxn"` y `customer_update` del top-level de la sesión: con dos `line_items` que ya tienen su moneda definida, Stripe la infiere correctamente y `customer_update` no es necesario aquí.
-
-7. **Compatibilidad con descuentos:** los `discounts` actuales aplican porcentaje sobre todos los line_items elegibles, lo que está bien porque el cargo prorrateado también debe llevar el descuento de la empresa/cupón.
-
-### Lógica del monto (sin cambios, solo recordatorio)
-
-- Dentro de gracia (≤3 días vencido): cargo = mes completo (`monthlyPriceCentavos × quantity`).
-- Fuera de gracia: cargo = `(3 días gracia + días restantes del mes) × tarifa diaria × quantity`.
-- El día 1° del mes siguiente Stripe cobra automáticamente el ciclo recurrente normal.
-
-### Verificación post-deploy
-
-1. Reabrir el checkout desde el panel de suscripción de Inversiones Salgado.
-2. Confirmar que el resumen ya **no diga $0** y muestre el monto del primer periodo + nota de "Luego $X/mes a partir del 1°".
-3. Revisar logs de `create-checkout` para confirmar que no haya errores de Stripe.
-4. Confirmar con un pago de prueba (o esperar al pago real) que la factura inicial cobra el monto esperado y la suscripción queda activa con anchor al día 1.
-
-### Archivos afectados
-
-- `supabase/functions/create-checkout/index.ts` (única edición)
-- Redeploy automático del edge function
+- Oscar deja de ver la factura "pendiente" CCO56QMX-0004 en `list-invoices`.
+- Solo queda visible la factura pagada de $900.
+- Suscripción sigue activa en trial hasta el 1° de junio, cuando Stripe genera la factura mensual normal.
