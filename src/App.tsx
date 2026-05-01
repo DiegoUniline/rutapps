@@ -11,6 +11,7 @@ import { usePermisos } from "@/hooks/usePermisos";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import FacturaPendienteModal from "@/components/FacturaPendienteModal";
 import { ErrorModalProvider } from "@/components/ErrorModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
