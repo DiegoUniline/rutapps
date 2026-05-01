@@ -10,10 +10,10 @@ export interface FacturaPendienteState {
   numeroFactura: string | null;
   total: number;
   fechaVencimiento: string | null;
-  diasParaPagar: number | null;     // días hasta fecha_vencimiento (positivo = aún no vence)
-  diasGraciaRestantes: number | null; // tras vencer: 3, 2, 1, 0
-  isExpired: boolean;                // ya pasó fecha_vencimiento
-  shouldBlock: boolean;              // pasaron 3 días de gracia
+  /** Días restantes hasta fecha_vencimiento. Positivo = aún en gracia. 0 o negativo = vencida. */
+  diasRestantes: number | null;
+  /** True cuando ya pasó fecha_vencimiento → debe bloquear acceso al sistema. */
+  shouldBlock: boolean;
 }
 
 const EMPTY: FacturaPendienteState = {
@@ -23,13 +23,9 @@ const EMPTY: FacturaPendienteState = {
   numeroFactura: null,
   total: 0,
   fechaVencimiento: null,
-  diasParaPagar: null,
-  diasGraciaRestantes: null,
-  isExpired: false,
+  diasRestantes: null,
   shouldBlock: false,
 };
-
-const GRACIA_DIAS = 3;
 
 export function useFacturaPendiente(): FacturaPendienteState {
   const { user, empresa } = useAuth();
@@ -51,12 +47,9 @@ export function useFacturaPendiente(): FacturaPendienteState {
 
       const venc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null;
       const today = new Date();
-      const diasParaPagar = venc ? differenceInCalendarDays(venc, today) : null;
-      const isExpired = diasParaPagar !== null && diasParaPagar < 0;
-      const diasGraciaRestantes = isExpired
-        ? Math.max(0, GRACIA_DIAS + diasParaPagar) // diasParaPagar es negativo
-        : null;
-      const shouldBlock = isExpired && diasGraciaRestantes === 0;
+      const diasRestantes = venc ? differenceInCalendarDays(venc, today) : null;
+      // Bloquea cuando ya pasó la fecha de vencimiento (día siguiente al límite)
+      const shouldBlock = diasRestantes !== null && diasRestantes < 0;
 
       return {
         hasPendiente: true,
@@ -64,9 +57,7 @@ export function useFacturaPendiente(): FacturaPendienteState {
         numeroFactura: f.numero_factura,
         total: Number(f.total) || 0,
         fechaVencimiento: f.fecha_vencimiento,
-        diasParaPagar,
-        diasGraciaRestantes,
-        isExpired,
+        diasRestantes,
         shouldBlock,
       };
     },
