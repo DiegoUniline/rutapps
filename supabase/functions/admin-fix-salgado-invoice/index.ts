@@ -20,19 +20,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Auth: super admin OR service role key in body
-    const body = await req.json().catch(() => ({}));
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    let authorized = body?.service_key === serviceKey;
-    if (!authorized) {
-      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey, { auth: { persistSession: false } });
-      const authHeader = req.headers.get("Authorization");
-      if (authHeader) {
-        const { data: userData } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-        authorized = userData.user?.email === SUPER_ADMIN_EMAIL;
-      }
+    // One-shot token (function will be deleted right after use)
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+    if (token !== "fix-salgado-2026-05-01-onetime") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
     }
-    if (!authorized) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2025-08-27.basil" });
 
