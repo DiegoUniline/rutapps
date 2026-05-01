@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
             descuento_porcentaje: descuento,
             subtotal,
             total,
-            estado: sub.stripe_subscription_id ? "procesando" : "pendiente",
+            estado: "pendiente",
             es_prorrateo: false,
             fecha_vencimiento: new Date(now.getTime() + DIAS_GRACIA * 86400000).toISOString(),
           })
