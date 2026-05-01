@@ -41,6 +41,7 @@ interface FacturaRow {
   es_prorrateo: boolean;
   fecha_emision: string;
   fecha_pago: string | null;
+  stripe_invoice_id: string | null;
 }
 
 const BANK_INFO = {
