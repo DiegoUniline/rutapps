@@ -236,7 +236,8 @@ Deno.serve(async (req) => {
       mode: "subscription",
       subscription_data: {
         billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        proration_behavior: "none",
+        // proration_behavior is incompatible with one-time line_items in Checkout;
+        // we instead use billing_cycle_anchor + a one-shot line_item to charge the first period.
         metadata: { empresa_id: empresa_id || "" },
       },
       success_url: `${origin}/dashboard?checkout=success`,
