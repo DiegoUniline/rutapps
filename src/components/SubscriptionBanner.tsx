@@ -12,27 +12,24 @@ export default function SubscriptionBanner() {
   // Ocultar únicamente en la vista móvil de ruta; en escritorio lo ven todos
   if (location.pathname.startsWith('/ruta')) return null;
 
-  // PRIORIDAD 1: Factura pendiente (mientras la suscripción siga activa)
+  // PRIORIDAD 1: Factura pendiente
   if (fp.hasPendiente) {
-    const isExpired = fp.isExpired;
-    const isUrgent = isExpired || (fp.diasParaPagar !== null && fp.diasParaPagar <= 2);
+    const isUrgent = fp.shouldBlock || (fp.diasRestantes !== null && fp.diasRestantes <= 1);
 
     let message = '';
-    if (isExpired) {
-      if (fp.diasGraciaRestantes && fp.diasGraciaRestantes > 0) {
-        message = `¡Tu factura ${fp.numeroFactura} venció! Te quedan ${fp.diasGraciaRestantes} día${fp.diasGraciaRestantes !== 1 ? 's' : ''} de gracia para pagarla.`;
-      } else {
-        message = `Tu factura ${fp.numeroFactura} venció. Tu acceso será suspendido.`;
-      }
+    if (fp.shouldBlock) {
+      message = `Tu factura ${fp.numeroFactura} venció. Tu acceso ha sido suspendido.`;
+    } else if (fp.diasRestantes === 0) {
+      message = `¡Hoy vence tu factura ${fp.numeroFactura}! Paga hoy para evitar la suspensión.`;
     } else {
-      message = `Tienes una factura pendiente. Te quedan ${fp.diasParaPagar} día${fp.diasParaPagar !== 1 ? 's' : ''} para pagarla.`;
+      message = `Tienes una factura pendiente. Te queda${fp.diasRestantes !== 1 ? 'n' : ''} ${fp.diasRestantes} día${fp.diasRestantes !== 1 ? 's' : ''} para pagarla antes de la suspensión.`;
     }
 
     return (
       <div
         className={cn(
           "w-full px-4 py-2.5 text-center text-sm font-semibold flex items-center justify-center gap-3 relative overflow-hidden z-50",
-          isExpired
+          fp.shouldBlock
             ? "bg-destructive text-destructive-foreground"
             : isUrgent
               ? "bg-amber-500 text-white"
@@ -44,18 +41,18 @@ export default function SubscriptionBanner() {
           style={{
             background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)',
             backgroundSize: '200% 100%',
-            animation: (isUrgent || isExpired) ? 'banner-shimmer 2s ease-in-out infinite' : 'none',
+            animation: isUrgent ? 'banner-shimmer 2s ease-in-out infinite' : 'none',
           }}
         />
         <span className="relative flex items-center gap-2">
-          {isExpired ? <AlertTriangle className="h-4 w-4 animate-bounce" /> : <FileWarning className="h-4 w-4" />}
+          {fp.shouldBlock ? <AlertTriangle className="h-4 w-4 animate-bounce" /> : <FileWarning className="h-4 w-4" />}
           <span>{message}</span>
         </span>
         <Link
           to="/mi-suscripcion"
           className={cn(
             "relative inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-bold transition-all shadow-sm hover:shadow-md hover:scale-105 active:scale-95",
-            isExpired ? "bg-white text-destructive hover:bg-white/90" : "bg-white/90 text-amber-700 hover:bg-white"
+            fp.shouldBlock ? "bg-white text-destructive hover:bg-white/90" : "bg-white/90 text-amber-700 hover:bg-white"
           )}
         >
           <CreditCard className="h-3.5 w-3.5" />

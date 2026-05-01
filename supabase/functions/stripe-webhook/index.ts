@@ -295,7 +295,8 @@ Deno.serve(async (req) => {
           total: totalMxn,
           estado: invoice.status === "paid" ? "pagada" : "procesando",
           es_prorrateo: false,
-          fecha_vencimiento: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
+          // Política Rutapp: 3 días de gracia desde emisión, después se bloquea acceso
+          fecha_vencimiento: new Date(Date.now() + 3 * 86400000).toISOString(),
         });
 
         log("Stripe invoice mirrored to facturas", { invoiceId: invoice.id, empresaId: sub.empresa_id });

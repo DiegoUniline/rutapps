@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { usePermisos } from "@/hooks/usePermisos";
 import AppLayout from "@/components/AppLayout";
@@ -185,6 +186,9 @@ const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPa
 function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
   const subscription = useSubscription();
+  const facturaPendiente = useFacturaPendiente();
+  // Bloqueo combinado: suscripción suspendida O factura pendiente vencida
+  const isBlockedTotal = subscription.isBlocked || (!subscription.isSuperAdmin && facturaPendiente.shouldBlock);
   
   const { hasPermiso, loading: permisosLoading } = usePermisos();
   
@@ -287,7 +291,7 @@ function AppRoutes() {
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
   const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
-  if (subscription.isBlocked && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
+  if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SubscriptionBanner />
@@ -344,7 +348,7 @@ function AppRoutes() {
   }
 
   // Regular blocked users
-  if (subscription.isBlocked) {
+  if (isBlockedTotal) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SubscriptionBanner />
