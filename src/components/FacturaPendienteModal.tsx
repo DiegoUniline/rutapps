@@ -17,18 +17,17 @@ export default function FacturaPendienteModal() {
 
   useEffect(() => {
     if (!fp.hasPendiente || fp.loading) return;
-    // No mostrar en rutas que ya son del flujo de pago
     if (location.pathname.startsWith('/mi-suscripcion')) return;
     if (location.pathname.startsWith('/suscripcion-bloqueada')) return;
     if (location.pathname.startsWith('/ruta')) return;
 
-    // Si está en gracia (vencida), siempre mostrar (no se puede posponer)
-    if (fp.isExpired) {
+    // Si ya venció (bloqueo), siempre mostrar y no permitir cerrar
+    if (fp.shouldBlock) {
       setOpen(true);
       return;
     }
 
-    // Si aún no vence, respetar snooze por factura
+    // Aún en periodo de gracia → respetar snooze
     try {
       const raw = localStorage.getItem(`${SNOOZE_KEY}:${fp.facturaId}`);
       if (raw) {
@@ -37,7 +36,7 @@ export default function FacturaPendienteModal() {
       }
     } catch {}
     setOpen(true);
-  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.isExpired, location.pathname]);
+  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.shouldBlock, location.pathname]);
 
   if (!fp.hasPendiente) return null;
 
@@ -56,49 +55,55 @@ export default function FacturaPendienteModal() {
     navigate('/mi-suscripcion');
   };
 
-  const isUrgent = fp.isExpired;
+  const isBlocked = fp.shouldBlock;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!isUrgent || !v) setOpen(v); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!isBlocked || !v) setOpen(v); }}>
       <DialogContent
         className="max-w-md z-[70]"
-        // Si está en gracia (vencida), no se puede cerrar haciendo click fuera
-        onInteractOutside={(e) => { if (isUrgent) e.preventDefault(); }}
-        onEscapeKeyDown={(e) => { if (isUrgent) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (isBlocked) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (isBlocked) e.preventDefault(); }}
       >
         <DialogHeader>
-          <div className={`mx-auto mb-3 h-14 w-14 rounded-full flex items-center justify-center ${isUrgent ? 'bg-destructive/10' : 'bg-amber-100'}`}>
-            {isUrgent
+          <div className={`mx-auto mb-3 h-14 w-14 rounded-full flex items-center justify-center ${isBlocked ? 'bg-destructive/10' : 'bg-amber-100'}`}>
+            {isBlocked
               ? <AlertTriangle className="h-7 w-7 text-destructive" />
               : <Clock className="h-7 w-7 text-amber-600" />}
           </div>
           <DialogTitle className="text-center text-xl">
-            {isUrgent ? '¡Tu factura venció!' : 'Tienes una factura pendiente'}
+            {isBlocked ? 'Acceso suspendido' : 'Tienes una factura pendiente'}
           </DialogTitle>
           <DialogDescription className="text-center">
             Folio <strong>{fp.numeroFactura}</strong> por <strong>{fmtMoney(fp.total)}</strong>
           </DialogDescription>
         </DialogHeader>
 
-        <div className={`rounded-lg p-4 text-center ${isUrgent ? 'bg-destructive/5 border border-destructive/20' : 'bg-amber-50 border border-amber-200'}`}>
-          {isUrgent ? (
+        <div className={`rounded-lg p-4 text-center ${isBlocked ? 'bg-destructive/5 border border-destructive/20' : 'bg-amber-50 border border-amber-200'}`}>
+          {isBlocked ? (
             <>
               <p className="text-sm text-destructive font-semibold mb-1">
-                {fp.diasGraciaRestantes && fp.diasGraciaRestantes > 0
-                  ? `Te quedan ${fp.diasGraciaRestantes} día${fp.diasGraciaRestantes !== 1 ? 's' : ''} de gracia`
-                  : 'Tu acceso será suspendido'}
+                Tu factura venció. El acceso al sistema está bloqueado.
               </p>
               <p className="text-xs text-muted-foreground">
-                Paga ahora para evitar la suspensión del servicio.
+                Paga ahora para reactivar tu cuenta inmediatamente.
+              </p>
+            </>
+          ) : fp.diasRestantes === 0 ? (
+            <>
+              <p className="text-sm text-amber-900 font-semibold mb-1">
+                ¡Hoy vence tu factura!
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Si no pagas hoy, mañana se suspenderá tu acceso al sistema.
               </p>
             </>
           ) : (
             <>
               <p className="text-sm text-amber-900 font-semibold mb-1">
-                Tienes {fp.diasParaPagar} día{fp.diasParaPagar !== 1 ? 's' : ''} para pagar
+                Te queda{fp.diasRestantes !== 1 ? 'n' : ''} {fp.diasRestantes} día{fp.diasRestantes !== 1 ? 's' : ''} para pagar
               </p>
               <p className="text-xs text-muted-foreground">
-                Después del vencimiento contarás con 3 días de gracia adicionales antes de la suspensión.
+                Si no pagas antes del vencimiento, tu acceso al sistema se suspenderá.
               </p>
             </>
           )}
@@ -109,7 +114,7 @@ export default function FacturaPendienteModal() {
             <CreditCard className="h-4 w-4 mr-2" />
             Pagar ahora
           </Button>
-          {!isUrgent && (
+          {!isBlocked && (
             <Button onClick={handleSnooze} variant="ghost" className="w-full">
               Recordarme más tarde
             </Button>
