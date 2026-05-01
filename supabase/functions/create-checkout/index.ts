@@ -122,15 +122,19 @@ Deno.serve(async (req) => {
       firstChargeDescription = `Reactivación: ${GRACE_DAYS} días de gracia + uso del día ${dayOfMonth} al ${daysInMonth} (${billedDays} días)`;
     }
 
+    // Build add_invoice_items entry to charge first period IMMEDIATELY at checkout
+    let firstPeriodInvoiceItem: any = null;
     if (firstChargeCentavos > 0 && monthlyPriceCentavos > 0) {
-      await stripe.invoiceItems.create({
-        customer: customerId,
-        amount: firstChargeCentavos,
+      // Create an inline one-shot price in MXN so it shows up in the Checkout session
+      const oneShotPrice = await stripe.prices.create({
         currency: "mxn",
-        description: firstChargeDescription,
-        metadata: { empresa_id: empresa_id || "", tipo: "primer_periodo" },
+        unit_amount: Math.round(firstChargeCentavos / quantity),
+        product_data: {
+          name: firstChargeDescription,
+        },
       });
-      log("Added first-period charge", { firstChargeCentavos, isWithinGrace, billedDays: isWithinGrace ? daysInMonth : (GRACE_DAYS + daysFromTodayToEndOfMonth) });
+      firstPeriodInvoiceItem = { price: oneShotPrice.id, quantity };
+      log("Created first-period inline price", { priceId: oneShotPrice.id, firstChargeCentavos, quantity });
     }
 
     // ─── Check for empresa discount (base + coupon) ───
