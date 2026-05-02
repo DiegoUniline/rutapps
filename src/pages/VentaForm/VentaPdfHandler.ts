@@ -60,7 +60,13 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       folio: e.folio ?? '', status: e.status,
       lineas: (e.entrega_lineas ?? []).map((el: any) => {
         const prod = productosList?.find((p: any) => p.id === el.producto_id);
-        return { codigo: prod?.codigo ?? '', nombre: prod?.nombre ?? '', cantidad_pedida: Number(el.cantidad_entregada) || 0, cantidad_entregada: Number(el.cantidad_entregada) || 0 };
+        const embed = el.productos;
+        return {
+          codigo: prod?.codigo ?? embed?.codigo ?? el.codigo ?? '',
+          nombre: prod?.nombre ?? embed?.nombre ?? el.descripcion ?? el.nombre ?? '',
+          cantidad_pedida: Number(el.cantidad_entregada) || 0,
+          cantidad_entregada: Number(el.cantidad_entregada) || 0,
+        };
       }),
     })),
     pagos: (pagosData ?? []).map((p: any) => ({

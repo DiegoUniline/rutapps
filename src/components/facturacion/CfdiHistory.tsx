@@ -55,7 +55,8 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
             const cfdiLineas = lineas.filter(l => l.factura_cfdi_id === cfdi.id);
             const lineasDesc = cfdiLineas.map(l => {
               const prod = productosList?.find((p: any) => p.id === l.producto_id);
-              return `${prod?.nombre || 'Producto'} (x${l.cantidad})`;
+              const nombre = prod?.nombre || l.productos?.nombre || l.descripcion || 'Producto';
+              return `${nombre} (x${l.cantidad})`;
             }).join(', ');
 
             return (
