@@ -63,8 +63,8 @@ export default function SubscriptionBanner() {
   }
 
   // PRIORIDAD 2: Vencimiento de suscripción (legacy)
-  if (daysLeft === null || daysLeft > 7) return null;
-  if (status === 'active' && daysLeft > 7) return null;
+  if (daysLeft === null || daysLeft > 3) return null;
+  if (status === 'active' && daysLeft > 3) return null;
 
   const isExpired = daysLeft <= 0;
   const isGracePeriod = isExpired && daysLeft >= -3;
