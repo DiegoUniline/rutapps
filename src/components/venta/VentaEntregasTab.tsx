@@ -94,13 +94,13 @@ export function VentaEntregasTab({
               </thead>
               <tbody>
                 {productLineas.map((l, idx) => {
-                  const prod = productosList.find(p => p.id === l.producto_id);
+                  const prod = productosList.find(p => p.id === l.producto_id) || (l as any).productos;
                   const pedida = Number(l.cantidad) || 0;
                   const surtida = lineDeliverySummary[l.producto_id!] ?? 0;
                   const faltante = Math.max(0, pedida - surtida);
                   return (
                     <tr key={idx} className={cn("border-b border-table-border", faltante > 0 && "bg-warning/5")}>
-                      <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</td>
+                      <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo ?? ''} · ${prod.nombre}`.replace(/^ · /, '') : ((l as any).descripcion || l.producto_id)}</td>
                       <td className="py-1.5 px-2 text-right text-[12px]">{pedida}</td>
                       <td className="py-1.5 px-2 text-right text-[12px] font-medium text-primary">{surtida}</td>
                       <td className={cn("py-1.5 px-2 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
