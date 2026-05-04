@@ -13,7 +13,8 @@ export const CLIENTE_COLUMNS = [
 ] as const;
 
 export const PRODUCTO_COLUMNS = [
-  'id','empresa_id','codigo','nombre','clave_alterna','descripcion','notas','costo','precio_principal',
+  'id','empresa_id','codigo','nombre','nombre_compra','nombre_venta','nombre_ticket',
+  'clave_alterna','descripcion','notas','costo','precio_principal',
   'cantidad','imagen_url','se_puede_comprar','se_puede_vender','vender_sin_stock','se_puede_inventariar',
   'es_combo','min','max','manejar_lotes','factor_conversion','permitir_descuento','monto_maximo',
   'tiene_comision','tipo_comision','pct_comision','status','almacenes','tiene_iva','tiene_ieps',
