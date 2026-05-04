@@ -3571,6 +3571,9 @@ export type Database = {
           min: number | null
           monto_maximo: number | null
           nombre: string
+          nombre_compra: string | null
+          nombre_ticket: string | null
+          nombre_venta: string | null
           notas: string | null
           pct_comision: number | null
           permitir_descuento: boolean | null
@@ -3624,6 +3627,9 @@ export type Database = {
           min?: number | null
           monto_maximo?: number | null
           nombre: string
+          nombre_compra?: string | null
+          nombre_ticket?: string | null
+          nombre_venta?: string | null
           notas?: string | null
           pct_comision?: number | null
           permitir_descuento?: boolean | null
@@ -3677,6 +3683,9 @@ export type Database = {
           min?: number | null
           monto_maximo?: number | null
           nombre?: string
+          nombre_compra?: string | null
+          nombre_ticket?: string | null
+          nombre_venta?: string | null
           notas?: string | null
           pct_comision?: number | null
           permitir_descuento?: boolean | null
