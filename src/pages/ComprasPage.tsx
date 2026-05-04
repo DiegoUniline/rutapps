@@ -144,7 +144,7 @@ export default function ComprasPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('compra_lineas')
-        .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
+        .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
         .eq('compras.empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
