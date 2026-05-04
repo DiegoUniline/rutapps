@@ -88,7 +88,7 @@ export function useProductos(search?: string, statusFilter?: string) {
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase.from('productos')
-          .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
+          .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);
