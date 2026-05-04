@@ -34,6 +34,7 @@ interface TicketVentaProps {
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
   pagos?: { metodo: string; monto: number; fecha?: string | null; referencia?: string | null }[];
+  productosList?: Array<{ id: string; nombre?: string | null; nombre_ticket?: string | null; nombre_venta?: string | null }>;
   onPrintTicket?: () => void;
   onClose: () => void;
 }
