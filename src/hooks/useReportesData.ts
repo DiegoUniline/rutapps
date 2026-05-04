@@ -64,11 +64,33 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         }).filter(Boolean);
       }
 
-      const gastos = await fetchAllPages<any>((from, to) => {
+      const gastosBase = await fetchAllPages<any>((from, to) => {
         let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
         return q;
       });
+
+      // Gastos de caja (POS): viven en caja_movimientos con tipo='gasto'.
+      // Se incluyen en el reporte etiquetados como "POS" para que se vean junto a los demás.
+      const cajaGastosRaw = hasVendorFilter ? [] : await fetchAllPages<any>((from, to) =>
+        supabase.from('caja_movimientos')
+          .select('id, monto, motivo, created_at, user_id, tipo')
+          .eq('empresa_id', eid)
+          .eq('tipo', 'gasto')
+          .gte('created_at', `${desde}T00:00:00`)
+          .lte('created_at', `${hasta}T23:59:59`)
+          .range(from, to)
+      );
+      const cajaGastos = cajaGastosRaw.map((m: any) => ({
+        id: `caja_${m.id}`,
+        monto: m.monto,
+        concepto: `[POS] ${m.motivo || 'Gasto de caja'}`,
+        fecha: (m.created_at || '').slice(0, 10),
+        vendedor_id: m.user_id,
+        vendedores: null,
+        origen: 'pos',
+      }));
+      const gastos = [...gastosBase, ...cajaGastos];
 
       const clientes = await fetchAllPages<any>((from, to) =>
         supabase.from('clientes').select('id, nombre, codigo, status').eq('empresa_id', eid).range(from, to)
