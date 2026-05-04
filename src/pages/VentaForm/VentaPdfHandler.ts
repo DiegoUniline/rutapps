@@ -1,6 +1,7 @@
 import { todayLocal } from '@/lib/utils';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
+import { getNombreVenta } from '@/lib/productoNombres';
 import type { Empresa, VentaLinea } from '@/types';
 
 interface PdfParams {
