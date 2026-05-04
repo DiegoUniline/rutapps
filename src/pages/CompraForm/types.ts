@@ -14,7 +14,7 @@ export interface CompraLinea {
   _unidad_compra: string;
   _factor_conversion: number;
   _piezas_total: number;
-  productos?: { id: string; codigo: string; nombre: string; costo: number };
+  productos?: { id: string; codigo: string; nombre: string; nombre_compra?: string | null; costo: number };
 }
 
 export function emptyLine(): Partial<CompraLinea> {

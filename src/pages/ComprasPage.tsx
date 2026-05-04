@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { getNombreCompra } from '@/lib/productoNombres';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -144,7 +145,7 @@ export default function ComprasPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('compra_lineas')
-        .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
+        .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
         .eq('compras.empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -155,7 +156,7 @@ export default function ComprasPage() {
         precio_unitario: l.precio_unitario,
         subtotal: l.subtotal ?? l.cantidad * l.precio_unitario,
         codigo: l.productos?.codigo ?? '',
-        producto: l.productos?.nombre ?? '',
+        producto: getNombreCompra(l.productos),
         folio: l.compras?.folio ?? l.compra_id?.slice(0, 8),
         status: l.compras?.status ?? '',
         fecha: l.compras?.fecha ?? '',
