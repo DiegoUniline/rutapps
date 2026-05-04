@@ -15,6 +15,9 @@ export interface Producto {
   empresa_id: string;
   codigo: string;
   nombre: string;
+  nombre_compra?: string | null;
+  nombre_venta?: string | null;
+  nombre_ticket?: string | null;
   clave_alterna?: string;
   marca_id?: string;
   proveedor_id?: string;
