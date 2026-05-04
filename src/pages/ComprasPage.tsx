@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { getNombreCompra } from '@/lib/productoNombres';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
