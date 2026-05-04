@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 interface Option {
   value: string;
   label: string;
+  searchText?: string;
 }
 
 interface SearchableSelectProps {
@@ -43,7 +44,7 @@ export default function SearchableSelect({
   const filtered = useMemo(() => {
     if (!search.trim()) return options;
     const q = search.toLowerCase();
-    return options.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
+    return options.filter(o => (o.searchText ?? o.label).toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
   }, [search, options]);
 
   const portalTarget = (triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? document.body;
