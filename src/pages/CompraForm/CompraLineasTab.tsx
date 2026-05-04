@@ -61,7 +61,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
                           return undefined; // no asignamos aún; lo hace onCreated
                         }}
                       />
-                    ) : <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${line.productos.nombre}` : '—'}</span>}
+                    ) : <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${getNombreCompra(line.productos)}` : '—'}</span>}
                   </td>
                   <td className="py-1.5 px-2 text-center text-xs text-muted-foreground uppercase">{line._unidad_compra || 'pz'}</td>
                   <td className="py-1.5 px-2">{isEditable ? <input type="number" className="input-odoo w-24 text-right text-sm" value={line.cantidad ?? 1} onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))} min={0} /> : <span className="text-sm text-right block tabular-nums">{(line.cantidad ?? 1).toLocaleString('es-MX')}</span>}</td>
