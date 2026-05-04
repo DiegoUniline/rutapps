@@ -51,7 +51,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
                   <td className="py-1.5 px-2">
                     {isEditable ? (
                       <SearchableSelect
-                        options={(productosList as any[])?.filter(p => { const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean); return !usedIds.includes(p.id); }).map(p => ({ value: p.id, label: `[${p.codigo}] ${getNombreCompra(p)}` })) ?? []}
+                        options={(productosList as any[])?.filter(p => { const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean); return !usedIds.includes(p.id); }).map(p => ({ value: p.id, label: `[${p.codigo}] ${getNombreCompra(p)}`, searchText: [p.codigo, p.nombre_compra, p.nombre].filter(Boolean).join(' ') })) ?? []}
                         value={line.producto_id ?? ''}
                         onChange={val => updateLinea(idx, 'producto_id', val)}
                         placeholder="Buscar producto..."
