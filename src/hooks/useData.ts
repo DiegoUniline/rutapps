@@ -322,7 +322,7 @@ export function useUnidadesSat() {
 export function useProductosForSelect() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-select', empresa?.id],
+    queryKey: ['productos-select', empresa?.id, 'nombres-contextuales'],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
