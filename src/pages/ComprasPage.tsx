@@ -156,7 +156,7 @@ export default function ComprasPage() {
         precio_unitario: l.precio_unitario,
         subtotal: l.subtotal ?? l.cantidad * l.precio_unitario,
         codigo: l.productos?.codigo ?? '',
-        producto: l.productos?.nombre ?? '',
+        producto: getNombreCompra(l.productos),
         folio: l.compras?.folio ?? l.compra_id?.slice(0, 8),
         status: l.compras?.status ?? '',
         fecha: l.compras?.fecha ?? '',
