@@ -2,6 +2,7 @@ import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
+import { getNombreTicket } from '@/lib/productoNombres';
 
 interface DevolucionTicketItem {
   nombre: string;
