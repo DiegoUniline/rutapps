@@ -5,6 +5,7 @@ import QuickProductDialog from '@/components/QuickProductDialog';
 import { Switch } from '@/components/ui/switch';
 import type { CompraLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
+import { getNombreCompra } from '@/lib/productoNombres';
 
 interface Props {
   lineas: Partial<CompraLinea>[];
