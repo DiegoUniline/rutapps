@@ -64,7 +64,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
         const embed = el.productos;
         return {
           codigo: prod?.codigo ?? embed?.codigo ?? el.codigo ?? '',
-          nombre: prod?.nombre ?? embed?.nombre ?? el.descripcion ?? el.nombre ?? '',
+          nombre: getNombreVenta(prod, getNombreVenta(embed, el.descripcion ?? el.nombre ?? '')),
           cantidad_pedida: Number(el.cantidad_entregada) || 0,
           cantidad_entregada: Number(el.cantidad_entregada) || 0,
         };
