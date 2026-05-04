@@ -50,7 +50,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       const prod = productosList?.find((p: any) => p.id === l.producto_id);
       return {
         codigo: prod?.codigo ?? (l as any).codigo ?? '',
-        nombre: prod?.nombre ?? (l as any).descripcion ?? (l as any).nombre ?? '',
+        nombre: getNombreVenta(prod, (l as any).descripcion ?? (l as any).nombre ?? ''),
         cantidad: Number(l.cantidad) || 0,
         unidad: (l as any).unidad_label || (prod as any)?.unidades_venta?.abreviatura || '',
         precio_unitario: Number(l.precio_unitario) || 0, descuento_pct: Number(l.descuento_pct) || 0,
