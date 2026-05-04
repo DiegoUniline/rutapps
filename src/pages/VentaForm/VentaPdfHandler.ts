@@ -1,6 +1,7 @@
 import { todayLocal } from '@/lib/utils';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
+import { getNombreVenta } from '@/lib/productoNombres';
 import type { Empresa, VentaLinea } from '@/types';
 
 interface PdfParams {
@@ -49,7 +50,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       const prod = productosList?.find((p: any) => p.id === l.producto_id);
       return {
         codigo: prod?.codigo ?? (l as any).codigo ?? '',
-        nombre: prod?.nombre ?? (l as any).descripcion ?? (l as any).nombre ?? '',
+        nombre: getNombreVenta(prod, (l as any).descripcion ?? (l as any).nombre ?? ''),
         cantidad: Number(l.cantidad) || 0,
         unidad: (l as any).unidad_label || (prod as any)?.unidades_venta?.abreviatura || '',
         precio_unitario: Number(l.precio_unitario) || 0, descuento_pct: Number(l.descuento_pct) || 0,
@@ -63,7 +64,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
         const embed = el.productos;
         return {
           codigo: prod?.codigo ?? embed?.codigo ?? el.codigo ?? '',
-          nombre: prod?.nombre ?? embed?.nombre ?? el.descripcion ?? el.nombre ?? '',
+          nombre: getNombreVenta(prod, getNombreVenta(embed, el.descripcion ?? el.nombre ?? '')),
           cantidad_pedida: Number(el.cantidad_entregada) || 0,
           cantidad_entregada: Number(el.cantidad_entregada) || 0,
         };

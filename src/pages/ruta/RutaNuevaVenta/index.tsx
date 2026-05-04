@@ -58,6 +58,7 @@ export default function RutaNuevaVenta() {
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
         promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
         pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha }))}
+        productosList={h.productos as any}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />

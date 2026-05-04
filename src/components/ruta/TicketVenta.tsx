@@ -2,6 +2,7 @@ import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
+import { getNombreTicket } from '@/lib/productoNombres';
 
 interface DevolucionTicketItem {
   nombre: string;
@@ -33,6 +34,7 @@ interface TicketVentaProps {
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
   pagos?: { metodo: string; monto: number; fecha?: string | null; referencia?: string | null }[];
+  productosList?: Array<{ id: string; nombre?: string | null; nombre_ticket?: string | null; nombre_venta?: string | null }>;
   onPrintTicket?: () => void;
   onClose: () => void;
 }
@@ -49,11 +51,17 @@ const ACCION_LABELS: Record<string, string> = {
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
-    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas,
+    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas: lineasRaw,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], onPrintTicket, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], productosList, onPrintTicket, onClose,
   } = props;
+
+  // Resuelve nombre_ticket (con fallback a nombre_venta y nombre principal) usando el cache de productos.
+  const lineas = lineasRaw.map(l => {
+    const prod = productosList?.find(p => p.id === l.producto_id);
+    return prod ? { ...l, nombre: getNombreTicket(prod, l.nombre) } : l;
+  });
 
   const { fmt } = useCurrency();
 
