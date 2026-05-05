@@ -190,7 +190,9 @@ Deno.serve(async (req) => {
         const total = precioConDescuento * qty;
 
         const mesActual = mxNow.toLocaleDateString("es-MX", { month: "long", year: "numeric", timeZone: TZ_MX });
-        const periodoFin = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 2).padStart(2, "0")}-01`;
+        // Last day of the current MX month
+        const lastDay = new Date(mxNow.getFullYear(), mxNow.getMonth() + 1, 0).getDate();
+        const periodoFin = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
         // Create invoice
         const { data: factura } = await supabase
