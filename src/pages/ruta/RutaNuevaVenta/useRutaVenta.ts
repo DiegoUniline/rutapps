@@ -684,7 +684,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           const montoCobro = roundMoney(aplicaciones.reduce((s, a) => s + a.monto, 0));
           if (montoCobro <= 0) continue;
 
-          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
           for (const ap of aplicaciones) {
             await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: new Date().toISOString() });
