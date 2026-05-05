@@ -1,0 +1,1 @@
+ALTER TABLE public.cobros ALTER COLUMN cliente_id SET NOT NULL;

@@ -1541,7 +1541,7 @@ export type Database = {
       }
       cobros: {
         Row: {
-          cliente_id: string | null
+          cliente_id: string
           created_at: string
           empresa_id: string
           fecha: string
@@ -1554,7 +1554,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cliente_id?: string | null
+          cliente_id: string
           created_at?: string
           empresa_id: string
           fecha?: string
@@ -1567,7 +1567,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          cliente_id?: string | null
+          cliente_id?: string
           created_at?: string
           empresa_id?: string
           fecha?: string

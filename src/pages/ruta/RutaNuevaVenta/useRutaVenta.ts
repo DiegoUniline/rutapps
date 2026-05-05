@@ -605,15 +605,43 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       }
 
       const applyPayment = totalACobrar > 0;
+
+      // Resolve "Público general" client when no client was selected, so cobros (NOT NULL cliente_id) can be registered
+      let clientePublicoId: string | null = null;
+      if (!clienteId) {
+        try {
+          const { data: publicClient } = await supabase
+            .from('clientes')
+            .select('id')
+            .eq('empresa_id', empresa.id)
+            .eq('status', 'activo')
+            .in('nombre', ['Público general', 'Publico general', 'Público General', 'Publico General'])
+            .limit(1)
+            .maybeSingle();
+          if (publicClient?.id) {
+            clientePublicoId = publicClient.id;
+          } else {
+            const { data: createdPublicClient } = await supabase
+              .from('clientes')
+              .insert({ empresa_id: empresa.id, nombre: 'Público general', status: 'activo', credito: false, vendedor_id: profile?.id || null })
+              .select('id')
+              .single();
+            clientePublicoId = createdPublicClient?.id ?? null;
+          }
+        } catch (e) { console.error('Error resolviendo Público general:', e); }
+      }
+      const ventaClienteId = clienteId ?? clientePublicoId;
+
       // saldo_pendiente starts as full total; will be reduced after payments are applied
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
       const extraAmtSaved = (totals as any).descuentoExtra ?? 0;
       const extraValSaved = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
-      if (applyPayment && clienteId && pagos.length > 0) {
+      if (applyPayment && ventaClienteId && pagos.length > 0) {
         // Snapshot pending accounts to avoid mutating React state
         const cuentasSnapshot = cuentasPendientes
           .filter(c => c.montoAplicar > 0)
@@ -656,7 +684,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           const montoCobro = roundMoney(aplicaciones.reduce((s, a) => s + a.monto, 0));
           if (montoCobro <= 0) continue;
 
-          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
           for (const ap of aplicaciones) {
             await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: new Date().toISOString() });
