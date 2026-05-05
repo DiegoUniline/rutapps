@@ -103,7 +103,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
 export function useSubscription(): SubscriptionState {
   const { user, empresa, overrideEmpresaId } = useAuth();
 
-  const cached = readCache(user?.id);
+  const cached = readCache(user?.id, empresa?.id);
   const isOverride = !!overrideEmpresaId;
 
   const { data, isLoading, isPlaceholderData } = useQuery({
