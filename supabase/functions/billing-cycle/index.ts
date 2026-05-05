@@ -82,8 +82,13 @@ Deno.serve(async (req) => {
     const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" }) : null;
 
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const isFirstOfMonth = now.getDate() === 1;
+    // Use Mexico City timezone to determine "today" and day-of-month
+    // (otherwise UTC may report day 1 when it's still the last day of prev month in MX,
+    //  generating invoices dated the last day of the previous month).
+    const TZ_MX = "America/Mexico_City";
+    const mxNow = new Date(now.toLocaleString("en-US", { timeZone: TZ_MX }));
+    const today = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, "0")}-${String(mxNow.getDate()).padStart(2, "0")}`;
+    const isFirstOfMonth = mxNow.getDate() === 1;
 
     log("Cycle started", { today, isFirstOfMonth });
 
@@ -184,8 +189,10 @@ Deno.serve(async (req) => {
         const subtotal = precioUnitario * qty;
         const total = precioConDescuento * qty;
 
-        const mesActual = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
-        const periodoFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+        const mesActual = mxNow.toLocaleDateString("es-MX", { month: "long", year: "numeric", timeZone: TZ_MX });
+        // Last day of the current MX month
+        const lastDay = new Date(mxNow.getFullYear(), mxNow.getMonth() + 1, 0).getDate();
+        const periodoFin = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
         // Create invoice
         const { data: factura } = await supabase
