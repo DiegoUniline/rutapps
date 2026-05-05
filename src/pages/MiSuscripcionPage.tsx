@@ -568,6 +568,22 @@ export default function MiSuscripcionPage() {
     }
   }
 
+  const isSuperAdminUser = user?.email === 'diego.leon@uniline.mx';
+
+  // ─── Eliminar factura (solo super admin) ───
+  async function handleDeleteFactura(factura: FacturaRow) {
+    if (!isSuperAdminUser) return;
+    if (!window.confirm(`¿Eliminar la factura ${factura.numero_factura || factura.id}? Esta acción no se puede deshacer.`)) return;
+    try {
+      const { error } = await supabase.from('facturas').delete().eq('id', factura.id);
+      if (error) throw error;
+      toast.success('Factura eliminada');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo eliminar la factura');
+    }
+  }
+
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text.replace(/\s/g, ''));
     toast.success('Copiado');
@@ -622,13 +638,45 @@ export default function MiSuscripcionPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Crown className="h-6 w-6 text-primary" /> Mi Suscripción
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Administra tu plan, usuarios y timbres de facturación.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Crown className="h-6 w-6 text-primary" /> Mi Suscripción
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Administra tu plan, usuarios y timbres de facturación.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={async () => {
+            try {
+              toast.loading('Sincronizando app...', { id: 'sync-app' });
+              const registrations = await navigator.serviceWorker?.getRegistrations();
+              if (registrations) {
+                for (const reg of registrations) {
+                  if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  await reg.unregister();
+                }
+              }
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(n => caches.delete(n)));
+              // Limpiar cache local de suscripción
+              Object.keys(localStorage)
+                .filter(k => k.startsWith('uniline_subscription_state'))
+                .forEach(k => localStorage.removeItem(k));
+              toast.success('App actualizada, recargando...', { id: 'sync-app' });
+              setTimeout(() => window.location.reload(), 600);
+            } catch {
+              window.location.reload();
+            }
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Sincronizar app
+        </Button>
       </div>
 
       {/* Status Banner */}
@@ -964,18 +1012,31 @@ export default function MiSuscripcionPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center">
-                            {f.estado === 'pendiente' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs gap-1"
-                                disabled={payingInvoice === f.id}
-                                onClick={() => handlePayInvoice(f)}
-                              >
-                                {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
-                                Pagar
-                              </Button>
-                            )}
+                            <div className="flex items-center justify-center gap-1">
+                              {f.estado === 'pendiente' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1"
+                                  disabled={payingInvoice === f.id}
+                                  onClick={() => handlePayInvoice(f)}
+                                >
+                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                  Pagar
+                                </Button>
+                              )}
+                              {isSuperAdminUser && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Eliminar factura (Super Admin)"
+                                  onClick={() => handleDeleteFactura(f)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
