@@ -14,16 +14,23 @@ interface SubscriptionState {
 
 const CACHE_KEY = 'uniline_subscription_state';
 
-function readCache(userId?: string | null) {
+function cacheKey(userId: string, empresaId?: string | null) {
+  return `${CACHE_KEY}:${userId}:${empresaId ?? 'sin_empresa'}`;
+}
+
+function readCache(userId?: string | null, empresaId?: string | null) {
   if (!userId) return null;
   try {
-    const raw = localStorage.getItem(`${CACHE_KEY}:${userId}`);
+    const raw = localStorage.getItem(cacheKey(userId, empresaId));
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
 
-function writeCache(userId: string, state: Omit<SubscriptionState, 'loading'>) {
-  try { localStorage.setItem(`${CACHE_KEY}:${userId}`, JSON.stringify(state)); } catch {}
+function writeCache(userId: string, empresaId: string | null | undefined, state: Omit<SubscriptionState, 'loading'>) {
+  try {
+    localStorage.removeItem(`${CACHE_KEY}:${userId}`); // Limpia caché vieja sin empresa
+    localStorage.setItem(cacheKey(userId, empresaId), JSON.stringify(state));
+  } catch {}
 }
 
 async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean): Promise<Omit<SubscriptionState, 'loading'>> {
@@ -33,14 +40,14 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
     const { data: sa } = await supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle();
     isSuperAdmin = !!sa;
   } catch {
-    const cached = readCache(userId);
+      const cached = readCache(userId, empresaId);
     if (cached) return cached;
     return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
   }
 
   if (isSuperAdmin && !empresaId) {
     const state = { status: 'active', daysLeft: 999, isBlocked: false, isSuperAdmin: true, maxUsuarios: 999 };
-    writeCache(userId, state);
+    writeCache(userId, empresaId, state);
     return state;
   }
 
@@ -57,7 +64,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
 
     if (error || !sub) {
       const state = { status: null, daysLeft: null, isBlocked: !sub, isSuperAdmin, maxUsuarios: 0 };
-      writeCache(userId, state);
+      writeCache(userId, empresaId, state);
       return state;
     }
 
@@ -84,10 +91,10 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       isSuperAdmin,
       maxUsuarios: isSuperAdmin ? 999 : sub.max_usuarios,
     };
-    writeCache(userId, state);
+    writeCache(userId, empresaId, state);
     return state;
   } catch {
-    const cached = readCache(userId);
+    const cached = readCache(userId, empresaId);
     if (cached) return cached;
     return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
   }
