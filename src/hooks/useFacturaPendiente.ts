@@ -34,15 +34,31 @@ export function useFacturaPendiente(): FacturaPendienteState {
     queryKey: ['factura-pendiente', empresa?.id],
     queryFn: async (): Promise<Omit<FacturaPendienteState, 'loading'>> => {
       if (!empresa?.id) return EMPTY;
-      const { data: facturas } = await supabase
-        .from('facturas')
-        .select('id, numero_factura, total, fecha_vencimiento, estado')
-        .eq('empresa_id', empresa.id)
-        .in('estado', ['pendiente', 'procesando', 'past_due'])
-        .order('fecha_emision', { ascending: true })
-        .limit(1);
+      const [{ data: sub }, { data: facturas }] = await Promise.all([
+        supabase
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('empresa_id', empresa.id)
+          .maybeSingle(),
+        supabase
+          .from('facturas')
+          .select('id, numero_factura, total, fecha_vencimiento, estado, periodo_fin')
+          .eq('empresa_id', empresa.id)
+          .in('estado', ['pendiente', 'procesando', 'past_due'])
+          .order('fecha_emision', { ascending: true })
+          .limit(10),
+      ]);
 
-      const f = facturas?.[0];
+      const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+      const f = facturas?.find((factura) => {
+        const facturaPeriodEnd = factura.periodo_fin ? new Date(factura.periodo_fin) : null;
+        const coveredByActiveSubscription =
+          sub?.status === 'active' &&
+          periodEnd !== null &&
+          facturaPeriodEnd !== null &&
+          facturaPeriodEnd <= periodEnd;
+        return !coveredByActiveSubscription;
+      });
       if (!f) return EMPTY;
 
       const venc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null;
