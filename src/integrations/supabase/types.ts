@@ -2295,6 +2295,7 @@ export type Database = {
           colonia: string | null
           cp: string | null
           created_at: string
+          demo_expires_at: string | null
           direccion: string | null
           email: string
           estado: string | null
@@ -2322,6 +2323,7 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          demo_expires_at?: string | null
           direccion?: string | null
           email: string
           estado?: string | null
@@ -2349,6 +2351,7 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          demo_expires_at?: string | null
           direccion?: string | null
           email?: string
           estado?: string | null
