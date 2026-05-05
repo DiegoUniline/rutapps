@@ -568,6 +568,22 @@ export default function MiSuscripcionPage() {
     }
   }
 
+  const isSuperAdminUser = user?.email === 'diego.leon@uniline.mx';
+
+  // ─── Eliminar factura (solo super admin) ───
+  async function handleDeleteFactura(factura: FacturaRow) {
+    if (!isSuperAdminUser) return;
+    if (!window.confirm(`¿Eliminar la factura ${factura.numero_factura || factura.id}? Esta acción no se puede deshacer.`)) return;
+    try {
+      const { error } = await supabase.from('facturas').delete().eq('id', factura.id);
+      if (error) throw error;
+      toast.success('Factura eliminada');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo eliminar la factura');
+    }
+  }
+
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text.replace(/\s/g, ''));
     toast.success('Copiado');
