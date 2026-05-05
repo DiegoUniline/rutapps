@@ -1012,18 +1012,31 @@ export default function MiSuscripcionPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center">
-                            {f.estado === 'pendiente' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs gap-1"
-                                disabled={payingInvoice === f.id}
-                                onClick={() => handlePayInvoice(f)}
-                              >
-                                {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
-                                Pagar
-                              </Button>
-                            )}
+                            <div className="flex items-center justify-center gap-1">
+                              {f.estado === 'pendiente' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1"
+                                  disabled={payingInvoice === f.id}
+                                  onClick={() => handlePayInvoice(f)}
+                                >
+                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                  Pagar
+                                </Button>
+                              )}
+                              {isSuperAdminUser && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Eliminar factura (Super Admin)"
+                                  onClick={() => handleDeleteFactura(f)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
