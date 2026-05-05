@@ -30,7 +30,9 @@ function writeCache(userId: string, empresaId: string | null | undefined, state:
   try {
     localStorage.removeItem(`${CACHE_KEY}:${userId}`); // Limpia caché vieja sin empresa
     localStorage.setItem(cacheKey(userId, empresaId), JSON.stringify(state));
-  } catch {}
+  } catch {
+    return;
+  }
 }
 
 async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean): Promise<Omit<SubscriptionState, 'loading'>> {
