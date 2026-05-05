@@ -89,6 +89,20 @@ Deno.serve(async (req) => {
       moneda: "MXN",
     }).eq("id", eid);
 
+    // ── 3.5) Ensure demo subscription is unblocked & manual (no billing) ──
+    await admin.from("subscriptions").update({
+      es_manual: true,
+      acceso_bloqueado: false,
+      status: "active",
+      updated_at: new Date().toISOString(),
+    }).eq("empresa_id", eid);
+
+    // Remove any pending invoices that may trigger "Factura vencida" modal
+    await admin.from("facturas")
+      .delete()
+      .eq("empresa_id", eid)
+      .in("estado", ["pendiente", "procesando", "past_due"]);
+
     // ── 4) Clean existing demo data (FK order) ──
     const tablesToClean = [
       "conteo_entradas", "conteo_lineas", "conteos_fisicos",
