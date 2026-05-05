@@ -608,7 +608,14 @@ export default function MiSuscripcionPage() {
   const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
 
   // Pending invoices
-  const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
+  const coveredUntil = subData?.status === 'active' && subData?.current_period_end
+    ? new Date(subData.current_period_end)
+    : null;
+  const pendingFacturas = facturas.filter(f => {
+    if (f.estado !== 'pendiente') return false;
+    if (!coveredUntil || !f.periodo_fin) return true;
+    return new Date(f.periodo_fin) > coveredUntil;
+  });
 
   const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
