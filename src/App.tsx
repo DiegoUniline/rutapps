@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -185,6 +185,7 @@ const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPa
 
 function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
+  const queryClient = useQueryClient();
   const subscription = useSubscription();
   const facturaPendiente = useFacturaPendiente();
   // Bloqueo combinado: suscripción suspendida O factura pendiente vencida
@@ -210,6 +211,12 @@ function AppRoutes() {
     const t = setTimeout(() => setLoadingTooLong(true), 8000);
     return () => clearTimeout(t);
   }, [loading, subscription.loading]);
+
+  useEffect(() => {
+    if (!user?.id || subscription.loading || subscription.status !== 'active') return;
+    localStorage.removeItem(`uniline_subscription_state:${user.id}`);
+    queryClient.invalidateQueries({ queryKey: ['factura-pendiente', profile?.empresa_id] });
+  }, [user?.id, profile?.empresa_id, subscription.loading, subscription.status, queryClient]);
 
   if (loading || subscription.loading) {
     return (
