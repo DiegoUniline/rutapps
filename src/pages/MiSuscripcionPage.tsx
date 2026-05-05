@@ -622,13 +622,45 @@ export default function MiSuscripcionPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Crown className="h-6 w-6 text-primary" /> Mi Suscripción
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Administra tu plan, usuarios y timbres de facturación.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Crown className="h-6 w-6 text-primary" /> Mi Suscripción
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Administra tu plan, usuarios y timbres de facturación.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={async () => {
+            try {
+              toast.loading('Sincronizando app...', { id: 'sync-app' });
+              const registrations = await navigator.serviceWorker?.getRegistrations();
+              if (registrations) {
+                for (const reg of registrations) {
+                  if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  await reg.unregister();
+                }
+              }
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(n => caches.delete(n)));
+              // Limpiar cache local de suscripción
+              Object.keys(localStorage)
+                .filter(k => k.startsWith('uniline_subscription_state'))
+                .forEach(k => localStorage.removeItem(k));
+              toast.success('App actualizada, recargando...', { id: 'sync-app' });
+              setTimeout(() => window.location.reload(), 600);
+            } catch {
+              window.location.reload();
+            }
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Sincronizar app
+        </Button>
       </div>
 
       {/* Status Banner */}
