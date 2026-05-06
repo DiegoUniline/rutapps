@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, Search, Package, Warehouse, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn, fmtNum } from '@/lib/utils';
