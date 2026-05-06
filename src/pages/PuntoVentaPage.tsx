@@ -2067,6 +2067,24 @@ export default function PuntoVentaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PresentacionSelectorModal
+        open={!!granelFor}
+        onClose={() => setGranelFor(null)}
+        producto={granelFor}
+        presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
+        precioPorUnidadBase={granelFor ? getProductPricing(granelFor).displayPrice : 0}
+        stockMax={granelFor ? (granelFor.vender_sin_stock ? Infinity : (granelFor.cantidad ?? 0)) : Infinity}
+        onConfirm={(data) => {
+          if (!granelFor) return;
+          addGranelLine(granelFor, {
+            cantidadBase: data.cantidadBase,
+            precioUnitario: data.precioUnitario,
+            paquetes: data.paquetes,
+            presentacion: data.presentacion ? { id: data.presentacion.id, nombre: data.presentacion.nombre, factor_base: Number(data.presentacion.factor_base) } : null,
+          });
+        }}
+      />
     </div>
   );
 }
