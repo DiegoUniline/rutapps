@@ -192,7 +192,7 @@ export default function ProductosListPage() {
               <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
               <td className="py-1.5 px-3 font-medium max-w-[240px]">
                 <div className="flex items-center gap-1.5 truncate">
-                  <span className="truncate">{p.nombre}</span>
+                  <ProductoLink id={p.id} className="truncate">{p.nombre}</ProductoLink>
                   {p.es_granel && (
                     <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
                       Granel
