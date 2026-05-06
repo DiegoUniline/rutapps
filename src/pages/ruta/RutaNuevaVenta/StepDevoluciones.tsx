@@ -218,6 +218,7 @@ export function StepDevoluciones(props: Props) {
     );
   }
 
+  return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
