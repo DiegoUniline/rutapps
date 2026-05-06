@@ -75,6 +75,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
             </button>
             <span className="text-[11px] text-muted-foreground">Activa precios distintos por caja, six-pack, etc.</span>
           </div>
+        </div>
       </div>
       <div>
         <div className="odoo-field-row">
