@@ -514,6 +514,10 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
+    if (p?.es_granel) {
+      setGranelFor(p);
+      return;
+    }
     const stock = p.cantidad ?? 0;
     const canSellWithout = p.vender_sin_stock;
     const pricing = getProductPricing(p);
@@ -539,17 +543,56 @@ export default function PuntoVentaPage() {
         precio_unitario: pricing.unitPrice,
         precio_unitario_sin_redondeo: pricing.rawUnitPrice,
         precio_display_sin_redondeo: pricing.rawDisplayPrice,
-        cantidad: p.es_granel ? 0 : 1,
+        cantidad: 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
+        unidad: 'pz',
         base_precio: pricing.basePrecio as BasePrecioMode,
         redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: canSellWithout ? Infinity : stock,
-        _es_granel: p.es_granel ?? false,
+        _es_granel: false,
       }];
+    });
+  };
+
+  const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
+    const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
+    if (cantidadBase <= 0) return;
+    const noLimit = !!p.vender_sin_stock;
+    const stock = p.cantidad ?? 0;
+    if (!noLimit && cantidadBase > stock) {
+      toast.error(`No puedes vender más de ${stock.toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${p.unidad_granel || 'kg'} disponibles`);
+      return;
+    }
+    const pf = getProductPricing(p);
+    setCart(prev => {
+      const idx = prev.findIndex(c => c.producto_id === p.id);
+      const line: any = {
+        producto_id: p.id,
+        codigo: p.codigo,
+        nombre: p.nombre,
+        precio_unitario: precioUnitario,
+        precio_unitario_sin_redondeo: precioUnitario,
+        precio_display_sin_redondeo: precioUnitario,
+        cantidad: cantidadBase,
+        tiene_iva: p.tiene_iva ?? false,
+        iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
+        tiene_ieps: p.tiene_ieps ?? false,
+        ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
+        unidad: p.unidad_granel || 'kg',
+        base_precio: pf.basePrecio as BasePrecioMode,
+        redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
+        _max_stock: noLimit ? Infinity : stock,
+        _es_granel: true,
+        presentacion_id: presentacion?.id ?? null,
+        presentacion_nombre: presentacion?.nombre ?? null,
+        presentacion_factor: presentacion?.factor_base ?? null,
+        paquetes,
+      };
+      if (idx >= 0) return prev.map((c, i) => i === idx ? { ...c, ...line } : c);
+      return [...prev, line];
     });
   };
 
