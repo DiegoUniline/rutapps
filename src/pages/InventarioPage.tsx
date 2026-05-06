@@ -6,7 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download } from 'lucide-react';
+import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { getStockBreakdown } from '@/lib/stockPresentacion';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
