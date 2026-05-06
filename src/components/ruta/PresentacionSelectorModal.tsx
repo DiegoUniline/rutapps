@@ -10,6 +10,8 @@ interface Props {
   presentaciones: ProductoPresentacion[];
   /** Base unit price (per unidad_granel, ej. por kg) */
   precioPorUnidadBase: number;
+  /** Máximo permitido (en unidad base). Infinity si no hay límite. */
+  stockMax?: number;
   onConfirm: (data: {
     cantidadBase: number;
     paquetes: number | null;
@@ -25,7 +27,7 @@ interface Props {
  * - Peso real opcional (override del factor)
  * - Resultado: cantidad en unidad base = paquetes × factor
  */
-export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, onConfirm }: Props) {
+export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, stockMax = Infinity, onConfirm }: Props) {
   const { symbol } = useCurrency();
   const [mode, setMode] = useState<'pres' | 'libre'>('pres');
   const [presId, setPresId] = useState<string | null>(null);
@@ -57,12 +59,14 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   const paqNum = Math.max(0, Number(paquetes) || 0);
   const pesoOvr = pesoOverride.trim() ? Number(pesoOverride) : null;
 
+  const fmtNum = (n: number, dec = 2) => n.toLocaleString('es-MX', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const fmtQty = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+
   let cantidadBase = 0;
   let precioUnitario = precioPorUnidadBase;
 
   if (mode === 'pres' && presSel) {
     cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
-    // Precio especial es por paquete completo (factor); convertimos a precio por unidad base
     if (presSel.precio_especial != null && factor > 0) {
       precioUnitario = Number(presSel.precio_especial) / factor;
     }
@@ -71,7 +75,8 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   }
 
   const subtotal = cantidadBase * precioUnitario;
-  const canConfirm = cantidadBase > 0;
+  const excedeStock = Number.isFinite(stockMax) && cantidadBase > stockMax;
+  const canConfirm = cantidadBase > 0 && !excedeStock;
 
   const confirmar = () => {
     if (!canConfirm) return;
@@ -95,7 +100,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
         <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <div>
             <h3 className="text-[15px] font-semibold">{producto.nombre}</h3>
-            <p className="text-[11px] text-muted-foreground">{symbol}{precioPorUnidadBase.toFixed(2)} / {unidad}</p>
+            <p className="text-[11px] text-muted-foreground">{symbol}{fmtNum(precioPorUnidadBase)} / {unidad}{Number.isFinite(stockMax) && <> · <span className="text-foreground">Stock: {fmtQty(stockMax)} {unidad}</span></>}</p>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-accent"><X className="h-4 w-4" /></button>
         </div>
@@ -128,8 +133,8 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                         <button key={p.id} onClick={() => setPresId(p.id)}
                           className={`text-left rounded-lg px-2 py-2 border transition-all ${active ? 'border-primary bg-primary/10' : 'border-border bg-card hover:bg-accent/40'}`}>
                           <p className="text-[12px] font-semibold leading-tight">{p.nombre}</p>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">{Number(p.factor_base)} {unidad}</p>
-                          <p className="text-[11px] font-medium text-primary tabular-nums">{symbol}{pUnit.toFixed(2)}</p>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{fmtQty(Number(p.factor_base))} {unidad}</p>
+                          <p className="text-[11px] font-medium text-primary tabular-nums">{symbol}{fmtNum(pUnit)}</p>
                         </button>
                       );
                     })}
@@ -150,7 +155,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                     <label className="text-[11px] font-medium text-muted-foreground uppercase">
                       Peso real total ({unidad}) <span className="normal-case font-normal">— opcional, si los paquetes pesan distinto</span>
                     </label>
-                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${(paqNum * factor).toFixed(3)}`}
+                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
                       value={pesoOverride}
                       onChange={e => setPesoOverride(e.target.value)}
                       className="mt-1 w-full h-9 px-3 bg-card border border-border rounded-lg text-[14px] tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -174,21 +179,27 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
           <div className="bg-accent/30 rounded-lg p-3 space-y-1">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Cantidad total:</span>
-              <span className="font-semibold tabular-nums">{cantidadBase.toFixed(3)} {unidad}</span>
+              <span className={`font-semibold tabular-nums ${excedeStock ? 'text-destructive' : ''}`}>{fmtQty(cantidadBase)} {unidad}</span>
             </div>
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Precio unitario:</span>
-              <span className="tabular-nums">{symbol}{precioUnitario.toFixed(2)} / {unidad}</span>
+              <span className="tabular-nums">{symbol}{fmtNum(precioUnitario)} / {unidad}</span>
             </div>
             <div className="flex justify-between text-[14px] pt-1 border-t border-border/60">
               <span className="font-semibold">Subtotal:</span>
-              <span className="font-bold text-primary tabular-nums">{symbol}{subtotal.toFixed(2)}</span>
+              <span className="font-bold text-primary tabular-nums">{symbol}{fmtNum(subtotal)}</span>
             </div>
           </div>
 
+          {excedeStock && (
+            <div className="text-[12px] text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-center">
+              No puedes vender más de {fmtQty(stockMax)} {unidad} disponibles en stock.
+            </div>
+          )}
+
           <button onClick={confirmar} disabled={!canConfirm}
             className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
-            Agregar al carrito
+            {excedeStock ? 'Excede el stock disponible' : 'Agregar al carrito'}
           </button>
         </div>
       </div>

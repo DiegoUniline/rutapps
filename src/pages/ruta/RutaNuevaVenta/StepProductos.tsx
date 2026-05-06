@@ -210,7 +210,7 @@ export function StepProductos(props: Props) {
                     )}
                     {inCart?.presentacion_nombre && (
                       <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-medium">
-                        {inCart.paquetes}× {inCart.presentacion_nombre} = {inCart.cantidad.toFixed(3)} {p.unidad_granel || 'kg'}
+                        {inCart.paquetes?.toLocaleString('es-MX')}× {inCart.presentacion_nombre} = {inCart.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {p.unidad_granel || 'kg'}
                       </span>
                     )}
                   </div>
@@ -287,6 +287,7 @@ export function StepProductos(props: Props) {
         producto={granelFor}
         presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
         precioPorUnidadBase={granelFor ? (getSuggestedPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
+        stockMax={granelFor ? (granelFor.vender_sin_stock ? Infinity : getMaxQty(granelFor.id)) : Infinity}
         onConfirm={(data) => {
           if (!granelFor) return;
           addGranelLine(granelFor, {
