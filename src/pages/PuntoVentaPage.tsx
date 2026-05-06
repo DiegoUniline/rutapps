@@ -25,6 +25,8 @@ import { CerrarTurnoModal } from '@/components/pos/CerrarTurnoModal';
 import { MovimientoCajaModal } from '@/components/pos/MovimientoCajaModal';
 import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -100,6 +102,8 @@ export default function PuntoVentaPage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
+  const [granelFor, setGranelFor] = useState<any | null>(null);
+  const { data: allPresentaciones } = useAllPresentaciones();
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
   const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -510,6 +514,10 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
+    if (p?.es_granel) {
+      setGranelFor(p);
+      return;
+    }
     const stock = p.cantidad ?? 0;
     const canSellWithout = p.vender_sin_stock;
     const pricing = getProductPricing(p);
@@ -535,17 +543,56 @@ export default function PuntoVentaPage() {
         precio_unitario: pricing.unitPrice,
         precio_unitario_sin_redondeo: pricing.rawUnitPrice,
         precio_display_sin_redondeo: pricing.rawDisplayPrice,
-        cantidad: p.es_granel ? 0 : 1,
+        cantidad: 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
+        unidad: 'pz',
         base_precio: pricing.basePrecio as BasePrecioMode,
         redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: canSellWithout ? Infinity : stock,
-        _es_granel: p.es_granel ?? false,
+        _es_granel: false,
       }];
+    });
+  };
+
+  const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
+    const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
+    if (cantidadBase <= 0) return;
+    const noLimit = !!p.vender_sin_stock;
+    const stock = p.cantidad ?? 0;
+    if (!noLimit && cantidadBase > stock) {
+      toast.error(`No puedes vender más de ${stock.toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${p.unidad_granel || 'kg'} disponibles`);
+      return;
+    }
+    const pf = getProductPricing(p);
+    setCart(prev => {
+      const idx = prev.findIndex(c => c.producto_id === p.id);
+      const line: any = {
+        producto_id: p.id,
+        codigo: p.codigo,
+        nombre: p.nombre,
+        precio_unitario: precioUnitario,
+        precio_unitario_sin_redondeo: precioUnitario,
+        precio_display_sin_redondeo: precioUnitario,
+        cantidad: cantidadBase,
+        tiene_iva: p.tiene_iva ?? false,
+        iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
+        tiene_ieps: p.tiene_ieps ?? false,
+        ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
+        unidad: p.unidad_granel || 'kg',
+        base_precio: pf.basePrecio as BasePrecioMode,
+        redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
+        _max_stock: noLimit ? Infinity : stock,
+        _es_granel: true,
+        presentacion_id: presentacion?.id ?? null,
+        presentacion_nombre: presentacion?.nombre ?? null,
+        presentacion_factor: presentacion?.factor_base ?? null,
+        paquetes,
+      };
+      if (idx >= 0) return prev.map((c, i) => i === idx ? { ...c, ...line } : c);
+      return [...prev, line];
     });
   };
 
@@ -809,6 +856,10 @@ export default function PuntoVentaPage() {
           ieps_monto: breakdown.ieps,
           descuento_pct: 0,
           total: chargedLineTotal,
+          presentacion_id: (item as any).presentacion_id ?? null,
+          presentacion_nombre: (item as any).presentacion_nombre ?? null,
+          presentacion_factor: (item as any).presentacion_factor ?? null,
+          paquetes: (item as any).paquetes ?? null,
         };
       });
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
@@ -1360,6 +1411,11 @@ export default function PuntoVentaPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
                       <p className="text-[10px] text-muted-foreground">{item.codigo}</p>
+                      {(item as any).presentacion_nombre && (
+                        <p className="text-[10px] text-primary font-medium">
+                          {(item as any).paquetes?.toLocaleString('es-MX')}× {(item as any).presentacion_nombre} = {item.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {item.unidad}
+                        </p>
+                      )}
                     </div>
                     <button onClick={() => removeItem(item.producto_id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
@@ -2011,6 +2067,24 @@ export default function PuntoVentaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PresentacionSelectorModal
+        open={!!granelFor}
+        onClose={() => setGranelFor(null)}
+        producto={granelFor}
+        presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
+        precioPorUnidadBase={granelFor ? getProductPricing(granelFor).displayPrice : 0}
+        stockMax={granelFor ? (granelFor.vender_sin_stock ? Infinity : (granelFor.cantidad ?? 0)) : Infinity}
+        onConfirm={(data) => {
+          if (!granelFor) return;
+          addGranelLine(granelFor, {
+            cantidadBase: data.cantidadBase,
+            precioUnitario: data.precioUnitario,
+            paquetes: data.paquetes,
+            presentacion: data.presentacion ? { id: data.presentacion.id, nombre: data.presentacion.nombre, factor_base: Number(data.presentacion.factor_base) } : null,
+          });
+        }}
+      />
     </div>
   );
 }
