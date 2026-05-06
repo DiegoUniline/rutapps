@@ -1,88 +1,73 @@
-# Productos a granel con presentaciones (paquetes)
+# Plan: Módulo de Mermas y Desperdicio
 
-## Caso de uso
-"Carne de Res" se vende a granel y el inventario se lleva en **kilos**, pero los vendedores manejan **paquetes** de 1, 2, 5, 7 kg, etc. Hoy cada producto tiene su propio stock; queremos que **todas las presentaciones descuenten kilos del mismo producto madre**.
+## Decisiones confirmadas
+- **Estructura**: 1 almacén global "Mermas" por empresa, cada movimiento rastrea origen (almacén/ruta/usuario).
+- **Devoluciones**: el usuario siempre elige destino (Almacén normal o Mermas).
+- **Motivos**: configurables por empresa (con set inicial sugerido).
+- **Valoración**: reporte muestra costo perdido y precio de venta no realizado.
 
-Ejemplo: vender 2 paquetes de 7 kg → descontar **14 kg** del stock de "Carne de Res".
+## 1. Base de datos
 
----
+**Nuevas columnas:**
+- `almacenes.es_merma boolean default false` — marca el almacén especial, oculto en POS/ventas.
 
-## Resumen de la solución
+**Nuevas tablas:**
+- `merma_motivos` — `id, empresa_id, nombre, activo`. Auto-seed: Caducado, Dañado, Robo, Derrame, Quemado, Error de manejo, Otro.
+- `mermas` — cabecera: `id, empresa_id, folio (MER-####), fecha, almacen_origen_id, ruta_id (nullable), motivo_id, observaciones, total_costo, total_venta, creado_por, devolucion_id (nullable, link cuando viene de devolución)`.
+- `merma_lineas` — `id, merma_id, producto_id, cantidad, costo_unitario, precio_venta_unitario, subtotal_costo, subtotal_venta`.
 
-1. Cada producto a granel (`es_granel = true`) puede tener una lista de **presentaciones** (1 kg, 2 kg, 5 kg, 7 kg…), cada una con un **factor en unidad base** (kg).
-2. Al vender, el usuario puede:
-   - Tocar una presentación + cantidad (rápido, factor fijo).
-   - Editar el peso real del paquete si varía (ej. 7 → 7.250).
-   - O capturar peso libre directamente (sin presentación).
-3. El **stock siempre se descuenta en la unidad base** (kg). La presentación es solo presentación: línea = `cantidad_paquetes × factor_kg`, y eso es lo que se mueve en inventario.
-4. **Precio por kg** como base. Cada presentación puede tener un **precio especial** opcional (descuento por volumen). Si no, se calcula como `precio_kg × factor`.
+**Lógica DB:**
+- Trigger `ensure_merma_almacen()` que crea el almacén Mermas al crear empresa (y backfill para empresas existentes).
+- Trigger en `mermas` (al insertar/cancelar) que mueve stock vía la lógica existente de transferencias: resta de `almacen_origen_id`, suma a almacén Mermas.
+- RLS: tenant isolation con `get_my_empresa_id()`.
+- Índices por `empresa_id`, `fecha`, `producto_id`.
 
----
+## 2. Devoluciones (cambio mínimo)
 
-## Cambios técnicos
+En el modal/flujo de devolución actual añadir selector **"Destino del producto"**:
+- `Almacén de venta` (default, recuperable)
+- `Mermas` (no recuperable) → genera además un registro en `mermas` con `devolucion_id` enlazado y motivo.
 
-### 1. Base de datos (migración)
+Se respeta el flujo financiero existente; solo cambia a qué almacén regresa el stock.
 
-Nueva tabla:
-```
-producto_presentaciones
-- id, empresa_id, producto_id (FK)
-- nombre (ej. "Paquete 7 kg")
-- factor_base   numeric(12,3)   -- cuántos kg representa
-- precio_especial numeric(12,2) NULL  -- override opcional
-- orden int, activo bool
-- created_at, updated_at
-- RLS por empresa_id (mismo patrón que productos)
-```
+## 3. UI
 
-En `venta_lineas` y `entrega_lineas` agregar columnas opcionales (no rompen nada existente):
-```
-- presentacion_id uuid NULL
-- presentacion_nombre text NULL          -- snapshot para historia
-- presentacion_factor numeric(12,3) NULL -- snapshot
-- paquetes numeric(12,3) NULL            -- # paquetes capturados (UI)
-```
+**Nueva ruta `/inventario/mermas`** (escritorio):
+- Lista con folio, fecha, almacén origen, motivo, total costo, total venta, usuario.
+- Filtros: rango de fechas, almacén/ruta, motivo, producto.
+- Botón **"Registrar merma"** → modal: almacén origen, motivo, líneas (producto + cantidad), observaciones, foto opcional.
+- Detalle por folio con líneas.
 
-`cantidad` sigue siendo la cantidad en **unidad base (kg)** — así el trigger de inventario y todos los reportes existentes siguen funcionando sin cambios.
+**Móvil/ruta `/ruta/mermas`**:
+- Botón rápido "Registrar merma" desde el menú de ruta (almacén origen = ruta actual).
+- Soporte offline (cola de sincronización como ventas).
 
-### 2. Producto (formulario)
-- En `ProductoForm`, cuando `es_granel = true`, mostrar nueva sub-tab **"Presentaciones"**.
-- CRUD inline: nombre, factor (kg), precio especial (opcional), orden, activo.
+**Configuración → Motivos de merma**: CRUD simple.
 
-### 3. POS y App Móvil de ruta
-- Al agregar un producto granel al carrito:
-  - Si tiene presentaciones, abrir un **selector**: chips con cada presentación + opción "Peso libre".
-  - Chip seleccionado → input de # paquetes (entero por defecto, editable a decimal).
-  - "Peso libre" → input directo en kg con 3 decimales (comportamiento actual).
-- La línea se guarda con `cantidad = paquetes × factor`, snapshot de la presentación, y precio = `precio_especial ?? precio_kg × factor`.
-- Indicador en línea: "2 × Paquete 7 kg = 14.000 kg".
+**Reportes**:
+- Nueva pestaña en Reportes: **Mermas** con KPIs (costo perdido, venta no realizada, kg perdidos), top productos, top motivos, por ruta/almacén/usuario.
 
-### 4. Stock / inventario
-- Sin cambios en triggers ni en `stock_almacen`: ya descuenta `cantidad` (kg).
-- En vistas de stock se sigue mostrando en kg (correcto). Opcionalmente, en el detalle del producto, mostrar "equivalente: ~14 paquetes de 1 kg" como info.
+## 4. Integraciones
 
-### 5. Tickets / PDFs
-- Si la línea tiene `presentacion_nombre`, mostrar: `2 × Paquete 7 kg (14.000 kg) — $X`.
-- Si no, mostrar como hoy (`14.000 kg`).
+- **POS / Ventas**: ocultar almacén Mermas en selectores (`es_merma = false`).
+- **Conteo físico**: en la pantalla de reconciliación, agregar acción "Marcar diferencia como merma" que crea registro automático.
+- **Kardex**: las salidas a merma aparecen como tipo `MERMA` con folio MER-####.
+- **Permisos**: nuevo módulo `mermas` con view/create/delete (delete solo admin con PIN).
 
-### 6. Importación masiva / catálogos públicos
-- Fuera de alcance esta iteración (se maneja después si hace falta). El catálogo público sigue mostrando precio por kg.
+## 5. Detalles técnicos
 
----
+- Folio `MER-####` con secuencia por empresa (mismo patrón que ventas).
+- Costo tomado de `producto.costo_promedio` al momento del registro (snapshot).
+- Precio de venta del precio principal vigente (snapshot).
+- Cancelación de merma: revierte stock, marca `cancelada`, queda en historial.
+- Auditoría: `creado_por` desde `profiles`.
 
-## Archivos principales a tocar
-- `supabase/migrations/...` (nueva tabla + columnas)
-- `src/pages/ProductoForm/` (nueva tab Presentaciones)
-- `src/pages/ruta/RutaNuevaVenta/StepProductos.tsx` + `useRutaVenta.ts` + `types.ts`
-- `src/pages/VentaForm/VentaLineaDesktop.tsx` y `VentaLineaMobile.tsx` (POS escritorio)
-- `src/lib/salePricing.ts` / `posPricing.ts` (cálculo cuando hay presentación)
-- `src/lib/ventaPdf.ts`, `ticketHtml.ts`, `entregaPdf.ts` (mostrar presentación)
+## Entregables
+1. Migración SQL (tablas, triggers, RLS, seeds, backfill almacén Mermas).
+2. Hooks: `useMermas`, `useMermaMotivos`.
+3. Páginas: `MermasListPage`, `MermaForm`, `MermaMotivosConfig`, ruta móvil.
+4. Modificación de modal de devolución (selector de destino).
+5. Tab "Mermas" en Reportes.
+6. Filtro `es_merma=false` en selectores de almacén de POS/ventas/transferencias.
 
----
-
-## Lo que NO cambia
-- El stock se sigue almacenando y mostrando en la unidad base (kg).
-- Productos no-granel siguen igual.
-- Triggers de inventario, kardex, balances y reportes existentes siguen funcionando porque `cantidad` mantiene su semántica (unidad base).
-
-¿Procedo con esta implementación o quieres ajustar algo (nombres, alcance de la primera entrega, etc.)?
+¿Aprobamos así o ajustamos algo antes?
