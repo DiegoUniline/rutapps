@@ -23,6 +23,7 @@ import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { ProductoLink } from '@/components/links/EntityLinks';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
