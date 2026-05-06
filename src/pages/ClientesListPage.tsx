@@ -220,7 +220,7 @@ function ClientesTable() {
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
               </td>
               <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
-              <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
+              <td className="py-1.5 px-3 font-medium"><ClienteLink id={c.id}>{c.nombre}</ClienteLink></td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
                 {c.dia_visita?.length > 0
