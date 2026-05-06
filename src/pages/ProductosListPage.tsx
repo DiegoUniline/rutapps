@@ -219,6 +219,14 @@ export default function ProductosListPage() {
                 )}>
                   {fmtNum(p.cantidad ?? 0)}
                 </span>
+                {(() => {
+                  const bd = getStockBreakdown(
+                    p.cantidad ?? 0,
+                    presentacionesByProducto.get(p.id),
+                    (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz',
+                  );
+                  return bd ? <div className="text-[10px] text-primary font-medium">{bd.texto}</div> : null;
+                })()}
               </td>
               <td className="py-1.5 px-3 hidden sm:table-cell text-center">
                 {p.tiene_iva ? (
