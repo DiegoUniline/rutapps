@@ -9,7 +9,10 @@ import { Plus, Trash2, Pencil, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { usePermisos } from '@/hooks/usePermisos';
+
 export default function MermaMotivosPage() {
+  const { isOwner, loading: permisosLoading } = usePermisos();
   const { data: motivos, isLoading } = useMermaMotivos();
   const upsert = useUpsertMermaMotivo();
   const del = useDeleteMermaMotivo();
