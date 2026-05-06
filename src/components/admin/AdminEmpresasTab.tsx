@@ -212,7 +212,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   // Group by status
   const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];
   const grouped = filtered.reduce<Record<string, EmpresaRow[]>>((acc, e) => {
-    const status = e.subscriptions?.[0]?.status || 'sin_sub';
+    const status = getEffectiveStatus(e.subscriptions?.[0]);
     if (!acc[status]) acc[status] = [];
     acc[status].push(e);
     return acc;
@@ -223,7 +223,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
 
   // Counts per status for filter chips
   const statusCounts = empresas.reduce<Record<string, number>>((acc, e) => {
-    const s = e.subscriptions?.[0]?.status || 'sin_sub';
+    const s = getEffectiveStatus(e.subscriptions?.[0]);
     acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});
