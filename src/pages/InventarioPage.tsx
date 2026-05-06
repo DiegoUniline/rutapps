@@ -16,6 +16,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
+import { ProductoLink } from '@/components/links/EntityLinks';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
