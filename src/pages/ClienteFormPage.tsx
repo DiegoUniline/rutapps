@@ -353,7 +353,7 @@ export default function ClienteFormPage() {
       toast.success('Cliente guardado');
       setOriginalForm({ ...form });
       if (isNew && result?.id) {
-        navigate(fromRuta ? '/ruta/clientes' : `/clientes/${result.id}`, { replace: true });
+        navigate(fromState || (fromRuta ? '/ruta/clientes' : `/clientes/${result.id}`), { replace: true });
       }
     } catch (err: any) { toast.error(err.message); }
   };
