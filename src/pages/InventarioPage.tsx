@@ -434,7 +434,7 @@ export default function InventarioPage() {
                       const qty = u.getStock(p.id);
                       return (
                         <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive")}>{fmtNum(qty)}</span> : '—'}
+                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive", verPorUnidades && "text-[11px]")}>{verPorUnidades ? fmtStock(p, qty) : fmtNum(qty)}</span> : '—'}
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
