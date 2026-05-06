@@ -139,7 +139,7 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
                     onChange={(e) => onUpdate(p, { activo: e.target.checked })} />
                 </td>
                 <td className="px-2 text-center">
-                  <button onClick={() => onDelete(p.id)} className="text-destructive hover:bg-destructive/10 rounded p-1">
+                  <button onClick={() => setDeleteTarget(p)} className="text-destructive hover:bg-destructive/10 rounded p-1" title="Eliminar unidad">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </td>
