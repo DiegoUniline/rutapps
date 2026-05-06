@@ -102,6 +102,16 @@ export default function ProductosListPage() {
   const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
 
   const productos = productosData?.rows ?? [];
+  const { data: allPresentaciones } = useAllPresentaciones();
+  const presentacionesByProducto = useMemo(() => {
+    const map = new Map<string, any[]>();
+    (allPresentaciones ?? []).forEach(p => {
+      const arr = map.get(p.producto_id) ?? [];
+      arr.push(p);
+      map.set(p.producto_id, arr);
+    });
+    return map;
+  }, [allPresentaciones]);
   const total = productosData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
