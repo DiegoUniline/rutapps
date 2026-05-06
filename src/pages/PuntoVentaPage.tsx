@@ -25,6 +25,8 @@ import { CerrarTurnoModal } from '@/components/pos/CerrarTurnoModal';
 import { MovimientoCajaModal } from '@/components/pos/MovimientoCajaModal';
 import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
