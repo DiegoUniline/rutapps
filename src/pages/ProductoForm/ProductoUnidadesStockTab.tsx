@@ -171,6 +171,23 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
           </tfoot>
         </table>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta unidad de stock?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la unidad <strong>{deleteTarget?.nombre}</strong>. El stock base no se verá afectado, pero dejará de mostrarse el desglose por esta unidad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
