@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermisos } from '@/hooks/usePermisos';
+import { Navigate } from 'react-router-dom';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useMermas, useMermaMotivos, useRegistrarMerma, useCancelarMerma, useMerma } from '@/hooks/useMermas';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,7 @@ interface LineaForm {
 
 export default function MermasPage() {
   const { empresa } = useAuth();
+  const { isOwner, loading: permisosLoading } = usePermisos();
   const { data: almacenes } = useAlmacenes();
   const { data: motivos } = useMermaMotivos();
   const { data: productos } = useProductosForSelect();
@@ -100,6 +103,18 @@ export default function MermasPage() {
       toast.error(e.message || 'Error al registrar merma');
     }
   };
+
+  if (!permisosLoading && !isOwner) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+        <h2 className="text-xl font-semibold">Acceso restringido</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          El módulo de Mermas es exclusivo para el administrador de la empresa.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-4 bg-background min-h-screen">
