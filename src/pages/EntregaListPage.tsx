@@ -440,8 +440,7 @@ export default function EntregaListPage() {
                   >{e.ventas?.folio ?? '—'}</TableCell>
                   <TableCell
                     className="text-[12px] font-medium py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.clientes?.nombre ?? '—'}</TableCell>
+                  ><ClienteLink id={e.cliente_id ?? e.clientes?.id}>{e.clientes?.nombre ?? '—'}</ClienteLink></TableCell>
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
