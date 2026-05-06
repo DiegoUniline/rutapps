@@ -195,22 +195,20 @@ export function StepDevoluciones(props: Props) {
 
           <div className="w-full max-w-sm grid grid-cols-2 gap-3">
             <button
-              onClick={() => {
-                processDevolucionesAndGoToProductos();
-              }}
+              onClick={() => setHayDevoluciones(true)}
               className="flex flex-col items-center justify-center gap-1 py-6 rounded-2xl bg-card border-2 border-border active:scale-[0.97] transition-all"
             >
-              <span className="text-3xl">🚫</span>
-              <span className="text-[15px] font-bold text-foreground">No</span>
-              <span className="text-[11px] text-muted-foreground">Continuar</span>
+              <span className="text-3xl">✅</span>
+              <span className="text-[15px] font-bold text-foreground">Sí</span>
+              <span className="text-[11px] text-muted-foreground">Registrar</span>
             </button>
             <button
-              onClick={() => setHayDevoluciones(true)}
+              onClick={() => { processDevolucionesAndGoToProductos(); }}
               className="flex flex-col items-center justify-center gap-1 py-6 rounded-2xl bg-primary text-primary-foreground active:scale-[0.97] transition-all shadow-lg shadow-primary/20"
             >
-              <span className="text-3xl">✅</span>
-              <span className="text-[15px] font-bold">Sí</span>
-              <span className="text-[11px] opacity-80">Registrar</span>
+              <span className="text-3xl">🚫</span>
+              <span className="text-[15px] font-bold">No</span>
+              <span className="text-[11px] opacity-80">Continuar</span>
             </button>
           </div>
         </div>
