@@ -22,6 +22,7 @@ interface Props {
   tipoVenta: 'venta_directa' | 'pedido';
   totals: { items: number; total: number };
   addToCart: (p: any, esCambio?: boolean) => void;
+  addGranelLine: (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => void;
   updateQty: (pid: string, delta: number, esCambio?: boolean) => void;
   removeFromCart: (pid: string, esCambio?: boolean) => void;
   getItemInCart: (pid: string) => CartItem | undefined;
