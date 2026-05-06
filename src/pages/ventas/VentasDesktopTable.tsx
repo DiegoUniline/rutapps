@@ -95,7 +95,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                     </span>
                   </td>
                 )}
-                {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.clientes?.nombre || (row.cliente_id ? '—' : 'Público en general')}</td>}
+                {v('cliente') && <td className="py-2 px-3 max-w-[180px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.clientes?.nombre || '—'}</ClienteLink> : 'Público en general'}</td>}
                 {v('vendedor') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedores?.nombre ?? '—'}</td>}
                 {v('almacen') && <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.almacenes?.nombre ?? <span className="text-destructive">Sin almacén</span>}</td>}
                 {v('condicion') && <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[row.condicion_pago] || row.condicion_pago}</td>}
