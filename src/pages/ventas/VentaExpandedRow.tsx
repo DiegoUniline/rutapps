@@ -11,6 +11,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
+import { ProductoLink } from '@/components/links/EntityLinks';
 
 interface Props {
   venta: any;
