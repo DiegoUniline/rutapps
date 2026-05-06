@@ -32,6 +32,7 @@ interface LineaForm {
 
 export default function MermasPage() {
   const { empresa } = useAuth();
+  const { isOwner, loading: permisosLoading } = usePermisos();
   const { data: almacenes } = useAlmacenes();
   const { data: motivos } = useMermaMotivos();
   const { data: productos } = useProductosForSelect();
