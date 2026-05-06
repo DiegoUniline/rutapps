@@ -319,7 +319,7 @@ export function useAlmacenes(opts?: { includeMermas?: boolean }) {
     let q = supabase.from('almacenes').select('id, nombre, es_merma').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
     if (!includeMermas) q = q.eq('es_merma', false);
     const { data } = await q;
-    return data as Almacen[];
+    return data as unknown as Almacen[];
   }});
 }
 export function useUnidadesSat() {
