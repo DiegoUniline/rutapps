@@ -59,12 +59,14 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   const paqNum = Math.max(0, Number(paquetes) || 0);
   const pesoOvr = pesoOverride.trim() ? Number(pesoOverride) : null;
 
+  const fmtNum = (n: number, dec = 2) => n.toLocaleString('es-MX', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const fmtQty = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+
   let cantidadBase = 0;
   let precioUnitario = precioPorUnidadBase;
 
   if (mode === 'pres' && presSel) {
     cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
-    // Precio especial es por paquete completo (factor); convertimos a precio por unidad base
     if (presSel.precio_especial != null && factor > 0) {
       precioUnitario = Number(presSel.precio_especial) / factor;
     }
@@ -73,7 +75,8 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   }
 
   const subtotal = cantidadBase * precioUnitario;
-  const canConfirm = cantidadBase > 0;
+  const excedeStock = Number.isFinite(stockMax) && cantidadBase > stockMax;
+  const canConfirm = cantidadBase > 0 && !excedeStock;
 
   const confirmar = () => {
     if (!canConfirm) return;
