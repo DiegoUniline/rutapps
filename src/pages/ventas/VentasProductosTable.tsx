@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
+import { ClienteLink, ProductoLink } from '@/components/links/EntityLinks';
 
 interface Props {
   items: any[];
