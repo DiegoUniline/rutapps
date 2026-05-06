@@ -7,6 +7,7 @@ import { ProductoFiscalTab } from './ProductoFiscalTab';
 import { ProductoComisionesTab } from './ProductoComisionesTab';
 import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
 import { ProductoPresentacionesTab } from './ProductoPresentacionesTab';
+import { ProductoUnidadesStockTab } from './ProductoUnidadesStockTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
@@ -37,6 +38,9 @@ export default function ProductoFormPage() {
           ...(!h.isNew ? [{
             key: 'presentaciones', label: 'Presentaciones',
             content: <ProductoPresentacionesTab productoId={h.id} isNew={h.isNew} esGranel={!!(h.form as any).es_granel} unidadGranel={(h.form as any).unidad_granel || 'kg'} precioPorUnidadBase={Number((h.form as any).precio_principal) || 0} />,
+          }, {
+            key: 'unidades_stock', label: 'Unidades de Stock',
+            content: <ProductoUnidadesStockTab productoId={h.id} isNew={h.isNew} esGranel={!!(h.form as any).es_granel} unidadGranel={(h.form as any).unidad_granel || 'kg'} />,
           }] : []),
           { key: 'fiscal', label: 'Fiscal', content: <ProductoFiscalTab form={h.form} set={h.set} unidadesSat={h.unidadesSat} /> },
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
