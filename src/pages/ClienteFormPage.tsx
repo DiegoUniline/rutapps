@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { usePermisos } from '@/hooks/usePermisos';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
@@ -202,7 +202,10 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
 export default function ClienteFormPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const fromRuta = searchParams.get('from') === 'ruta';
+  const fromState = (location.state as { from?: string } | null)?.from;
+  const backPath = fromState || (fromRuta ? '/ruta/clientes' : '/clientes');
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
@@ -350,7 +353,7 @@ export default function ClienteFormPage() {
       toast.success('Cliente guardado');
       setOriginalForm({ ...form });
       if (isNew && result?.id) {
-        navigate(fromRuta ? '/ruta/clientes' : `/clientes/${result.id}`, { replace: true });
+        navigate(fromState || (fromRuta ? '/ruta/clientes' : `/clientes/${result.id}`), { replace: true });
       }
     } catch (err: any) { toast.error(err.message); }
   };
@@ -361,7 +364,7 @@ export default function ClienteFormPage() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Cliente eliminado');
-      navigate(fromRuta ? '/ruta/clientes' : '/clientes');
+      navigate(backPath);
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -461,7 +464,7 @@ export default function ClienteFormPage() {
   return (
     <div className="p-4 min-h-full">
       <div className="mb-0.5">
-        <Link to={fromRuta ? '/ruta/clientes' : '/clientes'} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">{fromRuta ? '← Ruta' : 'Clientes'}</Link>
+        <Link to={backPath} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>
       </div>
 
       {/* Title + Photos */}

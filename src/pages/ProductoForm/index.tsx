@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { OdooTabs } from '@/components/OdooTabs';
 import { PreciosTab } from '@/components/producto/PreciosTab';
 import { useProductoForm } from './useProductoForm';
@@ -11,6 +12,8 @@ import { ProductoUnidadesStockTab } from './ProductoUnidadesStockTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
+  const location = useLocation();
+  const fromPath = (location.state as { from?: string } | null)?.from || '/productos';
 
   return (
     <div className="p-4 min-h-full">
@@ -19,7 +22,7 @@ export default function ProductoFormPage() {
         starred={h.starred} setStarred={h.setStarred} editingName={h.editingName} setEditingName={h.setEditingName}
         nameInputRef={h.nameInputRef as any} imageInputRef={h.imageInputRef as any} uploadingImage={h.uploadingImage}
         handleImageUpload={h.handleImageUpload} handleSave={h.handleSave} handleDelete={h.handleDelete}
-        onDiscard={() => h.navigate('/productos')} saving={h.saveMutation.isPending}
+        onDiscard={() => h.navigate(fromPath)} saving={h.saveMutation.isPending}
       />
       <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
         <ProductoGeneralFields
