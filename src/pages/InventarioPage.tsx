@@ -314,19 +314,14 @@ export default function InventarioPage() {
           ))}
         </div>
         <div className="flex items-center gap-2 mb-1">
-          {(view === 'resumen' || view === 'almacen') && presentaciones.some(pp => pp.es_principal_stock) && (
+          {presentaciones.length > 0 && (
             <button
-              onClick={() => setVerPorUnidades(v => !v)}
-              className={cn(
-                "flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors",
-                verPorUnidades
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-foreground border-border hover:border-primary/50"
-              )}
-              title="Mostrar el stock desglosado en cajas, bultos, etc."
+              onClick={() => setShowPresModal(true)}
+              className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
+              title="Ver el stock equivalente en cajas, bultos, six-packs, etc."
             >
-              <Boxes className="h-3.5 w-3.5" />
-              {verPorUnidades ? 'Ver en unidad base' : 'Ver por unidades de stock'}
+              <Boxes className="h-3.5 w-3.5 text-primary" />
+              Ver unidades de presentación
             </button>
           )}
           {(view === 'resumen' || view === 'almacen') && data && (
