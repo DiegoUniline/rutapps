@@ -1411,6 +1411,11 @@ export default function PuntoVentaPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
                       <p className="text-[10px] text-muted-foreground">{item.codigo}</p>
+                      {(item as any).presentacion_nombre && (
+                        <p className="text-[10px] text-primary font-medium">
+                          {(item as any).paquetes?.toLocaleString('es-MX')}× {(item as any).presentacion_nombre} = {item.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })} {item.unidad}
+                        </p>
+                      )}
                     </div>
                     <button onClick={() => removeItem(item.producto_id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
