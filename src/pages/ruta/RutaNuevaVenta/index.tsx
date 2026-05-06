@@ -1,5 +1,6 @@
 import { ArrowLeft, X } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
