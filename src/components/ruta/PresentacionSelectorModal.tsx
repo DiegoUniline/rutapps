@@ -27,7 +27,7 @@ interface Props {
  * - Peso real opcional (override del factor)
  * - Resultado: cantidad en unidad base = paquetes × factor
  */
-export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, onConfirm }: Props) {
+export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, stockMax = Infinity, onConfirm }: Props) {
   const { symbol } = useCurrency();
   const [mode, setMode] = useState<'pres' | 'libre'>('pres');
   const [presId, setPresId] = useState<string | null>(null);
