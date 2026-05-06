@@ -287,6 +287,7 @@ export function StepProductos(props: Props) {
         producto={granelFor}
         presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
         precioPorUnidadBase={granelFor ? (getSuggestedPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
+        stockMax={granelFor ? (granelFor.vender_sin_stock ? Infinity : getMaxQty(granelFor.id)) : Infinity}
         onConfirm={(data) => {
           if (!granelFor) return;
           addGranelLine(granelFor, {
