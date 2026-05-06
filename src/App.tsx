@@ -578,6 +578,8 @@ function desktopRoutes() {
       <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
       <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
       <Route path="/almacen/conteos" element={<ConteosFisicosPage />} />
+      <Route path="/almacen/mermas" element={<MermasPage />} />
+      <Route path="/almacen/mermas/motivos" element={<MermaMotivosPage />} />
       <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
       <Route path="/finanzas/aplicar-pagos" element={<AplicarPagosPage />} />
       <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
