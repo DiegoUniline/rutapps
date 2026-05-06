@@ -177,23 +177,31 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
           {/* Resumen */}
           <div className="bg-accent/30 rounded-lg p-3 space-y-1">
+          {/* Resumen */}
+          <div className="bg-accent/30 rounded-lg p-3 space-y-1">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Cantidad total:</span>
-              <span className="font-semibold tabular-nums">{cantidadBase.toFixed(3)} {unidad}</span>
+              <span className={`font-semibold tabular-nums ${excedeStock ? 'text-destructive' : ''}`}>{fmtQty(cantidadBase)} {unidad}</span>
             </div>
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Precio unitario:</span>
-              <span className="tabular-nums">{symbol}{precioUnitario.toFixed(2)} / {unidad}</span>
+              <span className="tabular-nums">{symbol}{fmtNum(precioUnitario)} / {unidad}</span>
             </div>
             <div className="flex justify-between text-[14px] pt-1 border-t border-border/60">
               <span className="font-semibold">Subtotal:</span>
-              <span className="font-bold text-primary tabular-nums">{symbol}{subtotal.toFixed(2)}</span>
+              <span className="font-bold text-primary tabular-nums">{symbol}{fmtNum(subtotal)}</span>
             </div>
           </div>
 
+          {excedeStock && (
+            <div className="text-[12px] text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-center">
+              No puedes vender más de {fmtQty(stockMax)} {unidad} disponibles en stock.
+            </div>
+          )}
+
           <button onClick={confirmar} disabled={!canConfirm}
             className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
-            Agregar al carrito
+            {excedeStock ? 'Excede el stock disponible' : 'Agregar al carrito'}
           </button>
         </div>
       </div>
