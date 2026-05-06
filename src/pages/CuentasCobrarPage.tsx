@@ -186,7 +186,7 @@ export default function CuentasCobrarPage() {
                       <Badge variant="secondary" className="ml-1.5 text-[9px] px-1 py-0">Saldo Inicial</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium text-[12px]">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
+                  <TableCell className="font-medium text-[12px]"><ClienteLink id={(v as any).cliente_id ?? (v.clientes as any)?.id}>{(v.clientes as any)?.nombre ?? '—'}</ClienteLink></TableCell>
                   <TableCell className="text-[12px] text-muted-foreground">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                   <TableCell>
