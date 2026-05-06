@@ -26,6 +26,8 @@ const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const SignupPage = lazy(() => import("@/pages/SignupPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
+const MermasPage = lazy(() => import("@/pages/MermasPage"));
+const MermaMotivosPage = lazy(() => import("@/pages/MermaMotivosPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoForm"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
