@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch, Scale } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/ruta/BarcodeScanner';
 import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
