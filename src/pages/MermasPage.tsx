@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermisos } from '@/hooks/usePermisos';
+import { Navigate } from 'react-router-dom';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useMermas, useMermaMotivos, useRegistrarMerma, useCancelarMerma, useMerma } from '@/hooks/useMermas';
 import { Button } from '@/components/ui/button';
