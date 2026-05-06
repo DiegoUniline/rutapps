@@ -867,7 +867,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
-    addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
+    addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,
