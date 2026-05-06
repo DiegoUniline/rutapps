@@ -100,7 +100,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
         <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <div>
             <h3 className="text-[15px] font-semibold">{producto.nombre}</h3>
-            <p className="text-[11px] text-muted-foreground">{symbol}{precioPorUnidadBase.toFixed(2)} / {unidad}</p>
+            <p className="text-[11px] text-muted-foreground">{symbol}{fmtNum(precioPorUnidadBase)} / {unidad}{Number.isFinite(stockMax) && <> · <span className="text-foreground">Stock: {fmtQty(stockMax)} {unidad}</span></>}</p>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-accent"><X className="h-4 w-4" /></button>
         </div>
