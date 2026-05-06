@@ -361,7 +361,7 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center font-bold">{verPorUnidades ? fmtStock(p, p.stockTotal) : fmtNum(p.stockTotal)}</TableCell>
+                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
@@ -422,7 +422,7 @@ export default function InventarioPage() {
                       const qty = u.getStock(p.id);
                       return (
                         <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive", verPorUnidades && "text-[11px]")}>{verPorUnidades ? fmtStock(p, qty) : fmtNum(qty)}</span> : '—'}
+                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive")}>{fmtNum(qty)}</span> : '—'}
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
@@ -441,7 +441,7 @@ export default function InventarioPage() {
                       );
                     })}
                     <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
-                      {verPorUnidades ? fmtStock(p, totalUbic) : fmtNum(totalUbic)}
+                      {fmtNum(totalUbic)}
                     </TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>
