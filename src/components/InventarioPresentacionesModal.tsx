@@ -35,7 +35,13 @@ const fmtN = (n: number, max = 3) =>
 
 export default function InventarioPresentacionesModal({ open, onClose, productos, almacenes, stockMap, presByProd }: Props) {
   const [search, setSearch] = useState('');
-  const [almacenId, setAlmacenId] = useState<string>(almacenes[0]?.id ?? '');
+  const [almacenId, setAlmacenId] = useState<string>('');
+
+  useEffect(() => {
+    if (open && !almacenId && almacenes[0]?.id) {
+      setAlmacenId(almacenes[0].id);
+    }
+  }, [open, almacenes, almacenId]);
 
   const almacen = almacenes.find(a => a.id === almacenId);
 
