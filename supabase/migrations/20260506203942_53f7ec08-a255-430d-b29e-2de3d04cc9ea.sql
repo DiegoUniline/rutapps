@@ -1,0 +1,1 @@
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS usa_presentaciones boolean NOT NULL DEFAULT false;

@@ -66,6 +66,16 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
             )}
           </div>
         </div>
+        <div className="odoo-field-row">
+          <span className="odoo-field-label">Vender por presentaciones</span>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => set('usa_presentaciones' as any, !(form as any).usa_presentaciones)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${(form as any).usa_presentaciones ? 'bg-primary' : 'bg-border'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${(form as any).usa_presentaciones ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            <span className="text-[11px] text-muted-foreground">Activa precios distintos por caja, six-pack, etc.</span>
+          </div>
+        </div>
       </div>
       <div>
         <div className="odoo-field-row">

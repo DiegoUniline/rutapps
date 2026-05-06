@@ -3814,6 +3814,7 @@ export type Database = {
           unidad_granel: string
           unidad_venta_id: string | null
           usa_listas_precio: boolean
+          usa_presentaciones: boolean
           vender_sin_stock: boolean | null
         }
         Insert: {
@@ -3870,6 +3871,7 @@ export type Database = {
           unidad_granel?: string
           unidad_venta_id?: string | null
           usa_listas_precio?: boolean
+          usa_presentaciones?: boolean
           vender_sin_stock?: boolean | null
         }
         Update: {
@@ -3926,6 +3928,7 @@ export type Database = {
           unidad_granel?: string
           unidad_venta_id?: string | null
           usa_listas_precio?: boolean
+          usa_presentaciones?: boolean
           vender_sin_stock?: boolean | null
         }
         Relationships: [
