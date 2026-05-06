@@ -309,7 +309,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                         {group.items.map(e => {
                           const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
                           const sub = e.subscriptions?.[0];
-                          const status = sub?.status || 'sin_sub';
+                          const status = getEffectiveStatus(sub);
                           const statusInfo = STATUS_MAP[status];
                           const hasStripeCustomer = !!sub?.stripe_customer_id;
                           const hasStripeSub = !!sub?.stripe_subscription_id;
