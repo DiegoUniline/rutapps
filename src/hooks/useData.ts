@@ -312,9 +312,15 @@ export function useTasasIeps() {
   const { empresa } = useAuth();
   return useQuery({ queryKey: ['tasas_ieps', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').eq('empresa_id', empresa!.id).order('nombre'); return data as TasaIeps[]; }});
 }
-export function useAlmacenes() {
+export function useAlmacenes(opts?: { includeMermas?: boolean }) {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['almacenes', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Almacen[]; }});
+  const includeMermas = !!opts?.includeMermas;
+  return useQuery({ queryKey: ['almacenes', empresa?.id, includeMermas], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => {
+    let q = supabase.from('almacenes').select('id, nombre, es_merma').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+    if (!includeMermas) q = q.eq('es_merma', false);
+    const { data } = await q;
+    return data as Almacen[];
+  }});
 }
 export function useUnidadesSat() {
   return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});
