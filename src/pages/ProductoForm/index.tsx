@@ -6,6 +6,7 @@ import { ProductoGeneralFields } from './ProductoGeneralFields';
 import { ProductoFiscalTab } from './ProductoFiscalTab';
 import { ProductoComisionesTab } from './ProductoComisionesTab';
 import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
+import { ProductoPresentacionesTab } from './ProductoPresentacionesTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
