@@ -26,6 +26,7 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
   const [draft, setDraft] = useState<{ nombre: string; factor_base: string }>({
     nombre: '', factor_base: '',
   });
+  const [deleteTarget, setDeleteTarget] = useState<ProductoPresentacion | null>(null);
 
   if (isNew) {
     return (
