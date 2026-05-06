@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Star, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePresentaciones, useSavePresentacion, useDeletePresentacion, type ProductoPresentacion } from '@/hooks/usePresentaciones';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Props {
   productoId?: string;
@@ -25,6 +26,7 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
   const [draft, setDraft] = useState<{ nombre: string; factor_base: string }>({
     nombre: '', factor_base: '',
   });
+  const [deleteTarget, setDeleteTarget] = useState<ProductoPresentacion | null>(null);
 
   if (isNew) {
     return (
@@ -69,10 +71,16 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const onDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta unidad de stock?')) return;
-    try { await delMut.mutateAsync(id); toast.success('Eliminada'); }
-    catch (e: any) { toast.error(e.message); }
+  const onConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await delMut.mutateAsync(deleteTarget.id);
+      toast.success('Unidad eliminada');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   return (
@@ -131,7 +139,7 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
                     onChange={(e) => onUpdate(p, { activo: e.target.checked })} />
                 </td>
                 <td className="px-2 text-center">
-                  <button onClick={() => onDelete(p.id)} className="text-destructive hover:bg-destructive/10 rounded p-1">
+                  <button onClick={() => setDeleteTarget(p)} className="text-destructive hover:bg-destructive/10 rounded p-1" title="Eliminar unidad">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </td>
@@ -163,6 +171,23 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
           </tfoot>
         </table>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta unidad de stock?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la unidad <strong>{deleteTarget?.nombre}</strong>. El stock base no se verá afectado, pero dejará de mostrarse el desglose por esta unidad.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
