@@ -155,7 +155,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                     <label className="text-[11px] font-medium text-muted-foreground uppercase">
                       Peso real total ({unidad}) <span className="normal-case font-normal">— opcional, si los paquetes pesan distinto</span>
                     </label>
-                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${(paqNum * factor).toFixed(3)}`}
+                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
                       value={pesoOverride}
                       onChange={e => setPesoOverride(e.target.value)}
                       className="mt-1 w-full h-9 px-3 bg-card border border-border rounded-lg text-[14px] tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
