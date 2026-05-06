@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
+import { ClienteLink } from '@/components/links/EntityLinks';
 import SaldoInicialModal from '@/components/SaldoInicialModal';
 import SaldoInicialImportDialog from '@/components/SaldoInicialImportDialog';
 import {
