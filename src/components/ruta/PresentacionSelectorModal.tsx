@@ -95,27 +95,27 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-card w-full sm:max-w-2xl lg:max-w-3xl rounded-t-2xl sm:rounded-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
           <div>
-            <h3 className="text-[15px] font-semibold">{producto.nombre}</h3>
-            <p className="text-[11px] text-muted-foreground">{symbol}{fmtNum(precioPorUnidadBase)} / {unidad}{Number.isFinite(stockMax) && <> · <span className="text-foreground">Stock: {fmtQty(stockMax)} {unidad}</span></>}</p>
+            <h3 className="text-base sm:text-xl font-semibold">{producto.nombre}</h3>
+            <p className="text-[12px] sm:text-sm text-muted-foreground">{symbol}{fmtNum(precioPorUnidadBase)} / {unidad}{Number.isFinite(stockMax) && <> · <span className="text-foreground">Stock: {fmtQty(stockMax)} {unidad}</span></>}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-accent"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} className="p-2 rounded hover:bg-accent"><X className="h-5 w-5" /></button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
           {/* Mode tabs */}
           <div className="flex gap-1 bg-accent/40 p-1 rounded-lg">
             <button
               onClick={() => setMode('pres')}
               disabled={presActivas.length === 0}
-              className={`flex-1 py-1.5 text-[12px] font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
+              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
             >Presentaciones</button>
             <button
               onClick={() => setMode('libre')}
-              className={`flex-1 py-1.5 text-[12px] font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
             >Peso libre</button>
           </div>
 
