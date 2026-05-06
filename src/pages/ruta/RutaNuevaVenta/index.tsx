@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { useCallback } from 'react';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEPS, STEP_LABELS } from './types';
