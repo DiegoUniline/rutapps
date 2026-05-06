@@ -180,20 +180,39 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     }
   }
 
+  // Deriva el status real considerando la fecha de próximo cobro.
+  // Si el status en BD dice past_due/suspended/gracia pero current_period_end aún es futuro,
+  // se considera 'active' (la cobranza aún no vence).
+  const getEffectiveStatus = (sub?: SubRow): string => {
+    if (!sub?.status) return 'sin_sub';
+    const now = new Date();
+    const end = sub.current_period_end ? new Date(sub.current_period_end) : null;
+    const trialEnd = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null;
+    if (sub.status === 'trial') {
+      if (trialEnd && trialEnd > now) return 'trial';
+      // Trial vencido pero con suscripción activa por current_period_end futuro
+      if (end && end > now) return 'active';
+      return sub.status;
+    }
+    if (['past_due', 'gracia', 'suspended'].includes(sub.status)) {
+      if (end && end > now) return 'active';
+    }
+    return sub.status;
+  };
+
   const filtered = empresas.filter(e => {
     const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase()) ||
       (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
       (e.telefono || '').toLowerCase().includes(search.toLowerCase());
     if (statusFilter === 'todos') return matchSearch;
-    const sub = e.subscriptions?.[0];
-    const status = sub?.status || 'sin_sub';
+    const status = getEffectiveStatus(e.subscriptions?.[0]);
     return matchSearch && status === statusFilter;
   });
 
   // Group by status
   const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];
   const grouped = filtered.reduce<Record<string, EmpresaRow[]>>((acc, e) => {
-    const status = e.subscriptions?.[0]?.status || 'sin_sub';
+    const status = getEffectiveStatus(e.subscriptions?.[0]);
     if (!acc[status]) acc[status] = [];
     acc[status].push(e);
     return acc;
@@ -204,7 +223,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
 
   // Counts per status for filter chips
   const statusCounts = empresas.reduce<Record<string, number>>((acc, e) => {
-    const s = e.subscriptions?.[0]?.status || 'sin_sub';
+    const s = getEffectiveStatus(e.subscriptions?.[0]);
     acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});
@@ -290,7 +309,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                         {group.items.map(e => {
                           const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
                           const sub = e.subscriptions?.[0];
-                          const status = sub?.status || 'sin_sub';
+                          const status = getEffectiveStatus(sub);
                           const statusInfo = STATUS_MAP[status];
                           const hasStripeCustomer = !!sub?.stripe_customer_id;
                           const hasStripeSub = !!sub?.stripe_subscription_id;
