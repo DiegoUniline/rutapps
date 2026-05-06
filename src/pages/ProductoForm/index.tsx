@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { OdooTabs } from '@/components/OdooTabs';
 import { PreciosTab } from '@/components/producto/PreciosTab';
 import { useProductoForm } from './useProductoForm';
@@ -11,6 +12,8 @@ import { ProductoUnidadesStockTab } from './ProductoUnidadesStockTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
+  const location = useLocation();
+  const fromPath = (location.state as { from?: string } | null)?.from || '/productos';
 
   return (
     <div className="p-4 min-h-full">
