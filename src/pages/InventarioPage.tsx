@@ -15,7 +15,7 @@ import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
-import { getStockBreakdown } from '@/lib/stockPresentacion';
+import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -166,7 +166,7 @@ export default function InventarioPage() {
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
-  const [verPorUnidades, setVerPorUnidades] = useState(false);
+  const [showPresModal, setShowPresModal] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
 
@@ -174,14 +174,7 @@ export default function InventarioPage() {
   for (const p of presentaciones) {
     (presByProd[p.producto_id] ||= []).push(p);
   }
-  const fmtStock = (prod: any, qty: number) => {
-    const unidadBase = prod?.es_granel ? (prod.unidad_granel || 'kg') : ((prod?.unidades as any)?.abreviatura ?? 'pz');
-    if (verPorUnidades) {
-      const bd = getStockBreakdown(qty, presByProd[prod?.id], unidadBase);
-      if (bd) return bd.texto;
-    }
-    return `${fmtNum(qty)} ${unidadBase}`;
-  };
+  // (in-cell breakdown removed; presented in modal instead)
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
@@ -314,19 +307,14 @@ export default function InventarioPage() {
           ))}
         </div>
         <div className="flex items-center gap-2 mb-1">
-          {(view === 'resumen' || view === 'almacen') && presentaciones.some(pp => pp.es_principal_stock) && (
+          {presentaciones.length > 0 && (
             <button
-              onClick={() => setVerPorUnidades(v => !v)}
-              className={cn(
-                "flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors",
-                verPorUnidades
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-foreground border-border hover:border-primary/50"
-              )}
-              title="Mostrar el stock desglosado en cajas, bultos, etc."
+              onClick={() => setShowPresModal(true)}
+              className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
+              title="Ver el stock equivalente en cajas, bultos, six-packs, etc."
             >
-              <Boxes className="h-3.5 w-3.5" />
-              {verPorUnidades ? 'Ver en unidad base' : 'Ver por unidades de stock'}
+              <Boxes className="h-3.5 w-3.5 text-primary" />
+              Ver unidades de presentación
             </button>
           )}
           {(view === 'resumen' || view === 'almacen') && data && (
@@ -373,7 +361,7 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center font-bold">{verPorUnidades ? fmtStock(p, p.stockTotal) : fmtNum(p.stockTotal)}</TableCell>
+                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
@@ -434,7 +422,7 @@ export default function InventarioPage() {
                       const qty = u.getStock(p.id);
                       return (
                         <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive", verPorUnidades && "text-[11px]")}>{verPorUnidades ? fmtStock(p, qty) : fmtNum(qty)}</span> : '—'}
+                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive")}>{fmtNum(qty)}</span> : '—'}
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
@@ -453,7 +441,7 @@ export default function InventarioPage() {
                       );
                     })}
                     <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
-                      {verPorUnidades ? fmtStock(p, totalUbic) : fmtNum(totalUbic)}
+                      {fmtNum(totalUbic)}
                     </TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>
@@ -554,6 +542,15 @@ export default function InventarioPage() {
           stockActual={kardex.stock}
         />
       )}
+
+      <InventarioPresentacionesModal
+        open={showPresModal}
+        onClose={() => setShowPresModal(false)}
+        productos={(data?.productos ?? []) as any}
+        almacenes={(data?.almacenes ?? []) as any}
+        stockMap={data?.stockAlmacenMap ?? {}}
+        presByProd={presByProd as any}
+      />
     </div>
   );
 }
