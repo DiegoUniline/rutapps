@@ -364,7 +364,7 @@ export default function ClienteFormPage() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Cliente eliminado');
-      navigate(fromRuta ? '/ruta/clientes' : '/clientes');
+      navigate(backPath);
     } catch (err: any) { toast.error(err.message); }
   };
 
