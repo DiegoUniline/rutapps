@@ -80,6 +80,7 @@ export const TABLE_LABELS: Record<string, string> = {
   tarifas: 'Tarifas',
   tarifa_lineas: 'Reglas de tarifa',
   stock_almacen: 'Stock por almacén',
+  producto_presentaciones: 'Presentaciones de productos',
 };
 
 // Tables that have empresa_id for filtering
@@ -89,6 +90,7 @@ const TABLES_WITH_EMPRESA = new Set([
   'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
   'tarifas',
   'stock_almacen',
+  'producto_presentaciones',
 ]);
 
 // Tables limited to recent data
