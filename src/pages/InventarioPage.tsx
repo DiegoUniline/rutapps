@@ -360,7 +360,7 @@ export default function InventarioPage() {
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
-                  <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
+                  <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
                   <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
