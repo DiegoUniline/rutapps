@@ -15,7 +15,7 @@ import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
-import { getStockBreakdown } from '@/lib/stockPresentacion';
+import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -542,6 +542,15 @@ export default function InventarioPage() {
           stockActual={kardex.stock}
         />
       )}
+
+      <InventarioPresentacionesModal
+        open={showPresModal}
+        onClose={() => setShowPresModal(false)}
+        productos={(data?.productos ?? []) as any}
+        almacenes={(data?.almacenes ?? []) as any}
+        stockMap={data?.stockAlmacenMap ?? {}}
+        presByProd={presByProd as any}
+      />
     </div>
   );
 }
