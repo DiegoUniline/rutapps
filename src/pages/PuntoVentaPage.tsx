@@ -856,6 +856,10 @@ export default function PuntoVentaPage() {
           ieps_monto: breakdown.ieps,
           descuento_pct: 0,
           total: chargedLineTotal,
+          presentacion_id: (item as any).presentacion_id ?? null,
+          presentacion_nombre: (item as any).presentacion_nombre ?? null,
+          presentacion_factor: (item as any).presentacion_factor ?? null,
+          paquetes: (item as any).paquetes ?? null,
         };
       });
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
