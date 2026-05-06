@@ -108,7 +108,7 @@ export default function MermasPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <AlertTriangle className="h-6 w-6 text-primary" />
             Mermas y Desperdicio
-            <HelpButton title="Mermas" content="Registra el producto que se daña, caduca o se pierde. Sale del almacén normal y entra al almacén Mermas para que el inventario cuadre sin inflar ventas." />
+            
           </h1>
           <p className="text-sm text-muted-foreground">Controla los kg/unidades que se pierden y su impacto en costo y venta.</p>
         </div>
