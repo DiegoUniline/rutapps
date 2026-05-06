@@ -30,7 +30,7 @@ function useInventarioData() {
       // Products with warehouse stock
       const { data: productos } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, cantidad, costo, precio_principal, status, unidades:unidad_venta_id(abreviatura)')
+        .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, unidades:unidad_venta_id(abreviatura)')
         .eq('empresa_id', eid)
         .eq('status', 'activo')
         .order('nombre');
