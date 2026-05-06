@@ -3633,6 +3633,7 @@ export type Database = {
           activo: boolean
           created_at: string
           empresa_id: string
+          es_principal_stock: boolean
           factor_base: number
           id: string
           nombre: string
@@ -3645,6 +3646,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           empresa_id: string
+          es_principal_stock?: boolean
           factor_base: number
           id?: string
           nombre: string
@@ -3657,6 +3659,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           empresa_id?: string
+          es_principal_stock?: boolean
           factor_base?: number
           id?: string
           nombre?: string
