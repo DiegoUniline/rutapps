@@ -369,9 +369,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
     const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
     if (cantidadBase <= 0) return;
-    const maxQty = getMaxQty(p.id);
-    const capped = Math.min(cantidadBase, maxQty);
-    if (capped < cantidadBase) toast.warning(`Stock insuficiente, ajustado a ${capped}`);
+    const noLimit = !!p.vender_sin_stock;
+    const maxQty = noLimit ? Infinity : getMaxQty(p.id);
+    if (!noLimit && maxQty <= 0) {
+      toast.error('Sin stock disponible');
+      return;
+    }
+    if (!noLimit && cantidadBase > maxQty) {
+      toast.error(`No puedes vender más de ${maxQty.toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${p.unidad_granel || 'kg'} disponibles`);
+      return;
+    }
+    const capped = cantidadBase;
     const pf = resolvePricingFull(p);
     const existingIdx = cart.findIndex(c => c.producto_id === p.id && !c.es_cambio);
     const lineBase: any = {
