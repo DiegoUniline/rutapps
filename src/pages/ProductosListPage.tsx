@@ -178,7 +178,16 @@ export default function ProductosListPage() {
                 )}
               </td>
               <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
-              <td className="py-1.5 px-3 font-medium max-w-[200px] truncate">{p.nombre}</td>
+              <td className="py-1.5 px-3 font-medium max-w-[240px]">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="truncate">{p.nombre}</span>
+                  {p.es_granel && (
+                    <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      Granel
+                    </span>
+                  )}
+                </div>
+              </td>
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
