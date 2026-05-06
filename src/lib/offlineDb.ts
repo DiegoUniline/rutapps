@@ -44,6 +44,7 @@ class OfflineDatabase extends Dexie {
   tarifa_lineas!: Table;
   tarifas!: Table;
   stock_almacen!: Table;
+  producto_presentaciones!: Table;
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
