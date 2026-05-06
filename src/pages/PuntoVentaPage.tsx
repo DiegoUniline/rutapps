@@ -26,6 +26,7 @@ import { MovimientoCajaModal } from '@/components/pos/MovimientoCajaModal';
 import { VentasTurnoModal } from '@/components/pos/VentasTurnoModal';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { getStockBreakdown } from '@/lib/stockPresentacion';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -104,6 +105,15 @@ export default function PuntoVentaPage() {
   const [cart, setCart] = useState<PosItem[]>([]);
   const [granelFor, setGranelFor] = useState<any | null>(null);
   const { data: allPresentaciones } = useAllPresentaciones();
+  const presByProducto = useMemo(() => {
+    const m = new Map<string, any[]>();
+    (allPresentaciones ?? []).forEach(p => {
+      const arr = m.get(p.producto_id) ?? [];
+      arr.push(p);
+      m.set(p.producto_id, arr);
+    });
+    return m;
+  }, [allPresentaciones]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
   const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -1258,6 +1268,10 @@ export default function PuntoVentaPage() {
                           </td>
                           <td className={`px-2 py-2 text-right font-semibold whitespace-nowrap ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                             {fmtNum(stock)} <span className="text-[9px] font-normal text-muted-foreground">{unidad}</span>
+                            {(() => {
+                              const bd = getStockBreakdown(stock, presByProducto.get(p.id), unidad);
+                              return bd ? <div className="text-[9px] text-primary font-medium">{bd.texto}</div> : null;
+                            })()}
                           </td>
                           <td className="px-2 py-2 text-right">
                             <Plus className="h-3.5 w-3.5 text-muted-foreground inline" />
@@ -1309,6 +1323,11 @@ export default function PuntoVentaPage() {
                           {fmtNum(stock)}
                         </span>
                       </div>
+                      {(() => {
+                        const u = (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz';
+                        const bd = getStockBreakdown(stock, presByProducto.get(p.id), u);
+                        return bd ? <p className="text-[8px] text-primary font-medium truncate">{bd.texto}</p> : null;
+                      })()}
                     </button>
                   );
                 })}

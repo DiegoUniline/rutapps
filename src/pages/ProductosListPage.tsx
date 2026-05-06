@@ -22,6 +22,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { getStockBreakdown } from '@/lib/stockPresentacion';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -100,6 +102,16 @@ export default function ProductosListPage() {
   const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
 
   const productos = productosData?.rows ?? [];
+  const { data: allPresentaciones } = useAllPresentaciones();
+  const presentacionesByProducto = useMemo(() => {
+    const map = new Map<string, any[]>();
+    (allPresentaciones ?? []).forEach(p => {
+      const arr = map.get(p.producto_id) ?? [];
+      arr.push(p);
+      map.set(p.producto_id, arr);
+    });
+    return map;
+  }, [allPresentaciones]);
   const total = productosData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
@@ -207,6 +219,14 @@ export default function ProductosListPage() {
                 )}>
                   {fmtNum(p.cantidad ?? 0)}
                 </span>
+                {(() => {
+                  const bd = getStockBreakdown(
+                    p.cantidad ?? 0,
+                    presentacionesByProducto.get(p.id),
+                    (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz',
+                  );
+                  return bd ? <div className="text-[10px] text-primary font-medium">{bd.texto}</div> : null;
+                })()}
               </td>
               <td className="py-1.5 px-3 hidden sm:table-cell text-center">
                 {p.tiene_iva ? (

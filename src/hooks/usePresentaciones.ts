@@ -11,6 +11,7 @@ export interface ProductoPresentacion {
   precio_especial: number | null;
   orden: number;
   activo: boolean;
+  es_principal_stock?: boolean;
 }
 
 export function usePresentaciones(productoId?: string) {

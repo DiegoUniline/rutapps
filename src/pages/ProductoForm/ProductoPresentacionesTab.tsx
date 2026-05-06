@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePresentaciones, useSavePresentacion, useDeletePresentacion, type ProductoPresentacion } from '@/hooks/usePresentaciones';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -7,15 +7,18 @@ import { useCurrency } from '@/hooks/useCurrency';
 interface Props {
   productoId?: string;
   isNew: boolean;
+  esGranel: boolean;
   unidadGranel: string;
   precioPorUnidadBase: number;
 }
 
-export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, precioPorUnidadBase }: Props) {
+export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadGranel, precioPorUnidadBase }: Props) {
   const { data: items = [], isLoading } = usePresentaciones(productoId);
   const saveMut = useSavePresentacion();
   const delMut = useDeletePresentacion();
   const { symbol } = useCurrency();
+
+  const unidad = esGranel ? unidadGranel : 'pz';
 
   const [draft, setDraft] = useState<{ nombre: string; factor_base: string; precio_especial: string }>({
     nombre: '', factor_base: '', precio_especial: '',
@@ -55,6 +58,17 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
     catch (e: any) { toast.error(e.message); }
   };
 
+  const onTogglePrincipal = async (p: ProductoPresentacion) => {
+    try {
+      // First unmark any other principal to avoid the unique index conflict
+      const others = items.filter(x => x.id !== p.id && x.es_principal_stock);
+      for (const o of others) {
+        await saveMut.mutateAsync({ id: o.id, producto_id: o.producto_id, es_principal_stock: false });
+      }
+      await saveMut.mutateAsync({ id: p.id, producto_id: p.producto_id, es_principal_stock: !p.es_principal_stock });
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const onDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta presentación?')) return;
     try { await delMut.mutateAsync(id); toast.success('Eliminada'); }
@@ -63,10 +77,15 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
 
   return (
     <div className="space-y-4 p-1">
-      <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded p-3">
-        Define los paquetes en los que vendes este producto a granel (ej. <strong>Paquete 1 {unidadGranel}</strong>, <strong>Paquete 7 {unidadGranel}</strong>).
-        El stock se sigue manejando en <strong>{unidadGranel}</strong>: vender 2 paquetes de 7 {unidadGranel} descuenta 14 {unidadGranel} del inventario.
-        Si dejas el precio especial vacío, se calcula automáticamente como precio por {unidadGranel} × factor.
+      <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded p-3 space-y-1">
+        {esGranel ? (
+          <p>Define los paquetes en los que vendes este producto a granel (ej. <strong>Paquete 1 {unidad}</strong>, <strong>Paquete 7 {unidad}</strong>). El stock se sigue manejando en <strong>{unidad}</strong>.</p>
+        ) : (
+          <p>Define las presentaciones de empaque (ej. <strong>Caja 12 pz</strong>, <strong>Six pack 6 pz</strong>). El factor es cuántas piezas trae cada presentación. El stock se sigue contando en <strong>piezas</strong>.</p>
+        )}
+        <p>
+          Marca con la <Star className="h-3 w-3 inline text-warning" /> la presentación <strong>principal</strong> para mostrar el desglose de stock (ej. "1 caja + 6 pz") en listados, inventario y POS.
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -75,19 +94,20 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
             <tr>
               <th className="text-left px-3 py-2 w-8"></th>
               <th className="text-left px-3 py-2">Nombre</th>
-              <th className="text-right px-3 py-2 w-32">Factor ({unidadGranel})</th>
+              <th className="text-right px-3 py-2 w-32">Factor ({unidad})</th>
               <th className="text-right px-3 py-2 w-40">Precio especial</th>
               <th className="text-right px-3 py-2 w-32">Calculado</th>
+              <th className="text-center px-3 py-2 w-16" title="Principal para stock">Stock</th>
               <th className="text-center px-3 py-2 w-20">Activo</th>
               <th className="px-3 py-2 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Cargando...</td></tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-4 text-muted-foreground">Sin presentaciones. Agrega la primera abajo.</td></tr>
+              <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Sin presentaciones. Agrega la primera abajo.</td></tr>
             )}
             {items.map(p => {
               const calc = p.precio_especial ?? (precioPorUnidadBase * Number(p.factor_base));
@@ -114,6 +134,16 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{symbol}{calc.toFixed(2)}</td>
                   <td className="px-3 py-1.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onTogglePrincipal(p)}
+                      title={p.es_principal_stock ? 'Quitar como principal' : 'Marcar como principal para stock'}
+                      className={`p-1 rounded hover:bg-accent ${p.es_principal_stock ? 'text-warning' : 'text-muted-foreground/40'}`}
+                    >
+                      <Star className={`h-4 w-4 ${p.es_principal_stock ? 'fill-current' : ''}`} />
+                    </button>
+                  </td>
+                  <td className="px-3 py-1.5 text-center">
                     <input type="checkbox" checked={p.activo}
                       onChange={(e) => onUpdate(p, { activo: e.target.checked })} />
                   </td>
@@ -131,7 +161,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
               <td></td>
               <td className="px-3 py-2">
                 <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm"
-                  placeholder={`Paquete X ${unidadGranel}`}
+                  placeholder={esGranel ? `Paquete X ${unidad}` : 'Caja 12 pz'}
                   value={draft.nombre}
                   onChange={(e) => setDraft({ ...draft, nombre: e.target.value })} />
               </td>
@@ -147,7 +177,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, unidadGranel, pre
                   value={draft.precio_especial}
                   onChange={(e) => setDraft({ ...draft, precio_especial: e.target.value })} />
               </td>
-              <td colSpan={2}></td>
+              <td colSpan={3}></td>
               <td className="text-center">
                 <button onClick={onAdd} disabled={saveMut.isPending}
                   className="bg-primary text-primary-foreground rounded p-1.5 hover:bg-primary/90 disabled:opacity-50">
