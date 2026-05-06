@@ -365,6 +365,40 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
   };
 
+  /** Add/replace a granel line with explicit cantidad (in unidad base) and presentación snapshot */
+  const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
+    const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
+    if (cantidadBase <= 0) return;
+    const maxQty = getMaxQty(p.id);
+    const capped = Math.min(cantidadBase, maxQty);
+    if (capped < cantidadBase) toast.warning(`Stock insuficiente, ajustado a ${capped}`);
+    const pf = resolvePricingFull(p);
+    const existingIdx = cart.findIndex(c => c.producto_id === p.id && !c.es_cambio);
+    const lineBase: any = {
+      producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
+      precio_unitario: precioUnitario,
+      cantidad: capped,
+      unidad: p.unidad_granel || 'kg',
+      unidad_id: p.unidad_venta_id ?? undefined,
+      tiene_iva: p.tiene_iva ?? false,
+      iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
+      tiene_ieps: p.tiene_ieps ?? false,
+      ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
+      es_cambio: false,
+      precio_unitario_sin_redondeo: precioUnitario,
+      precio_display_sin_redondeo: precioUnitario,
+      base_precio: pf.basePrecio,
+      redondeo: pf.redondeo,
+      presentacion_id: presentacion?.id ?? null,
+      presentacion_nombre: presentacion?.nombre ?? null,
+      presentacion_factor: presentacion?.factor_base ?? null,
+      paquetes,
+      precio_manual: !!presentacion?.id || presentacion === null,
+    };
+    if (existingIdx >= 0) setCart(cart.map((c, i) => i === existingIdx ? { ...c, ...lineBase } : c));
+    else setCart([...cart, lineBase]);
+  };
+
   const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.map(c => { if (c.producto_id !== productoId || !!c.es_cambio !== match) return c; const newQty = c.cantidad + delta; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty } : c; })); };
   const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
@@ -639,7 +673,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
-      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
+      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
 
       if (applyPayment && ventaClienteId && pagos.length > 0) {
         // Snapshot pending accounts to avoid mutating React state
@@ -833,7 +867,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
-    addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
+    addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,

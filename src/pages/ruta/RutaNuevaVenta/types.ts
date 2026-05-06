@@ -26,6 +26,12 @@ export interface CartItem {
   lista_precio_id?: string | null;
   /** Friendly label of the applied list (for UI badges) */
   lista_nombre?: string | null;
+  /** Granel: presentación seleccionada (snapshot) */
+  presentacion_id?: string | null;
+  presentacion_nombre?: string | null;
+  presentacion_factor?: number | null;
+  /** # de paquetes capturado por el usuario (la cantidad real va en `cantidad`, en unidad base) */
+  paquetes?: number | null;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';

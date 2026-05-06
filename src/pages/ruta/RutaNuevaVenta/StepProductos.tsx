@@ -7,6 +7,8 @@ import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
 import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
+import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
@@ -20,6 +22,7 @@ interface Props {
   tipoVenta: 'venta_directa' | 'pedido';
   totals: { items: number; total: number };
   addToCart: (p: any, esCambio?: boolean) => void;
+  addGranelLine: (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => void;
   updateQty: (pid: string, delta: number, esCambio?: boolean) => void;
   removeFromCart: (pid: string, esCambio?: boolean) => void;
   getItemInCart: (pid: string) => CartItem | undefined;
@@ -50,7 +53,7 @@ interface Props {
 export function StepProductos(props: Props) {
   const {
     clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos,
-    cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart,
+    cart, cambioItems, tipoVenta, totals, addToCart, addGranelLine, updateQty, removeFromCart,
     getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
@@ -58,14 +61,22 @@ export function StepProductos(props: Props) {
     canChangePrice,
   } = props;
   const { symbol: s } = useCurrency();
+  const { data: allPresentaciones } = useAllPresentaciones();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
+  const [granelFor, setGranelFor] = useState<any | null>(null);
+
+  // Wrap addToCart: if producto es_granel, abrir selector en lugar de añadir directo
+  const handleAdd = (p: any, esCambio?: boolean) => {
+    if (!esCambio && p?.es_granel) { setGranelFor(p); return; }
+    addToCart(p, esCambio);
+  };
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
 
   const handleScan = (code: string) => {
     const prod = findProductByCode(code);
     if (!prod) { toast.error(`Sin coincidencias para "${code}"`); return; }
-    addToCart(prod);
+    handleAdd(prod);
     toast.success(`+ ${prod.nombre}`, {
       action: { label: 'Deshacer', onClick: () => removeFromCart(prod.id) },
       duration: 4000,
@@ -171,7 +182,7 @@ export function StepProductos(props: Props) {
           return (
             <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inCart ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
               <div className="flex items-center gap-2.5">
-                <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && addToCart(p)}>
+                <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && handleAdd(p)}>
                   <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                   <div className="flex items-center gap-1.5 mt-px">
                     <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
@@ -197,6 +208,11 @@ export function StepProductos(props: Props) {
                         <Tag className="h-2 w-2 shrink-0" /><span className="truncate">{inCart?.lista_nombre}</span>
                       </span>
                     )}
+                    {inCart?.presentacion_nombre && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-medium">
+                        {inCart.paquetes}× {inCart.presentacion_nombre} = {inCart.cantidad.toFixed(3)} {p.unidad_granel || 'kg'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button
@@ -218,10 +234,10 @@ export function StepProductos(props: Props) {
                     >
                       {inCart.cantidad}
                     </button>
-                    <button onClick={() => addToCart(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
+                    <button onClick={() => handleAdd(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
                   </div>
                 ) : (
-                  <button onClick={() => addToCart(p)} className="w-8 h-8 rounded-lg bg-accent hover:bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-all shrink-0"><Plus className="h-4 w-4" /></button>
+                  <button onClick={() => handleAdd(p)} className="w-8 h-8 rounded-lg bg-accent hover:bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-all shrink-0"><Plus className="h-4 w-4" /></button>
                 )}
               </div>
               {atMax && <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1">Máximo a bordo alcanzado</p>}
@@ -263,6 +279,23 @@ export function StepProductos(props: Props) {
         onSelectLista={(listaId, tarifaId, unitPrice, listaNombre) => detalleProducto && setItemPriceFromLista(detalleProducto.id, listaId, tarifaId, unitPrice, listaNombre)}
         onSetManualPrice={(price) => detalleProducto && setItemPriceManual(detalleProducto.id, price)}
         onResetToSuggested={() => detalleProducto && resetItemToSuggested(detalleProducto.id)}
+      />
+
+      <PresentacionSelectorModal
+        open={!!granelFor}
+        onClose={() => setGranelFor(null)}
+        producto={granelFor}
+        presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
+        precioPorUnidadBase={granelFor ? (getSuggestedPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
+        onConfirm={(data) => {
+          if (!granelFor) return;
+          addGranelLine(granelFor, {
+            cantidadBase: data.cantidadBase,
+            precioUnitario: data.precioUnitario,
+            paquetes: data.paquetes,
+            presentacion: data.presentacion ? { id: data.presentacion.id, nombre: data.presentacion.nombre, factor_base: Number(data.presentacion.factor_base) } : null,
+          });
+        }}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { ProductoGeneralFields } from './ProductoGeneralFields';
 import { ProductoFiscalTab } from './ProductoFiscalTab';
 import { ProductoComisionesTab } from './ProductoComisionesTab';
 import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
+import { ProductoPresentacionesTab } from './ProductoPresentacionesTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
@@ -33,10 +34,13 @@ export default function ProductoFormPage() {
             key: 'precios', label: 'Reglas de precio',
             content: <PreciosTab form={h.form} tarifaLineas={h.tarifaLineas} tarifasDisp={h.tarifasDisp} productoId={h.id} isNew={h.isNew} navigate={h.navigate} />,
           }] : []),
+          ...((h.form as any).es_granel ? [{
+            key: 'presentaciones', label: 'Presentaciones',
+            content: <ProductoPresentacionesTab productoId={h.id} isNew={h.isNew} unidadGranel={(h.form as any).unidad_granel || 'kg'} precioPorUnidadBase={Number((h.form as any).precio_principal) || 0} />,
+          }] : []),
           { key: 'fiscal', label: 'Fiscal', content: <ProductoFiscalTab form={h.form} set={h.set} unidadesSat={h.unidadesSat} /> },
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
           { key: 'inventario', label: 'Inventario', content: <InventarioTabContent form={h.form} set={h.set} /> },
-          { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
           { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
           { key: 'kardex', label: 'Kardex', content: <KardexTabWrapper productoId={h.id} isNew={h.isNew} /> },
         ]} />
