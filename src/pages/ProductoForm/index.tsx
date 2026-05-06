@@ -34,9 +34,9 @@ export default function ProductoFormPage() {
             key: 'precios', label: 'Reglas de precio',
             content: <PreciosTab form={h.form} tarifaLineas={h.tarifaLineas} tarifasDisp={h.tarifasDisp} productoId={h.id} isNew={h.isNew} navigate={h.navigate} />,
           }] : []),
-          ...((h.form as any).es_granel ? [{
+          ...(!h.isNew ? [{
             key: 'presentaciones', label: 'Presentaciones',
-            content: <ProductoPresentacionesTab productoId={h.id} isNew={h.isNew} unidadGranel={(h.form as any).unidad_granel || 'kg'} precioPorUnidadBase={Number((h.form as any).precio_principal) || 0} />,
+            content: <ProductoPresentacionesTab productoId={h.id} isNew={h.isNew} esGranel={!!(h.form as any).es_granel} unidadGranel={(h.form as any).unidad_granel || 'kg'} precioPorUnidadBase={Number((h.form as any).precio_principal) || 0} />,
           }] : []),
           { key: 'fiscal', label: 'Fiscal', content: <ProductoFiscalTab form={h.form} set={h.set} unidadesSat={h.unidadesSat} /> },
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
