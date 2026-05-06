@@ -464,7 +464,7 @@ export default function ClienteFormPage() {
   return (
     <div className="p-4 min-h-full">
       <div className="mb-0.5">
-        <Link to={fromRuta ? '/ruta/clientes' : '/clientes'} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">{fromRuta ? '← Ruta' : 'Clientes'}</Link>
+        <Link to={backPath} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>
       </div>
 
       {/* Title + Photos */}
