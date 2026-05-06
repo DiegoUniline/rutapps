@@ -71,10 +71,16 @@ export function ProductoUnidadesStockTab({ productoId, isNew, esGranel, unidadGr
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const onDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta unidad de stock?')) return;
-    try { await delMut.mutateAsync(id); toast.success('Eliminada'); }
-    catch (e: any) { toast.error(e.message); }
+  const onConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await delMut.mutateAsync(deleteTarget.id);
+      toast.success('Unidad eliminada');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   return (
