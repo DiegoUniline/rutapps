@@ -36,6 +36,16 @@ export default function MermaMotivosPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 bg-background min-h-screen">
+  if (!permisosLoading && !isOwner) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-sm text-muted-foreground p-6 text-center">
+        Acceso restringido al administrador.
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 lg:p-6 space-y-4 bg-background min-h-screen">
       <div className="flex items-center gap-2">
         <Link to="/almacen/mermas"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <h1 className="text-2xl font-bold">Motivos de merma</h1>
