@@ -22,6 +22,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { getStockBreakdown } from '@/lib/stockPresentacion';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
