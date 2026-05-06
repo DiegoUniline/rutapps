@@ -609,6 +609,11 @@ function desktopRoutes() {
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
+      {/* Nested context-preserving routes for product/client detail */}
+      <Route path="/:a/productos/:id" element={<ProductoFormPage />} />
+      <Route path="/:a/:b/productos/:id" element={<ProductoFormPage />} />
+      <Route path="/:a/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+      <Route path="/:a/:b/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="*" element={<NotFound />} />
     </>
   );
