@@ -18,6 +18,7 @@ import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 export default function RutaNuevaVenta() {
   const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
 
