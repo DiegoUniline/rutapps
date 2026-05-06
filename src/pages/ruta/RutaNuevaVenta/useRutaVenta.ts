@@ -365,7 +365,41 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
   };
 
-  const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.map(c => { if (c.producto_id !== productoId || !!c.es_cambio !== match) return c; const newQty = c.cantidad + delta; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty } : c; })); };
+  /** Add/replace a granel line with explicit cantidad (in unidad base) and presentación snapshot */
+  const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
+    const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
+    if (cantidadBase <= 0) return;
+    const maxQty = getMaxQty(p.id);
+    const capped = Math.min(cantidadBase, maxQty);
+    if (capped < cantidadBase) toast.warning(`Stock insuficiente, ajustado a ${capped}`);
+    const pf = resolvePricingFull(p);
+    const existingIdx = cart.findIndex(c => c.producto_id === p.id && !c.es_cambio);
+    const lineBase: any = {
+      producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
+      precio_unitario: precioUnitario,
+      cantidad: capped,
+      unidad: p.unidad_granel || 'kg',
+      unidad_id: p.unidad_venta_id ?? undefined,
+      tiene_iva: p.tiene_iva ?? false,
+      iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
+      tiene_ieps: p.tiene_ieps ?? false,
+      ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
+      es_cambio: false,
+      precio_unitario_sin_redondeo: precioUnitario,
+      precio_display_sin_redondeo: precioUnitario,
+      base_precio: pf.basePrecio,
+      redondeo: pf.redondeo,
+      presentacion_id: presentacion?.id ?? null,
+      presentacion_nombre: presentacion?.nombre ?? null,
+      presentacion_factor: presentacion?.factor_base ?? null,
+      paquetes,
+      precio_manual: !!presentacion?.id || presentacion === null,
+    };
+    if (existingIdx >= 0) setCart(cart.map((c, i) => i === existingIdx ? { ...c, ...lineBase } : c));
+    else setCart([...cart, lineBase]);
+  };
+
+
   const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
 
