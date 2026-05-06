@@ -26,6 +26,8 @@ const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const SignupPage = lazy(() => import("@/pages/SignupPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
+const MermasPage = lazy(() => import("@/pages/MermasPage"));
+const MermaMotivosPage = lazy(() => import("@/pages/MermaMotivosPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoForm"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
@@ -578,6 +580,8 @@ function desktopRoutes() {
       <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
       <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
       <Route path="/almacen/conteos" element={<ConteosFisicosPage />} />
+      <Route path="/almacen/mermas" element={<MermasPage />} />
+      <Route path="/almacen/mermas/motivos" element={<MermaMotivosPage />} />
       <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
       <Route path="/finanzas/aplicar-pagos" element={<AplicarPagosPage />} />
       <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />

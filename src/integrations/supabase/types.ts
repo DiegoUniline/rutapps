@@ -87,6 +87,7 @@ export type Database = {
           created_at: string
           direccion: string | null
           empresa_id: string
+          es_merma: boolean
           gps_lat: number | null
           gps_lng: number | null
           id: string
@@ -98,6 +99,7 @@ export type Database = {
           created_at?: string
           direccion?: string | null
           empresa_id: string
+          es_merma?: boolean
           gps_lat?: number | null
           gps_lng?: number | null
           id?: string
@@ -109,6 +111,7 @@ export type Database = {
           created_at?: string
           direccion?: string | null
           empresa_id?: string
+          es_merma?: boolean
           gps_lat?: number | null
           gps_lng?: number | null
           id?: string
@@ -2870,6 +2873,156 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merma_lineas: {
+        Row: {
+          cantidad: number
+          costo_unitario: number
+          created_at: string
+          empresa_id: string
+          id: string
+          merma_id: string
+          precio_venta_unitario: number
+          producto_id: string
+          subtotal_costo: number
+          subtotal_venta: number
+        }
+        Insert: {
+          cantidad: number
+          costo_unitario?: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          merma_id: string
+          precio_venta_unitario?: number
+          producto_id: string
+          subtotal_costo?: number
+          subtotal_venta?: number
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          merma_id?: string
+          precio_venta_unitario?: number
+          producto_id?: string
+          subtotal_costo?: number
+          subtotal_venta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merma_lineas_merma_id_fkey"
+            columns: ["merma_id"]
+            isOneToOne: false
+            referencedRelation: "mermas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merma_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merma_motivos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      mermas: {
+        Row: {
+          almacen_origen_id: string
+          cancelada: boolean
+          cancelada_at: string | null
+          cancelada_por: string | null
+          creado_por: string | null
+          created_at: string
+          devolucion_id: string | null
+          empresa_id: string
+          fecha: string
+          folio: string
+          id: string
+          motivo_id: string | null
+          observaciones: string | null
+          ruta_id: string | null
+          total_costo: number
+          total_venta: number
+        }
+        Insert: {
+          almacen_origen_id: string
+          cancelada?: boolean
+          cancelada_at?: string | null
+          cancelada_por?: string | null
+          creado_por?: string | null
+          created_at?: string
+          devolucion_id?: string | null
+          empresa_id: string
+          fecha?: string
+          folio: string
+          id?: string
+          motivo_id?: string | null
+          observaciones?: string | null
+          ruta_id?: string | null
+          total_costo?: number
+          total_venta?: number
+        }
+        Update: {
+          almacen_origen_id?: string
+          cancelada?: boolean
+          cancelada_at?: string | null
+          cancelada_por?: string | null
+          creado_por?: string | null
+          created_at?: string
+          devolucion_id?: string | null
+          empresa_id?: string
+          fecha?: string
+          folio?: string
+          id?: string
+          motivo_id?: string | null
+          observaciones?: string | null
+          ruta_id?: string | null
+          total_costo?: number
+          total_venta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mermas_almacen_origen_id_fkey"
+            columns: ["almacen_origen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mermas_motivo_id_fkey"
+            columns: ["motivo_id"]
+            isOneToOne: false
+            referencedRelation: "merma_motivos"
             referencedColumns: ["id"]
           },
         ]
@@ -6198,6 +6351,7 @@ export type Database = {
         Args: { p_linea_id: string }
         Returns: number
       }
+      cancelar_merma: { Args: { _merma_id: string }; Returns: undefined }
       cancelar_traspaso: {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
@@ -6228,6 +6382,7 @@ export type Database = {
         Args: { p_deleted_by: string; p_empresa_ids: string[] }
         Returns: Json
       }
+      ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
       generate_folio: {
         Args: { p_empresa_id: string; p_tipo: string }
         Returns: string
@@ -6304,6 +6459,17 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      registrar_merma: {
+        Args: {
+          _almacen_origen_id: string
+          _devolucion_id?: string
+          _lineas: Json
+          _motivo_id: string
+          _observaciones: string
+          _ruta_id: string
+        }
+        Returns: string
       }
       registrar_saldo_inicial: {
         Args: {
