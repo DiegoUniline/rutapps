@@ -16,6 +16,7 @@ import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
+import { ProductoLink } from '@/components/links/EntityLinks';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -359,7 +360,7 @@ export default function InventarioPage() {
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
-                  <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
+                  <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
                   <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
@@ -417,7 +418,7 @@ export default function InventarioPage() {
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
-                    <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
+                    <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
                       return (

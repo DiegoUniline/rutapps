@@ -11,6 +11,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
+import { ProductoLink } from '@/components/links/EntityLinks';
 
 interface Props {
   venta: any;
@@ -218,7 +219,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                         const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? '—');
                         return (
                           <tr key={l.id} className="border-b border-border/40">
-                            <td className="py-1.5">{(l.productos as any)?.nombre ?? '—'}</td>
+                            <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
                             <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                             <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>

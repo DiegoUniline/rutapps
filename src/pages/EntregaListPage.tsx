@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
 import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ClienteLink } from '@/components/links/EntityLinks';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
@@ -439,8 +440,7 @@ export default function EntregaListPage() {
                   >{e.ventas?.folio ?? '—'}</TableCell>
                   <TableCell
                     className="text-[12px] font-medium py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.clientes?.nombre ?? '—'}</TableCell>
+                  ><ClienteLink id={e.cliente_id ?? e.clientes?.id}>{e.clientes?.nombre ?? '—'}</ClienteLink></TableCell>
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
@@ -523,7 +523,7 @@ export default function EntregaListPage() {
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>
-                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                  <ClienteLink id={e.cliente_id ?? e.clientes?.id} className="text-muted-foreground">{e.clientes?.nombre ?? "—"}</ClienteLink>
                   <Badge variant="secondary" className="text-[10px]">{e.status}</Badge>
                 </div>
               ))}
@@ -572,7 +572,7 @@ export default function EntregaListPage() {
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>
-                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                  <ClienteLink id={e.cliente_id ?? e.clientes?.id} className="text-muted-foreground">{e.clientes?.nombre ?? "—"}</ClienteLink>
                 </div>
               ))}
             </div>
