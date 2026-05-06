@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
+import { ClienteLink } from '@/components/links/EntityLinks';
 
 
 
