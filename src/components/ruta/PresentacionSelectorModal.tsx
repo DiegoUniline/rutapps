@@ -133,8 +133,8 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                         <button key={p.id} onClick={() => setPresId(p.id)}
                           className={`text-left rounded-lg px-2 py-2 border transition-all ${active ? 'border-primary bg-primary/10' : 'border-border bg-card hover:bg-accent/40'}`}>
                           <p className="text-[12px] font-semibold leading-tight">{p.nombre}</p>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">{Number(p.factor_base)} {unidad}</p>
-                          <p className="text-[11px] font-medium text-primary tabular-nums">{symbol}{pUnit.toFixed(2)}</p>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{fmtQty(Number(p.factor_base))} {unidad}</p>
+                          <p className="text-[11px] font-medium text-primary tabular-nums">{symbol}{fmtNum(pUnit)}</p>
                         </button>
                       );
                     })}
