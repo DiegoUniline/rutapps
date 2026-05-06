@@ -20,7 +20,7 @@ export const PRODUCTO_COLUMNS = [
   'tiene_comision','tipo_comision','pct_comision','status','almacenes','tiene_iva','tiene_ieps',
   'es_granel','unidad_granel',
   'calculo_costo','codigo_sat','contador','contador_tarifas','iva_pct','ieps_pct','ieps_tipo',
-  'costo_incluye_impuestos','usa_listas_precio','marca_id','clasificacion_id','lista_id','tarifa_id',
+  'costo_incluye_impuestos','usa_listas_precio','usa_presentaciones','marca_id','clasificacion_id','lista_id','tarifa_id',
   'unidad_venta_id','unidad_compra_id','unidad_sat_id','created_at',
 ] as const;
 
