@@ -104,6 +104,18 @@ export default function MermasPage() {
     }
   };
 
+  if (!permisosLoading && !isOwner) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+        <h2 className="text-xl font-semibold">Acceso restringido</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          El módulo de Mermas es exclusivo para el administrador de la empresa.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 lg:p-6 space-y-4 bg-background min-h-screen">
       <div className="flex flex-wrap items-center justify-between gap-2">
