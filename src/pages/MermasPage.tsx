@@ -17,7 +17,7 @@ import { fmtDate, fmtNum } from '@/lib/utils';
 import { fmtMoney } from '@/lib/currency';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import HelpButton from '@/components/HelpButton';
+
 
 interface LineaForm {
   producto_id: string;
