@@ -161,12 +161,27 @@ function useInventarioData() {
 
 export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
+  const { data: presentaciones = [] } = useAllPresentaciones();
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
+  const [verPorUnidades, setVerPorUnidades] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
+
+  const presByProd: Record<string, typeof presentaciones> = {};
+  for (const p of presentaciones) {
+    (presByProd[p.producto_id] ||= []).push(p);
+  }
+  const fmtStock = (prod: any, qty: number) => {
+    const unidadBase = prod?.es_granel ? (prod.unidad_granel || 'kg') : ((prod?.unidades as any)?.abreviatura ?? 'pz');
+    if (verPorUnidades) {
+      const bd = getStockBreakdown(qty, presByProd[prod?.id], unidadBase);
+      if (bd) return bd.texto;
+    }
+    return `${fmtNum(qty)} ${unidadBase}`;
+  };
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
