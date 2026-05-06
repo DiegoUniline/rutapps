@@ -1323,6 +1323,11 @@ export default function PuntoVentaPage() {
                           {fmtNum(stock)}
                         </span>
                       </div>
+                      {(() => {
+                        const u = (p as any).es_granel ? ((p as any).unidad_granel || 'kg') : 'pz';
+                        const bd = getStockBreakdown(stock, presByProducto.get(p.id), u);
+                        return bd ? <p className="text-[8px] text-primary font-medium truncate">{bd.texto}</p> : null;
+                      })()}
                     </button>
                   );
                 })}
