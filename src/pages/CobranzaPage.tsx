@@ -234,7 +234,7 @@ export default function CobranzaPage() {
         {items.map(c => (
           <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
             <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
-            <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
+            <TableCell className="font-medium text-[12px]"><ClienteLink id={(c as any).cliente_id ?? (c.clientes as any)?.id}>{(c.clientes as any)?.nombre ?? '—'}</ClienteLink></TableCell>
             <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
             <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
             <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
