@@ -275,6 +275,23 @@ export function StepProductos(props: Props) {
         onSetManualPrice={(price) => detalleProducto && setItemPriceManual(detalleProducto.id, price)}
         onResetToSuggested={() => detalleProducto && resetItemToSuggested(detalleProducto.id)}
       />
+
+      <PresentacionSelectorModal
+        open={!!granelFor}
+        onClose={() => setGranelFor(null)}
+        producto={granelFor}
+        presentaciones={(allPresentaciones ?? []).filter(p => granelFor && p.producto_id === granelFor.id)}
+        precioPorUnidadBase={granelFor ? (getSuggestedPrice(granelFor.id) || (granelFor.precio_principal ?? 0)) : 0}
+        onConfirm={(data) => {
+          if (!granelFor) return;
+          addGranelLine(granelFor, {
+            cantidadBase: data.cantidadBase,
+            precioUnitario: data.precioUnitario,
+            paquetes: data.paquetes,
+            presentacion: data.presentacion ? { id: data.presentacion.id, nombre: data.presentacion.nombre, factor_base: Number(data.presentacion.factor_base) } : null,
+          });
+        }}
+      />
     </div>
   );
 }
