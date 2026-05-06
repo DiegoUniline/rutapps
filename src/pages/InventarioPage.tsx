@@ -313,17 +313,34 @@ export default function InventarioPage() {
             </button>
           ))}
         </div>
-        {(view === 'resumen' || view === 'almacen') && data && (
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors mb-1"
-            style={{ backgroundColor: '#217346', borderColor: '#1a5c38', color: '#fff' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a5c38')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#217346')}
-          >
-            <Download className="h-3.5 w-3.5" /> Excel
-          </button>
-        )}
+        <div className="flex items-center gap-2 mb-1">
+          {(view === 'resumen' || view === 'almacen') && presentaciones.some(pp => pp.es_principal_stock) && (
+            <button
+              onClick={() => setVerPorUnidades(v => !v)}
+              className={cn(
+                "flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors",
+                verPorUnidades
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-foreground border-border hover:border-primary/50"
+              )}
+              title="Mostrar el stock desglosado en cajas, bultos, etc."
+            >
+              <Boxes className="h-3.5 w-3.5" />
+              {verPorUnidades ? 'Ver en unidad base' : 'Ver por unidades de stock'}
+            </button>
+          )}
+          {(view === 'resumen' || view === 'almacen') && data && (
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border font-medium transition-colors"
+              style={{ backgroundColor: '#217346', borderColor: '#1a5c38', color: '#fff' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a5c38')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#217346')}
+            >
+              <Download className="h-3.5 w-3.5" /> Excel
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -356,7 +373,7 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
+                  <TableCell className="text-center font-bold">{verPorUnidades ? fmtStock(p, p.stockTotal) : fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
