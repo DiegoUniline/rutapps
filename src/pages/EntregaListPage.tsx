@@ -523,7 +523,7 @@ export default function EntregaListPage() {
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>
-                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                  <ClienteLink id={e.cliente_id ?? e.clientes?.id} className="text-muted-foreground">{e.clientes?.nombre ?? "—"}</ClienteLink>
                   <Badge variant="secondary" className="text-[10px]">{e.status}</Badge>
                 </div>
               ))}
@@ -572,7 +572,7 @@ export default function EntregaListPage() {
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>
-                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                  <ClienteLink id={e.cliente_id ?? e.clientes?.id} className="text-muted-foreground">{e.clientes?.nombre ?? "—"}</ClienteLink>
                 </div>
               ))}
             </div>
