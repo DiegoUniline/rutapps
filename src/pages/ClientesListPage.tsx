@@ -26,6 +26,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
+import { ClienteLink } from '@/components/links/EntityLinks';
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },
