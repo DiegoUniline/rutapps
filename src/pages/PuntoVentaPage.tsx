@@ -1268,6 +1268,10 @@ export default function PuntoVentaPage() {
                           </td>
                           <td className={`px-2 py-2 text-right font-semibold whitespace-nowrap ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                             {fmtNum(stock)} <span className="text-[9px] font-normal text-muted-foreground">{unidad}</span>
+                            {(() => {
+                              const bd = getStockBreakdown(stock, presByProducto.get(p.id), unidad);
+                              return bd ? <div className="text-[9px] text-primary font-medium">{bd.texto}</div> : null;
+                            })()}
                           </td>
                           <td className="px-2 py-2 text-right">
                             <Plus className="h-3.5 w-3.5 text-muted-foreground inline" />
