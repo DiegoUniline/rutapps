@@ -53,7 +53,7 @@ interface Props {
 export function StepProductos(props: Props) {
   const {
     clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos,
-    cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart,
+    cart, cambioItems, tipoVenta, totals, addToCart, addGranelLine, updateQty, removeFromCart,
     getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
@@ -61,8 +61,16 @@ export function StepProductos(props: Props) {
     canChangePrice,
   } = props;
   const { symbol: s } = useCurrency();
+  const { data: allPresentaciones } = useAllPresentaciones();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
+  const [granelFor, setGranelFor] = useState<any | null>(null);
+
+  // Wrap addToCart: if producto es_granel, abrir selector en lugar de añadir directo
+  const handleAdd = (p: any, esCambio?: boolean) => {
+    if (!esCambio && p?.es_granel) { setGranelFor(p); return; }
+    addToCart(p, esCambio);
+  };
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
 
   const handleScan = (code: string) => {
