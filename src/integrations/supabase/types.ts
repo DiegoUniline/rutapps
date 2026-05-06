@@ -2384,6 +2384,10 @@ export type Database = {
           entrega_id: string
           hecho: boolean
           id: string
+          paquetes: number | null
+          presentacion_factor: number | null
+          presentacion_id: string | null
+          presentacion_nombre: string | null
           producto_id: string
           unidad_id: string | null
         }
@@ -2395,6 +2399,10 @@ export type Database = {
           entrega_id: string
           hecho?: boolean
           id?: string
+          paquetes?: number | null
+          presentacion_factor?: number | null
+          presentacion_id?: string | null
+          presentacion_nombre?: string | null
           producto_id: string
           unidad_id?: string | null
         }
@@ -2406,6 +2414,10 @@ export type Database = {
           entrega_id?: string
           hecho?: boolean
           id?: string
+          paquetes?: number | null
+          presentacion_factor?: number | null
+          presentacion_id?: string | null
+          presentacion_nombre?: string | null
           producto_id?: string
           unidad_id?: string | null
         }
@@ -3456,6 +3468,53 @@ export type Database = {
           },
           {
             foreignKeyName: "producto_lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_presentaciones: {
+        Row: {
+          activo: boolean
+          created_at: string
+          empresa_id: string
+          factor_base: number
+          id: string
+          nombre: string
+          orden: number
+          precio_especial: number | null
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          empresa_id: string
+          factor_base: number
+          id?: string
+          nombre: string
+          orden?: number
+          precio_especial?: number | null
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          empresa_id?: string
+          factor_base?: number
+          id?: string
+          nombre?: string
+          orden?: number
+          precio_especial?: number | null
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_presentaciones_producto_id_fkey"
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
@@ -5532,8 +5591,12 @@ export type Database = {
           iva_pct: number | null
           lista_precio_id: string | null
           notas: string | null
+          paquetes: number | null
           precio_manual: boolean
           precio_unitario: number
+          presentacion_factor: number | null
+          presentacion_id: string | null
+          presentacion_nombre: string | null
           producto_id: string | null
           subtotal: number | null
           total: number | null
@@ -5554,8 +5617,12 @@ export type Database = {
           iva_pct?: number | null
           lista_precio_id?: string | null
           notas?: string | null
+          paquetes?: number | null
           precio_manual?: boolean
           precio_unitario?: number
+          presentacion_factor?: number | null
+          presentacion_id?: string | null
+          presentacion_nombre?: string | null
           producto_id?: string | null
           subtotal?: number | null
           total?: number | null
@@ -5576,8 +5643,12 @@ export type Database = {
           iva_pct?: number | null
           lista_precio_id?: string | null
           notas?: string | null
+          paquetes?: number | null
           precio_manual?: boolean
           precio_unitario?: number
+          presentacion_factor?: number | null
+          presentacion_id?: string | null
+          presentacion_nombre?: string | null
           producto_id?: string | null
           subtotal?: number | null
           total?: number | null
