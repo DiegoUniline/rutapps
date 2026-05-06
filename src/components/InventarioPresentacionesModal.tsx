@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, Search, Package, Warehouse, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn, fmtNum } from '@/lib/utils';
@@ -35,7 +35,13 @@ const fmtN = (n: number, max = 3) =>
 
 export default function InventarioPresentacionesModal({ open, onClose, productos, almacenes, stockMap, presByProd }: Props) {
   const [search, setSearch] = useState('');
-  const [almacenId, setAlmacenId] = useState<string>(almacenes[0]?.id ?? '');
+  const [almacenId, setAlmacenId] = useState<string>('');
+
+  useEffect(() => {
+    if (open && !almacenId && almacenes[0]?.id) {
+      setAlmacenId(almacenes[0].id);
+    }
+  }, [open, almacenes, almacenId]);
 
   const almacen = almacenes.find(a => a.id === almacenId);
 
@@ -123,44 +129,63 @@ export default function InventarioPresentacionesModal({ open, onClose, productos
               <span>· {rows.length} productos con presentaciones</span>
             </div>
           )}
-          <div className="space-y-2">
-            {rows.map(r => (
-              <div key={r.producto.id} className="border border-border rounded">
-                <div className="flex items-center justify-between px-3 py-2 bg-accent/30 border-b border-border">
-                  <div>
-                    <div className="text-[13px] font-semibold text-foreground">{r.producto.nombre}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{r.producto.codigo}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-muted-foreground">Stock total</div>
-                    <div className="text-sm font-bold text-foreground">{fmtNum(r.qty)} {r.unidadBase}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2">
-                  {r.equivalencias.map(eq => (
-                    <div key={eq.presentacion.id} className={cn(
-                      "rounded border p-2",
-                      eq.presentacion.es_principal_stock ? "border-primary/40 bg-primary/5" : "border-border"
-                    )}>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{eq.presentacion.nombre}</div>
-                      <div className="text-sm font-bold text-foreground">
-                        {fmtN(eq.enteros)}
-                        <span className="text-[11px] font-normal text-muted-foreground"> enteras</span>
-                      </div>
-                      {eq.resto > 0 && (
-                        <div className="text-[10px] text-muted-foreground">
-                          + {fmtN(eq.resto)} {r.unidadBase} sueltas
-                        </div>
-                      )}
-                      <div className="text-[9px] text-muted-foreground/70 mt-0.5">
-                        1 {eq.presentacion.nombre} = {fmtN(eq.factor)} {r.unidadBase}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {almacen && rows.length > 0 && (() => {
+            // Collect all unique presentation names across rows for table columns
+            const colsSet = new Map<string, number>(); // name -> factor (for header tooltip)
+            rows.forEach(r => r.equivalencias.forEach(eq => {
+              if (!colsSet.has(eq.presentacion.nombre)) colsSet.set(eq.presentacion.nombre, eq.factor);
+            }));
+            const cols = Array.from(colsSet.entries());
+            return (
+              <div className="border border-border rounded overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-accent/30 border-b border-border">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-xs font-semibold text-foreground">Producto</th>
+                      <th className="text-right px-3 py-2 text-xs font-semibold text-foreground">Stock total</th>
+                      {cols.map(([name, factor]) => (
+                        <th key={name} className="text-right px-3 py-2 text-xs font-semibold text-foreground whitespace-nowrap">
+                          {name}
+                          <div className="text-[9px] font-normal text-muted-foreground">factor {fmtN(factor)}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(r => {
+                      const eqByName = new Map(r.equivalencias.map(eq => [eq.presentacion.nombre, eq]));
+                      return (
+                        <tr key={r.producto.id} className="border-b border-border last:border-0 hover:bg-accent/20">
+                          <td className="px-3 py-2">
+                            <div className="text-[13px] font-medium text-foreground">{r.producto.nombre}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{r.producto.codigo}</div>
+                          </td>
+                          <td className="px-3 py-2 text-right whitespace-nowrap font-semibold text-foreground">
+                            {fmtNum(r.qty)} <span className="text-[10px] text-muted-foreground">{r.unidadBase}</span>
+                          </td>
+                          {cols.map(([name]) => {
+                            const eq = eqByName.get(name);
+                            if (!eq) return <td key={name} className="px-3 py-2 text-right text-muted-foreground/40">—</td>;
+                            return (
+                              <td key={name} className={cn(
+                                "px-3 py-2 text-right whitespace-nowrap",
+                                eq.presentacion.es_principal_stock && "bg-primary/5"
+                              )}>
+                                <div className="text-sm font-semibold text-foreground">{fmtN(eq.enteros)}</div>
+                                {eq.resto > 0 && (
+                                  <div className="text-[10px] text-muted-foreground">+ {fmtN(eq.resto)} {r.unidadBase}</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
       </div>
     </div>
