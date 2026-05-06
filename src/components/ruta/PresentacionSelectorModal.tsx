@@ -10,6 +10,8 @@ interface Props {
   presentaciones: ProductoPresentacion[];
   /** Base unit price (per unidad_granel, ej. por kg) */
   precioPorUnidadBase: number;
+  /** Máximo permitido (en unidad base). Infinity si no hay límite. */
+  stockMax?: number;
   onConfirm: (data: {
     cantidadBase: number;
     paquetes: number | null;
