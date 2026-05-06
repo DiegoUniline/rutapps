@@ -102,6 +102,8 @@ export default function PuntoVentaPage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [cart, setCart] = useState<PosItem[]>([]);
+  const [granelFor, setGranelFor] = useState<any | null>(null);
+  const { data: allPresentaciones } = useAllPresentaciones();
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
   const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
