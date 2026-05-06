@@ -1,5 +1,6 @@
 import { ArrowLeft, X } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
@@ -17,6 +18,7 @@ import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 export default function RutaNuevaVenta() {
   const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
 
@@ -73,17 +75,30 @@ export default function RutaNuevaVenta() {
           <button onClick={h.goBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all"><ArrowLeft className="h-[18px] w-[18px] text-foreground" /></button>
           <span className="text-[15px] font-semibold text-foreground flex-1">Nueva venta</span>
           <button
-            onClick={() => {
-              if (confirm('¿Cancelar esta venta? Se perderán los cambios.')) {
-                h.navigate('/ruta');
-              }
-            }}
+            onClick={() => setShowCancelConfirm(true)}
             className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg bg-destructive/10 text-destructive text-[12px] font-semibold active:scale-95 transition-all"
           >
             <X className="h-3.5 w-3.5" />
             Cancelar
           </button>
         </div>
+        <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Cancelar esta venta?</AlertDialogTitle>
+              <AlertDialogDescription>Se perderán los cambios que hayas hecho.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Continuar venta</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => { setShowCancelConfirm(false); h.navigate('/ruta'); }}
+              >
+                Sí, cancelar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="flex px-3 pb-2.5 gap-1">
           {STEPS.map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
