@@ -173,7 +173,51 @@ export function StepDevoluciones(props: Props) {
   // Expanded item for per-item override
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
-  return (
+  // Gate: ¿hay devoluciones? — solo se omite si ya hay devoluciones cargadas (volviendo atrás)
+  const [hayDevoluciones, setHayDevoluciones] = useState<boolean | null>(devoluciones.length > 0 ? true : null);
+
+  if (hayDevoluciones === null) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
+          <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
+            <span className="text-[10px] text-muted-foreground">Cliente:</span>
+            <span className="text-[10.5px] font-semibold text-foreground">{clienteNombre}</span>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+          <div className="text-center space-y-2">
+            <div className="text-5xl">🔄</div>
+            <h2 className="text-[22px] font-bold text-foreground">¿Hay devoluciones?</h2>
+            <p className="text-[13px] text-muted-foreground">El cliente regresa producto vencido, dañado, no vendido, etc.</p>
+          </div>
+
+          <div className="w-full max-w-sm grid grid-cols-2 gap-3">
+            <button
+              onClick={() => {
+                processDevolucionesAndGoToProductos();
+              }}
+              className="flex flex-col items-center justify-center gap-1 py-6 rounded-2xl bg-card border-2 border-border active:scale-[0.97] transition-all"
+            >
+              <span className="text-3xl">🚫</span>
+              <span className="text-[15px] font-bold text-foreground">No</span>
+              <span className="text-[11px] text-muted-foreground">Continuar</span>
+            </button>
+            <button
+              onClick={() => setHayDevoluciones(true)}
+              className="flex flex-col items-center justify-center gap-1 py-6 rounded-2xl bg-primary text-primary-foreground active:scale-[0.97] transition-all shadow-lg shadow-primary/20"
+            >
+              <span className="text-3xl">✅</span>
+              <span className="text-[15px] font-bold">Sí</span>
+              <span className="text-[11px] opacity-80">Registrar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
