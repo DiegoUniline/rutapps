@@ -22,7 +22,7 @@ export default function ProductoFormPage() {
         starred={h.starred} setStarred={h.setStarred} editingName={h.editingName} setEditingName={h.setEditingName}
         nameInputRef={h.nameInputRef as any} imageInputRef={h.imageInputRef as any} uploadingImage={h.uploadingImage}
         handleImageUpload={h.handleImageUpload} handleSave={h.handleSave} handleDelete={h.handleDelete}
-        onDiscard={() => h.navigate('/productos')} saving={h.saveMutation.isPending}
+        onDiscard={() => h.navigate(fromPath)} saving={h.saveMutation.isPending}
       />
       <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
         <ProductoGeneralFields
