@@ -177,8 +177,6 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
           {/* Resumen */}
           <div className="bg-accent/30 rounded-lg p-3 space-y-1">
-          {/* Resumen */}
-          <div className="bg-accent/30 rounded-lg p-3 space-y-1">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Cantidad total:</span>
               <span className={`font-semibold tabular-nums ${excedeStock ? 'text-destructive' : ''}`}>{fmtQty(cantidadBase)} {unidad}</span>
