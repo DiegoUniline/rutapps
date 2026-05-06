@@ -105,6 +105,15 @@ export default function PuntoVentaPage() {
   const [cart, setCart] = useState<PosItem[]>([]);
   const [granelFor, setGranelFor] = useState<any | null>(null);
   const { data: allPresentaciones } = useAllPresentaciones();
+  const presByProducto = useMemo(() => {
+    const m = new Map<string, any[]>();
+    (allPresentaciones ?? []).forEach(p => {
+      const arr = m.get(p.producto_id) ?? [];
+      arr.push(p);
+      m.set(p.producto_id, arr);
+    });
+    return m;
+  }, [allPresentaciones]);
   const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
   const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
