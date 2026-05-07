@@ -537,6 +537,9 @@ Deno.serve(async (req) => {
           meses: String(meses),
           num_usuarios: String(num_usuarios),
           plan_nombre: labelPlan,
+          plan_id: plan_id || "",
+          descuento_pct: String(descPct),
+          descuento_permanente: descuento_permanente ? "1" : "0",
         },
       });
 
