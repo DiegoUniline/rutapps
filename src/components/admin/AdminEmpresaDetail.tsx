@@ -315,6 +315,67 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
+  const subInvoiceSubtotal = subInvoiceForm.num_usuarios * subInvoiceForm.meses * subInvoiceForm.precio_por_usuario_mes;
+  const subInvoiceDescMonto = subInvoiceSubtotal * (subInvoiceForm.descuento_pct / 100);
+  const subInvoiceTotal = subInvoiceSubtotal - subInvoiceDescMonto;
+
+  function openSubInvoice() {
+    const planNombre = subscription?.subscription_plans?.nombre || 'Mensual';
+    const meses = subscription?.subscription_plans?.meses || 1;
+    const precio = subscription?.subscription_plans?.precio_por_usuario || 300;
+    const descPlan = subscription?.subscription_plans?.descuento_pct || 0;
+    setSubInvoiceForm({
+      meses,
+      num_usuarios: subscription?.max_usuarios || 1,
+      precio_por_usuario_mes: precio,
+      descuento_pct: descPlan,
+      days_until_due: 7,
+      concepto: `Suscripción Rutapp ${planNombre}`,
+    });
+    setShowSubInvoice(true);
+  }
+
+  async function handleCreateSubInvoice() {
+    if (subInvoiceForm.num_usuarios < 1 || subInvoiceForm.meses < 1) {
+      toast.error('Verifica usuarios y meses');
+      return;
+    }
+    setCreatingSubInvoice(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_subscription_invoice`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            empresa_id: empresaId,
+            num_usuarios: subInvoiceForm.num_usuarios,
+            meses: subInvoiceForm.meses,
+            precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
+            descuento_pct: subInvoiceForm.descuento_pct,
+            days_until_due: subInvoiceForm.days_until_due,
+            concepto: subInvoiceForm.concepto,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al crear factura');
+      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}. Al pagarla se activará el plan por ${data.meses} ${data.meses === 1 ? 'mes' : 'meses'}.`);
+      setShowSubInvoice(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setCreatingSubInvoice(false);
+    }
+  }
+
   async function handleDeleteEmpresa() {
     if (!user) return;
     setDeleting(true);
