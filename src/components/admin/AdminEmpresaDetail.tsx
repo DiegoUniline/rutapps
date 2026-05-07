@@ -78,6 +78,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [resettingPw, setResettingPw] = useState(false);
   const [forcingAll, setForcingAll] = useState(false);
 
+  // Subscription invoice
+  const [showSubInvoice, setShowSubInvoice] = useState(false);
+  const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
+  const [subInvoiceForm, setSubInvoiceForm] = useState({
+    meses: 1,
+    num_usuarios: 1,
+    precio_por_usuario_mes: 300,
+    descuento_pct: 0,
+    days_until_due: 7,
+    concepto: '',
+  });
+
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
