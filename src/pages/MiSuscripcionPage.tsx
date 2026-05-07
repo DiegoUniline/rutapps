@@ -765,7 +765,7 @@ export default function MiSuscripcionPage() {
       {/* ⚠️ PROMINENT: Pending Invoice Banner */}
       {pendingFacturas.length > 0 && (
         <Card className="border-2 border-destructive/60 bg-destructive/5">
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
@@ -894,7 +894,7 @@ export default function MiSuscripcionPage() {
           </Card>
           {/* ─── Cupón de descuento ─── */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
                 <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
               </h2>
@@ -932,7 +932,7 @@ export default function MiSuscripcionPage() {
           {/* Timbres Section — solo visible para super admin */}
           {user?.email === 'diego.leon@uniline.mx' && (
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
                 <Stamp className="h-5 w-5 text-primary" /> Timbres CFDI
               </h2>
@@ -973,7 +973,7 @@ export default function MiSuscripcionPage() {
           {/* Invoice History */}
           {facturas.length > 0 && (
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
                   <Receipt className="h-5 w-5 text-primary" /> Historial de facturas
                 </h2>
@@ -1051,7 +1051,7 @@ export default function MiSuscripcionPage() {
         {/* Right: Cart */}
         <div className="lg:col-span-1">
           <Card className="sticky top-6 border-2 border-primary/20">
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="p-4 sm:p-5 space-y-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" /> Tu pedido
               </h2>
