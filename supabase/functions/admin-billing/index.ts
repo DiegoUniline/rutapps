@@ -471,10 +471,12 @@ Deno.serve(async (req) => {
     if (action === "create_subscription_invoice") {
       const {
         empresa_id,
+        plan_id,
         num_usuarios,
         meses,
         precio_por_usuario_mes,
         descuento_pct,
+        descuento_permanente,
         days_until_due,
         concepto,
         plan_nombre,
