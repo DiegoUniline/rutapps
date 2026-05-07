@@ -23,6 +23,7 @@ import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalett
 import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
