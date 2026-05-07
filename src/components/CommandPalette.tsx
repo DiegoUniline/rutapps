@@ -114,7 +114,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     // Always compute menu matches (works even without empresaId / no backend hits)
     const nq = normalize(q);
     const menuMatches: ResultItem[] = q.length >= 1
-      ? MENU_ITEMS
+      ? VISIBLE_MENU_ITEMS
           .filter(m => normalize(m.title + ' ' + (m.subtitle ?? '') + ' ' + (m.keywords ?? '')).includes(nq))
           .slice(0, 10)
           .map((m, i) => ({
