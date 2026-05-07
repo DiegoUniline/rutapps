@@ -463,7 +463,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [showDemoWelcome, setShowDemoWelcome] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const { empresa, profile, signOut } = useAuth();
+  const { empresa, profile, signOut, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
   const { data: setupComplete } = useSetupComplete();
