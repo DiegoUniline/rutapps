@@ -25,7 +25,6 @@ import { generarVentaPdf } from './VentaPdfHandler';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
