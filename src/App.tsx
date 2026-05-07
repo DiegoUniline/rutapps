@@ -497,12 +497,14 @@ function renderAuthenticatedRoutes() {
 
 function GuardedDesktopRoutes() {
   const location = useLocation();
+  const { user } = useAuth();
+  const isBillingOwner = isSuperAdminEmail(user?.email);
 
   return (
     <Suspense fallback={<PageLoader />}>
       <PermissionGuard path={location.pathname}>
         <Routes>
-          {desktopRoutes()}
+          {desktopRoutes(isBillingOwner)}
         </Routes>
       </PermissionGuard>
     </Suspense>
@@ -515,7 +517,7 @@ function HomeRedirect() {
   return <Navigate to={firstAccessibleRoute} replace />;
 }
 
-function desktopRoutes() {
+function desktopRoutes(isBillingOwner: boolean) {
   return (
     <>
       <Route path="/" element={<HomeRedirect />} />
