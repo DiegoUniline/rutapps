@@ -41,8 +41,9 @@ export default function FacturaPendienteModal() {
       }
     } catch {}
     setOpen(true);
-  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.shouldBlock, location.pathname]);
+  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.shouldBlock, location.pathname, user?.email]);
 
+  if (!isSuperAdminEmail(user?.email)) return null;
   if (!fp.hasPendiente) return null;
 
   const handleSnooze = () => {
