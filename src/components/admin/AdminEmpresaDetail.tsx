@@ -82,10 +82,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [showSubInvoice, setShowSubInvoice] = useState(false);
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
   const [subInvoiceForm, setSubInvoiceForm] = useState({
+    plan_id: '' as string,
     meses: 1,
     num_usuarios: 1,
     precio_por_usuario_mes: 300,
     descuento_pct: 0,
+    descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
   });
