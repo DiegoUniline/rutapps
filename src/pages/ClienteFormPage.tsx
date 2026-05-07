@@ -209,7 +209,8 @@ export default function ClienteFormPage() {
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
+  const billingEnabled = (user?.email || '').toLowerCase() === 'diego.leon@uniline.mx';
   const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
