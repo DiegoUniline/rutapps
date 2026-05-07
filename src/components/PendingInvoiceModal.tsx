@@ -8,6 +8,7 @@ import { AlertTriangle, CreditCard, Clock, Loader2 } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface PendingFactura {
   id: string;
