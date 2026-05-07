@@ -78,6 +78,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [resettingPw, setResettingPw] = useState(false);
   const [forcingAll, setForcingAll] = useState(false);
 
+  // Subscription invoice
+  const [showSubInvoice, setShowSubInvoice] = useState(false);
+  const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
+  const [subInvoiceForm, setSubInvoiceForm] = useState({
+    meses: 1,
+    num_usuarios: 1,
+    precio_por_usuario_mes: 300,
+    descuento_pct: 0,
+    days_until_due: 7,
+    concepto: '',
+  });
+
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
@@ -300,6 +312,67 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       toast.error(e.message);
     } finally {
       setForcingAll(false);
+    }
+  }
+
+  const subInvoiceSubtotal = subInvoiceForm.num_usuarios * subInvoiceForm.meses * subInvoiceForm.precio_por_usuario_mes;
+  const subInvoiceDescMonto = subInvoiceSubtotal * (subInvoiceForm.descuento_pct / 100);
+  const subInvoiceTotal = subInvoiceSubtotal - subInvoiceDescMonto;
+
+  function openSubInvoice() {
+    const planNombre = subscription?.subscription_plans?.nombre || 'Mensual';
+    const meses = subscription?.subscription_plans?.meses || 1;
+    const precio = subscription?.subscription_plans?.precio_por_usuario || 300;
+    const descPlan = subscription?.subscription_plans?.descuento_pct || 0;
+    setSubInvoiceForm({
+      meses,
+      num_usuarios: subscription?.max_usuarios || 1,
+      precio_por_usuario_mes: precio,
+      descuento_pct: descPlan,
+      days_until_due: 7,
+      concepto: `Suscripción Rutapp ${planNombre}`,
+    });
+    setShowSubInvoice(true);
+  }
+
+  async function handleCreateSubInvoice() {
+    if (subInvoiceForm.num_usuarios < 1 || subInvoiceForm.meses < 1) {
+      toast.error('Verifica usuarios y meses');
+      return;
+    }
+    setCreatingSubInvoice(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_subscription_invoice`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            empresa_id: empresaId,
+            num_usuarios: subInvoiceForm.num_usuarios,
+            meses: subInvoiceForm.meses,
+            precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
+            descuento_pct: subInvoiceForm.descuento_pct,
+            days_until_due: subInvoiceForm.days_until_due,
+            concepto: subInvoiceForm.concepto,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al crear factura');
+      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}. Al pagarla se activará el plan por ${data.meses} ${data.meses === 1 ? 'mes' : 'meses'}.`);
+      setShowSubInvoice(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setCreatingSubInvoice(false);
     }
   }
 
@@ -927,6 +1000,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         {/* ═══ TAB: Facturación ═══ */}
         <TabsContent value="facturacion">
           <div className="space-y-6">
+            {/* Action: Create subscription invoice */}
+            <Card className="border border-primary/30 bg-primary/5 shadow-sm">
+              <CardContent className="pt-6 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-base font-semibold flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-primary" /> Crear factura de suscripción
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Genera una factura por N meses con descuento. Al pagarse, el plan se activa/extiende automáticamente y aparece en el panel del cliente.
+                  </p>
+                </div>
+                <Button onClick={openSubInvoice} className="gap-1.5">
+                  <Receipt className="h-4 w-4" /> Nueva factura
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Internal invoices */}
             <Card className="border border-border/60 shadow-sm">
               <CardContent className="pt-6">
@@ -1030,6 +1120,80 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Subscription Invoice Dialog */}
+      <Dialog open={showSubInvoice} onOpenChange={setShowSubInvoice}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" /> Nueva factura de suscripción
+            </DialogTitle>
+            <DialogDescription>
+              Para <strong>{empresa?.nombre}</strong>. Al pagarse, el plan se activa/extiende automáticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Meses</Label>
+                <Input type="number" min={1} value={subInvoiceForm.meses}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, meses: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Usuarios</Label>
+                <Input type="number" min={1} value={subInvoiceForm.num_usuarios}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, num_usuarios: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Precio / usuario / mes (MXN)</Label>
+                <Input type="number" min={0} step="0.01" value={subInvoiceForm.precio_por_usuario_mes}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, precio_por_usuario_mes: parseFloat(e.target.value) || 0 }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Descuento (%)</Label>
+                <Input type="number" min={0} max={100} step="0.01" value={subInvoiceForm.descuento_pct}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, descuento_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Días para pagar</Label>
+                <Input type="number" min={1} value={subInvoiceForm.days_until_due}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, days_until_due: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Concepto</Label>
+                <Input value={subInvoiceForm.concepto}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, concepto: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border/60 bg-card p-3 space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{fmtMXN(subInvoiceSubtotal)}</span>
+              </div>
+              {subInvoiceForm.descuento_pct > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Descuento ({subInvoiceForm.descuento_pct}%)</span>
+                  <span>-{fmtMXN(subInvoiceDescMonto)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-base pt-1 border-t">
+                <span>Total</span>
+                <span className="text-primary">{fmtMXN(subInvoiceTotal)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
+              {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
+              Crear factura
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reset Password Dialog */}
       <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>

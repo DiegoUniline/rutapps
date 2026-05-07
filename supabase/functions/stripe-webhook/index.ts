@@ -93,9 +93,8 @@ Deno.serve(async (req) => {
         ? invoice.subscription
         : invoice.subscription?.id;
 
-      // Find empresa via stripe_subscription_id or stripe_customer_id
-      let empresa_id: string | null = null;
-      if (stripeSubId) {
+      let empresa_id: string | null = invoice.metadata?.empresa_id ?? null;
+      if (!empresa_id && stripeSubId) {
         const { data } = await supabase
           .from("subscriptions")
           .select("empresa_id")
@@ -113,18 +112,40 @@ Deno.serve(async (req) => {
       }
 
       if (empresa_id) {
-        const venc = lastDayOfCurrentMonthMx();
+        const mesesRaw = invoice.metadata?.meses;
+        const meses = mesesRaw ? parseInt(mesesRaw, 10) : 0;
+
+        let venc: string;
+        if (meses > 0) {
+          const { data: subRow } = await supabase
+            .from("subscriptions")
+            .select("current_period_end")
+            .eq("empresa_id", empresa_id)
+            .maybeSingle();
+          const today = nowInMx();
+          const currentEnd = subRow?.current_period_end ? new Date(subRow.current_period_end) : today;
+          const base = currentEnd > today ? currentEnd : today;
+          const extended = new Date(base);
+          extended.setMonth(extended.getMonth() + meses);
+          venc = extended.toISOString().slice(0, 10);
+        } else {
+          venc = lastDayOfCurrentMonthMx();
+        }
+
+        const updatePayload: any = {
+          status: "active",
+          fecha_vencimiento: venc,
+          acceso_bloqueado: false,
+          current_period_end: venc,
+          updated_at: new Date().toISOString(),
+        };
+        if (stripeCustomerId) updatePayload.stripe_customer_id = stripeCustomerId;
+
         await supabase
           .from("subscriptions")
-          .update({
-            status: "active",
-            fecha_vencimiento: venc,
-            acceso_bloqueado: false,
-            current_period_end: venc,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq("empresa_id", empresa_id);
-        log("Access renewed via invoice", { empresa_id, venc });
+        log("Access renewed via invoice", { empresa_id, venc, meses });
       }
     }
 

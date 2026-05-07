@@ -466,6 +466,111 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── Create subscription invoice (N months, optional discount) ───
+    // On payment, the stripe-webhook reads metadata.meses and extends current_period_end.
+    if (action === "create_subscription_invoice") {
+      const {
+        empresa_id,
+        num_usuarios,
+        meses,
+        precio_por_usuario_mes,
+        descuento_pct,
+        days_until_due,
+        concepto,
+        plan_nombre,
+      } = body;
+
+      if (!empresa_id) throw new Error("empresa_id requerido");
+      if (!num_usuarios || num_usuarios < 1) throw new Error("num_usuarios requerido");
+      if (!meses || meses < 1) throw new Error("meses requerido");
+      if (!precio_por_usuario_mes || precio_por_usuario_mes <= 0) throw new Error("precio requerido");
+
+      // Get empresa info
+      const { data: empData } = await supabase
+        .from("empresas")
+        .select("id, nombre, email, telefono, rfc, owner_user_id")
+        .eq("id", empresa_id)
+        .maybeSingle();
+      if (!empData) throw new Error("Empresa no encontrada");
+
+      let clientEmail = empData.email;
+      if (!clientEmail && empData.owner_user_id) {
+        const { data: u } = await supabase.auth.admin.getUserById(empData.owner_user_id);
+        clientEmail = u?.user?.email || null;
+      }
+      if (!clientEmail) throw new Error("No se encontró email para esta empresa");
+
+      // Find or create Stripe customer
+      const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
+      let customerId: string;
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const c = await stripe.customers.create({
+          email: clientEmail,
+          name: empData.nombre,
+          phone: empData.telefono || undefined,
+          metadata: { empresa_id, rfc: empData.rfc || "" },
+        });
+        customerId = c.id;
+      }
+
+      const subtotal = Number(num_usuarios) * Number(meses) * Number(precio_por_usuario_mes);
+      const descPct = Number(descuento_pct) || 0;
+      const descMonto = subtotal * (descPct / 100);
+      const total = subtotal - descMonto;
+
+      const labelPlan = plan_nombre || (meses === 1 ? "Mensual" : meses === 6 ? "Semestral" : meses === 12 ? "Anual" : `${meses} meses`);
+      const conceptoFinal = concepto || `Suscripción Rutapp ${labelPlan} — ${num_usuarios} usuario${num_usuarios > 1 ? "s" : ""} × ${meses} mes${meses > 1 ? "es" : ""}`;
+
+      const invoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: "send_invoice",
+        days_until_due: days_until_due || 7,
+        auto_advance: true,
+        description: conceptoFinal,
+        metadata: {
+          empresa_id,
+          tipo: "subscription_renewal",
+          meses: String(meses),
+          num_usuarios: String(num_usuarios),
+          plan_nombre: labelPlan,
+        },
+      });
+
+      await stripe.invoiceItems.create({
+        customer: customerId,
+        invoice: invoice.id,
+        amount: Math.round(subtotal * 100),
+        currency: "mxn",
+        description: `${labelPlan}: ${num_usuarios} usuario${num_usuarios > 1 ? "s" : ""} × ${meses} mes${meses > 1 ? "es" : ""} × $${precio_por_usuario_mes}/usuario/mes`,
+      });
+
+      if (descMonto > 0) {
+        await stripe.invoiceItems.create({
+          customer: customerId,
+          invoice: invoice.id,
+          amount: -Math.round(descMonto * 100),
+          currency: "mxn",
+          description: `Descuento ${descPct}%`,
+        });
+      }
+
+      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      try { await stripe.invoices.sendInvoice(invoice.id); } catch (_) {}
+
+      return new Response(JSON.stringify({
+        invoice_id: finalizedInv.id,
+        hosted_url: finalizedInv.hosted_invoice_url,
+        status: finalizedInv.status,
+        folio: finalizedInv.number || finalizedInv.id.slice(-8),
+        total,
+        meses,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── Create professional invoice with empresa, plan, users ───
     if (action === "create_pro_invoice") {
       const {
