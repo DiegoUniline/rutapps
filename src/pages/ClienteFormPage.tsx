@@ -645,7 +645,7 @@ export default function ClienteFormPage() {
             </div>
           ),
         },
-        {
+        ...(billingEnabled ? [{
           key: 'fiscal', label: 'Datos Fiscales',
           content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
@@ -688,7 +688,7 @@ export default function ClienteFormPage() {
               </div>
             </div>
           ),
-        },
+        }] : []),
         {
           key: 'comercial', label: 'Comercial',
           content: (
