@@ -1121,6 +1121,80 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         </TabsContent>
       </Tabs>
 
+      {/* Subscription Invoice Dialog */}
+      <Dialog open={showSubInvoice} onOpenChange={setShowSubInvoice}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" /> Nueva factura de suscripción
+            </DialogTitle>
+            <DialogDescription>
+              Para <strong>{empresa?.nombre}</strong>. Al pagarse, el plan se activa/extiende automáticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Meses</Label>
+                <Input type="number" min={1} value={subInvoiceForm.meses}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, meses: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Usuarios</Label>
+                <Input type="number" min={1} value={subInvoiceForm.num_usuarios}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, num_usuarios: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Precio / usuario / mes (MXN)</Label>
+                <Input type="number" min={0} step="0.01" value={subInvoiceForm.precio_por_usuario_mes}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, precio_por_usuario_mes: parseFloat(e.target.value) || 0 }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Descuento (%)</Label>
+                <Input type="number" min={0} max={100} step="0.01" value={subInvoiceForm.descuento_pct}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, descuento_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Días para pagar</Label>
+                <Input type="number" min={1} value={subInvoiceForm.days_until_due}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, days_until_due: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Concepto</Label>
+                <Input value={subInvoiceForm.concepto}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, concepto: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border/60 bg-card p-3 space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{fmtMXN(subInvoiceSubtotal)}</span>
+              </div>
+              {subInvoiceForm.descuento_pct > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Descuento ({subInvoiceForm.descuento_pct}%)</span>
+                  <span>-{fmtMXN(subInvoiceDescMonto)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-base pt-1 border-t">
+                <span>Total</span>
+                <span className="text-primary">{fmtMXN(subInvoiceTotal)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
+              {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
+              Crear factura
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Reset Password Dialog */}
       <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>
         <DialogContent className="max-w-md">
