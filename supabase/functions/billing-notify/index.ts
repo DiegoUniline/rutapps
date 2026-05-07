@@ -505,14 +505,20 @@ Deno.serve(async (req) => {
     const graceCutoff = new Date(today);
     graceCutoff.setDate(graceCutoff.getDate() - GRACE_DAYS);
 
-    // Past due subs
+    // Past due subs — only suspend AFTER current_period_end + grace.
+    // Never suspend while paid period is still active (e.g. paid invoice covers May,
+    // but Stripe shows last open invoice flagging past_due — must wait until period_end).
     const { data: pastDueSubs } = await supabase
       .from("subscriptions")
-      .select("id, empresa_id, updated_at")
-      .eq("status", "past_due")
-      .lt("updated_at", graceCutoff.toISOString());
+      .select("id, empresa_id, current_period_end")
+      .eq("status", "past_due");
 
     for (const sub of pastDueSubs || []) {
+      if (!sub.current_period_end) continue;
+      const periodEnd = new Date(sub.current_period_end);
+      const daysSinceEnd = Math.floor((today.getTime() - periodEnd.getTime()) / 86400000);
+      if (daysSinceEnd <= GRACE_DAYS) continue; // still within paid period or grace
+
       await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
       const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
       if (waToken && profile?.telefono && tplMap.suspension.activo) {
