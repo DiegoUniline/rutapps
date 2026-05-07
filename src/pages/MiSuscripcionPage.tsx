@@ -782,7 +782,7 @@ export default function MiSuscripcionPage() {
               </div>
               <Button
                 size="lg"
-                className="h-12 text-base font-bold gap-2 shrink-0"
+                className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                 disabled={payingInvoice !== null}
                 onClick={() => handlePayInvoice(pendingFacturas[0])}
               >
