@@ -114,6 +114,10 @@ Deno.serve(async (req) => {
       if (empresa_id) {
         const mesesRaw = invoice.metadata?.meses;
         const meses = mesesRaw ? parseInt(mesesRaw, 10) : 0;
+        const planIdMeta = invoice.metadata?.plan_id || null;
+        const descPctMeta = invoice.metadata?.descuento_pct ? parseFloat(invoice.metadata.descuento_pct) : null;
+        const descPermanente = invoice.metadata?.descuento_permanente === "1";
+        const numUsuariosMeta = invoice.metadata?.num_usuarios ? parseInt(invoice.metadata.num_usuarios, 10) : null;
 
         let venc: string;
         if (meses > 0) {
@@ -140,12 +144,32 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         };
         if (stripeCustomerId) updatePayload.stripe_customer_id = stripeCustomerId;
+        if (planIdMeta) updatePayload.plan_id = planIdMeta;
+        if (numUsuariosMeta) updatePayload.max_usuarios = numUsuariosMeta;
+        if (descPermanente && descPctMeta !== null) {
+          updatePayload.descuento_porcentaje = descPctMeta;
+        } else if (descPctMeta !== null && !descPermanente) {
+          updatePayload.descuento_porcentaje = 0;
+        }
 
         await supabase
           .from("subscriptions")
           .update(updatePayload)
           .eq("empresa_id", empresa_id);
-        log("Access renewed via invoice", { empresa_id, venc, meses });
+
+        // Mark factura as paid
+        if (invoice.id) {
+          await supabase
+            .from("facturas")
+            .update({
+              estado: "pagada",
+              fecha_pago: new Date().toISOString(),
+              stripe_payment_intent_id: typeof invoice.payment_intent === "string" ? invoice.payment_intent : null,
+            })
+            .eq("stripe_invoice_id", invoice.id);
+        }
+
+        log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
       }
     }
 
