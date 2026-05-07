@@ -1050,7 +1050,7 @@ export default function MiSuscripcionPage() {
 
         {/* Right: Cart */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-6 border-2 border-primary/20">
+          <Card className="lg:sticky lg:top-6 border-2 border-primary/20">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" /> Tu pedido
