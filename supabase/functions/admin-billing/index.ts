@@ -571,10 +571,18 @@ Deno.serve(async (req) => {
       const vencimiento = new Date(hoy);
       vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
 
+      // Look up current subscription to link the invoice
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("empresa_id", empresa_id)
+        .maybeSingle();
+
       const { data: facturaRow, error: facturaErr } = await supabase
         .from("facturas")
         .insert({
           empresa_id,
+          suscripcion_id: subRow?.id || null,
           numero_factura: finalizedInv.number || null,
           periodo_inicio: hoy.toISOString().slice(0, 10),
           periodo_fin: periodoFin.toISOString().slice(0, 10),
