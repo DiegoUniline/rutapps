@@ -1154,6 +1154,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label>Plan</Label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={subInvoiceForm.plan_id}
+                onChange={e => applyPlanToInvoice(e.target.value)}
+              >
+                <option value="">— Personalizado —</option>
+                {plans.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} · {p.meses} {p.meses === 1 ? 'mes' : 'meses'} · ${p.precio_por_usuario}/usuario/mes
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Al pagar, este plan se asigna a la empresa para los próximos cobros.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Meses</Label>
@@ -1174,6 +1191,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <Label>Descuento (%)</Label>
                 <Input type="number" min={0} max={100} step="0.01" value={subInvoiceForm.descuento_pct}
                   onChange={e => setSubInvoiceForm(f => ({ ...f, descuento_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
+              </div>
+              <div className="col-span-2 flex items-start gap-3 rounded-md border border-border/60 bg-card p-3">
+                <Checkbox
+                  id="desc-permanente"
+                  checked={subInvoiceForm.descuento_permanente}
+                  onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, descuento_permanente: !!v }))}
+                  disabled={subInvoiceForm.descuento_pct <= 0}
+                />
+                <label htmlFor="desc-permanente" className="text-sm cursor-pointer leading-tight">
+                  <span className="font-medium">Aplicar descuento de forma permanente</span>
+                  <br />
+                  <span className="text-muted-foreground text-xs">
+                    {subInvoiceForm.descuento_permanente
+                      ? 'El descuento se guardará en la suscripción y se mantendrá en cobros futuros.'
+                      : 'Descuento solo para esta factura. Los próximos cobros usarán el precio normal del plan.'}
+                  </span>
+                </label>
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
