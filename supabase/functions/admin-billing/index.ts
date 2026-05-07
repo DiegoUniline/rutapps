@@ -559,6 +559,34 @@ Deno.serve(async (req) => {
       const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
       try { await stripe.invoices.sendInvoice(invoice.id); } catch (_) {}
 
+      // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
+      const hoy = new Date();
+      const periodoFin = new Date(hoy);
+      periodoFin.setMonth(periodoFin.getMonth() + Number(meses));
+      const vencimiento = new Date(hoy);
+      vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
+
+      const { data: facturaRow, error: facturaErr } = await supabase
+        .from("facturas")
+        .insert({
+          empresa_id,
+          numero_factura: finalizedInv.number || null,
+          periodo_inicio: hoy.toISOString().slice(0, 10),
+          periodo_fin: periodoFin.toISOString().slice(0, 10),
+          num_usuarios: Number(num_usuarios),
+          precio_unitario: Number(precio_por_usuario_mes),
+          descuento_porcentaje: descPct,
+          subtotal,
+          total,
+          estado: "pendiente",
+          es_prorrateo: false,
+          fecha_vencimiento: vencimiento.toISOString(),
+          stripe_invoice_id: finalizedInv.id,
+        })
+        .select()
+        .single();
+      if (facturaErr) console.error("[admin-billing] insert factura error:", facturaErr);
+
       return new Response(JSON.stringify({
         invoice_id: finalizedInv.id,
         hosted_url: finalizedInv.hosted_invoice_url,
@@ -566,6 +594,7 @@ Deno.serve(async (req) => {
         folio: finalizedInv.number || finalizedInv.id.slice(-8),
         total,
         meses,
+        factura_id: facturaRow?.id,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
