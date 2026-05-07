@@ -272,7 +272,7 @@ export default function VentaFormPage() {
         </div>
       </div>
       <DocumentPreviewModal open={showPdfModal} onClose={() => { setShowPdfModal(false); setPdfBlob(null); }} pdfBlob={pdfBlob} fileName={`${form.folio ?? 'pedido'}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''} caption={`Documento ${form.folio}`} tipo="pedido" referencia_id={form.id} />
-      {showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
+      {billingEnabled && showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
 
       {/* Checkout modal for Venta Directa */}
