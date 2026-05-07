@@ -636,7 +636,7 @@ export default function MiSuscripcionPage() {
   const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-3 sm:px-0 pb-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -686,20 +686,20 @@ export default function MiSuscripcionPage() {
         sub.status === 'trial' ? 'border-blue-300 dark:border-blue-700' :
         'border-border'
       }`}>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div className={`h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center shrink-0 ${
                 sub.isBlocked ? 'bg-destructive/10' :
                 sub.status === 'active' ? 'bg-green-100 dark:bg-green-900/30' :
                 'bg-blue-100 dark:bg-blue-900/30'
               }`}>
-                {sub.isBlocked ? <AlertTriangle className="h-7 w-7 text-destructive" /> :
-                 sub.status === 'active' ? <Check className="h-7 w-7 text-green-600" /> :
-                 <Clock className="h-7 w-7 text-blue-600" />}
+                {sub.isBlocked ? <AlertTriangle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" /> :
+                 sub.status === 'active' ? <Check className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" /> :
+                 <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${statusColor[sub.status || ''] || 'bg-muted text-muted-foreground'}`}>
                     {statusLabel[sub.status || ''] || sub.status || 'Sin suscripción'}
                   </span>
@@ -720,7 +720,7 @@ export default function MiSuscripcionPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6 justify-around sm:justify-end">
               <div className="text-center">
                 <div className="text-2xl font-bold text-foreground">{currentUsuarios}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Usuarios</div>
@@ -765,7 +765,7 @@ export default function MiSuscripcionPage() {
       {/* ⚠️ PROMINENT: Pending Invoice Banner */}
       {pendingFacturas.length > 0 && (
         <Card className="border-2 border-destructive/60 bg-destructive/5">
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
@@ -782,7 +782,7 @@ export default function MiSuscripcionPage() {
               </div>
               <Button
                 size="lg"
-                className="h-12 text-base font-bold gap-2 shrink-0"
+                className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                 disabled={payingInvoice !== null}
                 onClick={() => handlePayInvoice(pendingFacturas[0])}
               >
@@ -816,9 +816,9 @@ export default function MiSuscripcionPage() {
 
           {/* ─── Tu plan actual + Actualizar ─── */}
           <Card className="border-primary/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
                     <Crown className="h-5 w-5 text-primary" /> Tu plan actual
                   </h2>
@@ -834,7 +834,7 @@ export default function MiSuscripcionPage() {
                     const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
 
                     return (
-                    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border p-4">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
                       <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
                         {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
                       </Badge>
@@ -849,7 +849,7 @@ export default function MiSuscripcionPage() {
                         </Badge>
                       )}
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div className="text-sm text-foreground">
+                      <div className="text-sm text-foreground w-full sm:w-auto">
                         <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
                         {hasAnyDiscount && (
                           <span className="block text-xs text-muted-foreground line-through">
@@ -858,7 +858,7 @@ export default function MiSuscripcionPage() {
                         )}
                       </div>
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div>
+                      <div className="w-full sm:w-auto">
                         <div className="text-lg font-black text-foreground">
                           ${totalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                         </div>
@@ -879,7 +879,7 @@ export default function MiSuscripcionPage() {
                 </div>
                 <Button
                   size="lg"
-                  className="h-12 text-base font-bold gap-2 shrink-0"
+                  className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                   onClick={() => {
                     setExtraUsers(0);
                     if (currentPlan) setSelectedFreq(currentPlan.periodo);
@@ -894,7 +894,7 @@ export default function MiSuscripcionPage() {
           </Card>
           {/* ─── Cupón de descuento ─── */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
                 <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
               </h2>
@@ -932,7 +932,7 @@ export default function MiSuscripcionPage() {
           {/* Timbres Section — solo visible para super admin */}
           {user?.email === 'diego.leon@uniline.mx' && (
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
                 <Stamp className="h-5 w-5 text-primary" /> Timbres CFDI
               </h2>
@@ -940,7 +940,7 @@ export default function MiSuscripcionPage() {
                 Paquetes de 100 timbres a $1 MXN c/u. Saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
               </p>
 
-              <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
+              <div className="flex flex-wrap items-center gap-3 bg-muted/30 rounded-xl p-3 sm:p-4">
                 <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
@@ -973,7 +973,7 @@ export default function MiSuscripcionPage() {
           {/* Invoice History */}
           {facturas.length > 0 && (
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
                   <Receipt className="h-5 w-5 text-primary" /> Historial de facturas
                 </h2>
@@ -1050,8 +1050,8 @@ export default function MiSuscripcionPage() {
 
         {/* Right: Cart */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-6 border-2 border-primary/20">
-            <CardContent className="p-5 space-y-4">
+          <Card className="lg:sticky lg:top-6 border-2 border-primary/20">
+            <CardContent className="p-4 sm:p-5 space-y-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" /> Tu pedido
               </h2>
