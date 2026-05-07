@@ -30,6 +30,7 @@ export default function PendingInvoiceModal() {
 
   useEffect(() => {
     if (!user || !empresa?.id) return;
+    if (!isSuperAdminEmail(user?.email)) return;
     // Only show once per session
     if (sessionStorage.getItem(`${SESSION_KEY}:${empresa.id}`)) return;
 
