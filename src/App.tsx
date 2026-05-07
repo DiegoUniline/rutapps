@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { isSuperAdminEmail } from "@/lib/superAdminEmail";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
