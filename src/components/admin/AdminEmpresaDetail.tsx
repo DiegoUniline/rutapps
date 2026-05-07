@@ -82,10 +82,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [showSubInvoice, setShowSubInvoice] = useState(false);
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
   const [subInvoiceForm, setSubInvoiceForm] = useState({
+    plan_id: '' as string,
     meses: 1,
     num_usuarios: 1,
     precio_por_usuario_mes: 300,
     descuento_pct: 0,
+    descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
   });
@@ -320,19 +322,36 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const subInvoiceTotal = subInvoiceSubtotal - subInvoiceDescMonto;
 
   function openSubInvoice() {
-    const planNombre = subscription?.subscription_plans?.nombre || 'Mensual';
-    const meses = subscription?.subscription_plans?.meses || 1;
-    const precio = subscription?.subscription_plans?.precio_por_usuario || 300;
-    const descPlan = subscription?.subscription_plans?.descuento_pct || 0;
+    const currentPlan = subscription?.subscription_plans;
+    const planId = subscription?.plan_id || (plans[0]?.id ?? '');
+    const plan = plans.find(p => p.id === planId) || currentPlan;
+    const meses = plan?.meses || currentPlan?.meses || 1;
+    const precio = plan?.precio_por_usuario || currentPlan?.precio_por_usuario || 300;
+    const planNombre = plan?.nombre || currentPlan?.nombre || 'Mensual';
+    const descPlan = currentPlan?.descuento_pct || 0;
     setSubInvoiceForm({
+      plan_id: planId,
       meses,
       num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio,
       descuento_pct: descPlan,
+      descuento_permanente: false,
       days_until_due: 7,
       concepto: `Suscripción Rutapp ${planNombre}`,
     });
     setShowSubInvoice(true);
+  }
+
+  function applyPlanToInvoice(planId: string) {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    setSubInvoiceForm(f => ({
+      ...f,
+      plan_id: planId,
+      meses: plan.meses,
+      precio_por_usuario_mes: plan.precio_por_usuario,
+      concepto: `Suscripción Rutapp ${plan.nombre}`,
+    }));
   }
 
   async function handleCreateSubInvoice() {
@@ -355,10 +374,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           },
           body: JSON.stringify({
             empresa_id: empresaId,
+            plan_id: subInvoiceForm.plan_id || undefined,
             num_usuarios: subInvoiceForm.num_usuarios,
             meses: subInvoiceForm.meses,
             precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
             descuento_pct: subInvoiceForm.descuento_pct,
+            descuento_permanente: subInvoiceForm.descuento_permanente,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
           }),
@@ -1133,6 +1154,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label>Plan</Label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={subInvoiceForm.plan_id}
+                onChange={e => applyPlanToInvoice(e.target.value)}
+              >
+                <option value="">— Personalizado —</option>
+                {plans.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} · {p.meses} {p.meses === 1 ? 'mes' : 'meses'} · ${p.precio_por_usuario}/usuario/mes
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Al pagar, este plan se asigna a la empresa para los próximos cobros.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Meses</Label>
@@ -1153,6 +1191,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <Label>Descuento (%)</Label>
                 <Input type="number" min={0} max={100} step="0.01" value={subInvoiceForm.descuento_pct}
                   onChange={e => setSubInvoiceForm(f => ({ ...f, descuento_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
+              </div>
+              <div className="col-span-2 flex items-start gap-3 rounded-md border border-border/60 bg-card p-3">
+                <Checkbox
+                  id="desc-permanente"
+                  checked={subInvoiceForm.descuento_permanente}
+                  onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, descuento_permanente: !!v }))}
+                  disabled={subInvoiceForm.descuento_pct <= 0}
+                />
+                <label htmlFor="desc-permanente" className="text-sm cursor-pointer leading-tight">
+                  <span className="font-medium">Aplicar descuento de forma permanente</span>
+                  <br />
+                  <span className="text-muted-foreground text-xs">
+                    {subInvoiceForm.descuento_permanente
+                      ? 'El descuento se guardará en la suscripción y se mantendrá en cobros futuros.'
+                      : 'Descuento solo para esta factura. Los próximos cobros usarán el precio normal del plan.'}
+                  </span>
+                </label>
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
