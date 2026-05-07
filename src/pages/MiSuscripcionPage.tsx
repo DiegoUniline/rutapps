@@ -686,20 +686,20 @@ export default function MiSuscripcionPage() {
         sub.status === 'trial' ? 'border-blue-300 dark:border-blue-700' :
         'border-border'
       }`}>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div className={`h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center shrink-0 ${
                 sub.isBlocked ? 'bg-destructive/10' :
                 sub.status === 'active' ? 'bg-green-100 dark:bg-green-900/30' :
                 'bg-blue-100 dark:bg-blue-900/30'
               }`}>
-                {sub.isBlocked ? <AlertTriangle className="h-7 w-7 text-destructive" /> :
-                 sub.status === 'active' ? <Check className="h-7 w-7 text-green-600" /> :
-                 <Clock className="h-7 w-7 text-blue-600" />}
+                {sub.isBlocked ? <AlertTriangle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" /> :
+                 sub.status === 'active' ? <Check className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" /> :
+                 <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${statusColor[sub.status || ''] || 'bg-muted text-muted-foreground'}`}>
                     {statusLabel[sub.status || ''] || sub.status || 'Sin suscripción'}
                   </span>
@@ -720,7 +720,7 @@ export default function MiSuscripcionPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6 justify-around sm:justify-end">
               <div className="text-center">
                 <div className="text-2xl font-bold text-foreground">{currentUsuarios}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Usuarios</div>
