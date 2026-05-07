@@ -322,19 +322,36 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const subInvoiceTotal = subInvoiceSubtotal - subInvoiceDescMonto;
 
   function openSubInvoice() {
-    const planNombre = subscription?.subscription_plans?.nombre || 'Mensual';
-    const meses = subscription?.subscription_plans?.meses || 1;
-    const precio = subscription?.subscription_plans?.precio_por_usuario || 300;
-    const descPlan = subscription?.subscription_plans?.descuento_pct || 0;
+    const currentPlan = subscription?.subscription_plans;
+    const planId = subscription?.plan_id || (plans[0]?.id ?? '');
+    const plan = plans.find(p => p.id === planId) || currentPlan;
+    const meses = plan?.meses || currentPlan?.meses || 1;
+    const precio = plan?.precio_por_usuario || currentPlan?.precio_por_usuario || 300;
+    const planNombre = plan?.nombre || currentPlan?.nombre || 'Mensual';
+    const descPlan = currentPlan?.descuento_pct || 0;
     setSubInvoiceForm({
+      plan_id: planId,
       meses,
       num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio,
       descuento_pct: descPlan,
+      descuento_permanente: false,
       days_until_due: 7,
       concepto: `Suscripción Rutapp ${planNombre}`,
     });
     setShowSubInvoice(true);
+  }
+
+  function applyPlanToInvoice(planId: string) {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    setSubInvoiceForm(f => ({
+      ...f,
+      plan_id: planId,
+      meses: plan.meses,
+      precio_por_usuario_mes: plan.precio_por_usuario,
+      concepto: `Suscripción Rutapp ${plan.nombre}`,
+    }));
   }
 
   async function handleCreateSubInvoice() {
@@ -357,10 +374,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           },
           body: JSON.stringify({
             empresa_id: empresaId,
+            plan_id: subInvoiceForm.plan_id || undefined,
             num_usuarios: subInvoiceForm.num_usuarios,
             meses: subInvoiceForm.meses,
             precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
             descuento_pct: subInvoiceForm.descuento_pct,
+            descuento_permanente: subInvoiceForm.descuento_permanente,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
           }),
