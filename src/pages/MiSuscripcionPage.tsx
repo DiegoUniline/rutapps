@@ -816,9 +816,9 @@ export default function MiSuscripcionPage() {
 
           {/* ─── Tu plan actual + Actualizar ─── */}
           <Card className="border-primary/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
                     <Crown className="h-5 w-5 text-primary" /> Tu plan actual
                   </h2>
@@ -834,7 +834,7 @@ export default function MiSuscripcionPage() {
                     const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
 
                     return (
-                    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border p-4">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
                       <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
                         {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
                       </Badge>
@@ -849,7 +849,7 @@ export default function MiSuscripcionPage() {
                         </Badge>
                       )}
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div className="text-sm text-foreground">
+                      <div className="text-sm text-foreground w-full sm:w-auto">
                         <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
                         {hasAnyDiscount && (
                           <span className="block text-xs text-muted-foreground line-through">
@@ -858,7 +858,7 @@ export default function MiSuscripcionPage() {
                         )}
                       </div>
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div>
+                      <div className="w-full sm:w-auto">
                         <div className="text-lg font-black text-foreground">
                           ${totalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                         </div>
@@ -879,7 +879,7 @@ export default function MiSuscripcionPage() {
                 </div>
                 <Button
                   size="lg"
-                  className="h-12 text-base font-bold gap-2 shrink-0"
+                  className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                   onClick={() => {
                     setExtraUsers(0);
                     if (currentPlan) setSelectedFreq(currentPlan.periodo);
