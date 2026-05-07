@@ -636,7 +636,7 @@ export default function MiSuscripcionPage() {
   const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-3 sm:px-0 pb-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
