@@ -940,7 +940,7 @@ export default function MiSuscripcionPage() {
                 Paquetes de 100 timbres a $1 MXN c/u. Saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
               </p>
 
-              <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
+              <div className="flex flex-wrap items-center gap-3 bg-muted/30 rounded-xl p-3 sm:p-4">
                 <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
