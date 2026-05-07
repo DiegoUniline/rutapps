@@ -9,13 +9,18 @@ import { fmtMoney } from '@/lib/currency';
 const SNOOZE_KEY = 'factura_pendiente_snooze';
 const SNOOZE_HOURS = 12;
 
+import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
+
 export default function FacturaPendienteModal() {
   const fp = useFacturaPendiente();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (!isSuperAdminEmail(user?.email)) return;
     if (!fp.hasPendiente || fp.loading) return;
     if (location.pathname.startsWith('/mi-suscripcion')) return;
     if (location.pathname.startsWith('/suscripcion-bloqueada')) return;
@@ -36,8 +41,9 @@ export default function FacturaPendienteModal() {
       }
     } catch {}
     setOpen(true);
-  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.shouldBlock, location.pathname]);
+  }, [fp.hasPendiente, fp.loading, fp.facturaId, fp.shouldBlock, location.pathname, user?.email]);
 
+  if (!isSuperAdminEmail(user?.email)) return null;
   if (!fp.hasPendiente) return null;
 
   const handleSnooze = () => {

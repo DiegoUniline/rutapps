@@ -209,7 +209,8 @@ export default function ClienteFormPage() {
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
+  const billingEnabled = (user?.email || '').toLowerCase() === 'diego.leon@uniline.mx';
   const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
@@ -644,7 +645,7 @@ export default function ClienteFormPage() {
             </div>
           ),
         },
-        {
+        ...(billingEnabled ? [{
           key: 'fiscal', label: 'Datos Fiscales',
           content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
@@ -687,7 +688,7 @@ export default function ClienteFormPage() {
               </div>
             </div>
           ),
-        },
+        }] : []),
         {
           key: 'comercial', label: 'Comercial',
           content: (

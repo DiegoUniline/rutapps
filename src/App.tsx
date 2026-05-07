@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { isSuperAdminEmail } from "@/lib/superAdminEmail";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
@@ -300,6 +301,7 @@ function AppRoutes() {
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
   const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
+  const isBillingOwner = isSuperAdminEmail(user?.email);
   if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -316,9 +318,11 @@ function AppRoutes() {
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/mi-suscripcion">Mi Suscripción</Link>
-                </Button>
+                {isBillingOwner && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/mi-suscripcion">Mi Suscripción</Link>
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => signOut()}>
                   Cerrar sesión
                 </Button>
@@ -329,9 +333,16 @@ function AppRoutes() {
         <div className="flex-1">
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/facturacion" element={<FacturacionPage />} />
-              <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-              <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
+              {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
+              {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
+              <Route path="*" element={
+                <div className="min-h-[60vh] flex items-center justify-center p-6 text-center">
+                  <div className="max-w-md space-y-3">
+                    <h2 className="text-xl font-semibold">Cuenta suspendida</h2>
+                    <p className="text-sm text-muted-foreground">Tu suscripción está suspendida. Contacta a tu administrador para reactivarla.</p>
+                  </div>
+                </div>
+              } />
             </Routes>
           </Suspense>
         </div>
@@ -367,9 +378,11 @@ function AppRoutes() {
             <Badge variant="destructive" className="text-xs">Suspendida</Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/mi-suscripcion">Mi Suscripción</Link>
-            </Button>
+            {isBillingOwner && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/mi-suscripcion">Mi Suscripción</Link>
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => signOut()}>
               Cerrar sesión
             </Button>
@@ -378,9 +391,16 @@ function AppRoutes() {
         <div className="flex-1">
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/facturacion" element={<FacturacionPage />} />
-              <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-              <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
+              {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
+              {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
+              <Route path="*" element={
+                <div className="min-h-[60vh] flex items-center justify-center p-6 text-center">
+                  <div className="max-w-md space-y-3">
+                    <h2 className="text-xl font-semibold">Cuenta suspendida</h2>
+                    <p className="text-sm text-muted-foreground">Tu suscripción está suspendida. Contacta a tu administrador para reactivarla.</p>
+                  </div>
+                </div>
+              } />
             </Routes>
           </Suspense>
         </div>
@@ -497,12 +517,14 @@ function renderAuthenticatedRoutes() {
 
 function GuardedDesktopRoutes() {
   const location = useLocation();
+  const { user } = useAuth();
+  const isBillingOwner = isSuperAdminEmail(user?.email);
 
   return (
     <Suspense fallback={<PageLoader />}>
       <PermissionGuard path={location.pathname}>
         <Routes>
-          {desktopRoutes()}
+          {desktopRoutes(isBillingOwner)}
         </Routes>
       </PermissionGuard>
     </Suspense>
@@ -515,7 +537,7 @@ function HomeRedirect() {
   return <Navigate to={firstAccessibleRoute} replace />;
 }
 
-function desktopRoutes() {
+function desktopRoutes(isBillingOwner: boolean) {
   return (
     <>
       <Route path="/" element={<HomeRedirect />} />
@@ -602,12 +624,12 @@ function desktopRoutes() {
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
-      <Route path="/facturacion" element={<FacturacionPage />} />
-      <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-      <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />
-      <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
-      <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
-      <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
+      {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
+      {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
+      {isBillingOwner && <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />}
+      {isBillingOwner && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
+      {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
+      {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       {/* Nested context-preserving routes for product/client detail */}
       <Route path="/:a/productos/:id" element={<ProductoFormPage />} />

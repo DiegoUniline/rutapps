@@ -8,6 +8,7 @@ import { AlertTriangle, CreditCard, Clock, Loader2 } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface PendingFactura {
   id: string;
@@ -29,6 +30,7 @@ export default function PendingInvoiceModal() {
 
   useEffect(() => {
     if (!user || !empresa?.id) return;
+    if (!isSuperAdminEmail(user?.email)) return;
     // Only show once per session
     if (sessionStorage.getItem(`${SESSION_KEY}:${empresa.id}`)) return;
 

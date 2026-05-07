@@ -24,6 +24,7 @@ import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -229,12 +230,13 @@ export default function VentaFormPage() {
     if (c?.requiere_factura) set('requiere_factura', true);
   };
 
+  const billingEnabled = isSuperAdminEmail(user?.email);
   return (
     <div className="min-h-full">
       <VentaFormHeader
         isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
-        requiereFactura={(form as any).requiere_factura} readOnly={readOnly}
+        requiereFactura={billingEnabled && (form as any).requiere_factura} readOnly={readOnly}
         canCreateEntrega={canCreateEntrega} canDeleteCancelada={canDeleteCancelada} hayEntregas={hayEntregas}
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
@@ -265,12 +267,12 @@ export default function VentaFormPage() {
             ...(!isNew ? [{ key: 'devoluciones', label: 'Devoluciones', content: <VentaDevolucionesTab ventaId={form.id!} /> }] : []),
             { key: 'notas', label: 'Notas', content: <div className="p-4">{readOnly ? <p className="text-[13px] text-foreground whitespace-pre-wrap">{form.notas || 'Sin notas'}</p> : <textarea className="input-odoo w-full min-h-[100px]" value={form.notas ?? ''} onChange={e => set('notas', e.target.value)} placeholder="Notas internas de la venta..." />}</div> },
             ...(!isNew ? [{ key: 'historial', label: 'Historial', content: <VentaHistorialTab ventaId={form.id!} /> }] : []),
-            ...(!isNew && (form as any).requiere_factura ? [{ key: 'facturacion', label: `Facturación (${lineas.filter(l => l.producto_id && l.facturado).length}/${lineas.filter(l => l.producto_id).length})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}{!lineas.some(l => l.facturado) && <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>}</div> }] : []),
+            ...(billingEnabled && !isNew && (form as any).requiere_factura ? [{ key: 'facturacion', label: `Facturación (${lineas.filter(l => l.producto_id && l.facturado).length}/${lineas.filter(l => l.producto_id).length})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}{!lineas.some(l => l.facturado) && <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>}</div> }] : []),
           ]} />
         </div>
       </div>
       <DocumentPreviewModal open={showPdfModal} onClose={() => { setShowPdfModal(false); setPdfBlob(null); }} pdfBlob={pdfBlob} fileName={`${form.folio ?? 'pedido'}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''} caption={`Documento ${form.folio}`} tipo="pedido" referencia_id={form.id} />
-      {showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
+      {billingEnabled && showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
 
       {/* Checkout modal for Venta Directa */}

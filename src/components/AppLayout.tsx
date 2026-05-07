@@ -23,6 +23,7 @@ import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalett
 import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -176,10 +177,19 @@ const mobileBottomTabs = [
 ];
 
 /** Filter nav items based on granular sub-module permissions */
-function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean) {
-  if (isSuperAdmin) return navItems;
+function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null) {
+  const isBillingOwner = isSuperAdminEmail(userEmail);
+  const stripBilling = (items: NavItem[]): NavItem[] => items
+    .filter(it => isBillingOwner || it.path !== '/facturacion-cfdi')
+    .map(it => {
+      if (!it.children) return it;
+      const children = it.children.filter(c => isBillingOwner || (c.path !== '/mi-suscripcion' && !c.path.startsWith('/facturacion-cfdi')));
+      return { ...it, children };
+    });
 
-  return navItems.reduce<NavItem[]>((acc, item) => {
+  if (isSuperAdmin) return stripBilling(navItems);
+
+  return stripBilling(navItems.reduce<NavItem[]>((acc, item) => {
     if (!item.children) {
       const modulo = PATH_MODULE_MAP[item.path] ?? '';
       if (hasModulo(modulo)) acc.push(item);
@@ -193,7 +203,7 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
       }
     }
     return acc;
-  }, []);
+  }, []));
 }
 
 function FavStar({ path, label }: { path: string; label: string }) {
@@ -453,7 +463,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [showDemoWelcome, setShowDemoWelcome] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const { empresa, profile, signOut } = useAuth();
+  const { empresa, profile, signOut, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
   const { data: setupComplete } = useSetupComplete();
@@ -499,7 +509,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
+  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo, user?.email);
   const { favorites } = useFavorites();
 
   // Inject Favoritos as a dynamic module right after Dashboard with user favorites as children

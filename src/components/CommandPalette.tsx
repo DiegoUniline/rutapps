@@ -96,8 +96,10 @@ function normalize(s: string) {
 
 export default function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const empresaId = empresa?.id;
+  const isBillingOwner = (user?.email || '').toLowerCase() === 'diego.leon@uniline.mx';
+  const VISIBLE_MENU_ITEMS = isBillingOwner ? MENU_ITEMS : MENU_ITEMS.filter(m => !m.to.startsWith('/facturacion-cfdi') && m.to !== '/mi-suscripcion' && m.to !== '/facturacion');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,7 +114,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     // Always compute menu matches (works even without empresaId / no backend hits)
     const nq = normalize(q);
     const menuMatches: ResultItem[] = q.length >= 1
-      ? MENU_ITEMS
+      ? VISIBLE_MENU_ITEMS
           .filter(m => normalize(m.title + ' ' + (m.subtitle ?? '') + ' ' + (m.keywords ?? '')).includes(nq))
           .slice(0, 10)
           .map((m, i) => ({

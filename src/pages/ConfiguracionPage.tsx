@@ -776,10 +776,12 @@ export default function ConfiguracionPage() {
         {hasChanges ? 'Guardar configuración' : 'Sin cambios'}
       </Button>
 
-      {/* Mi Suscripción */}
-      <div className="max-w-xl">
-        <SubscriptionCard />
-      </div>
+      {/* Mi Suscripción — solo super admin */}
+      {(useAuth().user?.email === 'diego.leon@uniline.mx') && (
+        <div className="max-w-xl">
+          <SubscriptionCard />
+        </div>
+      )}
 
       {/* Cambiar contraseña */}
       <div className="max-w-xl">
