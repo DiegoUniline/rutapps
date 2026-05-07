@@ -301,6 +301,7 @@ function AppRoutes() {
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
   const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
+  const isBillingOwner = isSuperAdminEmail(user?.email);
   if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -317,9 +318,11 @@ function AppRoutes() {
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/mi-suscripcion">Mi Suscripción</Link>
-                </Button>
+                {isBillingOwner && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/mi-suscripcion">Mi Suscripción</Link>
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => signOut()}>
                   Cerrar sesión
                 </Button>
@@ -330,9 +333,16 @@ function AppRoutes() {
         <div className="flex-1">
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/facturacion" element={<FacturacionPage />} />
-              <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-              <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
+              {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
+              {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
+              <Route path="*" element={
+                <div className="min-h-[60vh] flex items-center justify-center p-6 text-center">
+                  <div className="max-w-md space-y-3">
+                    <h2 className="text-xl font-semibold">Cuenta suspendida</h2>
+                    <p className="text-sm text-muted-foreground">Tu suscripción está suspendida. Contacta a tu administrador para reactivarla.</p>
+                  </div>
+                </div>
+              } />
             </Routes>
           </Suspense>
         </div>
