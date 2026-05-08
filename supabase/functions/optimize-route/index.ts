@@ -420,9 +420,14 @@ Deno.serve(async (req) => {
           orderedWp = r.waypoints;
           optMethod = "preserved";
         } else {
-          // Detectar si los waypoints traen colonia → agrupar para no saltar entre colonias.
-          const withColonia = r.waypoints.filter(w => w.colonia && String(w.colonia).trim() !== "");
-          const useColoniaGrouping = withColonia.length >= Math.ceil(r.waypoints.length * 0.6) && r.waypoints.length >= 3;
+          // Si hay ≥2 colonias distintas, agrupar para no rebotar entre zonas.
+          // Los clientes sin colonia se asignan al cluster geográficamente más cercano.
+          const distinctColonias = new Set(
+            r.waypoints
+              .map(w => (w.colonia ? String(w.colonia).trim() : ""))
+              .filter(c => c !== "")
+          );
+          const useColoniaGrouping = distinctColonias.size >= 2 && r.waypoints.length >= 3;
 
           if (useColoniaGrouping) {
             // Agrupar por colonia (los sin colonia van a un bucket "__sin__")
