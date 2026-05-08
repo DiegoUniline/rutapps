@@ -178,11 +178,14 @@ export function useVentaDetalle() {
       if (montoAplicarActual > 0) {
         aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
         const newSaldo = roundMoney(saldoActual - montoAplicarActual);
-        const saldoUpdate = { saldo_pendiente: Math.max(0, newSaldo), status: newSaldo <= 0.01 && venta.status === 'borrador' ? 'confirmado' as const : venta.status };
-        if (navigator.onLine) {
-          await supabase.from('ventas').update(saldoUpdate).eq('id', venta.id);
-        } else {
-          await queueOperation('ventas', 'update', { id: venta.id, ...saldoUpdate });
+        // Status update is still our responsibility (borrador -> confirmado on liquidation).
+        // saldo_pendiente will be recalculated by DB trigger trg_recalc_venta_saldo.
+        if (newSaldo <= 0.01 && venta.status === 'borrador') {
+          if (navigator.onLine) {
+            await supabase.from('ventas').update({ status: 'confirmado' as const }).eq('id', venta.id);
+          } else {
+            await queueOperation('ventas', 'update', { id: venta.id, status: 'confirmado' });
+          }
         }
         ticketApps.push({ folio: venta.folio ?? 'Sin folio', monto: roundMoney(montoAplicarActual), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
       }
@@ -192,11 +195,7 @@ export function useVentaDetalle() {
         if (cuenta.montoAplicar > 0) {
           aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
           const newSaldo = roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar);
-          if (navigator.onLine) {
-            await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo) }).eq('id', cuenta.id);
-          } else {
-            await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, newSaldo) });
-          }
+          // saldo_pendiente recalculated by DB trigger.
           ticketApps.push({ folio: cuenta.folio ?? '—', monto: roundMoney(cuenta.montoAplicar), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
         }
       }
