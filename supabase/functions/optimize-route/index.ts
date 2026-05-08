@@ -420,20 +420,27 @@ Deno.serve(async (req) => {
           orderedWp = r.waypoints;
           optMethod = "preserved";
         } else {
-          // Detectar si los waypoints traen colonia → agrupar para no saltar entre colonias.
-          const withColonia = r.waypoints.filter(w => w.colonia && String(w.colonia).trim() !== "");
-          const useColoniaGrouping = withColonia.length >= Math.ceil(r.waypoints.length * 0.6) && r.waypoints.length >= 3;
+          // Si hay ≥2 colonias distintas, agrupar para no rebotar entre zonas.
+          // Los clientes sin colonia se asignan al cluster geográficamente más cercano.
+          const distinctColonias = new Set(
+            r.waypoints
+              .map(w => (w.colonia ? String(w.colonia).trim() : ""))
+              .filter(c => c !== "")
+          );
+          const useColoniaGrouping = distinctColonias.size >= 2 && r.waypoints.length >= 3;
 
           if (useColoniaGrouping) {
-            // Agrupar por colonia (los sin colonia van a un bucket "__sin__")
+            // 1) Buckets por colonia conocida + huérfanos sin colonia
             const groups = new Map<string, Waypoint[]>();
+            const sinColonia: Waypoint[] = [];
             for (const w of r.waypoints) {
-              const key = (w.colonia && String(w.colonia).trim()) || "__sin__";
+              const key = w.colonia ? String(w.colonia).trim() : "";
+              if (key === "") { sinColonia.push(w); continue; }
               if (!groups.has(key)) groups.set(key, []);
               groups.get(key)!.push(w);
             }
 
-            // Centroide por colonia
+            // 2) Centroide por colonia (solo waypoints con colonia)
             const centroids = new Map<string, LatLng>();
             for (const [k, list] of groups.entries()) {
               const lat = list.reduce((s, p) => s + p.lat, 0) / list.length;
@@ -441,22 +448,27 @@ Deno.serve(async (req) => {
               centroids.set(k, { lat, lng });
             }
 
-            // Orden de colonias por nearest neighbour desde el origen
-            const remaining = new Set(groups.keys());
-            const coloniaOrder: string[] = [];
-            let cursor: LatLng = r.origin;
-            while (remaining.size > 0) {
+            // 3) Asignar huérfanos al cluster geográficamente más cercano
+            for (const w of sinColonia) {
               let bestKey: string | null = null;
               let bestDist = Infinity;
-              for (const k of remaining) {
-                const d = haversine(cursor, centroids.get(k)!);
+              for (const [k, c] of centroids.entries()) {
+                const d = haversine(w, c);
                 if (d < bestDist) { bestDist = d; bestKey = k; }
               }
-              if (!bestKey) break;
-              coloniaOrder.push(bestKey);
-              remaining.delete(bestKey);
-              cursor = centroids.get(bestKey)!;
+              if (bestKey) groups.get(bestKey)!.push(w);
             }
+
+            // 4) Orden de colonias: NN sobre centroides + 2-opt
+            const coloniaKeys = Array.from(groups.keys());
+            const centroidWps: Waypoint[] = coloniaKeys.map((k, i) => ({
+              id: `__c_${i}`,
+              lat: centroids.get(k)!.lat,
+              lng: centroids.get(k)!.lng,
+            }));
+            const nnIdx = nearestNeighborOrder(r.origin, centroidWps);
+            const optIdx = twoOptImprove(r.origin, centroidWps, nnIdx);
+            const coloniaOrder = optIdx.map(i => coloniaKeys[i]);
 
             // Dentro de cada colonia: NN + 2-opt usando como origen la posición previa
             const finalOrder: Waypoint[] = [];
