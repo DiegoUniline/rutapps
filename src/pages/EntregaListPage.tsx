@@ -249,7 +249,7 @@ export default function EntregaListPage() {
         if (!vendId) continue;
         // Idempotencia: re-leer status desde BD; si ya está cargado/entregado, saltar para no duplicar stock
         const { data: fresh } = await supabase.from('entregas').select('status').eq('id', eid).maybeSingle();
-        if (!fresh || fresh.status === 'cargado' || fresh.status === 'entregado') { saltadas++; continue; }
+        if (!fresh || (fresh.status as string) === 'cargado' || (fresh.status as string) === 'entregado' || (fresh.status as string) === 'hecho') { saltadas++; continue; }
         const almDestinoId = await getVendedorAlmacen(vendId);
         if (!almDestinoId) continue;
         const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
