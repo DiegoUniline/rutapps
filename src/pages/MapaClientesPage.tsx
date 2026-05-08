@@ -371,12 +371,20 @@ export default function MapaClientesPage() {
 
   const onMapLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
 
+  // Solo hacer fitBounds una vez al cargar inicial o cuando cambian los FILTROS,
+  // NO en cada refetch de clientes/ventas (eso reseteaba el zoom del usuario).
+  const didInitialFitRef = useRef(false);
   useEffect(() => {
+    didInitialFitRef.current = false;
+  }, [zonaFilter, vendedorFilter, diaFilter, statusFilter]);
+  useEffect(() => {
+    if (didInitialFitRef.current) return;
     if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
       if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
+      didInitialFitRef.current = true;
     }
   }, [withGps, originPoint]);
 
