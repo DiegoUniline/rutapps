@@ -43,6 +43,7 @@ export function useRutaSesionActiva() {
         .eq('empresa_id', empresa!.id)
         .eq('vendedor_id', vendedorId!)
         .eq('status', 'en_ruta')
+        .eq('fecha', todayLocal())
         .order('inicio_at', { ascending: false })
         .limit(1)
         .maybeSingle();
