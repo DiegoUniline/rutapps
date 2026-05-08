@@ -242,10 +242,14 @@ export default function EntregaListPage() {
   const bulkCargarMut = useMutation({
     mutationFn: async () => {
       const today = todayLocal();
+      let saltadas = 0;
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         if (!vendId) continue;
+        // Idempotencia: re-leer status desde BD; si ya está cargado/entregado, saltar para no duplicar stock
+        const { data: fresh } = await supabase.from('entregas').select('status').eq('id', eid).maybeSingle();
+        if (!fresh || fresh.status === 'cargado' || fresh.status === 'entregado') { saltadas++; continue; }
         const almDestinoId = await getVendedorAlmacen(vendId);
         if (!almDestinoId) continue;
         const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
@@ -255,9 +259,11 @@ export default function EntregaListPage() {
         }
         await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
       }
+      return { saltadas };
     },
-    onSuccess: () => {
-      toast.success(`${selectedEntregas.length} entrega(s) cargadas`);
+    onSuccess: ({ saltadas }) => {
+      const ok = selectedEntregas.length - saltadas;
+      toast.success(`${ok} entrega(s) cargadas${saltadas ? ` · ${saltadas} ya estaban cargadas` : ''}`);
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       setSelectedIds(new Set());
@@ -265,7 +271,10 @@ export default function EntregaListPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const handleBulkCargar = () => bulkCargarMut.mutate();
+  const handleBulkCargar = () => {
+    if (bulkCargarMut.isPending) return;
+    bulkCargarMut.mutate();
+  };
 
   return (
     <div className="p-4 space-y-4 min-h-full">
