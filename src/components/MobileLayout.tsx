@@ -54,10 +54,10 @@ export default function MobileLayout() {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Bloqueo por jornada (configurable por empresa)
+  // Bloqueo por jornada (configurable por empresa) — solo en rutas de acción
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
-  const isRutaPermitida = RUTAS_PERMITIDAS_SIN_JORNADA.some(p => location.pathname.startsWith(p));
-  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && !isRutaPermitida;
+  const requiereJornadaRuta = RUTAS_REQUIEREN_JORNADA.some(p => location.pathname.startsWith(p));
+  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && requiereJornadaRuta;
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
