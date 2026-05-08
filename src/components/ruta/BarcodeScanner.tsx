@@ -16,63 +16,116 @@ interface Props {
 export default function BarcodeScanner({ open, onClose, onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const onDetectedRef = useRef(onDetected);
   const [error, setError] = useState<string | null>(null);
   const [torch, setTorch] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
   const lastCodeRef = useRef<{ code: string; ts: number }>({ code: '', ts: 0 });
+
+  // Keep latest callback without restarting the camera
+  useEffect(() => { onDetectedRef.current = onDetected; }, [onDetected]);
 
   useEffect(() => {
     if (!open) return;
-    const reader = new BrowserMultiFormatReader();
     let cancelled = false;
+    const reader = new BrowserMultiFormatReader();
+
+    const stopAll = () => {
+      try { controlsRef.current?.stop(); } catch {}
+      controlsRef.current = null;
+      try {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+      } catch {}
+      streamRef.current = null;
+    };
 
     (async () => {
       try {
+        // 1) Request permission FIRST so device labels populate (Android/iOS)
+        //    and we can pick a real back camera.
+        let initialStream: MediaStream | null = null;
+        try {
+          initialStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false,
+          });
+        } catch {
+          // If "environment" fails (some desktops), retry generic
+          initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+        // Stop the probe stream — zxing will open its own with the chosen deviceId
+        initialStream.getTracks().forEach(t => t.stop());
+
+        if (cancelled) return;
+
+        // 2) Now list devices with real labels
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const backCam = devices.find(d => /back|rear|environment|trasera/i.test(d.label)) ?? devices[devices.length - 1];
+        const backCam =
+          devices.find(d => /back|rear|environment|trasera|posterior/i.test(d.label)) ??
+          devices[devices.length - 1];
         const deviceId = backCam?.deviceId;
 
-        const controls = await reader.decodeFromVideoDevice(deviceId, videoRef.current!, (result, err) => {
+        if (cancelled) return;
+
+        const controls = await reader.decodeFromVideoDevice(deviceId, videoRef.current!, (result) => {
           if (cancelled) return;
           if (result) {
             const code = result.getText().trim();
             const now = Date.now();
-            // Debounce identical reads within 1.5s
             if (code === lastCodeRef.current.code && now - lastCodeRef.current.ts < 1500) return;
             lastCodeRef.current = { code, ts: now };
-            // haptic feedback
             try { (navigator as any).vibrate?.(50); } catch {}
-            onDetected(code);
+            onDetectedRef.current(code);
           }
         });
+        if (cancelled) {
+          try { controls.stop(); } catch {}
+          return;
+        }
         controlsRef.current = controls;
+
+        // Track the active stream (for torch + cleanup)
+        const stream = videoRef.current?.srcObject as MediaStream | null;
+        streamRef.current = stream;
+        const track = stream?.getVideoTracks?.()[0];
+        const caps = (track as any)?.getCapabilities?.();
+        setTorchSupported(!!caps?.torch);
       } catch (e: any) {
-        setError(e?.message ?? 'No se pudo acceder a la cámara');
+        if (!cancelled) {
+          const msg = e?.message ?? String(e);
+          if (/permission|denied|NotAllowed/i.test(msg)) {
+            setError('Permiso de cámara denegado. Habilítalo en los ajustes del navegador.');
+          } else if (/NotFound|no.*camera/i.test(msg)) {
+            setError('No se encontró ninguna cámara en este dispositivo.');
+          } else if (/in use|NotReadable|track/i.test(msg)) {
+            setError('La cámara está en uso por otra app. Ciérrala e intenta de nuevo.');
+          } else {
+            setError(msg || 'No se pudo acceder a la cámara');
+          }
+        }
       }
     })();
 
     return () => {
       cancelled = true;
-      try { controlsRef.current?.stop(); } catch {}
-      controlsRef.current = null;
+      stopAll();
     };
-  }, [open, onDetected]);
+  }, [open]);
 
-  // Torch toggle
+  // Torch toggle (only when supported and stream is live)
   useEffect(() => {
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    const track = stream?.getVideoTracks?.()[0];
-    if (!track) return;
-    const caps = (track as any).getCapabilities?.();
-    if (caps?.torch) {
-      track.applyConstraints({ advanced: [{ torch } as any] }).catch(() => {});
-    }
-  }, [torch]);
+    if (!torchSupported) return;
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    if (!track || track.readyState !== 'live') return;
+    track.applyConstraints({ advanced: [{ torch } as any] }).catch(() => {});
+  }, [torch, torchSupported]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+      <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline autoPlay />
 
       {/* Scan overlay */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -94,9 +147,11 @@ export default function BarcodeScanner({ open, onClose, onDetected }: Props) {
           <p className="text-[13px] font-semibold">Escanear código</p>
           <p className="text-[11px] text-white/70">Apunta al código de barras o QR</p>
         </div>
-        <button onClick={() => setTorch(t => !t)} className="w-9 h-9 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white active:scale-95">
-          {torch ? <Zap className="h-5 w-5" /> : <ZapOff className="h-5 w-5" />}
-        </button>
+        {torchSupported && (
+          <button onClick={() => setTorch(t => !t)} className="w-9 h-9 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white active:scale-95">
+            {torch ? <Zap className="h-5 w-5" /> : <ZapOff className="h-5 w-5" />}
+          </button>
+        )}
       </div>
 
       {/* Footer error */}
