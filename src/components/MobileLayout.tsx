@@ -14,8 +14,16 @@ import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 
-// Rutas permitidas sin jornada activa
-const RUTAS_PERMITIDAS_SIN_JORNADA = ['/ruta/iniciar', '/ruta/perfil', '/ruta/sincronizar'];
+// Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
+// Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
+const RUTAS_REQUIEREN_JORNADA = [
+  '/ruta/pos',
+  '/ruta/ventas/nueva',
+  '/ruta/cobros/nuevo',
+  '/ruta/devolucion',
+  '/ruta/descarga',
+  '/ruta/entregas/', // confirmar/editar entregas
+];
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
@@ -46,10 +54,10 @@ export default function MobileLayout() {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Bloqueo por jornada (configurable por empresa)
+  // Bloqueo por jornada (configurable por empresa) — solo en rutas de acción
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
-  const isRutaPermitida = RUTAS_PERMITIDAS_SIN_JORNADA.some(p => location.pathname.startsWith(p));
-  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && !isRutaPermitida;
+  const requiereJornadaRuta = RUTAS_REQUIEREN_JORNADA.some(p => location.pathname.startsWith(p));
+  const bloqueado = requireJornada && !sesionLoading && !sesionActiva && requiereJornadaRuta;
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
