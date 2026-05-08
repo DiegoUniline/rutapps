@@ -200,8 +200,7 @@ export default function AplicarPagosPage() {
 
       for (const v of aplicaciones) {
         await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: v.id, monto_aplicado: roundMoney(v.montoAplicar) });
-        const nuevoSaldo = roundMoney(Math.max(0, v.saldo_pendiente - v.montoAplicar));
-        await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', v.id);
+        // saldo_pendiente recalculated automatically by DB trigger trg_recalc_venta_saldo
       }
 
       toast.success(`Pago de ${fmt(totalDistribuido)} aplicado a ${aplicaciones.length} venta(s)`);
