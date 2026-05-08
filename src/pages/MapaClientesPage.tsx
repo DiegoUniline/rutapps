@@ -351,6 +351,24 @@ export default function MapaClientesPage() {
 
   const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
 
+  /**
+   * Map clienteId → posición en la ruta optimizada (1..N) basado en lo que está
+   * GUARDADO en cliente_orden_ruta para el filtro vendedor+día actual.
+   * Este es el número que se pinta en el pin del mapa, NO el c.orden legacy
+   * de la tabla clientes (que tiene duplicados).
+   */
+  const ordenRutaMap = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!multiResults) return m;
+    for (const entry of multiResults) {
+      if (routeVisibility[entry.vendedor_id] === false) continue;
+      entry.optimized_order.forEach((cid, idx) => {
+        if (!m.has(cid)) m.set(cid, idx + 1);
+      });
+    }
+    return m;
+  }, [multiResults, routeVisibility]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
 
   useEffect(() => {
