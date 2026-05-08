@@ -255,7 +255,7 @@ export default function EntregaListPage() {
         const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
         for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
           await upsertStockAlmacen(empresa!.id, almDestinoId, l.producto_id, l.cantidad_entregada);
-          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
+          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
         }
         await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
       }
