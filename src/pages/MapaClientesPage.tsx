@@ -351,6 +351,24 @@ export default function MapaClientesPage() {
 
   const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
 
+  /**
+   * Map clienteId → posición en la ruta optimizada (1..N) basado en lo que está
+   * GUARDADO en cliente_orden_ruta para el filtro vendedor+día actual.
+   * Este es el número que se pinta en el pin del mapa, NO el c.orden legacy
+   * de la tabla clientes (que tiene duplicados).
+   */
+  const ordenRutaMap = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!multiResults) return m;
+    for (const entry of multiResults) {
+      if (routeVisibility[entry.vendedor_id] === false) continue;
+      entry.optimized_order.forEach((cid, idx) => {
+        if (!m.has(cid)) m.set(cid, idx + 1);
+      });
+    }
+    return m;
+  }, [multiResults, routeVisibility]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
 
   useEffect(() => {
@@ -905,8 +923,10 @@ export default function MapaClientesPage() {
               ))
             ) : multiResults ? null : (
               <>
-                {/* Numbered markers (with orden) rendered outside cluster so labels always show */}
-                {withGps.filter((c: any) => typeof c.orden === 'number' && c.orden > 0).map((c: any) => (
+                {/* Numbered markers: usan el orden GUARDADO en cliente_orden_ruta
+                    (por vendedor+día). Si no hay ruta optimizada para ese filtro,
+                    todos los pines van al cluster sin número. */}
+                {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => (
                   <Marker
                     key={c.id}
                     position={{ lat: c.gps_lat, lng: c.gps_lng }}
@@ -919,7 +939,7 @@ export default function MapaClientesPage() {
                       scale: 14,
                       labelOrigin: new google.maps.Point(0, 0),
                     }}
-                    label={{ text: `${c.orden}`, color: '#fff', fontSize: '10px', fontWeight: '700' }}
+                    label={{ text: `${ordenRutaMap.get(c.id)}`, color: '#fff', fontSize: '10px', fontWeight: '700' }}
                     onClick={() => setSelectedCliente(c)}
                     title={c.nombre}
                   />
@@ -934,7 +954,7 @@ export default function MapaClientesPage() {
                 >
                   {(clusterer) => (
                     <>
-                      {withGps.filter((c: any) => !c.orden || c.orden <= 0).map((c: any) => (
+                      {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
                         <Marker
                           key={c.id}
                           position={{ lat: c.gps_lat, lng: c.gps_lng }}
@@ -965,8 +985,8 @@ export default function MapaClientesPage() {
                     ) : null}
                   </div>
                   {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
-                  {typeof selectedCliente.orden === 'number' && selectedCliente.orden > 0 && (
-                    <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{selectedCliente.orden}</strong></div>
+                  {ordenRutaMap.has(selectedCliente.id) && (
+                    <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{ordenRutaMap.get(selectedCliente.id)}</strong></div>
                   )}
                   {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
                   {selectedCliente.vendedores?.nombre && (
