@@ -14,8 +14,16 @@ import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 
-// Rutas permitidas sin jornada activa
-const RUTAS_PERMITIDAS_SIN_JORNADA = ['/ruta/iniciar', '/ruta/perfil', '/ruta/sincronizar'];
+// Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
+// Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
+const RUTAS_REQUIEREN_JORNADA = [
+  '/ruta/pos',
+  '/ruta/ventas/nueva',
+  '/ruta/cobros/nuevo',
+  '/ruta/devolucion',
+  '/ruta/descarga',
+  '/ruta/entregas/', // confirmar/editar entregas
+];
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
