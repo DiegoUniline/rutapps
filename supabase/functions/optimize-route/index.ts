@@ -441,6 +441,47 @@ Deno.serve(async (req) => {
             optMethod = "haversine";
           }
         }
+        console.log(`Route ${r.key}: method=${optMethod}, stops=${r.waypoints.length}`);
+
+        let polyline: string | null = null;
+        let distanceMeters = 0;
+        let duration = "0s";
+
+        if (googleApiKey) {
+          const g = await fetchGooglePolyline(googleApiKey, r.origin, orderedWp);
+          polyline = g.polyline;
+          distanceMeters = g.distanceMeters;
+          duration = g.duration;
+        }
+
+        if (distanceMeters === 0) {
+          let totalDist = haversine(r.origin, orderedWp[0]);
+          for (let i = 0; i < orderedWp.length - 1; i++) {
+            totalDist += haversine(orderedWp[i], orderedWp[i + 1]);
+          }
+          totalDist += haversine(orderedWp[orderedWp.length - 1], r.origin);
+          distanceMeters = Math.round(totalDist * 1.3);
+          duration = `${Math.round(totalDist * 1.3 / 8.33)}s`;
+        }
+
+        results.push({
+          key: r.key,
+          optimized_order: orderedWp.map(wp => wp.id),
+          polyline,
+          distance_meters: distanceMeters,
+          duration,
+          original_distance_meters: Math.round(original * 1.3),
+        });
+      } catch (e: any) {
+        console.error(`Error optimizing route ${r.key}:`, e);
+        results.push({
+          key: r.key, optimized_order: [], polyline: null,
+          distance_meters: 0, duration: "0s", original_distance_meters: 0,
+          error: e?.message || "Error desconocido",
+        });
+      }
+    }
+
     // Recalcular uso final tras los inserts
     const fmFinal = new Date(); fmFinal.setDate(1); fmFinal.setHours(0,0,0,0);
     const { count: finalUsed } = await supabase.from("optimizacion_rutas_log")
