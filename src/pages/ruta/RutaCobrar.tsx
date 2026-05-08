@@ -164,12 +164,9 @@ export default function RutaCobrar() {
           monto_aplicado: app.montoAplicar,
           created_at: new Date().toISOString(),
         });
-        // Update local venta saldo
-        const venta = (allVentas as any[])?.find(v => v.id === app.id);
-        if (venta) {
-          const nuevoSaldo = Math.round((app.saldo_pendiente - app.montoAplicar) * 100) / 100;
-          await queueOperation('ventas', 'update', { ...venta, saldo_pendiente: nuevoSaldo });
-        }
+        // NOTE: saldo_pendiente is recalculated automatically by DB trigger
+        // trg_recalc_venta_saldo when cobro_aplicaciones syncs. Do NOT write it
+        // from the client (was causing stale-cache overwrites).
       }
 
       toast.success(`¡Cobro de ${fmtC(totalAplicado)} registrado!`);
