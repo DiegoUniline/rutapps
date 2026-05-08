@@ -52,6 +52,8 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
+      { label: 'Cuentas por cobrar', path: '/finanzas/por-cobrar' },
+      { label: 'Saldos por cliente', path: '/finanzas/saldos-cliente' },
       { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Reporte diario', path: '/ventas/reporte-diario' },
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
@@ -120,11 +122,9 @@ const navItems: NavItem[] = [
     icon: DollarSign,
     path: '/finanzas',
     children: [
-      { label: 'Cuentas por cobrar', path: '/finanzas/por-cobrar' },
       { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
       { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
       { label: 'Pagos proveedores', path: '/finanzas/pagos-proveedores' },
-      { label: 'Saldos por cliente', path: '/finanzas/saldos-cliente' },
       { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
       { label: 'Comisiones', path: '/finanzas/comisiones' },
