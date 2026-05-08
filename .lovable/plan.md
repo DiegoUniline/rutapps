@@ -1,73 +1,118 @@
-# Plan: Módulo de Mermas y Desperdicio
+# Fix: saldo_pendiente desactualizado (CLI-0153 muestra 3,180 cuando debería ser 2,000)
 
-## Decisiones confirmadas
-- **Estructura**: 1 almacén global "Mermas" por empresa, cada movimiento rastrea origen (almacén/ruta/usuario).
-- **Devoluciones**: el usuario siempre elige destino (Almacén normal o Mermas).
-- **Motivos**: configurables por empresa (con set inicial sugerido).
-- **Valoración**: reporte muestra costo perdido y precio de venta no realizado.
+## Diagnóstico (confirmado en BD)
 
-## 1. Base de datos
+Cliente CLI-0153 (ARELY COREA) tiene 4 ventas activas:
 
-**Nuevas columnas:**
-- `almacenes.es_merma boolean default false` — marca el almacén especial, oculto en POS/ventas.
+| Folio | Total | Aplicado real | Saldo BD | Saldo correcto |
+|---|---|---|---|---|
+| SAL-0007 | 610 | 610 | 0 | 0 |
+| VTA-0060 | 1,180 | 1,780 (mal aplicado) | 580 | 0 |
+| VTA-0370 | 600 | 0 | 600 | 0 |
+| VTA-0533 | 2,000 | 0 | 2,000 | 2,000 |
+| Total | | | **3,180** | **2,000** |
 
-**Nuevas tablas:**
-- `merma_motivos` — `id, empresa_id, nombre, activo`. Auto-seed: Caducado, Dañado, Robo, Derrame, Quemado, Error de manejo, Otro.
-- `mermas` — cabecera: `id, empresa_id, folio (MER-####), fecha, almacen_origen_id, ruta_id (nullable), motivo_id, observaciones, total_costo, total_venta, creado_por, devolucion_id (nullable, link cuando viene de devolución)`.
-- `merma_lineas` — `id, merma_id, producto_id, cantidad, costo_unitario, precio_venta_unitario, subtotal_costo, subtotal_venta`.
+**Causa raíz**: dos mecanismos pelean por escribir `saldo_pendiente`:
 
-**Lógica DB:**
-- Trigger `ensure_merma_almacen()` que crea el almacén Mermas al crear empresa (y backfill para empresas existentes).
-- Trigger en `mermas` (al insertar/cancelar) que mueve stock vía la lógica existente de transferencias: resta de `almacen_origen_id`, suma a almacén Mermas.
-- RLS: tenant isolation con `get_my_empresa_id()`.
-- Índices por `empresa_id`, `fecha`, `producto_id`.
+1. **Trigger `trg_recalc_venta_saldo`** (correcto): recalcula `total - SUM(aplicaciones activas)` después de cada INSERT/UPDATE/DELETE en `cobro_aplicaciones`.
+2. **UPDATE manual del cliente** (frágil) en `RutaCobrar.tsx`, `useVentaDetalle.ts`, `AplicarPagosPage.tsx`, `useVentaForm.ts`, etc.: usa `saldo_pendiente_local - montoAplicado` con datos a veces stale del cache.
 
-## 2. Devoluciones (cambio mínimo)
+Si el cliente actualiza una venta a la que en realidad no se aplicó el cobro (por desincronización), ese saldo queda incorrecto y el trigger no lo corrige porque nunca se insertó la aplicación correspondiente. Además se aplicó por error 600 extra a VTA-0060.
 
-En el modal/flujo de devolución actual añadir selector **"Destino del producto"**:
-- `Almacén de venta` (default, recuperable)
-- `Mermas` (no recuperable) → genera además un registro en `mermas` con `devolucion_id` enlazado y motivo.
+## Fix (3 pasos)
 
-Se respeta el flujo financiero existente; solo cambia a qué almacén regresa el stock.
+### 1. Migración: trigger como única fuente de verdad + función de reconciliación
 
-## 3. UI
+- Asegurar que `trg_recalc_venta_saldo` corra también si `cobros.status` cambia (cancelación/reactivación).
+- Agregar trigger en `cobros` que recalcule todas las ventas afectadas cuando cambia `status`.
+- Crear función `public.reconciliar_saldos_cliente(p_cliente_id uuid)` SECURITY DEFINER que recalcule todas las ventas del cliente desde `cobro_aplicaciones`.
+- Crear función `public.reconciliar_saldos_empresa(p_empresa_id uuid)` para corrida masiva.
+- **Ejecutar reconciliación inmediata** para CLI-0153 y todas las empresas en la migración.
 
-**Nueva ruta `/inventario/mermas`** (escritorio):
-- Lista con folio, fecha, almacén origen, motivo, total costo, total venta, usuario.
-- Filtros: rango de fechas, almacén/ruta, motivo, producto.
-- Botón **"Registrar merma"** → modal: almacén origen, motivo, líneas (producto + cantidad), observaciones, foto opcional.
-- Detalle por folio con líneas.
+### 2. RPC: aplicar cobros atómicamente
 
-**Móvil/ruta `/ruta/mermas`**:
-- Botón rápido "Registrar merma" desde el menú de ruta (almacén origen = ruta actual).
-- Soporte offline (cola de sincronización como ventas).
+Crear `public.aplicar_cobro(p_empresa_id, p_cliente_id, p_monto, p_metodo, p_referencia, p_fecha, p_aplicaciones jsonb)` que:
+- Valide totales (suma de aplicaciones ≤ monto del cobro).
+- Cree `cobros` + N `cobro_aplicaciones` en una sola transacción.
+- Devuelva `{ cobro_id, ventas_actualizadas }` con saldos finales recalculados por trigger.
+- Reemplaza la lógica dispersa que cada pantalla replica (y donde se introducen los bugs).
 
-**Configuración → Motivos de merma**: CRUD simple.
+### 3. Parche TypeScript: dejar de escribir `saldo_pendiente` desde el cliente
 
-**Reportes**:
-- Nueva pestaña en Reportes: **Mermas** con KPIs (costo perdido, venta no realizada, kg perdidos), top productos, top motivos, por ruta/almacén/usuario.
+Quitar todos los `update({ saldo_pendiente: ... })` del lado cliente que vienen de aplicar pagos. El trigger recalcula automáticamente. Archivos a tocar:
 
-## 4. Integraciones
+- `src/pages/ruta/RutaCobrar.tsx` (línea 171)
+- `src/pages/ruta/RutaVentaDetalle/useVentaDetalle.ts` (líneas 181, 196, 198)
+- `src/pages/AplicarPagosPage.tsx` (línea 204)
+- `src/pages/VentaForm/useVentaForm.ts` (línea 565)
+- `src/pages/PuntoVentaPage.tsx` (flujo de cobro a ventas existentes)
+- `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` (donde aplique)
 
-- **POS / Ventas**: ocultar almacén Mermas en selectores (`es_merma = false`).
-- **Conteo físico**: en la pantalla de reconciliación, agregar acción "Marcar diferencia como merma" que crea registro automático.
-- **Kardex**: las salidas a merma aparecen como tipo `MERMA` con folio MER-####.
-- **Permisos**: nuevo módulo `mermas` con view/create/delete (delete solo admin con PIN).
+Donde cree sentido, reemplazar el flujo manual por `supabase.rpc('aplicar_cobro', ...)`.
 
-## 5. Detalles técnicos
+**Excepciones que SÍ deben seguir escribiendo `saldo_pendiente` desde cliente**:
+- Crear venta nueva (init = total).
+- Editar líneas de venta (recalcula `total` y reinicia `saldo_pendiente = total - SUM(aplicaciones)`).
+- Cancelar venta (saldo = 0).
 
-- Folio `MER-####` con secuencia por empresa (mismo patrón que ventas).
-- Costo tomado de `producto.costo_promedio` al momento del registro (snapshot).
-- Precio de venta del precio principal vigente (snapshot).
-- Cancelación de merma: revierte stock, marca `cancelada`, queda en historial.
-- Auditoría: `creado_por` desde `profiles`.
+Para offline (queueOperation): mantener el UPDATE optimista pero al volver online ejecutar reconciliación del cliente.
 
-## Entregables
-1. Migración SQL (tablas, triggers, RLS, seeds, backfill almacén Mermas).
-2. Hooks: `useMermas`, `useMermaMotivos`.
-3. Páginas: `MermasListPage`, `MermaForm`, `MermaMotivosConfig`, ruta móvil.
-4. Modificación de modal de devolución (selector de destino).
-5. Tab "Mermas" en Reportes.
-6. Filtro `es_merma=false` en selectores de almacén de POS/ventas/transferencias.
+## Detalles técnicos
 
-¿Aprobamos así o ajustamos algo antes?
+```sql
+-- Trigger en cobros para cancelación
+CREATE OR REPLACE FUNCTION public.recalc_ventas_cobro_status()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    UPDATE public.ventas v
+    SET saldo_pendiente = GREATEST(0, COALESCE(v.total,0) - COALESCE((
+      SELECT SUM(ca.monto_aplicado) FROM cobro_aplicaciones ca
+      JOIN cobros c ON c.id=ca.cobro_id
+      WHERE ca.venta_id=v.id AND c.status<>'cancelado'),0))
+    WHERE v.id IN (SELECT venta_id FROM cobro_aplicaciones WHERE cobro_id=NEW.id);
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_cobros_status_recalc
+AFTER UPDATE OF status ON cobros
+FOR EACH ROW EXECUTE FUNCTION recalc_ventas_cobro_status();
+```
+
+```sql
+-- Reconciliación masiva
+CREATE OR REPLACE FUNCTION public.reconciliar_saldos_empresa(p_empresa_id uuid)
+RETURNS int LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE n int;
+BEGIN
+  WITH agg AS (
+    SELECT v.id, v.total - COALESCE(SUM(ca.monto_aplicado) FILTER (WHERE c.status<>'cancelado'),0) AS nuevo
+    FROM ventas v
+    LEFT JOIN cobro_aplicaciones ca ON ca.venta_id=v.id
+    LEFT JOIN cobros c ON c.id=ca.cobro_id
+    WHERE v.empresa_id=p_empresa_id AND v.status<>'cancelado'
+    GROUP BY v.id
+  )
+  UPDATE ventas v SET saldo_pendiente=GREATEST(0,a.nuevo)
+  FROM agg a WHERE a.id=v.id AND v.saldo_pendiente IS DISTINCT FROM GREATEST(0,a.nuevo);
+  GET DIAGNOSTICS n = ROW_COUNT; RETURN n;
+END $$;
+```
+
+Llamada inmediata en migración:
+```sql
+SELECT public.reconciliar_saldos_empresa(id) FROM empresas;
+```
+
+## Riesgos y mitigaciones
+
+- **Offline**: el UPDATE optimista local sigue mostrando lo correcto al usuario; al sincronizar, las aplicaciones se insertan y el trigger reconcilia.
+- **Cobros eliminados (DELETE en cobros)**: agregar trigger BEFORE DELETE que primero borre aplicaciones (cascada ya existe vía FK) — el trigger en cobro_aplicaciones recalcula. Verificar FK.
+- **Performance**: la reconciliación masiva es una sola pasada agregada por empresa, O(ventas).
+
+## Resultado esperado
+
+- CLI-0153 saldo total = 2,000 L (solo VTA-0533).
+- Cualquier nuevo cobro mantiene la consistencia automáticamente.
+- Cero "ventas con saldo fantasma".
