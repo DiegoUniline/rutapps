@@ -519,6 +519,14 @@ Deno.serve(async (req) => {
       const daysSinceEnd = Math.floor((today.getTime() - periodEnd.getTime()) / 86400000);
       if (daysSinceEnd <= GRACE_DAYS) continue; // still within paid period or grace
 
+      // SAFETY: revalidar cobertura real antes de suspender
+      const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: sub.empresa_id });
+      if (cubierta === true) {
+        await supabase.from("subscriptions").update({ status: "active", acceso_bloqueado: false, updated_at: new Date().toISOString() }).eq("id", sub.id);
+        results.push({ id: sub.id, action: "skipped_paid_coverage", status: "ok" });
+        continue;
+      }
+
       await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
       const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
       if (waToken && profile?.telefono && tplMap.suspension.activo) {
