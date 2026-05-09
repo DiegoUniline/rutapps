@@ -44,6 +44,12 @@ Deno.serve(async (req) => {
       .lt("current_period_end", today);
 
     for (const sub of expiredActive || []) {
+      // SAFETY: skip if real coverage (paid invoice covers today, manual, etc.)
+      const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: sub.empresa_id });
+      if (cubierta === true) {
+        console.log(`Skip past_due for ${sub.empresa_id}: cobertura vigente`);
+        continue;
+      }
       await supabase
         .from("subscriptions")
         .update({ status: "past_due", updated_at: now.toISOString() })
