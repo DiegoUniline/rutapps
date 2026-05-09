@@ -1,0 +1,1 @@
+UPDATE subscriptions SET status='active', acceso_bloqueado=false, fecha_vencimiento='2026-05-31', current_period_end='2026-05-31', updated_at=now() WHERE empresa_id='66ac277d-c859-4d0e-beeb-f9162e3ade81';
