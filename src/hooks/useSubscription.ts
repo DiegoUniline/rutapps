@@ -60,7 +60,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
   try {
     const { data: sub, error } = await supabase
       .from('subscriptions')
-      .select('status, trial_ends_at, current_period_end, max_usuarios')
+      .select('status, trial_ends_at, current_period_end, fecha_vencimiento, acceso_bloqueado, es_manual, max_usuarios')
       .eq('empresa_id', empresaId)
       .maybeSingle();
 
@@ -70,15 +70,25 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       return state;
     }
 
-    const endDate = sub.status === 'trial'
-      ? (sub.trial_ends_at ?? sub.current_period_end)
-      : (sub.current_period_end ?? sub.trial_ends_at);
-    const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
+    // Determinar fecha de fin "real" — preferir el mayor entre fecha_vencimiento y current_period_end
+    const candidates = [sub.fecha_vencimiento, sub.current_period_end, sub.trial_ends_at]
+      .filter(Boolean)
+      .map((d) => new Date(d as string));
+    const endDate = candidates.length ? new Date(Math.max(...candidates.map(d => d.getTime()))) : null;
+    const daysLeft = endDate ? differenceInDays(endDate, new Date()) : null;
+
+    // Cobertura real: manual, o cualquier fecha de fin >= hoy
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tieneCobertura = !!sub.es_manual || (endDate !== null && endDate >= today);
 
     // When super admin overrides to another empresa, evaluate isBlocked
     // as if they were a regular user so they see the real experience.
     const skipBlockBypass = isSuperAdmin && isOverride;
-    const isBlocked = (skipBlockBypass || !isSuperAdmin) && (
+    // Bloqueo: respeta acceso_bloqueado solo si NO hay cobertura real
+    // (evita falsos bloqueos cuando facturación quedó marcada pero ya pagaron)
+    const isBlocked = (skipBlockBypass || !isSuperAdmin) && !tieneCobertura && (
+      sub.acceso_bloqueado === true ||
       sub.status === 'suspended' ||
       sub.status === 'cancelada' ||
       (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||

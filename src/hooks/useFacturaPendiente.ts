@@ -37,7 +37,7 @@ export function useFacturaPendiente(): FacturaPendienteState {
       const [{ data: sub }, { data: facturas }] = await Promise.all([
         supabase
           .from('subscriptions')
-          .select('status, current_period_end')
+          .select('status, current_period_end, fecha_vencimiento, es_manual, acceso_bloqueado')
           .eq('empresa_id', empresa.id)
           .maybeSingle(),
         supabase
@@ -49,14 +49,23 @@ export function useFacturaPendiente(): FacturaPendienteState {
           .limit(10),
       ]);
 
-      const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+      // Si la suscripción es manual o tiene cobertura vigente,
+      // ignorar facturas cuyo periodo_fin ya está cubierto.
+      const subEndCandidates = [sub?.current_period_end, sub?.fecha_vencimiento]
+        .filter(Boolean)
+        .map((d) => new Date(d as string));
+      const subEnd = subEndCandidates.length
+        ? new Date(Math.max(...subEndCandidates.map((d) => d.getTime())))
+        : null;
+      const subTieneCobertura = !!sub?.es_manual || (subEnd !== null && subEnd >= new Date());
+
       const f = facturas?.find((factura) => {
         const facturaPeriodEnd = factura.periodo_fin ? new Date(factura.periodo_fin) : null;
         const coveredByActiveSubscription =
-          sub?.status === 'active' &&
-          periodEnd !== null &&
+          subTieneCobertura &&
+          subEnd !== null &&
           facturaPeriodEnd !== null &&
-          facturaPeriodEnd <= periodEnd;
+          facturaPeriodEnd <= subEnd;
         return !coveredByActiveSubscription;
       });
       if (!f) return EMPTY;

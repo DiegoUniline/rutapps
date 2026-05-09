@@ -262,6 +262,16 @@ Deno.serve(async (req) => {
       const empresaNombre = empresa?.nombre || "tu empresa";
 
       if (daysPastDue >= DIAS_GRACIA) {
+        // SAFETY: revalidar cobertura real (factura pagada vigente, manual, etc.)
+        const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: sub.empresa_id });
+        if (cubierta === true) {
+          await supabase
+            .from("subscriptions")
+            .update({ status: "active", acceso_bloqueado: false, updated_at: now.toISOString() })
+            .eq("id", sub.id);
+          log("Skip suspend (cobertura vigente)", { empresa: sub.empresa_id });
+          continue;
+        }
         // Suspend
         await supabase
           .from("subscriptions")

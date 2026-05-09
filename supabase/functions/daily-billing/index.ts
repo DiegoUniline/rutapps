@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     if (dayOfMonth >= 4) {
       const { data: bloqueables, error: errSelect } = await supabase
         .from("subscriptions")
-        .select("empresa_id, fecha_vencimiento, status, es_manual")
+        .select("empresa_id, fecha_vencimiento, current_period_end, status, es_manual")
         .neq("es_manual", true)
         .eq("acceso_bloqueado", false)
         .or(`fecha_vencimiento.lt.${today},fecha_vencimiento.is.null`)
@@ -45,7 +45,47 @@ Deno.serve(async (req) => {
 
       if (errSelect) log("Select error", errSelect);
 
-      const ids = (bloqueables || []).map((s: any) => s.empresa_id);
+      // SAFETY NET: revalidar contra cobertura real (factura pagada que cubre hoy,
+      // current_period_end vigente, manual, etc.) para no bloquear empresas pagadas.
+      const candidatos = bloqueables || [];
+      const ids: string[] = [];
+      for (const s of candidatos) {
+        // Skip si current_period_end aún cubre hoy
+        if (s.current_period_end && s.current_period_end >= today) {
+          log("Skip block (period_end vigente)", { empresa: s.empresa_id, end: s.current_period_end });
+          continue;
+        }
+        const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: s.empresa_id });
+        if (cubierta === true) {
+          // Auto-sanar: marcar como activa si tiene factura pagada vigente
+          const { data: facturaCubre } = await supabase
+            .from("facturas")
+            .select("periodo_fin")
+            .eq("empresa_id", s.empresa_id)
+            .eq("estado", "pagada")
+            .gte("periodo_fin", today)
+            .order("periodo_fin", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (facturaCubre?.periodo_fin) {
+            await supabase
+              .from("subscriptions")
+              .update({
+                status: "active",
+                acceso_bloqueado: false,
+                fecha_vencimiento: facturaCubre.periodo_fin,
+                current_period_end: facturaCubre.periodo_fin,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("empresa_id", s.empresa_id);
+            log("Auto-healed (factura pagada)", { empresa: s.empresa_id, periodo_fin: facturaCubre.periodo_fin });
+          } else {
+            log("Skip block (cobertura vigente)", { empresa: s.empresa_id });
+          }
+          continue;
+        }
+        ids.push(s.empresa_id);
+      }
       if (ids.length > 0) {
         const { error: errUpd } = await supabase
           .from("subscriptions")
@@ -55,6 +95,7 @@ Deno.serve(async (req) => {
         else log("Blocked", { count: ids.length, ids });
       }
       result.blocked_count = ids.length;
+      result.skipped_with_coverage = candidatos.length - ids.length;
     }
 
     // ── DÍA 1: Reset acceso_bloqueado para que entren los días 1-3 de gracia ──

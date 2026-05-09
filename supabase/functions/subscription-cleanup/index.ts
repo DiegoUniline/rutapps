@@ -44,6 +44,12 @@ Deno.serve(async (req) => {
       .lt("current_period_end", today);
 
     for (const sub of expiredActive || []) {
+      // SAFETY: skip if real coverage (paid invoice covers today, manual, etc.)
+      const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: sub.empresa_id });
+      if (cubierta === true) {
+        console.log(`Skip past_due for ${sub.empresa_id}: cobertura vigente`);
+        continue;
+      }
       await supabase
         .from("subscriptions")
         .update({ status: "past_due", updated_at: now.toISOString() })
@@ -61,6 +67,18 @@ Deno.serve(async (req) => {
 
     for (const sub of toDelete || []) {
       const eid = sub.empresa_id;
+
+      // SAFETY: never delete data if real coverage is active (paid invoice covers today, manual)
+      const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: eid });
+      if (cubierta === true) {
+        await supabase
+          .from("subscriptions")
+          .update({ status: "active", acceso_bloqueado: false, updated_at: now.toISOString() })
+          .eq("id", sub.id);
+        console.log(`Skip delete for ${eid}: cobertura vigente — restaurada a active`);
+        continue;
+      }
+
       console.log(`Deleting all data for empresa ${eid} (15+ days past due)`);
 
       // Delete in dependency order
