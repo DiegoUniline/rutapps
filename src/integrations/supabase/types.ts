@@ -6524,6 +6524,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      tiene_cobertura_vigente: {
+        Args: { p_empresa_id: string }
+        Returns: boolean
+      }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
       verify_admin_pin: {
         Args: { p_pin: string; p_user_id: string }
