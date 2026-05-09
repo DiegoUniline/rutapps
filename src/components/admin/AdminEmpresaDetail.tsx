@@ -1047,39 +1047,56 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 {facturas.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">Sin facturas registradas</p>
                 ) : (
-                  <div className="border border-border/60 rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-card">
-                          <TableHead>Número</TableHead>
-                          <TableHead>Período</TableHead>
-                          <TableHead>Usuarios</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Pagada</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {facturas.map(f => (
-                          <TableRow key={f.id}>
-                            <TableCell className="font-mono text-sm">{f.numero_factura || '—'}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
-                            </TableCell>
-                            <TableCell>{f.num_usuarios}</TableCell>
-                            <TableCell className="font-semibold">{fmtMXN(f.total)}</TableCell>
-                            <TableCell>
+                  <div className="space-y-3">
+                    {facturas.map(f => {
+                      const fmtDate = (v: any, withTime = false) => {
+                        if (!v) return '—';
+                        try { return format(new Date(v), withTime ? 'dd MMM yyyy HH:mm' : 'dd MMM yyyy', { locale: es }); }
+                        catch { return String(v); }
+                      };
+                      const fields: Array<[string, any]> = [
+                        ['ID', f.id],
+                        ['Número', f.numero_factura],
+                        ['Empresa ID', f.empresa_id],
+                        ['Suscripción ID', f.suscripcion_id],
+                        ['Período inicio', f.periodo_inicio ? fmtDate(f.periodo_inicio) : '—'],
+                        ['Período fin', f.periodo_fin ? fmtDate(f.periodo_fin) : '—'],
+                        ['Núm. usuarios', f.num_usuarios],
+                        ['Precio unitario', f.precio_unitario != null ? fmtMXN(Number(f.precio_unitario)) : '—'],
+                        ['Descuento %', f.descuento_porcentaje ?? 0],
+                        ['Subtotal', f.subtotal != null ? fmtMXN(Number(f.subtotal)) : '—'],
+                        ['Total', f.total != null ? fmtMXN(Number(f.total)) : '—'],
+                        ['Estado', f.estado || 'pendiente'],
+                        ['Es prorrateo', f.es_prorrateo ? 'Sí' : 'No'],
+                        ['Fecha emisión', fmtDate(f.fecha_emision, true)],
+                        ['Fecha pago', fmtDate(f.fecha_pago, true)],
+                        ['Fecha vencimiento', fmtDate(f.fecha_vencimiento, true)],
+                        ['Stripe invoice ID', f.stripe_invoice_id],
+                        ['Stripe payment intent', f.stripe_payment_intent_id],
+                        ['Creado en', fmtDate(f.creado_en, true)],
+                      ];
+                      return (
+                        <div key={f.id} className="border border-border/60 rounded-lg p-4 bg-card">
+                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-semibold">{f.numero_factura || '—'}</span>
                               <Badge variant={f.estado === 'pagada' ? 'default' : f.estado === 'pendiente' ? 'destructive' : 'secondary'}>
                                 {f.estado || 'pendiente'}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {f.fecha_pago ? format(new Date(f.fecha_pago), 'dd MMM yyyy', { locale: es }) : '—'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </div>
+                            <span className="font-semibold text-primary">{f.total != null ? fmtMXN(Number(f.total)) : '—'}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                            {fields.map(([k, v]) => (
+                              <div key={k} className="flex flex-col border-b border-border/30 pb-1">
+                                <span className="text-xs text-muted-foreground uppercase tracking-wide">{k}</span>
+                                <span className="font-mono text-xs break-all">{v == null || v === '' ? '—' : String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
