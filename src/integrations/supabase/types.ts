@@ -2467,6 +2467,7 @@ export type Database = {
           fecha_entrega: string | null
           folio: string | null
           id: string
+          motivo_no_entrega: string | null
           notas: string | null
           orden_entrega: number | null
           pedido_id: string | null
@@ -2487,6 +2488,7 @@ export type Database = {
           fecha_entrega?: string | null
           folio?: string | null
           id?: string
+          motivo_no_entrega?: string | null
           notas?: string | null
           orden_entrega?: number | null
           pedido_id?: string | null
@@ -2507,6 +2509,7 @@ export type Database = {
           fecha_entrega?: string | null
           folio?: string | null
           id?: string
+          motivo_no_entrega?: string | null
           notas?: string | null
           orden_entrega?: number | null
           pedido_id?: string | null
@@ -6592,6 +6595,7 @@ export type Database = {
         | "listo"
         | "hecho"
         | "cancelado"
+        | "no_entregado"
       status_producto: "activo" | "inactivo" | "borrador"
       status_traspaso: "borrador" | "confirmado" | "cancelado"
       status_venta:
@@ -6803,6 +6807,7 @@ export const Constants = {
         "listo",
         "hecho",
         "cancelado",
+        "no_entregado",
       ],
       status_producto: ["activo", "inactivo", "borrador"],
       status_traspaso: ["borrador", "confirmado", "cancelado"],
