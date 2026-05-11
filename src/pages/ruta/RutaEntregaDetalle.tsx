@@ -366,7 +366,7 @@ export default function RutaEntregaDetalle() {
           <p className="text-[11px] text-muted-foreground">Entrega de pedido</p>
         </div>
         <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[entrega.status] ?? '')}>
-          {entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
+          {entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'no_entregado' ? 'No entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
         </span>
       </div>
 
