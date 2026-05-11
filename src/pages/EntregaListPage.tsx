@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'defa
   cargado: { label: 'Cargado', variant: 'default' },
   en_ruta: { label: 'En ruta', variant: 'outline', className: 'bg-amber-500 text-white border-transparent hover:bg-amber-500/90' },
   hecho: { label: 'Entregado', variant: 'outline', className: 'bg-success text-success-foreground border-transparent hover:bg-success/90' },
+  no_entregado: { label: 'No entregado', variant: 'destructive' },
   cancelado: { label: 'Cancelado', variant: 'destructive' },
 };
 
