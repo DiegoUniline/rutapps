@@ -14,7 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
-  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle
+  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle, CalendarClock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
