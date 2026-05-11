@@ -14,7 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
-  Receipt, X, Truck, Loader2, Clock
+  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,8 +25,19 @@ const statusColors: Record<string, string> = {
   cargado: 'bg-warning/10 text-warning',
   en_ruta: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   hecho: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  no_entregado: 'bg-destructive/10 text-destructive',
   cancelado: 'bg-destructive/10 text-destructive',
 };
+
+const MOTIVOS_NO_ENTREGA = [
+  'Cerrado',
+  'Cliente ausente',
+  'Cliente rechazó pedido',
+  'Sin dinero',
+  'Dirección incorrecta',
+  'No hubo acceso',
+  'Producto dañado',
+];
 
 export default function RutaEntregaDetalle() {
   const { id } = useParams();
@@ -43,6 +54,10 @@ export default function RutaEntregaDetalle() {
   const [showEcPreview, setShowEcPreview] = useState(false);
   const [showTax, setShowTax] = useState(true);
   const [showCobrarPrompt, setShowCobrarPrompt] = useState(false);
+  const [showNoEntregadoModal, setShowNoEntregadoModal] = useState(false);
+  const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>('');
+  const [motivoCustom, setMotivoCustom] = useState('');
+  const [savingNoEntregado, setSavingNoEntregado] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
