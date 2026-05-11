@@ -240,6 +240,7 @@ export default function RutaEntregaDetalle() {
   };
 
 
+  const getTicketData = (): TicketData | null => {
     const e = empresa as any;
     if (!e) return null;
     const empresaData = {
