@@ -509,33 +509,48 @@ export default function RutaEntregaDetalle() {
           </div>
         )}
 
+        {isNoEntregado && (entrega as any).motivo_no_entrega && (
+          <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4">
+            <p className="text-[11px] font-semibold text-destructive uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" /> Motivo de no entrega
+            </p>
+            <p className="text-[13px] font-medium text-foreground">{(entrega as any).motivo_no_entrega}</p>
+          </div>
+        )}
+
         {entrega.notas && (
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-[11px] text-muted-foreground mb-1">Notas</p>
-            <p className="text-[13px] text-foreground">{entrega.notas}</p>
+            <p className="text-[13px] text-foreground whitespace-pre-line">{entrega.notas}</p>
           </div>
         )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-        <div className="flex gap-2">
-          {totalSaldoPendiente > 0 && !isDelivered && (
+        <div className="flex flex-col gap-2">
+          {totalSaldoPendiente > 0 && !isClosedState && (
             <button onClick={goToCobrar}
-              className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5">
+              className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5">
               <Banknote className="h-4 w-4" /> Cobrar {fmt(totalSaldoPendiente)}
             </button>
           )}
-          {isDelivered ? (
+          {isClosedState ? (
             <button onClick={goToCobrar}
-              className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
+              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
               <FileText className="h-5 w-5" /> Ver pedido
             </button>
           ) : (
-            <button onClick={handleMarcarClick} disabled={saving}
-              className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-              {saving ? 'Entregando...' : 'Marcar como entregado'}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowNoEntregadoModal(true)} disabled={saving}
+                className="flex-1 bg-card border border-destructive/40 text-destructive rounded-xl py-3.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <XCircle className="h-4 w-4" /> No entregado
+              </button>
+              <button onClick={handleMarcarClick} disabled={saving}
+                className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+                {saving ? 'Entregando...' : 'Marcar entregado'}
+              </button>
+            </div>
           )}
         </div>
       </div>
