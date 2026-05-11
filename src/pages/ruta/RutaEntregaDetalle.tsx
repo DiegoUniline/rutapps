@@ -589,6 +589,49 @@ export default function RutaEntregaDetalle() {
         </div>
       )}
 
+      {showNoEntregadoModal && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingNoEntregado && setShowNoEntregadoModal(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><XCircle className="h-4 w-4 text-destructive" /> No entregado</h3>
+              <button onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-[12px] text-muted-foreground">Selecciona el motivo por el cual no se pudo entregar este pedido.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {MOTIVOS_NO_ENTREGA.map(m => (
+                <button key={m} onClick={() => { setMotivoSeleccionado(m); setMotivoCustom(''); }}
+                  className={cn("px-3 py-2.5 rounded-lg text-[12px] font-medium border transition-colors text-left",
+                    motivoSeleccionado === m ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border active:bg-accent")}>
+                  {m}
+                </button>
+              ))}
+              <button onClick={() => setMotivoSeleccionado('Otro')}
+                className={cn("px-3 py-2.5 rounded-lg text-[12px] font-medium border transition-colors text-left col-span-2",
+                  motivoSeleccionado === 'Otro' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border active:bg-accent")}>
+                Otro motivo…
+              </button>
+            </div>
+            {motivoSeleccionado === 'Otro' && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-muted-foreground font-medium">Describe el motivo</label>
+                <textarea value={motivoCustom} onChange={e => setMotivoCustom(e.target.value)} rows={3} placeholder="Escribe el motivo…"
+                  className="w-full bg-accent/40 rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none" />
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado}
+                className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+              <button onClick={marcarNoEntregado}
+                disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim())}
+                className="flex-1 bg-destructive text-destructive-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                {savingNoEntregado ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={cliente?.telefono ?? ''} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
