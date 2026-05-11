@@ -111,6 +111,8 @@ export default function RutaEntregaDetalle() {
   const vendedorNombre = (entrega as any).vendedores?.nombre ?? '—';
   const lineas = (entrega as any).entrega_lineas ?? [];
   const isDelivered = entrega.status === 'hecho';
+  const isNoEntregado = entrega.status === 'no_entregado';
+  const isClosedState = isDelivered || isNoEntregado || entrega.status === 'cancelado';
 
   const ventaLineas = (venta as any)?.venta_lineas ?? [];
   const ventaTotal = venta?.total ?? 0;
