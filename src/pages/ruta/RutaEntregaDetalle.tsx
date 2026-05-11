@@ -211,7 +211,35 @@ export default function RutaEntregaDetalle() {
     finally { setSaving(false); }
   };
 
-  const getTicketData = (): TicketData | null => {
+  const marcarNoEntregado = async () => {
+    const motivo = (motivoSeleccionado === 'Otro' ? motivoCustom : motivoSeleccionado).trim();
+    if (!motivo) { toast.error('Selecciona o escribe un motivo'); return; }
+    setSavingNoEntregado(true);
+    try {
+      const now = new Date().toISOString();
+      const nuevaNota = `No entregado: ${motivo}`;
+      const notasFinales = entrega.notas ? `${entrega.notas}\n${nuevaNota}` : nuevaNota;
+      const { error } = await supabase.from('entregas')
+        .update({
+          status: 'no_entregado',
+          motivo_no_entrega: motivo,
+          notas: notasFinales,
+          fecha_entrega: now,
+          validado_at: now,
+        } as any)
+        .eq('id', id!);
+      if (error) throw error;
+      toast.success('Entrega marcada como no entregada');
+      setShowNoEntregadoModal(false);
+      setMotivoSeleccionado('');
+      setMotivoCustom('');
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+      queryClient.invalidateQueries({ queryKey: ['entregas'] });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSavingNoEntregado(false); }
+  };
+
+
     const e = empresa as any;
     if (!e) return null;
     const empresaData = {
