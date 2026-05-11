@@ -458,7 +458,19 @@ export default function RutaEntregaDetalle() {
           {(cliente?.direccion || cliente?.colonia) && (
             <div className="flex items-center gap-3 px-4 py-3"><MapPin className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Dirección</span><span className="text-[13px] font-medium text-foreground truncate">{[cliente?.direccion, cliente?.colonia].filter(Boolean).join(', ')}</span></div>
           )}
-          <div className="flex items-center gap-3 px-4 py-3"><Calendar className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Fecha</span><span className="text-[13px] font-medium text-foreground">{fmtDate(entrega.fecha)}</span></div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-[12px] text-muted-foreground w-20 shrink-0">Fecha</span>
+            <span className="text-[13px] font-medium text-foreground flex-1">{fmtDate(entrega.fecha)}</span>
+            {!isClosedState && (
+              <button
+                onClick={() => { setNuevaFecha(entrega.fecha ?? ''); setShowReprogramarModal(true); }}
+                className="text-[11px] font-medium text-primary px-2 py-1 rounded-md border border-primary/30 active:bg-primary/10 flex items-center gap-1"
+              >
+                <CalendarClock className="h-3 w-3" /> Reprogramar
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-3 px-4 py-3"><Truck className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Vendedor</span><span className="text-[13px] font-medium text-foreground truncate">{vendedorNombre}</span></div>
           {venta && (
             <div className="flex items-center gap-3 px-4 py-3"><FileText className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Pedido</span><span className="text-[13px] font-medium text-primary truncate">{venta.folio ?? '—'}</span></div>
