@@ -242,6 +242,22 @@ export default function RutaEntregaDetalle() {
     finally { setSavingNoEntregado(false); }
   };
 
+  const reprogramarFecha = async () => {
+    if (!nuevaFecha) { toast.error('Selecciona una fecha'); return; }
+    setSavingReprog(true);
+    try {
+      const { error } = await supabase.from('entregas')
+        .update({ fecha: nuevaFecha } as any)
+        .eq('id', id!);
+      if (error) throw error;
+      toast.success('Entrega reprogramada');
+      setShowReprogramarModal(false);
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+      queryClient.invalidateQueries({ queryKey: ['entregas'] });
+      queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSavingReprog(false); }
+  };
 
   const getTicketData = (): TicketData | null => {
     const e = empresa as any;
