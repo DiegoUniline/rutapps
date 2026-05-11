@@ -14,7 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
-  Receipt, X, Truck, Loader2, Clock
+  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,8 +25,19 @@ const statusColors: Record<string, string> = {
   cargado: 'bg-warning/10 text-warning',
   en_ruta: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   hecho: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  no_entregado: 'bg-destructive/10 text-destructive',
   cancelado: 'bg-destructive/10 text-destructive',
 };
+
+const MOTIVOS_NO_ENTREGA = [
+  'Cerrado',
+  'Cliente ausente',
+  'Cliente rechazó pedido',
+  'Sin dinero',
+  'Dirección incorrecta',
+  'No hubo acceso',
+  'Producto dañado',
+];
 
 export default function RutaEntregaDetalle() {
   const { id } = useParams();
@@ -43,6 +54,10 @@ export default function RutaEntregaDetalle() {
   const [showEcPreview, setShowEcPreview] = useState(false);
   const [showTax, setShowTax] = useState(true);
   const [showCobrarPrompt, setShowCobrarPrompt] = useState(false);
+  const [showNoEntregadoModal, setShowNoEntregadoModal] = useState(false);
+  const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>('');
+  const [motivoCustom, setMotivoCustom] = useState('');
+  const [savingNoEntregado, setSavingNoEntregado] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
@@ -96,6 +111,8 @@ export default function RutaEntregaDetalle() {
   const vendedorNombre = (entrega as any).vendedores?.nombre ?? '—';
   const lineas = (entrega as any).entrega_lineas ?? [];
   const isDelivered = entrega.status === 'hecho';
+  const isNoEntregado = entrega.status === 'no_entregado';
+  const isClosedState = isDelivered || isNoEntregado || entrega.status === 'cancelado';
 
   const ventaLineas = (venta as any)?.venta_lineas ?? [];
   const ventaTotal = venta?.total ?? 0;
@@ -193,6 +210,35 @@ export default function RutaEntregaDetalle() {
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
+
+  const marcarNoEntregado = async () => {
+    const motivo = (motivoSeleccionado === 'Otro' ? motivoCustom : motivoSeleccionado).trim();
+    if (!motivo) { toast.error('Selecciona o escribe un motivo'); return; }
+    setSavingNoEntregado(true);
+    try {
+      const now = new Date().toISOString();
+      const nuevaNota = `No entregado: ${motivo}`;
+      const notasFinales = entrega.notas ? `${entrega.notas}\n${nuevaNota}` : nuevaNota;
+      const { error } = await supabase.from('entregas')
+        .update({
+          status: 'no_entregado',
+          motivo_no_entrega: motivo,
+          notas: notasFinales,
+          fecha_entrega: now,
+          validado_at: now,
+        } as any)
+        .eq('id', id!);
+      if (error) throw error;
+      toast.success('Entrega marcada como no entregada');
+      setShowNoEntregadoModal(false);
+      setMotivoSeleccionado('');
+      setMotivoCustom('');
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+      queryClient.invalidateQueries({ queryKey: ['entregas'] });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSavingNoEntregado(false); }
+  };
+
 
   const getTicketData = (): TicketData | null => {
     const e = empresa as any;
@@ -349,7 +395,7 @@ export default function RutaEntregaDetalle() {
           <p className="text-[11px] text-muted-foreground">Entrega de pedido</p>
         </div>
         <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[entrega.status] ?? '')}>
-          {entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
+          {entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'no_entregado' ? 'No entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
         </span>
       </div>
 
@@ -463,33 +509,48 @@ export default function RutaEntregaDetalle() {
           </div>
         )}
 
+        {isNoEntregado && (entrega as any).motivo_no_entrega && (
+          <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4">
+            <p className="text-[11px] font-semibold text-destructive uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" /> Motivo de no entrega
+            </p>
+            <p className="text-[13px] font-medium text-foreground">{(entrega as any).motivo_no_entrega}</p>
+          </div>
+        )}
+
         {entrega.notas && (
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-[11px] text-muted-foreground mb-1">Notas</p>
-            <p className="text-[13px] text-foreground">{entrega.notas}</p>
+            <p className="text-[13px] text-foreground whitespace-pre-line">{entrega.notas}</p>
           </div>
         )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-        <div className="flex gap-2">
-          {totalSaldoPendiente > 0 && !isDelivered && (
+        <div className="flex flex-col gap-2">
+          {totalSaldoPendiente > 0 && !isClosedState && (
             <button onClick={goToCobrar}
-              className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5">
+              className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5">
               <Banknote className="h-4 w-4" /> Cobrar {fmt(totalSaldoPendiente)}
             </button>
           )}
-          {isDelivered ? (
+          {isClosedState ? (
             <button onClick={goToCobrar}
-              className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
+              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
               <FileText className="h-5 w-5" /> Ver pedido
             </button>
           ) : (
-            <button onClick={handleMarcarClick} disabled={saving}
-              className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-              {saving ? 'Entregando...' : 'Marcar como entregado'}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowNoEntregadoModal(true)} disabled={saving}
+                className="flex-1 bg-card border border-destructive/40 text-destructive rounded-xl py-3.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                <XCircle className="h-4 w-4" /> No entregado
+              </button>
+              <button onClick={handleMarcarClick} disabled={saving}
+                className="flex-1 bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-success/20 flex items-center justify-center gap-1.5 disabled:opacity-40">
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+                {saving ? 'Entregando...' : 'Marcar entregado'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -522,6 +583,49 @@ export default function RutaEntregaDetalle() {
                 onClick={() => setShowCobrarPrompt(false)}
                 className="w-full bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNoEntregadoModal && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingNoEntregado && setShowNoEntregadoModal(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><XCircle className="h-4 w-4 text-destructive" /> No entregado</h3>
+              <button onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-[12px] text-muted-foreground">Selecciona el motivo por el cual no se pudo entregar este pedido.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {MOTIVOS_NO_ENTREGA.map(m => (
+                <button key={m} onClick={() => { setMotivoSeleccionado(m); setMotivoCustom(''); }}
+                  className={cn("px-3 py-2.5 rounded-lg text-[12px] font-medium border transition-colors text-left",
+                    motivoSeleccionado === m ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border active:bg-accent")}>
+                  {m}
+                </button>
+              ))}
+              <button onClick={() => setMotivoSeleccionado('Otro')}
+                className={cn("px-3 py-2.5 rounded-lg text-[12px] font-medium border transition-colors text-left col-span-2",
+                  motivoSeleccionado === 'Otro' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border active:bg-accent")}>
+                Otro motivo…
+              </button>
+            </div>
+            {motivoSeleccionado === 'Otro' && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-muted-foreground font-medium">Describe el motivo</label>
+                <textarea value={motivoCustom} onChange={e => setMotivoCustom(e.target.value)} rows={3} placeholder="Escribe el motivo…"
+                  className="w-full bg-accent/40 rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none" />
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado}
+                className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+              <button onClick={marcarNoEntregado}
+                disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim())}
+                className="flex-1 bg-destructive text-destructive-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                {savingNoEntregado ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Confirmar
               </button>
             </div>
           </div>
