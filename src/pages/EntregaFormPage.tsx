@@ -450,8 +450,31 @@ export default function EntregaFormPage() {
                 )}
               </div>
               <div>
-                <label className="label-odoo">Fecha</label>
-                <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha) || fmtDate(new Date().toISOString())}</div>
+                <label className="label-odoo">Fecha {!isNew && form.status !== 'cancelado' && form.status !== 'hecho' && form.status !== 'no_entregado' && <span className="text-[10px] text-muted-foreground font-normal">(reprogramable)</span>}</label>
+                {isNew || form.status === 'cancelado' || form.status === 'hecho' || form.status === 'no_entregado' ? (
+                  <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha) || fmtDate(new Date().toISOString())}</div>
+                ) : (
+                  <input
+                    type="date"
+                    value={form.fecha ?? ''}
+                    onChange={async (e) => {
+                      const nuevaFecha = e.target.value;
+                      if (!nuevaFecha) return;
+                      const prev = form.fecha;
+                      setForm((p: any) => ({ ...p, fecha: nuevaFecha }));
+                      const { error } = await supabase.from('entregas').update({ fecha: nuevaFecha } as any).eq('id', form.id);
+                      if (error) {
+                        setForm((p: any) => ({ ...p, fecha: prev }));
+                        toast.error('No se pudo reprogramar: ' + error.message);
+                      } else {
+                        toast.success('Fecha reprogramada');
+                        qc.invalidateQueries({ queryKey: ['entregas-list'] });
+                        qc.invalidateQueries({ queryKey: ['entregas'] });
+                      }
+                    }}
+                    className="bg-card border border-border rounded-md px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  />
+                )}
               </div>
               {form.vendedor_ruta_id && (
                 <div>
