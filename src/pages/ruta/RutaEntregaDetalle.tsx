@@ -14,7 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
-  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle
+  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle, CalendarClock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +58,9 @@ export default function RutaEntregaDetalle() {
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>('');
   const [motivoCustom, setMotivoCustom] = useState('');
   const [savingNoEntregado, setSavingNoEntregado] = useState(false);
+  const [showReprogramarModal, setShowReprogramarModal] = useState(false);
+  const [nuevaFecha, setNuevaFecha] = useState('');
+  const [savingReprog, setSavingReprog] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
@@ -239,6 +242,22 @@ export default function RutaEntregaDetalle() {
     finally { setSavingNoEntregado(false); }
   };
 
+  const reprogramarFecha = async () => {
+    if (!nuevaFecha) { toast.error('Selecciona una fecha'); return; }
+    setSavingReprog(true);
+    try {
+      const { error } = await supabase.from('entregas')
+        .update({ fecha: nuevaFecha } as any)
+        .eq('id', id!);
+      if (error) throw error;
+      toast.success('Entrega reprogramada');
+      setShowReprogramarModal(false);
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+      queryClient.invalidateQueries({ queryKey: ['entregas'] });
+      queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSavingReprog(false); }
+  };
 
   const getTicketData = (): TicketData | null => {
     const e = empresa as any;
@@ -439,7 +458,19 @@ export default function RutaEntregaDetalle() {
           {(cliente?.direccion || cliente?.colonia) && (
             <div className="flex items-center gap-3 px-4 py-3"><MapPin className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Dirección</span><span className="text-[13px] font-medium text-foreground truncate">{[cliente?.direccion, cliente?.colonia].filter(Boolean).join(', ')}</span></div>
           )}
-          <div className="flex items-center gap-3 px-4 py-3"><Calendar className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Fecha</span><span className="text-[13px] font-medium text-foreground">{fmtDate(entrega.fecha)}</span></div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-[12px] text-muted-foreground w-20 shrink-0">Fecha</span>
+            <span className="text-[13px] font-medium text-foreground flex-1">{fmtDate(entrega.fecha)}</span>
+            {!isClosedState && (
+              <button
+                onClick={() => { setNuevaFecha(entrega.fecha ?? ''); setShowReprogramarModal(true); }}
+                className="text-[11px] font-medium text-primary px-2 py-1 rounded-md border border-primary/30 active:bg-primary/10 flex items-center gap-1"
+              >
+                <CalendarClock className="h-3 w-3" /> Reprogramar
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-3 px-4 py-3"><Truck className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Vendedor</span><span className="text-[13px] font-medium text-foreground truncate">{vendedorNombre}</span></div>
           {venta && (
             <div className="flex items-center gap-3 px-4 py-3"><FileText className="h-4 w-4 text-muted-foreground shrink-0" /><span className="text-[12px] text-muted-foreground w-20 shrink-0">Pedido</span><span className="text-[13px] font-medium text-primary truncate">{venta.folio ?? '—'}</span></div>
@@ -625,6 +656,36 @@ export default function RutaEntregaDetalle() {
                 disabled={savingNoEntregado || !motivoSeleccionado || (motivoSeleccionado === 'Otro' && !motivoCustom.trim())}
                 className="flex-1 bg-destructive text-destructive-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
                 {savingNoEntregado ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReprogramarModal && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingReprog && setShowReprogramarModal(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Reprogramar entrega</h3>
+              <button onClick={() => setShowReprogramarModal(false)} disabled={savingReprog} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <p className="text-[12px] text-muted-foreground">Selecciona la nueva fecha de entrega.</p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground font-medium">Nueva fecha</label>
+              <input
+                type="date"
+                value={nuevaFecha}
+                onChange={e => setNuevaFecha(e.target.value)}
+                className="w-full bg-accent/40 rounded-lg px-3 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowReprogramarModal(false)} disabled={savingReprog}
+                className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+              <button onClick={reprogramarFecha} disabled={savingReprog || !nuevaFecha}
+                className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                {savingReprog ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 Confirmar
               </button>
             </div>

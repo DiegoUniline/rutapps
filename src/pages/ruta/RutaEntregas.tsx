@@ -1,22 +1,29 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2 } from 'lucide-react';
+import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate, cn } from '@/lib/utils';
 
-function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: string) => void; delivered?: boolean }) {
-  const statusLabel = e.status === 'hecho' ? 'Entregado' : e.status === 'en_ruta' ? 'En ruta' : 'Cargado';
-  const statusClass = e.status === 'hecho'
-    ? 'border-green-600/60 text-green-600'
-    : 'border-warning text-warning';
+type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
+
+const statusMeta: Record<string, { label: string; className: string }> = {
+  cargado: { label: 'Cargado', className: 'border-warning text-warning' },
+  en_ruta: { label: 'En ruta', className: 'border-warning text-warning' },
+  hecho: { label: 'Entregado', className: 'border-green-600/60 text-green-600' },
+  no_entregado: { label: 'No entregado', className: 'border-destructive/60 text-destructive' },
+};
+
+function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string) => void; dimmed?: boolean }) {
+  const meta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
   return (
     <button
       onClick={() => navigate(`/ruta/entregas/${e.id}`)}
       className={cn(
         'w-full text-left bg-card border border-border rounded-2xl overflow-hidden active:scale-[0.98] transition-transform',
-        delivered && 'opacity-60'
+        dimmed && 'opacity-60'
       )}
     >
       <div className="p-4 space-y-2">
@@ -26,8 +33,8 @@ function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: stri
             <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <Badge variant="outline" className={cn('text-[10px]', statusClass)}>
-              {statusLabel}
+            <Badge variant="outline" className={cn('text-[10px]', meta.className)}>
+              {meta.label}
             </Badge>
             <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
           </div>
@@ -40,9 +47,16 @@ function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: stri
           </div>
         )}
 
+        {e.status === 'no_entregado' && e.motivo_no_entrega && (
+          <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+            <XCircle className="h-3 w-3 mt-0.5 shrink-0" />
+            <span className="font-medium">{e.motivo_no_entrega}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-muted-foreground">
-            {delivered && e.fecha_entrega
+            {e.status === 'hecho' && e.fecha_entrega
               ? `Entregado ${fmtDate(e.fecha_entrega)}`
               : fmtDate(e.fecha)}
           </p>
@@ -57,6 +71,7 @@ export default function RutaEntregas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.id;
+  const [filter, setFilter] = useState<StatusFilter>('todos');
 
   const { data: allEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
@@ -71,7 +86,7 @@ export default function RutaEntregas() {
 
   const entregas = (allEntregas ?? [])
     .filter((e: any) =>
-      (e.status === 'cargado' || e.status === 'en_ruta' || e.status === 'hecho') &&
+      ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
       (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
     )
     .map((e: any) => {
@@ -84,24 +99,41 @@ export default function RutaEntregas() {
         }));
       const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
       return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas };
-    })
-    .sort((a: any, b: any) => {
-      // Pendientes primero, entregados al final
-      if (a.status === 'hecho' && b.status !== 'hecho') return 1;
-      if (a.status !== 'hecho' && b.status === 'hecho') return -1;
-      return 0;
     });
 
-  const pendientes = entregas.filter((e: any) => e.status !== 'hecho');
-  const entregados = entregas.filter((e: any) => e.status === 'hecho');
+  const counts = useMemo(() => ({
+    todos: entregas.length,
+    pendientes: entregas.filter((e: any) => e.status === 'cargado' || e.status === 'en_ruta').length,
+    hecho: entregas.filter((e: any) => e.status === 'hecho').length,
+    no_entregado: entregas.filter((e: any) => e.status === 'no_entregado').length,
+  }), [entregas]);
+
+  const visible = useMemo(() => {
+    let list: any[] = entregas;
+    if (filter === 'pendientes') list = list.filter(e => e.status === 'cargado' || e.status === 'en_ruta');
+    else if (filter === 'hecho') list = list.filter(e => e.status === 'hecho');
+    else if (filter === 'no_entregado') list = list.filter(e => e.status === 'no_entregado');
+    // sort: pendientes first, then no_entregado, then hecho
+    return [...list].sort((a, b) => {
+      const order: Record<string, number> = { cargado: 0, en_ruta: 0, no_entregado: 1, hecho: 2 };
+      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+    });
+  }, [entregas, filter]);
+
+  const tabs: { key: StatusFilter; label: string; count: number }[] = [
+    { key: 'todos', label: 'Todas', count: counts.todos },
+    { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+    { key: 'hecho', label: 'Entregadas', count: counts.hecho },
+    { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
+  ];
 
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Truck className="h-5 w-5 text-primary" />
-        <h1 className="text-[18px] font-bold text-foreground">Por entregar</h1>
-        <Badge variant="secondary" className="text-[11px]">{pendientes.length} pendientes</Badge>
-        {pendientes.length > 0 && (
+        <h1 className="text-[18px] font-bold text-foreground">Entregas</h1>
+        <Badge variant="secondary" className="text-[11px]">{counts.pendientes} pendientes</Badge>
+        {counts.pendientes > 0 && (
           <Button
             size="sm"
             variant="outline"
@@ -113,35 +145,36 @@ export default function RutaEntregas() {
         )}
       </div>
 
-      {pendientes.length === 0 && entregados.length === 0 && (
+      {/* Status filter chips */}
+      <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setFilter(t.key)}
+            className={cn(
+              'shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors',
+              filter === t.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-card text-muted-foreground border-border'
+            )}
+          >
+            {t.label} <span className="opacity-70">({t.count})</span>
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 && (
         <div className="text-center py-16">
           <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-          <p className="text-muted-foreground text-sm">No tienes entregas pendientes</p>
+          <p className="text-muted-foreground text-sm">
+            {filter === 'todos' ? 'No tienes entregas' : 'Sin entregas en este filtro'}
+          </p>
         </div>
       )}
 
-      {pendientes.length === 0 && entregados.length > 0 && (
-        <div className="text-center py-8">
-          <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-green-500/50" />
-          <p className="text-muted-foreground text-sm">¡Todas las entregas completadas!</p>
-        </div>
-      )}
-
-      {pendientes.map((e: any) => (
-        <EntregaCard key={e.id} e={e} navigate={navigate} />
+      {visible.map((e: any) => (
+        <EntregaCard key={e.id} e={e} navigate={navigate} dimmed={e.status === 'hecho' || e.status === 'no_entregado'} />
       ))}
-
-      {entregados.length > 0 && (
-        <>
-          <div className="flex items-center gap-2 pt-2">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span className="text-[13px] font-semibold text-muted-foreground">Entregados ({entregados.length})</span>
-          </div>
-          {entregados.map((e: any) => (
-            <EntregaCard key={e.id} e={e} navigate={navigate} delivered />
-          ))}
-        </>
-      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'defa
   cargado: { label: 'Cargado', variant: 'default' },
   en_ruta: { label: 'En ruta', variant: 'outline', className: 'bg-amber-500 text-white border-transparent hover:bg-amber-500/90' },
   hecho: { label: 'Entregado', variant: 'outline', className: 'bg-success text-success-foreground border-transparent hover:bg-success/90' },
+  no_entregado: { label: 'No entregado', variant: 'destructive' },
   cancelado: { label: 'Cancelado', variant: 'destructive' },
 };
 
@@ -64,6 +65,7 @@ export default function EntregaListPage() {
     cargado: allEntregas?.filter(e => (e as any).status === 'cargado').length ?? 0,
     en_ruta: allEntregas?.filter(e => (e as any).status === 'en_ruta').length ?? 0,
     hecho: allEntregas?.filter(e => (e as any).status === 'hecho').length ?? 0,
+    no_entregado: allEntregas?.filter(e => (e as any).status === 'no_entregado').length ?? 0,
   };
 
   // Filter locally by selected tab
@@ -294,6 +296,7 @@ export default function EntregaListPage() {
           { key: 'cargado', label: 'Cargados', count: counts.cargado },
           { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
           { key: 'hecho', label: 'Entregadas', count: counts.hecho },
+          { key: 'no_entregado', label: 'No entregadas', count: counts.no_entregado },
         ].map(tab => (
           <button
             key={tab.key}
