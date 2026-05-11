@@ -58,6 +58,9 @@ export default function RutaEntregaDetalle() {
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>('');
   const [motivoCustom, setMotivoCustom] = useState('');
   const [savingNoEntregado, setSavingNoEntregado] = useState(false);
+  const [showReprogramarModal, setShowReprogramarModal] = useState(false);
+  const [nuevaFecha, setNuevaFecha] = useState('');
+  const [savingReprog, setSavingReprog] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
