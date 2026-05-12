@@ -341,8 +341,9 @@ export default function MapaClientesPage() {
     if (zonaFilter) result = result.filter((c: any) => c.zona_id === zonaFilter);
     if (vendedorFilter) result = result.filter((c: any) => c.vendedor_id === vendedorFilter);
     if (diaFilter) result = result.filter((c: any) => c.dia_visita?.includes(diaFilter));
+    if (clienteIdsFilter.size > 0) result = result.filter((c: any) => clienteIdsFilter.has(c.id));
     return result;
-  }, [clientes, zonaFilter, vendedorFilter, diaFilter]);
+  }, [clientes, zonaFilter, vendedorFilter, diaFilter, clienteIdsFilter]);
 
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
   const withoutGps = useMemo(() => filtered.filter((c: any) => !c.gps_lat || !c.gps_lng), [filtered]);
