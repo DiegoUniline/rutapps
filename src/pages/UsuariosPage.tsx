@@ -74,10 +74,12 @@ export default function UsuariosPage() {
           roles={rolesHook.roles} almacenes={usuarios.almacenes}
           activeUsers={activeUsers} maxUsuarios={subscription.maxUsuarios} availableSlots={availableSlots}
           ownerUserId={empresa?.owner_user_id}
+          showArchived={showArchived} setShowArchived={setShowArchived}
           onNewUser={() => usuarios.setShowNewUser(true)}
           onEditUser={usuarios.startEdit}
           onSetPassword={(uid, name) => { usuarios.setPasswordModal({ userId: uid, nombre: name }); usuarios.setNewPassword(''); }}
-          onToggleEstado={usuarios.toggleEstado}
+          onArchive={handleArchive}
+          onReactivate={handleReactivate}
         />
       )}
 
