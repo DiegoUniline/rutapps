@@ -91,7 +91,38 @@ export default function MapaVentasPage() {
     enabled: !!empresa?.id,
   });
 
-  const entregasConGps = useMemo(() => (entregasData ?? []).filter((e: any) => e.clientes?.gps_lat && e.clientes?.gps_lng), [entregasData]);
+  // Spread overlapping markers in a small ring so they don't stack into a single dot.
+  // Mutates a per-render copy: each entrega gets _displayLat/_displayLng.
+  const entregasConGps = useMemo(() => {
+    const filtered = (entregasData ?? []).filter((e: any) => e.clientes?.gps_lat && e.clientes?.gps_lng);
+    const groups = new Map<string, any[]>();
+    for (const e of filtered) {
+      const key = `${Number(e.clientes.gps_lat).toFixed(5)},${Number(e.clientes.gps_lng).toFixed(5)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(e);
+    }
+    const result: any[] = [];
+    for (const group of groups.values()) {
+      if (group.length === 1) {
+        const e = group[0];
+        result.push({ ...e, _displayLat: e.clientes.gps_lat, _displayLng: e.clientes.gps_lng });
+      } else {
+        // Spread in a circle ~25m radius (≈0.00022° lat). Scale lng by cos(lat).
+        const radius = 0.00022;
+        const lat0 = group[0].clientes.gps_lat;
+        const lngScale = 1 / Math.max(0.0001, Math.cos((lat0 * Math.PI) / 180));
+        group.forEach((e: any, i: number) => {
+          const angle = (2 * Math.PI * i) / group.length;
+          result.push({
+            ...e,
+            _displayLat: e.clientes.gps_lat + radius * Math.cos(angle),
+            _displayLng: e.clientes.gps_lng + radius * Math.sin(angle) * lngScale,
+          });
+        });
+      }
+    }
+    return result;
+  }, [entregasData]);
 
   const uniqueWaypoints = useMemo(() => {
     return entregasConGps.map((e: any) => ({
@@ -117,7 +148,7 @@ export default function MapaVentasPage() {
   useEffect(() => {
     if (mapRef.current && entregasConGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }));
+      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
       if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
     }
@@ -126,7 +157,7 @@ export default function MapaVentasPage() {
   const handleRecenter = useCallback(() => {
     if (mapRef.current && entregasConGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }));
+      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
       if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
     }
@@ -141,7 +172,7 @@ export default function MapaVentasPage() {
     if (!routeResult) return null;
     return routeResult.orderedIds.map(id => {
       const entrega = entregasConGps.find((e: any) => e.id === id);
-      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega.clientes.gps_lat, lng: entrega.clientes.gps_lng } : null;
+      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega._displayLat, lng: entrega._displayLng } : null;
     }).filter(Boolean);
   }, [routeResult, entregasConGps]);
 
@@ -415,7 +446,7 @@ export default function MapaVentasPage() {
               entregasConGps.map((e: any) => (
                 <Marker
                   key={e.id}
-                  position={{ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }}
+                  position={{ lat: e._displayLat, lng: e._displayLng }}
                   icon={getEntregaIcon(e.status)}
                   onClick={() => setSelectedEntrega(e)}
                   title={`${e.folio} - ${e.clientes.nombre}`}
@@ -425,7 +456,7 @@ export default function MapaVentasPage() {
 
             {selectedEntrega && (
               <InfoWindow
-                position={{ lat: selectedEntrega.clientes.gps_lat, lng: selectedEntrega.clientes.gps_lng }}
+                position={{ lat: selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat, lng: selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng }}
                 onCloseClick={() => setSelectedEntrega(null)}
               >
                 <div className="min-w-[200px] p-1">
