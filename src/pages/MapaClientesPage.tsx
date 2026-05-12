@@ -351,6 +351,35 @@ export default function MapaClientesPage() {
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
   const withoutGps = useMemo(() => filtered.filter((c: any) => !c.gps_lat || !c.gps_lng), [filtered]);
 
+  // When spreadOverlapping is on, clients sharing the same GPS get distributed in a small ring
+  // so they don't render as a single overlapping dot.
+  const displayCoords = useMemo(() => {
+    const m = new Map<string, { lat: number; lng: number }>();
+    if (!spreadOverlapping) return m;
+    const groups = new Map<string, any[]>();
+    for (const c of withGps) {
+      const key = `${Number(c.gps_lat).toFixed(5)},${Number(c.gps_lng).toFixed(5)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(c);
+    }
+    for (const group of groups.values()) {
+      if (group.length <= 1) continue;
+      const radius = 0.00022;
+      const lat0 = Number(group[0].gps_lat);
+      const lngScale = 1 / Math.max(0.0001, Math.cos((lat0 * Math.PI) / 180));
+      group.forEach((c: any, i: number) => {
+        const angle = (2 * Math.PI * i) / group.length;
+        m.set(c.id, {
+          lat: Number(c.gps_lat) + radius * Math.cos(angle),
+          lng: Number(c.gps_lng) + radius * Math.sin(angle) * lngScale,
+        });
+      });
+    }
+    return m;
+  }, [withGps, spreadOverlapping]);
+
+  const posOf = useCallback((c: any) => displayCoords.get(c.id) ?? { lat: c.gps_lat, lng: c.gps_lng }, [displayCoords]);
+
   const todayClients = useMemo(() => filtered.filter((c: any) => c.dia_visita?.includes(DIA_HOY)), [filtered]);
   const visitedCount = useMemo(() => {
     if (!ventasHoy) return 0;
