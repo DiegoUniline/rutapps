@@ -337,6 +337,32 @@ export default function EntregaListPage() {
             placeholder="Vendedor..."
           />
         </div>
+        <div className="min-w-[180px]">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Ruta asignada</label>
+          <SearchableSelect
+            options={[
+              { value: 'todos', label: 'Todas' },
+              { value: 'sin_ruta', label: 'Sin ruta asignada' },
+              ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre })),
+            ]}
+            value={rutaFilter}
+            onChange={setRutaFilter}
+            placeholder="Ruta..."
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha desde</label>
+          <Input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-[160px]" />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha hasta</label>
+          <Input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-[160px]" />
+        </div>
+        {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos') && (
+          <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setVendedorFilter('todos'); }}>
+            Limpiar
+          </Button>
+        )}
 
         {/* Surtir rápido — only when borrador selected */}
         {selectedIds.size > 0 && hasBorrador && (
