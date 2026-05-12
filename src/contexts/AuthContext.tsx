@@ -88,6 +88,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nextProfile = await getCachedProfile(u.id);
     }
 
+    // Bloquear sesión si el usuario fue archivado o dado de baja
+    if (nextProfile && (nextProfile.estado === 'archivado' || nextProfile.estado === 'baja')) {
+      try {
+        const { toast } = await import('sonner');
+        toast.error(
+          nextProfile.estado === 'archivado'
+            ? 'Tu usuario fue archivado. Contacta al administrador para reactivarlo.'
+            : 'Tu usuario fue dado de baja. Contacta al administrador.'
+        );
+      } catch {}
+      await supabase.auth.signOut();
+      setProfile(null);
+      setEmpresa(null);
+      setRealEmpresa(null);
+      return;
+    }
+
     setProfile(nextProfile);
 
     if (nextProfile?.empresa_id) {
