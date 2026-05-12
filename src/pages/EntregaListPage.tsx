@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Search, Package, Zap, PackageCheck } from 'lucide-react';
+import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega
 import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
+import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
@@ -40,6 +41,7 @@ export default function EntregaListPage() {
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
 
   // Always fetch ALL entregas (no status filter) so counts are correct
   const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
@@ -77,7 +79,7 @@ export default function EntregaListPage() {
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
-    new Set(filtered.filter((e: any) => ['borrador', 'surtido', 'asignado'].includes(e.status)).map((e: any) => e.id)),
+    new Set(filtered.filter((e: any) => !['hecho', 'cancelado'].includes(e.status)).map((e: any) => e.id)),
     [filtered]
   );
 
@@ -359,6 +361,21 @@ export default function EntregaListPage() {
             Cargar camión ({selectedIds.size})
           </Button>
         )}
+
+        {/* Acciones masivas universales (con preview e inventario automático) */}
+        {selectedIds.size > 0 && (
+          <>
+            <Button onClick={() => setBulkAction('reasignar')} variant="outline" className="gap-1.5">
+              <ArrowRightLeft className="h-4 w-4" /> Reasignar ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setBulkAction('reprogramar')} variant="outline" className="gap-1.5">
+              <Calendar className="h-4 w-4" /> Reprogramar ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setBulkAction('cancelar')} variant="outline" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10">
+              <XCircle className="h-4 w-4" /> Cancelar ({selectedIds.size})
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Table */}
@@ -615,6 +632,15 @@ export default function EntregaListPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {bulkAction && (
+        <BulkEntregasActionsDialog
+          action={bulkAction}
+          entregaIds={Array.from(selectedIds)}
+          onClose={() => setBulkAction(null)}
+          onDone={() => { setBulkAction(null); setSelectedIds(new Set()); }}
+        />
+      )}
     </div>
   );
 }
