@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useUsuarios } from '@/hooks/useUsuarios';
+import { useUsuarios, type ProfileUser } from '@/hooks/useUsuarios';
 import { useRoles } from '@/hooks/useRoles';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -12,11 +14,14 @@ import RolesTab from '@/components/usuarios/RolesTab';
 import EditUserModal from '@/components/usuarios/modals/EditUserModal';
 import NewUserModal from '@/components/usuarios/modals/NewUserModal';
 import PasswordModal from '@/components/usuarios/modals/PasswordModal';
+import ArchiveUserWizard from '@/components/usuarios/modals/ArchiveUserWizard';
 
 export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ user: ProfileUser; email?: string } | null>(null);
   const usuarios = useUsuarios();
   const rolesHook = useRoles();
 
@@ -33,6 +38,19 @@ export default function UsuariosPage() {
   const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo').length;
   const availableSlots = subscription.maxUsuarios - activeUsers;
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
+
+  const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
+  const handleReactivate = async (p: ProfileUser) => {
+    if (!confirm(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
+    try {
+      const { error } = await supabase.rpc('reactivar_usuario', { p_profile_id: p.id });
+      if (error) throw error;
+      toast.success('Usuario reactivado');
+      reload();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   if (usuarios.loading) return <div className="p-6 text-muted-foreground text-sm">Cargando...</div>;
 
@@ -56,10 +74,12 @@ export default function UsuariosPage() {
           roles={rolesHook.roles} almacenes={usuarios.almacenes}
           activeUsers={activeUsers} maxUsuarios={subscription.maxUsuarios} availableSlots={availableSlots}
           ownerUserId={empresa?.owner_user_id}
+          showArchived={showArchived} setShowArchived={setShowArchived}
           onNewUser={() => usuarios.setShowNewUser(true)}
           onEditUser={usuarios.startEdit}
           onSetPassword={(uid, name) => { usuarios.setPasswordModal({ userId: uid, nombre: name }); usuarios.setNewPassword(''); }}
-          onToggleEstado={usuarios.toggleEstado}
+          onArchive={handleArchive}
+          onReactivate={handleReactivate}
         />
       )}
 
@@ -113,6 +133,17 @@ export default function UsuariosPage() {
           newPassword={usuarios.newPassword} setNewPassword={usuarios.setNewPassword}
           settingPassword={usuarios.settingPassword}
           onSave={usuarios.handleSetPassword} onClose={() => usuarios.setPasswordModal(null)}
+        />
+      )}
+
+      {archiveTarget && (
+        <ArchiveUserWizard
+          user={archiveTarget.user}
+          emailLabel={archiveTarget.email}
+          activeUsers={usuarios.profiles}
+          almacenes={usuarios.almacenes}
+          onClose={() => setArchiveTarget(null)}
+          onArchived={() => { setArchiveTarget(null); reload(); }}
         />
       )}
     </div>
