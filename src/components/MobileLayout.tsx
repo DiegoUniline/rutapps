@@ -177,6 +177,8 @@ export default function MobileLayout() {
         </div>
       </header>
 
+      <SuperAdminMobileBar />
+
       <OfflineBanner />
 
       {/* Content area */}
