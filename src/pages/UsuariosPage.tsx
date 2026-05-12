@@ -20,6 +20,8 @@ export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ user: ProfileUser; email?: string } | null>(null);
   const usuarios = useUsuarios();
   const rolesHook = useRoles();
 
@@ -36,6 +38,19 @@ export default function UsuariosPage() {
   const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo').length;
   const availableSlots = subscription.maxUsuarios - activeUsers;
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
+
+  const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
+  const handleReactivate = async (p: ProfileUser) => {
+    if (!confirm(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
+    try {
+      const { error } = await supabase.rpc('reactivar_usuario', { p_profile_id: p.id });
+      if (error) throw error;
+      toast.success('Usuario reactivado');
+      reload();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   if (usuarios.loading) return <div className="p-6 text-muted-foreground text-sm">Cargando...</div>;
 
