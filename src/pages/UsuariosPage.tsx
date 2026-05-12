@@ -135,6 +135,17 @@ export default function UsuariosPage() {
           onSave={usuarios.handleSetPassword} onClose={() => usuarios.setPasswordModal(null)}
         />
       )}
+
+      {archiveTarget && (
+        <ArchiveUserWizard
+          user={archiveTarget.user}
+          emailLabel={archiveTarget.email}
+          activeUsers={usuarios.profiles}
+          almacenes={usuarios.almacenes}
+          onClose={() => setArchiveTarget(null)}
+          onArchived={() => { setArchiveTarget(null); reload(); }}
+        />
+      )}
     </div>
   );
 }
