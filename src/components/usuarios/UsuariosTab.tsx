@@ -1,4 +1,4 @@
-import { Users, UserPlus, Edit2, KeyRound, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProfileUser, AuthUser, UserRole, Almacen } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
@@ -13,15 +13,19 @@ interface Props {
   maxUsuarios: number;
   availableSlots: number;
   ownerUserId?: string;
+  showArchived: boolean;
+  setShowArchived: (v: boolean) => void;
   onNewUser: () => void;
   onEditUser: (p: ProfileUser) => void;
   onSetPassword: (userId: string, nombre: string) => void;
-  onToggleEstado: (p: ProfileUser, email?: string) => void;
+  onArchive: (p: ProfileUser, email?: string) => void;
+  onReactivate: (p: ProfileUser) => void;
 }
 
 const estadoBadge = (estado: string) => {
   switch (estado) {
     case 'activo': return 'bg-success/10 text-success';
+    case 'archivado': return 'bg-muted text-muted-foreground';
     case 'baja': return 'bg-destructive/10 text-destructive';
     default: return 'bg-card/50 text-muted-foreground';
   }
@@ -30,8 +34,12 @@ const estadoBadge = (estado: string) => {
 export default function UsuariosTab({
   profiles, userRoles, authUsers, roles, almacenes,
   activeUsers, maxUsuarios, availableSlots, ownerUserId,
-  onNewUser, onEditUser, onSetPassword, onToggleEstado,
+  showArchived, setShowArchived,
+  onNewUser, onEditUser, onSetPassword, onArchive, onReactivate,
 }: Props) {
+  const visibleProfiles = showArchived
+    ? profiles
+    : profiles.filter(p => p.estado === 'activo');
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
