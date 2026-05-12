@@ -148,7 +148,7 @@ export default function MapaVentasPage() {
   useEffect(() => {
     if (mapRef.current && entregasConGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }));
+      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
       if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
     }
@@ -157,7 +157,7 @@ export default function MapaVentasPage() {
   const handleRecenter = useCallback(() => {
     if (mapRef.current && entregasConGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }));
+      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
       if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
     }
