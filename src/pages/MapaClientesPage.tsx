@@ -112,6 +112,7 @@ export default function MapaClientesPage() {
   // Multi-route state
   const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
   const [showOriginPicker, setShowOriginPicker] = useState(false);
+  const [showSinGps, setShowSinGps] = useState(false);
   const [multiResults, setMultiResults] = useState<RouteResultEntry[] | null>(null);
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
@@ -738,8 +739,41 @@ export default function MapaClientesPage() {
                 ))}
               </div>
             )}
+            {withoutGps.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => { setShowSinGps(s => !s); setShowOriginPicker(false); }}
+                  className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                    showSinGps ? "bg-amber-500/10 border-amber-500/30 text-amber-700"
+                      : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+                  <MapPinOff className="h-3.5 w-3.5" />
+                  Sin GPS ({withoutGps.length})
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", showSinGps && "rotate-180")} />
+                </button>
+                {showSinGps && (
+                  <div className="absolute top-full right-0 mt-2 z-30 w-72 bg-card border border-border rounded-xl shadow-lg max-h-[60vh] flex flex-col">
+                    <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+                      <MapPinOff className="h-3.5 w-3.5 text-amber-600" />
+                      <span className="text-xs font-semibold text-foreground">Clientes sin GPS ({withoutGps.length})</span>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      {withoutGps.map((c: any) => (
+                        <Link key={c.id} to={`/clientes/${c.id}`} onClick={() => setShowSinGps(false)}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-accent/50 transition-colors border-b border-border/30 last:border-0">
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground/30 shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
+                            {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <button
-              onClick={() => setShowOriginPicker(s => !s)}
+              onClick={() => { setShowOriginPicker(s => !s); setShowSinGps(false); }}
               className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
                 originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
                   : "bg-background border-border text-muted-foreground")}>
@@ -1077,27 +1111,7 @@ export default function MapaClientesPage() {
           />
         )}
 
-        {/* Without GPS sidebar (hidden when any route panel is active) */}
-        {!orderedClients && !multiResults && withoutGps.length > 0 && (
-          <div className="absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-64 max-h-[50vh] flex flex-col">
-            <div className="px-3 py-2 border-b border-border flex items-center gap-2">
-              <MapPinOff className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground">Sin GPS ({withoutGps.length})</span>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {withoutGps.map((c: any) => (
-                <Link key={c.id} to={`/clientes/${c.id}`}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-accent/50 transition-colors border-b border-border/30 last:border-0">
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                    {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* "Sin GPS" panel moved to toolbar dropdown next to "Origen" */}
 
         {/* First-time hint */}
         {!originPoint && !routeResult && withGps.length > 0 && (
