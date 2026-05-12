@@ -305,9 +305,7 @@ export default function SignupPage() {
         });
       } catch { /* silent - welcome msg is best-effort */ }
 
-      const successMsg = verificationMethod === 'email'
-        ? '¡Cuenta creada! Revisa tu correo electrónico para confirmar tu cuenta y activarla.'
-        : '¡Cuenta creada exitosamente! Revisa tu email para confirmar tu cuenta.';
+      const successMsg = '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.';
 
       toast.success(successMsg, { duration: 8000 });
       navigate('/login');
