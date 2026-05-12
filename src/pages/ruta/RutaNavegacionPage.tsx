@@ -786,25 +786,31 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                     onClick={() => startNavigation(stop)}
                     className={cn(
                       "flex items-center gap-3 w-full px-4 py-3 border-b border-border/50 text-left transition-colors",
-                      isCompleted ? "opacity-40" : "active:bg-card"
+                      isCompleted ? "opacity-40" : !stop.hasOrden ? "bg-red-500/10 hover:bg-red-500/15 active:bg-red-500/20" : "active:bg-card"
                     )}
                   >
                     <div className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
                       isCompleted
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : !stop.hasOrden ? "bg-red-500 text-white"
                         : stop.tipo === 'entrega' ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
                     )}>
                       {isCompleted ? <Check className="h-3.5 w-3.5" /> : stop.tipo === 'entrega' ? <Truck className="h-3.5 w-3.5" /> : idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {stop.folio && <span className="text-[10px] font-mono text-muted-foreground">{stop.folio}</span>}
                         <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium",
                           stop.tipo === 'entrega' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
                         )}>
                           {stop.tipo === 'entrega' ? 'Entrega' : 'Visita'}
                         </span>
+                        {!stop.hasOrden && !isCompleted && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white">
+                            Sin optimizar
+                          </span>
+                        )}
                       </div>
                       <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
                         {stop.nombre}
