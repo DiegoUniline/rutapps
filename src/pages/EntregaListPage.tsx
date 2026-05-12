@@ -73,12 +73,15 @@ export default function EntregaListPage() {
     no_entregado: allEntregas?.filter(e => (e as any).status === 'no_entregado').length ?? 0,
   };
 
-  // Filter locally by selected tab
+  // Filter locally by selected tab + extra filters
   const filtered = useMemo(() => {
-    const list = allEntregas ?? [];
-    if (statusFilter === 'todos') return list;
-    return list.filter((e: any) => e.status === statusFilter);
-  }, [allEntregas, statusFilter]);
+    let list = allEntregas ?? [];
+    if (statusFilter !== 'todos') list = list.filter((e: any) => e.status === statusFilter);
+    if (rutaFilter !== 'todos') list = list.filter((e: any) => (e.vendedor_ruta_id ?? '') === (rutaFilter === 'sin_ruta' ? '' : rutaFilter));
+    if (fechaDesde) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) >= fechaDesde);
+    if (fechaHasta) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) <= fechaHasta);
+    return list;
+  }, [allEntregas, statusFilter, rutaFilter, fechaDesde, fechaHasta]);
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
