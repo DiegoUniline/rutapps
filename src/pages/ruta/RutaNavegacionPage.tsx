@@ -70,32 +70,16 @@ interface Stop {
 function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, empresa, profile } = useAuth();
+  const { user, empresa, profile, overrideVendedorId } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
 
-  // Super-admin overrides
+  // Super-admin: override read from global context (set in MobileLayout bar)
   const isSuperAdmin = isSuperAdminEmail(user?.email);
-  const [superVendedorId, setSuperVendedorId] = useState<string | null>(null);
-  // Reset vendedor override when empresa changes
-  useEffect(() => { setSuperVendedorId(null); }, [empresa?.id]);
-
-  // Vendedores of the current empresa (only for super admin)
-  const { data: empresaVendedores } = useQuery({
-    queryKey: ['nav-empresa-vendedores', empresa?.id],
-    enabled: !!empresa?.id && isSuperAdmin,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, nombre, email')
-        .eq('empresa_id', empresa!.id)
-        .order('nombre');
-      return data ?? [];
-    },
-  });
+  const superVendedorId = isSuperAdmin ? overrideVendedorId : null;
 
   // Persist completed/arrived across navigation using sessionStorage keyed by date
   const storageKeyCompleted = `nav-completed-${filterDate}`;
@@ -653,25 +637,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
               />
               <span className="text-[11px] text-muted-foreground capitalize">{filterDia}</span>
             </div>
-            {/* Super admin: empresa + vendedor selector */}
-            {isSuperAdmin && (
-              <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-sm">
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase shrink-0">SA</span>
-                <div className="shrink-0">
-                  <SuperAdminEmpresaSelector />
-                </div>
-                <select
-                  value={superVendedorId ?? ''}
-                  onChange={e => setSuperVendedorId(e.target.value || null)}
-                  className="flex-1 min-w-0 bg-transparent text-[11px] text-foreground border-0 focus:outline-none truncate"
-                >
-                  <option value="">— Todos los vendedores —</option>
-                  {(empresaVendedores ?? []).map((v: any) => (
-                    <option key={v.id} value={v.id}>{v.nombre || v.email}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Super admin override is now in the global SuperAdminMobileBar */}
           </div>
         )}
       </div>

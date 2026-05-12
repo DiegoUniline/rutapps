@@ -14,11 +14,15 @@ interface AuthContextType {
   /** Super-admin only: override the active empresa to view another company's data */
   overrideEmpresaId: string | null;
   setOverrideEmpresaId: (id: string | null) => void;
+  /** Super-admin only: override active vendedor (profile id) to filter mobile views */
+  overrideVendedorId: string | null;
+  setOverrideVendedorId: (id: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, empresa: null, loading: true, signOut: async () => {},
   overrideEmpresaId: null, setOverrideEmpresaId: () => {},
+  overrideVendedorId: null, setOverrideVendedorId: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [realEmpresa, setRealEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const [overrideEmpresaId, setOverrideEmpresaIdRaw] = useState<string | null>(null);
+  const [overrideVendedorId, setOverrideVendedorId] = useState<string | null>(null);
 
   const loadUserData = useCallback(async (u: User | null) => {
     if (!u) {
@@ -134,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle override empresa for super admin
   const setOverrideEmpresaId = useCallback(async (id: string | null) => {
     setOverrideEmpresaIdRaw(id);
+    setOverrideVendedorId(null);
     if (!id) {
       // Restore original empresa
       setEmpresa(realEmpresa);
@@ -164,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmpresa(null);
         setRealEmpresa(null);
         setOverrideEmpresaIdRaw(null);
+        setOverrideVendedorId(null);
         setLoading(false);
         return;
       }
@@ -188,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId }}>
+    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, overrideVendedorId, setOverrideVendedorId }}>
       {children}
     </AuthContext.Provider>
   );
