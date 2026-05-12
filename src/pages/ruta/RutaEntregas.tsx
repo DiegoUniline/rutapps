@@ -87,7 +87,8 @@ export default function RutaEntregas() {
   const entregas = (allEntregas ?? [])
     .filter((e: any) =>
       ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
-      (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
+      // Si hay vendedor_ruta_id (reasignación), solo cuenta ese; si no, cae al vendedor original
+      (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
     )
     .map((e: any) => {
       const cliente = clienteMap.get(e.cliente_id);
