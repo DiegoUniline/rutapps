@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId }}>
+    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, overrideVendedorId, setOverrideVendedorId }}>
       {children}
     </AuthContext.Provider>
   );
