@@ -170,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEmpresa(null);
         setRealEmpresa(null);
         setOverrideEmpresaIdRaw(null);
+        setOverrideVendedorId(null);
         setLoading(false);
         return;
       }
