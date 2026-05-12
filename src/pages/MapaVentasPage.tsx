@@ -446,7 +446,7 @@ export default function MapaVentasPage() {
               entregasConGps.map((e: any) => (
                 <Marker
                   key={e.id}
-                  position={{ lat: e.clientes.gps_lat, lng: e.clientes.gps_lng }}
+                  position={{ lat: e._displayLat, lng: e._displayLng }}
                   icon={getEntregaIcon(e.status)}
                   onClick={() => setSelectedEntrega(e)}
                   title={`${e.folio} - ${e.clientes.nombre}`}
@@ -456,7 +456,7 @@ export default function MapaVentasPage() {
 
             {selectedEntrega && (
               <InfoWindow
-                position={{ lat: selectedEntrega.clientes.gps_lat, lng: selectedEntrega.clientes.gps_lng }}
+                position={{ lat: selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat, lng: selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng }}
                 onCloseClick={() => setSelectedEntrega(null)}
               >
                 <div className="min-w-[200px] p-1">
