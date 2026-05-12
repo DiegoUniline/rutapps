@@ -13,6 +13,7 @@ import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
+import SuperAdminMobileBar from '@/components/SuperAdminMobileBar';
 
 // Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
 // Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
