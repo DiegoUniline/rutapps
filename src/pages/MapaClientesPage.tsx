@@ -1120,7 +1120,7 @@ export default function MapaClientesPage() {
               orderedClients.map((c: any, idx: number) => (
                 <Marker
                   key={c.id}
-                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  position={posOf(c)}
                   icon={createNumberedLabel()}
                   label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
                   onClick={() => setSelectedCliente(c)}
@@ -1128,13 +1128,10 @@ export default function MapaClientesPage() {
               ))
             ) : multiResults ? null : (
               <>
-                {/* Numbered markers: usan el orden GUARDADO en cliente_orden_ruta
-                    (por vendedor+día). Si no hay ruta optimizada para ese filtro,
-                    todos los pines van al cluster sin número. */}
                 {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => (
                   <Marker
                     key={c.id}
-                    position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                    position={posOf(c)}
                     icon={{
                       path: google.maps.SymbolPath.CIRCLE,
                       fillColor: getMarkerColor(c),
@@ -1149,29 +1146,37 @@ export default function MapaClientesPage() {
                     title={c.nombre}
                   />
                 ))}
-                {/* Non-ordered markers stay clustered */}
-                <MarkerClusterer
-                  options={{
-                    maxZoom: 14,
-                    gridSize: 50,
-                    minimumClusterSize: 5,
-                  }}
-                >
-                  {(clusterer) => (
-                    <>
-                      {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
-                        <Marker
-                          key={c.id}
-                          position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                          icon={getMarkerIcon(c)}
-                          onClick={() => setSelectedCliente(c)}
-                          title={c.nombre}
-                          clusterer={clusterer}
-                        />
-                      ))}
-                    </>
-                  )}
-                </MarkerClusterer>
+                {/* Non-ordered markers stay clustered (skip clustering when spread is on so the user can see the separation) */}
+                {spreadOverlapping ? (
+                  withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
+                    <Marker
+                      key={c.id}
+                      position={posOf(c)}
+                      icon={getMarkerIcon(c)}
+                      onClick={() => setSelectedCliente(c)}
+                      title={c.nombre}
+                    />
+                  ))
+                ) : (
+                  <MarkerClusterer
+                    options={{ maxZoom: 14, gridSize: 50, minimumClusterSize: 5 }}
+                  >
+                    {(clusterer) => (
+                      <>
+                        {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
+                          <Marker
+                            key={c.id}
+                            position={posOf(c)}
+                            icon={getMarkerIcon(c)}
+                            onClick={() => setSelectedCliente(c)}
+                            title={c.nombre}
+                            clusterer={clusterer}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </MarkerClusterer>
+                )}
               </>
             )}
 
