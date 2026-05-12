@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { cn, todayLocal } from '@/lib/utils';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
+import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
+import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 
 /* ─── Voice Navigation ─── */
 const speak = (text: string) => {
@@ -60,18 +63,39 @@ interface Stop {
   folio?: string;
   tipo: 'cliente' | 'entrega';
   orden: number;
+  hasOrden: boolean;
   entregaRef?: any;
 }
 
 function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { empresa, profile } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
+
+  // Super-admin overrides
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+  const [superVendedorId, setSuperVendedorId] = useState<string | null>(null);
+  // Reset vendedor override when empresa changes
+  useEffect(() => { setSuperVendedorId(null); }, [empresa?.id]);
+
+  // Vendedores of the current empresa (only for super admin)
+  const { data: empresaVendedores } = useQuery({
+    queryKey: ['nav-empresa-vendedores', empresa?.id],
+    enabled: !!empresa?.id && isSuperAdmin,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, nombre, email')
+        .eq('empresa_id', empresa!.id)
+        .order('nombre');
+      return data ?? [];
+    },
+  });
 
   // Persist completed/arrived across navigation using sessionStorage keyed by date
   const storageKeyCompleted = `nav-completed-${filterDate}`;
@@ -112,7 +136,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
-  const vendedorId = profile?.id;
+  const vendedorId = (isSuperAdmin && superVendedorId) ? superVendedorId : profile?.id;
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const lastSpokenStepRef = useRef(-1);
   const followUserRef = useRef(true); // true = camera follows user
@@ -128,9 +152,10 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients for today (respecting visibility — same logic as RutaClientes)
+  // Fetch clients for today (respecting visibility — same logic as RutaClientes).
+  // Super admin: filter by chosen vendedor (if any) instead of profile.id.
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id, filterDia, profile?.id, clientesVisibilidad],
+    queryKey: ['nav-clientes', empresa?.id, filterDia, profile?.id, clientesVisibilidad, isSuperAdmin ? superVendedorId : null],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -140,14 +165,19 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter(c => {
-        // Respect visibility setting
-        if (clientesVisibilidad === 'propios' && profile?.id) {
+        // Super admin override: only show clients of chosen vendedor
+        if (isSuperAdmin && superVendedorId) {
+          if (c.vendedor_id !== superVendedorId) return false;
+        } else if (clientesVisibilidad === 'propios' && profile?.id) {
           if (c.vendedor_id !== profile.id) return false;
         }
         return c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng;
       });
     },
   });
+
+  // Saved optimization order (same source the desktop map uses)
+  const { ordenMap } = useClienteOrdenRuta(vendedorId, filterDia);
 
   // Fetch visitas of the filter date (clients already attended: sale, order, or no-sale)
   const { data: visitasHoy } = useQuery({
@@ -206,13 +236,17 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const stops: Stop[] = useMemo(() => {
     const clientStops: Stop[] = (clientesData ?? [])
       .filter(c => !attendedClientIds.has(c.id))
-      .map((c, i) => ({
-        id: `cli-${c.id}`, nombre: c.nombre,
-        direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
-        telefono: c.telefono ?? undefined,
-        gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
-        orden: c.orden ?? i,
-      }));
+      .map((c, i) => {
+        const ord = ordenMap.get(c.id);
+        return {
+          id: `cli-${c.id}`, nombre: c.nombre,
+          direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
+          telefono: c.telefono ?? undefined,
+          gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
+          orden: ord ?? c.orden ?? (10000 + i),
+          hasOrden: ord != null,
+        };
+      });
 
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
@@ -230,6 +264,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
           gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
           folio: e.folio, tipo: 'entrega' as const,
           orden: e.orden_entrega ?? 999,
+          hasOrden: true, // entregas siempre tienen orden de despacho
           entregaRef: e,
         };
       })
@@ -237,10 +272,13 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
     // Merge: entregas first (priority), then client visits
     const all = [...entregaStops, ...clientStops];
-    // Sort by orden
-    all.sort((a, b) => a.orden - b.orden);
+    // Sort: optimizados primero por orden, no-optimizados al final
+    all.sort((a, b) => {
+      if (a.hasOrden !== b.hasOrden) return a.hasOrden ? -1 : 1;
+      return a.orden - b.orden;
+    });
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds, ordenMap]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
@@ -493,7 +531,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                 }}
                 icon={{
                   path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : stop.tipo === 'entrega' ? '#f59e0b' : '#6366f1',
+                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : !stop.hasOrden ? '#ef4444' : stop.tipo === 'entrega' ? '#f59e0b' : '#6366f1',
                   fillOpacity: isCompleted ? 0.5 : 1,
                   strokeColor: '#ffffff',
                   strokeWeight: 2,
@@ -615,6 +653,25 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
               />
               <span className="text-[11px] text-muted-foreground capitalize">{filterDia}</span>
             </div>
+            {/* Super admin: empresa + vendedor selector */}
+            {isSuperAdmin && (
+              <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-sm">
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase shrink-0">SA</span>
+                <div className="shrink-0">
+                  <SuperAdminEmpresaSelector />
+                </div>
+                <select
+                  value={superVendedorId ?? ''}
+                  onChange={e => setSuperVendedorId(e.target.value || null)}
+                  className="flex-1 min-w-0 bg-transparent text-[11px] text-foreground border-0 focus:outline-none truncate"
+                >
+                  <option value="">— Todos los vendedores —</option>
+                  {(empresaVendedores ?? []).map((v: any) => (
+                    <option key={v.id} value={v.id}>{v.nombre || v.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -729,25 +786,31 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                     onClick={() => startNavigation(stop)}
                     className={cn(
                       "flex items-center gap-3 w-full px-4 py-3 border-b border-border/50 text-left transition-colors",
-                      isCompleted ? "opacity-40" : "active:bg-card"
+                      isCompleted ? "opacity-40" : !stop.hasOrden ? "bg-red-500/10 hover:bg-red-500/15 active:bg-red-500/20" : "active:bg-card"
                     )}
                   >
                     <div className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
                       isCompleted
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : !stop.hasOrden ? "bg-red-500 text-white"
                         : stop.tipo === 'entrega' ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
                     )}>
                       {isCompleted ? <Check className="h-3.5 w-3.5" /> : stop.tipo === 'entrega' ? <Truck className="h-3.5 w-3.5" /> : idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {stop.folio && <span className="text-[10px] font-mono text-muted-foreground">{stop.folio}</span>}
                         <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium",
                           stop.tipo === 'entrega' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
                         )}>
                           {stop.tipo === 'entrega' ? 'Entrega' : 'Visita'}
                         </span>
+                        {!stop.hasOrden && !isCompleted && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white">
+                            Sin optimizar
+                          </span>
+                        )}
                       </div>
                       <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
                         {stop.nombre}
