@@ -413,20 +413,55 @@ export default function AdminInvoicesTab() {
                     <TableCell className={`text-right font-semibold ${remaining > 0 ? 'text-destructive' : 'text-primary'}`}>{fmtMXN(remaining / 100)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {inv.status === 'open' && (
+                      <div className="flex gap-1 flex-wrap">
+                        {inv.hosted_invoice_url && !isPaid && (
                           <>
-                            <Button size="sm" variant="ghost" disabled={sendingId === inv.id} onClick={() => sendInvoiceNotification(inv, 'whatsapp')} title="Enviar por WhatsApp">
-                              <MessageCircle className="h-3.5 w-3.5" />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                navigator.clipboard.writeText(inv.hosted_invoice_url!);
+                                toast.success('Link de pago copiado');
+                              }}
+                              title="Copiar link de pago"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="sm" variant="ghost" disabled={sendingId === inv.id} onClick={() => sendInvoiceNotification(inv, 'email')} title="Enviar por correo">
-                              <Mail className="h-3.5 w-3.5" />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => {
+                                const tel = (profilesMap[inv.empresa_id || '']?.telefono || '').replace(/\D/g, '');
+                                const nombre = profilesMap[inv.empresa_id || '']?.nombre?.split(' ')[0] || '';
+                                const empresa = inv.empresa_nombre || '';
+                                const monto = fmtMXN(remaining / 100);
+                                const folio = inv.number ? ` (${inv.number})` : '';
+                                const msg =
+                                  `¡Hola${nombre ? ' ' + nombre : ''}! 👋\n\n` +
+                                  `Te compartimos el link de pago de tu factura${folio}${empresa ? ` de *${empresa}*` : ''} por *${monto}*.\n\n` +
+                                  `💳 Paga en línea de forma segura aquí:\n${inv.hosted_invoice_url}\n\n` +
+                                  `Aceptamos tarjeta de crédito/débito. Una vez pagada, tu cuenta se reactiva automáticamente. ✅\n\n` +
+                                  `Cualquier duda, estamos para ayudarte. ¡Gracias por confiar en Rutapp! 🚀`;
+                                const url = tel
+                                  ? `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
+                                  : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                                window.open(url, '_blank');
+                              }}
+                              title="Enviar link por WhatsApp (abre WhatsApp con mensaje listo)"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
+                        {inv.status === 'open' && (
+                          <Button size="sm" variant="ghost" disabled={sendingId === inv.id} onClick={() => sendInvoiceNotification(inv, 'email')} title="Enviar por correo">
+                            <Mail className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {inv.hosted_invoice_url && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" title="Ver en Stripe"><ExternalLink className="h-3.5 w-3.5" /></a>
+                            <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" title="Abrir página de pago"><ExternalLink className="h-3.5 w-3.5" /></a>
                           </Button>
                         )}
                         {inv.invoice_pdf && (
