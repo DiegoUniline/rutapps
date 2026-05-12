@@ -1182,7 +1182,7 @@ export default function MapaClientesPage() {
 
             {selectedCliente && (
               <InfoWindow
-                position={{ lat: selectedCliente.gps_lat, lng: selectedCliente.gps_lng }}
+                position={posOf(selectedCliente)}
                 onCloseClick={() => setSelectedCliente(null)}
               >
                 <div className="min-w-[220px] p-1">
