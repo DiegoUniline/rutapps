@@ -20,6 +20,8 @@ import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
 import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
 import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
@@ -96,6 +98,9 @@ export default function MapaClientesPage() {
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [diaFilter, setDiaFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [clienteIdsFilter, setClienteIdsFilter] = useState<Set<string>>(new Set());
+  const [clientesPickerOpen, setClientesPickerOpen] = useState(false);
+  const [clientePickerSearch, setClientePickerSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<OriginValue | null>(null);
@@ -338,8 +343,9 @@ export default function MapaClientesPage() {
     if (zonaFilter) result = result.filter((c: any) => c.zona_id === zonaFilter);
     if (vendedorFilter) result = result.filter((c: any) => c.vendedor_id === vendedorFilter);
     if (diaFilter) result = result.filter((c: any) => c.dia_visita?.includes(diaFilter));
+    if (clienteIdsFilter.size > 0) result = result.filter((c: any) => clienteIdsFilter.has(c.id));
     return result;
-  }, [clientes, zonaFilter, vendedorFilter, diaFilter]);
+  }, [clientes, zonaFilter, vendedorFilter, diaFilter, clienteIdsFilter]);
 
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
   const withoutGps = useMemo(() => filtered.filter((c: any) => !c.gps_lat || !c.gps_lng), [filtered]);
@@ -706,6 +712,91 @@ export default function MapaClientesPage() {
               placeholder="Vendedor..."
             />
           </div>
+
+          {/* Multi-cliente picker */}
+          <Popover open={clientesPickerOpen} onOpenChange={setClientesPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                  clienteIdsFilter.size > 0
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : "bg-background border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                {clienteIdsFilter.size > 0 ? `${clienteIdsFilter.size} cliente${clienteIdsFilter.size > 1 ? 's' : ''}` : 'Clientes'}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="start">
+              <div className="p-2 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente..."
+                    value={clientePickerSearch}
+                    onChange={e => setClientePickerSearch(e.target.value)}
+                    className="w-full bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[11px]">
+                  <span className="text-muted-foreground">
+                    {clienteIdsFilter.size} de {(clientes ?? []).length} seleccionado{clienteIdsFilter.size === 1 ? '' : 's'}
+                  </span>
+                  {clienteIdsFilter.size > 0 && (
+                    <button
+                      onClick={() => { setClienteIdsFilter(new Set()); setRouteResult(null); }}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="max-h-72 overflow-y-auto py-1">
+                {(() => {
+                  const term = clientePickerSearch.trim().toLowerCase();
+                  const baseList = (clientes ?? []) as any[];
+                  const list = term
+                    ? baseList.filter(c =>
+                        (c.nombre ?? '').toLowerCase().includes(term) ||
+                        (c.codigo ?? '').toLowerCase().includes(term)
+                      )
+                    : baseList;
+                  if (list.length === 0) {
+                    return <div className="px-3 py-6 text-center text-xs text-muted-foreground">Sin resultados</div>;
+                  }
+                  return list.slice(0, 200).map((c: any) => {
+                    const checked = clienteIdsFilter.has(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/40 cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => {
+                            setClienteIdsFilter(prev => {
+                              const next = new Set(prev);
+                              if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+                              return next;
+                            });
+                            setRouteResult(null);
+                          }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium text-foreground text-[13px]">{c.nombre}</div>
+                          {c.codigo && <div className="text-[10px] text-muted-foreground font-mono">{c.codigo}</div>}
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
