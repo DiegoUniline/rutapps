@@ -172,7 +172,7 @@ export default function MapaVentasPage() {
     if (!routeResult) return null;
     return routeResult.orderedIds.map(id => {
       const entrega = entregasConGps.find((e: any) => e.id === id);
-      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega.clientes.gps_lat, lng: entrega.clientes.gps_lng } : null;
+      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega._displayLat, lng: entrega._displayLng } : null;
     }).filter(Boolean);
   }, [routeResult, entregasConGps]);
 
