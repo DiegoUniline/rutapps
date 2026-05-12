@@ -902,6 +902,15 @@ export default function MapaClientesPage() {
                 )}
               </div>
             )}
+            <button
+              onClick={() => setSpreadOverlapping(s => !s)}
+              title="Separa visualmente los clientes que comparten la misma ubicación GPS"
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                spreadOverlapping ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+              <MapPin className="h-3.5 w-3.5" />
+              {spreadOverlapping ? 'Separados' : 'Separar repetidos'}
+            </button>
             {withoutGps.length > 0 && (
               <div className="relative">
                 <button
