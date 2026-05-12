@@ -63,6 +63,7 @@ interface Stop {
   folio?: string;
   tipo: 'cliente' | 'entrega';
   orden: number;
+  hasOrden: boolean;
   entregaRef?: any;
 }
 
