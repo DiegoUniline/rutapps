@@ -39,7 +39,7 @@ export function useClienteOrdenRuta(vendedorId?: string | null, dia?: string | n
           .eq('empresa_id', empresa!.id)
           .is('vendedor_id', null)
           .order('orden', { ascending: true });
-        gq = dia ? gq.eq('dia', dia) : gq.is('dia', null);
+        gq = dia ? gq.ilike('dia', dia) : gq.is('dia', null);
         const { data: gdata } = await gq;
         rows = (gdata ?? []) as any;
       }
