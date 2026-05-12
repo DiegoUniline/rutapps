@@ -82,12 +82,13 @@ export default function UsuariosTab({
             </tr>
           </thead>
           <tbody>
-            {profiles.map(p => {
+            {visibleProfiles.map(p => {
               const userRole = userRoles.find(ur => ur.user_id === p.user_id);
               const authUser = authUsers.find(au => au.id === p.user_id);
               const isOwnerUser = ownerUserId === p.user_id;
+              const isArchived = p.estado === 'archivado' || p.estado === 'baja';
               return (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer" onClick={() => onEditUser(p)}>
+                <tr key={p.id} className={cn("border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer", isArchived && "opacity-60")} onClick={() => onEditUser(p)}>
                   <td className="px-4 py-2.5">
                     <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
                     {isOwnerUser && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">Dueño</span>}
@@ -111,13 +112,22 @@ export default function UsuariosTab({
                     <div className="flex items-center gap-1">
                       <button onClick={() => onEditUser(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => onSetPassword(p.user_id, p.nombre || authUser?.email || '')} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
-                      {!isOwnerUser && (
+                      {!isOwnerUser && p.estado === 'activo' && (
                         <button
-                          onClick={() => onToggleEstado(p, authUser?.email)}
-                          className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
-                          title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
+                          onClick={() => onArchive(p, authUser?.email)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive"
+                          title="Archivar usuario"
                         >
-                          {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                          <Archive className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!isOwnerUser && isArchived && (
+                        <button
+                          onClick={() => onReactivate(p)}
+                          className="p-1 rounded hover:bg-accent text-success"
+                          title="Reactivar usuario"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
@@ -125,8 +135,8 @@ export default function UsuariosTab({
                 </tr>
               );
             })}
-            {profiles.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios registrados</td></tr>
+            {visibleProfiles.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios para mostrar</td></tr>
             )}
           </tbody>
         </table>
