@@ -1082,6 +1082,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       ];
                       const stripeMatch = stripeInvoices.find((si: any) => si.id === f.stripe_invoice_id);
                       const hostedUrl = stripeMatch?.hosted_invoice_url || null;
+                      const hasStripeInvoice = Boolean(f.stripe_invoice_id);
                       const isPending = (f.estado || 'pendiente') !== 'pagada';
                       const buildWaMsg = () => {
                         const monto = f.total != null ? fmtMXN(Number(f.total)) : '';
@@ -1141,7 +1142,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                   </Button>
                                 </>
                               ) : (
-                                <span className="text-xs text-muted-foreground">Link de pago no disponible (factura sin Stripe invoice)</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {hasStripeInvoice ? 'Buscando link de pago en Stripe… si no aparece, refresca la página.' : 'Link de pago no disponible (factura sin Stripe invoice)'}
+                                </span>
                               )}
                             </div>
                           )}
