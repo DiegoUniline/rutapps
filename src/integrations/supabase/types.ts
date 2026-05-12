@@ -4017,6 +4017,9 @@ export type Database = {
       profiles: {
         Row: {
           almacen_id: string | null
+          archivado_en: string | null
+          archivado_motivo: string | null
+          archivado_por: string | null
           avatar_url: string | null
           created_at: string
           empresa_id: string
@@ -4030,6 +4033,9 @@ export type Database = {
         }
         Insert: {
           almacen_id?: string | null
+          archivado_en?: string | null
+          archivado_motivo?: string | null
+          archivado_por?: string | null
           avatar_url?: string | null
           created_at?: string
           empresa_id: string
@@ -4043,6 +4049,9 @@ export type Database = {
         }
         Update: {
           almacen_id?: string | null
+          archivado_en?: string | null
+          archivado_motivo?: string | null
+          archivado_por?: string | null
           avatar_url?: string | null
           created_at?: string
           empresa_id?: string
@@ -6370,6 +6379,10 @@ export type Database = {
         }
         Returns: string
       }
+      archivar_usuario: {
+        Args: { p_force?: boolean; p_motivo?: string; p_profile_id: string }
+        Returns: Json
+      }
       calc_audit_stock_teorico: {
         Args: { p_linea_id: string }
         Returns: number
@@ -6393,6 +6406,7 @@ export type Database = {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
       }
+      count_active_users: { Args: { p_empresa_id: string }; Returns: number }
       deduct_timbre: {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
@@ -6460,12 +6474,25 @@ export type Database = {
           usuarios_activos: number
         }[]
       }
+      get_user_archive_summary: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
+      is_empresa_admin: {
+        Args: { p_empresa_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
+      }
+      reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
+      reasignar_pendientes_usuario: {
+        Args: { p_profile_id: string; p_target_profile_id: string }
+        Returns: Json
       }
       recalc_producto_costo: {
         Args: { p_producto_id: string }
