@@ -18,11 +18,12 @@ export default function SuperAdminMobileBar() {
     queryKey: ['sa-mobile-vendedores', empresa?.id],
     enabled: !!empresa?.id && isSuperAdmin,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, nombre, email')
+        .select('id, nombre, telefono')
         .eq('empresa_id', empresa!.id)
         .order('nombre');
+      if (error) console.error('[SA-Mobile] vendedores error:', error);
       return data ?? [];
     },
   });
