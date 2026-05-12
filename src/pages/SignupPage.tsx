@@ -324,7 +324,6 @@ export default function SignupPage() {
   }
 
   const isFormReady =
-    isVerified &&
     acceptedTerms &&
     acceptedPrivacy &&
     form.email.trim() &&
