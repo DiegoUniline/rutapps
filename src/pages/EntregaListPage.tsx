@@ -35,6 +35,9 @@ export default function EntregaListPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('todos');
+  const [rutaFilter, setRutaFilter] = useState('todos');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
