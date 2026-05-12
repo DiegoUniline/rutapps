@@ -17,7 +17,7 @@ import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
   ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2, Trash2,
-  Copy, MessageCircle
+  Copy, MessageCircle, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, differenceInDays } from 'date-fns';
