@@ -35,7 +35,9 @@ function saveLocalVisitedSet(set: Set<string>) {
 export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { empresa, profile } = useAuth();
+  const { user, empresa, profile, overrideEmpresaId, overrideVendedorId } = useAuth();
+  const isSAOverride = !!overrideEmpresaId;
+  const effectiveVendedorId = isSAOverride ? overrideVendedorId : (profile?.id ?? null);
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
