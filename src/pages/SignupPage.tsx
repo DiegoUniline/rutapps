@@ -283,7 +283,7 @@ export default function SignupPage() {
             phone: fullPhone,
             empresa_nombre: form.empresa,
             accepted_terms_at: new Date().toISOString(),
-            verified_via: verificationMethod,
+            verified_via: 'auto',
           },
           emailRedirectTo: window.location.origin,
         },
