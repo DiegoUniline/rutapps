@@ -22,7 +22,6 @@ import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntr
 import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users as UsersIcon } from 'lucide-react';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
