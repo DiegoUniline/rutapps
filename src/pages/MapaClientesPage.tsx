@@ -118,6 +118,7 @@ export default function MapaClientesPage() {
   const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
   const [showOriginPicker, setShowOriginPicker] = useState(false);
   const [showSinGps, setShowSinGps] = useState(false);
+  const [spreadOverlapping, setSpreadOverlapping] = useState(false);
   const [multiResults, setMultiResults] = useState<RouteResultEntry[] | null>(null);
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
