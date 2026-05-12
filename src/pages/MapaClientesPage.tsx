@@ -96,6 +96,9 @@ export default function MapaClientesPage() {
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [diaFilter, setDiaFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [clienteIdsFilter, setClienteIdsFilter] = useState<Set<string>>(new Set());
+  const [clientesPickerOpen, setClientesPickerOpen] = useState(false);
+  const [clientePickerSearch, setClientePickerSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<OriginValue | null>(null);
