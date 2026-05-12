@@ -999,7 +999,7 @@ Sistema de Gestión de Rutas<br>
 
         // Log notification
         await supabase.from("billing_notifications").insert({
-          customer_email,
+          customer_email: customer_email || null,
           customer_phone: phone,
           channel: "whatsapp",
           tipo: "factura",
