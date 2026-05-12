@@ -6356,6 +6356,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _mover_stock_entre_almacenes: {
+        Args: {
+          p_almacen_destino: string
+          p_almacen_origen: string
+          p_cantidad: number
+          p_empresa_id: string
+          p_fecha: string
+          p_notas: string
+          p_producto_id: string
+          p_referencia_id: string
+          p_referencia_tipo: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       add_timbres: {
         Args: {
           p_cantidad: number
@@ -6386,6 +6401,10 @@ export type Database = {
       calc_audit_stock_teorico: {
         Args: { p_linea_id: string }
         Returns: number
+      }
+      cancelar_entregas_bulk: {
+        Args: { p_entrega_ids: string[]; p_motivo?: string; p_user_id?: string }
+        Returns: Json
       }
       cancelar_merma: { Args: { _merma_id: string }; Returns: undefined }
       cancelar_traspaso: {
@@ -6439,6 +6458,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_entregas_bulk_preview: {
+        Args: { p_entrega_ids: string[]; p_target_vendedor_id?: string }
+        Returns: Json
+      }
       get_inactive_empresas: {
         Args: { p_dias_inactivo?: number; p_dias_vencido?: number }
         Returns: {
@@ -6490,6 +6513,14 @@ export type Database = {
         Returns: string
       }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
+      reasignar_entregas_bulk: {
+        Args: {
+          p_entrega_ids: string[]
+          p_target_vendedor_id: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       reasignar_pendientes_usuario: {
         Args: { p_profile_id: string; p_target_profile_id: string }
         Returns: Json
@@ -6540,6 +6571,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      reprogramar_entregas_bulk: {
+        Args: { p_entrega_ids: string[]; p_nueva_fecha: string }
+        Returns: Json
       }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
       surtir_linea_entrega: {
