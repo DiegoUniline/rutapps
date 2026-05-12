@@ -236,13 +236,17 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const stops: Stop[] = useMemo(() => {
     const clientStops: Stop[] = (clientesData ?? [])
       .filter(c => !attendedClientIds.has(c.id))
-      .map((c, i) => ({
-        id: `cli-${c.id}`, nombre: c.nombre,
-        direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
-        telefono: c.telefono ?? undefined,
-        gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
-        orden: c.orden ?? i,
-      }));
+      .map((c, i) => {
+        const ord = ordenMap.get(c.id);
+        return {
+          id: `cli-${c.id}`, nombre: c.nombre,
+          direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
+          telefono: c.telefono ?? undefined,
+          gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
+          orden: ord ?? c.orden ?? (10000 + i),
+          hasOrden: ord != null,
+        };
+      });
 
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
@@ -260,6 +264,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
           gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
           folio: e.folio, tipo: 'entrega' as const,
           orden: e.orden_entrega ?? 999,
+          hasOrden: true, // entregas siempre tienen orden de despacho
           entregaRef: e,
         };
       })
@@ -267,10 +272,13 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
     // Merge: entregas first (priority), then client visits
     const all = [...entregaStops, ...clientStops];
-    // Sort by orden
-    all.sort((a, b) => a.orden - b.orden);
+    // Sort: optimizados primero por orden, no-optimizados al final
+    all.sort((a, b) => {
+      if (a.hasOrden !== b.hasOrden) return a.hasOrden ? -1 : 1;
+      return a.orden - b.orden;
+    });
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds, ordenMap]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
