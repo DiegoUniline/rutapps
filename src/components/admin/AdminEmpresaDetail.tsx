@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
-  ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2, Trash2
+  ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2, Trash2,
+  Copy, MessageCircle
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, differenceInDays } from 'date-fns';
@@ -1075,6 +1076,20 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                         ['Stripe payment intent', f.stripe_payment_intent_id],
                         ['Creado en', fmtDate(f.creado_en, true)],
                       ];
+                      const stripeMatch = stripeInvoices.find((si: any) => si.id === f.stripe_invoice_id);
+                      const hostedUrl = stripeMatch?.hosted_invoice_url || null;
+                      const isPending = (f.estado || 'pendiente') !== 'pagada';
+                      const buildWaMsg = () => {
+                        const monto = f.total != null ? fmtMXN(Number(f.total)) : '';
+                        const folio = f.numero_factura ? ` (${f.numero_factura})` : '';
+                        return (
+                          `¡Hola! 👋\n\n` +
+                          `Te compartimos el link de pago de tu factura${folio} de *${empresa?.nombre || 'tu suscripción'}*${monto ? ` por *${monto}*` : ''}.\n\n` +
+                          `💳 Paga en línea de forma segura aquí:\n${hostedUrl}\n\n` +
+                          `Aceptamos tarjeta de crédito/débito. Una vez procesado el pago, tu cuenta se reactiva automáticamente. ✅\n\n` +
+                          `Cualquier duda, estamos para ayudarte. ¡Gracias por confiar en Rutapp! 🚀`
+                        );
+                      };
                       return (
                         <div key={f.id} className="border border-border/60 rounded-lg p-4 bg-card">
                           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -1084,8 +1099,48 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                 {f.estado || 'pendiente'}
                               </Badge>
                             </div>
-                            <span className="font-semibold text-primary">{f.total != null ? fmtMXN(Number(f.total)) : '—'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-primary">{f.total != null ? fmtMXN(Number(f.total)) : '—'}</span>
+                            </div>
                           </div>
+                          {isPending && (
+                            <div className="flex flex-wrap gap-2 mb-3 p-2 rounded-md bg-primary/5 border border-primary/20">
+                              {hostedUrl ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(hostedUrl);
+                                      toast.success('Link de pago copiado');
+                                    }}
+                                  >
+                                    <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar link
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => {
+                                      const tel = (empresa?.telefono || '').replace(/\D/g, '');
+                                      const url = tel
+                                        ? `https://wa.me/${tel}?text=${encodeURIComponent(buildWaMsg())}`
+                                        : `https://wa.me/?text=${encodeURIComponent(buildWaMsg())}`;
+                                      window.open(url, '_blank');
+                                    }}
+                                  >
+                                    <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> Enviar por WhatsApp
+                                  </Button>
+                                  <Button size="sm" variant="ghost" asChild>
+                                    <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir página de pago
+                                    </a>
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Link de pago no disponible (factura sin Stripe invoice)</span>
+                              )}
+                            </div>
+                          )}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                             {fields.map(([k, v]) => (
                               <div key={k} className="flex flex-col border-b border-border/30 pb-1">
