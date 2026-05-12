@@ -739,6 +739,48 @@ export default function MapaClientesPage() {
                 ))}
               </div>
             )}
+            {orderedClients && orderedClients.length > 0 && !multiResults && (
+              <div className="relative">
+                <button
+                  onClick={() => { setShowRoutePanel(s => !s); setShowSinGps(false); setShowOriginPicker(false); }}
+                  className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                    showRoutePanel ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+                  <Route className="h-3.5 w-3.5" />
+                  Orden de visita ({orderedClients.length})
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", showRoutePanel && "rotate-180")} />
+                </button>
+                {showRoutePanel && (
+                  <div className="absolute top-full right-0 mt-2 z-30 w-72 bg-card border border-border rounded-xl shadow-lg max-h-[60vh] flex flex-col">
+                    <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+                      <Route className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Orden de visita</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground">{orderedClients.length} paradas</span>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      {orderedClients.map((c: any, idx: number) => {
+                        const visited = ventasHoy?.has(c.id);
+                        return (
+                          <button key={c.id}
+                            onClick={() => { setSelectedCliente(c); mapRef.current?.panTo({ lat: c.gps_lat, lng: c.gps_lng }); }}
+                            className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border/30 last:border-0 w-full text-left hover:bg-accent/30 transition-colors">
+                            <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0",
+                              visited ? "bg-[hsl(var(--success))] text-white" : "bg-primary text-primary-foreground")}>
+                              {visited ? '✓' : idx + 1}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
+                              {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
+                            </div>
+                            {visited && <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {withoutGps.length > 0 && (
               <div className="relative">
                 <button
@@ -1058,44 +1100,7 @@ export default function MapaClientesPage() {
         <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar (single route, hidden when multi-route panel is active) */}
-        {orderedClients && orderedClients.length > 0 && !multiResults && (
-          <div className={cn("absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-72 flex flex-col transition-all",
-            showRoutePanel ? "max-h-[65vh]" : "max-h-[42px]")}>
-            <button onClick={() => setShowRoutePanel(!showRoutePanel)}
-              className="px-3 py-2.5 border-b border-border flex items-center justify-between w-full hover:bg-accent/30 transition-colors rounded-t-xl">
-              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Route className="h-3.5 w-3.5 text-primary" />
-                Orden de visita
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground">{orderedClients.length} paradas</span>
-                {showRoutePanel ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-              </div>
-            </button>
-            {showRoutePanel && (
-              <div className="flex-1 overflow-auto">
-                {orderedClients.map((c: any, idx: number) => {
-                  const visited = ventasHoy?.has(c.id);
-                  return (
-                    <button key={c.id}
-                      onClick={() => { setSelectedCliente(c); mapRef.current?.panTo({ lat: c.gps_lat, lng: c.gps_lng }); }}
-                      className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border/30 last:border-0 w-full text-left hover:bg-accent/30 transition-colors">
-                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0",
-                        visited ? "bg-[hsl(var(--success))] text-white" : "bg-primary text-primary-foreground")}>
-                        {visited ? '✓' : idx + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                        {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
-                      </div>
-                      {visited && <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {/* "Orden de visita" panel moved to toolbar dropdown */}
 
         {/* Multi-route panel */}
         {multiResults && multiResults.length > 0 && (
