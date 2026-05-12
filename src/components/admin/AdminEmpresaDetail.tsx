@@ -17,7 +17,7 @@ import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
   ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2, Trash2,
-  Copy, MessageCircle
+  Copy, MessageCircle, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, differenceInDays } from 'date-fns';
@@ -49,6 +49,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [usersDetailed, setUsersDetailed] = useState<any[]>([]);
   const [sendingWaId, setSendingWaId] = useState<string | null>(null);
+  const [expandedFacturaId, setExpandedFacturaId] = useState<string | null>(null);
   const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
   const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
@@ -1053,143 +1054,164 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 {facturas.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">Sin facturas registradas</p>
                 ) : (
-                  <div className="space-y-3">
-                    {facturas.map(f => {
-                      const fmtDate = (v: any, withTime = false) => {
-                        if (!v) return '—';
-                        try { return format(new Date(v), withTime ? 'dd MMM yyyy HH:mm' : 'dd MMM yyyy', { locale: es }); }
-                        catch { return String(v); }
-                      };
-                      const fields: Array<[string, any]> = [
-                        ['ID', f.id],
-                        ['Número', f.numero_factura],
-                        ['Empresa ID', f.empresa_id],
-                        ['Suscripción ID', f.suscripcion_id],
-                        ['Período inicio', f.periodo_inicio ? fmtDate(f.periodo_inicio) : '—'],
-                        ['Período fin', f.periodo_fin ? fmtDate(f.periodo_fin) : '—'],
-                        ['Núm. usuarios', f.num_usuarios],
-                        ['Precio unitario', f.precio_unitario != null ? fmtMXN(Number(f.precio_unitario)) : '—'],
-                        ['Descuento %', f.descuento_porcentaje ?? 0],
-                        ['Subtotal', f.subtotal != null ? fmtMXN(Number(f.subtotal)) : '—'],
-                        ['Total', f.total != null ? fmtMXN(Number(f.total)) : '—'],
-                        ['Estado', f.estado || 'pendiente'],
-                        ['Es prorrateo', f.es_prorrateo ? 'Sí' : 'No'],
-                        ['Fecha emisión', fmtDate(f.fecha_emision, true)],
-                        ['Fecha pago', fmtDate(f.fecha_pago, true)],
-                        ['Fecha vencimiento', fmtDate(f.fecha_vencimiento, true)],
-                        ['Stripe invoice ID', f.stripe_invoice_id],
-                        ['Stripe payment intent', f.stripe_payment_intent_id],
-                        ['Creado en', fmtDate(f.creado_en, true)],
-                      ];
-                      const stripeMatch = stripeInvoices.find((si: any) => si.id === f.stripe_invoice_id);
-                      const hostedUrl = stripeMatch?.hosted_invoice_url || null;
-                      const hasStripeInvoice = Boolean(f.stripe_invoice_id);
-                      const isPending = (f.estado || 'pendiente') !== 'pagada';
-                      const buildWaMsg = () => {
-                        const monto = f.total != null ? fmtMXN(Number(f.total)) : '';
-                        const folio = f.numero_factura ? ` (${f.numero_factura})` : '';
-                        return (
-                          `¡Hola! 👋\n\n` +
-                          `Te compartimos el link de pago de tu factura${folio} de *${empresa?.nombre || 'tu suscripción'}*${monto ? ` por *${monto}*` : ''}.\n\n` +
-                          `💳 Paga en línea de forma segura aquí:\n${hostedUrl}\n\n` +
-                          `Aceptamos tarjeta de crédito/débito. Una vez procesado el pago, tu cuenta se reactiva automáticamente. ✅\n\n` +
-                          `Cualquier duda, estamos para ayudarte. ¡Gracias por confiar en Rutapp! 🚀`
-                        );
-                      };
-                      return (
-                        <div key={f.id} className="border border-border/60 rounded-lg p-4 bg-card">
-                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-semibold">{f.numero_factura || '—'}</span>
-                              <Badge variant={f.estado === 'pagada' ? 'default' : f.estado === 'pendiente' ? 'destructive' : 'secondary'}>
-                                {f.estado || 'pendiente'}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-primary">{f.total != null ? fmtMXN(Number(f.total)) : '—'}</span>
-                            </div>
-                          </div>
-                          {isPending && (
-                            <div className="flex flex-wrap gap-2 mb-3 p-2 rounded-md bg-primary/5 border border-primary/20">
-                              {hostedUrl ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(hostedUrl);
-                                      toast.success('Link de pago copiado');
-                                    }}
-                                  >
-                                    <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar link
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                    disabled={sendingWaId === f.id}
-                                    onClick={async () => {
-                                      const tel = (empresa?.telefono || '').replace(/\D/g, '');
-                                      if (!tel) {
-                                        toast.error('La empresa no tiene teléfono registrado');
-                                        return;
-                                      }
-                                      try {
-                                        setSendingWaId(f.id);
-                                        const { data, error } = await supabase.functions.invoke('admin-billing', {
-                                          body: {
-                                            action: 'send_invoice_notification',
-                                            channel: 'whatsapp',
-                                            phone_override: tel,
-                                            empresa_id: empresaId,
-                                            empresa_nombre: empresa?.nombre || '',
-                                            folio: f.numero_factura || '',
-                                            fecha_vencimiento: f.fecha_vencimiento || null,
-                                            amount: Math.round(Number(f.total || 0) * 100),
-                                            hosted_url: hostedUrl,
-                                            invoice_id: f.stripe_invoice_id || null,
-                                            description: `Factura ${f.numero_factura || ''}`,
-                                          },
-                                        });
-                                        if (error) throw error;
-                                        if (data?.success === false) throw new Error(data?.error || 'Error');
-                                        toast.success('WhatsApp enviado al cliente ✅');
-                                      } catch (e: any) {
-                                        toast.error(`No se pudo enviar: ${e.message || e}`);
-                                      } finally {
-                                        setSendingWaId(null);
-                                      }
-                                    }}
-                                  >
-                                    {sendingWaId === f.id ? (
-                                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Enviando…</>
-                                    ) : (
-                                      <><MessageCircle className="h-3.5 w-3.5 mr-1.5" /> Enviar por WhatsApp</>
+                  <div className="border border-border/60 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead className="w-8"></TableHead>
+                          <TableHead>Número</TableHead>
+                          <TableHead>Fecha emisión</TableHead>
+                          <TableHead>Vencimiento</TableHead>
+                          <TableHead>Usuarios</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...facturas]
+                          .sort((a, b) => {
+                            const da = new Date(a.creado_en || a.fecha_emision || 0).getTime();
+                            const db = new Date(b.creado_en || b.fecha_emision || 0).getTime();
+                            return db - da;
+                          })
+                          .map(f => {
+                            const fmtDate = (v: any, withTime = false) => {
+                              if (!v) return '—';
+                              try { return format(new Date(v), withTime ? 'dd MMM yyyy HH:mm' : 'dd MMM yyyy', { locale: es }); }
+                              catch { return String(v); }
+                            };
+                            const stripeMatch = stripeInvoices.find((si: any) => si.id === f.stripe_invoice_id);
+                            const hostedUrl = stripeMatch?.hosted_invoice_url || null;
+                            const hasStripeInvoice = Boolean(f.stripe_invoice_id);
+                            const isPending = (f.estado || 'pendiente') !== 'pagada';
+                            const isExpanded = expandedFacturaId === f.id;
+                            const fields: Array<[string, any]> = [
+                              ['ID', f.id],
+                              ['Empresa ID', f.empresa_id],
+                              ['Suscripción ID', f.suscripcion_id],
+                              ['Período inicio', f.periodo_inicio ? fmtDate(f.periodo_inicio) : '—'],
+                              ['Período fin', f.periodo_fin ? fmtDate(f.periodo_fin) : '—'],
+                              ['Precio unitario', f.precio_unitario != null ? fmtMXN(Number(f.precio_unitario)) : '—'],
+                              ['Descuento %', f.descuento_porcentaje ?? 0],
+                              ['Subtotal', f.subtotal != null ? fmtMXN(Number(f.subtotal)) : '—'],
+                              ['Es prorrateo', f.es_prorrateo ? 'Sí' : 'No'],
+                              ['Fecha pago', fmtDate(f.fecha_pago, true)],
+                              ['Stripe invoice ID', f.stripe_invoice_id],
+                              ['Stripe payment intent', f.stripe_payment_intent_id],
+                              ['Creado en', fmtDate(f.creado_en, true)],
+                            ];
+                            return (
+                              <>
+                                <TableRow
+                                  key={f.id}
+                                  className="cursor-pointer hover:bg-muted/30"
+                                  onClick={() => setExpandedFacturaId(isExpanded ? null : f.id)}
+                                >
+                                  <TableCell className="py-2">
+                                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                  </TableCell>
+                                  <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
+                                  <TableCell className="text-sm">{fmtDate(f.fecha_emision)}</TableCell>
+                                  <TableCell className="text-sm">{fmtDate(f.fecha_vencimiento)}</TableCell>
+                                  <TableCell className="text-sm">{f.num_usuarios ?? '—'}</TableCell>
+                                  <TableCell className="text-right font-semibold text-primary">
+                                    {f.total != null ? fmtMXN(Number(f.total)) : '—'}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={f.estado === 'pagada' ? 'default' : f.estado === 'pendiente' ? 'destructive' : 'secondary'}>
+                                      {f.estado || 'pendiente'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                    {isPending && hostedUrl && (
+                                      <div className="flex justify-end gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          title="Copiar link"
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(hostedUrl);
+                                            toast.success('Link de pago copiado');
+                                          }}
+                                        >
+                                          <Copy className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700 text-white h-8"
+                                          disabled={sendingWaId === f.id}
+                                          title="Enviar por WhatsApp"
+                                          onClick={async () => {
+                                            const tel = (empresa?.telefono || '').replace(/\D/g, '');
+                                            if (!tel) {
+                                              toast.error('La empresa no tiene teléfono registrado');
+                                              return;
+                                            }
+                                            try {
+                                              setSendingWaId(f.id);
+                                              const { data, error } = await supabase.functions.invoke('admin-billing', {
+                                                body: {
+                                                  action: 'send_invoice_notification',
+                                                  channel: 'whatsapp',
+                                                  phone_override: tel,
+                                                  empresa_id: empresaId,
+                                                  empresa_nombre: empresa?.nombre || '',
+                                                  folio: f.numero_factura || '',
+                                                  fecha_vencimiento: f.fecha_vencimiento || null,
+                                                  amount: Math.round(Number(f.total || 0) * 100),
+                                                  hosted_url: hostedUrl,
+                                                  invoice_id: f.stripe_invoice_id || null,
+                                                  description: `Factura ${f.numero_factura || ''}`,
+                                                },
+                                              });
+                                              if (error) throw error;
+                                              if (data?.success === false) throw new Error(data?.error || 'Error');
+                                              toast.success('WhatsApp enviado al cliente ✅');
+                                            } catch (e: any) {
+                                              toast.error(`No se pudo enviar: ${e.message || e}`);
+                                            } finally {
+                                              setSendingWaId(null);
+                                            }
+                                          }}
+                                        >
+                                          {sendingWaId === f.id
+                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            : <MessageCircle className="h-3.5 w-3.5" />}
+                                        </Button>
+                                        <Button size="sm" variant="ghost" asChild title="Abrir página de pago">
+                                          <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                          </a>
+                                        </Button>
+                                      </div>
                                     )}
-                                  </Button>
-                                  <Button size="sm" variant="ghost" asChild>
-                                    <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir página de pago
-                                    </a>
-                                  </Button>
-                                </>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">
-                                  {hasStripeInvoice ? 'Buscando link de pago en Stripe… si no aparece, refresca la página.' : 'Link de pago no disponible (factura sin Stripe invoice)'}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                            {fields.map(([k, v]) => (
-                              <div key={k} className="flex flex-col border-b border-border/30 pb-1">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wide">{k}</span>
-                                <span className="font-mono text-xs break-all">{v == null || v === '' ? '—' : String(v)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                    {isPending && !hostedUrl && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {hasStripeInvoice ? 'Buscando link…' : 'Sin link'}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                                {isExpanded && (
+                                  <TableRow key={`${f.id}-exp`} className="bg-muted/20 hover:bg-muted/20">
+                                    <TableCell colSpan={8} className="p-4">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                                        {fields.map(([k, v]) => (
+                                          <div key={k} className="flex flex-col border-b border-border/30 pb-1">
+                                            <span className="text-xs text-muted-foreground uppercase tracking-wide">{k}</span>
+                                            <span className="font-mono text-xs break-all">{v == null || v === '' ? '—' : String(v)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </>
+                            );
+                          })}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
