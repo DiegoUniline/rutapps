@@ -227,14 +227,6 @@ export default function SignupPage() {
       toast.error(phoneError);
       return;
     }
-    if (!verificationMethod) {
-      toast.error('Selecciona un método de verificación');
-      return;
-    }
-    if (verificationMethod === 'whatsapp' && !otpVerified) {
-      toast.error('Debes verificar tu número de WhatsApp');
-      return;
-    }
     if (!acceptedTerms || !acceptedPrivacy) {
       toast.error('Debes aceptar los Términos y el Aviso de Privacidad');
       return;
