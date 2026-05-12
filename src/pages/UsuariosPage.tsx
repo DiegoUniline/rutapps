@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useUsuarios } from '@/hooks/useUsuarios';
+import { useUsuarios, type ProfileUser } from '@/hooks/useUsuarios';
 import { useRoles } from '@/hooks/useRoles';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -12,6 +14,7 @@ import RolesTab from '@/components/usuarios/RolesTab';
 import EditUserModal from '@/components/usuarios/modals/EditUserModal';
 import NewUserModal from '@/components/usuarios/modals/NewUserModal';
 import PasswordModal from '@/components/usuarios/modals/PasswordModal';
+import ArchiveUserWizard from '@/components/usuarios/modals/ArchiveUserWizard';
 
 export default function UsuariosPage() {
   const { empresa } = useAuth();
