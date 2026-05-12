@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import ModalSelect from '@/components/ModalSelect';
-import { Receipt, Search, ExternalLink, Download, Plus, Send, Mail, MessageCircle, Building2, Users, Percent, FileText, Phone, Globe } from 'lucide-react';
+import { Receipt, Search, ExternalLink, Download, Plus, Send, Mail, MessageCircle, Building2, Users, Percent, FileText, Phone, Globe, Copy, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
