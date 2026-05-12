@@ -235,7 +235,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
-        (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId) &&
+        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
         !attendedClientIds.has(e.cliente_id)
       )
       .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
