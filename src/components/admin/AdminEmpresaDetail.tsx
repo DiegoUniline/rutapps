@@ -48,6 +48,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [timbres, setTimbres] = useState(0);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [usersDetailed, setUsersDetailed] = useState<any[]>([]);
+  const [sendingWaId, setSendingWaId] = useState<string | null>(null);
   const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
   const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
@@ -1125,15 +1126,45 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                   <Button
                                     size="sm"
                                     className="bg-green-600 hover:bg-green-700 text-white"
-                                    onClick={() => {
+                                    disabled={sendingWaId === f.id}
+                                    onClick={async () => {
                                       const tel = (empresa?.telefono || '').replace(/\D/g, '');
-                                      const url = tel
-                                        ? `https://wa.me/${tel}?text=${encodeURIComponent(buildWaMsg())}`
-                                        : `https://wa.me/?text=${encodeURIComponent(buildWaMsg())}`;
-                                      window.open(url, '_blank');
+                                      if (!tel) {
+                                        toast.error('La empresa no tiene teléfono registrado');
+                                        return;
+                                      }
+                                      try {
+                                        setSendingWaId(f.id);
+                                        const { data, error } = await supabase.functions.invoke('admin-billing', {
+                                          body: {
+                                            action: 'send_invoice_notification',
+                                            channel: 'whatsapp',
+                                            phone_override: tel,
+                                            empresa_id: empresaId,
+                                            empresa_nombre: empresa?.nombre || '',
+                                            folio: f.numero_factura || '',
+                                            fecha_vencimiento: f.fecha_vencimiento || null,
+                                            amount: Math.round(Number(f.total || 0) * 100),
+                                            hosted_url: hostedUrl,
+                                            invoice_id: f.stripe_invoice_id || null,
+                                            description: `Factura ${f.numero_factura || ''}`,
+                                          },
+                                        });
+                                        if (error) throw error;
+                                        if (data?.success === false) throw new Error(data?.error || 'Error');
+                                        toast.success('WhatsApp enviado al cliente ✅');
+                                      } catch (e: any) {
+                                        toast.error(`No se pudo enviar: ${e.message || e}`);
+                                      } finally {
+                                        setSendingWaId(null);
+                                      }
                                     }}
                                   >
-                                    <MessageCircle className="h-3.5 w-3.5 mr-1.5" /> Enviar por WhatsApp
+                                    {sendingWaId === f.id ? (
+                                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Enviando…</>
+                                    ) : (
+                                      <><MessageCircle className="h-3.5 w-3.5 mr-1.5" /> Enviar por WhatsApp</>
+                                    )}
                                   </Button>
                                   <Button size="sm" variant="ghost" asChild>
                                     <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
