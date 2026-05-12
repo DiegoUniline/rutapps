@@ -916,37 +916,72 @@ Sistema de Gestión de Rutas<br>
 
     // ─── Send invoice notification via WhatsApp or email ───
     if (action === "send_invoice_notification") {
-      const { channel, customer_email, amount, hosted_url, description, invoice_id } = body;
+      const {
+        channel, customer_email, amount, hosted_url, description, invoice_id,
+        phone_override, empresa_nombre, folio, fecha_vencimiento, empresa_id: empresa_id_body,
+      } = body;
 
       let notifStatus = "sent";
       let errorDetalle: string | null = null;
       let mensaje = "";
 
       if (channel === "whatsapp") {
-        const { data: allUsersData } = await supabase.auth.admin.listUsers();
-        const matchUser = allUsersData?.users?.find((u: any) => u.email === customer_email);
-        if (!matchUser) throw new Error("Usuario no encontrado con ese email");
+        let phone: string | null = null;
+        let empresaIdForToken: string | null = empresa_id_body || null;
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("telefono, empresa_id")
-          .eq("user_id", matchUser.id)
-          .maybeSingle();
-        if (!profile?.telefono) throw new Error("El cliente no tiene teléfono registrado");
+        if (phone_override) {
+          phone = String(phone_override).replace(/[\s\-\(\)]/g, "");
+        } else {
+          const { data: allUsersData } = await supabase.auth.admin.listUsers();
+          const matchUser = allUsersData?.users?.find((u: any) => u.email === customer_email);
+          if (!matchUser) throw new Error("Usuario no encontrado con ese email");
 
-        const { data: waConfig } = await supabase
-          .from("whatsapp_config")
-          .select("api_token")
-          .eq("empresa_id", profile.empresa_id)
-          .maybeSingle();
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("telefono, empresa_id")
+            .eq("user_id", matchUser.id)
+            .maybeSingle();
+          if (!profile?.telefono) throw new Error("El cliente no tiene teléfono registrado");
+          phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
+          empresaIdForToken = profile.empresa_id;
+        }
 
-        const waToken = waConfig?.api_token || Deno.env.get("ADMIN_WHATSAPP_TOKEN");
+        // Token: try empresa-specific, then any available, then env fallback
+        let waToken: string | null = null;
+        if (empresaIdForToken) {
+          const { data: waConfig } = await supabase
+            .from("whatsapp_config")
+            .select("api_token")
+            .eq("empresa_id", empresaIdForToken)
+            .maybeSingle();
+          waToken = waConfig?.api_token || null;
+        }
+        if (!waToken) {
+          const { data: anyWa } = await supabase
+            .from("whatsapp_config")
+            .select("api_token")
+            .not("api_token", "is", null)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          waToken = anyWa?.api_token || null;
+        }
+        if (!waToken) waToken = Deno.env.get("ADMIN_WHATSAPP_TOKEN") || null;
         if (!waToken) throw new Error("Token de WhatsApp no configurado");
 
-        const amountFmt = `$${(amount / 100).toLocaleString("es-MX")} MXN`;
-        mensaje = `📋 *Factura Rutapp*\n\n${description || "Suscripción Rutapp"}\nMonto: ${amountFmt}\n\n💳 Paga aquí:\n${hosted_url}\n\nGracias por tu preferencia 🙌`;
+        const amountFmt = `$${(amount / 100).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`;
+        const folioTxt = folio ? ` *${folio}*` : "";
+        const vencTxt = fecha_vencimiento
+          ? `\n⏰ *Vence:* ${new Date(fecha_vencimiento).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}`
+          : "";
+        const nombreTxt = empresa_nombre ? ` *${empresa_nombre}*` : "";
+        mensaje = `¡Hola${nombreTxt}! 👋\n\n` +
+          `Te compartimos el link de pago de tu factura${folioTxt} de Rutapp.\n\n` +
+          `💰 *Total:* ${amountFmt}${vencTxt}\n\n` +
+          `💳 *Paga en línea de forma segura aquí:*\n${hosted_url}\n\n` +
+          `Aceptamos tarjeta de crédito/débito. Una vez procesado el pago, tu cuenta se reactiva automáticamente. ✅\n\n` +
+          `Cualquier duda, estamos para ayudarte.\n¡Gracias por confiar en Rutapp! 🚀`;
 
-        const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
         try {
           const apiRes = await fetch(WHATSAPI_URL, {
             method: "POST",
