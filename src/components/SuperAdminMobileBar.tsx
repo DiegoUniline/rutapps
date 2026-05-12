@@ -43,7 +43,7 @@ export default function SuperAdminMobileBar() {
       >
         <option value="">Todos los vendedores</option>
         {(vendedores ?? []).map((v: any) => (
-          <option key={v.id} value={v.id}>{v.nombre || v.email}</option>
+          <option key={v.id} value={v.id}>{v.nombre || v.telefono || v.id.slice(0, 8)}</option>
         ))}
       </select>
     </div>
