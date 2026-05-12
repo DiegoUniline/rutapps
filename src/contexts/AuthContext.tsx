@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [realEmpresa, setRealEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const [overrideEmpresaId, setOverrideEmpresaIdRaw] = useState<string | null>(null);
+  const [overrideVendedorId, setOverrideVendedorId] = useState<string | null>(null);
 
   const loadUserData = useCallback(async (u: User | null) => {
     if (!u) {
