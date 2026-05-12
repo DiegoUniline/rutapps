@@ -28,7 +28,7 @@ export function useClienteOrdenRuta(vendedorId?: string | null, dia?: string | n
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
       if (error) throw error;
-      let rows = (data ?? []) as { cliente_id: string; orden: number; vendedor_id: string | null }[];
+      let rows = ((data ?? []) as unknown) as { cliente_id: string; orden: number; vendedor_id: string | null }[];
 
       // Fallback: if vendor has no specific route saved, use the global
       // (vendedor_id IS NULL) route the supervisor saved for that day.
