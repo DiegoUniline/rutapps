@@ -152,9 +152,10 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients for today (respecting visibility — same logic as RutaClientes)
+  // Fetch clients for today (respecting visibility — same logic as RutaClientes).
+  // Super admin: filter by chosen vendedor (if any) instead of profile.id.
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id, filterDia, profile?.id, clientesVisibilidad],
+    queryKey: ['nav-clientes', empresa?.id, filterDia, profile?.id, clientesVisibilidad, isSuperAdmin ? superVendedorId : null],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -164,14 +165,19 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter(c => {
-        // Respect visibility setting
-        if (clientesVisibilidad === 'propios' && profile?.id) {
+        // Super admin override: only show clients of chosen vendedor
+        if (isSuperAdmin && superVendedorId) {
+          if (c.vendedor_id !== superVendedorId) return false;
+        } else if (clientesVisibilidad === 'propios' && profile?.id) {
           if (c.vendedor_id !== profile.id) return false;
         }
         return c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng;
       });
     },
   });
+
+  // Saved optimization order (same source the desktop map uses)
+  const { ordenMap } = useClienteOrdenRuta(vendedorId, filterDia);
 
   // Fetch visitas of the filter date (clients already attended: sale, order, or no-sale)
   const { data: visitasHoy } = useQuery({
