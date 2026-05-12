@@ -361,6 +361,21 @@ export default function EntregaListPage() {
             Cargar camión ({selectedIds.size})
           </Button>
         )}
+
+        {/* Acciones masivas universales (con preview e inventario automático) */}
+        {selectedIds.size > 0 && (
+          <>
+            <Button onClick={() => setBulkAction('reasignar')} variant="outline" className="gap-1.5">
+              <ArrowRightLeft className="h-4 w-4" /> Reasignar ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setBulkAction('reprogramar')} variant="outline" className="gap-1.5">
+              <Calendar className="h-4 w-4" /> Reprogramar ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setBulkAction('cancelar')} variant="outline" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10">
+              <XCircle className="h-4 w-4" /> Cancelar ({selectedIds.size})
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Table */}
