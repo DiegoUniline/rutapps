@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle override empresa for super admin
   const setOverrideEmpresaId = useCallback(async (id: string | null) => {
     setOverrideEmpresaIdRaw(id);
+    setOverrideVendedorId(null);
     if (!id) {
       // Restore original empresa
       setEmpresa(realEmpresa);
