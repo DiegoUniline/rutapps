@@ -60,13 +60,19 @@ export default function UsuariosTab({
             </span>
           )}
         </div>
-        <button
-          onClick={onNewUser}
-          disabled={availableSlots <= 0}
-          className={cn("btn-odoo-primary text-xs", availableSlots <= 0 && "opacity-50 cursor-not-allowed")}
-        >
-          <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="h-3.5 w-3.5" />
+            Mostrar archivados
+          </label>
+          <button
+            onClick={onNewUser}
+            disabled={availableSlots <= 0}
+            className={cn("btn-odoo-primary text-xs", availableSlots <= 0 && "opacity-50 cursor-not-allowed")}
+          >
+            <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
+          </button>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-auto">
