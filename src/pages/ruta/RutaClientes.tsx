@@ -35,7 +35,9 @@ function saveLocalVisitedSet(set: Set<string>) {
 export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { empresa, profile } = useAuth();
+  const { empresa, profile, overrideEmpresaId, overrideVendedorId } = useAuth();
+  const isSAOverride = !!overrideEmpresaId;
+  const effectiveVendedorId = isSAOverride ? overrideVendedorId : (profile?.id ?? null);
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
@@ -139,21 +141,37 @@ export default function RutaClientes() {
     toast.success(`GPS guardado para ${cliente.nombre}`);
   }, [offlineMutate]);
 
-  const { data: clientes, isLoading, refetch } = useOfflineQuery('clientes', {
+  const offlineRes = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
     status: 'activo',
   }, {
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && !isSAOverride,
     orderBy: 'orden',
   });
+  const saRes = useQuery({
+    queryKey: ['sa-ruta-clientes', empresa?.id],
+    enabled: !!empresa?.id && isSAOverride,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clientes')
+        .select('*').eq('empresa_id', empresa!.id).eq('status', 'activo').order('orden');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const clientes = isSAOverride ? saRes.data : offlineRes.data;
+  const isLoading = isSAOverride ? saRes.isLoading : offlineRes.isLoading;
+  const refetch = isSAOverride ? saRes.refetch : offlineRes.refetch;
 
   // Read the SAME table the desktop "Mapa de Clientes" writes to
   // so mobile shows literally the same numbering the supervisor optimized.
-  const { ordenMap } = useClienteOrdenRuta(profile?.id ?? null, diaFiltro);
+  const { ordenMap } = useClienteOrdenRuta(effectiveVendedorId, diaFiltro);
   const invalidateOrdenRuta = useInvalidateOrdenRuta();
 
   // Filter by vendedor assignment when visibility is 'propios'
   const myClientes = (clientes ?? []).filter((c: any) => {
+    if (isSAOverride && effectiveVendedorId) {
+      return c.vendedor_id === effectiveVendedorId;
+    }
     if (clientesVisibilidad === 'propios' && profile?.id) {
       return c.vendedor_id === profile.id;
     }
