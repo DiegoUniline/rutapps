@@ -14,11 +14,15 @@ interface AuthContextType {
   /** Super-admin only: override the active empresa to view another company's data */
   overrideEmpresaId: string | null;
   setOverrideEmpresaId: (id: string | null) => void;
+  /** Super-admin only: override active vendedor (profile id) to filter mobile views */
+  overrideVendedorId: string | null;
+  setOverrideVendedorId: (id: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, empresa: null, loading: true, signOut: async () => {},
   overrideEmpresaId: null, setOverrideEmpresaId: () => {},
+  overrideVendedorId: null, setOverrideVendedorId: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
