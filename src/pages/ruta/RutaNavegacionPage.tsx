@@ -70,12 +70,32 @@ interface Stop {
 function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { empresa, profile } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
+
+  // Super-admin overrides
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+  const [superVendedorId, setSuperVendedorId] = useState<string | null>(null);
+  // Reset vendedor override when empresa changes
+  useEffect(() => { setSuperVendedorId(null); }, [empresa?.id]);
+
+  // Vendedores of the current empresa (only for super admin)
+  const { data: empresaVendedores } = useQuery({
+    queryKey: ['nav-empresa-vendedores', empresa?.id],
+    enabled: !!empresa?.id && isSuperAdmin,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, nombre, email')
+        .eq('empresa_id', empresa!.id)
+        .order('nombre');
+      return data ?? [];
+    },
+  });
 
   // Persist completed/arrived across navigation using sessionStorage keyed by date
   const storageKeyCompleted = `nav-completed-${filterDate}`;
