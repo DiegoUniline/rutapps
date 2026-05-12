@@ -1,33 +1,50 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, ShoppingCart, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
 export default function RutaMapaPage() {
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
 
-  const { data: clientes } = useQuery({
+  const { data: rawClientes } = useQuery({
     queryKey: ['ruta-clientes-mapa', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
-        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden')
+        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden, vendedor_id')
         .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('orden', { ascending: true });
-      return (data ?? [])
-        .filter(c => c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng)
-        .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
+        .eq('status', 'activo');
+      return (data ?? []).filter(
+        c => c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng
+      );
     },
   });
+
+  // Read the desktop-optimized order so mobile mirrors it 1:1.
+  const { ordenMap } = useClienteOrdenRuta(profile?.id ?? null, DIA_HOY);
+
+  const clientes = useMemo(() => {
+    const list = (rawClientes ?? []).slice();
+    list.sort((a: any, b: any) => {
+      const oa = ordenMap.get(a.id);
+      const ob = ordenMap.get(b.id);
+      if (oa != null && ob != null) return oa - ob;
+      if (oa != null) return -1;
+      if (ob != null) return 1;
+      return (a.orden ?? 9999) - (b.orden ?? 9999);
+    });
+    return list;
+  }, [rawClientes, ordenMap]);
+
 
   const openGoogleMapsRoute = () => {
     if (!clientes || clientes.length === 0) return;

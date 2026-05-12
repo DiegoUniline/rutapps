@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -146,6 +147,11 @@ export default function RutaClientes() {
     orderBy: 'orden',
   });
 
+  // Read the SAME table the desktop "Mapa de Clientes" writes to
+  // so mobile shows literally the same numbering the supervisor optimized.
+  const { ordenMap } = useClienteOrdenRuta(profile?.id ?? null, diaFiltro);
+  const invalidateOrdenRuta = useInvalidateOrdenRuta();
+
   // Filter by vendedor assignment when visibility is 'propios'
   const myClientes = (clientes ?? []).filter((c: any) => {
     if (clientesVisibilidad === 'propios' && profile?.id) {
@@ -169,6 +175,15 @@ export default function RutaClientes() {
       return visited.has(c.id);
     }
     return true;
+  }).sort((a: any, b: any) => {
+    // Priority 1: optimized order from desktop (cliente_orden_ruta)
+    const oa = ordenMap.get(a.id);
+    const ob = ordenMap.get(b.id);
+    if (oa != null && ob != null) return oa - ob;
+    if (oa != null) return -1;
+    if (ob != null) return 1;
+    // Priority 2: legacy global orden on the cliente row
+    return (a.orden ?? 9999) - (b.orden ?? 9999);
   });
 
   const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
@@ -179,19 +194,23 @@ export default function RutaClientes() {
   }).length;
 
   const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
-    if (!filtered) return;
+    if (!filtered || !empresa?.id) return;
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= filtered.length) return;
-
-    const currentItem = filtered[idx] as any;
-    const targetItem = filtered[targetIdx] as any;
-    const currentOrden = currentItem.orden ?? idx;
-    const targetOrden = targetItem.orden ?? targetIdx;
-
-    await offlineMutate('clientes', 'update', { ...currentItem, orden: targetOrden });
-    await offlineMutate('clientes', 'update', { ...targetItem, orden: currentOrden });
-    refetch();
-  }, [filtered, offlineMutate, refetch]);
+    try {
+      await swapOrdenRuta({
+        empresaId: empresa.id,
+        vendedorId: profile?.id ?? null,
+        dia: diaFiltro,
+        currentOrder: filtered.map((c: any) => c.id),
+        fromIdx: idx,
+        toIdx: targetIdx,
+      });
+      invalidateOrdenRuta();
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo reordenar (necesitas conexión)');
+    }
+  }, [filtered, empresa?.id, profile?.id, diaFiltro, invalidateOrdenRuta]);
 
   const openMaps = (lat: number, lng: number, nombre: string) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(nombre)}`, '_blank');
