@@ -35,6 +35,9 @@ export default function EntregaListPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('todos');
+  const [rutaFilter, setRutaFilter] = useState('todos');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
@@ -70,12 +73,15 @@ export default function EntregaListPage() {
     no_entregado: allEntregas?.filter(e => (e as any).status === 'no_entregado').length ?? 0,
   };
 
-  // Filter locally by selected tab
+  // Filter locally by selected tab + extra filters
   const filtered = useMemo(() => {
-    const list = allEntregas ?? [];
-    if (statusFilter === 'todos') return list;
-    return list.filter((e: any) => e.status === statusFilter);
-  }, [allEntregas, statusFilter]);
+    let list = allEntregas ?? [];
+    if (statusFilter !== 'todos') list = list.filter((e: any) => e.status === statusFilter);
+    if (rutaFilter !== 'todos') list = list.filter((e: any) => (e.vendedor_ruta_id ?? '') === (rutaFilter === 'sin_ruta' ? '' : rutaFilter));
+    if (fechaDesde) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) >= fechaDesde);
+    if (fechaHasta) list = list.filter((e: any) => (e.fecha ?? '').slice(0, 10) <= fechaHasta);
+    return list;
+  }, [allEntregas, statusFilter, rutaFilter, fechaDesde, fechaHasta]);
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
@@ -331,6 +337,32 @@ export default function EntregaListPage() {
             placeholder="Vendedor..."
           />
         </div>
+        <div className="min-w-[180px]">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Ruta asignada</label>
+          <SearchableSelect
+            options={[
+              { value: 'todos', label: 'Todas' },
+              { value: 'sin_ruta', label: 'Sin ruta asignada' },
+              ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre })),
+            ]}
+            value={rutaFilter}
+            onChange={setRutaFilter}
+            placeholder="Ruta..."
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha desde</label>
+          <Input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-[160px]" />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha hasta</label>
+          <Input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-[160px]" />
+        </div>
+        {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos') && (
+          <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setVendedorFilter('todos'); }}>
+            Limpiar
+          </Button>
+        )}
 
         {/* Surtir rápido — only when borrador selected */}
         {selectedIds.size > 0 && hasBorrador && (
