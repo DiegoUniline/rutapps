@@ -23,7 +23,7 @@ export function useClienteOrdenRuta(vendedorId?: string | null, dia?: string | n
         .select('cliente_id, orden, vendedor_id')
         .eq('empresa_id', empresa!.id)
         .order('orden', { ascending: true });
-      q = dia ? q.eq('dia', dia) : q.is('dia', null);
+      q = dia ? q.ilike('dia', dia) : q.is('dia', null);
       // First try with the vendor scope (route optimized for that seller).
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
