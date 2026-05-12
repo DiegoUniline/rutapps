@@ -632,6 +632,15 @@ export default function EntregaListPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {bulkAction && (
+        <BulkEntregasActionsDialog
+          action={bulkAction}
+          entregaIds={Array.from(selectedIds)}
+          onClose={() => setBulkAction(null)}
+          onDone={() => { setBulkAction(null); setSelectedIds(new Set()); }}
+        />
+      )}
     </div>
   );
 }
