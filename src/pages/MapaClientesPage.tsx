@@ -107,7 +107,7 @@ export default function MapaClientesPage() {
     distance_meters: number;
     duration: string;
   } | null>(null);
-  const [showRoutePanel, setShowRoutePanel] = useState(true);
+  const [showRoutePanel, setShowRoutePanel] = useState(false);
   const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('visitado');
   // Multi-route state
   const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
