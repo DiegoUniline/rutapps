@@ -118,6 +118,7 @@ export default function MapaClientesPage() {
   const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
   const [showOriginPicker, setShowOriginPicker] = useState(false);
   const [showSinGps, setShowSinGps] = useState(false);
+  const [spreadOverlapping, setSpreadOverlapping] = useState(false);
   const [multiResults, setMultiResults] = useState<RouteResultEntry[] | null>(null);
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
@@ -349,6 +350,35 @@ export default function MapaClientesPage() {
 
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
   const withoutGps = useMemo(() => filtered.filter((c: any) => !c.gps_lat || !c.gps_lng), [filtered]);
+
+  // When spreadOverlapping is on, clients sharing the same GPS get distributed in a small ring
+  // so they don't render as a single overlapping dot.
+  const displayCoords = useMemo(() => {
+    const m = new Map<string, { lat: number; lng: number }>();
+    if (!spreadOverlapping) return m;
+    const groups = new Map<string, any[]>();
+    for (const c of withGps) {
+      const key = `${Number(c.gps_lat).toFixed(5)},${Number(c.gps_lng).toFixed(5)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(c);
+    }
+    for (const group of groups.values()) {
+      if (group.length <= 1) continue;
+      const radius = 0.00022;
+      const lat0 = Number(group[0].gps_lat);
+      const lngScale = 1 / Math.max(0.0001, Math.cos((lat0 * Math.PI) / 180));
+      group.forEach((c: any, i: number) => {
+        const angle = (2 * Math.PI * i) / group.length;
+        m.set(c.id, {
+          lat: Number(c.gps_lat) + radius * Math.cos(angle),
+          lng: Number(c.gps_lng) + radius * Math.sin(angle) * lngScale,
+        });
+      });
+    }
+    return m;
+  }, [withGps, spreadOverlapping]);
+
+  const posOf = useCallback((c: any) => displayCoords.get(c.id) ?? { lat: c.gps_lat, lng: c.gps_lng }, [displayCoords]);
 
   const todayClients = useMemo(() => filtered.filter((c: any) => c.dia_visita?.includes(DIA_HOY)), [filtered]);
   const visitedCount = useMemo(() => {
@@ -872,6 +902,15 @@ export default function MapaClientesPage() {
                 )}
               </div>
             )}
+            <button
+              onClick={() => setSpreadOverlapping(s => !s)}
+              title="Separa visualmente los clientes que comparten la misma ubicación GPS"
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                spreadOverlapping ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+              <MapPin className="h-3.5 w-3.5" />
+              {spreadOverlapping ? 'Separados' : 'Separar repetidos'}
+            </button>
             {withoutGps.length > 0 && (
               <div className="relative">
                 <button
@@ -1090,7 +1129,7 @@ export default function MapaClientesPage() {
               orderedClients.map((c: any, idx: number) => (
                 <Marker
                   key={c.id}
-                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  position={posOf(c)}
                   icon={createNumberedLabel()}
                   label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
                   onClick={() => setSelectedCliente(c)}
@@ -1098,13 +1137,10 @@ export default function MapaClientesPage() {
               ))
             ) : multiResults ? null : (
               <>
-                {/* Numbered markers: usan el orden GUARDADO en cliente_orden_ruta
-                    (por vendedor+día). Si no hay ruta optimizada para ese filtro,
-                    todos los pines van al cluster sin número. */}
                 {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => (
                   <Marker
                     key={c.id}
-                    position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                    position={posOf(c)}
                     icon={{
                       path: google.maps.SymbolPath.CIRCLE,
                       fillColor: getMarkerColor(c),
@@ -1119,35 +1155,43 @@ export default function MapaClientesPage() {
                     title={c.nombre}
                   />
                 ))}
-                {/* Non-ordered markers stay clustered */}
-                <MarkerClusterer
-                  options={{
-                    maxZoom: 14,
-                    gridSize: 50,
-                    minimumClusterSize: 5,
-                  }}
-                >
-                  {(clusterer) => (
-                    <>
-                      {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
-                        <Marker
-                          key={c.id}
-                          position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                          icon={getMarkerIcon(c)}
-                          onClick={() => setSelectedCliente(c)}
-                          title={c.nombre}
-                          clusterer={clusterer}
-                        />
-                      ))}
-                    </>
-                  )}
-                </MarkerClusterer>
+                {/* Non-ordered markers stay clustered (skip clustering when spread is on so the user can see the separation) */}
+                {spreadOverlapping ? (
+                  withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
+                    <Marker
+                      key={c.id}
+                      position={posOf(c)}
+                      icon={getMarkerIcon(c)}
+                      onClick={() => setSelectedCliente(c)}
+                      title={c.nombre}
+                    />
+                  ))
+                ) : (
+                  <MarkerClusterer
+                    options={{ maxZoom: 14, gridSize: 50, minimumClusterSize: 5 }}
+                  >
+                    {(clusterer) => (
+                      <>
+                        {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
+                          <Marker
+                            key={c.id}
+                            position={posOf(c)}
+                            icon={getMarkerIcon(c)}
+                            onClick={() => setSelectedCliente(c)}
+                            title={c.nombre}
+                            clusterer={clusterer}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </MarkerClusterer>
+                )}
               </>
             )}
 
             {selectedCliente && (
               <InfoWindow
-                position={{ lat: selectedCliente.gps_lat, lng: selectedCliente.gps_lng }}
+                position={posOf(selectedCliente)}
                 onCloseClick={() => setSelectedCliente(null)}
               >
                 <div className="min-w-[220px] p-1">
