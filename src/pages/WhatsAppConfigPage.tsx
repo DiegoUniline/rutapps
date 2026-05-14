@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { MessageCircle, Send, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ export default function WhatsAppConfigPage() {
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
     if (config) {
@@ -180,12 +181,23 @@ export default function WhatsAppConfigPage() {
 
         <div className="space-y-2">
           <Label className="text-xs">Token / API Key</Label>
-          <Input
-            type="password"
-            placeholder="Pega aquí tu token de WhatsAPI"
-            value={form.api_token}
-            onChange={e => update('api_token', e.target.value)}
-          />
+          <div className="relative">
+            <Input
+              type={showToken ? 'text' : 'password'}
+              placeholder="Pega aquí tu token de WhatsAPI"
+              value={form.api_token}
+              onChange={e => update('api_token', e.target.value)}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken(s => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+              aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
+            >
+              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between py-2">
