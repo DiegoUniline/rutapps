@@ -192,6 +192,15 @@ export default function WhatsAppConfigPage() {
           <Label className="text-sm">Servicio activo</Label>
           <Switch checked={form.activo} onCheckedChange={v => update('activo', v)} />
         </div>
+
+        <Button
+          onClick={() => saveConfig(form)}
+          disabled={saving || !isDirty}
+          className="w-full"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
+          {saving ? 'Guardando...' : isDirty ? 'Guardar cambios' : 'Guardado'}
+        </Button>
       </div>
 
       {/* Toggles */}
