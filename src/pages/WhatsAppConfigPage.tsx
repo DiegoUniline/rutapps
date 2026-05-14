@@ -65,24 +65,36 @@ export default function WhatsAppConfigPage() {
   // Debounced auto-save
   const debouncedForm = useDebounce(form, 800);
 
-  const saveConfig = useCallback(async (data: WhatsAppConfig) => {
+  const saveConfig = useCallback(async (data: WhatsAppConfig, opts?: { silent?: boolean }) => {
     if (!empresa?.id) return;
     setSaving(true);
     try {
       const payload = { ...data, empresa_id: empresa.id };
       if (data.id) {
-        await supabase.from('whatsapp_config').update(payload).eq('id', data.id);
+        const { error } = await supabase.from('whatsapp_config').update(payload).eq('id', data.id);
+        if (error) throw error;
       } else {
-        const { data: created } = await supabase.from('whatsapp_config').insert(payload).select().single();
+        const { data: created, error } = await supabase.from('whatsapp_config').insert(payload).select().single();
+        if (error) throw error;
         if (created) setForm(prev => ({ ...prev, id: created.id }));
       }
       qc.invalidateQueries({ queryKey: ['whatsapp-config'] });
+      if (!opts?.silent) toast.success('Configuración guardada');
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || 'Error al guardar');
     } finally {
       setSaving(false);
     }
   }, [empresa, qc]);
+
+  const isDirty =
+    form.api_url !== (config?.api_url ?? '') ||
+    form.api_token !== (config?.api_token ?? '') ||
+    form.instance_name !== (config?.instance_name ?? '') ||
+    form.activo !== (config?.activo ?? false) ||
+    form.enviar_recibo_pago !== (config?.enviar_recibo_pago ?? true) ||
+    form.aviso_dia_antes !== (config?.aviso_dia_antes ?? false) ||
+    form.aviso_vencido !== (config?.aviso_vencido ?? false);
 
   useEffect(() => {
     if (debouncedForm.api_url !== (config?.api_url ?? '') ||
@@ -92,7 +104,7 @@ export default function WhatsAppConfigPage() {
         debouncedForm.enviar_recibo_pago !== (config?.enviar_recibo_pago ?? true) ||
         debouncedForm.aviso_dia_antes !== (config?.aviso_dia_antes ?? false) ||
         debouncedForm.aviso_vencido !== (config?.aviso_vencido ?? false)) {
-      saveConfig(debouncedForm);
+      saveConfig(debouncedForm, { silent: true });
     }
   }, [debouncedForm, config, saveConfig]);
 
