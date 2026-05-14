@@ -53,6 +53,7 @@ export default function WhatsAppConfigPage() {
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
     if (config) {
