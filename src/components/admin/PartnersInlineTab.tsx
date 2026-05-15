@@ -291,7 +291,7 @@ export default function PartnersInlineTab() {
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => {
                       setAprobarOpen(s);
-                      setAprobarForm({ slug: s.email.split('@')[0].replace(/[^a-z0-9-]/gi, '').toLowerCase(), comision_pct: 20 });
+                      setAprobarForm({ slug: s.email.split('@')[0].replace(/[^a-z0-9-]/gi, '').toLowerCase(), comision_pct: 20, password: '' });
                     }}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Aprobar
                     </Button>
