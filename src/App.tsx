@@ -646,6 +646,13 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
+      <Route path="/partner" element={<PartnerLayout />}>
+        <Route index element={<PartnerDashboard />} />
+        <Route path="empresas" element={<PartnerEmpresas />} />
+        <Route path="cupones" element={<PartnerCupones />} />
+        <Route path="comisiones" element={<PartnerComisiones />} />
+        <Route path="perfil" element={<PartnerPerfil />} />
+      </Route>
       {/* Nested context-preserving routes for product/client detail */}
       <Route path="/:a/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/:b/productos/:id" element={<ProductoFormPage />} />
