@@ -425,6 +425,7 @@ export default function TutorialesPage() {
           </DialogContent>
         </Dialog>
       )}
+      </div>
     </div>
   );
 }
