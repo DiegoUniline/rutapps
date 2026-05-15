@@ -133,15 +133,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get plan price
+        // Get plan price + duration
         let precioUnitario = 300; // default
+        let planMeses = 1; // default monthly
         if (sub.plan_id) {
           const { data: plan } = await supabase
             .from("planes")
-            .select("precio_base_mes")
+            .select("precio_base_mes, meses")
             .eq("id", sub.plan_id)
             .single();
-          if (plan) precioUnitario = plan.precio_base_mes;
+          if (plan) {
+            precioUnitario = plan.precio_base_mes;
+            planMeses = plan.meses || 1;
+          }
         }
 
         // Recompute quantity from actual active users (min 3)
@@ -181,9 +185,10 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Decrement meses_restantes
+          // Decrement meses_restantes by REAL months covered by this invoice
           if (cuponUso.meses_restantes !== null) {
-            const newMeses = cuponUso.meses_restantes - 1;
+            const consumed = Math.min(cuponUso.meses_restantes, planMeses);
+            const newMeses = Math.max(0, cuponUso.meses_restantes - consumed);
             await supabase.from("cupon_usos").update({ meses_restantes: newMeses }).eq("id", cuponUso.id);
 
             // If coupon expired, recalculate subscription discount without it
@@ -192,7 +197,7 @@ Deno.serve(async (req) => {
               await supabase.from("subscriptions").update({ descuento_porcentaje: baseDiscount }).eq("id", sub.id);
             }
           }
-          log("Coupon applied", { empresa: sub.empresa_id, cuponDescuento, totalDescuento: descuento, mesesRestantes: cuponUso.meses_restantes });
+          log("Coupon applied", { empresa: sub.empresa_id, cuponDescuento, totalDescuento: descuento, mesesRestantes: cuponUso.meses_restantes, planMeses });
         }
 
         // Round per-user price to whole peso to avoid fractional totals
