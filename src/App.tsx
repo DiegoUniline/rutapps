@@ -311,6 +311,7 @@ function AppRoutes() {
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
+          <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
