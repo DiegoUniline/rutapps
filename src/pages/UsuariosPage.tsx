@@ -73,6 +73,10 @@ export default function UsuariosPage() {
       </div>
 
       {tab === 'usuarios' && (
+        <PlanSimuladorCard activeUsers={activeUsers} isTrial={isTrial} />
+      )}
+
+      {tab === 'usuarios' && (
         <UsuariosTab
           profiles={usuarios.profiles} userRoles={usuarios.userRoles} authUsers={usuarios.authUsers}
           roles={rolesHook.roles} almacenes={usuarios.almacenes}
