@@ -26,6 +26,26 @@ const PIE_COLORS = [PRIMARY, ACCENT, GREEN, '#8B5CF6', '#EC4899', '#06B6D4'];
 export default function PartnerDashboard() {
   const { data: partner } = usePartner();
   const [copied, setCopied] = useState(false);
+  const [openingSandbox, setOpeningSandbox] = useState(false);
+
+  const handleOpenSandbox = async () => {
+    try {
+      setOpeningSandbox(true);
+      const { data, error } = await supabase.functions.invoke('partner-sandbox-login');
+      if (error) throw error;
+      if (data?.action_link) {
+        window.open(data.action_link, '_blank');
+        toast.success('Sandbox abierto en una nueva pestaña');
+      } else {
+        throw new Error('No se recibió enlace');
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo abrir el sandbox');
+    } finally {
+      setOpeningSandbox(false);
+    }
+  };
+
 
   const { data: nivelData } = useQuery({
     queryKey: ['partner-nivel', partner?.id],
