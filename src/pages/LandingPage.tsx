@@ -146,6 +146,18 @@ export default function LandingPage() {
             <Link to="/partners" className="hover:text-gray-900 transition-colors flex items-center gap-1">
               <span className="text-emerald-600">💰</span> Partners
             </Link>
+            <Link
+              to="/tutoriales"
+              className="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-lg shadow-rose-500/30 hover:scale-105 transition-transform overflow-hidden"
+              style={{ background: 'linear-gradient(90deg, #ef4444, #f97316)' }}
+            >
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.2s_infinite]" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              </span>
+              ▶ Mira cómo funciona
+            </Link>
           </div>
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Iniciar sesión</Link>
