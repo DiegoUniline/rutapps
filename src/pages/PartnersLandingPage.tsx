@@ -58,16 +58,29 @@ export default function PartnersLandingPage() {
       return;
     }
     setLoading(true);
+    const fullPhone = form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null;
     const { error } = await supabase.from('partner_solicitudes').insert({
       nombre: form.nombre.trim(),
       email: form.email.trim().toLowerCase(),
-      telefono: form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null,
+      telefono: fullPhone,
       motivo: form.motivo.trim() || null,
       experiencia: form.experiencia.trim() || null,
       redes: form.redes.trim() || null,
     });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+
+    // Fire-and-forget WhatsApp welcome message (no bloquea el flujo)
+    if (fullPhone) {
+      supabase.functions.invoke('partner-welcome', {
+        body: {
+          nombre: form.nombre.trim(),
+          telefono: fullPhone,
+          email: form.email.trim().toLowerCase(),
+        },
+      }).catch(() => { /* silent */ });
+    }
+
     setSent(true);
   };
 

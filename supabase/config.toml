@@ -44,3 +44,7 @@ verify_jwt = false
 
 [functions.daily-billing]
 verify_jwt = false
+
+[functions.partner-welcome]
+verify_jwt = false
+
