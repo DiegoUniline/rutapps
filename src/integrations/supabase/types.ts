@@ -3614,6 +3614,48 @@ export type Database = {
           },
         ]
       }
+      partner_niveles: {
+        Row: {
+          beneficios: string[] | null
+          bono_mxn: number | null
+          color: string | null
+          comision_pct: number
+          created_at: string
+          emoji: string | null
+          empresas_max: number | null
+          empresas_min: number
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          beneficios?: string[] | null
+          bono_mxn?: number | null
+          color?: string | null
+          comision_pct: number
+          created_at?: string
+          emoji?: string | null
+          empresas_max?: number | null
+          empresas_min: number
+          id?: string
+          nombre: string
+          orden: number
+        }
+        Update: {
+          beneficios?: string[] | null
+          bono_mxn?: number | null
+          color?: string | null
+          comision_pct?: number
+          created_at?: string
+          emoji?: string | null
+          empresas_max?: number | null
+          empresas_min?: number
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
+      }
       partner_pagos: {
         Row: {
           created_at: string
@@ -3740,6 +3782,8 @@ export type Database = {
           id: string
           nombre: string
           notas: string | null
+          peor_nivel_fecha: string | null
+          peor_nivel_pct_60d: number | null
           ref_slug: string
           telefono: string | null
           updated_at: string
@@ -3753,6 +3797,8 @@ export type Database = {
           id?: string
           nombre: string
           notas?: string | null
+          peor_nivel_fecha?: string | null
+          peor_nivel_pct_60d?: number | null
           ref_slug: string
           telefono?: string | null
           updated_at?: string
@@ -3766,6 +3812,8 @@ export type Database = {
           id?: string
           nombre?: string
           notas?: string | null
+          peor_nivel_fecha?: string | null
+          peor_nivel_pct_60d?: number | null
           ref_slug?: string
           telefono?: string | null
           updated_at?: string
@@ -6859,6 +6907,27 @@ export type Database = {
           recargas_disponibles: number
           usadas_mes_actual: number
           usuarios_activos: number
+        }[]
+      }
+      get_partner_active_empresas: {
+        Args: { _partner_id: string }
+        Returns: number
+      }
+      get_partner_nivel: {
+        Args: { _partner_id: string }
+        Returns: {
+          color: string
+          comision_pct: number
+          emoji: string
+          empresas_actuales: number
+          empresas_max: number
+          empresas_min: number
+          empresas_para_siguiente: number
+          nivel_id: string
+          nombre: string
+          orden: number
+          siguiente_nombre: string
+          siguiente_pct: number
         }[]
       }
       get_user_archive_summary: {
