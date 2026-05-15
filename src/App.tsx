@@ -365,8 +365,16 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
+            <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
             <Route path="/admin/database-health" element={<DatabaseHealthPage />} />
+            <Route path="/partner" element={<PartnerLayout />}>
+              <Route index element={<PartnerDashboard />} />
+              <Route path="empresas" element={<PartnerEmpresas />} />
+              <Route path="cupones" element={<PartnerCupones />} />
+              <Route path="comisiones" element={<PartnerComisiones />} />
+              <Route path="perfil" element={<PartnerPerfil />} />
+            </Route>
             {renderAuthenticatedRoutes()}
           </Routes>
         </Suspense>
