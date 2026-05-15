@@ -10,6 +10,7 @@ import { useRoles } from '@/hooks/useRoles';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import UsuariosTab from '@/components/usuarios/UsuariosTab';
+import PlanSimuladorCard from '@/components/usuarios/PlanSimuladorCard';
 import RolesTab from '@/components/usuarios/RolesTab';
 import EditUserModal from '@/components/usuarios/modals/EditUserModal';
 import NewUserModal from '@/components/usuarios/modals/NewUserModal';
@@ -36,7 +37,10 @@ export default function UsuariosPage() {
   useEffect(() => { reload(); }, [reload]);
 
   const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo').length;
-  const availableSlots = subscription.maxUsuarios - activeUsers;
+  const isTrial = subscription.status === 'trial';
+  // En prueba: usuarios ilimitados. En planes pagados: respeta el límite del plan.
+  const effectiveMax = isTrial ? 9999 : subscription.maxUsuarios;
+  const availableSlots = effectiveMax - activeUsers;
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
 
   const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
@@ -69,10 +73,14 @@ export default function UsuariosPage() {
       </div>
 
       {tab === 'usuarios' && (
+        <PlanSimuladorCard activeUsers={activeUsers} isTrial={isTrial} />
+      )}
+
+      {tab === 'usuarios' && (
         <UsuariosTab
           profiles={usuarios.profiles} userRoles={usuarios.userRoles} authUsers={usuarios.authUsers}
           roles={rolesHook.roles} almacenes={usuarios.almacenes}
-          activeUsers={activeUsers} maxUsuarios={subscription.maxUsuarios} availableSlots={availableSlots}
+          activeUsers={activeUsers} maxUsuarios={effectiveMax} availableSlots={availableSlots}
           ownerUserId={empresa?.owner_user_id}
           showArchived={showArchived} setShowArchived={setShowArchived}
           onNewUser={() => usuarios.setShowNewUser(true)}
@@ -113,7 +121,7 @@ export default function UsuariosPage() {
           quickCreateAlmacen={usuarios.quickCreateAlmacen} setQuickCreateAlmacen={usuarios.setQuickCreateAlmacen}
           quickAlmacenName={usuarios.quickAlmacenName} setQuickAlmacenName={usuarios.setQuickAlmacenName}
           onQuickCreateRole={usuarios.quickCreateRoleAction} onQuickCreateAlmacen={usuarios.quickCreateAlmacenAction}
-          onCreate={() => usuarios.createUser(availableSlots, subscription.maxUsuarios)}
+          onCreate={() => usuarios.createUser(availableSlots, effectiveMax)}
           onClose={() => usuarios.setShowNewUser(false)}
         />
       )}
