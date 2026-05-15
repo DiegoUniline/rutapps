@@ -466,6 +466,22 @@ export default function SignupPage() {
               )}
             </div>
 
+            {/* Cupón / Referido */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Tag className="h-4 w-4" /> Código de cupón <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
+              <Input
+                value={cuponCodigo}
+                onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
+                placeholder="EJ. JUAN10"
+                className="uppercase"
+              />
+              {partnerRef && (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> Referido por <span className="font-semibold">{partnerRef}</span>
+                </p>
+              )}
+            </div>
+
             {/* Terms & Privacy */}
             <div className="space-y-3 pt-2 border-t">
               <div className="flex items-start gap-2">
