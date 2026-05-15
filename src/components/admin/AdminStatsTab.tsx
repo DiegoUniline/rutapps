@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, UserPlus, ArrowRight, PieChart } from 'lucide-react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, CartesianGrid, Line } from 'recharts';
@@ -29,53 +31,52 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: 'Suspendida', gracia: 'Gracia', cancelada: 'Cancelada', sin_sub: 'Sin sub',
 };
 
+const STATS_STALE = 2 * 60 * 1000; // 2 min
+
 export default function AdminStatsTab() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [facturamaPlan, setFacturamaPlan] = useState<FacturamaPlan | null>(null);
-  const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
-  useEffect(() => { loadStats(); loadFacturamaPlan(); loadEmpresas(); }, []);
-
-  async function loadStats() {
-    try {
+  // KPIs (admin-billing edge function) — independent
+  const { data: stats, isLoading: loadingStats } = useQuery<DashboardStats | null>({
+    queryKey: ['admin-stats-dashboard'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       if (!token) throw new Error('No session');
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=dashboard_stats`,
-        { headers: { 'Authorization': `Bearer ${token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        { headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
       );
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setStats(data);
-    } catch (err) {
-      console.error('Stats error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+      return data;
+    },
+  });
 
-  async function loadFacturamaPlan() {
-    try {
-      const { data, error } = await supabase.functions.invoke('facturama', {
-        body: { action: 'suscription_plan' },
-      });
-      if (error) throw error;
-      setFacturamaPlan(data);
-    } catch (err) {
-      console.error('Facturama plan error:', err);
-    }
-  }
+  // Facturama plan — independent, slowest, never blocks UI
+  const { data: facturamaPlan } = useQuery<FacturamaPlan | null>({
+    queryKey: ['admin-stats-facturama'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const { data } = await supabase.functions.invoke('facturama', { body: { action: 'suscription_plan' } });
+      return data;
+    },
+  });
 
-  async function loadEmpresas() {
-    const { data } = await supabase
-      .from('empresas')
-      .select('id, nombre, created_at, subscriptions(status, plan_id, created_at)')
-      .order('created_at', { ascending: true });
-    setEmpresas((data as any) || []);
-  }
+  // Empresas list — independent
+  const { data: empresasData } = useQuery<EmpresaRow[]>({
+    queryKey: ['admin-stats-empresas'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('empresas')
+        .select('id, nombre, created_at, subscriptions(status, plan_id, created_at)')
+        .order('created_at', { ascending: true });
+      return (data as any) || [];
+    },
+  });
+  const empresas = empresasData || [];
 
   // ── Derived chart data ──
   const signupsByDay = useMemo(() => {
@@ -127,10 +128,11 @@ export default function AdminStatsTab() {
       .slice(0, 10) as (EmpresaRow & { nombre: string })[];
   }, [empresas]);
 
-  const fmt = (cents: number) => `$${(cents / 100).toLocaleString('es-MX')}`;
-
-  if (loading) return <div className="text-muted-foreground text-center py-10">Cargando estadísticas...</div>;
-  if (!stats) return <div className="text-muted-foreground text-center py-10">Error al cargar</div>;
+  const fmt = (cents: number) => `$${((cents || 0) / 100).toLocaleString('es-MX')}`;
+  const safeStats: DashboardStats = stats || {
+    balance_available: 0, balance_pending: 0, total_invoiced: 0,
+    total_paid: 0, total_open: 0, active_subscriptions: 0, total_customers: 0, mrr: 0,
+  };
 
   return (
     <div className="space-y-6">
@@ -164,16 +166,21 @@ export default function AdminStatsTab() {
       )}
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(stats.total_paid)} hint={stats.paid_count != null ? `${stats.paid_count} facturas pagadas` : undefined} accent="success" />
-        <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(stats.total_open)} hint={stats.open_count != null ? `${stats.open_count} facturas pendientes` : undefined} accent="destructive" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative">
+        {loadingStats && (
+          <div className="absolute -top-2 right-0 text-[10px] text-muted-foreground flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Actualizando KPIs…
+          </div>
+        )}
+        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(safeStats.total_paid)} hint={safeStats.paid_count != null ? `${safeStats.paid_count} facturas pagadas` : undefined} accent="success" />
+        <StatCard icon={TrendingUp} label="MRR" value={fmt(safeStats.mrr)} accent="primary" />
+        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(safeStats.total_open)} hint={safeStats.open_count != null ? `${safeStats.open_count} facturas pendientes` : undefined} accent="destructive" />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard icon={CreditCard} label="Suscripciones activas" value={stats.active_subscriptions.toString()} accent="success" />
-        <StatCard icon={Receipt} label="Total facturado" value={fmt(stats.total_invoiced)} accent="muted" />
-        <StatCard icon={Users} label="Clientes Stripe" value={stats.total_customers.toString()} accent="primary" />
+        <StatCard icon={CreditCard} label="Suscripciones activas" value={safeStats.active_subscriptions.toString()} accent="success" />
+        <StatCard icon={Receipt} label="Total facturado" value={fmt(safeStats.total_invoiced)} accent="muted" />
+        <StatCard icon={Users} label="Clientes Stripe" value={safeStats.total_customers.toString()} accent="primary" />
       </div>
 
       {/* ── Nuevos registros por día ── */}
