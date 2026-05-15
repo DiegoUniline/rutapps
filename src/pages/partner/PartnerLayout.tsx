@@ -52,7 +52,7 @@ export default function PartnerLayout() {
           </Button>
         </div>
       </aside>
-      <main className="flex-1 p-4 md:p-8 max-w-6xl">
+      <main className="flex-1 p-4 md:p-8 w-full min-w-0">
         <Outlet />
       </main>
     </div>
