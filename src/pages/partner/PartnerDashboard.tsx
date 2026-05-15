@@ -122,14 +122,76 @@ export default function PartnerDashboard() {
         <div>
           <h1 className="text-3xl font-black tracking-tight">Hola, {partner?.nombre} 👋</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Tu comisión base es del <strong>{partner?.comision_pct}%</strong> sobre cada cobro recurrente.
+            Tu comisión actual es del <strong>{nivelData?.comision_pct ?? partner?.comision_pct}%</strong> sobre cada cobro recurrente.
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-          <Sparkles className="h-3.5 w-3.5" />
-          {stats?.empresasCount ? `Llevas ${stats.empresasCount} ${stats.empresasCount === 1 ? 'empresa referida' : 'empresas referidas'}` : '¡Comparte tu link y empieza!'}
-        </div>
+        {nivelData && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg"
+               style={{ background: `linear-gradient(135deg, ${nivelData.color}, ${nivelData.color}cc)` }}>
+            <span className="text-lg">{nivelData.emoji}</span>
+            Nivel {nivelData.nombre}
+          </div>
+        )}
       </div>
+
+      {/* Tarjeta de Nivel + Progreso */}
+      {nivelData && (
+        <Card className="overflow-hidden border-2" style={{ borderColor: `${nivelData.color}40` }}>
+          <CardContent className="p-6">
+            <div className="grid md:grid-cols-3 gap-6 items-center">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-4xl shadow-md"
+                     style={{ background: `${nivelData.color}15` }}>
+                  {nivelData.emoji}
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Tu nivel</div>
+                  <div className="text-2xl font-black" style={{ color: nivelData.color }}>{nivelData.nombre}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    <strong className="text-foreground">{nivelData.empresas_actuales}</strong> empresas activas · <strong style={{ color: nivelData.color }}>{nivelData.comision_pct}%</strong> comisión
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                {nivelData.siguiente_nombre ? (
+                  <>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-semibold flex items-center gap-1.5">
+                        <Trophy className="h-4 w-4 text-amber-500" />
+                        Siguiente: <strong>{nivelData.siguiente_nombre}</strong> ({nivelData.siguiente_pct}%)
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        Te faltan <strong className="text-foreground">{nivelData.empresas_para_siguiente}</strong> empresas
+                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, ((nivelData.empresas_actuales - (nivelData.empresas_min ?? 0)) / Math.max(1, ((nivelData.empresas_max ?? nivelData.empresas_actuales) - (nivelData.empresas_min ?? 0) + 1))) * 100)}%`,
+                          background: `linear-gradient(90deg, ${nivelData.color}, ${ACCENT})`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Sube de nivel automáticamente cuando alcances el umbral. La nueva comisión aplica a los siguientes cobros.
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                    <Crown className="h-8 w-8 text-amber-500" />
+                    <div>
+                      <div className="font-bold text-amber-900">¡Estás en el nivel máximo!</div>
+                      <div className="text-xs text-amber-700">Disfruta el {nivelData.comision_pct}% de comisión recurrente.</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hero KPI estilo YouTube Partners */}
       <Card className="overflow-hidden border-0 shadow-xl" style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, hsl(230,60%,38%) 100%)` }}>
