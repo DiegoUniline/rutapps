@@ -33,7 +33,7 @@ export default function PartnerDashboard() {
       const [emp, com, cup] = await Promise.all([
         supabase.from('partner_atribuciones').select('id, created_at, empresa_id, empresas:empresa_id(nombre)').eq('partner_id', partner.id),
         supabase.from('partner_comisiones').select('monto_comision, status, created_at, empresa_id').eq('partner_id', partner.id),
-        supabase.from('cupones').select('codigo, usos_count').eq('partner_id', partner.id).eq('activo', true),
+        supabase.from('cupones').select('codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
       ]);
       const empresas = (emp.data || []) as any[];
       const comisiones = (com.data || []) as any[];
