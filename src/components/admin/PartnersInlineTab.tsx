@@ -235,6 +235,9 @@ export default function PartnersInlineTab() {
                         <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setPwOpen(p); setPwForm({ password: '', saving: false }); }} title="Resetear contraseña">
+                          <Key className="h-3.5 w-3.5" />
+                        </Button>
                         <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
                           onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
                           <Wallet className="h-3 w-3 mr-1" /> Pagar
