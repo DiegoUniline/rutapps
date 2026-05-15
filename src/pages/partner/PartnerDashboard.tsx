@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Building2, Tag, Wallet, TrendingUp, Copy, Check, ArrowUpRight, ArrowDownRight,
   Users, DollarSign, Sparkles, Share2, MessageCircle, Twitter, Facebook, Mail, Trophy, Crown,
-  Beaker, ExternalLink,
+  Beaker, ExternalLink, UserCheck, Clock, AlertTriangle, UserX, Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMemo, useState } from 'react';
@@ -61,18 +61,77 @@ export default function PartnerDashboard() {
     queryKey: ['partner-stats', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return null;
-      const [emp, com, cup] = await Promise.all([
+      const [emp, com, cup, cupRows] = await Promise.all([
         supabase.from('partner_atribuciones').select('id, created_at, empresa_id, empresas:empresa_id(nombre)').eq('partner_id', partner.id),
         supabase.from('partner_comisiones').select('monto_comision, status, created_at, empresa_id').eq('partner_id', partner.id),
-        supabase.from('cupones').select('codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
+        supabase.from('cupones').select('id, codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
+        supabase.from('cupones').select('id').eq('partner_id', partner.id),
       ]);
       const empresas = (emp.data || []) as any[];
       const comisiones = (com.data || []) as any[];
       const cupones = (cup.data || []) as any[];
+
+      // Merge cupon_usos referrals (signups que usaron un cupón del partner)
+      const cuponIds = (cupRows.data || []).map((c: any) => c.id);
+      if (cuponIds.length) {
+        const { data: usos } = await supabase
+          .from('cupon_usos')
+          .select('empresa_id, used_at')
+          .in('cupon_id', cuponIds);
+        const known = new Set(empresas.map((e: any) => e.empresa_id));
+        const extraIds = (usos || []).filter((u: any) => u.empresa_id && !known.has(u.empresa_id));
+        if (extraIds.length) {
+          const ids = Array.from(new Set(extraIds.map((u: any) => u.empresa_id)));
+          const { data: extraEmps } = await supabase.from('empresas').select('id, nombre').in('id', ids);
+          extraIds.forEach((u: any) => {
+            const e = (extraEmps || []).find((x: any) => x.id === u.empresa_id);
+            if (e && !known.has(e.id)) {
+              empresas.push({ id: u.empresa_id, empresa_id: u.empresa_id, created_at: u.used_at, empresas: { nombre: e.nombre } });
+              known.add(e.id);
+            }
+          });
+        }
+      }
+
+      // Fetch subscriptions para todas las empresas referidas (funnel)
+      const empresaIds = empresas.map((e: any) => e.empresa_id).filter(Boolean);
+      let subs: any[] = [];
+      if (empresaIds.length) {
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('empresa_id, status, acceso_bloqueado, trial_ends_at, current_period_end')
+          .in('empresa_id', empresaIds);
+        subs = subData || [];
+      }
+      const subByEmp = new Map<string, any>();
+      subs.forEach((s: any) => subByEmp.set(s.empresa_id, s));
+
+      let activas = 0, prueba = 0, vencidas = 0, canceladas = 0, sinSub = 0;
+      empresas.forEach((e: any) => {
+        const s = subByEmp.get(e.empresa_id);
+        if (!s) { sinSub += 1; return; }
+        if (s.acceso_bloqueado) { canceladas += 1; return; }
+        switch (s.status) {
+          case 'active': activas += 1; break;
+          case 'trial': prueba += 1; break;
+          case 'gracia': prueba += 1; break;
+          case 'past_due': vencidas += 1; break;
+          case 'suspended': canceladas += 1; break;
+          default: sinSub += 1;
+        }
+      });
+      const totalRef = empresas.length;
+      const conversionPct = totalRef > 0 ? (activas / totalRef) * 100 : 0;
+
       const total = comisiones.reduce((s, c) => s + Number(c.monto_comision), 0);
       const pendiente = comisiones.filter(c => c.status === 'pendiente').reduce((s, c) => s + Number(c.monto_comision), 0);
       const pagado = comisiones.filter(c => c.status === 'pagada').reduce((s, c) => s + Number(c.monto_comision), 0);
-      return { empresas, comisiones, cupones, empresasCount: empresas.length, cuponesCount: cupones.length, total, pendiente, pagado };
+      return {
+        empresas, comisiones, cupones,
+        empresasCount: empresas.length, cuponesCount: cupones.length,
+        total, pendiente, pagado,
+        funnel: { totalRef, activas, prueba, vencidas, canceladas, sinSub, conversionPct },
+      };
     },
     enabled: !!partner?.id,
   });
@@ -341,6 +400,65 @@ export default function PartnerDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Funnel de conversión */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" /> Funnel de conversión de tus referidos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(stats?.funnel?.totalRef ?? 0) === 0 ? (
+            <div className="text-center py-10 text-sm text-muted-foreground">
+              Aún no tienes empresas referidas. Comparte tu link o cupón para empezar.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: 'Total referidas', value: stats!.funnel.totalRef, icon: Users, color: PRIMARY, sub: 'Se registraron con tu link/cupón' },
+                  { label: 'Activas con plan', value: stats!.funnel.activas, icon: UserCheck, color: GREEN, sub: 'Pagando suscripción' },
+                  { label: 'En periodo de prueba', value: stats!.funnel.prueba, icon: Clock, color: ACCENT, sub: 'Trial o gracia' },
+                  { label: 'No convirtieron', value: stats!.funnel.vencidas + stats!.funnel.sinSub, icon: AlertTriangle, color: '#F59E0B', sub: 'Vencidas / sin plan' },
+                  { label: 'Dadas de baja', value: stats!.funnel.canceladas, icon: UserX, color: RED, sub: 'Canceladas / bloqueadas' },
+                ].map((c, i) => (
+                  <div key={i} className="rounded-xl border-2 p-4 hover:shadow-md transition" style={{ borderColor: `${c.color}30`, background: `${c.color}08` }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: `${c.color}20`, color: c.color }}>
+                        <c.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-bold" style={{ color: c.color }}>
+                        {stats!.funnel.totalRef > 0 ? `${((c.value / stats!.funnel.totalRef) * 100).toFixed(0)}%` : '0%'}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-black" style={{ color: c.color }}>{c.value}</div>
+                    <div className="text-xs font-semibold mt-0.5">{c.label}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Barra de conversión */}
+              <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    Tasa de conversión a plan pagado
+                  </span>
+                  <span className="text-2xl font-black text-emerald-700">{stats!.funnel.conversionPct.toFixed(1)}%</span>
+                </div>
+                <div className="h-3 bg-white/70 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, stats!.funnel.conversionPct)}%`, background: `linear-gradient(90deg, ${GREEN}, ${PRIMARY})` }} />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  <strong>{stats!.funnel.activas}</strong> de <strong>{stats!.funnel.totalRef}</strong> empresas referidas están pagando suscripción activa.
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Charts row */}
       <div className="grid lg:grid-cols-3 gap-4">
