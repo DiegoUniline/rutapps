@@ -97,10 +97,10 @@ export default function MiSuscripcionPage() {
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
 
-  // Coupon
+  // Coupons (multiple allowed)
   const [cuponCode, setCuponCode] = useState('');
   const [cuponLoading, setCuponLoading] = useState(false);
-  const [activeCupon, setActiveCupon] = useState<any>(null); // active cupon_usos for this empresa
+  const [activeCupones, setActiveCupones] = useState<any[]>([]);
 
   useEffect(() => {
     if (!empresa?.id) return;
@@ -124,7 +124,7 @@ export default function MiSuscripcionPage() {
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
       supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
-      supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }).limit(1),
+      supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion, vigencia_fin)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
@@ -133,13 +133,15 @@ export default function MiSuscripcionPage() {
     setSubPlans(plans);
     setFacturas((facturasRes.data as any[]) || []);
 
-    // Active coupon
-    const cuponUso = (cuponRes.data as any[])?.[0];
-    if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
-      setActiveCupon(cuponUso);
-    } else {
-      setActiveCupon(null);
-    }
+    // Active coupons (still valid: meses_restantes null or > 0, and not expired)
+    const today = new Date().toISOString().slice(0, 10);
+    const allUsos = (cuponRes.data as any[]) || [];
+    const activos = allUsos.filter(u => {
+      const stillHasMonths = u.meses_restantes === null || u.meses_restantes > 0;
+      const notExpired = !u.cupones?.vigencia_fin || u.cupones.vigencia_fin >= today;
+      return stillHasMonths && notExpired;
+    });
+    setActiveCupones(activos);
 
     // Resolve current plan
     if (subRes.data?.plan_id) {
@@ -892,40 +894,61 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
-          {/* ─── Cupón de descuento ─── */}
+          {/* ─── Cupones de descuento ─── */}
           <Card>
             <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
+                <Ticket className="h-5 w-5 text-primary" /> Cupones de descuento
               </h2>
-              {activeCupon ? (
-                <div className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-4 mt-3">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-600 text-white font-mono">{(activeCupon.cupones as any)?.codigo}</Badge>
-                    <span className="text-sm font-semibold text-green-800 dark:text-green-300">
-                      {(activeCupon.cupones as any)?.descuento_pct}% de descuento
-                      {(activeCupon.cupones as any)?.acumulable ? ' (acumulable)' : ''}
-                    </span>
-                  </div>
-                  {activeCupon.meses_restantes !== null && (
-                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                      {activeCupon.meses_restantes > 0 ? `${activeCupon.meses_restantes} meses restantes` : 'Último mes de descuento'}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 mt-3">
-                  <Input
-                    value={cuponCode}
-                    onChange={e => setCuponCode(e.target.value.toUpperCase())}
-                    placeholder="Ingresa tu código"
-                    className="max-w-[200px] font-mono"
-                  />
-                  <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
-                    {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-                  </Button>
+              <p className="text-xs text-muted-foreground">
+                Puedes aplicar varios cupones. Los <strong>acumulables</strong> se suman; los <strong>no acumulables</strong> usan el de mayor descuento.
+              </p>
+
+              {activeCupones.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {activeCupones.map((u) => {
+                    const c = u.cupones as any;
+                    return (
+                      <div
+                        key={u.id}
+                        className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-3 flex items-center justify-between gap-3 flex-wrap"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className="bg-green-600 text-white font-mono">{c?.codigo}</Badge>
+                          <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                            {c?.descuento_pct}% de descuento
+                          </span>
+                          {c?.acumulable ? (
+                            <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">Acumulable</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">No acumulable</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-green-700 dark:text-green-400">
+                          {u.meses_restantes === null
+                            ? 'Permanente'
+                            : u.meses_restantes > 0
+                              ? `${u.meses_restantes} mes${u.meses_restantes > 1 ? 'es' : ''} restante${u.meses_restantes > 1 ? 's' : ''}`
+                              : 'Último mes'}
+                          {c?.vigencia_fin ? ` · Vence ${format(new Date(c.vigencia_fin), 'dd MMM yy', { locale: es })}` : ''}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+
+              <div className="flex items-center gap-2 mt-3">
+                <Input
+                  value={cuponCode}
+                  onChange={e => setCuponCode(e.target.value.toUpperCase())}
+                  placeholder={activeCupones.length > 0 ? 'Aplicar otro código' : 'Ingresa tu código'}
+                  className="max-w-[220px] font-mono"
+                />
+                <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
+                  {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -1180,19 +1203,44 @@ export default function MiSuscripcionPage() {
             </div>
 
             {/* Summary */}
-            {targetPlan && (
+            {targetPlan && (() => {
+              const baseSubtotal = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+              const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
+              const totalConDesc = companyDiscount > 0
+                ? Math.round(baseSubtotal * (1 - companyDiscount / 100))
+                : baseSubtotal;
+              const ahorro = baseSubtotal - totalConDesc;
+              return (
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
                     {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
                   </div>
-                  <div className="text-xl font-black text-foreground">
-                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                  <div className="text-right">
+                    {companyDiscount > 0 && (
+                      <div className="text-xs text-muted-foreground line-through">
+                        ${baseSubtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                      </div>
+                    )}
+                    <div className="text-xl font-black text-foreground">
+                      ${totalConDesc.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                    </div>
                   </div>
                 </div>
+                {companyDiscount > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-green-700 dark:text-green-400 font-semibold">
+                      Descuento aplicado: {companyDiscount}%
+                      {activeCupones.length > 0 && ` (cupón${activeCupones.length > 1 ? 'es' : ''}: ${activeCupones.map((u: any) => u.cupones?.codigo).filter(Boolean).join(', ')})`}
+                    </span>
+                    <span className="text-green-700 dark:text-green-400 font-semibold">
+                      Ahorras ${ahorro.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a <strong className="text-foreground">${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
+                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
                 </div>
 
                 {hasChanges && updateCharge && (
@@ -1214,7 +1262,8 @@ export default function MiSuscripcionPage() {
                   </>
                 )}
               </div>
-            )}
+              );
+            })()}
           </div>
 
           <DialogFooter>
