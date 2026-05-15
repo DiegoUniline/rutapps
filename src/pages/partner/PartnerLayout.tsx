@@ -1,5 +1,5 @@
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Tag, Wallet, Building2, User, LogOut, Loader2 } from 'lucide-react';
+import { NavLink, Outlet, Navigate, Link } from 'react-router-dom';
+import { LayoutDashboard, Tag, Wallet, Building2, User, LogOut, Loader2, PlayCircle } from 'lucide-react';
 import { usePartner } from '@/hooks/usePartner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
