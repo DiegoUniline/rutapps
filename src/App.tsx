@@ -85,6 +85,13 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const PosAdminPage = lazy(() => import("@/pages/PosAdminPage"));
 const ReporteDiarioPage = lazy(() => import("@/pages/ReporteDiarioPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
+const SuperAdminPartnersPage = lazy(() => import("@/pages/SuperAdminPartnersPage"));
+const PartnerLayout = lazy(() => import("@/pages/partner/PartnerLayout"));
+const PartnerDashboard = lazy(() => import("@/pages/partner/PartnerDashboard"));
+const PartnerEmpresas = lazy(() => import("@/pages/partner/PartnerEmpresas"));
+const PartnerCupones = lazy(() => import("@/pages/partner/PartnerCupones"));
+const PartnerComisiones = lazy(() => import("@/pages/partner/PartnerComisiones"));
+const PartnerPerfil = lazy(() => import("@/pages/partner/PartnerPerfil"));
 const DatabaseHealthPage = lazy(() => import("@/pages/DatabaseHealthPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
@@ -358,8 +365,16 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
+            <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
             <Route path="/admin/database-health" element={<DatabaseHealthPage />} />
+            <Route path="/partner" element={<PartnerLayout />}>
+              <Route index element={<PartnerDashboard />} />
+              <Route path="empresas" element={<PartnerEmpresas />} />
+              <Route path="cupones" element={<PartnerCupones />} />
+              <Route path="comisiones" element={<PartnerComisiones />} />
+              <Route path="perfil" element={<PartnerPerfil />} />
+            </Route>
             {renderAuthenticatedRoutes()}
           </Routes>
         </Suspense>
@@ -631,6 +646,13 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
+      <Route path="/partner" element={<PartnerLayout />}>
+        <Route index element={<PartnerDashboard />} />
+        <Route path="empresas" element={<PartnerEmpresas />} />
+        <Route path="cupones" element={<PartnerCupones />} />
+        <Route path="comisiones" element={<PartnerComisiones />} />
+        <Route path="perfil" element={<PartnerPerfil />} />
+      </Route>
       {/* Nested context-preserving routes for product/client detail */}
       <Route path="/:a/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/:b/productos/:id" element={<ProductoFormPage />} />
