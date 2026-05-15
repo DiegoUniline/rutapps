@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
       sandboxEmail = `sandbox-${partner.ref_slug}-${randomToken(4)}@${SANDBOX_DOMAIN}`;
       const password = `Sbx!${randomToken(16)}`;
 
+      const uniquePhone = `SBX-${partner.ref_slug}-${randomToken(6)}`;
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email: sandboxEmail,
         password,
@@ -88,6 +89,7 @@ Deno.serve(async (req) => {
         user_metadata: {
           full_name: `${partner.nombre} (Sandbox)`,
           empresa_nombre: sandboxNombre,
+          phone: uniquePhone,
           is_partner_sandbox: true,
         },
       });
