@@ -97,10 +97,10 @@ export default function MiSuscripcionPage() {
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
 
-  // Coupon
+  // Coupons (multiple allowed)
   const [cuponCode, setCuponCode] = useState('');
   const [cuponLoading, setCuponLoading] = useState(false);
-  const [activeCupon, setActiveCupon] = useState<any>(null); // active cupon_usos for this empresa
+  const [activeCupones, setActiveCupones] = useState<any[]>([]);
 
   useEffect(() => {
     if (!empresa?.id) return;
