@@ -331,7 +331,8 @@ function AppRoutes() {
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
   const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
-  const isBillingOwner = isSuperAdminEmail(user?.email);
+  const isOwnerOfEmpresa = !!empresa?.owner_user_id && empresa.owner_user_id === user?.id;
+  const isBillingOwner = isSuperAdminEmail(user?.email) || isOwnerOfEmpresa;
   if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
