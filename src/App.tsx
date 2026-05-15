@@ -230,6 +230,26 @@ function AppRoutes() {
     queryClient.invalidateQueries({ queryKey: ['factura-pendiente', profile?.empresa_id] });
   }, [user?.id, profile?.empresa_id, subscription.loading, subscription.status, queryClient]);
 
+  // Partner-only user (tiene partner row pero NO profile de empresa) → solo panel /partner
+  const partnerQ = usePartner();
+  const isPartnerOnly = !!user && !profile && !loading && !!partnerQ.data;
+  if (isPartnerOnly) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/partner" element={<PartnerLayout />}>
+            <Route index element={<PartnerDashboard />} />
+            <Route path="empresas" element={<PartnerEmpresas />} />
+            <Route path="cupones" element={<PartnerCupones />} />
+            <Route path="comisiones" element={<PartnerComisiones />} />
+            <Route path="perfil" element={<PartnerPerfil />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/partner" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   if (loading || subscription.loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6">
