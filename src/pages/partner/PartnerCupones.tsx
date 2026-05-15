@@ -31,9 +31,10 @@ export default function PartnerCupones() {
 
   const create = async () => {
     if (!form.codigo.trim() || !form.descuento_pct) { toast.error('Código y % son obligatorios'); return; }
-    if (form.descuento_pct >= (partner?.comision_pct ?? 0)) {
-      const ok = confirm(`Tu comisión es ${partner?.comision_pct}%. Si el cupón es de ${form.descuento_pct}% no recibirás comisión por ventas que lo usen. ¿Continuar?`);
-      if (!ok) return;
+    const maxPct = partner?.comision_pct ?? 0;
+    if (form.descuento_pct > maxPct) {
+      toast.error(`El descuento no puede ser mayor que tu comisión (${maxPct}%)`);
+      return;
     }
     const { error } = await supabase.from('cupones').insert({
       codigo: form.codigo.trim().toUpperCase(),
@@ -105,7 +106,7 @@ export default function PartnerCupones() {
           <DialogHeader><DialogTitle>Nuevo cupón</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Código</Label><Input value={form.codigo} onChange={e => setForm({ ...form, codigo: e.target.value.toUpperCase() })} placeholder="JUAN10" className="uppercase" /></div>
-            <div><Label>Descuento %</Label><Input type="number" min={1} max={100} value={form.descuento_pct} onChange={e => setForm({ ...form, descuento_pct: Number(e.target.value) })} /></div>
+            <div><Label>Descuento % (máx {partner?.comision_pct ?? 0}%)</Label><Input type="number" min={1} max={partner?.comision_pct ?? 100} value={form.descuento_pct} onChange={e => setForm({ ...form, descuento_pct: Number(e.target.value) })} /></div>
             <div><Label>Duración en meses (vacío = para siempre)</Label><Input type="number" min={1} value={form.meses_duracion} onChange={e => setForm({ ...form, meses_duracion: e.target.value })} /></div>
             <div><Label>Vence el (opcional)</Label><Input type="date" value={form.vigencia_fin} onChange={e => setForm({ ...form, vigencia_fin: e.target.value })} /></div>
             <Button onClick={create} className="w-full">Crear</Button>
