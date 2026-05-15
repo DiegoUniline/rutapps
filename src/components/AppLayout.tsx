@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
+import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
