@@ -19,7 +19,6 @@ type PartnerCoupon = {
   id: string;
   codigo: string;
   descuento_pct: number | null;
-  descuento_monto: number | null;
   partner_id: string | null;
 };
 
@@ -50,7 +49,7 @@ export default function PartnerEmpresas() {
         .order('created_at', { ascending: false }),
         supabase
           .from('cupones')
-          .select('id, codigo, descuento_pct, descuento_monto, partner_id')
+          .select('id, codigo, descuento_pct, partner_id')
           .eq('partner_id', partner.id),
       ]);
       if (atribError) throw atribError;
@@ -91,7 +90,7 @@ export default function PartnerEmpresas() {
       if (extraCuponIds.length) {
         const { data: extraCupones } = await supabase
           .from('cupones')
-          .select('id, codigo, descuento_pct, descuento_monto, partner_id')
+          .select('id, codigo, descuento_pct, partner_id')
           .in('id', extraCuponIds);
         ((extraCupones || []) as PartnerCoupon[]).forEach(c => { cuponMap[c.id] = c; });
       }
@@ -133,9 +132,7 @@ export default function PartnerEmpresas() {
               const desc = cup
                 ? cup.descuento_pct
                   ? `${cup.descuento_pct}% off`
-                  : cup.descuento_monto
-                    ? `$${cup.descuento_monto} off`
-                    : ''
+                  : ''
                 : '';
               return (
                 <TableRow key={e.id}>
