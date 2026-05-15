@@ -244,7 +244,9 @@ function AppRoutes() {
             <Route path="comisiones" element={<PartnerComisiones />} />
             <Route path="perfil" element={<PartnerPerfil />} />
           </Route>
+          <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="*" element={<Navigate to="/partner" replace />} />
+        </Routes>
         </Routes>
       </Suspense>
     );
