@@ -85,7 +85,7 @@ export default function PartnerDashboard() {
     });
     const topEmpresas = Object.values(empMap).sort((a, b) => b.total - a.total).slice(0, 5);
 
-    const distCupones = (stats?.cupones || []).map((c: any) => ({ name: c.codigo, value: c.usos_count || 0 })).filter((x: any) => x.value > 0);
+    const distCupones = (stats?.cupones || []).map((c: any) => ({ name: c.codigo, value: c.usos_actuales || 0 })).filter((x: any) => x.value > 0);
     return { serieMensual: serie, mesActual, mesAnterior, deltaPct, deltaEmpresas, topEmpresas, distCupones };
   }, [stats]);
 
