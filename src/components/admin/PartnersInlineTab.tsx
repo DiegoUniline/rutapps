@@ -27,7 +27,7 @@ export default function PartnersInlineTab() {
   const [clientesOpen, setClientesOpen] = useState<any>(null);
   const [pwOpen, setPwOpen] = useState<any>(null);
   const [pwForm, setPwForm] = useState({ password: '', saving: false });
-  const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
+  const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20, password: '' });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
 
