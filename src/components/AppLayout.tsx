@@ -179,13 +179,22 @@ const mobileBottomTabs = [
 
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null, isOwner?: boolean) {
-  const isBillingOwner = isSuperAdminEmail(userEmail) || !!isOwner;
+  const isSuperAdminUser = isSuperAdminEmail(userEmail);
+  const isBillingOwner = isSuperAdminUser || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
-    .filter(it => isBillingOwner || it.path !== '/facturacion-cfdi')
-    .map(it => {
-      if (!it.children) return it;
-      const children = it.children.filter(c => isBillingOwner || (c.path !== '/mi-suscripcion' && !c.path.startsWith('/facturacion-cfdi')));
-      return { ...it, children };
+    .flatMap(it => {
+      // Hide whole "Facturación" parent if user has no billing access
+      if (it.path === '/mi-suscripcion' && !isBillingOwner) return [];
+      // Hide legacy CFDI top-level for non-super-admin (defensive)
+      if (it.path === '/facturacion-cfdi' && !isSuperAdminUser) return [];
+      if (!it.children) return [it];
+      const children = it.children.filter(c => {
+        if (c.path === '/mi-suscripcion') return isBillingOwner;
+        if (c.path.startsWith('/facturacion-cfdi')) return isSuperAdminUser;
+        return true;
+      });
+      if (it.path === '/mi-suscripcion' && children.length === 0) return [];
+      return [{ ...it, children }];
     });
 
   if (isSuperAdmin) return stripBilling(navItems);
