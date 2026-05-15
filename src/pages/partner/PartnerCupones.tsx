@@ -31,9 +31,10 @@ export default function PartnerCupones() {
 
   const create = async () => {
     if (!form.codigo.trim() || !form.descuento_pct) { toast.error('Código y % son obligatorios'); return; }
-    if (form.descuento_pct >= (partner?.comision_pct ?? 0)) {
-      const ok = confirm(`Tu comisión es ${partner?.comision_pct}%. Si el cupón es de ${form.descuento_pct}% no recibirás comisión por ventas que lo usen. ¿Continuar?`);
-      if (!ok) return;
+    const maxPct = partner?.comision_pct ?? 0;
+    if (form.descuento_pct > maxPct) {
+      toast.error(`El descuento no puede ser mayor que tu comisión (${maxPct}%)`);
+      return;
     }
     const { error } = await supabase.from('cupones').insert({
       codigo: form.codigo.trim().toUpperCase(),
