@@ -60,9 +60,9 @@ export default function PartnersLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen text-gray-900" style={{ background: 'hsl(25, 100%, 97%)' }}>
       {/* Nav */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
+      <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur border-b border-orange-100" style={{ background: 'hsla(25, 100%, 97%, 0.9)' }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-8 w-8 rounded-lg" />
@@ -99,7 +99,7 @@ export default function PartnersLandingPage() {
       </section>
 
       {/* Beneficios */}
-      <section className="py-16 px-6 bg-gray-50">
+      <section className="py-16 px-6" style={{ background: 'hsl(25, 95%, 94%)' }}>
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black text-center mb-12">¿Cómo funciona?</h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -147,7 +147,7 @@ export default function PartnersLandingPage() {
       </section>
 
       {/* Políticas */}
-      <section className="py-16 px-6 bg-gray-50">
+      <section className="py-16 px-6" style={{ background: 'hsl(25, 95%, 94%)' }}>
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black text-center mb-10">Políticas del programa</h2>
           <div className="space-y-3">
