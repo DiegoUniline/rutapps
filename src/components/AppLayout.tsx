@@ -140,15 +140,6 @@ const navItems: NavItem[] = [
       { label: 'Reporte entregas', path: '/reportes/entregas' },
     ],
   },
-  {
-    label: 'Facturación',
-    icon: FileText,
-    path: '/facturacion-cfdi',
-    children: [
-      { label: 'Facturas CFDI', path: '/facturacion-cfdi' },
-      { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
-    ],
-  },
   // ── Admin & Config ──
   { label: 'Control', icon: ShieldAlert, path: '/control' },
   { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
@@ -163,9 +154,19 @@ const navItems: NavItem[] = [
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-      { label: 'Mi suscripción', path: '/mi-suscripcion' },
     ],
   },
+  {
+    label: 'Facturación',
+    icon: FileText,
+    path: '/mi-suscripcion',
+    children: [
+      { label: 'Mi suscripción', path: '/mi-suscripcion' },
+      { label: 'Facturas CFDI', path: '/facturacion-cfdi' },
+      { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
+    ],
+  },
+
 ];
 
 const mobileBottomTabs = [
