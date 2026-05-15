@@ -9,9 +9,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Handshake, DollarSign, Tag, BarChart3, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 
+const LADAS = [
+  { code: '+52', flag: '🇲🇽', name: 'México' },
+  { code: '+1', flag: '🇺🇸', name: 'EE.UU. / Canadá' },
+  { code: '+54', flag: '🇦🇷', name: 'Argentina' },
+  { code: '+55', flag: '🇧🇷', name: 'Brasil' },
+  { code: '+56', flag: '🇨🇱', name: 'Chile' },
+  { code: '+57', flag: '🇨🇴', name: 'Colombia' },
+  { code: '+506', flag: '🇨🇷', name: 'Costa Rica' },
+  { code: '+593', flag: '🇪🇨', name: 'Ecuador' },
+  { code: '+503', flag: '🇸🇻', name: 'El Salvador' },
+  { code: '+34', flag: '🇪🇸', name: 'España' },
+  { code: '+502', flag: '🇬🇹', name: 'Guatemala' },
+  { code: '+504', flag: '🇭🇳', name: 'Honduras' },
+  { code: '+505', flag: '🇳🇮', name: 'Nicaragua' },
+  { code: '+507', flag: '🇵🇦', name: 'Panamá' },
+  { code: '+595', flag: '🇵🇾', name: 'Paraguay' },
+  { code: '+51', flag: '🇵🇪', name: 'Perú' },
+  { code: '+1', flag: '🇩🇴', name: 'Rep. Dominicana' },
+  { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
+  { code: '+58', flag: '🇻🇪', name: 'Venezuela' },
+];
+
 export default function PartnersLandingPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lada, setLada] = useState('+52');
   const [form, setForm] = useState({
     nombre: '', email: '', telefono: '', motivo: '', experiencia: '', redes: '',
   });
@@ -26,7 +49,7 @@ export default function PartnersLandingPage() {
     const { error } = await supabase.from('partner_solicitudes').insert({
       nombre: form.nombre.trim(),
       email: form.email.trim().toLowerCase(),
-      telefono: form.telefono.trim() || null,
+      telefono: form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null,
       motivo: form.motivo.trim() || null,
       experiencia: form.experiencia.trim() || null,
       redes: form.redes.trim() || null,
@@ -181,7 +204,25 @@ export default function PartnersLandingPage() {
                 </div>
                 <div>
                   <Label>Teléfono / WhatsApp</Label>
-                  <Input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="+52 ..." />
+                  <div className="flex gap-2">
+                    <select
+                      value={lada}
+                      onChange={e => setLada(e.target.value)}
+                      className="h-10 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
+                      aria-label="Lada"
+                    >
+                      {LADAS.map((l, i) => (
+                        <option key={`${l.code}-${i}`} value={l.code}>{l.flag} {l.name} ({l.code})</option>
+                      ))}
+                    </select>
+                    <Input
+                      type="tel"
+                      value={form.telefono}
+                      onChange={e => setForm({ ...form, telefono: e.target.value.replace(/[^0-9 ]/g, '') })}
+                      placeholder="55 1234 5678"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>¿Por qué quieres ser Partner?</Label>
