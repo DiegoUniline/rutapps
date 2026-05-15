@@ -364,6 +364,54 @@ export default function PartnersLandingPage() {
         </div>
       </section>
 
+      {/* Sandbox Partner */}
+      <section className="py-20 px-6 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider mb-3">
+              🧪 Exclusivo Partners
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-3">Pruébalo antes de promocionarlo</h2>
+            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+              Al aprobarte como Partner recibes un <strong>Sandbox personal</strong> con todo Rutapp desbloqueado. Aprende el sistema, ensaya demos y resuelve dudas básicas de tus referidos sin necesidad de tu propia suscripción.
+            </p>
+          </div>
+
+          <div className="rounded-3xl p-8 md:p-10 border-2 border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 shadow-xl">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <h3 className="text-2xl font-black mb-4 text-gray-900">¿Qué incluye tu Sandbox?</h3>
+                <ul className="space-y-3 text-sm">
+                  {[
+                    'Hasta 10 clientes de prueba',
+                    'Hasta 20 productos en tu catálogo',
+                    'Hasta 50 ventas registradas',
+                    'POS, App Móvil, Logística y Reportes activos',
+                    'Permanente mientras seas Partner activo',
+                  ].map((t) => (
+                    <li key={t} className="flex items-start gap-2">
+                      <div className="h-5 w-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">✓</div>
+                      <span className="text-gray-700">{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-orange-100">
+                <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wider mb-3">¿Por qué con límites?</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Para que ningún Partner use el Sandbox como sistema productivo gratis. Tu sandbox es tu <strong>laboratorio</strong>: aquí pruebas todo, pero los clientes reales necesitan su propia cuenta Rutapp.
+                </p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>❌ Sin facturación CFDI</div>
+                  <div>❌ Sin envíos masivos de WhatsApp</div>
+                  <div>❌ Sin catálogo público compartible</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA WhatsApp */}
       <section className="py-16 px-6">
         <div className="max-w-4xl mx-auto rounded-3xl p-8 md:p-12 text-center text-white shadow-2xl"

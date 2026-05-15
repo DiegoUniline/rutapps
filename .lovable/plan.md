@@ -1,128 +1,93 @@
+## 🧪 Sandbox para Partners
 
-# Módulo de Partners (Revendedores)
+Cada partner aprobado tendrá UNA empresa sandbox **permanente**, **vacía** y con **límites duros**. La idea: que pueda probar todo, dar demos y soporte, pero nunca usarla como sistema productivo.
 
-Sistema completo para que terceros promocionen Rutapp, generen cupones y reciban un % recurrente de cada empresa que refieran.
+### 1. Base de datos (`supabase/migrations/...`)
 
-## Cómo funciona (resumen)
+**Cambios al esquema:**
+- `empresas`: agregar `is_partner_sandbox boolean DEFAULT false` + `partner_owner_id uuid REFERENCES partners(id)`
+- `partners`: agregar `sandbox_empresa_id uuid REFERENCES empresas(id)` (cache rápido)
+- Índice parcial en `empresas(partner_owner_id) WHERE is_partner_sandbox`
 
-1. Tú (Super Admin) creas un **Partner** y le asignas su % base (ej. 25%).
-2. El partner entra a su **panel** (`/partner`) y crea sus cupones (ej. `JUAN10` = 10% off).
-3. El partner comparte: link `rutapp.mx/?ref=JUAN` o el código de cupón.
-4. Una empresa se registra usando ese link/cupón → se atribuye al partner **de por vida**.
-5. Cada vez que la empresa paga su suscripción → se calcula comisión:
-   - **Comisión partner = (Partner % − Cupón %) × Monto cobrado**
-   - Ej: Partner 25%, cupón 10%, factura $1000 cobrada $900 → comisión = 15% × $900 = $135
-   - Si cupón ≥ partner % → comisión = 0 (no negativa)
-6. Tú ves un panel admin con saldo a pagar por partner y marcas pagos manuales.
+**Triggers de límite (bloquean inserts cuando se excede):**
 
-## Estructura
+| Tabla | Límite | Mensaje |
+|---|---|---|
+| `clientes` | 10 | "Sandbox limitado a 10 clientes. Para más, tu prospecto necesita su propia cuenta." |
+| `productos` | 20 | "Sandbox limitado a 20 productos." |
+| `ventas` | 50 | "Sandbox limitado a 50 ventas. Borra ventas viejas o usa una cuenta real." |
+| `compras` | 20 | "Sandbox limitado a 20 compras." |
+| `profiles` (mismo empresa_id) | 1 | "El sandbox solo permite 1 usuario (tú)." |
+| `almacenes` | 2 | "Sandbox limitado a 2 almacenes." |
 
-### Backend (4 tablas nuevas)
+Cada trigger verifica `is_partner_sandbox = true` antes de aplicar el límite — las empresas normales no se ven afectadas.
 
-- **`partners`** — datos del partner: usuario asociado, nombre, email, teléfono, % comisión base, slug del link de referido (`?ref=slug`), estado (activo/inactivo), notas internas.
-- **`partner_cupones`** — código, % descuento, vigencia, máximo de usos, usos actuales, activo. Pertenecen a 1 partner.
-- **`partner_atribuciones`** — vincula `empresa_id` ↔ `partner_id` (1:1, fijada al registrarse). Guarda cupón usado y método (link/cupón/manual).
-- **`partner_comisiones`** — un registro por cada cobro de suscripción atribuido: monto base, % partner, % cupón, monto comisión, status (pendiente/pagada), fecha pago, referencia.
-- **`partner_pagos`** — registro de pagos manuales que tú haces al partner: monto, método, referencia, comisiones que cubre.
+**Bloqueos absolutos (vía triggers BEFORE INSERT):**
+- `cfdis` → bloquear si empresa es sandbox ("Facturación CFDI no disponible en Sandbox")
+- `wa_messages` / envíos masivos WhatsApp → bloquear
+- `listas` con `es_publica = true` → bloquear (no pueden compartir catálogo público)
 
-### Cambios en flujos existentes
+**Función `create_partner_sandbox(p_partner_id uuid)`:**
+- Crea `empresa` marcada como `is_partner_sandbox = true`
+- Crea `subscription` con `es_manual = true, status = 'active'` (sin cobros)
+- Guarda `partner_owner_id` y actualiza `partners.sandbox_empresa_id`
+- Llama al trigger `auto_create_empresa_basics` (genera tarifa + lista General por defecto)
+- NO siembra datos (vacío, como pediste)
 
-- **Signup público** (`SignupPage` + edge `auto_create_trial_subscription`): leer `?ref=` de URL o cupón aplicado → crear `partner_atribuciones`. Aplicar descuento del cupón a la `subscription` (campo `descuento_porcentaje` ya existe).
-- **Billing cycle** (edge `billing-cycle` / `daily-billing`): cuando se confirma un cobro exitoso de suscripción, si la empresa tiene atribución activa → insertar fila en `partner_comisiones` con el cálculo.
-- **Landing/Login**: capturar `?ref=slug` en localStorage para que sobreviva hasta el signup.
+### 2. Edge Function `partner-sandbox-login`
 
-### Frontend
+Reutiliza el patrón de `demo-login` pero **persistente**:
+1. Verifica que el usuario autenticado sea un `partner` activo
+2. Si `partners.sandbox_empresa_id` es null → crea sandbox + auth user con email `sandbox-{ref_slug}@sandbox.rutapp.mx`
+3. Genera un `signInWithOtp` mágico → devuelve URL de sesión al frontend
+4. Al regresar al partner panel, el botón siempre funciona (reutiliza la misma empresa)
 
-**Para el Partner (`/partner/*`):**
-- Login normal (su `user_id` está vinculado en `partners`)
-- Dashboard: KPIs (empresas referidas activas, comisión del mes, total acumulado, total pagado, saldo pendiente)
-- Mis empresas referidas: lista con estado de suscripción de cada una (sin datos sensibles, solo nombre/fecha alta/status)
-- Mis cupones: CRUD (crear, activar/desactivar, ver usos)
-- Mi link de referido: copiar URL + QR
-- Comisiones: tabla por mes con detalle, filtro pagada/pendiente
-- Pagos recibidos: historial de lo que le has pagado
+### 3. UI Partner (`/partner`)
 
-**Para Super Admin (`/superadmin/partners`):**
-- Lista de partners (CRUD): crear, editar %, dar de baja
-- Vincular un usuario existente o crear cuenta nueva al crear partner
-- Ver detalle de cada partner: empresas referidas, cupones, comisiones generadas, saldo a pagar
-- Registrar pago: marca comisiones como pagadas y crea `partner_pagos`
-- Ajustes manuales (agregar/quitar comisión)
+**`PartnerDashboard.tsx`:**
+- Card destacada nueva arriba: **"🧪 Tu Sandbox"** con botón **"Abrir Sandbox"** y texto: *"Empresa de pruebas con tus datos reales nunca mezclados. Úsala para demos y aprender el sistema."*
+- Muestra contadores actuales: `3/10 clientes • 7/20 productos • 12/50 ventas`
 
-### Permisos / Roles
+**`PartnersLandingPage.tsx`:**
+- Nueva sección "Pruébalo antes de promocionarlo": *"Al aprobarte como partner, recibes un sandbox personal con todo el sistema desbloqueado (límite 10 clientes / 20 productos / 50 ventas) para que conozcas Rutapp de adentro."*
 
-- Nuevo flag `es_partner` o detección por existencia en tabla `partners` → al login redirige a `/partner` si NO tiene `empresa_id` (partners puros) o muestra un toggle si también tiene empresa.
-- RLS estricta: partner solo ve sus propios datos. Super admin ve todo.
+### 4. Banner global en sandbox
 
-## Detalles técnicos
+Componente `<SandboxBanner />` montado en `AppLayout` cuando `empresa.is_partner_sandbox`:
+- Barra naranja sticky arriba: `🧪 Modo Sandbox Partner — Datos de prueba | 3/10 clientes • 7/20 productos`
+- Botón "Volver al Panel Partner" que cierra sesión sandbox y regresa a `/partner`
 
-### Atribución (link + cupón)
+### 5. Bloqueo en hooks de upgrade
 
-```
-LandingPage / SignupPage:
-  useEffect: if (searchParams.ref) localStorage.setItem('rutapp_ref', ref)
-  signup form: input opcional "Código de cupón"
+En `useSuscripcion`, `BillingPage`, intentos de pago Stripe/OpenPay → si `is_partner_sandbox` muestra: *"El sandbox no admite suscripción. Sirve solo para pruebas."*
 
-Al crear empresa (trigger o edge):
-  ref = localStorage.rutapp_ref
-  cupon = form.cupon_code
-  resolver partner_id desde ref O desde cupon
-  insert partner_atribuciones(empresa_id, partner_id, cupon_id, metodo)
-  if cupon: update subscriptions.descuento_porcentaje
-```
+---
 
-### Cálculo de comisión (al cobrar)
+### Archivos a crear/editar
 
-```sql
--- En billing-cycle / stripe-webhook al confirmar pago:
-INSERT INTO partner_comisiones (
-  partner_id, empresa_id, periodo,
-  monto_cobrado, partner_pct, cupon_pct,
-  monto_comision, status
-)
-SELECT
-  pa.partner_id, pa.empresa_id, '2026-05',
-  monto_pagado,
-  p.comision_pct,
-  COALESCE(pc.descuento_pct, 0),
-  monto_pagado * GREATEST(p.comision_pct - COALESCE(pc.descuento_pct, 0), 0) / 100,
-  'pendiente'
-FROM partner_atribuciones pa
-JOIN partners p ON p.id = pa.partner_id
-LEFT JOIN partner_cupones pc ON pc.id = pa.cupon_id
-WHERE pa.empresa_id = $1 AND p.estado = 'activo';
+```text
+NUEVO  supabase/migrations/{timestamp}_partner_sandbox.sql
+NUEVO  supabase/functions/partner-sandbox-login/index.ts
+NUEVO  src/components/SandboxBanner.tsx
+EDIT   src/pages/partner/PartnerDashboard.tsx  (card Sandbox + contadores)
+EDIT   src/pages/PartnersLandingPage.tsx      (sección "Pruébalo")
+EDIT   src/layouts/AppLayout.tsx               (montar SandboxBanner)
+EDIT   src/pages/BillingPage.tsx               (bloquear upgrade si sandbox)
 ```
 
-### Rutas a crear
+---
 
-- `/partner` — dashboard
-- `/partner/empresas` — empresas referidas
-- `/partner/cupones` — gestión cupones
-- `/partner/comisiones` — comisiones y pagos
-- `/partner/perfil` — datos + link
-- `/superadmin/partners` — admin de partners
-- `/superadmin/partners/:id` — detalle + pagar
+### ⚠️ Una decisión clave que necesito confirmar
 
-### RLS clave
+El partner ya tiene su cuenta auth para `/partner`. Para entrar al sandbox hay dos opciones:
 
-- `partners`: SELECT/UPDATE para `auth.uid() = user_id` ó super admin
-- `partner_cupones`: SELECT/INSERT/UPDATE si `partner_id` pertenece al usuario
-- `partner_atribuciones`: SELECT solo de las propias o super admin
-- `partner_comisiones`: SELECT propias o super admin (insert solo desde edge functions con service role)
-- `partner_pagos`: SELECT propias, INSERT solo super admin
+**A) Cuenta auth separada para el sandbox** (recomendado)
+- Email autogenerado `sandbox-{slug}@sandbox.rutapp.mx`
+- Login mágico desde el botón "Abrir Sandbox"
+- Nunca mezcla con su empresa real si algún día compra Rutapp
 
-## Fuera de alcance (pueden venir después)
+**B) Misma cuenta auth, dos empresas**
+- Switch de empresa en el sidebar
+- Requiere refactor mayor del sistema (hoy es 1 user → 1 empresa)
 
-- Pagos automáticos (Stripe Connect) — por ahora todo manual
-- Multi-tier (sub-partners, sub-comisiones)
-- Caducidad de comisión a X meses (hoy es recurrente "para siempre")
-- Reportes fiscales / generación CFDI al partner
-
-## Orden de implementación sugerido
-
-1. Migración: 5 tablas + RLS + trigger de atribución
-2. Edge function update: agregar inserción de comisión en `billing-cycle`
-3. Captura `?ref=` en Landing + campo cupón en Signup
-4. Páginas Partner (dashboard + cupones + comisiones)
-5. Páginas Super Admin (gestión partners + pagar)
-6. QA end-to-end con un partner de prueba
+Voy con **A** salvo que digas lo contrario. ¿Apruebo y aplico?

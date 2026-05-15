@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
+import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
@@ -548,6 +549,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
         <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
@@ -681,6 +683,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Desktop layout with sidebar
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background">
+      <SandboxBanner />
       <NotificationRuntime bannersOnly />
       <div className="flex-1 flex min-h-0">
       <aside

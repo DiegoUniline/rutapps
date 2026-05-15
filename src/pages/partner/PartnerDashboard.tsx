@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Building2, Tag, Wallet, TrendingUp, Copy, Check, ArrowUpRight, ArrowDownRight,
   Users, DollarSign, Sparkles, Share2, MessageCircle, Twitter, Facebook, Mail, Trophy, Crown,
+  Beaker, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMemo, useState } from 'react';
@@ -25,6 +26,26 @@ const PIE_COLORS = [PRIMARY, ACCENT, GREEN, '#8B5CF6', '#EC4899', '#06B6D4'];
 export default function PartnerDashboard() {
   const { data: partner } = usePartner();
   const [copied, setCopied] = useState(false);
+  const [openingSandbox, setOpeningSandbox] = useState(false);
+
+  const handleOpenSandbox = async () => {
+    try {
+      setOpeningSandbox(true);
+      const { data, error } = await supabase.functions.invoke('partner-sandbox-login');
+      if (error) throw error;
+      if (data?.action_link) {
+        window.open(data.action_link, '_blank');
+        toast.success('Sandbox abierto en una nueva pestaña');
+      } else {
+        throw new Error('No se recibió enlace');
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? 'No se pudo abrir el sandbox');
+    } finally {
+      setOpeningSandbox(false);
+    }
+  };
+
 
   const { data: nivelData } = useQuery({
     queryKey: ['partner-nivel', partner?.id],
@@ -133,6 +154,43 @@ export default function PartnerDashboard() {
           </div>
         )}
       </div>
+
+      {/* Sandbox Partner */}
+      <Card className="overflow-hidden border-2 border-orange-300 bg-gradient-to-br from-orange-50 via-white to-amber-50">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="h-14 w-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shrink-0">
+                <Beaker className="h-7 w-7" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-black">Tu Sandbox Partner</h2>
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-orange-500 text-white rounded">Exclusivo</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Empresa de pruebas <strong>100% funcional</strong> para que conozcas Rutapp por dentro, hagas demos a tus prospectos y aprendas el sistema. Nunca se mezcla con tus datos reales.
+                </p>
+                <div className="flex flex-wrap gap-3 mt-3 text-xs">
+                  <span className="px-2 py-1 rounded-md bg-white border border-orange-200 font-semibold">10 clientes</span>
+                  <span className="px-2 py-1 rounded-md bg-white border border-orange-200 font-semibold">20 productos</span>
+                  <span className="px-2 py-1 rounded-md bg-white border border-orange-200 font-semibold">50 ventas</span>
+                  <span className="px-2 py-1 rounded-md bg-white border border-orange-200 font-semibold">Sin CFDI · Sin envíos masivos</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              onClick={handleOpenSandbox}
+              disabled={openingSandbox}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shrink-0"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {openingSandbox ? 'Abriendo…' : 'Abrir mi Sandbox'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tarjeta de Nivel + Progreso */}
       {nivelData && (
