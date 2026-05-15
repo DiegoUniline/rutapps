@@ -26,6 +26,16 @@ export default function PartnerDashboard() {
   const { data: partner } = usePartner();
   const [copied, setCopied] = useState(false);
 
+  const { data: nivelData } = useQuery({
+    queryKey: ['partner-nivel', partner?.id],
+    queryFn: async () => {
+      if (!partner?.id) return null;
+      const { data } = await supabase.rpc('get_partner_nivel', { _partner_id: partner.id });
+      return (data && data[0]) || null;
+    },
+    enabled: !!partner?.id,
+  });
+
   const { data: stats } = useQuery({
     queryKey: ['partner-stats', partner?.id],
     queryFn: async () => {
