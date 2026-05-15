@@ -43,16 +43,13 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'gps_lng', header: 'Longitud', format: 'number', width: 14 },
 ];
 
+const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const DIAS_LABEL: Record<string, string> = {
+  lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves',
+  viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo',
+};
+
 const STATIC_FILTER_OPTIONS = [
-  {
-    key: 'status',
-    label: 'Estado',
-    options: [
-      { value: 'activo', label: 'Activo' },
-      { value: 'inactivo', label: 'Inactivo' },
-      { value: 'suspendido', label: 'Suspendido' },
-    ],
-  },
   {
     key: 'credito',
     label: 'Crédito',
@@ -60,6 +57,11 @@ const STATIC_FILTER_OPTIONS = [
       { value: 'si', label: 'Con crédito' },
       { value: 'no', label: 'Sin crédito' },
     ],
+  },
+  {
+    key: 'dia_visita',
+    label: 'Día de visita',
+    options: DIAS_SEMANA.map(d => ({ value: d, label: DIAS_LABEL[d] })),
   },
 ];
 
