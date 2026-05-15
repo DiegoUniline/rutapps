@@ -2321,12 +2321,14 @@ export type Database = {
           email: string
           estado: string | null
           id: string
+          is_partner_sandbox: boolean
           jornada_permite_sin_vehiculo: boolean
           logo_url: string | null
           moneda: string
           nombre: string
           notas_ticket: string | null
           owner_user_id: string | null
+          partner_owner_id: string | null
           pos_turnos_habilitado: boolean
           razon_social: string | null
           regimen_fiscal: string | null
@@ -2349,12 +2351,14 @@ export type Database = {
           email: string
           estado?: string | null
           id?: string
+          is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre: string
           notas_ticket?: string | null
           owner_user_id?: string | null
+          partner_owner_id?: string | null
           pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
@@ -2377,12 +2381,14 @@ export type Database = {
           email?: string
           estado?: string | null
           id?: string
+          is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
           moneda?: string
           nombre?: string
           notas_ticket?: string | null
           owner_user_id?: string | null
+          partner_owner_id?: string | null
           pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
@@ -2394,7 +2400,22 @@ export type Database = {
           ticket_campos?: Json | null
           zona_horaria?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "empresas_partner_owner_id_fkey"
+            columns: ["partner_owner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "empresas_partner_owner_id_fkey"
+            columns: ["partner_owner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entrega_lineas: {
         Row: {
@@ -3785,6 +3806,7 @@ export type Database = {
           peor_nivel_fecha: string | null
           peor_nivel_pct_60d: number | null
           ref_slug: string
+          sandbox_empresa_id: string | null
           telefono: string | null
           updated_at: string
           user_id: string | null
@@ -3800,6 +3822,7 @@ export type Database = {
           peor_nivel_fecha?: string | null
           peor_nivel_pct_60d?: number | null
           ref_slug: string
+          sandbox_empresa_id?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
@@ -3815,11 +3838,20 @@ export type Database = {
           peor_nivel_fecha?: string | null
           peor_nivel_pct_60d?: number | null
           ref_slug?: string
+          sandbox_empresa_id?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_sandbox_empresa_id_fkey"
+            columns: ["sandbox_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_links: {
         Row: {
@@ -6930,6 +6962,17 @@ export type Database = {
           siguiente_pct: number
         }[]
       }
+      get_sandbox_usage: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          clientes_count: number
+          clientes_max: number
+          productos_count: number
+          productos_max: number
+          ventas_count: number
+          ventas_max: number
+        }[]
+      }
       get_user_archive_summary: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -6940,6 +6983,7 @@ export type Database = {
         Args: { p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
