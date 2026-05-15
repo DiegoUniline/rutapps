@@ -683,6 +683,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Desktop layout with sidebar
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background">
+      <SandboxBanner />
       <NotificationRuntime bannersOnly />
       <div className="flex-1 flex min-h-0">
       <aside
