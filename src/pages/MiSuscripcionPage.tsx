@@ -894,40 +894,61 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
-          {/* ─── Cupón de descuento ─── */}
+          {/* ─── Cupones de descuento ─── */}
           <Card>
             <CardContent className="p-4 sm:p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
+                <Ticket className="h-5 w-5 text-primary" /> Cupones de descuento
               </h2>
-              {activeCupon ? (
-                <div className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-4 mt-3">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-600 text-white font-mono">{(activeCupon.cupones as any)?.codigo}</Badge>
-                    <span className="text-sm font-semibold text-green-800 dark:text-green-300">
-                      {(activeCupon.cupones as any)?.descuento_pct}% de descuento
-                      {(activeCupon.cupones as any)?.acumulable ? ' (acumulable)' : ''}
-                    </span>
-                  </div>
-                  {activeCupon.meses_restantes !== null && (
-                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                      {activeCupon.meses_restantes > 0 ? `${activeCupon.meses_restantes} meses restantes` : 'Último mes de descuento'}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 mt-3">
-                  <Input
-                    value={cuponCode}
-                    onChange={e => setCuponCode(e.target.value.toUpperCase())}
-                    placeholder="Ingresa tu código"
-                    className="max-w-[200px] font-mono"
-                  />
-                  <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
-                    {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-                  </Button>
+              <p className="text-xs text-muted-foreground">
+                Puedes aplicar varios cupones. Los <strong>acumulables</strong> se suman; los <strong>no acumulables</strong> usan el de mayor descuento.
+              </p>
+
+              {activeCupones.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {activeCupones.map((u) => {
+                    const c = u.cupones as any;
+                    return (
+                      <div
+                        key={u.id}
+                        className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-3 flex items-center justify-between gap-3 flex-wrap"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className="bg-green-600 text-white font-mono">{c?.codigo}</Badge>
+                          <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                            {c?.descuento_pct}% de descuento
+                          </span>
+                          {c?.acumulable ? (
+                            <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">Acumulable</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">No acumulable</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-green-700 dark:text-green-400">
+                          {u.meses_restantes === null
+                            ? 'Permanente'
+                            : u.meses_restantes > 0
+                              ? `${u.meses_restantes} mes${u.meses_restantes > 1 ? 'es' : ''} restante${u.meses_restantes > 1 ? 's' : ''}`
+                              : 'Último mes'}
+                          {c?.vigencia_fin ? ` · Vence ${format(new Date(c.vigencia_fin), 'dd MMM yy', { locale: es })}` : ''}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+
+              <div className="flex items-center gap-2 mt-3">
+                <Input
+                  value={cuponCode}
+                  onChange={e => setCuponCode(e.target.value.toUpperCase())}
+                  placeholder={activeCupones.length > 0 ? 'Aplicar otro código' : 'Ingresa tu código'}
+                  className="max-w-[220px] font-mono"
+                />
+                <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
+                  {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
