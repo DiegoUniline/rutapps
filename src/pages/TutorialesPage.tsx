@@ -168,7 +168,43 @@ export default function TutorialesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background">
+      {/* Top public nav */}
+      <nav className="sticky top-0 inset-x-0 z-40 backdrop-blur-md bg-white/90 border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-2">
+          <a href="/" className="flex items-center gap-2">
+            <img
+              src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png"
+              alt="Rutapp"
+              className="h-7 w-7 rounded-lg"
+            />
+            <span className="text-lg font-black tracking-tight text-primary">Rutapp</span>
+          </a>
+          <div className="flex items-center gap-1 md:gap-2">
+            <a href="/" className="px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md">
+              Inicio
+            </a>
+            <a href="/partners" className="px-3 py-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md">
+              Partners
+            </a>
+            <a
+              href="/tutoriales"
+              className="relative overflow-hidden px-4 py-1.5 text-sm font-bold text-white rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center gap-1.5"
+              style={{ background: 'linear-gradient(90deg, #dc2626, #ea580c)' }}
+            >
+              <span className="relative z-10 flex items-center gap-1.5">
+                <PlayCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Mira cómo funciona</span>
+                <span className="sm:hidden">Videos</span>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+              </span>
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Video Tutoriales</h1>
