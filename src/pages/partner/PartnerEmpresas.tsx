@@ -6,45 +6,107 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tag, Link2 } from 'lucide-react';
 
+type PartnerAttribution = {
+  id: string;
+  metodo: string;
+  created_at: string;
+  ref_slug: string | null;
+  empresa_id: string;
+  cupon_id: string | null;
+};
+
+type PartnerCoupon = {
+  id: string;
+  codigo: string;
+  descuento_pct: number | null;
+  partner_id: string | null;
+};
+
+type CouponUsage = {
+  id: string;
+  empresa_id: string;
+  cupon_id: string;
+  aplicado_at: string;
+};
+
+type PartnerCompanyRow = PartnerAttribution & {
+  empresa_nombre?: string;
+  sub_status?: string;
+  cupon_efectivo?: PartnerCoupon | null;
+};
+
 export default function PartnerEmpresas() {
   const { data: partner } = usePartner();
-  const { data: empresas } = useQuery({
+  const { data: empresas, isLoading, error } = useQuery<PartnerCompanyRow[]>({
     queryKey: ['partner-empresas', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return [];
-      const { data } = await supabase
+      const [{ data: atribuciones, error: atribError }, { data: partnerCupones }] = await Promise.all([
+        supabase
         .from('partner_atribuciones')
-        .select('id, metodo, created_at, ref_slug, empresa_id, cupon_id, empresas:empresa_id(nombre), cupon:cupon_id(codigo, descuento_pct, descuento_monto)')
+        .select('id, metodo, created_at, ref_slug, empresa_id, cupon_id')
         .eq('partner_id', partner.id)
-        .order('created_at', { ascending: false });
-      const items = (data || []) as any[];
-      const empresaIds = items.map(i => i.empresa_id);
+        .order('created_at', { ascending: false }),
+        supabase
+          .from('cupones')
+          .select('id, codigo, descuento_pct, partner_id')
+          .eq('partner_id', partner.id),
+      ]);
+      if (atribError) throw atribError;
+
+      const cuponMap: Record<string, PartnerCoupon> = Object.fromEntries(((partnerCupones || []) as PartnerCoupon[]).map(c => [c.id, c]));
+      const partnerCuponIds = Object.keys(cuponMap);
+      const { data: usos } = partnerCuponIds.length
+        ? await supabase
+          .from('cupon_usos')
+          .select('id, empresa_id, cupon_id, aplicado_at')
+          .in('cupon_id', partnerCuponIds)
+          .order('aplicado_at', { ascending: false })
+        : { data: [] as CouponUsage[] };
+
+      const byEmpresa = new Map<string, PartnerCompanyRow>();
+      ((atribuciones || []) as PartnerAttribution[]).forEach((a) => byEmpresa.set(a.empresa_id, a));
+      ((usos || []) as CouponUsage[]).forEach((u) => {
+        const current = byEmpresa.get(u.empresa_id);
+        if (current) {
+          byEmpresa.set(u.empresa_id, { ...current, cupon_id: current.cupon_id || u.cupon_id });
+          return;
+        }
+        byEmpresa.set(u.empresa_id, {
+          id: `cupon-uso-${u.id}`,
+          metodo: 'cupon',
+          created_at: u.aplicado_at,
+          ref_slug: null,
+          empresa_id: u.empresa_id,
+          cupon_id: u.cupon_id,
+        });
+      });
+
+      const items = Array.from(byEmpresa.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const empresaIds = [...new Set(items.map(i => i.empresa_id).filter(Boolean))];
       if (!empresaIds.length) return items;
 
-      // Subscription status
-      const { data: subs } = await supabase
-        .from('subscriptions')
-        .select('empresa_id, status')
-        .in('empresa_id', empresaIds);
-      const subMap = Object.fromEntries((subs || []).map(s => [s.empresa_id, s.status]));
+      const extraCuponIds = [...new Set(items.map(i => i.cupon_id).filter(Boolean).filter(id => !cuponMap[id]))];
+      if (extraCuponIds.length) {
+        const { data: extraCupones } = await supabase
+          .from('cupones')
+          .select('id, codigo, descuento_pct, partner_id')
+          .in('id', extraCuponIds);
+        ((extraCupones || []) as PartnerCoupon[]).forEach(c => { cuponMap[c.id] = c; });
+      }
 
-      // Fallback: cupones aplicados por esta empresa que pertenezcan al partner
-      const { data: usos } = await supabase
-        .from('cupon_usos')
-        .select('empresa_id, aplicado_at, cupones:cupon_id(codigo, descuento_pct, descuento_monto, partner_id)')
-        .in('empresa_id', empresaIds);
-      const usosMap: Record<string, any> = {};
-      (usos || []).forEach((u: any) => {
-        if (u.cupones?.partner_id === partner.id) {
-          // mantener el primero (más viejo) por empresa
-          if (!usosMap[u.empresa_id]) usosMap[u.empresa_id] = u.cupones;
-        }
-      });
+      const [{ data: empresasData }, { data: subs }] = await Promise.all([
+        supabase.from('empresas').select('id, nombre').in('id', empresaIds),
+        supabase.from('subscriptions').select('empresa_id, status').in('empresa_id', empresaIds),
+      ]);
+      const empresaMap = Object.fromEntries(((empresasData || []) as { id: string; nombre: string }[]).map(e => [e.id, e.nombre]));
+      const subMap = Object.fromEntries(((subs || []) as { empresa_id: string; status: string }[]).map(s => [s.empresa_id, s.status]));
 
       return items.map(i => ({
         ...i,
+        empresa_nombre: empresaMap[i.empresa_id] || 'Empresa referida',
         sub_status: subMap[i.empresa_id] || 'sin_dato',
-        cupon_efectivo: i.cupon || usosMap[i.empresa_id] || null,
+        cupon_efectivo: i.cupon_id ? cuponMap[i.cupon_id] || null : null,
       }));
     },
     enabled: !!partner?.id,
@@ -65,18 +127,16 @@ export default function PartnerEmpresas() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(empresas || []).map((e: any) => {
+            {(empresas || []).map((e) => {
               const cup = e.cupon_efectivo;
               const desc = cup
                 ? cup.descuento_pct
                   ? `${cup.descuento_pct}% off`
-                  : cup.descuento_monto
-                    ? `$${cup.descuento_monto} off`
-                    : ''
+                  : ''
                 : '';
               return (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.empresas?.nombre || '—'}</TableCell>
+                  <TableCell className="font-medium">{e.empresa_nombre || 'Empresa referida'}</TableCell>
                   <TableCell>
                     <Badge variant={e.sub_status === 'active' ? 'default' : 'secondary'}>{e.sub_status}</Badge>
                   </TableCell>
@@ -90,7 +150,7 @@ export default function PartnerEmpresas() {
                   <TableCell>
                     {cup ? (
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-orange-500 hover:bg-orange-600 text-white gap-1">
+                        <Badge className="bg-accent hover:bg-accent text-accent-foreground gap-1">
                           <Tag className="h-3 w-3" />
                           {cup.codigo}
                         </Badge>
@@ -104,8 +164,14 @@ export default function PartnerEmpresas() {
                 </TableRow>
               );
             })}
-            {!empresas?.length && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no tienes empresas referidas. Comparte tu link.</TableCell></TableRow>
+            {isLoading && (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Cargando empresas...</TableCell></TableRow>
+            )}
+            {error && !isLoading && (
+              <TableRow><TableCell colSpan={5} className="text-center text-destructive py-8">No se pudieron cargar tus empresas referidas.</TableCell></TableRow>
+            )}
+            {!isLoading && !error && !empresas?.length && (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no tienes empresas referidas. Comparte tu link o cupón.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
