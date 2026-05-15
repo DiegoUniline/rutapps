@@ -204,7 +204,25 @@ export default function PartnersLandingPage() {
                 </div>
                 <div>
                   <Label>Teléfono / WhatsApp</Label>
-                  <Input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} placeholder="+52 ..." />
+                  <div className="flex gap-2">
+                    <select
+                      value={lada}
+                      onChange={e => setLada(e.target.value)}
+                      className="h-10 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[130px]"
+                      aria-label="Lada"
+                    >
+                      {LADAS.map((l, i) => (
+                        <option key={`${l.code}-${i}`} value={l.code}>{l.flag} {l.name} ({l.code})</option>
+                      ))}
+                    </select>
+                    <Input
+                      type="tel"
+                      value={form.telefono}
+                      onChange={e => setForm({ ...form, telefono: e.target.value.replace(/[^0-9 ]/g, '') })}
+                      placeholder="55 1234 5678"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>¿Por qué quieres ser Partner?</Label>
