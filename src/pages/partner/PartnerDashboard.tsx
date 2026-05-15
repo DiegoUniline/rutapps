@@ -61,18 +61,77 @@ export default function PartnerDashboard() {
     queryKey: ['partner-stats', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return null;
-      const [emp, com, cup] = await Promise.all([
+      const [emp, com, cup, cupRows] = await Promise.all([
         supabase.from('partner_atribuciones').select('id, created_at, empresa_id, empresas:empresa_id(nombre)').eq('partner_id', partner.id),
         supabase.from('partner_comisiones').select('monto_comision, status, created_at, empresa_id').eq('partner_id', partner.id),
-        supabase.from('cupones').select('codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
+        supabase.from('cupones').select('id, codigo, usos_actuales').eq('partner_id', partner.id).eq('activo', true),
+        supabase.from('cupones').select('id').eq('partner_id', partner.id),
       ]);
       const empresas = (emp.data || []) as any[];
       const comisiones = (com.data || []) as any[];
       const cupones = (cup.data || []) as any[];
+
+      // Merge cupon_usos referrals (signups que usaron un cupón del partner)
+      const cuponIds = (cupRows.data || []).map((c: any) => c.id);
+      if (cuponIds.length) {
+        const { data: usos } = await supabase
+          .from('cupon_usos')
+          .select('empresa_id, used_at')
+          .in('cupon_id', cuponIds);
+        const known = new Set(empresas.map((e: any) => e.empresa_id));
+        const extraIds = (usos || []).filter((u: any) => u.empresa_id && !known.has(u.empresa_id));
+        if (extraIds.length) {
+          const ids = Array.from(new Set(extraIds.map((u: any) => u.empresa_id)));
+          const { data: extraEmps } = await supabase.from('empresas').select('id, nombre').in('id', ids);
+          extraIds.forEach((u: any) => {
+            const e = (extraEmps || []).find((x: any) => x.id === u.empresa_id);
+            if (e && !known.has(e.id)) {
+              empresas.push({ id: u.empresa_id, empresa_id: u.empresa_id, created_at: u.used_at, empresas: { nombre: e.nombre } });
+              known.add(e.id);
+            }
+          });
+        }
+      }
+
+      // Fetch subscriptions para todas las empresas referidas (funnel)
+      const empresaIds = empresas.map((e: any) => e.empresa_id).filter(Boolean);
+      let subs: any[] = [];
+      if (empresaIds.length) {
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('empresa_id, status, acceso_bloqueado, trial_ends_at, current_period_end')
+          .in('empresa_id', empresaIds);
+        subs = subData || [];
+      }
+      const subByEmp = new Map<string, any>();
+      subs.forEach((s: any) => subByEmp.set(s.empresa_id, s));
+
+      let activas = 0, prueba = 0, vencidas = 0, canceladas = 0, sinSub = 0;
+      empresas.forEach((e: any) => {
+        const s = subByEmp.get(e.empresa_id);
+        if (!s) { sinSub += 1; return; }
+        if (s.acceso_bloqueado) { canceladas += 1; return; }
+        switch (s.status) {
+          case 'active': activas += 1; break;
+          case 'trial': prueba += 1; break;
+          case 'gracia': prueba += 1; break;
+          case 'past_due': vencidas += 1; break;
+          case 'suspended': canceladas += 1; break;
+          default: sinSub += 1;
+        }
+      });
+      const totalRef = empresas.length;
+      const conversionPct = totalRef > 0 ? (activas / totalRef) * 100 : 0;
+
       const total = comisiones.reduce((s, c) => s + Number(c.monto_comision), 0);
       const pendiente = comisiones.filter(c => c.status === 'pendiente').reduce((s, c) => s + Number(c.monto_comision), 0);
       const pagado = comisiones.filter(c => c.status === 'pagada').reduce((s, c) => s + Number(c.monto_comision), 0);
-      return { empresas, comisiones, cupones, empresasCount: empresas.length, cuponesCount: cupones.length, total, pendiente, pagado };
+      return {
+        empresas, comisiones, cupones,
+        empresasCount: empresas.length, cuponesCount: cupones.length,
+        total, pendiente, pagado,
+        funnel: { totalRef, activas, prueba, vencidas, canceladas, sinSub, conversionPct },
+      };
     },
     enabled: !!partner?.id,
   });
