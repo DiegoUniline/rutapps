@@ -25,9 +25,30 @@ export default function PartnersInlineTab() {
   const [editOpen, setEditOpen] = useState<any>(null);
   const [editForm, setEditForm] = useState({ comision_pct: 20, ref_slug: '', estado: 'activo' });
   const [clientesOpen, setClientesOpen] = useState<any>(null);
+  const [pwOpen, setPwOpen] = useState<any>(null);
+  const [pwForm, setPwForm] = useState({ password: '', saving: false });
   const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+
+  const resetPartnerPassword = async () => {
+    if (!pwOpen) return;
+    if (pwForm.password.length < 6) { toast.error('Mínimo 6 caracteres'); return; }
+    setPwForm(f => ({ ...f, saving: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'set-password-partner', partner_id: pwOpen.partner_id, password: pwForm.password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Contraseña actualizada · compártela con el partner');
+      setPwOpen(null);
+      setPwForm({ password: '', saving: false });
+    } catch (e: any) {
+      toast.error(e.message || 'Error');
+      setPwForm(f => ({ ...f, saving: false }));
+    }
+  };
 
   const { data: clientesPartner } = useQuery({
     queryKey: ['admin-partner-clientes', clientesOpen?.partner_id],
