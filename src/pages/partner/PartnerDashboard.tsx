@@ -401,6 +401,65 @@ export default function PartnerDashboard() {
         ))}
       </div>
 
+      {/* Funnel de conversión */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" /> Funnel de conversión de tus referidos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(stats?.funnel?.totalRef ?? 0) === 0 ? (
+            <div className="text-center py-10 text-sm text-muted-foreground">
+              Aún no tienes empresas referidas. Comparte tu link o cupón para empezar.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: 'Total referidas', value: stats!.funnel.totalRef, icon: Users, color: PRIMARY, sub: 'Se registraron con tu link/cupón' },
+                  { label: 'Activas con plan', value: stats!.funnel.activas, icon: UserCheck, color: GREEN, sub: 'Pagando suscripción' },
+                  { label: 'En periodo de prueba', value: stats!.funnel.prueba, icon: Clock, color: ACCENT, sub: 'Trial o gracia' },
+                  { label: 'No convirtieron', value: stats!.funnel.vencidas + stats!.funnel.sinSub, icon: AlertTriangle, color: '#F59E0B', sub: 'Vencidas / sin plan' },
+                  { label: 'Dadas de baja', value: stats!.funnel.canceladas, icon: UserX, color: RED, sub: 'Canceladas / bloqueadas' },
+                ].map((c, i) => (
+                  <div key={i} className="rounded-xl border-2 p-4 hover:shadow-md transition" style={{ borderColor: `${c.color}30`, background: `${c.color}08` }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: `${c.color}20`, color: c.color }}>
+                        <c.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-bold" style={{ color: c.color }}>
+                        {stats!.funnel.totalRef > 0 ? `${((c.value / stats!.funnel.totalRef) * 100).toFixed(0)}%` : '0%'}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-black" style={{ color: c.color }}>{c.value}</div>
+                    <div className="text-xs font-semibold mt-0.5">{c.label}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Barra de conversión */}
+              <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    Tasa de conversión a plan pagado
+                  </span>
+                  <span className="text-2xl font-black text-emerald-700">{stats!.funnel.conversionPct.toFixed(1)}%</span>
+                </div>
+                <div className="h-3 bg-white/70 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, stats!.funnel.conversionPct)}%`, background: `linear-gradient(90deg, ${GREEN}, ${PRIMARY})` }} />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  <strong>{stats!.funnel.activas}</strong> de <strong>{stats!.funnel.totalRef}</strong> empresas referidas están pagando suscripción activa.
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Charts row */}
       <div className="grid lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
