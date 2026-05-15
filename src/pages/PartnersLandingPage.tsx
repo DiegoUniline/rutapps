@@ -244,6 +244,69 @@ export default function PartnersLandingPage() {
         </div>
       </section>
 
+      {/* NIVELES — Sube de comisión */}
+      <section className="py-20 px-6" style={{ background: 'linear-gradient(180deg, #ffffff, hsl(230,55%,97%))' }}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3" style={{ background: `${ACCENT}15`, color: ACCENT }}>NIVELES DE PARTNER</span>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
+              Sube de nivel, <span style={{ color: PRIMARY }}>gana más</span>
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+              Tu comisión crece con cada empresa activa que refieras. Empiezas en 10% y puedes llegar hasta <strong>30% recurrente</strong>.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { emoji: '🥉', nombre: 'Starter',  pct: 10, rango: '1 – 4 empresas',   color: '#CD7F32', bono: null },
+              { emoji: '🥈', nombre: 'Growth',   pct: 15, rango: '5 – 14 empresas',  color: '#9CA3AF', bono: null },
+              { emoji: '🥇', nombre: 'Pro',      pct: 20, rango: '15 – 29 empresas', color: '#FCD34D', bono: '+$500 bono' },
+              { emoji: '💎', nombre: 'Elite',    pct: 25, rango: '30 – 59 empresas', color: '#06B6D4', bono: '+$1,500 bono', popular: true },
+              { emoji: '👑', nombre: 'Legend',   pct: 30, rango: '60+ empresas',     color: '#A855F7', bono: '+$5,000 bono' },
+            ].map((n, i) => (
+              <Card key={i} className="relative p-5 hover:-translate-y-1 transition border-2" style={{ borderColor: n.popular ? n.color : 'transparent', background: n.popular ? `${n.color}08` : 'white' }}>
+                {n.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold text-white shadow whitespace-nowrap" style={{ background: n.color }}>
+                    MÁS POPULAR
+                  </div>
+                )}
+                <div className="text-4xl mb-2">{n.emoji}</div>
+                <div className="font-black text-lg" style={{ color: n.color }}>{n.nombre}</div>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-3xl font-black">{n.pct}%</span>
+                  <span className="text-xs text-gray-500">recurrente</span>
+                </div>
+                <div className="text-xs text-gray-600 mt-2 font-medium">{n.rango}</div>
+                {n.bono && (
+                  <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${n.color}20`, color: n.color }}>
+                    <Gift className="h-3 w-3" /> {n.bono}
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-10 grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            {[
+              { icon: TrendingUp, t: 'Sube automático', d: 'Al cierre de mes, si alcanzas el umbral, subes de nivel solo.' },
+              { icon: ShieldCheck, t: 'Período de gracia', d: 'Si pierdes empresas, mantienes tu nivel 60 días.' },
+              { icon: Rocket, t: 'Aplica al siguiente cobro', d: 'La nueva comisión se usa en las facturas posteriores.' },
+            ].map((it, i) => (
+              <div key={i} className="flex gap-3 bg-white p-4 rounded-xl border border-gray-100">
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${PRIMARY}15`, color: PRIMARY }}>
+                  <it.icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm">{it.t}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">{it.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Cómo empezar — pasos */}
       <section className="py-20 px-6" style={{ background: 'hsl(230, 55%, 97%)' }}>
         <div className="max-w-5xl mx-auto">
