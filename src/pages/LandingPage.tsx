@@ -184,6 +184,9 @@ export default function LandingPage() {
             <a href="#screenshots" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Capturas</a>
             <a href="#pricing" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Precios</a>
             <Link to="/partners" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-emerald-600">💰 Unirme como Partner</Link>
+            <Link to="/tutoriales" onClick={() => setMobileMenu(false)} className="block text-sm font-bold text-white text-center px-4 py-2 rounded-lg" style={{ background: 'linear-gradient(90deg, #ef4444, #f97316)' }}>
+              ▶ Mira cómo funciona
+            </Link>
             <Link to="/signup" className="block w-full text-center px-5 py-2.5 text-sm font-semibold text-white rounded-lg"
               style={{ background: 'hsl(230, 55%, 52%)' }}>Probar gratis</Link>
           </div>
