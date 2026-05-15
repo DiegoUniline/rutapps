@@ -144,7 +144,20 @@ Deno.serve(async (req) => {
           if (plan) precioUnitario = plan.precio_base_mes;
         }
 
-        const qty = sub.max_usuarios || 3;
+        // Recompute quantity from actual active users (min 3)
+        const { count: activeProfilesCount } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("empresa_id", sub.empresa_id)
+          .eq("estado", "activo");
+        const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
+        const qty = Math.max(3, realUsers);
+
+        // Persist the recomputed seat count so UI/limits stay in sync
+        if (qty !== sub.max_usuarios) {
+          await supabase.from("subscriptions").update({ max_usuarios: qty }).eq("id", sub.id);
+          log("Seat count recomputed", { empresa: sub.empresa_id, prev: sub.max_usuarios, new: qty });
+        }
         let descuento = sub.descuento_porcentaje || 0;
 
         // ─── Check active coupon ───
