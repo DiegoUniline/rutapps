@@ -1203,19 +1203,44 @@ export default function MiSuscripcionPage() {
             </div>
 
             {/* Summary */}
-            {targetPlan && (
+            {targetPlan && (() => {
+              const baseSubtotal = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+              const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
+              const totalConDesc = companyDiscount > 0
+                ? Math.round(baseSubtotal * (1 - companyDiscount / 100))
+                : baseSubtotal;
+              const ahorro = baseSubtotal - totalConDesc;
+              return (
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
                     {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
                   </div>
-                  <div className="text-xl font-black text-foreground">
-                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                  <div className="text-right">
+                    {companyDiscount > 0 && (
+                      <div className="text-xs text-muted-foreground line-through">
+                        ${baseSubtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                      </div>
+                    )}
+                    <div className="text-xl font-black text-foreground">
+                      ${totalConDesc.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                    </div>
                   </div>
                 </div>
+                {companyDiscount > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-green-700 dark:text-green-400 font-semibold">
+                      Descuento aplicado: {companyDiscount}%
+                      {activeCupones.length > 0 && ` (cupón${activeCupones.length > 1 ? 'es' : ''}: ${activeCupones.map((u: any) => u.cupones?.codigo).filter(Boolean).join(', ')})`}
+                    </span>
+                    <span className="text-green-700 dark:text-green-400 font-semibold">
+                      Ahorras ${ahorro.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a <strong className="text-foreground">${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
+                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
                 </div>
 
                 {hasChanges && updateCharge && (
@@ -1237,7 +1262,8 @@ export default function MiSuscripcionPage() {
                   </>
                 )}
               </div>
-            )}
+              );
+            })()}
           </div>
 
           <DialogFooter>
