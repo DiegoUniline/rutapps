@@ -145,21 +145,29 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     { key: 'zona', label: 'Zona', options: (zonas ?? []).map(z => ({ value: z.id, label: z.nombre })) },
   ], [vendedores, zonas]);
 
-  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
+  const statusFilter = forcedStatus;
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
 
-  // Client-side credit filter
+  // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
+  const diaVisitaFilter = filters.dia_visita;
   const clientesRaw = clientesData?.rows ?? [];
   const clientes = useMemo(() => {
-    if (!creditoFilter || creditoFilter.length === 0) return clientesRaw;
-    return clientesRaw.filter(c => {
-      const hasCredit = !!c.credito;
-      return creditoFilter.includes(hasCredit ? 'si' : 'no');
-    });
-  }, [clientesRaw, creditoFilter]);
+    let rows = clientesRaw;
+    if (creditoFilter && creditoFilter.length > 0) {
+      rows = rows.filter(c => creditoFilter.includes(c.credito ? 'si' : 'no'));
+    }
+    if (diaVisitaFilter && diaVisitaFilter.length > 0) {
+      rows = rows.filter(c => {
+        const dv = (c as any).dia_visita as string[] | null | undefined;
+        if (!dv || dv.length === 0) return false;
+        return dv.some(d => diaVisitaFilter.includes(d.toLowerCase()));
+      });
+    }
+    return rows;
+  }, [clientesRaw, creditoFilter, diaVisitaFilter]);
   const total = clientesData?.total ?? 0;
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
