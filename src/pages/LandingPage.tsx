@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ShoppingCart, Users, MapPin, BarChart3, Package, Wallet,
   Truck, Smartphone, Shield, Zap, ChevronRight, Check,
@@ -115,6 +115,12 @@ const PLANS = [
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) localStorage.setItem('rutapp_partner_ref', ref);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">

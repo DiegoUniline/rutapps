@@ -1971,6 +1971,7 @@ export type Database = {
           descuento_pct: number
           id: string
           meses_duracion: number | null
+          partner_id: string | null
           planes_aplicables: string[] | null
           uso_maximo: number | null
           uso_por_empresa: number | null
@@ -1987,6 +1988,7 @@ export type Database = {
           descuento_pct?: number
           id?: string
           meses_duracion?: number | null
+          partner_id?: string | null
           planes_aplicables?: string[] | null
           uso_maximo?: number | null
           uso_por_empresa?: number | null
@@ -2003,6 +2005,7 @@ export type Database = {
           descuento_pct?: number
           id?: string
           meses_duracion?: number | null
+          partner_id?: string | null
           planes_aplicables?: string[] | null
           uso_maximo?: number | null
           uso_por_empresa?: number | null
@@ -2010,7 +2013,22 @@ export type Database = {
           vigencia_fin?: string | null
           vigencia_inicio?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cupones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "cupones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       descarga_ruta: {
         Row: {
@@ -3456,6 +3474,238 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      partner_atribuciones: {
+        Row: {
+          created_at: string
+          cupon_id: string | null
+          empresa_id: string
+          id: string
+          metodo: string
+          partner_id: string
+          ref_slug: string | null
+        }
+        Insert: {
+          created_at?: string
+          cupon_id?: string | null
+          empresa_id: string
+          id?: string
+          metodo: string
+          partner_id: string
+          ref_slug?: string | null
+        }
+        Update: {
+          created_at?: string
+          cupon_id?: string | null
+          empresa_id?: string
+          id?: string
+          metodo?: string
+          partner_id?: string
+          ref_slug?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_atribuciones_cupon_id_fkey"
+            columns: ["cupon_id"]
+            isOneToOne: false
+            referencedRelation: "cupones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_atribuciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_atribuciones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "partner_atribuciones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_comisiones: {
+        Row: {
+          created_at: string
+          cupon_pct: number
+          empresa_id: string
+          factura_id: string | null
+          id: string
+          monto_comision: number
+          monto_factura: number
+          notas: string | null
+          pagado_en: string | null
+          pago_id: string | null
+          partner_id: string
+          partner_pct: number
+          periodo: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          cupon_pct?: number
+          empresa_id: string
+          factura_id?: string | null
+          id?: string
+          monto_comision?: number
+          monto_factura?: number
+          notas?: string | null
+          pagado_en?: string | null
+          pago_id?: string | null
+          partner_id: string
+          partner_pct: number
+          periodo: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          cupon_pct?: number
+          empresa_id?: string
+          factura_id?: string | null
+          id?: string
+          monto_comision?: number
+          monto_factura?: number
+          notas?: string | null
+          pagado_en?: string | null
+          pago_id?: string | null
+          partner_id?: string
+          partner_pct?: number
+          periodo?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_comisiones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_comisiones_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: true
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_comisiones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "partner_comisiones_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_pagos: {
+        Row: {
+          created_at: string
+          id: string
+          metodo: string | null
+          monto: number
+          notas: string | null
+          pagado_en: string
+          pagado_por: string | null
+          partner_id: string
+          referencia: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metodo?: string | null
+          monto: number
+          notas?: string | null
+          pagado_en?: string
+          pagado_por?: string | null
+          partner_id: string
+          referencia?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metodo?: string | null
+          monto?: number
+          notas?: string | null
+          pagado_en?: string
+          pagado_por?: string | null
+          partner_id?: string
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_pagos_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "partner_pagos_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          comision_pct: number
+          created_at: string
+          email: string | null
+          estado: string
+          id: string
+          nombre: string
+          notas: string | null
+          ref_slug: string
+          telefono: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          comision_pct?: number
+          created_at?: string
+          email?: string | null
+          estado?: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          ref_slug: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          comision_pct?: number
+          created_at?: string
+          email?: string | null
+          estado?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          ref_slug?: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       payment_links: {
         Row: {
@@ -6353,7 +6603,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      partner_resumen: {
+        Row: {
+          comision_pct: number | null
+          empresas_referidas: number | null
+          estado: string | null
+          nombre: string | null
+          partner_id: string | null
+          ref_slug: string | null
+          saldo_pendiente: number | null
+          total_generado: number | null
+          total_pagado: number | null
+        }
+        Insert: {
+          comision_pct?: number | null
+          empresas_referidas?: never
+          estado?: string | null
+          nombre?: string | null
+          partner_id?: string | null
+          ref_slug?: string | null
+          saldo_pendiente?: never
+          total_generado?: never
+          total_pagado?: never
+        }
+        Update: {
+          comision_pct?: number | null
+          empresas_referidas?: never
+          estado?: string | null
+          nombre?: string | null
+          partner_id?: string | null
+          ref_slug?: string | null
+          saldo_pendiente?: never
+          total_generado?: never
+          total_pagado?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _mover_stock_entre_almacenes: {
@@ -6393,6 +6678,14 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      aplicar_partner_referido: {
+        Args: {
+          p_cupon_codigo?: string
+          p_empresa_id: string
+          p_ref_slug?: string
+        }
+        Returns: Json
       }
       archivar_usuario: {
         Args: { p_force?: boolean; p_motivo?: string; p_profile_id: string }
@@ -6486,6 +6779,7 @@ export type Database = {
         }[]
       }
       get_my_empresa_id: { Args: never; Returns: string }
+      get_my_partner_id: { Args: never; Returns: string }
       get_optimization_quota: {
         Args: { _empresa_id: string }
         Returns: {
@@ -6510,6 +6804,17 @@ export type Database = {
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
+        Returns: string
+      }
+      pagar_comisiones_partner: {
+        Args: {
+          p_comision_ids?: string[]
+          p_metodo?: string
+          p_monto: number
+          p_notas?: string
+          p_partner_id: string
+          p_referencia?: string
+        }
         Returns: string
       }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
