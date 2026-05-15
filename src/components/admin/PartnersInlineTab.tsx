@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wallet, Inbox, Users, Check, X } from 'lucide-react';
+import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+
+const REF_BASE = 'https://rutapp.mx/?ref=';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -20,9 +22,50 @@ export default function PartnersInlineTab() {
   const [open, setOpen] = useState(false);
   const [pagoOpen, setPagoOpen] = useState<any>(null);
   const [aprobarOpen, setAprobarOpen] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ comision_pct: 20, ref_slug: '', estado: 'activo' });
+  const [clientesOpen, setClientesOpen] = useState<any>(null);
   const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+
+  const { data: clientesPartner } = useQuery({
+    queryKey: ['admin-partner-clientes', clientesOpen?.partner_id],
+    enabled: !!clientesOpen?.partner_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('partner_atribuciones')
+        .select('created_at, metodo, ref_slug, empresas(id, nombre, created_at)')
+        .eq('partner_id', clientesOpen.partner_id)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+  });
+
+  const copyUrl = (slug: string) => {
+    const url = REF_BASE + slug;
+    navigator.clipboard.writeText(url);
+    toast.success('URL copiada: ' + url);
+  };
+
+  const openEdit = (p: any) => {
+    setEditOpen(p);
+    setEditForm({ comision_pct: Number(p.comision_pct), ref_slug: p.ref_slug, estado: p.estado });
+  };
+
+  const saveEdit = async () => {
+    if (!editOpen) return;
+    if (!editForm.ref_slug.trim()) { toast.error('Slug obligatorio'); return; }
+    const { error } = await supabase.from('partners').update({
+      comision_pct: editForm.comision_pct,
+      ref_slug: editForm.ref_slug.trim().toLowerCase(),
+      estado: editForm.estado,
+    }).eq('id', editOpen.partner_id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Partner actualizado · el % aplica solo a comisiones nuevas');
+    setEditOpen(null);
+    qc.invalidateQueries({ queryKey: ['admin-partners'] });
+  };
 
   const { data: partners } = useQuery({
     queryKey: ['admin-partners'],
