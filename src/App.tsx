@@ -21,6 +21,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
+import { usePartner } from "@/hooks/usePartner";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
