@@ -49,7 +49,7 @@ export default function PartnersLandingPage() {
     const { error } = await supabase.from('partner_solicitudes').insert({
       nombre: form.nombre.trim(),
       email: form.email.trim().toLowerCase(),
-      telefono: form.telefono.trim() || null,
+      telefono: form.telefono.trim() ? `${lada} ${form.telefono.trim()}` : null,
       motivo: form.motivo.trim() || null,
       experiencia: form.experiencia.trim() || null,
       redes: form.redes.trim() || null,
