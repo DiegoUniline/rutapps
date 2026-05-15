@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Building2, Tag, Wallet, TrendingUp, Copy, Check, ArrowUpRight, ArrowDownRight,
   Users, DollarSign, Sparkles, Share2, MessageCircle, Twitter, Facebook, Mail, Trophy, Crown,
-  Beaker, ExternalLink,
+  Beaker, ExternalLink, UserCheck, Clock, AlertTriangle, UserX, Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMemo, useState } from 'react';
