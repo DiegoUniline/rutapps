@@ -80,7 +80,7 @@ export default function UsuariosPage() {
         <UsuariosTab
           profiles={usuarios.profiles} userRoles={usuarios.userRoles} authUsers={usuarios.authUsers}
           roles={rolesHook.roles} almacenes={usuarios.almacenes}
-          activeUsers={activeUsers} maxUsuarios={subscription.maxUsuarios} availableSlots={availableSlots}
+          activeUsers={activeUsers} maxUsuarios={effectiveMax} availableSlots={availableSlots}
           ownerUserId={empresa?.owner_user_id}
           showArchived={showArchived} setShowArchived={setShowArchived}
           onNewUser={() => usuarios.setShowNewUser(true)}
