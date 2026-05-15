@@ -401,6 +401,25 @@ export default function PartnersInlineTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reset password partner */}
+      <Dialog open={!!pwOpen} onOpenChange={v => !v && setPwOpen(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Resetear contraseña · {pwOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Cuenta: <b>{pwOpen?.email || '—'}</b>. La nueva contraseña se aplica de inmediato; compártela por un canal seguro.
+            </p>
+            <div>
+              <Label>Nueva contraseña</Label>
+              <Input type="text" value={pwForm.password} onChange={e => setPwForm({ ...pwForm, password: e.target.value })} placeholder="Mínimo 6 caracteres" autoFocus />
+            </div>
+            <Button onClick={resetPartnerPassword} disabled={pwForm.saving} className="w-full">
+              {pwForm.saving ? 'Guardando...' : 'Actualizar contraseña'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
