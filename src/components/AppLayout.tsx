@@ -177,8 +177,8 @@ const mobileBottomTabs = [
 ];
 
 /** Filter nav items based on granular sub-module permissions */
-function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null) {
-  const isBillingOwner = isSuperAdminEmail(userEmail);
+function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null, isOwner?: boolean) {
+  const isBillingOwner = isSuperAdminEmail(userEmail) || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .filter(it => isBillingOwner || it.path !== '/facturacion-cfdi')
     .map(it => {
