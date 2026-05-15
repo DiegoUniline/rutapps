@@ -241,7 +241,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── REALTIME TRACKING (HERO FEATURE) ── */}
+      {/* Partner CTA banner */}
+      <section className="py-6 px-6" style={{ background: 'linear-gradient(90deg, hsl(25, 95%, 55%), hsl(15, 90%, 55%))' }}>
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="flex items-center gap-3 text-white">
+            <span className="text-2xl">💰</span>
+            <div>
+              <div className="font-bold text-base md:text-lg">Únete como Partner de Rutapp</div>
+              <div className="text-xs md:text-sm opacity-95">Gana comisiones recurrentes refiriendo Rutapp a otras empresas.</div>
+            </div>
+          </div>
+          <Link to="/partners" className="px-6 py-2.5 bg-white text-orange-600 font-bold rounded-lg shadow hover:opacity-90 transition flex items-center gap-2 whitespace-nowrap">
+            Quiero ser Partner <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
       <section id="realtime" className="py-24 px-6 relative overflow-hidden"
         style={{ background: 'linear-gradient(180deg, white 0%, hsl(152, 56%, 97%) 100%)' }}>
         <div className="max-w-7xl mx-auto">
