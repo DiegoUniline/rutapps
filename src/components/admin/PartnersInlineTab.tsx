@@ -315,6 +315,68 @@ export default function PartnersInlineTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Editar partner */}
+      <Dialog open={!!editOpen} onOpenChange={v => !v && setEditOpen(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar {editOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Slug de referido</Label>
+              <Input value={editForm.ref_slug} onChange={e => setEditForm({ ...editForm, ref_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+              <div className="text-[11px] text-muted-foreground mt-1 break-all">{REF_BASE}{editForm.ref_slug}</div>
+            </div>
+            <div>
+              <Label>Comisión %</Label>
+              <Input type="number" min={0} max={100} step={0.01}
+                value={editForm.comision_pct}
+                onChange={e => setEditForm({ ...editForm, comision_pct: Number(e.target.value) })} />
+              <div className="text-[11px] text-amber-600 mt-1">⚠ El nuevo % aplica solo a comisiones futuras. Las ya generadas conservan su porcentaje original.</div>
+            </div>
+            <div>
+              <Label>Estado</Label>
+              <select className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <Button onClick={saveEdit} className="w-full">Guardar cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ver clientes referidos */}
+      <Dialog open={!!clientesOpen} onOpenChange={v => !v && setClientesOpen(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Clientes referidos por {clientesOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {!clientesPartner?.length && <div className="text-center text-muted-foreground py-6 text-sm">Sin clientes referidos aún</div>}
+            {!!clientesPartner?.length && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Atribuido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clientesPartner.map((a: any) => (
+                    <TableRow key={a.empresas?.id || a.created_at}>
+                      <TableCell className="font-medium">{a.empresas?.nombre || '—'}</TableCell>
+                      <TableCell><Badge variant="outline">{a.metodo}</Badge></TableCell>
+                      <TableCell><code className="text-xs">{a.ref_slug || '—'}</code></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{fmtDate(a.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
