@@ -43,16 +43,13 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'gps_lng', header: 'Longitud', format: 'number', width: 14 },
 ];
 
+const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const DIAS_LABEL: Record<string, string> = {
+  lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves',
+  viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo',
+};
+
 const STATIC_FILTER_OPTIONS = [
-  {
-    key: 'status',
-    label: 'Estado',
-    options: [
-      { value: 'activo', label: 'Activo' },
-      { value: 'inactivo', label: 'Inactivo' },
-      { value: 'suspendido', label: 'Suspendido' },
-    ],
-  },
   {
     key: 'credito',
     label: 'Crédito',
@@ -60,6 +57,11 @@ const STATIC_FILTER_OPTIONS = [
       { value: 'si', label: 'Con crédito' },
       { value: 'no', label: 'Sin crédito' },
     ],
+  },
+  {
+    key: 'dia_visita',
+    label: 'Día de visita',
+    options: DIAS_SEMANA.map(d => ({ value: d, label: DIAS_LABEL[d] })),
   },
 ];
 
@@ -97,7 +99,7 @@ function useDynamicFilterOptions() {
   return { vendedores, zonas };
 }
 
-function ClientesTable() {
+function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefsKey: string }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
@@ -109,7 +111,7 @@ function ClientesTable() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState<PageSizeOption>(readStoredPageSize);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences(prefsKey);
   const { vendedores, zonas } = useDynamicFilterOptions();
 
   // Count active clients without vendedor
@@ -143,21 +145,29 @@ function ClientesTable() {
     { key: 'zona', label: 'Zona', options: (zonas ?? []).map(z => ({ value: z.id, label: z.nombre })) },
   ], [vendedores, zonas]);
 
-  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
+  const statusFilter = forcedStatus;
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
 
-  // Client-side credit filter
+  // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
+  const diaVisitaFilter = filters.dia_visita;
   const clientesRaw = clientesData?.rows ?? [];
   const clientes = useMemo(() => {
-    if (!creditoFilter || creditoFilter.length === 0) return clientesRaw;
-    return clientesRaw.filter(c => {
-      const hasCredit = !!c.credito;
-      return creditoFilter.includes(hasCredit ? 'si' : 'no');
-    });
-  }, [clientesRaw, creditoFilter]);
+    let rows = clientesRaw;
+    if (creditoFilter && creditoFilter.length > 0) {
+      rows = rows.filter(c => creditoFilter.includes(c.credito ? 'si' : 'no'));
+    }
+    if (diaVisitaFilter && diaVisitaFilter.length > 0) {
+      rows = rows.filter(c => {
+        const dv = (c as any).dia_visita as string[] | null | undefined;
+        if (!dv || dv.length === 0) return false;
+        return dv.some(d => diaVisitaFilter.includes(d.toLowerCase()));
+      });
+    }
+    return rows;
+  }, [clientesRaw, creditoFilter, diaVisitaFilter]);
   const total = clientesData?.total ?? 0;
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
@@ -354,7 +364,8 @@ export default function ClientesListPage() {
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></h1>
       <OdooTabs
         tabs={[
-          { key: 'clientes', label: 'Clientes', content: <ClientesTable /> },
+          { key: 'activos', label: 'Activos', content: <ClientesTable forcedStatus="activo" prefsKey="clientes-activos" /> },
+          { key: 'bajas', label: 'Bajas', content: <ClientesTable forcedStatus="inactivo" prefsKey="clientes-bajas" /> },
           { key: 'zonas', label: 'Zonas', content: <CatalogCRUD title="Zonas" tableName="zonas" queryKey="zonas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
         ]}
       />
