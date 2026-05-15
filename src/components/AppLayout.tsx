@@ -549,6 +549,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
         <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
