@@ -247,7 +247,6 @@ function AppRoutes() {
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="*" element={<Navigate to="/partner" replace />} />
         </Routes>
-        </Routes>
       </Suspense>
     );
   }
