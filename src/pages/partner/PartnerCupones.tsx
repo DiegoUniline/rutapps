@@ -106,7 +106,12 @@ export default function PartnerCupones() {
           <DialogHeader><DialogTitle>Nuevo cupón</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Código</Label><Input value={form.codigo} onChange={e => setForm({ ...form, codigo: e.target.value.toUpperCase() })} placeholder="JUAN10" className="uppercase" /></div>
-            <div><Label>Descuento % (máx {partner?.comision_pct ?? 0}%)</Label><Input type="number" min={1} max={partner?.comision_pct ?? 100} value={form.descuento_pct} onChange={e => setForm({ ...form, descuento_pct: Number(e.target.value) })} /></div>
+            <div><Label>Descuento % (máx {partner?.comision_pct ?? 0}%)</Label><Input type="number" min={1} max={partner?.comision_pct ?? 100} value={form.descuento_pct} onChange={e => {
+              const max = partner?.comision_pct ?? 100;
+              let v = Number(e.target.value);
+              if (v > max) { v = max; toast.error(`Máximo permitido: ${max}%`); }
+              setForm({ ...form, descuento_pct: v });
+            }} /></div>
             <div><Label>Duración en meses (vacío = para siempre)</Label><Input type="number" min={1} value={form.meses_duracion} onChange={e => setForm({ ...form, meses_duracion: e.target.value })} /></div>
             <div><Label>Vence el (opcional)</Label><Input type="date" value={form.vigencia_fin} onChange={e => setForm({ ...form, vigencia_fin: e.target.value })} /></div>
             <Button onClick={create} className="w-full">Crear</Button>
