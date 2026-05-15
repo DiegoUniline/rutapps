@@ -21,6 +21,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
+import { usePartner } from "@/hooks/usePartner";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -228,6 +229,26 @@ function AppRoutes() {
     localStorage.removeItem(`uniline_subscription_state:${user.id}`);
     queryClient.invalidateQueries({ queryKey: ['factura-pendiente', profile?.empresa_id] });
   }, [user?.id, profile?.empresa_id, subscription.loading, subscription.status, queryClient]);
+
+  // Partner-only user (tiene partner row pero NO profile de empresa) → solo panel /partner
+  const partnerQ = usePartner();
+  const isPartnerOnly = !!user && !profile && !loading && !!partnerQ.data;
+  if (isPartnerOnly) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/partner" element={<PartnerLayout />}>
+            <Route index element={<PartnerDashboard />} />
+            <Route path="empresas" element={<PartnerEmpresas />} />
+            <Route path="cupones" element={<PartnerCupones />} />
+            <Route path="comisiones" element={<PartnerComisiones />} />
+            <Route path="perfil" element={<PartnerPerfil />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/partner" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
 
   if (loading || subscription.loading) {
     return (
