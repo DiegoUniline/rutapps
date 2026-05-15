@@ -322,7 +322,13 @@ export default function PartnersInlineTab() {
               <Input type="number" min={0} max={100} value={aprobarForm.comision_pct}
                 onChange={e => setAprobarForm({ ...aprobarForm, comision_pct: Number(e.target.value) })} />
             </div>
-            <Button onClick={aprobar} className="w-full">Aprobar y crear partner</Button>
+            <div>
+              <Label>Contraseña inicial (compártela con el partner)</Label>
+              <Input type="text" value={aprobarForm.password}
+                onChange={e => setAprobarForm({ ...aprobarForm, password: e.target.value })}
+                placeholder="Mínimo 6 caracteres" />
+            </div>
+            <Button onClick={aprobar} className="w-full">Aprobar y crear cuenta</Button>
           </div>
         </DialogContent>
       </Dialog>
