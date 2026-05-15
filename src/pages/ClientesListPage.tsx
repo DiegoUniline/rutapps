@@ -99,7 +99,7 @@ function useDynamicFilterOptions() {
   return { vendedores, zonas };
 }
 
-function ClientesTable() {
+function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefsKey: string }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
@@ -111,7 +111,7 @@ function ClientesTable() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState<PageSizeOption>(readStoredPageSize);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences(prefsKey);
   const { vendedores, zonas } = useDynamicFilterOptions();
 
   // Count active clients without vendedor
