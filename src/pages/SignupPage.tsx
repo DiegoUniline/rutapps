@@ -304,6 +304,8 @@ export default function SignupPage() {
             empresa_nombre: form.empresa,
             accepted_terms_at: new Date().toISOString(),
             verified_via: 'auto',
+            partner_ref: partnerRef || null,
+            cupon_codigo: cuponCodigo.trim().toUpperCase() || null,
           },
           emailRedirectTo: window.location.origin,
         },
