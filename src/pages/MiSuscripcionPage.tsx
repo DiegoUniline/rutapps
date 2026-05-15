@@ -682,6 +682,9 @@ export default function MiSuscripcionPage() {
         </Button>
       </div>
 
+      {/* Simulador de costo */}
+      <CostoSimuladorCard defaultUsers={currentUsuarios} />
+
       {/* Status Banner */}
       <Card className={`overflow-hidden border-2 ${
         sub.isBlocked ? 'border-destructive/50' :
