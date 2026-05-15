@@ -127,15 +127,30 @@ export default function PartnersInlineTab() {
 
   const aprobar = async () => {
     if (!aprobarOpen || !aprobarForm.slug.trim()) { toast.error('Slug obligatorio'); return; }
+    if (!aprobarForm.password || aprobarForm.password.length < 6) { toast.error('Contraseña mínimo 6 caracteres'); return; }
     const { error } = await supabase.rpc('aprobar_solicitud_partner', {
       _solicitud_id: aprobarOpen.id,
       _slug: aprobarForm.slug.trim().toLowerCase(),
       _comision_pct: aprobarForm.comision_pct,
     });
     if (error) { toast.error(error.message); return; }
-    toast.success('Solicitud aprobada · partner creado');
+
+    // Crear cuenta de auth para el partner (busca por email vía edge)
+    const { data: p } = await supabase.from('partners').select('id').eq('email', aprobarOpen.email).maybeSingle();
+    if (p?.id) {
+      const { data: r, error: e2 } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'set-password-partner', partner_id: p.id, password: aprobarForm.password },
+      });
+      if (e2 || r?.error) {
+        toast.warning('Partner creado, pero no se pudo crear su cuenta: ' + (r?.error || e2?.message));
+      } else {
+        toast.success('Partner aprobado y cuenta creada · comparte la contraseña');
+      }
+    } else {
+      toast.success('Solicitud aprobada · partner creado');
+    }
     setAprobarOpen(null);
-    setAprobarForm({ slug: '', comision_pct: 20 });
+    setAprobarForm({ slug: '', comision_pct: 20, password: '' });
     qc.invalidateQueries({ queryKey: ['admin-partner-solicitudes'] });
     qc.invalidateQueries({ queryKey: ['admin-partners'] });
   };
