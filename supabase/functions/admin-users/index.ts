@@ -157,6 +157,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "set-password-partner") {
+      const { partner_id, password } = params;
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!password || password.length < 6) {
+        return new Response(JSON.stringify({ error: "Contraseña inválida" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: partner } = await adminClient
+        .from("partners").select("user_id, email").eq("id", partner_id).single();
+      let targetUserId = partner?.user_id as string | null;
+      if (!targetUserId && partner?.email) {
+        const { data: list } = await adminClient.auth.admin.listUsers();
+        const found = list?.users?.find((u: any) => u.email?.toLowerCase() === partner.email.toLowerCase());
+        targetUserId = found?.id ?? null;
+      }
+      if (!targetUserId) {
+        return new Response(JSON.stringify({ error: "El partner aún no tiene cuenta. Pídele que se registre con su correo primero." }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error } = await adminClient.auth.admin.updateUserById(targetUserId, { password });
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "confirm-email") {
       const { user_id } = params;
       // Only super admins can confirm emails

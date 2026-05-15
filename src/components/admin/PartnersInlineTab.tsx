@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye } from 'lucide-react';
+import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye, Key } from 'lucide-react';
 import { toast } from 'sonner';
 
 const REF_BASE = 'https://rutapp.mx/?ref=';
@@ -25,9 +25,30 @@ export default function PartnersInlineTab() {
   const [editOpen, setEditOpen] = useState<any>(null);
   const [editForm, setEditForm] = useState({ comision_pct: 20, ref_slug: '', estado: 'activo' });
   const [clientesOpen, setClientesOpen] = useState<any>(null);
+  const [pwOpen, setPwOpen] = useState<any>(null);
+  const [pwForm, setPwForm] = useState({ password: '', saving: false });
   const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+
+  const resetPartnerPassword = async () => {
+    if (!pwOpen) return;
+    if (pwForm.password.length < 6) { toast.error('Mínimo 6 caracteres'); return; }
+    setPwForm(f => ({ ...f, saving: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'set-password-partner', partner_id: pwOpen.partner_id, password: pwForm.password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Contraseña actualizada · compártela con el partner');
+      setPwOpen(null);
+      setPwForm({ password: '', saving: false });
+    } catch (e: any) {
+      toast.error(e.message || 'Error');
+      setPwForm(f => ({ ...f, saving: false }));
+    }
+  };
 
   const { data: clientesPartner } = useQuery({
     queryKey: ['admin-partner-clientes', clientesOpen?.partner_id],
@@ -214,6 +235,9 @@ export default function PartnersInlineTab() {
                         <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Editar">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setPwOpen(p); setPwForm({ password: '', saving: false }); }} title="Resetear contraseña">
+                          <Key className="h-3.5 w-3.5" />
+                        </Button>
                         <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
                           onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
                           <Wallet className="h-3 w-3 mr-1" /> Pagar
@@ -374,6 +398,25 @@ export default function PartnersInlineTab() {
                 </TableBody>
               </Table>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password partner */}
+      <Dialog open={!!pwOpen} onOpenChange={v => !v && setPwOpen(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Resetear contraseña · {pwOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Cuenta: <b>{pwOpen?.email || '—'}</b>. La nueva contraseña se aplica de inmediato; compártela por un canal seguro.
+            </p>
+            <div>
+              <Label>Nueva contraseña</Label>
+              <Input type="text" value={pwForm.password} onChange={e => setPwForm({ ...pwForm, password: e.target.value })} placeholder="Mínimo 6 caracteres" autoFocus />
+            </div>
+            <Button onClick={resetPartnerPassword} disabled={pwForm.saving} className="w-full">
+              {pwForm.saving ? 'Guardando...' : 'Actualizar contraseña'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
