@@ -6,9 +6,39 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tag, Link2 } from 'lucide-react';
 
+type PartnerAttribution = {
+  id: string;
+  metodo: string;
+  created_at: string;
+  ref_slug: string | null;
+  empresa_id: string;
+  cupon_id: string | null;
+};
+
+type PartnerCoupon = {
+  id: string;
+  codigo: string;
+  descuento_pct: number | null;
+  descuento_monto: number | null;
+  partner_id: string | null;
+};
+
+type CouponUsage = {
+  id: string;
+  empresa_id: string;
+  cupon_id: string;
+  aplicado_at: string;
+};
+
+type PartnerCompanyRow = PartnerAttribution & {
+  empresa_nombre?: string;
+  sub_status?: string;
+  cupon_efectivo?: PartnerCoupon | null;
+};
+
 export default function PartnerEmpresas() {
   const { data: partner } = usePartner();
-  const { data: empresas, isLoading, error } = useQuery({
+  const { data: empresas, isLoading, error } = useQuery<PartnerCompanyRow[]>({
     queryKey: ['partner-empresas', partner?.id],
     queryFn: async () => {
       if (!partner?.id) return [];
@@ -25,7 +55,7 @@ export default function PartnerEmpresas() {
       ]);
       if (atribError) throw atribError;
 
-      const cuponMap: Record<string, any> = Object.fromEntries(((partnerCupones || []) as any[]).map(c => [c.id, c]));
+      const cuponMap: Record<string, PartnerCoupon> = Object.fromEntries(((partnerCupones || []) as PartnerCoupon[]).map(c => [c.id, c]));
       const partnerCuponIds = Object.keys(cuponMap);
       const { data: usos } = partnerCuponIds.length
         ? await supabase
@@ -33,11 +63,11 @@ export default function PartnerEmpresas() {
           .select('id, empresa_id, cupon_id, aplicado_at')
           .in('cupon_id', partnerCuponIds)
           .order('aplicado_at', { ascending: false })
-        : { data: [] as any[] };
+        : { data: [] as CouponUsage[] };
 
-      const byEmpresa = new Map<string, any>();
-      ((atribuciones || []) as any[]).forEach((a) => byEmpresa.set(a.empresa_id, a));
-      ((usos || []) as any[]).forEach((u) => {
+      const byEmpresa = new Map<string, PartnerCompanyRow>();
+      ((atribuciones || []) as PartnerAttribution[]).forEach((a) => byEmpresa.set(a.empresa_id, a));
+      ((usos || []) as CouponUsage[]).forEach((u) => {
         const current = byEmpresa.get(u.empresa_id);
         if (current) {
           byEmpresa.set(u.empresa_id, { ...current, cupon_id: current.cupon_id || u.cupon_id });
@@ -63,15 +93,15 @@ export default function PartnerEmpresas() {
           .from('cupones')
           .select('id, codigo, descuento_pct, descuento_monto, partner_id')
           .in('id', extraCuponIds);
-        ((extraCupones || []) as any[]).forEach(c => { cuponMap[c.id] = c; });
+        ((extraCupones || []) as PartnerCoupon[]).forEach(c => { cuponMap[c.id] = c; });
       }
 
       const [{ data: empresasData }, { data: subs }] = await Promise.all([
         supabase.from('empresas').select('id, nombre').in('id', empresaIds),
         supabase.from('subscriptions').select('empresa_id, status').in('empresa_id', empresaIds),
       ]);
-      const empresaMap = Object.fromEntries(((empresasData || []) as any[]).map(e => [e.id, e.nombre]));
-      const subMap = Object.fromEntries(((subs || []) as any[]).map(s => [s.empresa_id, s.status]));
+      const empresaMap = Object.fromEntries(((empresasData || []) as { id: string; nombre: string }[]).map(e => [e.id, e.nombre]));
+      const subMap = Object.fromEntries(((subs || []) as { empresa_id: string; status: string }[]).map(s => [s.empresa_id, s.status]));
 
       return items.map(i => ({
         ...i,
@@ -98,7 +128,7 @@ export default function PartnerEmpresas() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(empresas || []).map((e: any) => {
+            {(empresas || []).map((e) => {
               const cup = e.cupon_efectivo;
               const desc = cup
                 ? cup.descuento_pct
@@ -123,7 +153,7 @@ export default function PartnerEmpresas() {
                   <TableCell>
                     {cup ? (
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-orange-500 hover:bg-orange-600 text-white gap-1">
+                        <Badge className="bg-accent hover:bg-accent text-accent-foreground gap-1">
                           <Tag className="h-3 w-3" />
                           {cup.codigo}
                         </Badge>
