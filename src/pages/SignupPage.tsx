@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -37,9 +37,29 @@ const COUNTRY_CODES = [
 
 type VerificationMethod = 'whatsapp' | 'email' | null;
 
+const REF_KEY = 'rutapp_partner_ref';
+
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [cuponCodigo, setCuponCodigo] = useState('');
+  const [partnerRef, setPartnerRef] = useState<string>('');
+
+  // Capture ?ref= from URL or localStorage
+  useEffect(() => {
+    const urlRef = searchParams.get('ref');
+    if (urlRef) {
+      localStorage.setItem(REF_KEY, urlRef);
+      setPartnerRef(urlRef);
+    } else {
+      const saved = localStorage.getItem(REF_KEY);
+      if (saved) setPartnerRef(saved);
+    }
+    const urlCupon = searchParams.get('cupon') || searchParams.get('coupon');
+    if (urlCupon) setCuponCodigo(urlCupon.toUpperCase());
+  }, [searchParams]);
+
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
