@@ -44,7 +44,14 @@ export default function PartnerCupones() {
       partner_id: partner!.id,
       activo: true,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (error.code === '23505' || /duplicate|unique/i.test(error.message)) {
+        toast.error('Ese código ya está en uso por otro partner. Elige uno único (ej. tu nombre + número).');
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
     toast.success('Cupón creado');
     setOpen(false);
     setForm({ codigo: '', descuento_pct: 10, meses_duracion: '', vigencia_fin: '' });
