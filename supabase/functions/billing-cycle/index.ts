@@ -133,15 +133,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get plan price
+        // Get plan price + duration
         let precioUnitario = 300; // default
+        let planMeses = 1; // default monthly
         if (sub.plan_id) {
           const { data: plan } = await supabase
             .from("planes")
-            .select("precio_base_mes")
+            .select("precio_base_mes, meses")
             .eq("id", sub.plan_id)
             .single();
-          if (plan) precioUnitario = plan.precio_base_mes;
+          if (plan) {
+            precioUnitario = plan.precio_base_mes;
+            planMeses = plan.meses || 1;
+          }
         }
 
         // Recompute quantity from actual active users (min 3)
