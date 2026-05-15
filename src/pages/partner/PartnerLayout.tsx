@@ -1,5 +1,5 @@
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Tag, Wallet, Building2, User, LogOut, Loader2 } from 'lucide-react';
+import { NavLink, Outlet, Navigate, Link } from 'react-router-dom';
+import { LayoutDashboard, Tag, Wallet, Building2, User, LogOut, Loader2, PlayCircle } from 'lucide-react';
 import { usePartner } from '@/hooks/usePartner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,15 @@ export default function PartnerLayout() {
               <span>{item.label}</span>
             </NavLink>
           ))}
+          <Link
+            to="/tutoriales"
+            className="relative mt-1 md:mt-3 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-white whitespace-nowrap shadow-lg shadow-rose-500/30 hover:scale-[1.02] transition-transform overflow-hidden shrink-0"
+            style={{ background: 'linear-gradient(90deg, #ef4444, #f97316)' }}
+          >
+            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            <PlayCircle className="h-4 w-4 relative" />
+            <span className="relative">Mira cómo funciona</span>
+          </Link>
         </nav>
         <div className="p-2 border-t border-border hidden md:block">
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => signOut()}>
