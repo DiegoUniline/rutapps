@@ -67,7 +67,6 @@ Deno.serve(async (req) => {
     const { plan_id, num_usuarios } = await req.json();
     if (!plan_id) throw new Error("plan_id requerido");
 
-    const qty = Math.max(3, parseInt(num_usuarios) || 3);
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
     // Get user's empresa
@@ -77,6 +76,17 @@ Deno.serve(async (req) => {
       .eq("user_id", userData.user.id)
       .maybeSingle();
     if (!profile?.empresa_id) throw new Error("Sin empresa");
+
+    // Quantity = real active users (min 3). If client passes a higher num_usuarios
+    // (e.g. user is pre-purchasing extra seats), respect it.
+    const { count: activeProfilesCount } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("empresa_id", profile.empresa_id)
+      .eq("estado", "activo");
+    const realUsers = activeProfilesCount ?? 0;
+    const requested = parseInt(num_usuarios) || 0;
+    const qty = Math.max(3, realUsers, requested);
 
     // Get plan details — try `subscription_plans` first (used by frontend),
     // then fall back to legacy `planes` table.
