@@ -143,6 +143,9 @@ export default function LandingPage() {
             <a href="#modules" className="hover:text-gray-900 transition-colors">Módulos</a>
             <a href="#screenshots" className="hover:text-gray-900 transition-colors">Capturas</a>
             <a href="#pricing" className="hover:text-gray-900 transition-colors">Precios</a>
+            <Link to="/partners" className="hover:text-gray-900 transition-colors flex items-center gap-1">
+              <span className="text-emerald-600">💰</span> Partners
+            </Link>
           </div>
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Iniciar sesión</Link>
