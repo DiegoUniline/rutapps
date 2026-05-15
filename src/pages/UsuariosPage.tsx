@@ -37,7 +37,10 @@ export default function UsuariosPage() {
   useEffect(() => { reload(); }, [reload]);
 
   const activeUsers = usuarios.profiles.filter(p => p.estado === 'activo').length;
-  const availableSlots = subscription.maxUsuarios - activeUsers;
+  const isTrial = subscription.status === 'trial';
+  // En prueba: usuarios ilimitados. En planes pagados: respeta el límite del plan.
+  const effectiveMax = isTrial ? 9999 : subscription.maxUsuarios;
+  const availableSlots = effectiveMax - activeUsers;
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
 
   const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
