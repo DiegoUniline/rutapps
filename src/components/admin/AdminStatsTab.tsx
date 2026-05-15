@@ -166,16 +166,21 @@ export default function AdminStatsTab() {
       )}
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(stats.total_paid)} hint={stats.paid_count != null ? `${stats.paid_count} facturas pagadas` : undefined} accent="success" />
-        <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(stats.total_open)} hint={stats.open_count != null ? `${stats.open_count} facturas pendientes` : undefined} accent="destructive" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative">
+        {loadingStats && (
+          <div className="absolute -top-2 right-0 text-[10px] text-muted-foreground flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Actualizando KPIs…
+          </div>
+        )}
+        <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(safeStats.total_paid)} hint={safeStats.paid_count != null ? `${safeStats.paid_count} facturas pagadas` : undefined} accent="success" />
+        <StatCard icon={TrendingUp} label="MRR" value={fmt(safeStats.mrr)} accent="primary" />
+        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(safeStats.total_open)} hint={safeStats.open_count != null ? `${safeStats.open_count} facturas pendientes` : undefined} accent="destructive" />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard icon={CreditCard} label="Suscripciones activas" value={stats.active_subscriptions.toString()} accent="success" />
-        <StatCard icon={Receipt} label="Total facturado" value={fmt(stats.total_invoiced)} accent="muted" />
-        <StatCard icon={Users} label="Clientes Stripe" value={stats.total_customers.toString()} accent="primary" />
+        <StatCard icon={CreditCard} label="Suscripciones activas" value={safeStats.active_subscriptions.toString()} accent="success" />
+        <StatCard icon={Receipt} label="Total facturado" value={fmt(safeStats.total_invoiced)} accent="muted" />
+        <StatCard icon={Users} label="Clientes Stripe" value={safeStats.total_customers.toString()} accent="primary" />
       </div>
 
       {/* ── Nuevos registros por día ── */}
