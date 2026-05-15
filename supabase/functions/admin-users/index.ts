@@ -179,8 +179,26 @@ Deno.serve(async (req) => {
         targetUserId = found?.id ?? null;
       }
       if (!targetUserId) {
-        return new Response(JSON.stringify({ error: "El partner aún no tiene cuenta. Pídele que se registre con su correo primero." }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        if (!partner?.email) {
+          return new Response(JSON.stringify({ error: "El partner no tiene email registrado." }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // Auto-create auth account for the partner
+        const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+          email: partner.email,
+          password,
+          email_confirm: true,
+        });
+        if (createErr || !created?.user) {
+          return new Response(JSON.stringify({ error: createErr?.message || "No se pudo crear la cuenta" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        targetUserId = created.user.id;
+        await adminClient.from("partners").update({ user_id: targetUserId }).eq("id", partner_id);
+        return new Response(JSON.stringify({ ok: true, created: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const { error } = await adminClient.auth.admin.updateUserById(targetUserId, { password });
