@@ -121,7 +121,7 @@ export default function UsuariosPage() {
           quickCreateAlmacen={usuarios.quickCreateAlmacen} setQuickCreateAlmacen={usuarios.setQuickCreateAlmacen}
           quickAlmacenName={usuarios.quickAlmacenName} setQuickAlmacenName={usuarios.setQuickAlmacenName}
           onQuickCreateRole={usuarios.quickCreateRoleAction} onQuickCreateAlmacen={usuarios.quickCreateAlmacenAction}
-          onCreate={() => usuarios.createUser(availableSlots, subscription.maxUsuarios)}
+          onCreate={() => usuarios.createUser(availableSlots, effectiveMax)}
           onClose={() => usuarios.setShowNewUser(false)}
         />
       )}
