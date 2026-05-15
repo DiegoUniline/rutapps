@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Wallet, Inbox, Users, Check, X } from 'lucide-react';
+import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+
+const REF_BASE = 'https://rutapp.mx/?ref=';
 
 const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -20,9 +22,50 @@ export default function PartnersInlineTab() {
   const [open, setOpen] = useState(false);
   const [pagoOpen, setPagoOpen] = useState<any>(null);
   const [aprobarOpen, setAprobarOpen] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ comision_pct: 20, ref_slug: '', estado: 'activo' });
+  const [clientesOpen, setClientesOpen] = useState<any>(null);
   const [aprobarForm, setAprobarForm] = useState({ slug: '', comision_pct: 20 });
   const [pagoForm, setPagoForm] = useState({ monto: 0, metodo: '', referencia: '', notas: '' });
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', comision_pct: 20, ref_slug: '', user_id: '' });
+
+  const { data: clientesPartner } = useQuery({
+    queryKey: ['admin-partner-clientes', clientesOpen?.partner_id],
+    enabled: !!clientesOpen?.partner_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('partner_atribuciones')
+        .select('created_at, metodo, ref_slug, empresas(id, nombre, created_at)')
+        .eq('partner_id', clientesOpen.partner_id)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+  });
+
+  const copyUrl = (slug: string) => {
+    const url = REF_BASE + slug;
+    navigator.clipboard.writeText(url);
+    toast.success('URL copiada: ' + url);
+  };
+
+  const openEdit = (p: any) => {
+    setEditOpen(p);
+    setEditForm({ comision_pct: Number(p.comision_pct), ref_slug: p.ref_slug, estado: p.estado });
+  };
+
+  const saveEdit = async () => {
+    if (!editOpen) return;
+    if (!editForm.ref_slug.trim()) { toast.error('Slug obligatorio'); return; }
+    const { error } = await supabase.from('partners').update({
+      comision_pct: editForm.comision_pct,
+      ref_slug: editForm.ref_slug.trim().toLowerCase(),
+      estado: editForm.estado,
+    }).eq('id', editOpen.partner_id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Partner actualizado · el % aplica solo a comisiones nuevas');
+    setEditOpen(null);
+    qc.invalidateQueries({ queryKey: ['admin-partners'] });
+  };
 
   const { data: partners } = useQuery({
     queryKey: ['admin-partners'],
@@ -141,19 +184,41 @@ export default function PartnersInlineTab() {
               <TableBody>
                 {(partners || []).map((p: any) => (
                   <TableRow key={p.partner_id}>
-                    <TableCell className="font-medium">{p.nombre}</TableCell>
-                    <TableCell><code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code></TableCell>
+                    <TableCell className="font-medium">
+                      {p.nombre}
+                      {p.email && <div className="text-[10px] text-muted-foreground font-normal">{p.email}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyUrl(p.ref_slug)} title={REF_BASE + p.ref_slug}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell>{p.comision_pct}%</TableCell>
-                    <TableCell>{p.empresas_referidas}</TableCell>
+                    <TableCell>
+                      <button className="text-primary hover:underline font-medium" onClick={() => setClientesOpen(p)}>
+                        {p.empresas_referidas}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-right">{fmt(Number(p.total_generado))}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{fmt(Number(p.total_pagado))}</TableCell>
                     <TableCell className="text-right font-bold text-primary">{fmt(Number(p.saldo_pendiente))}</TableCell>
                     <TableCell><Badge variant={p.estado === 'activo' ? 'default' : 'secondary'}>{p.estado}</Badge></TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
-                        onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
-                        <Wallet className="h-3 w-3 mr-1" /> Pagar
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" onClick={() => setClientesOpen(p)} title="Ver clientes">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
+                          onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
+                          <Wallet className="h-3 w-3 mr-1" /> Pagar
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -247,6 +312,68 @@ export default function PartnersInlineTab() {
             <div><Label>Notas</Label><Input value={pagoForm.notas} onChange={e => setPagoForm({ ...pagoForm, notas: e.target.value })} /></div>
             <p className="text-xs text-muted-foreground">Todas las comisiones pendientes se marcarán como pagadas.</p>
             <Button onClick={registrarPago} className="w-full">Registrar pago</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar partner */}
+      <Dialog open={!!editOpen} onOpenChange={v => !v && setEditOpen(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar {editOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Slug de referido</Label>
+              <Input value={editForm.ref_slug} onChange={e => setEditForm({ ...editForm, ref_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+              <div className="text-[11px] text-muted-foreground mt-1 break-all">{REF_BASE}{editForm.ref_slug}</div>
+            </div>
+            <div>
+              <Label>Comisión %</Label>
+              <Input type="number" min={0} max={100} step={0.01}
+                value={editForm.comision_pct}
+                onChange={e => setEditForm({ ...editForm, comision_pct: Number(e.target.value) })} />
+              <div className="text-[11px] text-amber-600 mt-1">⚠ El nuevo % aplica solo a comisiones futuras. Las ya generadas conservan su porcentaje original.</div>
+            </div>
+            <div>
+              <Label>Estado</Label>
+              <select className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <Button onClick={saveEdit} className="w-full">Guardar cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ver clientes referidos */}
+      <Dialog open={!!clientesOpen} onOpenChange={v => !v && setClientesOpen(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Clientes referidos por {clientesOpen?.nombre}</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {!clientesPartner?.length && <div className="text-center text-muted-foreground py-6 text-sm">Sin clientes referidos aún</div>}
+            {!!clientesPartner?.length && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Atribuido</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clientesPartner.map((a: any) => (
+                    <TableRow key={a.empresas?.id || a.created_at}>
+                      <TableCell className="font-medium">{a.empresas?.nombre || '—'}</TableCell>
+                      <TableCell><Badge variant="outline">{a.metodo}</Badge></TableCell>
+                      <TableCell><code className="text-xs">{a.ref_slug || '—'}</code></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{fmtDate(a.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </DialogContent>
       </Dialog>
