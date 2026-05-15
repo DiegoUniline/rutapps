@@ -184,19 +184,41 @@ export default function PartnersInlineTab() {
               <TableBody>
                 {(partners || []).map((p: any) => (
                   <TableRow key={p.partner_id}>
-                    <TableCell className="font-medium">{p.nombre}</TableCell>
-                    <TableCell><code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code></TableCell>
+                    <TableCell className="font-medium">
+                      {p.nombre}
+                      {p.email && <div className="text-[10px] text-muted-foreground font-normal">{p.email}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">{p.ref_slug}</code>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyUrl(p.ref_slug)} title={REF_BASE + p.ref_slug}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell>{p.comision_pct}%</TableCell>
-                    <TableCell>{p.empresas_referidas}</TableCell>
+                    <TableCell>
+                      <button className="text-primary hover:underline font-medium" onClick={() => setClientesOpen(p)}>
+                        {p.empresas_referidas}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-right">{fmt(Number(p.total_generado))}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{fmt(Number(p.total_pagado))}</TableCell>
                     <TableCell className="text-right font-bold text-primary">{fmt(Number(p.saldo_pendiente))}</TableCell>
                     <TableCell><Badge variant={p.estado === 'activo' ? 'default' : 'secondary'}>{p.estado}</Badge></TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
-                        onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
-                        <Wallet className="h-3 w-3 mr-1" /> Pagar
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" onClick={() => setClientesOpen(p)} title="Ver clientes">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={Number(p.saldo_pendiente) <= 0}
+                          onClick={() => { setPagoOpen(p); setPagoForm({ ...pagoForm, monto: Number(p.saldo_pendiente) }); }}>
+                          <Wallet className="h-3 w-3 mr-1" /> Pagar
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
