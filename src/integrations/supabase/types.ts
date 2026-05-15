@@ -3665,6 +3665,72 @@ export type Database = {
           },
         ]
       }
+      partner_solicitudes: {
+        Row: {
+          created_at: string
+          email: string
+          experiencia: string | null
+          id: string
+          motivo: string | null
+          nombre: string
+          notas_admin: string | null
+          partner_id: string | null
+          processed_at: string | null
+          processed_by: string | null
+          redes: string | null
+          status: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          experiencia?: string | null
+          id?: string
+          motivo?: string | null
+          nombre: string
+          notas_admin?: string | null
+          partner_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          redes?: string | null
+          status?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          experiencia?: string | null
+          id?: string
+          motivo?: string | null
+          nombre?: string
+          notas_admin?: string | null
+          partner_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          redes?: string | null
+          status?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_solicitudes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_resumen"
+            referencedColumns: ["partner_id"]
+          },
+          {
+            foreignKeyName: "partner_solicitudes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           comision_pct: number
@@ -6687,6 +6753,10 @@ export type Database = {
         }
         Returns: Json
       }
+      aprobar_solicitud_partner: {
+        Args: { _comision_pct?: number; _slug: string; _solicitud_id: string }
+        Returns: string
+      }
       archivar_usuario: {
         Args: { p_force?: boolean; p_motivo?: string; p_profile_id: string }
         Returns: Json
@@ -6832,6 +6902,10 @@ export type Database = {
       }
       recalc_producto_costo: {
         Args: { p_producto_id: string }
+        Returns: undefined
+      }
+      rechazar_solicitud_partner: {
+        Args: { _motivo?: string; _solicitud_id: string }
         Returns: undefined
       }
       recibir_linea_compra: {
