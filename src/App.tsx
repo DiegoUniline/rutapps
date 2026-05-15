@@ -556,8 +556,8 @@ function renderAuthenticatedRoutes() {
 
 function GuardedDesktopRoutes() {
   const location = useLocation();
-  const { user } = useAuth();
-  const isBillingOwner = isSuperAdminEmail(user?.email);
+  const { user, empresa } = useAuth();
+  const isBillingOwner = isSuperAdminEmail(user?.email) || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
 
   return (
     <Suspense fallback={<PageLoader />}>
