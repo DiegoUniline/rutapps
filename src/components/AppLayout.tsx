@@ -509,7 +509,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo, user?.email);
+  const baseVisibleNavItems = useFilteredNav(isSuperAdmin, hasModulo, user?.email, !!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
   const { favorites } = useFavorites();
 
   // Inject Favoritos as a dynamic module right after Dashboard with user favorites as children
