@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
 
 interface SubPlanRow {
   id: string;
@@ -680,6 +681,9 @@ export default function MiSuscripcionPage() {
           Sincronizar app
         </Button>
       </div>
+
+      {/* Simulador de costo */}
+      <CostoSimuladorCard defaultUsers={currentUsuarios} />
 
       {/* Status Banner */}
       <Card className={`overflow-hidden border-2 ${
