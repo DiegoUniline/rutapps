@@ -229,7 +229,7 @@ export function useVentaDetalle() {
       setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');
       toast.success('¡Cobro registrado!');
-      ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes', 'entregas', 'entregas-list', 'ruta-entregas', 'logistica-pedidos'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
+      ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes', 'ruta-entrega-detalle', 'ruta-entrega-venta', 'entregas', 'entregas-list', 'ruta-entregas', 'logistica-pedidos'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
