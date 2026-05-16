@@ -353,35 +353,12 @@ export function useValidarEntrega() {
         throw new Error(`No se puede validar la entrega ${cur.folio || ''}: primero debe estar cargada (estado actual: ${cur.status}).`);
       }
 
+      // DB trigger `trg_apply_entrega_hecho_inventory` deducts stock. Frontend only flips status.
       const { error } = await supabase.from('entregas').update({
         status: 'hecho',
         validado_at: new Date().toISOString(),
       } as any).eq('id', entregaId);
       if (error) throw error;
-
-      // Deduct from vendedor's almacen via stock_almacen
-      const { data: ent } = await supabase.from('entregas')
-        .select('empresa_id, vendedor_ruta_id, vendedor_id, entrega_lineas(producto_id, cantidad_entregada, hecho)')
-        .eq('id', entregaId).single();
-
-      const vendId = ent?.vendedor_ruta_id || ent?.vendedor_id;
-      if (vendId) {
-        const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendId).maybeSingle();
-        const almId = prof?.almacen_id;
-        if (almId) {
-          for (const l of (ent?.entrega_lineas ?? []).filter((l: any) => l.hecho && l.cantidad_entregada > 0)) {
-            const { data: sa } = await supabase.from('stock_almacen')
-              .select('id, cantidad').eq('almacen_id', almId)
-              .eq('producto_id', (l as any).producto_id).maybeSingle();
-            if (sa) {
-              await supabase.from('stock_almacen')
-                .update({ cantidad: Math.max(0, sa.cantidad - (l as any).cantidad_entregada), updated_at: new Date().toISOString() } as any)
-                .eq('id', sa.id);
-            }
-          }
-        }
-      }
-    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entrega'] });
