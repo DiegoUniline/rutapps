@@ -7072,6 +7072,16 @@ export type Database = {
         }
         Returns: string
       }
+      repair_missing_entrega_carga: {
+        Args: never
+        Returns: {
+          cantidad: number
+          entrega_id: string
+          folio: string
+          producto_id: string
+          ruta_almacen: string
+        }[]
+      }
       reprogramar_entregas_bulk: {
         Args: { p_entrega_ids: string[]; p_nueva_fecha: string }
         Returns: Json
