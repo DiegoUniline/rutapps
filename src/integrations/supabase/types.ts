@@ -1604,7 +1604,9 @@ export type Database = {
           cantidad: number
           compra_id: string
           created_at: string
+          factor_conversion: number
           id: string
+          piezas_total: number | null
           precio_unitario: number
           producto_id: string
           subtotal: number | null
@@ -1614,7 +1616,9 @@ export type Database = {
           cantidad?: number
           compra_id: string
           created_at?: string
+          factor_conversion?: number
           id?: string
+          piezas_total?: number | null
           precio_unitario?: number
           producto_id: string
           subtotal?: number | null
@@ -1624,7 +1628,9 @@ export type Database = {
           cantidad?: number
           compra_id?: string
           created_at?: string
+          factor_conversion?: number
           id?: string
+          piezas_total?: number | null
           precio_unitario?: number
           producto_id?: string
           subtotal?: number | null

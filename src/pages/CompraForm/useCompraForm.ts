@@ -45,7 +45,10 @@ export function useCompraForm() {
       if (compra_lineas?.length) {
         const enrichedLines = compra_lineas.map((cl: any) => {
           const prod = productosList.find((p: any) => p.id === cl.producto_id) as any;
-          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: prod?.factor_conversion ?? 1, _piezas_total: (cl.cantidad ?? 1) * (prod?.factor_conversion ?? 1) };
+          // Prefer factor guardado en la línea; si es legacy (NULL/0) cae al del producto
+          const factorPersistido = Number(cl.factor_conversion);
+          const factor = factorPersistido > 0 ? factorPersistido : (prod?.factor_conversion ?? 1);
+          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: factor, _piezas_total: (cl.cantidad ?? 1) * factor };
         });
         setLineas(enrichedLines);
       }
@@ -101,7 +104,14 @@ export function useCompraForm() {
       let compraId = form.id;
       if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
       const validLines = lineas.filter(l => l.producto_id);
-      if (validLines.length) { const rows = validLines.map(l => ({ compra_id: compraId, producto_id: l.producto_id!, cantidad: l.cantidad ?? 1, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0 })); const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error; }
+      if (validLines.length) {
+        const rows = validLines.map(l => {
+          const factor = Number(l._factor_conversion) > 0 ? Number(l._factor_conversion) : 1;
+          const cantidad = l.cantidad ?? 1;
+          return { compra_id: compraId, producto_id: l.producto_id!, cantidad, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0, factor_conversion: factor, piezas_total: cantidad * factor };
+        });
+        const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error;
+      }
       toast.success('Compra guardada'); qc.invalidateQueries({ queryKey: ['compras'] }); qc.invalidateQueries({ queryKey: ['compra', compraId] }); setDirty(false);
       if (isNew) navigate(`/almacen/compras/${compraId}`, { replace: true });
     } catch (err: any) { toast.error(err.message || 'Error al guardar'); }
