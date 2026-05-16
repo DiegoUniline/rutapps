@@ -65,6 +65,8 @@ export default function RutaEntregaDetalle() {
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
@@ -80,6 +82,8 @@ export default function RutaEntregaDetalle() {
   const { data: venta } = useQuery({
     queryKey: ['ruta-entrega-venta', pedidoId],
     enabled: !!pedidoId,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
@@ -95,6 +99,8 @@ export default function RutaEntregaDetalle() {
   const { data: otrasPendientes } = useQuery({
     queryKey: ['ruta-entrega-cuentas', clienteId],
     enabled: !!clienteId,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     queryFn: async () => {
       const { data } = await supabase.from('ventas')
         .select('id, folio, fecha, total, saldo_pendiente')
@@ -105,6 +111,33 @@ export default function RutaEntregaDetalle() {
       return data ?? [];
     },
   });
+
+  // Auto-marcar como entregado si la venta ya fue cobrada totalmente
+  const autoMarkedRef = useRef(false);
+  useEffect(() => {
+    if (!entrega || !venta || autoMarkedRef.current) return;
+    const status = (entrega as any).status;
+    const saldo = (venta as any).saldo_pendiente ?? 0;
+    const condicion = (venta as any).condicion_pago;
+    // Solo auto-marcar si está en estados activos de ruta y saldo está en 0 (contado/pagado)
+    if (saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
+      autoMarkedRef.current = true;
+      const now = new Date().toISOString();
+      supabase.from('entregas')
+        .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
+        .eq('id', id!)
+        .then(({ error }) => {
+          if (!error) {
+            toast.success('Entrega marcada como entregada automáticamente');
+            queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+            queryClient.invalidateQueries({ queryKey: ['entregas'] });
+          } else {
+            autoMarkedRef.current = false;
+          }
+        });
+    }
+  }, [entrega, venta, id, queryClient]);
+
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
   if (!entrega) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2"><p className="text-muted-foreground text-[13px]">Entrega no encontrada</p><button onClick={() => navigate(-1)} className="text-primary text-[13px] font-medium">Volver</button></div>;
