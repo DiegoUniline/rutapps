@@ -162,6 +162,25 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
+  // Entregas realizadas (hechas) por el vendedor en el periodo
+  const { data: entregas } = useQuery({
+    queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    enabled: !!descarga.vendedor_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('entregas')
+        .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad_entregada, hecho, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
+        .eq('empresa_id', descarga.empresa_id)
+        .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
+        .eq('status', 'hecho')
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin)
+        .order('fecha_entrega', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // --- Stock del almacén asignado al vendedor ---
   const { data: vendedorAlmacen } = useQuery({
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
