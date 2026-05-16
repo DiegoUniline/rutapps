@@ -1,63 +1,44 @@
-## Qué encontré
+## Bug confirmado
 
-El problema sí está en el flujo de inventario de entregas:
+En `apply_entrega_cargado_inventory()` el bloque de reversión se dispara cuando una entrega pasa de `cargado` a **cualquier otro estado**, incluyendo `hecho`. Esto:
 
-- En la entrega `ENT-0001`, el producto `Agua natural 1L.` tuvo:
-  - Entrada de conteo físico: `+100` a `Almacén Principal`.
-  - Surtido de entrega: `-100` desde `Almacén Principal`.
-  - Entrega al cliente: `-100` desde `Ruta Andrey`.
-- Falta el movimiento intermedio correcto de carga a ruta:
-  - Debió aparecer `+100` en `Ruta Andrey` al cargar la entrega.
-- Por eso hoy queda mal:
-  - `Almacén Principal`: stock real `100`, pero Kardex `0`.
-  - `Ruta Andrey`: stock real `-100`, Kardex `-100`.
-  - Lo esperado después de surtir, cargar y entregar era stock `0` y Kardex `0`.
+1. Borra el movimiento `entrega_cargado` (+N a la ruta) del kardex.
+2. Resta N del stock del almacén de la ruta.
 
-## Causa raíz
+Inmediatamente después, `apply_entrega_hecho_inventory()` aplica el descuento normal de la entrega (-N de la ruta). Resultado neto: la ruta queda en **-N** y el kardex sólo muestra la salida `entrega_hecho`, exactamente como Coca-Cola 600ml (-50) en Ruta Andrey.
 
-La función de base de datos `apply_entrega_cargado_inventory()` sí debería crear la entrada a la ruta cuando la entrega pasa a `cargado`, pero el cambio a `cargado` ocurrió antes de la versión corregida del trigger o no generó el movimiento `entrega_cargado` para esa entrega.
-
-Luego, cuando marqué la entrega como `hecho`, el trigger `apply_entrega_hecho_inventory()` descontó correctamente de `Ruta Andrey`, pero como nunca existió la entrada previa a esa ruta, la ruta quedó en negativo.
-
-Además, el arreglo anterior que marca pedido/entrega como entregado arregló el estado, pero no reparó este caso histórico de carga faltante.
+`cargado → hecho` no es una reversión, es la continuación natural del flujo. La carga ya está consumida por la entrega, no debe deshacerse.
 
 ## Plan de corrección
 
-1. Reparar los datos de `ENT-0001`
-   - Insertar los movimientos faltantes `entrega_cargado` para sus líneas:
-     - `+100` Agua natural 1L. a `Ruta Andrey`.
-     - `+100` Coca-Cola 2L a `Ruta Andrey`.
-   - Ajustar `stock_almacen` para que:
-     - `Almacén Principal` baje de `100` a `0` para esos productos.
-     - `Ruta Andrey` suba de `-100` a `0` para esos productos.
-   - Confirmar con consulta que stock real y Kardex coincidan en ambos almacenes.
+### 1. Arreglar el trigger `apply_entrega_cargado_inventory`
+- La condición de reversión debe excluir la transición a `hecho`.
+- Sólo revertir cuando `NEW.status` sea un estado "hacia atrás" (`pendiente`, `borrador`, `cancelado`, `no_entregado`, etc.), no cuando avanza a `hecho`.
+- Cambio mínimo: `IF OLD.status='cargado' AND NEW.status NOT IN ('cargado','hecho') THEN ...`.
 
-2. Blindar el trigger de carga para que no vuelva a pasar
-   - Reescribir `apply_entrega_cargado_inventory()` para que sea idempotente por producto y entrega.
-   - Si ya existe la salida de surtido `referencia_tipo='entrega'`, no volverá a descontar del origen, pero sí garantizará la entrada a la ruta.
-   - Si falta el movimiento de carga, podrá crearlo sin duplicar salidas.
-   - En reversas, solo revertirá movimientos `entrega_cargado`, no tocará los movimientos antiguos de surtido.
+### 2. Reparar datos históricos afectados por el bug
+Detectar entregas con status `hecho` donde:
+- Existen líneas con `cantidad_entregada > 0`.
+- **No existe** movimiento `entrega_cargado` para esa entrega (fue borrado por la reversión bug).
+- **Sí existe** movimiento `entrega_hecho` (salida desde la ruta).
 
-3. Evitar dobles descuentos al marcar entregado
-   - Ajustar `apply_entrega_hecho_inventory()` para detectar mejor los casos donde ya existe un descuento previo real desde la ruta y no duplicarlo.
-   - Mantener el descuento normal desde la ruta cuando sí hubo carga previa.
+Para cada caso:
+- Insertar el movimiento `entrega_cargado` faltante (+cantidad a la ruta, salida del almacén origen) con nota "Reparación: carga restaurada".
+- Ajustar `stock_almacen`:
+  - Sumar la cantidad al almacén de la ruta (corrige el negativo).
+  - Restar la cantidad del almacén origen (corrige la doble alta que dejó la reversión bug).
+- Hacer esto **por entrega/producto** para no tocar casos sanos.
 
-4. Agregar reparación automática para entregas ya cargadas o hechas con carga faltante
-   - Crear una función de mantenimiento segura que reconstruya únicamente la entrada faltante a ruta cuando:
-     - La entrega tiene líneas surtidas.
-     - Existe salida de surtido desde origen.
-     - No existe entrada `entrega_cargado` a la ruta.
-   - Ejecutarla para la empresa demo y revisar si hay más casos iguales.
+### 3. Verificación específica
+Confirmar para Distribuidora MG:
+- Coca-Cola 600ml en Ruta Andrey: stock = 0, kardex = 0 (con líneas `entrega_cargado +50` y `entrega_hecho -50`).
+- Recorrer el resto de productos de la empresa para asegurar que el descuadre Stock vs Kardex que vimos antes desaparece (o se reduce sólo a casos no relacionados con este bug).
 
-5. Verificación final
-   - Consultar Kardex vs stock real por producto/almacén.
-   - Confirmar específicamente que `Agua natural 1L.` quede:
-     - `Almacén Principal`: stock `0`, Kardex `0`.
-     - `Ruta Andrey`: stock `0`, Kardex `0`.
-   - Revisar también `Coca-Cola 2L`, porque aparece en la misma entrega y presenta el mismo patrón.
+### 4. Salvaguarda futura
+Agregar también una protección: si al pasar a `hecho` no existe el movimiento `entrega_cargado` previo y la entrega tiene `vendedor_destino_id` distinto del `almacen_origen`, generar el `entrega_cargado` de respaldo dentro de `apply_entrega_hecho_inventory` para que el kardex de la ruta siempre tenga el par entrada+salida.
 
 ## Detalles técnicos
 
-- Los cambios estructurales se harán con migración porque son funciones/triggers de base de datos.
-- La corrección de datos se hará con operación de datos, no con migración de esquema.
-- No se tocará inventario desde frontend: se mantiene la regla de que inventario es autoridad de base de datos.
+- Todo va en **una migración SQL** (CREATE OR REPLACE FUNCTION + script de reparación de datos en el mismo archivo, ejecutado una sola vez vía bloque `DO $$ ... $$`).
+- No se toca código de frontend: el inventario sigue siendo autoridad de la BD.
+- La reparación es idempotente: filtra por entregas que cumplen el patrón exacto del bug.
