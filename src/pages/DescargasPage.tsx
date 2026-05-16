@@ -227,6 +227,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
 
+  // Entregas agregados
+  const entregasList = (entregas || []) as any[];
+  const totalEntregaUnidades = entregasList.reduce(
+    (s, e) => s + (e.entrega_lineas || []).filter((l: any) => l.hecho).reduce((ss: number, l: any) => ss + (Number(l.cantidad_entregada) || 0), 0),
+    0
+  );
+  const totalEntregaMonto = entregasList.reduce((s, e) => s + (Number(e.ventas?.total) || 0), 0);
+
   // Cobros by payment method
   const cobrosPorMetodo: Record<string, number> = {};
   (cobros || []).forEach((c: any) => {
