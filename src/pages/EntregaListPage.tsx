@@ -568,7 +568,7 @@ export default function EntregaListPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                </>
+                </Fragment>
               );
             })}
           </TableBody>
