@@ -104,7 +104,14 @@ export function useCompraForm() {
       let compraId = form.id;
       if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
       const validLines = lineas.filter(l => l.producto_id);
-      if (validLines.length) { const rows = validLines.map(l => ({ compra_id: compraId, producto_id: l.producto_id!, cantidad: l.cantidad ?? 1, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0 })); const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error; }
+      if (validLines.length) {
+        const rows = validLines.map(l => {
+          const factor = Number(l._factor_conversion) > 0 ? Number(l._factor_conversion) : 1;
+          const cantidad = l.cantidad ?? 1;
+          return { compra_id: compraId, producto_id: l.producto_id!, cantidad, precio_unitario: l.precio_unitario ?? 0, subtotal: l.subtotal ?? 0, total: l.total ?? 0, factor_conversion: factor, piezas_total: cantidad * factor };
+        });
+        const { error } = await supabase.from('compra_lineas').insert(rows as any); if (error) throw error;
+      }
       toast.success('Compra guardada'); qc.invalidateQueries({ queryKey: ['compras'] }); qc.invalidateQueries({ queryKey: ['compra', compraId] }); setDirty(false);
       if (isNew) navigate(`/almacen/compras/${compraId}`, { replace: true });
     } catch (err: any) { toast.error(err.message || 'Error al guardar'); }
