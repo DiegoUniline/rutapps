@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -162,6 +162,25 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
+  // Entregas realizadas (hechas) por el vendedor en el periodo
+  const { data: entregas } = useQuery({
+    queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    enabled: !!descarga.vendedor_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('entregas')
+        .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad_entregada, hecho, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
+        .eq('empresa_id', descarga.empresa_id)
+        .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
+        .eq('status', 'hecho')
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin)
+        .order('fecha_entrega', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // --- Stock del almacén asignado al vendedor ---
   const { data: vendedorAlmacen } = useQuery({
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
@@ -207,6 +226,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+
+  // Entregas agregados
+  const entregasList = (entregas || []) as any[];
+  const totalEntregaUnidades = entregasList.reduce(
+    (s, e) => s + (e.entrega_lineas || []).filter((l: any) => l.hecho).reduce((ss: number, l: any) => ss + (Number(l.cantidad_entregada) || 0), 0),
+    0
+  );
+  const totalEntregaMonto = entregasList.reduce((s, e) => s + (Number(e.ventas?.total) || 0), 0);
 
   // Cobros by payment method
   const cobrosPorMetodo: Record<string, number> = {};
@@ -521,6 +548,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Entregas</div>
+              <div className="text-lg font-bold text-foreground">{entregasList.length}</div>
+              <div className="text-[10px] text-muted-foreground">{totalEntregaUnidades} uds</div>
+            </div>
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
               <div className="text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
               <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
@@ -811,6 +843,48 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               </table>
             </>
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
+        </SectionCard>
+
+        {/* ═══ ENTREGAS REALIZADAS ═══ */}
+        <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
+          {entregasList.length > 0 ? (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Folio</th>
+                  <th className="text-left py-2">Pedido</th>
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Fecha</th>
+                  <th className="text-right py-2">Uds</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entregasList.map((e: any) => {
+                  const uds = (e.entrega_lineas || [])
+                    .filter((l: any) => l.hecho)
+                    .reduce((s: number, l: any) => s + (Number(l.cantidad_entregada) || 0), 0);
+                  return (
+                    <tr key={e.id} className="border-b border-border/50">
+                      <td className="py-1.5 font-mono text-foreground">{e.folio ?? '—'}</td>
+                      <td className="py-1.5 font-mono text-muted-foreground">{e.ventas?.folio ?? '—'}</td>
+                      <td className="py-1.5">{e.clientes?.nombre ?? '—'}</td>
+                      <td className="py-1.5 text-muted-foreground">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</td>
+                      <td className="py-1.5 text-right">{uds}</td>
+                      <td className="py-1.5 text-right font-semibold">{e.ventas?.total ? fmt(Number(e.ventas.total)) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold text-[12px]">
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Totales:</td>
+                  <td className="py-2 text-right">{totalEntregaUnidades} uds</td>
+                  <td className="py-2 text-right">{fmt(totalEntregaMonto)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
         </SectionCard>
 
         {/* ═══ STOCK EN ALMACÉN ═══ */}
