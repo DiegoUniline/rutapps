@@ -169,7 +169,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
-        .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad_entregada, hecho, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
+        .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
         .eq('empresa_id', descarga.empresa_id)
         .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
         .eq('status', 'hecho')
@@ -848,42 +848,75 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         {/* ═══ ENTREGAS REALIZADAS ═══ */}
         <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
           {entregasList.length > 0 ? (
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Folio</th>
-                  <th className="text-left py-2">Pedido</th>
-                  <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Fecha</th>
-                  <th className="text-right py-2">Uds</th>
-                  <th className="text-right py-2">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entregasList.map((e: any) => {
-                  const uds = (e.entrega_lineas || [])
-                    .filter((l: any) => l.hecho)
-                    .reduce((s: number, l: any) => s + (Number(l.cantidad_entregada) || 0), 0);
-                  return (
-                    <tr key={e.id} className="border-b border-border/50">
-                      <td className="py-1.5 font-mono text-foreground">{e.folio ?? '—'}</td>
-                      <td className="py-1.5 font-mono text-muted-foreground">{e.ventas?.folio ?? '—'}</td>
-                      <td className="py-1.5">{e.clientes?.nombre ?? '—'}</td>
-                      <td className="py-1.5 text-muted-foreground">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</td>
-                      <td className="py-1.5 text-right">{uds}</td>
-                      <td className="py-1.5 text-right font-semibold">{e.ventas?.total ? fmt(Number(e.ventas.total)) : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border font-bold text-[12px]">
-                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Totales:</td>
-                  <td className="py-2 text-right">{totalEntregaUnidades} uds</td>
-                  <td className="py-2 text-right">{fmt(totalEntregaMonto)}</td>
-                </tr>
-              </tfoot>
-            </table>
+            <div className="space-y-3">
+              {entregasList.map((e: any) => {
+                const lineas = (e.entrega_lineas || []) as any[];
+                const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
+                const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
+                return (
+                  <div key={e.id} className="border border-border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-muted/40 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3 text-[12px]">
+                        <span className="font-mono font-semibold text-foreground">{e.folio ?? '—'}</span>
+                        <span className="text-muted-foreground">Pedido <span className="font-mono">{e.ventas?.folio ?? '—'}</span></span>
+                        <span className="text-foreground">{e.clientes?.nombre ?? '—'}</span>
+                        <span className="text-muted-foreground">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{udsEntregadas} entregadas</span>
+                        {udsNoEntregadas > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-semibold">{udsNoEntregadas} no entregadas</span>
+                        )}
+                        {e.ventas?.total != null && (
+                          <span className="font-bold text-foreground ml-2">{fmt(Number(e.ventas.total))}</span>
+                        )}
+                      </div>
+                    </div>
+                    {lineas.length > 0 ? (
+                      <table className="w-full text-[12px]">
+                        <thead>
+                          <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                            <th className="text-left py-1.5 px-3">Producto</th>
+                            <th className="text-left py-1.5">Código</th>
+                            <th className="text-right py-1.5">Pedidas</th>
+                            <th className="text-right py-1.5">Entregadas</th>
+                            <th className="text-center py-1.5 px-3">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lineas.map((l: any, i: number) => (
+                            <tr key={i} className="border-b border-border/40 last:border-b-0">
+                              <td className="py-1.5 px-3">{l.productos?.nombre ?? '—'}</td>
+                              <td className="py-1.5 font-mono text-muted-foreground">{l.productos?.codigo ?? ''}</td>
+                              <td className="py-1.5 text-right">{Number(l.cantidad ?? 0)}</td>
+                              <td className="py-1.5 text-right font-semibold">{Number(l.cantidad_entregada ?? 0)}</td>
+                              <td className="py-1.5 px-3 text-center">
+                                {l.hecho ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold">
+                                    <CheckCircle2 className="h-3 w-3" /> Entregado
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold" title={l.motivo_no_entrega || ''}>
+                                    <XCircle className="h-3 w-3" /> No entregado{l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-xs text-muted-foreground px-3 py-2">Sin productos en esta entrega</p>
+                    )}
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-end gap-4 text-[12px] font-bold pt-2 border-t border-border">
+                <span className="text-muted-foreground">Totales:</span>
+                <span>{totalEntregaUnidades} uds entregadas</span>
+                <span>{fmt(totalEntregaMonto)}</span>
+              </div>
+            </div>
           ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
         </SectionCard>
 
