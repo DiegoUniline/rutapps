@@ -548,6 +548,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Entregas</div>
+              <div className="text-lg font-bold text-foreground">{entregasList.length}</div>
+              <div className="text-[10px] text-muted-foreground">{totalEntregaUnidades} uds</div>
+            </div>
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
               <div className="text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
               <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
