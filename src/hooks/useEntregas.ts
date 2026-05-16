@@ -202,15 +202,15 @@ export function useAsignarEntrega() {
   });
 }
 
-/** Cargar entrega — moves stock to vendedor's almacen via stock_almacen */
+/** Cargar entrega — DB trigger `trg_apply_entrega_cargado_inventory` handles stock movement.
+ *  Frontend only updates status (DB-authoritative inventory). */
 export function useCargarEntrega() {
-  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ entregaId }: { entregaId: string }) => {
       const { data: entrega } = await supabase
         .from('entregas')
-        .select('id, folio, empresa_id, vendedor_ruta_id, vendedor_id, status')
+        .select('id, folio, vendedor_ruta_id, vendedor_id')
         .eq('id', entregaId)
         .single();
       if (!entrega) throw new Error('Entrega no encontrada');
@@ -219,65 +219,31 @@ export function useCargarEntrega() {
       const vendedorId = entrega.vendedor_ruta_id || entrega.vendedor_id;
       if (!vendedorId) throw new Error(`No se puede cargar la entrega ${folio}: falta asignar vendedor de ruta.`);
 
-      // Get vendedor's almacen_id from profiles
       const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorId).maybeSingle();
-      const almacenDestinoId = prof?.almacen_id;
-      if (!almacenDestinoId) throw new Error(`No se puede cargar la entrega ${folio}: el vendedor no tiene almacén asignado en su perfil.`);
+      if (!prof?.almacen_id) throw new Error(`No se puede cargar la entrega ${folio}: el vendedor no tiene almacén asignado en su perfil.`);
 
       const { data: lineas } = await supabase
         .from('entrega_lineas')
-        .select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id, productos(nombre)')
+        .select('id, hecho, cantidad_entregada, almacen_origen_id, productos(nombre)')
         .eq('entrega_id', entregaId);
 
-      // Validación dura previa: cada línea hecha debe tener almacén origen
       const lineasHechas = (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0);
       if (lineasHechas.length === 0) {
         throw new Error(`No se puede cargar la entrega ${folio}: no hay líneas surtidas. Surte al menos un producto antes de cargar.`);
       }
       const sinOrigen = lineasHechas.filter(l => !l.almacen_origen_id);
       if (sinOrigen.length > 0) {
-        const nombres = sinOrigen
-          .map((l: any) => l.productos?.nombre || l.producto_id)
-          .slice(0, 5)
-          .join(', ');
+        const nombres = sinOrigen.map((l: any) => l.productos?.nombre || '').slice(0, 5).join(', ');
         const extra = sinOrigen.length > 5 ? ` y ${sinOrigen.length - 5} más` : '';
         throw new Error(`No se puede cargar la entrega ${folio}: las siguientes líneas no tienen almacén origen: ${nombres}${extra}.`);
       }
 
-      const today = todayLocal();
-
-      for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
-        // Upsert into stock_almacen for vendedor's almacen
-        const { data: existing } = await supabase.from('stock_almacen')
-          .select('id, cantidad').eq('almacen_id', almacenDestinoId).eq('producto_id', l.producto_id).maybeSingle();
-
-        if (existing) {
-          await supabase.from('stock_almacen').update({ cantidad: existing.cantidad + l.cantidad_entregada, updated_at: new Date().toISOString() } as any).eq('id', existing.id);
-        } else {
-          await supabase.from('stock_almacen').insert({ empresa_id: entrega.empresa_id, almacen_id: almacenDestinoId, producto_id: l.producto_id, cantidad: l.cantidad_entregada } as any);
-        }
-
-        // Log movimiento (entrada a almacén del vendedor)
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: entrega.empresa_id,
-          tipo: 'entrada',
-          producto_id: l.producto_id,
-          cantidad: l.cantidad_entregada,
-          almacen_origen_id: l.almacen_origen_id ?? null,
-          almacen_destino_id: almacenDestinoId,
-          vendedor_destino_id: vendedorId,
-          referencia_tipo: 'entrega',
-          referencia_id: entregaId,
-          user_id: user?.id,
-          fecha: today,
-          notas: 'Carga a ubicación',
-        } as any);
-      }
-
-      await supabase.from('entregas').update({
+      // DB trigger moves stock; we only flip status
+      const { error } = await supabase.from('entregas').update({
         status: 'cargado',
         fecha_carga: new Date().toISOString(),
       } as any).eq('id', entregaId);
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
@@ -387,34 +353,12 @@ export function useValidarEntrega() {
         throw new Error(`No se puede validar la entrega ${cur.folio || ''}: primero debe estar cargada (estado actual: ${cur.status}).`);
       }
 
+      // DB trigger `trg_apply_entrega_hecho_inventory` deducts stock. Frontend only flips status.
       const { error } = await supabase.from('entregas').update({
         status: 'hecho',
         validado_at: new Date().toISOString(),
       } as any).eq('id', entregaId);
       if (error) throw error;
-
-      // Deduct from vendedor's almacen via stock_almacen
-      const { data: ent } = await supabase.from('entregas')
-        .select('empresa_id, vendedor_ruta_id, vendedor_id, entrega_lineas(producto_id, cantidad_entregada, hecho)')
-        .eq('id', entregaId).single();
-
-      const vendId = ent?.vendedor_ruta_id || ent?.vendedor_id;
-      if (vendId) {
-        const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendId).maybeSingle();
-        const almId = prof?.almacen_id;
-        if (almId) {
-          for (const l of (ent?.entrega_lineas ?? []).filter((l: any) => l.hecho && l.cantidad_entregada > 0)) {
-            const { data: sa } = await supabase.from('stock_almacen')
-              .select('id, cantidad').eq('almacen_id', almId)
-              .eq('producto_id', (l as any).producto_id).maybeSingle();
-            if (sa) {
-              await supabase.from('stock_almacen')
-                .update({ cantidad: Math.max(0, sa.cantidad - (l as any).cantidad_entregada), updated_at: new Date().toISOString() } as any)
-                .eq('id', sa.id);
-            }
-          }
-        }
-      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
