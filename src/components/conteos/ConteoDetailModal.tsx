@@ -75,49 +75,14 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
     if (ajustables.length === 0) return;
     setAdjusting(true);
     try {
-      for (const linea of ajustables) {
-        // Get current stock
-        const { data: sa } = await supabase.from('stock_almacen')
-          .select('cantidad')
-          .eq('almacen_id', conteo?.almacen_id)
-          .eq('producto_id', linea.producto_id)
-          .single();
+      // RPC atómica + idempotente (apply_conteo_ajustes en BD)
+      const { data, error } = await supabase.rpc('apply_conteo_ajustes' as any, {
+        p_conteo_id: conteoId,
+      });
+      if (error) throw error;
 
-        const stockActual = sa?.cantidad ?? 0;
-        const dif = (linea.cantidad_contada ?? 0) - stockActual;
-
-        if (dif !== 0) {
-          // Update stock
-          await supabase.from('stock_almacen').upsert({
-            empresa_id: conteo?.empresa_id,
-            almacen_id: conteo?.almacen_id,
-            producto_id: linea.producto_id,
-            cantidad: stockActual + dif,
-          } as any, { onConflict: 'almacen_id,producto_id' });
-
-          // Register movement
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: conteo?.empresa_id,
-            tipo: dif > 0 ? 'entrada' : 'salida',
-            producto_id: linea.producto_id,
-            cantidad: Math.abs(dif),
-            ...(dif > 0
-              ? { almacen_destino_id: conteo?.almacen_id }
-              : { almacen_origen_id: conteo?.almacen_id }),
-            referencia_tipo: 'conteo_fisico',
-            referencia_id: conteoId,
-            notas: `Ajuste por conteo físico ${conteo?.folio}. Contado: ${linea.cantidad_contada}, Sistema: ${stockActual}`,
-            user_id: user!.id,
-          } as any);
-
-          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
-        }
-
-        // Mark as adjusted
-        await supabase.from('conteo_lineas').update({ ajuste_aplicado: true } as any).eq('id', linea.id);
-      }
-
-      toast.success(`${ajustables.length} ajustes aplicados`);
+      const aplicados = (data as any)?.aplicados ?? ajustables.length;
+      toast.success(`${aplicados} ajuste(s) aplicados`);
       refetchLineas();
       qc.invalidateQueries({ queryKey: ['conteos-fisicos'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
