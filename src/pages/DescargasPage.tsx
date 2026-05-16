@@ -845,6 +845,48 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
 
+        {/* ═══ ENTREGAS REALIZADAS ═══ */}
+        <SectionCard title={`Entregas realizadas (${entregasList.length})`} icon={Truck}>
+          {entregasList.length > 0 ? (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Folio</th>
+                  <th className="text-left py-2">Pedido</th>
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Fecha</th>
+                  <th className="text-right py-2">Uds</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entregasList.map((e: any) => {
+                  const uds = (e.entrega_lineas || [])
+                    .filter((l: any) => l.hecho)
+                    .reduce((s: number, l: any) => s + (Number(l.cantidad_entregada) || 0), 0);
+                  return (
+                    <tr key={e.id} className="border-b border-border/50">
+                      <td className="py-1.5 font-mono text-foreground">{e.folio ?? '—'}</td>
+                      <td className="py-1.5 font-mono text-muted-foreground">{e.ventas?.folio ?? '—'}</td>
+                      <td className="py-1.5">{e.clientes?.nombre ?? '—'}</td>
+                      <td className="py-1.5 text-muted-foreground">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</td>
+                      <td className="py-1.5 text-right">{uds}</td>
+                      <td className="py-1.5 text-right font-semibold">{e.ventas?.total ? fmt(Number(e.ventas.total)) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold text-[12px]">
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Totales:</td>
+                  <td className="py-2 text-right">{totalEntregaUnidades} uds</td>
+                  <td className="py-2 text-right">{fmt(totalEntregaMonto)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : <p className="text-sm text-muted-foreground">Sin entregas en este periodo</p>}
+        </SectionCard>
+
         {/* ═══ STOCK EN ALMACÉN ═══ */}
         {incluirStock && stockItems.length > 0 && (
           <SectionCard title={`Stock — ${almacenNombre}`} icon={Package}>
