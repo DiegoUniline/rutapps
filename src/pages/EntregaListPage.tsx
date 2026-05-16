@@ -481,7 +481,7 @@ export default function EntregaListPage() {
               const lineas = e.entrega_lineas ?? [];
 
               return (
-                <>
+                <Fragment key={e.id}>
                 <TableRow
                   key={e.id}
                   className={cn(
