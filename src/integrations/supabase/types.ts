@@ -6839,6 +6839,7 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_carga_kardex: { Args: { _carga_id: string }; Returns: undefined }
       apply_conteo_ajustes: { Args: { p_conteo_id: string }; Returns: Json }
       aprobar_solicitud_partner: {
         Args: { _comision_pct?: number; _slug: string; _solicitud_id: string }
