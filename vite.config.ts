@@ -46,17 +46,29 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       workbox: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        // Precache all built assets + index.html
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Serve cached app shell when offline
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
+        // CRÍTICO: activa el nuevo SW inmediatamente y toma control de todas las pestañas abiertas
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // JS/CSS assets: cache first (they have hashes in filenames)
+            // HTML: SIEMPRE red primero, así una publicación nueva se ve al instante
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-pages',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          {
+            // JS/CSS con hash en el nombre: cache-first es seguro
             urlPattern: /\.(?:js|css)$/,
             handler: 'StaleWhileRevalidate',
             options: {
@@ -65,7 +77,6 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // Images: cache first
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
             handler: 'CacheFirst',
             options: {
@@ -74,7 +85,6 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // Fonts
             urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/,
             handler: 'CacheFirst',
             options: {
@@ -83,7 +93,6 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // Supabase API calls: network only (handled by offline queue)
             urlPattern: /supabase\.co/,
             handler: 'NetworkOnly',
           },
