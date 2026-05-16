@@ -136,62 +136,11 @@ export default function RutaEntregaDetalle() {
     try {
       const now = new Date().toISOString();
 
-      // 1) Descontar del almacén del vendedor (ruta) las cantidades realmente surtidas.
-      const vendedorId = (entrega as any)?.vendedor_ruta_id || (entrega as any)?.vendedor_id;
-      if (vendedorId) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('almacen_id')
-          .eq('id', vendedorId)
-          .maybeSingle();
-        const almacenVendedorId = prof?.almacen_id;
+      // El descuento de inventario lo realiza el trigger de base de datos
+      // `trg_apply_entrega_hecho_inventory` al cambiar el status a 'hecho'.
+      // No descontamos desde el cliente para evitar duplicados y race conditions.
 
-        if (almacenVendedorId) {
-          // Idempotencia: solo bloquear si YA hay salidas registradas desde ESTE almacén de ruta
-          const { data: movsRuta } = await supabase
-            .from('movimientos_inventario')
-            .select('id')
-            .eq('referencia_tipo', 'entrega')
-            .eq('referencia_id', id!)
-            .eq('tipo', 'salida')
-            .eq('almacen_origen_id', almacenVendedorId)
-            .limit(1);
-          const yaDescontadoRuta = (movsRuta ?? []).length > 0;
-
-          const lineasSurtidas = yaDescontadoRuta ? [] : (lineas ?? []).filter(
-            (l: any) => l.hecho && Number(l.cantidad_entregada) > 0
-          );
-          for (const l of lineasSurtidas) {
-            const cant = Number(l.cantidad_entregada) || 0;
-            const { data: sa } = await supabase
-              .from('stock_almacen')
-              .select('id, cantidad')
-              .eq('almacen_id', almacenVendedorId)
-              .eq('producto_id', l.producto_id)
-              .maybeSingle();
-            if (sa) {
-              await supabase.from('stock_almacen').update({
-                cantidad: Math.max(0, Number(sa.cantidad) - cant),
-                updated_at: new Date().toISOString(),
-              } as any).eq('id', sa.id);
-            }
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: (entrega as any).empresa_id,
-              tipo: 'salida',
-              producto_id: l.producto_id,
-              cantidad: cant,
-              almacen_origen_id: almacenVendedorId,
-              referencia_tipo: 'entrega',
-              referencia_id: id!,
-              user_id: user?.id ?? null,
-              fecha: now.slice(0, 10),
-              notas: `Entrega ${(entrega as any).folio ?? ''} (descuento ruta)`,
-            } as any);
-          }
-        }
-      }
-
-      // 2) Marcar la entrega como hecha (solo si no lo está ya)
+      // Marcar la entrega como hecha (solo si no lo está ya)
       if (entrega.status !== 'hecho') {
         const { error } = await supabase.from('entregas')
           .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
