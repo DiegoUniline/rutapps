@@ -477,13 +477,18 @@ export default function EntregaListPage() {
                 e.vendedores?.almacen_destino?.nombre ??
                 null;
 
+              const isExpanded = expandedId === e.id;
+              const lineas = e.entrega_lineas ?? [];
+
               return (
+                <>
                 <TableRow
                   key={e.id}
                   className={cn(
                     "cursor-pointer hover:bg-accent/50 transition-colors",
-                    selectedIds.has(e.id) && "bg-primary/5"
+                    (selectedIds.has(e.id) || isExpanded) && "bg-primary/5"
                   )}
+                  onClick={() => setExpandedId(isExpanded ? null : e.id)}
                 >
                   <TableCell className="text-center py-2" onClick={e2 => e2.stopPropagation()}>
                     {canSelect && (
@@ -493,45 +498,77 @@ export default function EntregaListPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell
-                    className="font-mono text-[11px] font-bold py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.folio ?? '—'}</TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.ventas?.folio ?? '—'}</TableCell>
-                  <TableCell
-                    className="text-[12px] font-medium py-2"
-                  ><ClienteLink id={e.cliente_id ?? e.clientes?.id}>{e.clientes?.nombre ?? '—'}</ClienteLink></TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.vendedores?.nombre ?? '—'}</TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                    title={originTitle}
-                  >{originLabel}</TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{destinoNombre ?? '—'}</TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
-                  <TableCell
-                    className="text-[12px] text-muted-foreground py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >{fmtDate(e.fecha)}</TableCell>
-                  <TableCell
-                    className="text-center py-2"
-                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
-                  >
+                  <TableCell className="font-mono text-[11px] font-bold py-2">{e.folio ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{e.ventas?.folio ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] font-medium py-2" onClick={e2 => e2.stopPropagation()}>
+                    <ClienteLink id={e.cliente_id ?? e.clientes?.id}>{e.clientes?.nombre ?? '—'}</ClienteLink>
+                  </TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{e.vendedores?.nombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2" title={originTitle}>{originLabel}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{destinoNombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
+                  <TableCell className="text-center py-2">
                     <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
                   </TableCell>
+                  <TableCell className="text-center py-2 w-8">
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform inline-block", isExpanded && "rotate-180")} />
+                  </TableCell>
                 </TableRow>
+                {isExpanded && (
+                  <TableRow key={`exp-${e.id}`} className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={11} className="p-0">
+                      <div className="px-6 py-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
+                            <Package className="h-3.5 w-3.5" />
+                            Productos ({lineas.length})
+                          </h3>
+                          <Button size="sm" variant="outline" onClick={(ev) => { ev.stopPropagation(); navigate(`/logistica/entregas/${e.id}`); }}>
+                            Abrir entrega
+                          </Button>
+                        </div>
+                        {lineas.length === 0 ? (
+                          <p className="text-[12px] text-muted-foreground py-2">Sin productos</p>
+                        ) : (
+                          <div className="bg-card border border-border rounded-lg overflow-hidden">
+                            <table className="w-full text-[12px]">
+                              <thead>
+                                <tr className="border-b border-border bg-muted/40 text-left">
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Código</th>
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Producto</th>
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Almacén origen</th>
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-right">Pedido</th>
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-right">Entregado</th>
+                                  <th className="py-1.5 px-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-center">Hecho</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {lineas.map((l: any) => (
+                                  <tr key={l.id} className="border-b border-border last:border-b-0">
+                                    <td className="py-1.5 px-3 font-mono text-muted-foreground">{l.productos?.codigo ?? '—'}</td>
+                                    <td className="py-1.5 px-3 text-foreground">{l.productos?.nombre ?? '—'}</td>
+                                    <td className="py-1.5 px-3 text-muted-foreground">{l.almacenes?.nombre ?? '—'}</td>
+                                    <td className="py-1.5 px-3 text-right tabular-nums">{l.cantidad_pedida ?? 0}</td>
+                                    <td className="py-1.5 px-3 text-right tabular-nums font-medium">{l.cantidad_entregada ?? 0}</td>
+                                    <td className="py-1.5 px-3 text-center">
+                                      {l.hecho ? (
+                                        <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/30">Sí</Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-[10px]">No</Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                </>
               );
             })}
           </TableBody>
