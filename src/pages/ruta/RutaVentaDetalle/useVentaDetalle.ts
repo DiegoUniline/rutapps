@@ -211,18 +211,18 @@ export function useVentaDetalle() {
       ];
 
       for (const ventaId of ventasLiquidadas) {
-        const { data: entregasPendientes, error: entregasErr } = await supabase
+        const { data: entregasVenta, error: entregasErr } = await supabase
           .from('entregas')
           .select('id, status')
           .eq('pedido_id', ventaId)
-          .in('status', ['cargado', 'en_ruta', 'surtido', 'asignado'] as any)
-          .limit(5);
+          .limit(10);
         if (entregasErr) throw entregasErr;
 
-        if ((entregasPendientes ?? []).length === 1) {
-          await marcarEntregaHechaYSincronizarPedido(entregasPendientes![0].id, ventaId);
-        } else if ((entregasPendientes ?? []).length === 0) {
-          await supabase.from('ventas').update({ status: 'entregado' as any, fecha_entrega: new Date().toISOString() } as any).eq('id', ventaId).neq('status', 'cancelado').neq('status', 'facturado');
+        const entregasPendientes = (entregasVenta ?? []).filter((entrega: any) => ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(entrega.status));
+        if (entregasPendientes.length === 1) {
+          await marcarEntregaHechaYSincronizarPedido(entregasPendientes[0].id, ventaId);
+        } else if ((entregasVenta ?? []).length > 0 && entregasPendientes.length === 0) {
+          await marcarEntregaHechaYSincronizarPedido((entregasVenta ?? [])[0].id, ventaId);
         }
       }
 
