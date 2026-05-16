@@ -232,11 +232,7 @@ export default function EntregaListPage() {
           fecha_asignacion: new Date().toISOString(),
         } as any).eq('id', eid);
         if (cargarTambien && almDestinoId) {
-          const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
-          for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
-            await upsertStockAlmacen(empresa!.id, almDestinoId, l.producto_id, l.cantidad_entregada);
-            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, vendedor_destino_id: vendedorRutaId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
-          }
+          // El trigger de BD (trg_apply_entrega_cargado_inventory) hace SALIDA del origen y ENTRADA al destino
           await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
         }
       }
@@ -252,22 +248,15 @@ export default function EntregaListPage() {
 
   const bulkCargarMut = useMutation({
     mutationFn: async () => {
-      const today = todayLocal();
       let saltadas = 0;
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         if (!vendId) continue;
-        // Idempotencia: re-leer status desde BD; si ya está cargado/entregado, saltar para no duplicar stock
+        // Idempotencia: re-leer status; si ya está cargado/entregado/hecho, saltar
         const { data: fresh } = await supabase.from('entregas').select('status').eq('id', eid).maybeSingle();
         if (!fresh || (fresh.status as string) === 'cargado' || (fresh.status as string) === 'entregado' || (fresh.status as string) === 'hecho') { saltadas++; continue; }
-        const almDestinoId = await getVendedorAlmacen(vendId);
-        if (!almDestinoId) continue;
-        const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
-        for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
-          await upsertStockAlmacen(empresa!.id, almDestinoId, l.producto_id, l.cantidad_entregada);
-          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
-        }
+        // El trigger de BD (trg_apply_entrega_cargado_inventory) hace SALIDA del origen y ENTRADA al destino
         await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
       }
       return { saltadas };
