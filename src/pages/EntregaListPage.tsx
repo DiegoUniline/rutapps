@@ -45,6 +45,7 @@ export default function EntregaListPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Always fetch ALL entregas (no status filter) so counts are correct
   const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
