@@ -80,8 +80,37 @@ export default function RutaEntregas() {
   }, { enabled: !!empresa?.id, orderBy: 'fecha' });
 
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
-  const { data: entregaLineas } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id });
+  const { data: entregaLineasOffline } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+
+  // Online fetch of lines for this vendor's entregas — ensures fresh counts even if offline cache is stale
+  const entregaIds = useMemo(
+    () => (allEntregas ?? [])
+      .filter((e: any) =>
+        ['cargado', 'en_ruta', 'hecho', 'no_entregado'].includes(e.status) &&
+        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
+      )
+      .map((e: any) => e.id),
+    [allEntregas, vendedorId]
+  );
+
+  const { data: entregaLineasOnline } = useQuery({
+    queryKey: ['ruta-entrega-lineas', empresa?.id, entregaIds.join(',')],
+    enabled: !!empresa?.id && entregaIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('entrega_lineas')
+        .select('id, entrega_id, producto_id, cantidad_pedida, cantidad_entregada, hecho, almacen_origen_id')
+        .in('entrega_id', entregaIds);
+      return data ?? [];
+    },
+  });
+
+  // Merge: online overrides offline by id; offline used as fallback
+  const lineasById = new Map<string, any>();
+  for (const l of (entregaLineasOffline ?? [])) lineasById.set(l.id, l);
+  for (const l of (entregaLineasOnline ?? [])) lineasById.set(l.id, l);
+  const entregaLineas = Array.from(lineasById.values());
 
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c]));
   const productoMap = new Map((productos ?? []).map((p: any) => [p.id, p]));
@@ -94,7 +123,7 @@ export default function RutaEntregas() {
     )
     .map((e: any) => {
       const cliente = clienteMap.get(e.cliente_id);
-      const lineas = (entregaLineas ?? [])
+      const lineas = entregaLineas
         .filter((l: any) => l.entrega_id === e.id)
         .map((l: any) => ({
           ...l,
