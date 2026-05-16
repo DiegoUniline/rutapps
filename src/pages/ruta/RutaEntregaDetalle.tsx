@@ -11,6 +11,7 @@ import { printTicket } from '@/lib/printTicketUtil';
 import { toPng } from 'html-to-image';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
+import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
@@ -123,20 +124,21 @@ export default function RutaEntregaDetalle() {
     if (saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
       autoMarkedRef.current = true;
       const now = new Date().toISOString();
-      supabase.from('entregas')
-        .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
-        .eq('id', id!)
-        .then(({ error }) => {
-          if (!error) {
-            toast.success('Entrega marcada como entregada automáticamente');
-            queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
-            queryClient.invalidateQueries({ queryKey: ['entregas'] });
-          } else {
-            autoMarkedRef.current = false;
-          }
+      marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now)
+        .then(() => {
+          toast.success('Entrega marcada como entregada automáticamente');
+          queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+          queryClient.invalidateQueries({ queryKey: ['entregas'] });
+          queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+          queryClient.invalidateQueries({ queryKey: ['venta', pedidoId] });
+          queryClient.invalidateQueries({ queryKey: ['ventas'] });
+          queryClient.invalidateQueries({ queryKey: ['logistica-pedidos'] });
+        })
+        .catch(() => {
+          autoMarkedRef.current = false;
         });
     }
-  }, [entrega, venta, id, queryClient]);
+  }, [entrega, venta, id, pedidoId, queryClient]);
 
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
@@ -175,18 +177,17 @@ export default function RutaEntregaDetalle() {
 
       // Marcar la entrega como hecha (solo si no lo está ya)
       if (entrega.status !== 'hecho') {
-        const { error } = await supabase.from('entregas')
-          .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
-          .eq('id', id!);
-        if (error) throw error;
+        await marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now);
       }
 
       toast.success('¡Entrega completada!');
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
+      queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-venta'] });
       queryClient.invalidateQueries({ queryKey: ['venta'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['logistica-pedidos'] });
       queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       if (goToCobrarAfter && pedidoId) {
