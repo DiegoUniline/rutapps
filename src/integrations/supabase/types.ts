@@ -7075,11 +7075,11 @@ export type Database = {
       repair_missing_entrega_carga: {
         Args: never
         Returns: {
-          cantidad: number
-          entrega_id: string
-          folio: string
-          producto_id: string
-          ruta_almacen: string
+          out_cantidad: number
+          out_entrega_id: string
+          out_folio: string
+          out_producto_id: string
+          out_ruta_almacen: string
         }[]
       }
       reprogramar_entregas_bulk: {
