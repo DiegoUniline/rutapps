@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle } from 'lucide-react';
+import { Truck, Search, Package, Zap, PackageCheck, ArrowRightLeft, Calendar, XCircle, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
