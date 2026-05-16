@@ -1,74 +1,63 @@
-## Contexto importante (lo que ya existe)
+## Qué encontré
 
-Al revisar la BD, **#2 ya está cubierto**:
-- `trg_apply_delivered_direct_sale_inventory` — venta directa → entregado descuenta stock
-- `trg_apply_immediate_sale_inventory` — POS al crear venta_lineas
-- `trg_apply_pedido_entregado_inventory` — pedido → entregado
-- `trg_restore_cancelled_sale_inventory` — cancelaciones restituyen
-- `trg_apply_descarga_ruta_aprobada` — descarga de ruta aprobada
+El problema sí está en el flujo de inventario de entregas:
 
-Entonces solo faltan **4 flujos** (no 5):
+- En la entrega `ENT-0001`, el producto `Agua natural 1L.` tuvo:
+  - Entrada de conteo físico: `+100` a `Almacén Principal`.
+  - Surtido de entrega: `-100` desde `Almacén Principal`.
+  - Entrega al cliente: `-100` desde `Ruta Andrey`.
+- Falta el movimiento intermedio correcto de carga a ruta:
+  - Debió aparecer `+100` en `Ruta Andrey` al cargar la entrega.
+- Por eso hoy queda mal:
+  - `Almacén Principal`: stock real `100`, pero Kardex `0`.
+  - `Ruta Andrey`: stock real `-100`, Kardex `-100`.
+  - Lo esperado después de surtir, cargar y entregar era stock `0` y Kardex `0`.
 
-## Flujos a blindar con trigger
+## Causa raíz
 
-### 1. Cargar camión (`entrega.status = 'cargado'`)
-- Trigger AFTER UPDATE en `entregas` cuando `status: pendiente → cargado`
-- Crea `salida` del almacén origen y `entrada` al `stock_camion` del vendedor
-- **Idempotencia:** detectar `referencia_tipo='entrega_cargado'` ya existente y skip; detectar movimiento legacy `referencia_tipo='entrega'+tipo='salida'+anchor_label='carga'` para no duplicar con apps viejas
-- Reversal `cargado → pendiente` revierte
+La función de base de datos `apply_entrega_cargado_inventory()` sí debería crear la entrada a la ruta cuando la entrega pasa a `cargado`, pero el cambio a `cargado` ocurrió antes de la versión corregida del trigger o no generó el movimiento `entrega_cargado` para esa entrega.
 
-### 3. Devoluciones (`devolucion.status = 'aplicada'`)
-- Trigger AFTER UPDATE en `devoluciones` cuando `status → aplicada`
-- Reingreso al almacén indicado por cada línea
-- Idempotencia: `referencia_tipo='devolucion_aplicada'+referencia_id=devolucion.id`
-- Reversal cuando deja de estar `aplicada`
+Luego, cuando marqué la entrega como `hecho`, el trigger `apply_entrega_hecho_inventory()` descontó correctamente de `Ruta Andrey`, pero como nunca existió la entrada previa a esa ruta, la ruta quedó en negativo.
 
-### 4. Conteos cerrados (`conteo.status = 'cerrado'`)
-- Trigger AFTER UPDATE en `conteos` cuando `status → cerrado`
-- Por cada `conteo_lineas`, generar `ajuste` (entrada/salida) por la diferencia teórico vs físico
-- Idempotencia: `referencia_tipo='conteo_cerrado'+referencia_id=conteo.id`
-- No revertir automáticamente al reabrir (auditoría)
+Además, el arreglo anterior que marca pedido/entrega como entregado arregló el estado, pero no reparó este caso histórico de carga faltante.
 
-### 5. Compras recibidas (`compra.status = 'recibido'`)
-- Trigger AFTER UPDATE en `compras` cuando `status → recibido`
-- Entrada al almacén por cada `compra_lineas`
-- Idempotencia: `referencia_tipo='compra_recibida'+referencia_id=compra.id` y detectar movimiento legacy `referencia_tipo='compra'`
-- Reversal cuando deja de estar `recibido`
+## Plan de corrección
 
-## Blindaje anti-duplicado (regla universal)
+1. Reparar los datos de `ENT-0001`
+   - Insertar los movimientos faltantes `entrega_cargado` para sus líneas:
+     - `+100` Agua natural 1L. a `Ruta Andrey`.
+     - `+100` Coca-Cola 2L a `Ruta Andrey`.
+   - Ajustar `stock_almacen` para que:
+     - `Almacén Principal` baje de `100` a `0` para esos productos.
+     - `Ruta Andrey` suba de `-100` a `0` para esos productos.
+   - Confirmar con consulta que stock real y Kardex coincidan en ambos almacenes.
 
-Cada función nueva sigue el mismo patrón del trigger de entrega ya creado:
+2. Blindar el trigger de carga para que no vuelva a pasar
+   - Reescribir `apply_entrega_cargado_inventory()` para que sea idempotente por producto y entrega.
+   - Si ya existe la salida de surtido `referencia_tipo='entrega'`, no volverá a descontar del origen, pero sí garantizará la entrada a la ruta.
+   - Si falta el movimiento de carga, podrá crearlo sin duplicar salidas.
+   - En reversas, solo revertirá movimientos `entrega_cargado`, no tocará los movimientos antiguos de surtido.
 
-```sql
--- 1. Si ya existe el movimiento "oficial" del trigger → return (idempotencia pura)
--- 2. Si existe movimiento legacy del frontend antiguo → crear anchor de 0 y return
--- 3. Si nada existe → aplicar movimientos reales
-```
+3. Evitar dobles descuentos al marcar entregado
+   - Ajustar `apply_entrega_hecho_inventory()` para detectar mejor los casos donde ya existe un descuento previo real desde la ruta y no duplicarlo.
+   - Mantener el descuento normal desde la ruta cuando sí hubo carga previa.
 
-Esto garantiza:
-- Apps viejas (PWA cacheada) que aún hacen el insert manual → trigger detecta y no duplica
-- Apps actualizadas → solo trigger aplica
-- Doble UPDATE de status → idempotente
+4. Agregar reparación automática para entregas ya cargadas o hechas con carga faltante
+   - Crear una función de mantenimiento segura que reconstruya únicamente la entrada faltante a ruta cuando:
+     - La entrega tiene líneas surtidas.
+     - Existe salida de surtido desde origen.
+     - No existe entrada `entrega_cargado` a la ruta.
+   - Ejecutarla para la empresa demo y revisar si hay más casos iguales.
 
-## Cambios en frontend (post-migración)
+5. Verificación final
+   - Consultar Kardex vs stock real por producto/almacén.
+   - Confirmar específicamente que `Agua natural 1L.` quede:
+     - `Almacén Principal`: stock `0`, Kardex `0`.
+     - `Ruta Andrey`: stock `0`, Kardex `0`.
+   - Revisar también `Coca-Cola 2L`, porque aparece en la misma entrega y presenta el mismo patrón.
 
-Para cada flujo, quitar el insert manual de `movimientos_inventario` y el `upsertStockAlmacen`/`upsertStockCamion` correspondiente, dejando solo el `UPDATE status`:
+## Detalles técnicos
 
-1. `EntregaListPage.tsx` — quitar carga manual de camión
-2. `useDevoluciones.ts` — quitar reingreso manual
-3. `ConteoFisicoPage.tsx` — quitar ajustes manuales al cerrar
-4. `CompraForm/useCompraForm.ts` — quitar entrada manual al marcar recibido
-
-Las apps viejas siguen funcionando porque el trigger detecta los movimientos legacy.
-
-## Estrategia de despliegue
-
-Una migración por flujo (4 migraciones) + edits de frontend. Cada migración es independiente, así si algo falla podemos revertir solo esa parte.
-
-## Documentación
-
-Actualizar `mem://architecture/entrega-inventory-trigger` para que sea un patrón general "inventory-trigger-pattern" que aplique a los 4 flujos nuevos.
-
-## ¿Avanzamos?
-
-Si confirmas, ejecuto en este orden: migración #1 + frontend #1, validamos, luego #3, #4, #5 una a una.
+- Los cambios estructurales se harán con migración porque son funciones/triggers de base de datos.
+- La corrección de datos se hará con operación de datos, no con migración de esquema.
+- No se tocará inventario desde frontend: se mantiene la regla de que inventario es autoridad de base de datos.
