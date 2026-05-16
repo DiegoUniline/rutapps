@@ -14,6 +14,7 @@ import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
+import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -201,10 +202,34 @@ export function useVentaDetalle() {
       }
 
       if (aplicaciones.length > 0) { const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones); if (appErr) throw appErr; }
+
+      const ventasLiquidadas = [
+        ...(montoAplicarActual > 0 && roundMoney(saldoActual - montoAplicarActual) <= 0.01 ? [venta.id] : []),
+        ...cuentasPendientes
+          .filter(cuenta => cuenta.montoAplicar > 0 && roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar) <= 0.01)
+          .map(cuenta => cuenta.id),
+      ];
+
+      for (const ventaId of ventasLiquidadas) {
+        const { data: entregasPendientes, error: entregasErr } = await supabase
+          .from('entregas')
+          .select('id, status')
+          .eq('pedido_id', ventaId)
+          .in('status', ['cargado', 'en_ruta', 'surtido', 'asignado'] as any)
+          .limit(5);
+        if (entregasErr) throw entregasErr;
+
+        if ((entregasPendientes ?? []).length === 1) {
+          await marcarEntregaHechaYSincronizarPedido(entregasPendientes![0].id, ventaId);
+        } else if ((entregasPendientes ?? []).length === 0) {
+          await supabase.from('ventas').update({ status: 'entregado' as any, fecha_entrega: new Date().toISOString() } as any).eq('id', ventaId).neq('status', 'cancelado').neq('status', 'facturado');
+        }
+      }
+
       setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');
       toast.success('¡Cobro registrado!');
-      ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
+      ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes', 'entregas', 'entregas-list', 'ruta-entregas', 'logistica-pedidos'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
