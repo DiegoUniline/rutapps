@@ -66,54 +66,9 @@ export function useSaveDevolucion() {
         }
       }
 
-      // ── Restore stock to the user's assigned warehouse ──
-      const almacenId = profile?.almacen_id;
-      if (almacenId && lineas.length > 0) {
-        const prodIds = lineas.map(l => l.producto_id);
-
-        // Get current stock_almacen rows for this warehouse
-        const { data: stockRows } = await supabase
-          .from('stock_almacen')
-          .select('id, producto_id, cantidad')
-          .eq('almacen_id', almacenId)
-          .in('producto_id', prodIds);
-
-        const stockMap = new Map((stockRows ?? []).map(s => [s.producto_id, s]));
-
-        // Get current global product quantities
-        const { data: prodRows } = await supabase
-          .from('productos')
-          .select('id, cantidad')
-          .in('id', prodIds);
-
-        const prodMap = new Map((prodRows ?? []).map(p => [p.id, p]));
-
-        for (const l of lineas) {
-          const existing = stockMap.get(l.producto_id);
-          if (existing) {
-            await supabase.from('stock_almacen').update({
-              cantidad: (existing.cantidad ?? 0) + l.cantidad,
-            }).eq('id', existing.id);
-          } else {
-            await supabase.from('stock_almacen').insert({
-              almacen_id: almacenId, producto_id: l.producto_id,
-              empresa_id: empresa.id, cantidad: l.cantidad,
-            });
-          }
-
-          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
-
-          // Log inventory movement
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa.id, tipo: 'entrada',
-            producto_id: l.producto_id, cantidad: l.cantidad,
-            almacen_destino_id: almacenId,
-            referencia_tipo: 'devolucion', referencia_id: dev.id,
-            user_id: devolucion.user_id,
-            notas: `Devolución - ${l.motivo}`,
-          });
-        }
-      }
+      // ── Reingreso al inventario: lo aplica el trigger BD
+      // (trg_apply_devolucion_linea_inventory en devolucion_lineas).
+      // El stock_almacen del usuario que registra se actualiza solo.
 
       return dev;
     },
