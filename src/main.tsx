@@ -27,28 +27,15 @@ if (isPreviewHost || isInIframe) {
       if (!registration) return;
       // Check for updates every 60s
       setInterval(() => registration.update(), 60_000);
-
-      // When a new SW is waiting, show update banner
-      const showUpdateBanner = () => {
-        window.dispatchEvent(new Event('uniline:sw-update-available'));
-      };
-
-      if (registration.waiting) {
-        showUpdateBanner();
-      }
-
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner();
-          }
-        });
-      });
     });
 
-    // Silent update: no visible reload on controller change
+    // Auto-reload cuando el nuevo SW toma control (publicación nueva)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   });
 } // end else-if serviceWorker
 
