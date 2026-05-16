@@ -359,6 +359,7 @@ export function useValidarEntrega() {
         validado_at: new Date().toISOString(),
       } as any).eq('id', entregaId);
       if (error) throw error;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entrega'] });
