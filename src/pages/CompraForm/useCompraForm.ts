@@ -45,7 +45,10 @@ export function useCompraForm() {
       if (compra_lineas?.length) {
         const enrichedLines = compra_lineas.map((cl: any) => {
           const prod = productosList.find((p: any) => p.id === cl.producto_id) as any;
-          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: prod?.factor_conversion ?? 1, _piezas_total: (cl.cantidad ?? 1) * (prod?.factor_conversion ?? 1) };
+          // Prefer factor guardado en la línea; si es legacy (NULL/0) cae al del producto
+          const factorPersistido = Number(cl.factor_conversion);
+          const factor = factorPersistido > 0 ? factorPersistido : (prod?.factor_conversion ?? 1);
+          return { ...cl, _tiene_iva: prod?.tiene_iva ?? false, _iva_pct: prod?.iva_pct ?? 16, _tiene_ieps: prod?.tiene_ieps ?? false, _ieps_pct: prod?.ieps_pct ?? 0, _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje', _unidad_compra: prod?.unidades_compra?.abreviatura ?? prod?.unidades_venta?.abreviatura ?? 'pz', _factor_conversion: factor, _piezas_total: (cl.cantidad ?? 1) * factor };
         });
         setLineas(enrichedLines);
       }
