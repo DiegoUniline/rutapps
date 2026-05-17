@@ -9,37 +9,72 @@ import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Li
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
-/** Realtime listener — invalidates productos cache on any server-side change */
+/**
+ * Realtime listener — invalidates caches on server-side changes.
+ *
+ * Each tracked table gets its OWN channel, scoped by `empresa_id`, so a tenant
+ * only receives broadcasts about its own rows. This avoids cross-tenant fan-out
+ * which was multiplying Realtime egress by the total number of companies in the
+ * project.
+ *
+ * Channel names include the empresa id so multiple tenants on the same browser
+ * (e.g. super admin tenant switch) don't collide.
+ */
 export function useProductosRealtime() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
+
   useEffect(() => {
-    const channel = supabase
-      .channel('productos-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
+    if (!empresaId) return;
+
+    const filter = `empresa_id=eq.${empresaId}`;
+
+    const productosCh = supabase
+      .channel(`data-productos-${empresaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos', filter }, () => {
         qc.invalidateQueries({ queryKey: ['productos'] });
         qc.invalidateQueries({ queryKey: ['productos-page'] });
         qc.invalidateQueries({ queryKey: ['productos-select'] });
         qc.invalidateQueries({ queryKey: ['pos-productos'] });
         qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen' }, () => {
+      .subscribe();
+
+    const stockCh = supabase
+      .channel(`data-stock_almacen-${empresaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter }, () => {
         qc.invalidateQueries({ queryKey: ['stock-almacen'] });
         qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
         qc.invalidateQueries({ queryKey: ['productos'] });
         qc.invalidateQueries({ queryKey: ['productos-page'] });
         qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+      .subscribe();
+
+    const ventasCh = supabase
+      .channel(`data-ventas-${empresaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, () => {
         qc.invalidateQueries({ queryKey: ['ventas'] });
         qc.invalidateQueries({ queryKey: ['ventas-list'] });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'almacenes' }, () => {
+      .subscribe();
+
+    const almacenesCh = supabase
+      .channel(`data-almacenes-${empresaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'almacenes', filter }, () => {
         qc.invalidateQueries({ queryKey: ['almacenes'] });
         qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+
+    return () => {
+      supabase.removeChannel(productosCh);
+      supabase.removeChannel(stockCh);
+      supabase.removeChannel(ventasCh);
+      supabase.removeChannel(almacenesCh);
+    };
+  }, [qc, empresaId]);
 }
 
 /** Paginated products for list views */
