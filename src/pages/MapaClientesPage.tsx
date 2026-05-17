@@ -3,6 +3,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { GoogleMap, Marker, InfoWindow, Polyline, MarkerClusterer } from '@react-google-maps/api';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -145,7 +146,6 @@ export default function MapaClientesPage() {
   const { data: ventasHoy } = useQuery({
     queryKey: ['ventas-hoy', empresa?.id],
     enabled: !!empresa?.id,
-    refetchInterval: 15000,
     queryFn: async () => {
       const today = todayInTimezone(empresa?.zona_horaria);
       const { data } = await supabase
@@ -158,6 +158,9 @@ export default function MapaClientesPage() {
       return new Set((data ?? []).map((v: any) => v.cliente_id));
     },
   });
+
+  // Realtime: invalida ventas-hoy cuando hay cambios en ventas (reemplaza refetchInterval 15s).
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['ventas-hoy', empresa?.id]] });
 
   const { data: clientes, isLoading } = useClientes(search, statusFilter || undefined);
   const { data: zonas } = useZonas();

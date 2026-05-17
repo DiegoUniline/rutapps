@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import {
   AlertCircle,
   Banknote,
@@ -148,7 +149,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const { data: cobrosHoy } = useQuery({
@@ -159,7 +159,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const { data: gastosHoy } = useQuery({
@@ -170,7 +169,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const { data: entregasHoy } = useQuery({
@@ -181,7 +179,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta);
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const { data: visitasHoy } = useQuery({
@@ -192,7 +189,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', `${desde}T00:00:00-12:00`).lte('fecha', `${hasta}T23:59:59+12:00`).order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
@@ -205,7 +201,6 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
-    refetchInterval: 30000,
   });
 
   const { data: clientesAsignados } = useQuery({
@@ -233,8 +228,16 @@ export default function SupervisorDashboardPage() {
         .eq('empresa_id', empresa!.id).in('status', ['en_ruta', 'pendiente'] as any);
       return (data ?? []) as any[];
     },
-    refetchInterval: 60000,
   });
+
+  // Realtime subscriptions — reemplazan los refetchInterval anteriores.
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['supervisor-ventas-hoy'], ['supervisor-ventas-recientes']] });
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['supervisor-cobros-hoy']] });
+  useRealtimeInvalidate({ table: 'gastos', empresaId: empresa?.id, queryKeys: [['supervisor-gastos-hoy']] });
+  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['supervisor-entregas-hoy']] });
+  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['supervisor-visitas-hoy']] });
+  useRealtimeInvalidate({ table: 'devoluciones', empresaId: empresa?.id, queryKeys: [['supervisor-devoluciones-hoy']] });
+  useRealtimeInvalidate({ table: 'cargas', empresaId: empresa?.id, queryKeys: [['supervisor-cargas-activas']] });
 
   // Rutas guardadas (cliente_orden_ruta) para visualizar multirruta tal como el Mapa de Clientes
   const { data: savedRoutes } = useQuery({

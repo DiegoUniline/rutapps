@@ -179,16 +179,8 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
   const qc = useQueryClient();
   const { empresa } = useAuth();
 
-  useEffect(() => {
-    if (!empresa?.id) return;
-    const channel = supabase
-      .channel('ventas-realtime-all')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter: `empresa_id=eq.${empresa.id}` }, () => {
-        qc.invalidateQueries({ queryKey: ['ventas'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc, empresa?.id]);
+  // Realtime ya está cubierto por el canal 'ventas-realtime' de useVentasPaginated.
+  // No duplicamos suscripción aquí para evitar doble invalidación.
 
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter],
