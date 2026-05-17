@@ -34,7 +34,7 @@ export function useLiveVendedores(enabled: boolean = true) {
     queryKey: ['live-vendedores', empresa?.id],
     enabled: enabled && !!empresa?.id,
     staleTime: 30_000,
-    refetchInterval: 60_000, // safety net: pick up new vendedores even if realtime drops
+    refetchInterval: 90_000, // safety net: pick up new vendedores even if realtime drops
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendedor_ubicaciones' as any)
