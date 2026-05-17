@@ -14,6 +14,7 @@ import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -64,8 +65,10 @@ export default function RutaClientes() {
       return data ?? [];
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
   });
+
+  // Realtime: invalida visitas cuando hay cambios (reemplaza refetchInterval 60s).
+  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['ruta-visitas-hoy', empresa?.id, todayStr]] });
 
   // Reconcile: drop local visits that have NO DB record (ghost visits from cancelled flows)
   useEffect(() => {

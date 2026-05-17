@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { useVendedores } from '@/hooks/useClientes';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
@@ -81,7 +82,6 @@ export function MonitorContent() {
     queryKey: ['monitor-clientes-hoy', empresa?.id, diaVisita],
     enabled: !!empresa?.id,
     staleTime: 60 * 1000,
-    refetchInterval: 60000,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
@@ -98,7 +98,6 @@ export function MonitorContent() {
   // Sales for selected date
   const { data: ventasHoy } = useQuery({
     queryKey: ['monitor-ventas-hoy', dateStr],
-    refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
@@ -111,7 +110,6 @@ export function MonitorContent() {
   // Entregas for selected date (with client GPS)
   const { data: entregasHoy } = useQuery({
     queryKey: ['monitor-entregas-hoy', dateStr],
-    refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
@@ -124,12 +122,17 @@ export function MonitorContent() {
   // Cobros for selected date
   const { data: cobrosHoy } = useQuery({
     queryKey: ['monitor-cobros-hoy', dateStr],
-    refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr).neq('status', 'cancelado');
       return data ?? [];
     },
   });
+
+  // Realtime invalidation — reemplaza los refetchInterval anteriores.
+  useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['monitor-clientes-hoy']] });
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['monitor-ventas-hoy']] });
+  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['monitor-entregas-hoy']] });
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['monitor-cobros-hoy']] });
 
   // Build visit statuses — include scheduled clients + entregas/ventas clients
   const visits: ClientVisit[] = useMemo(() => {

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -177,7 +178,6 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       return data ?? [];
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
   });
 
   // Also fetch ventas of the date as a safety net (in case visita wasn't recorded)
@@ -195,8 +195,11 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       return data ?? [];
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
   });
+
+  // Realtime: reemplaza los refetchInterval de visitas/ventas.
+  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['nav-visitas', empresa?.id, filterDate]] });
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['nav-ventas', empresa?.id, filterDate, vendedorId]] });
 
   const attendedClientIds = useMemo(() => {
     const s = new Set<string>();
