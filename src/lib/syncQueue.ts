@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
 import { isDataSaverEnabled } from './dataSaver';
 import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
+import { hasRealConnection } from './connectivity';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -58,8 +59,10 @@ export async function queueOperation(
   // 3. Try to sync immediately if online AND auto-sync is enabled AND data saver is off
   const autoSync = localStorage.getItem('uniline_auto_sync');
   const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
-  if (navigator.onLine && autoSyncEnabled && !isDataSaverEnabled()) {
-    processSyncQueue().catch(console.warn);
+  if (autoSyncEnabled && !isDataSaverEnabled()) {
+    hasRealConnection().then(online => {
+      if (online) processSyncQueue().catch(console.warn);
+    }).catch(console.warn);
   }
 }
 

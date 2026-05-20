@@ -14,6 +14,7 @@ import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 import SuperAdminMobileBar from '@/components/SuperAdminMobileBar';
+import { useRutaStore } from '@/stores/rutaStore';
 
 // Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
 // Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
@@ -54,6 +55,7 @@ export default function MobileLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const isOnline = !useRutaStore(state => state.isOffline);
 
   // Bloqueo por jornada (configurable por empresa) — solo en rutas de acción
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
@@ -81,7 +83,7 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
-    if (!navigator.onLine) return;
+    if (!isOnline) return;
     setIsUpdating(true);
     try {
       if ('serviceWorker' in navigator) {
@@ -139,16 +141,16 @@ export default function MobileLayout() {
         <div className="flex items-center gap-1">
           <button
             onClick={forceUpdate}
-            disabled={!navigator.onLine}
+            disabled={!isOnline}
             className={cn(
               "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
-              !navigator.onLine
+              !isOnline
                 ? "text-muted-foreground/40 cursor-not-allowed"
                 : swUpdateAvailable
                   ? "text-primary animate-pulse hover:text-primary/80"
                   : "text-muted-foreground hover:text-foreground"
             )}
-            title={navigator.onLine ? "Actualizar app" : "Sin conexión"}
+            title={isOnline ? "Actualizar app" : "Sin conexión"}
           >
             <RefreshCw className="h-5 w-5" />
           </button>
@@ -276,14 +278,14 @@ export default function MobileLayout() {
             <div className="border-t border-border mt-1 pt-1">
               <button
                 onClick={() => { forceUpdate(); setMoreOpen(false); }}
-                disabled={!navigator.onLine}
+                disabled={!isOnline}
                 className={cn(
                   "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
-                  navigator.onLine ? "text-primary hover:bg-accent" : "text-muted-foreground/40 cursor-not-allowed"
+                  isOnline ? "text-primary hover:bg-accent" : "text-muted-foreground/40 cursor-not-allowed"
                 )}
               >
                 <Download className="h-4 w-4" />
-                {navigator.onLine ? 'Actualizar app' : 'Sin conexión'}
+                {isOnline ? 'Actualizar app' : 'Sin conexión'}
               </button>
               <div className="px-4 py-2 text-[10px] text-muted-foreground">
                 v{APP_VERSION} · {APP_BUILD_DATE}

@@ -3,6 +3,7 @@ import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { queueOperation } from '@/lib/syncQueue';
 import { getSyncConfig } from '@/lib/dataSaver';
+import { hasRealConnection } from '@/lib/connectivity';
 
 /**
  * Hook that reads from IndexedDB first (instant), then from Supabase if online
@@ -77,8 +78,8 @@ export function useOfflineQuery<T = any>(
       return;
     }
 
-    // 3. If online, fetch fresh data from server and update cache
-    if (navigator.onLine) {
+    // 3. If connected, fetch fresh data from server and update cache
+    if (await hasRealConnection()) {
       try {
         let query = (supabase.from as any)(table).select(options?.select || '*');
 

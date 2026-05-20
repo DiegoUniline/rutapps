@@ -79,7 +79,7 @@ export const useRutaStore = create<RutaState>((set, get) => ({
       return sum + base + iva;
     }, 0),
 
-  isOffline: !navigator.onLine,
+  isOffline: false,
   setOffline: (v) => set({ isOffline: v }),
   pendingSyncCount: 0,
   setPendingSyncCount: (n) => set({ pendingSyncCount: n }),

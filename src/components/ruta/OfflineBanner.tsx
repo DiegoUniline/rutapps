@@ -1,31 +1,7 @@
 import { useEffect } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useRutaStore } from '@/stores/rutaStore';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-
-// Real connectivity probe — navigator.onLine miente en muchas redes
-async function probeOnline(): Promise<boolean> {
-  if (!navigator.onLine) return false;
-  // Si no tenemos URL/key configuradas, confiamos en navigator.onLine
-  if (!SUPABASE_URL) return true;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
-      method: 'GET',
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: SUPABASE_KEY ? { apikey: SUPABASE_KEY } : undefined,
-    });
-    clearTimeout(timer);
-    // Cualquier respuesta HTTP del servidor = hay internet
-    return res.status > 0;
-  } catch {
-    return false;
-  }
-}
+import { hasRealConnection } from '@/lib/connectivity';
 
 export default function OfflineBanner() {
   const { isOffline, setOffline, pendingSyncCount } = useRutaStore();
@@ -34,13 +10,13 @@ export default function OfflineBanner() {
     let cancelled = false;
 
     const check = async () => {
-      const online = await probeOnline();
+      const online = await hasRealConnection();
       if (!cancelled) setOffline(!online);
     };
 
     // Eventos del navegador (rápidos pero poco confiables) → disparan recheck real
     const onOnline = () => check();
-    const onOffline = () => setOffline(true);
+    const onOffline = () => check();
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     window.addEventListener('focus', onOnline);
