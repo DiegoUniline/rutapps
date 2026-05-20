@@ -4,6 +4,7 @@ import { downloadAllData, getLastSyncTime, isCacheStale } from '@/lib/offlineSyn
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
+import { hasRealConnection } from '@/lib/connectivity';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 
@@ -31,15 +32,27 @@ export function useNetworkStatus() {
     setDataSaverState(value);
   }, []);
 
-  // Track online/offline
+  // Track real online/offline; navigator.onLine is unreliable on mobile/PWA
   useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
+    let cancelled = false;
+
+    const check = async () => {
+      const online = await hasRealConnection();
+      if (!cancelled) setIsOnline(online);
+    };
+
+    const recheck = () => check();
+    check();
+    const interval = setInterval(check, 15000);
+    window.addEventListener('online', recheck);
+    window.addEventListener('offline', recheck);
+    window.addEventListener('focus', recheck);
     return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('online', recheck);
+      window.removeEventListener('offline', recheck);
+      window.removeEventListener('focus', recheck);
     };
   }, []);
 
@@ -87,9 +100,13 @@ export function useNetworkStatus() {
 
   // Full sync
   const syncNow = useCallback(async () => {
-    if (!navigator.onLine || !empresa?.id) return;
+    if (!empresa?.id) return;
     setIsSyncing(true);
     try {
+      const online = await hasRealConnection();
+      setIsOnline(online);
+      if (!online) return;
+
       const result = await processSyncQueue();
       console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
       const { rowsDownloaded } = await downloadAllData(empresa.id);
