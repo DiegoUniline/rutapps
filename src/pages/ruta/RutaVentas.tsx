@@ -7,17 +7,21 @@ import { fmtDate } from '@/lib/utils';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useCurrency } from '@/hooks/useCurrency';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 type Tab = 'todas' | 'por_cobrar';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
-  const { empresa, profile } = useAuth();
+  const { empresa, profile, user, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<Tab>('todas');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
-  const vendedorId = profile?.id;
+  // Super admin impersonando: usa el vendedor seleccionado en el switcher "Viendo:"
+  const isSA = isSuperAdminEmail(user?.email);
+  const vendedorId = (isSA && overrideVendedorId) ? overrideVendedorId : profile?.id;
+
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,
