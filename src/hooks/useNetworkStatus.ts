@@ -9,7 +9,7 @@ import { hasRealConnection } from '@/lib/connectivity';
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
