@@ -1,23 +1,27 @@
 import { useEffect } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useRutaStore } from '@/stores/rutaStore';
-import { supabase } from '@/integrations/supabase/client';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 // Real connectivity probe — navigator.onLine miente en muchas redes
 async function probeOnline(): Promise<boolean> {
   if (!navigator.onLine) return false;
+  // Si no tenemos URL/key configuradas, confiamos en navigator.onLine
+  if (!SUPABASE_URL) return true;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const url = `${(supabase as any).supabaseUrl}/auth/v1/health`;
-    const res = await fetch(url, {
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
       method: 'GET',
       cache: 'no-store',
       signal: controller.signal,
-      headers: { apikey: (supabase as any).supabaseKey },
+      headers: SUPABASE_KEY ? { apikey: SUPABASE_KEY } : undefined,
     });
     clearTimeout(timer);
-    return res.ok || res.status === 401 || res.status === 404; // respuesta del server = hay internet
+    // Cualquier respuesta HTTP del servidor = hay internet
+    return res.status > 0;
   } catch {
     return false;
   }
