@@ -7,6 +7,7 @@ import { fmtDate } from '@/lib/utils';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useCurrency } from '@/hooks/useCurrency';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 type Tab = 'todas' | 'por_cobrar';
 
