@@ -1,18 +1,56 @@
 import { useEffect } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useRutaStore } from '@/stores/rutaStore';
+import { supabase } from '@/integrations/supabase/client';
+
+// Real connectivity probe — navigator.onLine miente en muchas redes
+async function probeOnline(): Promise<boolean> {
+  if (!navigator.onLine) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const url = `${(supabase as any).supabaseUrl}/auth/v1/health`;
+    const res = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { apikey: (supabase as any).supabaseKey },
+    });
+    clearTimeout(timer);
+    return res.ok || res.status === 401 || res.status === 404; // respuesta del server = hay internet
+  } catch {
+    return false;
+  }
+}
 
 export default function OfflineBanner() {
   const { isOffline, setOffline, pendingSyncCount } = useRutaStore();
 
   useEffect(() => {
-    const goOnline = () => setOffline(false);
-    const goOffline = () => setOffline(true);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
+    let cancelled = false;
+
+    const check = async () => {
+      const online = await probeOnline();
+      if (!cancelled) setOffline(!online);
+    };
+
+    // Eventos del navegador (rápidos pero poco confiables) → disparan recheck real
+    const onOnline = () => check();
+    const onOffline = () => setOffline(true);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('focus', onOnline);
+
+    // Probe inicial + cada 15s
+    check();
+    const interval = setInterval(check, 15000);
+
     return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('focus', onOnline);
     };
   }, [setOffline]);
 
