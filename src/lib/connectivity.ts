@@ -18,6 +18,10 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
 export async function hasRealConnection(): Promise<boolean> {
   if (typeof window === 'undefined') return true;
 
+  // No bloquear sincronización si el navegador dice que sí hay red.
+  // Si realmente falla, la cola conserva los cambios y reintenta después.
+  if (navigator.onLine) return true;
+
   const checks: Promise<boolean>[] = [];
 
   if (SUPABASE_URL) {
