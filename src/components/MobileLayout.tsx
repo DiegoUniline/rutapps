@@ -14,7 +14,7 @@ import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 import SuperAdminMobileBar from '@/components/SuperAdminMobileBar';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useRutaStore } from '@/stores/rutaStore';
 
 // Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
 // Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
@@ -55,7 +55,7 @@ export default function MobileLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { isOnline } = useNetworkStatus();
+  const isOnline = !useRutaStore(state => state.isOffline);
 
   // Bloqueo por jornada (configurable por empresa) — solo en rutas de acción
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
