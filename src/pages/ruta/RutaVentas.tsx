@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, ChevronRight } from 'lucide-react';
+import { Plus, Search, ChevronRight, Banknote } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
@@ -8,13 +8,16 @@ import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useCurrency } from '@/hooks/useCurrency';
 
+type Tab = 'todas' | 'por_cobrar';
+
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<Tab>('todas');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
-  const vendedorId = profile?.id || profile?.id;
+  const vendedorId = profile?.id;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,
@@ -25,11 +28,20 @@ export default function RutaVentas() {
     ascending: false,
   });
 
-  // Enrich with client names from local cache
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  const enriched = filterByDate((ventas ?? []) as any[], 'fecha').map((v: any) => ({
+  // Cuentas por cobrar de este vendedor (ignora filtro de fechas para no esconder vencidas)
+  const porCobrar = useMemo(() => {
+    return ((ventas ?? []) as any[])
+      .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.status !== 'cancelado' && v.status !== 'borrador')
+      .map(v => ({ ...v, _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente' }))
+      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+  }, [ventas, clientes]);
+
+  const totalPorCobrar = porCobrar.reduce((s, v: any) => s + (v.saldo_pendiente ?? 0), 0);
+
+  const enrichedTodas = filterByDate((ventas ?? []) as any[], 'fecha').map((v: any) => ({
     ...v,
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
@@ -42,10 +54,15 @@ export default function RutaVentas() {
     cancelado: 'bg-destructive/10 text-destructive',
   };
 
-  const filtered = enriched.filter((v: any) =>
+  const sourceList: any[] = tab === 'por_cobrar' ? porCobrar : enrichedTodas;
+  const filtered = sourceList.filter((v: any) =>
     !search || v.folio?.toLowerCase().includes(search.toLowerCase()) ||
     v._clienteNombre?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const today = new Date();
+  const diasVencido = (fecha: string) =>
+    Math.max(0, Math.floor((today.getTime() - new Date(fecha).getTime()) / 86400000));
 
   return (
     <div className="flex flex-col h-full">
@@ -59,6 +76,28 @@ export default function RutaVentas() {
             <Plus className="h-4 w-4" /> Nueva
           </button>
         </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1.5 mb-3 bg-card/60 border border-border rounded-xl p-1">
+          <button
+            onClick={() => setTab('todas')}
+            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => setTab('por_cobrar')}
+            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'por_cobrar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+          >
+            Por cobrar
+            {porCobrar.length > 0 && (
+              <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px]">
+                {porCobrar.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -67,23 +106,37 @@ export default function RutaVentas() {
             className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={search}
             onChange={e => setSearch(e.target.value)}
-           />
-         </div>
-         <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
-       </div>
+          />
+        </div>
+        {tab === 'todas' && (
+          <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+        )}
+        {tab === 'por_cobrar' && porCobrar.length > 0 && (
+          <div className="mt-3 bg-destructive/8 border border-destructive/20 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total por cobrar</p>
+              <p className="text-2xl font-bold text-destructive tabular-nums">{fmt(totalPorCobrar)}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">{porCobrar.length} ventas</p>
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((v: any) => {
           const saldo = v.saldo_pendiente ?? 0;
           const esCredito = v.condicion_pago === 'credito';
+          const dias = tab === 'por_cobrar' ? diasVencido(v.fecha) : 0;
           return (
-            <button
+            <div
               key={v.id}
-              onClick={() => navigate(`/ruta/ventas/${v.id}`)}
-              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 text-left"
             >
-              <div className="flex-1 min-w-0">
+              <button
+                onClick={() => navigate(`/ruta/ventas/${v.id}`)}
+                className="flex-1 min-w-0 text-left active:opacity-70"
+              >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[14px] font-semibold text-foreground">{v.folio ?? '—'}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
@@ -94,8 +147,15 @@ export default function RutaVentas() {
                   </span>
                 </div>
                 <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
-                <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
-              </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {fmtDate(v.fecha)}
+                  {tab === 'por_cobrar' && dias > 0 && (
+                    <span className={`ml-2 font-medium ${dias > 30 ? 'text-destructive' : dias > 15 ? 'text-warning' : 'text-muted-foreground'}`}>
+                      · {dias}d
+                    </span>
+                  )}
+                </p>
+              </button>
               <div className="text-right shrink-0">
                 <p className="text-[15px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                 {saldo > 0 && v.status !== 'cancelado' && (
@@ -105,12 +165,25 @@ export default function RutaVentas() {
                   <p className="text-[11px] font-medium text-primary">Pagado</p>
                 )}
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </button>
+              {tab === 'por_cobrar' ? (
+                <button
+                  onClick={() => navigate(`/ruta/ventas/${v.id}`)}
+                  className="shrink-0 bg-success text-white rounded-lg px-2.5 py-2 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                  title="Cobrar"
+                >
+                  <Banknote className="h-3.5 w-3.5" />
+                  Cobrar
+                </button>
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+            </div>
           );
         })}
         {!isLoading && filtered.length === 0 && (
-          <p className="text-center text-muted-foreground text-[13px] py-8">No hay ventas</p>
+          <p className="text-center text-muted-foreground text-[13px] py-8">
+            {tab === 'por_cobrar' ? 'Sin cuentas por cobrar 🎉' : 'No hay ventas'}
+          </p>
         )}
       </div>
     </div>
