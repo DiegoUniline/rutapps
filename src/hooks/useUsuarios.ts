@@ -110,8 +110,11 @@ export function useUsuarios() {
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
     if (!newUser.role_id) { toast.error('Debes seleccionar un rol'); return; }
     if (availableSlots <= 0) {
-      toast.error(`Ya alcanzaste el límite de ${maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
-      return;
+      const ok = confirm(
+        `Ya alcanzaste el límite de ${maxUsuarios} usuarios de tu plan.\n\n` +
+        `Puedes agregar este usuario como adicional: se cobrará automáticamente en tu próximo ciclo de facturación junto con los ${maxUsuarios} incluidos.\n\n¿Continuar?`
+      );
+      if (!ok) return;
     }
     const emailLower = newUser.email.trim().toLowerCase();
     const existingAuth = authUsers.find(u => u.email?.toLowerCase() === emailLower);

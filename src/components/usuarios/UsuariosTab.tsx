@@ -49,9 +49,9 @@ export default function UsuariosTab({
             {activeUsers} / {maxUsuarios} usuarios activos
           </span>
           {availableSlots <= 0 && (
-            <span className="text-xs text-destructive flex items-center gap-1">
+            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Límite alcanzado
+              Al límite — usuarios extra se cobrarán en el próximo ciclo
             </span>
           )}
           {availableSlots > 0 && availableSlots <= 2 && (
@@ -67,8 +67,7 @@ export default function UsuariosTab({
           </label>
           <button
             onClick={onNewUser}
-            disabled={availableSlots <= 0}
-            className={cn("btn-odoo-primary text-xs", availableSlots <= 0 && "opacity-50 cursor-not-allowed")}
+            className="btn-odoo-primary text-xs"
           >
             <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
           </button>
