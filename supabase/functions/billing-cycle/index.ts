@@ -397,6 +397,49 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ═══ PART 5: Sync Stripe subscription quantity with active users (daily) ═══
+    // Ensures that any extra users added beyond the plan limit get billed on the
+    // next Stripe renewal invoice. proration_behavior:"none" => no immediate
+    // proration charge; the new quantity simply applies to the upcoming invoice.
+    if (stripe) {
+      const { data: stripeSubs } = await supabase
+        .from("subscriptions")
+        .select("id, empresa_id, max_usuarios, stripe_subscription_id")
+        .not("stripe_subscription_id", "is", null)
+        .in("status", ["active", "past_due", "gracia"]);
+
+      for (const sub of stripeSubs || []) {
+        try {
+          const { count: activeProfilesCount } = await supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("empresa_id", sub.empresa_id)
+            .eq("estado", "activo");
+          const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
+          const qty = Math.max(3, realUsers);
+
+          const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+          const item = stripeSub.items.data[0];
+          if (!item) continue;
+          const currentStripeQty = item.quantity || 0;
+
+          if (qty !== currentStripeQty) {
+            await stripe.subscriptions.update(sub.stripe_subscription_id, {
+              items: [{ id: item.id, quantity: qty }],
+              proration_behavior: "none", // no immediate charge; bills on next renewal
+            });
+            log("Stripe quantity synced", { empresa: sub.empresa_id, prev: currentStripeQty, new: qty });
+          }
+
+          if (qty !== sub.max_usuarios) {
+            await supabase.from("subscriptions").update({ max_usuarios: qty, updated_at: now.toISOString() }).eq("id", sub.id);
+          }
+        } catch (e) {
+          log("Stripe sync failed (non-blocking)", { empresa: sub.empresa_id, error: (e as Error).message });
+        }
+      }
+    }
+
     log("Cycle completed");
 
     return new Response(JSON.stringify({ success: true, timestamp: now.toISOString() }), {
