@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => ({
             handler: 'CacheFirst',
             options: {
               cacheName: 'images',
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
           {
@@ -90,6 +90,20 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: 'fonts',
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
+            // Imágenes/archivos en Supabase Storage (productos, ruta-fotos, avatars).
+            // CacheFirst evita re-descargar en cada navegación → gran ahorro de egress.
+            // Debe ir ANTES del catch-all de supabase.co (NetworkOnly).
+            urlPattern: ({ url }) =>
+              url.hostname.endsWith('supabase.co') &&
+              url.pathname.startsWith('/storage/v1/object/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-storage',
+              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           {
