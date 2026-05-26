@@ -183,10 +183,10 @@ export default function CrearConteoDialog({ open, onClose, onCreated }: Props) {
 
           <div>
             <Label>Categoría (opcional)</Label>
-            <Select value={clasificacionId} onValueChange={setClasificacionId}>
+            <Select value={clasificacionId || '__all__'} onValueChange={v => setClasificacionId(v === '__all__' ? '' : v)}>
               <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="__all__">Todas</SelectItem>
                 {(clasificaciones ?? []).map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
                 ))}
