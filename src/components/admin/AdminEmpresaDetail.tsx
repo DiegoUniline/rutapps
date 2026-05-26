@@ -710,7 +710,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Plan</Label>
-                    <Select value={subForm.plan_id} onValueChange={v => setSubForm((f: any) => ({ ...f, plan_id: v }))}>
+                    <Select value={subForm.plan_id} onValueChange={v => {
+                      const p = plans.find(pl => pl.id === v);
+                      setSubForm((f: any) => ({ ...f, plan_id: v, meses_cobro: p?.meses || 1 }));
+                    }}>
                       <SelectTrigger><SelectValue placeholder="Sin plan" /></SelectTrigger>
                       <SelectContent>
                         {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} — ${p.precio_por_usuario}/usr</SelectItem>)}
