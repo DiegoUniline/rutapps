@@ -140,6 +140,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         current_period_end: subRes.data.current_period_end?.split('T')[0] || '',
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
         descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
+        meses_cobro: (subRes.data as any).subscription_plans?.meses || 1,
       });
     }
 
@@ -709,7 +710,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Plan</Label>
-                    <Select value={subForm.plan_id} onValueChange={v => setSubForm((f: any) => ({ ...f, plan_id: v }))}>
+                    <Select value={subForm.plan_id} onValueChange={v => {
+                      const p = plans.find(pl => pl.id === v);
+                      setSubForm((f: any) => ({ ...f, plan_id: v, meses_cobro: p?.meses || 1 }));
+                    }}>
                       <SelectTrigger><SelectValue placeholder="Sin plan" /></SelectTrigger>
                       <SelectContent>
                         {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} — ${p.precio_por_usuario}/usr</SelectItem>)}
@@ -776,6 +780,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Input type="date" value={subForm.current_period_end}
                       onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Meses a cobrar</Label>
+                    <Input type="number" min={1} max={120} value={subForm.meses_cobro || 1}
+                      onChange={e => setSubForm((f: any) => ({ ...f, meses_cobro: Math.max(1, parseInt(e.target.value) || 1) }))} />
+                    <p className="text-[11px] text-muted-foreground">Cuántos meses se cobrarán en la próxima factura</p>
+                  </div>
 
                   {/* Resumen de cobro */}
                   {(() => {
@@ -786,7 +796,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     const precioFinal = precioBase * (1 - desc / 100);
                     const usuarios = subForm.max_usuarios || 1;
                     const totalMes = precioFinal * usuarios;
-                    const meses = selectedPlan.meses || 1;
+                    const meses = subForm.meses_cobro || selectedPlan.meses || 1;
                     const totalPeriodo = totalMes * meses;
                     return (
                       <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-4 space-y-2">
