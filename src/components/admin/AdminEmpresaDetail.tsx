@@ -786,6 +786,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     const precioFinal = precioBase * (1 - desc / 100);
                     const usuarios = subForm.max_usuarios || 1;
                     const totalMes = precioFinal * usuarios;
+                    const meses = selectedPlan.meses || 1;
+                    const totalPeriodo = totalMes * meses;
                     return (
                       <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-4 space-y-2">
                         <p className="text-sm font-semibold">💰 Resumen de cobro</p>
@@ -809,11 +811,17 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                         </div>
                         <div className="border-t pt-2 flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">Total mensual</span>
-                          <span className="text-lg font-bold text-primary">${Math.round(totalMes).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
+                          <span className="text-sm font-semibold text-foreground">${Math.round(totalMes).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Total del periodo ({meses} {meses === 1 ? 'mes' : 'meses'})
+                          </span>
+                          <span className="text-lg font-bold text-primary">${Math.round(totalPeriodo).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         {desc > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Sin descuento sería ${(precioBase * usuarios).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN — ahorro: ${Math.round(precioBase * usuarios - totalMes).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                            Sin descuento sería ${(precioBase * usuarios * meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN — ahorro: ${Math.round(precioBase * usuarios * meses - totalPeriodo).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                           </p>
                         )}
                       </div>
