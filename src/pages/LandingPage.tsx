@@ -568,7 +568,7 @@ export default function LandingPage() {
               style={{ color: 'hsl(230, 55%, 48%)' }}>
               Crear cuenta gratis <ArrowRight className="h-5 w-5" />
             </Link>
-            <p className="text-indigo-200 text-xs mt-4">14 días de prueba sin compromiso</p>
+            <p className="text-indigo-200 text-xs mt-4">7 días de prueba gratis</p>
           </div>
         </div>
       </section>
