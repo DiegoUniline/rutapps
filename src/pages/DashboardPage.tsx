@@ -26,6 +26,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
+import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -194,6 +195,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-5 space-y-0 max-w-[1400px] mx-auto">
+      <TrialCountdownBanner />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div>
