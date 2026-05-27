@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { usePermisos } from '@/hooks/usePermisos';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, Upload, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
