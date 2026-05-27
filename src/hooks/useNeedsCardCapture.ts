@@ -39,8 +39,9 @@ export function useNeedsCardCapture(): { loading: boolean; needs: boolean } {
       if ((sub as any).es_manual) return false;
       if (sub.status !== 'trial') return false;
       const hasCard = !!(sub as any).stripe_payment_method_id;
-      const acceptedTerms = !!(sub as any).terms_accepted_at;
-      return !hasCard && !acceptedTerms;
+      // La tarjeta es el único gate real. Aceptar términos sin capturar tarjeta
+      // (al iniciar checkout y luego cancelar) NO debe permitir entrar al sistema.
+      return !hasCard;
     },
   });
 
