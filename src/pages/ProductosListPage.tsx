@@ -124,6 +124,28 @@ export default function ProductosListPage() {
     }
   };
 
+  const handleBulkActivate = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!empresa?.id) {
+      toast.error('No se pudo identificar la empresa actual');
+      return;
+    }
+    setBulkActivating(true);
+    try {
+      const { error } = await supabase.from('productos').update({ status: 'activo' }).in('id', ids).eq('empresa_id', empresa.id);
+      if (error) throw error;
+      toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} activados`);
+      setSelected(new Set());
+      setConfirmActivateOpen(false);
+      qc.invalidateQueries({ queryKey: ['productos'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al activar');
+    } finally {
+      setBulkActivating(false);
+    }
+  };
+
   const FILTER_OPTIONS = useMemo(() => [
     ...STATIC_FILTER_OPTIONS,
     { key: 'clasificacion', label: 'Categoría', options: (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre })) },
