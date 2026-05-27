@@ -626,6 +626,9 @@ export default function MiSuscripcionPage() {
 
   const endDate = sub.status === 'trial' ? subData?.trial_ends_at : subData?.current_period_end;
   const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
+  const trialChargeDate = sub.status === 'trial' && subData?.trial_ends_at
+    ? new Date(new Date(subData.trial_ends_at).getTime() + 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
   // Pending invoices
   const coveredUntil = subData?.status === 'active' && subData?.current_period_end
@@ -754,9 +757,18 @@ export default function MiSuscripcionPage() {
               {sub.status === 'trial' && subData.trial_ends_at && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Vence tu prueba:</span>
+                  <span className="text-muted-foreground">Vence:</span>
                   <span className="font-medium text-foreground">
                     {fmtDateLongMx(subData.trial_ends_at)}
+                  </span>
+                </div>
+              )}
+              {sub.status === 'trial' && trialChargeDate && (
+                <div className="flex items-center gap-2 text-sm">
+                  <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">Próximo cobro:</span>
+                  <span className="font-medium text-foreground">
+                    {fmtDateLongMx(trialChargeDate)}
                   </span>
                 </div>
               )}
