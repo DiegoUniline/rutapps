@@ -201,6 +201,7 @@ function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
+  const cardCapture = useNeedsCardCapture();
   const facturaPendiente = useFacturaPendiente();
   // Bloqueo combinado: suscripción suspendida O factura pendiente vencida
   const isBlockedTotal = subscription.isBlocked || (!subscription.isSuperAdmin && facturaPendiente.shouldBlock);
