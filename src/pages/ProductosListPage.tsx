@@ -390,9 +390,11 @@ export default function ProductosListPage() {
         <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Dar de baja productos</AlertDialogTitle>
+              <AlertDialogTitle>{statusFilter === 'inactivo' ? 'Eliminar productos' : 'Dar de baja productos'}</AlertDialogTitle>
               <AlertDialogDescription>
-                Se marcarán como inactivos {selected.size} producto{selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.
+                {statusFilter === 'inactivo'
+                  ? `Se eliminarán permanentemente ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
+                  : `Se marcarán como inactivos ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -402,7 +404,7 @@ export default function ProductosListPage() {
                 onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {bulkDeleting ? 'Procesando…' : 'Dar de baja'}
+                {bulkDeleting ? 'Procesando…' : (statusFilter === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
