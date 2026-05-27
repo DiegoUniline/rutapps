@@ -20,7 +20,19 @@ const isInIframe = (() => { try { return window.self !== window.top; } catch { r
 const isPreviewHost = window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
 
 if (isPreviewHost || isInIframe) {
-  navigator.serviceWorker?.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  // Kill-switch: aggressively unregister any existing SW and clear caches
+  (async () => {
+    if (!navigator.serviceWorker) return;
+    const regs = await navigator.serviceWorker.getRegistrations();
+    if (regs.length === 0) return;
+    await Promise.all(regs.map((r) => r.unregister()));
+    if ('caches' in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map((n) => caches.delete(n)));
+    }
+    // Force reload to ensure no stale SW context remains
+    window.location.reload();
+  })();
 } else if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.getRegistration().then((registration) => {
