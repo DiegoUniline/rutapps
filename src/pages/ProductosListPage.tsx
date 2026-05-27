@@ -96,17 +96,18 @@ export default function ProductosListPage() {
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!window.confirm(`¿Dar de baja ${ids.length} producto${ids.length !== 1 ? 's' : ''}? Se marcarán como inactivos.`)) return;
     setBulkDeleting(true);
     try {
       const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids);
       if (error) throw error;
       toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} dados de baja`);
       setSelected(new Set());
+      setConfirmDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['productos'] });
     } catch (e: any) {
       toast.error(e?.message || 'Error al eliminar');
