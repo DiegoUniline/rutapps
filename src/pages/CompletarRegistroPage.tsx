@@ -176,7 +176,9 @@ export default function CompletarRegistroPage() {
             <div className="flex items-center justify-between bg-muted/40 rounded-lg p-3">
               <div>
                 <div className="text-sm font-semibold">Número de usuarios</div>
-                <div className="text-xs text-muted-foreground">Mínimo {MIN_USERS}. Puedes cambiarlo después.</div>
+                <div className="text-xs text-muted-foreground">
+                  Contrato de {MIN_USERS} usuarios iniciales. Puedes agregar más después.
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button

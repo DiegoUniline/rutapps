@@ -377,6 +377,7 @@ export default function SignupPage() {
             </div>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
               <li><strong className="text-foreground">$300 MXN por usuario al mes</strong> (planes semestral -10% y anual -15%).</li>
+              <li>El contrato es de <strong className="text-foreground">3 usuarios iniciales</strong> y de ahí hacia arriba puedes agregar los que necesites.</li>
               <li>En el siguiente paso capturas tu tarjeta y eliges plan. <strong className="text-foreground">No se cobra nada durante los 7 días de prueba.</strong></li>
               <li>Al terminar la prueba se realiza el primer cargo automático según el plan elegido.</li>
               <li>Puedes cancelar antes del día 7 desde tu cuenta sin ningún cargo.</li>
