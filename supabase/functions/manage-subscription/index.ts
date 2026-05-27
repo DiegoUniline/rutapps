@@ -43,10 +43,11 @@ Deno.serve(async (req) => {
     // Get subscription
     const { data: sub } = await supabase
       .from("subscriptions")
-      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios")
+      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios, status")
       .eq("empresa_id", profile.empresa_id)
       .maybeSingle();
     if (!sub) throw new Error("Sin suscripción");
+
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
