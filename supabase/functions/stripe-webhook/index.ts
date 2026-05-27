@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const empresa_id = session.metadata?.empresa_id;
+      const flow = session.metadata?.flow;
       const stripeSubId = typeof session.subscription === "string"
         ? session.subscription
         : session.subscription?.id;
@@ -65,7 +66,38 @@ Deno.serve(async (req) => {
         ? session.customer
         : session.customer?.id;
 
-      if (empresa_id && session.payment_status === "paid") {
+      // ── Flujo nuevo: alta con trial 7 días + tarjeta obligatoria ──
+      if (empresa_id && flow === "trial_signup" && stripeSubId) {
+        const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
+        const trialEndsAt = stripeSub.trial_end
+          ? new Date(stripeSub.trial_end * 1000).toISOString()
+          : null;
+        const cpeUnix = stripeSub.items.data[0]?.current_period_end ?? stripeSub.trial_end;
+        const currentPeriodEnd = cpeUnix ? new Date(cpeUnix * 1000).toISOString() : null;
+        const paymentMethodId = typeof stripeSub.default_payment_method === "string"
+          ? stripeSub.default_payment_method
+          : (stripeSub.default_payment_method as any)?.id ?? null;
+
+        await supabase
+          .from("subscriptions")
+          .update({
+            status: "trial",
+            trial_ends_at: trialEndsAt,
+            current_period_end: currentPeriodEnd,
+            fecha_vencimiento: currentPeriodEnd?.slice(0, 10),
+            acceso_bloqueado: false,
+            stripe_subscription_id: stripeSubId,
+            stripe_customer_id: stripeCustomerId ?? undefined,
+            stripe_payment_method_id: paymentMethodId,
+            cancel_at_period_end: false,
+            terms_accepted_at: session.metadata?.accepted_terms_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("empresa_id", empresa_id);
+        log("Trial signup completed (card on file)", { empresa_id, trialEndsAt, paymentMethodId });
+      }
+      // ── Flujo viejo: pago inmediato (upgrades) ──
+      else if (empresa_id && session.payment_status === "paid") {
         const venc = lastDayOfCurrentMonthMx();
         const { error } = await supabase
           .from("subscriptions")
@@ -84,14 +116,50 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Sincroniza estado, cancel_at_period_end y fechas en cada cambio en Stripe ──
+    if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
+      const sub = event.data.object as Stripe.Subscription;
+      const empresa_id = sub.metadata?.empresa_id;
+      if (empresa_id) {
+        const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
+        const cpeUnix = (sub.items.data[0] as any)?.current_period_end;
+        const cpe = cpeUnix ? new Date(cpeUnix * 1000).toISOString() : null;
+        const paymentMethodId = typeof sub.default_payment_method === "string"
+          ? sub.default_payment_method
+          : (sub.default_payment_method as any)?.id ?? null;
+
+        let internalStatus: string | null = null;
+        if (sub.status === "trialing") internalStatus = "trial";
+        else if (sub.status === "active") internalStatus = "active";
+        else if (sub.status === "past_due") internalStatus = "past_due";
+        else if (sub.status === "canceled") internalStatus = "cancelled";
+        else if (sub.status === "incomplete" || sub.status === "incomplete_expired") internalStatus = "pending_payment_method";
+
+        const payload: any = {
+          cancel_at_period_end: !!sub.cancel_at_period_end,
+          updated_at: new Date().toISOString(),
+        };
+        if (internalStatus) payload.status = internalStatus;
+        if (trialEndsAt) payload.trial_ends_at = trialEndsAt;
+        if (cpe) {
+          payload.current_period_end = cpe;
+          payload.fecha_vencimiento = cpe.slice(0, 10);
+        }
+        if (paymentMethodId) payload.stripe_payment_method_id = paymentMethodId;
+
+        await supabase.from("subscriptions").update(payload).eq("empresa_id", empresa_id);
+        log("Subscription synced", { empresa_id, status: internalStatus, cancel_at_period_end: sub.cancel_at_period_end });
+      }
+    }
+
     if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object as Stripe.Invoice;
       const stripeCustomerId = typeof invoice.customer === "string"
         ? invoice.customer
         : invoice.customer?.id;
-      const stripeSubId = typeof invoice.subscription === "string"
-        ? invoice.subscription
-        : invoice.subscription?.id;
+      const stripeSubId = typeof (invoice as any).subscription === "string"
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id;
 
       let empresa_id: string | null = invoice.metadata?.empresa_id ?? null;
       if (!empresa_id && stripeSubId) {
@@ -133,7 +201,10 @@ Deno.serve(async (req) => {
           extended.setMonth(extended.getMonth() + meses);
           venc = extended.toISOString().slice(0, 10);
         } else {
-          venc = lastDayOfCurrentMonthMx();
+          const cpe = stripeSubId
+            ? (await stripe.subscriptions.retrieve(stripeSubId)).items.data[0]?.current_period_end
+            : null;
+          venc = cpe ? new Date(cpe * 1000).toISOString().slice(0, 10) : lastDayOfCurrentMonthMx();
         }
 
         const updatePayload: any = {
@@ -157,14 +228,13 @@ Deno.serve(async (req) => {
           .update(updatePayload)
           .eq("empresa_id", empresa_id);
 
-        // Mark factura as paid
         if (invoice.id) {
           await supabase
             .from("facturas")
             .update({
               estado: "pagada",
               fecha_pago: new Date().toISOString(),
-              stripe_payment_intent_id: typeof invoice.payment_intent === "string" ? invoice.payment_intent : null,
+              stripe_payment_intent_id: typeof (invoice as any).payment_intent === "string" ? (invoice as any).payment_intent : null,
             })
             .eq("stripe_invoice_id", invoice.id);
         }
@@ -179,7 +249,12 @@ Deno.serve(async (req) => {
       if (empresa_id) {
         await supabase
           .from("subscriptions")
-          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .update({
+            status: "cancelled",
+            cancel_at_period_end: false,
+            acceso_bloqueado: true,
+            updated_at: new Date().toISOString(),
+          })
           .eq("empresa_id", empresa_id);
         log("Subscription cancelled", { empresa_id });
       }
