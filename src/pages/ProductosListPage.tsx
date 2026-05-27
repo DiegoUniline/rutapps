@@ -27,6 +27,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { getStockBreakdown } from '@/lib/stockPresentacion';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -96,17 +97,18 @@ export default function ProductosListPage() {
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!window.confirm(`¿Dar de baja ${ids.length} producto${ids.length !== 1 ? 's' : ''}? Se marcarán como inactivos.`)) return;
     setBulkDeleting(true);
     try {
       const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids);
       if (error) throw error;
       toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} dados de baja`);
       setSelected(new Set());
+      setConfirmDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['productos'] });
     } catch (e: any) {
       toast.error(e?.message || 'Error al eliminar');
@@ -291,10 +293,11 @@ export default function ProductosListPage() {
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {canDelete && selected.size > 0 && (
+          {selected.size > 0 && (
             <button
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={bulkDeleting || !canDelete}
+              title={!canDelete ? 'No tienes permiso para eliminar productos' : ''}
               className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Dar de baja ({selected.size})
@@ -325,6 +328,26 @@ export default function ProductosListPage() {
           </button>
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Dar de baja productos</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se marcarán como inactivos {selected.size} producto{selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bulkDeleting}
+                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {bulkDeleting ? 'Procesando…' : 'Dar de baja'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <MobileProductoQuickForm
           open={mobileNewOpen}
           onOpenChange={setMobileNewOpen}

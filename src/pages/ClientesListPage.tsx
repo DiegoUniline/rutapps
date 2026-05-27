@@ -28,6 +28,7 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 import { ClienteLink } from '@/components/links/EntityLinks';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },
@@ -108,12 +109,11 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const canDelete = hasPermiso('clientes', 'eliminar');
   const qc = useQueryClient();
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    const action = forcedStatus === 'inactivo' ? 'eliminar definitivamente' : 'dar de baja';
-    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} ${ids.length} cliente${ids.length !== 1 ? 's' : ''}? Esta acción ${forcedStatus === 'inactivo' ? 'no se puede deshacer' : 'los marcará como inactivos'}.`)) return;
     setBulkDeleting(true);
     try {
       if (forcedStatus === 'inactivo') {
@@ -125,6 +125,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       }
       toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} ${forcedStatus === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
       setSelected(new Set());
+      setConfirmDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['clientes'] });
       qc.invalidateQueries({ queryKey: ['clientes-page'] });
     } catch (e: any) {
@@ -309,10 +310,11 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {canDelete && selected.size > 0 && (
+          {selected.size > 0 && (
             <button
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={bulkDeleting || !canDelete}
+              title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
               className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -347,6 +349,30 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           )}
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {forcedStatus === 'inactivo' ? 'Eliminar definitivamente' : 'Dar de baja clientes'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {forcedStatus === 'inactivo'
+                  ? `Se eliminarán permanentemente ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
+                  : `Se marcarán como inactivos ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Puedes reactivarlos desde la pestaña Bajas.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bulkDeleting}
+                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {bulkDeleting ? 'Procesando…' : (forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {isLoading ? (
