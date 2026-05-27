@@ -740,23 +740,32 @@ export default function MiSuscripcionPage() {
             </div>
           </div>
 
-          {subData && (subData.current_period_start || subData.current_period_end) && (
+          {subData && (subData.current_period_start || subData.current_period_end || subData.trial_ends_at) && (
             <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
-              {subData.current_period_start && (
+              {subData.current_period_start && sub.status !== 'trial' && (
                 <div className="flex items-center gap-2 text-sm">
                   <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">Último pago:</span>
                   <span className="font-medium text-foreground">
-                    {format(new Date(subData.current_period_start), "d 'de' MMMM yyyy", { locale: es })}
+                    {fmtDateLongMx(subData.current_period_start)}
                   </span>
                 </div>
               )}
-              {subData.current_period_end && (
+              {sub.status === 'trial' && subData.trial_ends_at && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">Vence tu prueba:</span>
+                  <span className="font-medium text-foreground">
+                    {fmtDateLongMx(subData.trial_ends_at)}
+                  </span>
+                </div>
+              )}
+              {sub.status !== 'trial' && subData.current_period_end && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">Próximo cobro:</span>
                   <span className="font-medium text-foreground">
-                    {format(new Date(subData.current_period_end), "d 'de' MMMM yyyy", { locale: es })}
+                    {fmtDateLongMx(subData.current_period_end)}
                   </span>
                 </div>
               )}
