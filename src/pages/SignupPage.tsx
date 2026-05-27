@@ -73,6 +73,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpDialog, setShowOtpDialog] = useState(false);
   const [showCooldownDialog, setShowCooldownDialog] = useState(false);
+  const [showPoliciesDialog, setShowPoliciesDialog] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [form, setForm] = useState({
     nombre: '',
