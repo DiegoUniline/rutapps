@@ -333,6 +333,21 @@ function AppRoutes() {
     );
   }
 
+  // Trial owners without captured card MUST complete registration before using the app.
+  if (cardCapture.needs) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/completar-registro" element={<CompletarRegistroPage />} />
+          <Route path="/terminos" element={<TerminosPage />} />
+          <Route path="/privacidad" element={<PrivacidadPage />} />
+          <Route path="*" element={<Navigate to="/completar-registro" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
   const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
