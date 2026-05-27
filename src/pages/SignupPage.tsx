@@ -385,7 +385,7 @@ export default function SignupPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             {/* Name */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Tu nombre</Label>
@@ -398,8 +398,8 @@ export default function SignupPage() {
               <Input required value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))} placeholder="Distribuidora Norte S.A." />
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
+            {/* Email — full width */}
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
               <Input
                 type="email"
@@ -411,8 +411,8 @@ export default function SignupPage() {
               <p className="text-xs text-muted-foreground">Se usará para iniciar sesión y recuperar tu contraseña</p>
             </div>
 
-            {/* Phone */}
-            <div className="space-y-2">
+            {/* Phone — full width */}
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Teléfono</Label>
               <div className="flex gap-2">
                 <Select
@@ -423,7 +423,7 @@ export default function SignupPage() {
                   }}
                   disabled={otpVerified && verificationMethod === 'whatsapp'}
                 >
-                  <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[180px] shrink-0"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COUNTRY_CODES.map(c => (
                       <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
@@ -485,43 +485,57 @@ export default function SignupPage() {
             </div>
 
             {/* Cupón / Referido */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Tag className="h-4 w-4" /> Código de cupón <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-              <Input
-                value={cuponCodigo}
-                onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
-                placeholder="EJ. JUAN10"
-                className="uppercase"
-              />
-              {partnerRef && (
-                <p className="text-xs text-primary flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> Referido por <span className="font-semibold">{partnerRef}</span>
-                </p>
-              )}
-            </div>
-
-            {/* Terms & Privacy */}
-            <div className="space-y-3 pt-2 border-t">
-              <div className="flex items-start gap-2">
-                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
-                <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto los <Link to="/terminos" target="_blank" className="text-primary font-medium hover:underline">Términos y Condiciones</Link> del servicio.
-                </label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox id="privacy" checked={acceptedPrivacy} onCheckedChange={v => setAcceptedPrivacy(v === true)} />
-                <label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto el <Link to="/privacidad" target="_blank" className="text-primary font-medium hover:underline">Aviso de Privacidad</Link> y el tratamiento de mis datos personales.
-                </label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  value={cuponCodigo}
+                  onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
+                  placeholder="EJ. JUAN10"
+                  className="uppercase max-w-xs"
+                />
+                {partnerRef && (
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> Referido por <span className="font-semibold">{partnerRef}</span>
+                  </p>
+                )}
               </div>
             </div>
 
-            <Button type="submit" disabled={loading || !isFormReady} className="w-full" size="lg">
+            {/* Terms & Privacy — full width */}
+            <div className="space-y-3 pt-2 border-t md:col-span-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
+                  <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    Acepto los Términos y Condiciones del servicio.
+                  </label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox id="privacy" checked={acceptedPrivacy} onCheckedChange={v => setAcceptedPrivacy(v === true)} />
+                  <label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    Acepto el Aviso de Privacidad y el tratamiento de mis datos personales.
+                  </label>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPoliciesDialog(true)}
+                className="w-full"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Ver Términos y Aviso de Privacidad
+              </Button>
+            </div>
+
+            <Button type="submit" disabled={loading || !isFormReady} className="w-full md:col-span-2" size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear mi cuenta
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground md:col-span-2">
               ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Iniciar sesión</Link>
             </p>
           </form>
