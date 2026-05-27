@@ -108,12 +108,11 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const canDelete = hasPermiso('clientes', 'eliminar');
   const qc = useQueryClient();
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    const action = forcedStatus === 'inactivo' ? 'eliminar definitivamente' : 'dar de baja';
-    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} ${ids.length} cliente${ids.length !== 1 ? 's' : ''}? Esta acción ${forcedStatus === 'inactivo' ? 'no se puede deshacer' : 'los marcará como inactivos'}.`)) return;
     setBulkDeleting(true);
     try {
       if (forcedStatus === 'inactivo') {
@@ -125,6 +124,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       }
       toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} ${forcedStatus === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
       setSelected(new Set());
+      setConfirmDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['clientes'] });
       qc.invalidateQueries({ queryKey: ['clientes-page'] });
     } catch (e: any) {
