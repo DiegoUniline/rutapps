@@ -111,9 +111,14 @@ export default function ProductosListPage() {
     }
     setBulkDeleting(true);
     try {
-      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids).eq('empresa_id', empresa.id);
-      if (error) throw error;
-      toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} dados de baja`);
+      if (statusFilter === 'inactivo') {
+        const { error } = await supabase.from('productos').delete().in('id', ids).eq('empresa_id', empresa.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids).eq('empresa_id', empresa.id);
+        if (error) throw error;
+      }
+      toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} ${statusFilter === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
       setSelected(new Set());
       setConfirmDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['productos'] });
