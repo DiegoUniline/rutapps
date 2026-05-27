@@ -92,6 +92,28 @@ export default function ProductosListPage() {
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
   const { clasificaciones, marcas } = useProductoFilterOptions();
+  const { hasPermiso } = usePermisos();
+  const canDelete = hasPermiso('productos', 'eliminar');
+  const qc = useQueryClient();
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!window.confirm(`¿Dar de baja ${ids.length} producto${ids.length !== 1 ? 's' : ''}? Se marcarán como inactivos.`)) return;
+    setBulkDeleting(true);
+    try {
+      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids);
+      if (error) throw error;
+      toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} dados de baja`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['productos'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al eliminar');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const FILTER_OPTIONS = useMemo(() => [
     ...STATIC_FILTER_OPTIONS,
