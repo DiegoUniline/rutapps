@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { usePermisos } from '@/hooks/usePermisos';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, Upload, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -110,6 +110,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const qc = useQueryClient();
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [bulkActivating, setBulkActivating] = useState(false);
+  const [confirmActivateOpen, setConfirmActivateOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
@@ -136,6 +138,28 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       toast.error(e?.message || 'Error al eliminar');
     } finally {
       setBulkDeleting(false);
+    }
+  };
+  const handleBulkActivate = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!empresa?.id) {
+      toast.error('No se pudo identificar la empresa actual');
+      return;
+    }
+    setBulkActivating(true);
+    try {
+      const { error } = await supabase.from('clientes').update({ status: 'activo' }).in('id', ids).eq('empresa_id', empresa.id);
+      if (error) throw error;
+      toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} activados`);
+      setSelected(new Set());
+      setConfirmActivateOpen(false);
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['clientes-page'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al activar');
+    } finally {
+      setBulkActivating(false);
     }
   };
   const { empresa } = useAuth();
@@ -315,15 +339,40 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
         />
         <div className="flex items-center gap-2 shrink-0">
           {selected.size > 0 && (
-            <button
-              onClick={() => setConfirmDeleteOpen(true)}
-              disabled={bulkDeleting || !canDelete}
-              title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
-              className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja'} ({selected.size})
-            </button>
+            <>
+              {forcedStatus === 'inactivo' ? (
+                <>
+                  <button
+                    onClick={() => setConfirmActivateOpen(true)}
+                    disabled={bulkActivating || !canDelete}
+                    title={!canDelete ? 'No tienes permiso para reactivar clientes' : ''}
+                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-success text-success-foreground hover:bg-success/90 text-xs font-medium shrink-0 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Activar ({selected.size})
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteOpen(true)}
+                    disabled={bulkDeleting || !canDelete}
+                    title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
+                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar ({selected.size})
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  disabled={bulkDeleting || !canDelete}
+                  title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
+                  className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Dar de baja ({selected.size})
+                </button>
+              )}
+            </>
           )}
           {!isMobile && (
             <>
@@ -373,6 +422,26 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {bulkDeleting ? 'Procesando…' : (forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={confirmActivateOpen} onOpenChange={setConfirmActivateOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reactivar clientes</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se marcarán como activos {selected.size} cliente{selected.size !== 1 ? 's' : ''}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkActivating}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bulkActivating}
+                onClick={(e) => { e.preventDefault(); handleBulkActivate(); }}
+                className="bg-success text-success-foreground hover:bg-success/90"
+              >
+                {bulkActivating ? 'Procesando…' : 'Activar'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
