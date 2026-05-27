@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, Clock, AlertTriangle, Loader2, X } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney } from '@/lib/currency';
 import { Link } from 'react-router-dom';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
