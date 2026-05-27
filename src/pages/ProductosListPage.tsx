@@ -327,6 +327,26 @@ export default function ProductosListPage() {
           </button>
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Dar de baja productos</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se marcarán como inactivos {selected.size} producto{selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bulkDeleting}
+                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {bulkDeleting ? 'Procesando…' : 'Dar de baja'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <MobileProductoQuickForm
           open={mobileNewOpen}
           onOpenChange={setMobileNewOpen}
