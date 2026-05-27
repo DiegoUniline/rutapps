@@ -348,6 +348,30 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           )}
         </div>
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {forcedStatus === 'inactivo' ? 'Eliminar definitivamente' : 'Dar de baja clientes'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {forcedStatus === 'inactivo'
+                  ? `Se eliminarán permanentemente ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
+                  : `Se marcarán como inactivos ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Puedes reactivarlos desde la pestaña Bajas.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={bulkDeleting}
+                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {bulkDeleting ? 'Procesando…' : (forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {isLoading ? (
