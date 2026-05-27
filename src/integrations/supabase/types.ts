@@ -5104,6 +5104,7 @@ export type Database = {
       subscriptions: {
         Row: {
           acceso_bloqueado: boolean
+          cancel_at_period_end: boolean
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -5116,13 +5117,16 @@ export type Database = {
           plan_id: string | null
           status: string
           stripe_customer_id: string | null
+          stripe_payment_method_id: string | null
           stripe_subscription_id: string | null
+          terms_accepted_at: string | null
           trial_ends_at: string | null
           ultimo_checkout_session_id: string | null
           updated_at: string
         }
         Insert: {
           acceso_bloqueado?: boolean
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -5135,13 +5139,16 @@ export type Database = {
           plan_id?: string | null
           status?: string
           stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
           stripe_subscription_id?: string | null
+          terms_accepted_at?: string | null
           trial_ends_at?: string | null
           ultimo_checkout_session_id?: string | null
           updated_at?: string
         }
         Update: {
           acceso_bloqueado?: boolean
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -5154,7 +5161,9 @@ export type Database = {
           plan_id?: string | null
           status?: string
           stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
           stripe_subscription_id?: string | null
+          terms_accepted_at?: string | null
           trial_ends_at?: string | null
           ultimo_checkout_session_id?: string | null
           updated_at?: string
