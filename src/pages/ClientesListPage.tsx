@@ -105,6 +105,34 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canCreate = hasPermiso('clientes', 'crear');
+  const canDelete = hasPermiso('clientes', 'eliminar');
+  const qc = useQueryClient();
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const action = forcedStatus === 'inactivo' ? 'eliminar definitivamente' : 'dar de baja';
+    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} ${ids.length} cliente${ids.length !== 1 ? 's' : ''}? Esta acción ${forcedStatus === 'inactivo' ? 'no se puede deshacer' : 'los marcará como inactivos'}.`)) return;
+    setBulkDeleting(true);
+    try {
+      if (forcedStatus === 'inactivo') {
+        const { error } = await supabase.from('clientes').delete().in('id', ids);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).in('id', ids);
+        if (error) throw error;
+      }
+      toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} ${forcedStatus === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['clientes-page'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al eliminar');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
   const { empresa } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
