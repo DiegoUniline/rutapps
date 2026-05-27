@@ -365,7 +365,22 @@ export default function SignupPage() {
           </Link>
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
           <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
-          <p className="text-sm text-muted-foreground">7 días de prueba gratis · Capturas tu tarjeta en el siguiente paso</p>
+          <p className="text-sm text-muted-foreground">7 días de prueba gratis · Se requiere tarjeta para activar la cuenta</p>
+
+          {/* Pricing & card disclosure */}
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-left space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <Sparkles className="h-4 w-4" />
+              Cómo funciona el cobro
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+              <li><strong className="text-foreground">$300 MXN por usuario al mes</strong> (planes semestral -10% y anual -15%).</li>
+              <li>En el siguiente paso capturas tu tarjeta y eliges plan. <strong className="text-foreground">No se cobra nada durante los 7 días de prueba.</strong></li>
+              <li>Al terminar la prueba se realiza el primer cargo automático según el plan elegido.</li>
+              <li>Puedes cancelar antes del día 7 desde tu cuenta sin ningún cargo.</li>
+              <li><strong className="text-foreground">Si no capturas la tarjeta, la cuenta no se activa</strong> y no podrás acceder al sistema.</li>
+            </ul>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
