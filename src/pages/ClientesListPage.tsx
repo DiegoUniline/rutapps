@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { usePermisos } from '@/hooks/usePermisos';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, AlertTriangle } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Plus, Upload, AlertTriangle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
@@ -104,6 +105,34 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canCreate = hasPermiso('clientes', 'crear');
+  const canDelete = hasPermiso('clientes', 'eliminar');
+  const qc = useQueryClient();
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const action = forcedStatus === 'inactivo' ? 'eliminar definitivamente' : 'dar de baja';
+    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} ${ids.length} cliente${ids.length !== 1 ? 's' : ''}? Esta acción ${forcedStatus === 'inactivo' ? 'no se puede deshacer' : 'los marcará como inactivos'}.`)) return;
+    setBulkDeleting(true);
+    try {
+      if (forcedStatus === 'inactivo') {
+        const { error } = await supabase.from('clientes').delete().in('id', ids);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).in('id', ids);
+        if (error) throw error;
+      }
+      toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} ${forcedStatus === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['clientes-page'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al eliminar');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
   const { empresa } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
@@ -280,6 +309,16 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
+          {canDelete && selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja'} ({selected.size})
+            </button>
+          )}
           {!isMobile && (
             <>
               <ExportButton
