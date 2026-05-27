@@ -360,7 +360,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-card">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-3xl shadow-xl">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
