@@ -90,7 +90,10 @@ export function todayLocal(): string {
 /** Format a date string to "d 'de' MMMM yyyy" in Mexico timezone (avoids UTC offset shifting the day) */
 export function fmtDateLongMx(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
+  const dateOnly = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = dateOnly
+    ? new Date(Date.UTC(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 12))
+    : new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString('es-MX', {
     timeZone: 'America/Mexico_City',
