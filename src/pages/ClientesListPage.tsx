@@ -114,13 +114,17 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
+    if (!empresa?.id) {
+      toast.error('No se pudo identificar la empresa actual');
+      return;
+    }
     setBulkDeleting(true);
     try {
       if (forcedStatus === 'inactivo') {
-        const { error } = await supabase.from('clientes').delete().in('id', ids);
+        const { error } = await supabase.from('clientes').delete().in('id', ids).eq('empresa_id', empresa.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).in('id', ids);
+        const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).in('id', ids).eq('empresa_id', empresa.id);
         if (error) throw error;
       }
       toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} ${forcedStatus === 'inactivo' ? 'eliminados' : 'dados de baja'}`);
