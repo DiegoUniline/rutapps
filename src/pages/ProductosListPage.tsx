@@ -292,10 +292,11 @@ export default function ProductosListPage() {
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {canDelete && selected.size > 0 && (
+          {selected.size > 0 && (
             <button
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={bulkDeleting || !canDelete}
+              title={!canDelete ? 'No tienes permiso para eliminar productos' : ''}
               className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Dar de baja ({selected.size})
