@@ -622,6 +622,212 @@ export default function SignupPage() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Policies Dialog */}
+      <Dialog open={showPoliciesDialog} onOpenChange={setShowPoliciesDialog}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Documentos legales
+            </DialogTitle>
+            <DialogDescription>
+              Revisa nuestros Términos y Condiciones y el Aviso de Privacidad antes de crear tu cuenta.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="terminos" className="flex-1 min-h-0 flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="terminos">Términos y Condiciones</TabsTrigger>
+              <TabsTrigger value="privacidad">Aviso de Privacidad</TabsTrigger>
+            </TabsList>
+            <TabsContent value="terminos" className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] mt-4 pr-2">
+              <div className="prose prose-sm max-w-none text-foreground/90 space-y-4 text-xs">
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">1. Aceptación de los Términos</h3>
+                  <p>Al acceder, registrarse o utilizar la plataforma RutApp, usted acepta estos Términos y Condiciones en su totalidad.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">2. Descripción del Servicio</h3>
+                  <p>RutApp es una plataforma de gestión empresarial en la nube (SaaS) que incluye: ventas, inventario, facturación CFDI 4.0, logística, cobranza, punto de venta y reportes.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">3. Registro y Cuenta</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Información veraz, completa y actualizada.</li>
+                    <li>Correo y teléfono únicos.</li>
+                    <li>Cada cuenta es personal e intransferible.</li>
+                    <li>Mayor de 18 años.</li>
+                    <li>Verificación de identidad obligatoria.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">4. Planes, Pagos y Suscripciones</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Periodo de prueba gratuito de 7 días naturales.</li>
+                    <li>3 días de gracia adicionales antes de suspender.</li>
+                    <li>Pagos seguros mediante Stripe. No almacenamos tarjetas.</li>
+                    <li>Renovación automática mensual salvo cancelación.</li>
+                    <li>Timbres fiscales no reembolsables.</li>
+                    <li>La Empresa puede modificar precios con 30 días de aviso.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">5. Cobro Automático</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cobro automático recurrente mensual autorizado.</li>
+                    <li>Si falla, hasta 3 intentos en 7 días antes de suspender.</li>
+                    <li>Cambios de plan con ajuste prorrateado.</li>
+                    <li>Aumento de usuarios genera cargo prorrateado inmediato.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">6. Cancelación</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cancelación en cualquier momento desde el panel.</li>
+                    <li>Acceso activo hasta final del periodo pagado.</li>
+                    <li>No reembolsos parciales salvo errores comprobados.</li>
+                    <li>Datos conservados 30 días tras cancelación.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">7. Política de Reembolso</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>La prueba no genera cargo.</li>
+                    <li>Cargos mensuales no reembolsables salvo duplicados o errores.</li>
+                    <li>Timbres fiscales no reembolsables.</li>
+                    <li>Disputas dentro de 15 días naturales posteriores al cargo.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">8. Baja de Cuenta</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Eliminación permanente de datos en máximo 30 días.</li>
+                    <li>CFDI conservados 5 años por ley fiscal.</li>
+                    <li>Datos de facturación conservados por obligaciones contables.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">9. Uso Aceptable</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Usos lícitos y comerciales legítimos únicamente.</li>
+                    <li>No accesos no autorizados ni ingeniería inversa.</li>
+                    <li>No virus, spam ni sobrecarga de servidores.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">10. Propiedad Intelectual</h3>
+                  <p>Todo el software, diseño, código, logos y marcas son propiedad exclusiva de RutApp. El Usuario retiene la propiedad de sus datos comerciales.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">11. Limitación de Responsabilidad</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Servicio "tal cual" sin garantías expresas.</li>
+                    <li>Responsabilidad máxima limitada a 3 meses de pago.</li>
+                    <li>No responsable por errores en información fiscal del Usuario.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">12. Legislación</h3>
+                  <p>Leyes de los Estados Unidos Mexicanos. Jurisdicción: Guadalajara, Jalisco.</p>
+                </section>
+              </div>
+            </TabsContent>
+            <TabsContent value="privacidad" className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] mt-4 pr-2">
+              <div className="prose prose-sm max-w-none text-foreground/90 space-y-4 text-xs">
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">1. Responsable</h3>
+                  <p>RutApp es responsable del tratamiento de datos conforme a la LFPDPPP. Domicilio: Guadalajara, Jalisco, México.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">2. Datos Recabados</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Identificación:</strong> Nombre, correo, teléfono.</li>
+                    <li><strong>Empresa:</strong> Nombre comercial, RFC, régimen fiscal.</li>
+                    <li><strong>Financieros:</strong> Procesados por Stripe (no almacenamos tarjetas).</li>
+                    <li><strong>Uso:</strong> IP, dispositivo, GPS (con autorización).</li>
+                    <li><strong>Fiscales:</strong> CSD, constancias, CFDI.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">3. Finalidades</h3>
+                  <p><strong>Primarias:</strong></p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Crear y administrar su cuenta.</li>
+                    <li>Proveer los servicios contratados.</li>
+                    <li>Procesar pagos y cobros recurrentes.</li>
+                    <li>Emitir CFDI ante el SAT.</li>
+                    <li>Verificar identidad.</li>
+                    <li>Cumplir obligaciones legales y fiscales.</li>
+                  </ul>
+                  <p className="mt-2"><strong>Secundarias (opcionales):</strong></p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Comunicaciones promocionales.</li>
+                    <li>Análisis estadísticos para mejorar el servicio.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">4. Datos Financieros</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Stripe procesa pagos con PCI DSS Nivel 1.</li>
+                    <li>No almacenamos datos de tarjetas.</li>
+                    <li>Cobros recurrentes autorizados al registrar método de pago.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">5. Transferencias</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Stripe, Inc.</strong> — Pagos (EE.UU., PCI DSS).</li>
+                    <li><strong>Supabase, Inc.</strong> — Almacenamiento y autenticación (EE.UU.).</li>
+                    <li><strong>Facturama</strong> — Emisión CFDI (México).</li>
+                    <li><strong>WhatsAPI</strong> — Notificaciones y OTP.</li>
+                    <li><strong>Google Maps</strong> — Geolocalización.</li>
+                    <li><strong>SAT</strong> — Cuando lo requiera la ley.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">6. Derechos ARCO</h3>
+                  <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento. Envíe solicitud a soporte@rutapp.com con identificación oficial. Respuesta en 20 días hábiles.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">7. Seguridad</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cifrado TLS/SSL en tránsito y reposo.</li>
+                    <li>Acceso basado en roles (RLS).</li>
+                    <li>Aislamiento multi-tenant.</li>
+                    <li>Respaldos diarios y redundancia geográfica.</li>
+                    <li>Monitoreo continuo.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">8. Cookies</h3>
+                  <p>Uso exclusivo para sesión segura, preferencias, funcionalidad offline (PWA) y sincronización. Sin cookies de terceros publicitarias.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">9. Conservación</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Datos activos mientras la cuenta esté vigente.</li>
+                    <li>30 días tras cancelación para reactivación.</li>
+                    <li>CFDI conservados 5 años por ley fiscal.</li>
+                    <li>Registros de pagos por obligaciones contables.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">10. Contacto</h3>
+                  <p>Para ejercer derechos ARCO o consultas de privacidad: soporte@rutapp.com.</p>
+                </section>
+              </div>
+            </TabsContent>
+          </Tabs>
+          <div className="flex gap-2 pt-2 border-t">
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link to="/terminos" target="_blank">Ver Términos completos</Link>
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link to="/privacidad" target="_blank">Ver Privacidad completo</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
