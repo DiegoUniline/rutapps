@@ -227,7 +227,7 @@ export default function LandingPage() {
                 Ver seguimiento en vivo <ChevronRight className="h-5 w-5" />
               </a>
             </div>
-            <p className="text-xs text-gray-400 mt-4">Sin tarjeta · Configuración en 5 minutos · 14 días de prueba</p>
+            <p className="text-xs text-gray-400 mt-4">Configuración en 5 minutos · 7 días de prueba</p>
           </div>
 
           {/* Hero — live dashboard mockup */}
@@ -568,7 +568,7 @@ export default function LandingPage() {
               style={{ color: 'hsl(230, 55%, 48%)' }}>
               Crear cuenta gratis <ArrowRight className="h-5 w-5" />
             </Link>
-            <p className="text-indigo-200 text-xs mt-4">14 días de prueba sin compromiso</p>
+            <p className="text-indigo-200 text-xs mt-4">7 días de prueba gratis</p>
           </div>
         </div>
       </section>
