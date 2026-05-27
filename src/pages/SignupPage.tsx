@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -72,6 +73,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpDialog, setShowOtpDialog] = useState(false);
   const [showCooldownDialog, setShowCooldownDialog] = useState(false);
+  const [showPoliciesDialog, setShowPoliciesDialog] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [form, setForm] = useState({
     nombre: '',
@@ -358,7 +360,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-card">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-3xl shadow-xl">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
@@ -383,7 +385,7 @@ export default function SignupPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             {/* Name */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Tu nombre</Label>
@@ -396,8 +398,8 @@ export default function SignupPage() {
               <Input required value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))} placeholder="Distribuidora Norte S.A." />
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
+            {/* Email — full width */}
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
               <Input
                 type="email"
@@ -409,8 +411,8 @@ export default function SignupPage() {
               <p className="text-xs text-muted-foreground">Se usará para iniciar sesión y recuperar tu contraseña</p>
             </div>
 
-            {/* Phone */}
-            <div className="space-y-2">
+            {/* Phone — full width */}
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Teléfono</Label>
               <div className="flex gap-2">
                 <Select
@@ -421,7 +423,7 @@ export default function SignupPage() {
                   }}
                   disabled={otpVerified && verificationMethod === 'whatsapp'}
                 >
-                  <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[180px] shrink-0"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COUNTRY_CODES.map(c => (
                       <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
@@ -483,43 +485,57 @@ export default function SignupPage() {
             </div>
 
             {/* Cupón / Referido */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-2"><Tag className="h-4 w-4" /> Código de cupón <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-              <Input
-                value={cuponCodigo}
-                onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
-                placeholder="EJ. JUAN10"
-                className="uppercase"
-              />
-              {partnerRef && (
-                <p className="text-xs text-primary flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> Referido por <span className="font-semibold">{partnerRef}</span>
-                </p>
-              )}
-            </div>
-
-            {/* Terms & Privacy */}
-            <div className="space-y-3 pt-2 border-t">
-              <div className="flex items-start gap-2">
-                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
-                <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto los <Link to="/terminos" target="_blank" className="text-primary font-medium hover:underline">Términos y Condiciones</Link> del servicio.
-                </label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox id="privacy" checked={acceptedPrivacy} onCheckedChange={v => setAcceptedPrivacy(v === true)} />
-                <label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto el <Link to="/privacidad" target="_blank" className="text-primary font-medium hover:underline">Aviso de Privacidad</Link> y el tratamiento de mis datos personales.
-                </label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  value={cuponCodigo}
+                  onChange={e => setCuponCodigo(e.target.value.toUpperCase())}
+                  placeholder="EJ. JUAN10"
+                  className="uppercase max-w-xs"
+                />
+                {partnerRef && (
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> Referido por <span className="font-semibold">{partnerRef}</span>
+                  </p>
+                )}
               </div>
             </div>
 
-            <Button type="submit" disabled={loading || !isFormReady} className="w-full" size="lg">
+            {/* Terms & Privacy — full width */}
+            <div className="space-y-3 pt-2 border-t md:col-span-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
+                  <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    Acepto los Términos y Condiciones del servicio.
+                  </label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox id="privacy" checked={acceptedPrivacy} onCheckedChange={v => setAcceptedPrivacy(v === true)} />
+                  <label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    Acepto el Aviso de Privacidad y el tratamiento de mis datos personales.
+                  </label>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPoliciesDialog(true)}
+                className="w-full"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Ver Términos y Aviso de Privacidad
+              </Button>
+            </div>
+
+            <Button type="submit" disabled={loading || !isFormReady} className="w-full md:col-span-2" size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear mi cuenta
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground md:col-span-2">
               ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Iniciar sesión</Link>
             </p>
           </form>
@@ -604,6 +620,212 @@ export default function SignupPage() {
           >
             {cooldownSeconds > 0 ? 'Entendido' : 'Continuar'}
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Policies Dialog */}
+      <Dialog open={showPoliciesDialog} onOpenChange={setShowPoliciesDialog}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Documentos legales
+            </DialogTitle>
+            <DialogDescription>
+              Revisa nuestros Términos y Condiciones y el Aviso de Privacidad antes de crear tu cuenta.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="terminos" className="flex-1 min-h-0 flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="terminos">Términos y Condiciones</TabsTrigger>
+              <TabsTrigger value="privacidad">Aviso de Privacidad</TabsTrigger>
+            </TabsList>
+            <TabsContent value="terminos" className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] mt-4 pr-2">
+              <div className="prose prose-sm max-w-none text-foreground/90 space-y-4 text-xs">
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">1. Aceptación de los Términos</h3>
+                  <p>Al acceder, registrarse o utilizar la plataforma RutApp, usted acepta estos Términos y Condiciones en su totalidad.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">2. Descripción del Servicio</h3>
+                  <p>RutApp es una plataforma de gestión empresarial en la nube (SaaS) que incluye: ventas, inventario, facturación CFDI 4.0, logística, cobranza, punto de venta y reportes.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">3. Registro y Cuenta</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Información veraz, completa y actualizada.</li>
+                    <li>Correo y teléfono únicos.</li>
+                    <li>Cada cuenta es personal e intransferible.</li>
+                    <li>Mayor de 18 años.</li>
+                    <li>Verificación de identidad obligatoria.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">4. Planes, Pagos y Suscripciones</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Periodo de prueba gratuito de 7 días naturales.</li>
+                    <li>3 días de gracia adicionales antes de suspender.</li>
+                    <li>Pagos seguros mediante Stripe. No almacenamos tarjetas.</li>
+                    <li>Renovación automática mensual salvo cancelación.</li>
+                    <li>Timbres fiscales no reembolsables.</li>
+                    <li>La Empresa puede modificar precios con 30 días de aviso.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">5. Cobro Automático</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cobro automático recurrente mensual autorizado.</li>
+                    <li>Si falla, hasta 3 intentos en 7 días antes de suspender.</li>
+                    <li>Cambios de plan con ajuste prorrateado.</li>
+                    <li>Aumento de usuarios genera cargo prorrateado inmediato.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">6. Cancelación</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cancelación en cualquier momento desde el panel.</li>
+                    <li>Acceso activo hasta final del periodo pagado.</li>
+                    <li>No reembolsos parciales salvo errores comprobados.</li>
+                    <li>Datos conservados 30 días tras cancelación.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">7. Política de Reembolso</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>La prueba no genera cargo.</li>
+                    <li>Cargos mensuales no reembolsables salvo duplicados o errores.</li>
+                    <li>Timbres fiscales no reembolsables.</li>
+                    <li>Disputas dentro de 15 días naturales posteriores al cargo.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">8. Baja de Cuenta</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Eliminación permanente de datos en máximo 30 días.</li>
+                    <li>CFDI conservados 5 años por ley fiscal.</li>
+                    <li>Datos de facturación conservados por obligaciones contables.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">9. Uso Aceptable</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Usos lícitos y comerciales legítimos únicamente.</li>
+                    <li>No accesos no autorizados ni ingeniería inversa.</li>
+                    <li>No virus, spam ni sobrecarga de servidores.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">10. Propiedad Intelectual</h3>
+                  <p>Todo el software, diseño, código, logos y marcas son propiedad exclusiva de RutApp. El Usuario retiene la propiedad de sus datos comerciales.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">11. Limitación de Responsabilidad</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Servicio "tal cual" sin garantías expresas.</li>
+                    <li>Responsabilidad máxima limitada a 3 meses de pago.</li>
+                    <li>No responsable por errores en información fiscal del Usuario.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">12. Legislación</h3>
+                  <p>Leyes de los Estados Unidos Mexicanos. Jurisdicción: Guadalajara, Jalisco.</p>
+                </section>
+              </div>
+            </TabsContent>
+            <TabsContent value="privacidad" className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] mt-4 pr-2">
+              <div className="prose prose-sm max-w-none text-foreground/90 space-y-4 text-xs">
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">1. Responsable</h3>
+                  <p>RutApp es responsable del tratamiento de datos conforme a la LFPDPPP. Domicilio: Guadalajara, Jalisco, México.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">2. Datos Recabados</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Identificación:</strong> Nombre, correo, teléfono.</li>
+                    <li><strong>Empresa:</strong> Nombre comercial, RFC, régimen fiscal.</li>
+                    <li><strong>Financieros:</strong> Procesados por Stripe (no almacenamos tarjetas).</li>
+                    <li><strong>Uso:</strong> IP, dispositivo, GPS (con autorización).</li>
+                    <li><strong>Fiscales:</strong> CSD, constancias, CFDI.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">3. Finalidades</h3>
+                  <p><strong>Primarias:</strong></p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Crear y administrar su cuenta.</li>
+                    <li>Proveer los servicios contratados.</li>
+                    <li>Procesar pagos y cobros recurrentes.</li>
+                    <li>Emitir CFDI ante el SAT.</li>
+                    <li>Verificar identidad.</li>
+                    <li>Cumplir obligaciones legales y fiscales.</li>
+                  </ul>
+                  <p className="mt-2"><strong>Secundarias (opcionales):</strong></p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Comunicaciones promocionales.</li>
+                    <li>Análisis estadísticos para mejorar el servicio.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">4. Datos Financieros</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Stripe procesa pagos con PCI DSS Nivel 1.</li>
+                    <li>No almacenamos datos de tarjetas.</li>
+                    <li>Cobros recurrentes autorizados al registrar método de pago.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">5. Transferencias</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>Stripe, Inc.</strong> — Pagos (EE.UU., PCI DSS).</li>
+                    <li><strong>Supabase, Inc.</strong> — Almacenamiento y autenticación (EE.UU.).</li>
+                    <li><strong>Facturama</strong> — Emisión CFDI (México).</li>
+                    <li><strong>WhatsAPI</strong> — Notificaciones y OTP.</li>
+                    <li><strong>Google Maps</strong> — Geolocalización.</li>
+                    <li><strong>SAT</strong> — Cuando lo requiera la ley.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">6. Derechos ARCO</h3>
+                  <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento. Envíe solicitud a soporte@rutapp.com con identificación oficial. Respuesta en 20 días hábiles.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">7. Seguridad</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Cifrado TLS/SSL en tránsito y reposo.</li>
+                    <li>Acceso basado en roles (RLS).</li>
+                    <li>Aislamiento multi-tenant.</li>
+                    <li>Respaldos diarios y redundancia geográfica.</li>
+                    <li>Monitoreo continuo.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">8. Cookies</h3>
+                  <p>Uso exclusivo para sesión segura, preferencias, funcionalidad offline (PWA) y sincronización. Sin cookies de terceros publicitarias.</p>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">9. Conservación</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Datos activos mientras la cuenta esté vigente.</li>
+                    <li>30 días tras cancelación para reactivación.</li>
+                    <li>CFDI conservados 5 años por ley fiscal.</li>
+                    <li>Registros de pagos por obligaciones contables.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="text-sm font-bold text-foreground">10. Contacto</h3>
+                  <p>Para ejercer derechos ARCO o consultas de privacidad: soporte@rutapp.com.</p>
+                </section>
+              </div>
+            </TabsContent>
+          </Tabs>
+          <div className="flex gap-2 pt-2 border-t">
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link to="/terminos" target="_blank">Ver Términos completos</Link>
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link to="/privacidad" target="_blank">Ver Privacidad completo</Link>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
