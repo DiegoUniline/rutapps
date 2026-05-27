@@ -227,7 +227,7 @@ export default function LandingPage() {
                 Ver seguimiento en vivo <ChevronRight className="h-5 w-5" />
               </a>
             </div>
-            <p className="text-xs text-gray-400 mt-4">Sin tarjeta · Configuración en 5 minutos · 14 días de prueba</p>
+            <p className="text-xs text-gray-400 mt-4">Configuración en 5 minutos · 7 días de prueba</p>
           </div>
 
           {/* Hero — live dashboard mockup */}
