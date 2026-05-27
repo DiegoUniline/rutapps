@@ -86,3 +86,16 @@ export function setGlobalTimezone(tz: string | null | undefined) {
 export function todayLocal(): string {
   return todayInTimezone(_empresaTimezone);
 }
+
+/** Format a date string to "d 'de' MMMM yyyy" in Mexico timezone (avoids UTC offset shifting the day) */
+export function fmtDateLongMx(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('es-MX', {
+    timeZone: 'America/Mexico_City',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
