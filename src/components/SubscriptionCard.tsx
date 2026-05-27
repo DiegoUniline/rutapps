@@ -13,8 +13,8 @@ import { useSearchParams } from 'react-router-dom';
 
 const PLANS = [
   { id: 'mensual', label: 'Mensual', price: 300, priceId: 'price_1TBGvcCUpJnsv7il0KmvUTCj', desc: '$300/usuario/mes' },
-  { id: 'semestral', label: 'Semestral', price: 270, priceId: 'price_1TBGwFCUpJnsv7il7iiIUPLV', desc: '$270/usuario/mes (10% desc.)' },
-  { id: 'anual', label: 'Anual', price: 255, priceId: 'price_1TBGxQCUpJnsv7iltBEy18AC', desc: '$255/usuario/mes (15% desc.)' },
+  { id: 'semestral', label: 'Semestral', price: 270, priceId: 'price_1TbjZUCUpJnsv7ilq1rDPtBg', desc: '$270/usuario/mes (10% desc., cobro cada 6 meses)' },
+  { id: 'anual', label: 'Anual', price: 255, priceId: 'price_1TbjcjCUpJnsv7ilEwNm7Imw', desc: '$255/usuario/mes (15% desc., cobro cada 12 meses)' },
 ] as const;
 
 const BANK_INFO = {
