@@ -99,6 +99,8 @@ export default function ProductosListPage() {
   const { empresa } = useAuth();
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [bulkActivating, setBulkActivating] = useState(false);
+  const [confirmActivateOpen, setConfirmActivateOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
