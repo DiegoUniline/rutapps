@@ -234,21 +234,58 @@ Deno.serve(async (req) => {
           .update({ status: "cancelled", updated_at: new Date().toISOString() })
           .eq("id", sub.id);
       } else {
-        // Cancel at period end (user keeps access until current period ends)
+        // Si está en periodo de prueba (trial), cancelar INMEDIATAMENTE.
+        // No se cobró nada todavía, así que el acceso se retira al instante.
+        if (sub.status === "trial") {
+          await stripe.subscriptions.cancel(sub.stripe_subscription_id, {
+            invoice_now: false,
+            prorate: false,
+          });
+          await supabase.from("subscriptions").update({
+            status: "cancelled",
+            acceso_bloqueado: true,
+            cancel_at_period_end: false,
+            updated_at: new Date().toISOString(),
+          }).eq("id", sub.id);
+          return new Response(JSON.stringify({ success: true, status: "cancelled", immediate: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Si ya cobró: programar cancelación al fin de periodo, conserva acceso.
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
           cancel_at_period_end: true,
           metadata: { cancel_reason: reason || "not_specified" },
         });
 
         await supabase.from("subscriptions")
-          .update({ status: "cancelling", updated_at: new Date().toISOString() })
+          .update({
+            cancel_at_period_end: true,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", sub.id);
       }
 
-      return new Response(JSON.stringify({ success: true, status: "cancelling" }), {
+      return new Response(JSON.stringify({ success: true, status: "cancel_at_period_end" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    /* ─── Reactivar suscripción cancelada (deshacer cancel_at_period_end) ─── */
+    if (action === "reactivate_subscription") {
+      if (!sub.stripe_subscription_id) throw new Error("No hay suscripción activa en Stripe");
+      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        cancel_at_period_end: false,
+      });
+      await supabase.from("subscriptions").update({
+        cancel_at_period_end: false,
+        updated_at: new Date().toISOString(),
+      }).eq("id", sub.id);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     /* ─── Apply retention discount (15% off next invoice) ─── */
     if (action === "apply_retention_discount") {
