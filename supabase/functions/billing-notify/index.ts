@@ -130,11 +130,20 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
     if (c.mensaje_contacto) lines.push("\nSi tienes dudas o necesitas ayuda, contáctanos. Queremos seguir siendo parte de tu negocio. 💪");
   }
   if (tpl.tipo === "trial_expira_manana") {
-    lines.push("¡Esperamos que estés disfrutando *Rutapp*! 🎯\n");
-    lines.push("Tu prueba gratuita termina mañana. Si te ha gustado lo que has visto, activa tu plan para no perder nada de lo que ya avanzaste:\n");
-    if (c.enlace_facturacion) lines.push(`💳 *Activar mi plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
-    lines.push(`\n📺 ¿Aún no exploras todo? Mira nuestros tutoriales: ${YOUTUBE_CHANNEL}`);
-    if (c.mensaje_despedida) lines.push("\n¡Estamos seguros de que Rutapp va a ayudar a crecer tu negocio! 🚀");
+    const willCharge = !!(vars.monto && vars.fechaCobro);
+    if (willCharge) {
+      lines.push("¡Tu prueba gratuita termina mañana! 🎯\n");
+      lines.push(`Mañana *${vars.fechaCobro}* se realizará el cobro automático de *${vars.monto}*${vars.numUsuarios ? ` por *${vars.numUsuarios} usuario(s)*` : ""} a la tarjeta que registraste, y arranca tu mes de servicio.\n`);
+      lines.push("Si ya no quieres continuar, puedes cancelar antes del cobro desde tu panel y no se realizará ningún cargo.\n");
+      if (c.enlace_facturacion) lines.push(`💳 *Ver/cancelar mi suscripción:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+      if (c.mensaje_despedida) lines.push("\n¡Gracias por confiar en Rutapp! 🚀");
+    } else {
+      lines.push("¡Esperamos que estés disfrutando *Rutapp*! 🎯\n");
+      lines.push("Tu prueba gratuita termina mañana. Si te ha gustado lo que has visto, activa tu plan para no perder nada de lo que ya avanzaste:\n");
+      if (c.enlace_facturacion) lines.push(`💳 *Activar mi plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+      lines.push(`\n📺 ¿Aún no exploras todo? Mira nuestros tutoriales: ${YOUTUBE_CHANNEL}`);
+      if (c.mensaje_despedida) lines.push("\n¡Estamos seguros de que Rutapp va a ayudar a crecer tu negocio! 🚀");
+    }
   }
   if (tpl.tipo === "trial_expirado") {
     lines.push("Tu prueba gratuita ha terminado, pero *tus datos siguen seguros* con nosotros. 🔒\n");
@@ -332,7 +341,7 @@ Deno.serve(async (req) => {
 
     const { data: trialsExpiringTomorrow } = await supabase
       .from("subscriptions")
-      .select("id, empresa_id, trial_ends_at, max_usuarios")
+      .select("id, empresa_id, trial_ends_at, max_usuarios, stripe_payment_method_id, plan_id")
       .eq("status", "trial")
       .gte("trial_ends_at", `${tomorrowStr}T00:00:00`)
       .lt("trial_ends_at", `${tomorrowStr}T23:59:59`);
@@ -346,11 +355,37 @@ Deno.serve(async (req) => {
         const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
         const tpl = tplMap.trial_expira_manana || DEFAULT_TEMPLATES.trial_expira_manana;
 
+        // If the user already captured a card, enrich with the exact charge amount + date
+        let monto: string | undefined;
+        let fechaCobro: string | undefined;
+        let numUsuarios: number | undefined;
+        if ((sub as any).stripe_payment_method_id && (sub as any).plan_id) {
+          const { data: plan } = await supabase
+            .from("subscription_plans")
+            .select("precio_por_usuario, meses, descuento_pct")
+            .eq("id", (sub as any).plan_id)
+            .maybeSingle();
+          if (plan) {
+            const qty = sub.max_usuarios || 3;
+            const subtotal = (plan as any).precio_por_usuario * qty * (plan as any).meses;
+            const total = (plan as any).descuento_pct > 0
+              ? subtotal * (1 - (plan as any).descuento_pct / 100)
+              : subtotal;
+            monto = `$${total.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+            const chargeDate = new Date(sub.trial_ends_at);
+            fechaCobro = chargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "long", timeZone: MX_TZ });
+            numUsuarios = qty;
+          }
+        }
+
         if (waToken && profile.telefono && tpl.activo) {
           await sendWA(supabase, waToken, profile.telefono, tpl, {
             nombre: profile.nombre || "",
             empresa: empresaNombre,
             enlaceFacturacion: FACTURACION_URL,
+            monto,
+            fechaCobro,
+            numUsuarios,
           }, profile.email);
         }
         results.push({ id: sub.id, action: "trial_expira_manana", status: "sent" });

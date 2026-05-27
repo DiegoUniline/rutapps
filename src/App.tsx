@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { isSuperAdminEmail } from "@/lib/superAdminEmail";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useNeedsCardCapture } from "@/hooks/useNeedsCardCapture";
 import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { usePermisos } from "@/hooks/usePermisos";
@@ -104,6 +105,7 @@ const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicial
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
+const CompletarRegistroPage = lazy(() => import("@/pages/CompletarRegistroPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
@@ -199,6 +201,7 @@ function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
+  const cardCapture = useNeedsCardCapture();
   const facturaPendiente = useFacturaPendiente();
   // Bloqueo combinado: suscripción suspendida O factura pendiente vencida
   const isBlockedTotal = subscription.isBlocked || (!subscription.isSuperAdmin && facturaPendiente.shouldBlock);
@@ -329,6 +332,21 @@ function AppRoutes() {
       </Suspense>
     );
   }
+
+  // Trial owners without captured card MUST complete registration before using the app.
+  if (cardCapture.needs) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/completar-registro" element={<CompletarRegistroPage />} />
+          <Route path="/terminos" element={<TerminosPage />} />
+          <Route path="/privacidad" element={<PrivacidadPage />} />
+          <Route path="*" element={<Navigate to="/completar-registro" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
 
   // Blocked users — only billing access + sign-out header
   // Also applies to super admin when overriding to a suspended empresa
@@ -668,6 +686,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
       {isBillingOwner && <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />}
+      {isBillingOwner && <Route path="/completar-registro" element={<CompletarRegistroPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}

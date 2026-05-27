@@ -327,10 +327,11 @@ export default function SignupPage() {
         });
       } catch { /* silent - welcome msg is best-effort */ }
 
-      const successMsg = '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.';
-
-      toast.success(successMsg, { duration: 8000 });
-      navigate('/login');
+      toast.success('¡Cuenta creada! Ahora elige tu plan y captura tu tarjeta para iniciar tu prueba.', { duration: 8000 });
+      // After signUp the user is already authenticated; send them to capture card.
+      // If session is not yet ready, redirect to /login which will then route to /completar-registro via the guard.
+      const { data: { session } } = await supabase.auth.getSession();
+      navigate(session ? '/completar-registro' : '/login');
     } catch (err: any) {
       const msg = err.message || 'Error al crear la cuenta';
       if (msg.includes('duplicate') && msg.includes('email')) {
@@ -364,7 +365,7 @@ export default function SignupPage() {
           </Link>
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
           <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
-          <p className="text-sm text-muted-foreground">7 días de prueba gratis · Sin tarjeta de crédito</p>
+          <p className="text-sm text-muted-foreground">7 días de prueba gratis · Capturas tu tarjeta en el siguiente paso</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
