@@ -96,15 +96,20 @@ export default function ProductosListPage() {
   const { hasPermiso } = usePermisos();
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
+    if (!empresa?.id) {
+      toast.error('No se pudo identificar la empresa actual');
+      return;
+    }
     setBulkDeleting(true);
     try {
-      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids);
+      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).in('id', ids).eq('empresa_id', empresa.id);
       if (error) throw error;
       toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} dados de baja`);
       setSelected(new Set());
