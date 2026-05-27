@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { isSuperAdminEmail } from "@/lib/superAdminEmail";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useNeedsCardCapture } from "@/hooks/useNeedsCardCapture";
 import { useFacturaPendiente } from "@/hooks/useFacturaPendiente";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { usePermisos } from "@/hooks/usePermisos";
@@ -104,6 +105,7 @@ const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicial
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
+const CompletarRegistroPage = lazy(() => import("@/pages/CompletarRegistroPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
