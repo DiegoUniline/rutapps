@@ -330,15 +330,26 @@ export default function ProductosListPage() {
           {selected.size > 0 && (
             <>
               {statusFilter === 'inactivo' ? (
-                <button
-                  onClick={() => setConfirmActivateOpen(true)}
-                  disabled={bulkActivating || !canDelete}
-                  title={!canDelete ? 'No tienes permiso para reactivar productos' : ''}
-                  className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-success text-success-foreground hover:bg-success/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Activar ({selected.size})
-                </button>
+                <>
+                  <button
+                    onClick={() => setConfirmActivateOpen(true)}
+                    disabled={bulkActivating || !canDelete}
+                    title={!canDelete ? 'No tienes permiso para reactivar productos' : ''}
+                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-success text-success-foreground hover:bg-success/90 text-xs font-medium shrink-0 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Activar ({selected.size})
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteOpen(true)}
+                    disabled={bulkDeleting || !canDelete}
+                    title={!canDelete ? 'No tienes permiso para eliminar productos' : ''}
+                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar ({selected.size})
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => setConfirmDeleteOpen(true)}
