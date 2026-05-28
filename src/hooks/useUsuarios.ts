@@ -95,15 +95,46 @@ export function useUsuarios() {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
+      const pinValue = (editForm.pin_code || '').trim();
+      const { data: updated, error: upErr } = await supabase
+        .from('profiles')
+        .update({
+          nombre: editForm.nombre || null,
+          telefono: editForm.telefono || null,
+          estado: editForm.estado,
+          almacen_id: editForm.almacen_id || null,
+          pin_code: pinValue ? pinValue : null,
+        })
+        .eq('id', editingUser.id)
+        .select('id, pin_code');
+      if (upErr) throw upErr;
+      if (!updated || updated.length === 0) {
+        throw new Error('No se pudo guardar (permisos insuficientes). Verifica que sigues con sesión activa.');
+      }
+      // Confirm PIN persistence
+      if (pinValue && updated[0].pin_code !== pinValue) {
+        throw new Error('El PIN no se guardó correctamente. Vuelve a intentarlo.');
+      }
       const existing = userRoles.filter(ur => ur.user_id === editingUser.user_id);
-      for (const ur of existing) { await supabase.from('user_roles').delete().eq('id', ur.id); }
-      if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id }); }
+      for (const ur of existing) {
+        const { error: delErr } = await supabase.from('user_roles').delete().eq('id', ur.id);
+        if (delErr) throw delErr;
+      }
+      if (editForm.role_id) {
+        const { error: insErr } = await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id });
+        if (insErr) throw insErr;
+      }
       toast.success('Usuario actualizado');
       setEditingUser(null);
       loadUsuarios();
-    } catch (e: any) { toast.error(e.message); } finally { setSavingUser(false); }
+    } catch (e: any) {
+      console.error('saveUser error:', e);
+      toast.error(e.message || 'Error al guardar');
+    } finally {
+      setSavingUser(false);
+    }
   }, [editingUser, editForm, userRoles, loadUsuarios]);
+
 
   const createUser = useCallback(async (availableSlots: number, maxUsuarios: number) => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
