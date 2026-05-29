@@ -8,7 +8,7 @@ import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import SaldoPendienteBanner from '@/components/ruta/SaldoPendienteBanner';
 import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
-import { useAllPresentaciones } from '@/hooks/usePresentaciones';
+import { useAllPresentaciones, presentacionMatchesCode } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
@@ -76,9 +76,9 @@ export function StepProductos(props: Props) {
   const handleScan = (code: string) => {
     const norm = code.trim().toLowerCase();
 
-    // 1) Match contra código de barras de presentación
+    // 1) Match contra código de barras de presentación (principal o alias)
     const pres = (allPresentaciones ?? []).find(p =>
-      p.activo && p.codigo_barras && p.codigo_barras.trim().toLowerCase() === norm
+      p.activo && presentacionMatchesCode(p, code)
     );
     if (pres) {
       const prod = (filteredProductos ?? []).find(x => x.id === pres.producto_id)

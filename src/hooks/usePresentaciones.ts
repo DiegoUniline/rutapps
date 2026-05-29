@@ -13,6 +13,16 @@ export interface ProductoPresentacion {
   activo: boolean;
   es_principal_stock?: boolean;
   codigo_barras?: string | null;
+  codigos_barras?: string[] | null;
+}
+
+/** True si `code` coincide con el código principal o algún alias de la presentación. */
+export function presentacionMatchesCode(p: ProductoPresentacion, code: string): boolean {
+  const norm = code.trim().toLowerCase();
+  if (!norm) return false;
+  if ((p.codigo_barras ?? '').trim().toLowerCase() === norm) return true;
+  const alts = p.codigos_barras ?? [];
+  return alts.some(c => (c ?? '').trim().toLowerCase() === norm);
 }
 
 export function usePresentaciones(productoId?: string) {
