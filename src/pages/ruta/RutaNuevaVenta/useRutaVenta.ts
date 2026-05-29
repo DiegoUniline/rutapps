@@ -330,6 +330,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const c = code.trim().toLowerCase();
     const list = productos as any[];
     return (
+      list.find(p => (p.id ?? '').toLowerCase() === c) ||
       list.find(p => (p.codigo_barras ?? '').toLowerCase() === c) ||
       list.find(p => (p.codigo ?? '').toLowerCase() === c) ||
       list.find(p => (p.codigo_barras ?? '').toLowerCase().includes(c)) ||

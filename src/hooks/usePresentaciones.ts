@@ -12,6 +12,7 @@ export interface ProductoPresentacion {
   orden: number;
   activo: boolean;
   es_principal_stock?: boolean;
+  codigo_barras?: string | null;
 }
 
 export function usePresentaciones(productoId?: string) {
