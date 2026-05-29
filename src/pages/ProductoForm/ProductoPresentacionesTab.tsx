@@ -188,7 +188,14 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
                   value={draft.precio_especial}
                   onChange={(e) => setDraft({ ...draft, precio_especial: e.target.value })} />
               </td>
-              <td colSpan={3}></td>
+              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground text-xs">—</td>
+              <td className="px-3 py-2">
+                <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm font-mono"
+                  placeholder="Cód. barras"
+                  value={draft.codigo_barras}
+                  onChange={(e) => setDraft({ ...draft, codigo_barras: e.target.value })} />
+              </td>
+              <td colSpan={2}></td>
               <td className="text-center">
                 <button onClick={onAdd} disabled={saveMut.isPending}
                   className="bg-primary text-primary-foreground rounded p-1.5 hover:bg-primary/90 disabled:opacity-50">
