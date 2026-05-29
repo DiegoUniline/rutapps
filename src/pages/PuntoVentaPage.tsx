@@ -491,9 +491,9 @@ export default function PuntoVentaPage() {
     if (!productos) return;
     const norm = code.trim().toLowerCase();
 
-    // 1) Buscar primero por código de barras de PRESENTACIÓN
+    // 1) Buscar primero por código de barras de PRESENTACIÓN (principal o alias)
     const pres = (allPresentaciones ?? []).find(p =>
-      p.activo && p.codigo_barras && p.codigo_barras.trim().toLowerCase() === norm
+      p.activo && presentacionMatchesCode(p, code)
     );
     if (pres) {
       const prod = productos.find(p => p.id === pres.producto_id);
