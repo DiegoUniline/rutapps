@@ -74,6 +74,32 @@ export function StepProductos(props: Props) {
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
 
   const handleScan = (code: string) => {
+    const norm = code.trim().toLowerCase();
+
+    // 1) Match contra código de barras de presentación
+    const pres = (allPresentaciones ?? []).find(p =>
+      p.activo && p.codigo_barras && p.codigo_barras.trim().toLowerCase() === norm
+    );
+    if (pres) {
+      const prod = (filteredProductos ?? []).find(x => x.id === pres.producto_id)
+        ?? findProductByCode(pres.producto_id);
+      if (prod) {
+        const factor = Number(pres.factor_base) || 1;
+        const precioUnit = pres.precio_especial != null
+          ? Number(pres.precio_especial) / factor
+          : getSuggestedPrice(prod.id);
+        addGranelLine(prod, {
+          cantidadBase: factor,
+          precioUnitario: precioUnit,
+          paquetes: 1,
+          presentacion: { id: pres.id, nombre: pres.nombre, factor_base: factor },
+        });
+        toast.success(`+ ${prod.nombre} · ${pres.nombre}`);
+        return;
+      }
+    }
+
+    // 2) Match contra código del producto
     const prod = findProductByCode(code);
     if (!prod) { toast.error(`Sin coincidencias para "${code}"`); return; }
     handleAdd(prod);
