@@ -1,85 +1,40 @@
+# Corrección: productos no surtidos en vista móvil de Entrega
 
-# Nuevo flujo de alta con tarjeta obligatoria
+## Problema
 
-## Reglas de negocio
+En `RutaEntregaDetalle.tsx`:
+- La sección **Productos** muestra todas las `entrega_lineas`, incluidas las que tienen `cantidad_entregada = 0` (no surtidas por falta de stock).
+- El **total mostrado y el botón "Cobrar"** usan `venta.total` (total original del pedido), por lo que cobran también el producto no surtido.
 
-- 7 días de prueba gratis, pero la tarjeta se captura ANTES de entrar.
-- Día 8: cobro automático del plan elegido (Mensual / Semestral / Anual). **No reembolsable.**
-- Cancelación antes del día 8 → no se cobra nada, cuenta se cierra.
-- Cancelación después del cobro → conserva acceso hasta `current_period_end` y luego se desactiva (no se renueva).
+El backend y la lógica de inventario son correctos; solo la UI móvil quedó desfasada.
 
-## Cambios en el alta (SignupPage)
+## Cambios (solo frontend, `src/pages/ruta/RutaEntregaDetalle.tsx`)
 
-1. Quitar el texto "Sin tarjeta de crédito".
-2. Después de crear la cuenta agregar paso 2: **Selección de plan + captura de tarjeta**.
-   - Selector: Mensual / Semestral / Anual (precios desde `subscription_plans`).
-   - Casilla obligatoria: *"Acepto que al terminar mis 7 días de prueba se cobrará automáticamente $X a mi tarjeta y que ese primer cargo no es reembolsable."*
-   - Botón "Continuar" deshabilitado hasta marcar la casilla.
-3. Redirigir a **Stripe Checkout** (`mode: subscription`) con:
-   - `payment_method_collection: 'always'`
-   - `subscription_data.trial_period_days: 7`
-   - `subscription_data.trial_settings.end_behavior.missing_payment_method: 'cancel'`
-   - `metadata: { empresa_id, plan_id }`
-4. Hasta no completar Checkout (status `trialing` o `active`), el usuario **no entra a la app**. Guard en `AuthContext` redirige a `/completar-registro` si la suscripción está en `pending_payment_method`.
+1. **Filtrar líneas no surtidas en el render de Productos**
+   - Definir `lineasSurtidas = lineas.filter(l => (l.cantidad_entregada ?? 0) > 0)`.
+   - Reemplazar el `.map` actual (línea 470) y el contador `({lineas.length})` (línea 467) para usar `lineasSurtidas`.
+   - Si hay líneas no surtidas, mostrar debajo una nota discreta tipo: *"X producto(s) sin surtir no se incluyen en esta entrega"* (estilo `text-muted-foreground text-[11px]`).
 
-## Cambios en backend (Stripe + DB)
+2. **Recalcular el total real entregado**
+   - Nuevo `entregaTotal` calculado sumando, por cada línea surtida, `precio_unitario × cantidad_entregada` cruzando con `ventaLineas` por `producto_id` (fallback a `precio_principal` cuando no haya venta).
+   - Para impuestos (IVA/IEPS): prorratear desde `venta` proporcionalmente al `entregaTotal` vs `venta.total`, o sumar `iva_monto`/`ieps_monto` de cada `venta_linea` ponderado por `cantidad_entregada / cantidad_pedida`. Usar la segunda opción para precisión por línea.
 
-### Migración
-- `subscriptions`: agregar
-  - `payment_method_id text`
-  - `trial_will_charge_at timestamptz` (= `trial_ends_at`, fecha exacta del primer cobro)
-  - `cancel_at_period_end boolean default false`
-  - `terms_accepted_at timestamptz`
-  - Permitir nuevo estado `pending_payment_method`.
+3. **Usar `entregaTotal` en lugar de `ventaTotal` en la UI**
+   - Header con el total grande (línea 434).
+   - Bloque "Totales" (línea 504) y subtotales/impuestos prorrateados.
+   - Botón "Cobrar" cuando aplique al monto de esta entrega.
+   - `getTicketData()` (líneas 256-278): filtrar `ventaLineas` a las que están surtidas en la entrega y ajustar `subtotal/iva/ieps/total` al `entregaTotal` para que el ticket impreso refleje sólo lo cargado.
 
-### Edge functions
-- **`create-checkout`**: aceptar `plan_id`, abrir sesión con trial 7 días, cancelar si no hay método al terminar trial, guardar `terms_accepted_at`.
-- **`stripe-webhook`** (extender):
-  - `checkout.session.completed` → `status='trialing'`, guarda `stripe_subscription_id`, `trial_will_charge_at`, desbloquea acceso.
-  - `customer.subscription.updated` → sincroniza `status`, `current_period_end`, `cancel_at_period_end`.
-  - `invoice.paid` → `status='active'`.
-  - `customer.subscription.deleted` → `status='canceled'`.
-- **`manage-subscription`**: botón "Cancelar" → si está `trialing` ejecuta `subscriptions.cancel()` inmediato (no se cobró nada); si está `active` ejecuta `subscriptions.update(..., { cancel_at_period_end: true })` y mantiene acceso hasta fin del periodo.
+4. **Saldo de la venta**
+   - `ventaSaldo` se sigue calculando desde la venta (el saldo real del pedido lo recalcula el trigger de pagos). No se toca aquí; sólo se ajusta lo que se muestra/cobra para esta entrega específica.
 
-## Aviso de fin de prueba
+## Fuera de alcance
 
-No se agrega nada nuevo. **Reutilizar el aviso existente de "tu periodo de prueba está por terminar"** y ajustar su redacción para los que ya tienen tarjeta activa:
+- No se modifica el backend ni el trigger de entrega (ya corregido en la migración previa).
+- No se toca la vista de escritorio (`VentaEntregasTab.tsx`) — el usuario reportó únicamente la vista móvil.
+- No se modifican `venta.total` ni `venta.saldo_pendiente`; eso ya es responsabilidad de los triggers cuando aplique.
 
-> "Tu prueba termina el DD/MM/YYYY. Ese día se cobrará automáticamente $X a tu tarjeta y comenzará tu mes de servicio. Si no quieres continuar, puedes cancelar desde tu panel antes de esa fecha."
+## Verificación
 
-Editar la(s) plantilla(s) de correo/WhatsApp que ya usa el cron `daily-billing` / `billing-notify` para incluir el monto y la fecha de cargo cuando `payment_method_id IS NOT NULL`. Si no hay tarjeta, queda el texto actual.
-
-## Cambios en Dashboard
-
-- Componente nuevo **`TrialCountdownBanner`** visible para `status='trialing'`:
-  - "Te quedan **X días** de prueba. Se cobrará **$Y** el **DD/MM/YYYY**."
-  - Botón **"Cancelar suscripción"** siempre visible (también en `active`), abre modal de confirmación → llama `manage-subscription`.
-- En `MiSuscripcionPage` / `SubscriptionCard`: mostrar fecha exacta del próximo cobro, estado de cancelación programada y permitir reactivar antes del fin del periodo (`cancel_at_period_end=false`).
-
-## Texto legal del checkbox
-
-> "Inicio mis 7 días de prueba gratis. Entiendo que el **DD/MM/YYYY** se cobrará automáticamente **$X MXN** a mi tarjeta por el plan {Mensual/Semestral/Anual} y que **ese primer cargo no es reembolsable**. Puedo cancelar en cualquier momento desde mi panel; si cancelo después del cobro conservo el acceso hasta el final del periodo pagado."
-
-## Migración de cuentas existentes
-
-- Trials actuales sin tarjeta: banner pidiendo capturar tarjeta para continuar al terminar su prueba; no se cortan retroactivamente pero no podrán seguir sin tarjeta al vencer.
-- Cuentas `active` actuales: sin cambio.
-
-## Detalles técnicos
-
-- `trial_settings.end_behavior.missing_payment_method = 'cancel'` ya impide entrar sin tarjeta; aun así forzamos captura en Checkout.
-- El webhook es la **fuente de verdad** del estado; nunca confiar en el cliente.
-- Idempotencia por `event.id` (ya implementada en `stripe-webhook`).
-
-## Archivos a tocar
-
-- `src/pages/SignupPage.tsx`
-- `src/pages/CompletarRegistroPage.tsx` (nueva) + ruta en `App.tsx`
-- `src/components/TrialCountdownBanner.tsx` (nueva), montada en `DashboardPage.tsx`
-- `src/pages/MiSuscripcionPage.tsx`, `src/components/SubscriptionCard.tsx`
-- Guard en `AuthContext` para bloquear acceso sin tarjeta
-- `supabase/functions/create-checkout/index.ts`
-- `supabase/functions/stripe-webhook/index.ts`
-- `supabase/functions/manage-subscription/index.ts`
-- `supabase/functions/billing-notify/index.ts` (sólo ajustar texto cuando hay tarjeta)
-- Nueva migración con las columnas de `subscriptions`
+- Entrega ENT-0795 (Distribuidora MG): la línea con `cantidad_entregada=0` debe desaparecer de "Productos" y el total mostrado/cobrado debe bajar al monto real entregado.
+- Entrega con todas las líneas surtidas: comportamiento idéntico al actual.
