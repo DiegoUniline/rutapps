@@ -489,9 +489,34 @@ export default function PuntoVentaPage() {
 
   const handleScan = useCallback((code: string) => {
     if (!productos) return;
+    const norm = code.trim().toLowerCase();
+
+    // 1) Buscar primero por código de barras de PRESENTACIÓN
+    const pres = (allPresentaciones ?? []).find(p =>
+      p.activo && p.codigo_barras && p.codigo_barras.trim().toLowerCase() === norm
+    );
+    if (pres) {
+      const prod = productos.find(p => p.id === pres.producto_id);
+      if (prod) {
+        const factor = Number(pres.factor_base) || 1;
+        const precioUnit = pres.precio_especial != null
+          ? Number(pres.precio_especial) / factor
+          : getProductPricing(prod).unitPrice;
+        addGranelLine(prod, {
+          cantidadBase: factor,
+          precioUnitario: precioUnit,
+          paquetes: 1,
+          presentacion: { id: pres.id, nombre: pres.nombre, factor_base: factor },
+        });
+        toast.success(`${prod.nombre} · ${pres.nombre} agregado`);
+        return;
+      }
+    }
+
+    // 2) Buscar por código o clave alterna del producto
     const found = productos.find(p =>
-      p.codigo.toLowerCase() === code.toLowerCase() ||
-      (p.clave_alterna && p.clave_alterna.toLowerCase() === code.toLowerCase())
+      p.codigo.toLowerCase() === norm ||
+      (p.clave_alterna && p.clave_alterna.toLowerCase() === norm)
     );
     if (found) {
       addToCart(found);
@@ -499,7 +524,7 @@ export default function PuntoVentaPage() {
     } else {
       toast.error(`Producto no encontrado: ${code}`);
     }
-  }, [productos, cart]);
+  }, [productos, allPresentaciones, cart]);
 
   const filteredProducts = useMemo(() => {
     if (!productos) return [];
