@@ -156,6 +156,36 @@ export default function RutaEntregaDetalle() {
   const ventaTotal = venta?.total ?? 0;
   const ventaSaldo = venta?.saldo_pendiente ?? 0;
 
+  // Only lines that were actually surtidas (cantidad_entregada > 0) are part of THIS delivery.
+  // Lines with cantidad_entregada = 0 (sin stock) must not appear in Productos nor be charged.
+  const lineasSurtidas = (lineas as any[]).filter(l => Number(l.cantidad_entregada ?? 0) > 0);
+  const lineasNoSurtidas = (lineas as any[]).length - lineasSurtidas.length;
+
+  // Recompute totals for this delivery only, prorating taxes per venta_linea by delivered ratio.
+  const computeEntregaTotals = () => {
+    let subtotal = 0, iva = 0, ieps = 0, total = 0;
+    for (const l of lineasSurtidas) {
+      const cant = Number(l.cantidad_entregada) || 0;
+      const vl = ventaLineas.find((v: any) => v.producto_id === l.producto_id);
+      const precio = vl?.precio_unitario ?? l.productos?.precio_principal ?? 0;
+      if (vl) {
+        const pedida = Number(vl.cantidad) || 0;
+        const ratio = pedida > 0 ? cant / pedida : 0;
+        subtotal += Number(vl.subtotal ?? precio * cant) * (pedida > 0 ? ratio : 1);
+        iva += Number(vl.iva_monto ?? 0) * ratio;
+        ieps += Number(vl.ieps_monto ?? 0) * ratio;
+        total += Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1);
+      } else {
+        const t = precio * cant;
+        subtotal += t;
+        total += t;
+      }
+    }
+    return { subtotal, iva, ieps, total };
+  };
+  const entregaTotals = computeEntregaTotals();
+  const entregaTotal = entregaTotals.total;
+
   const handleMarcarClick = () => {
     // If there's any pending balance (this order or other accounts), prompt
     const tienePendiente = (ventaSaldo > 0) || (totalSaldoPendiente > 0);
