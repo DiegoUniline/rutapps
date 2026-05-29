@@ -156,6 +156,36 @@ export default function RutaEntregaDetalle() {
   const ventaTotal = venta?.total ?? 0;
   const ventaSaldo = venta?.saldo_pendiente ?? 0;
 
+  // Only lines that were actually surtidas (cantidad_entregada > 0) are part of THIS delivery.
+  // Lines with cantidad_entregada = 0 (sin stock) must not appear in Productos nor be charged.
+  const lineasSurtidas = (lineas as any[]).filter(l => Number(l.cantidad_entregada ?? 0) > 0);
+  const lineasNoSurtidas = (lineas as any[]).length - lineasSurtidas.length;
+
+  // Recompute totals for this delivery only, prorating taxes per venta_linea by delivered ratio.
+  const computeEntregaTotals = () => {
+    let subtotal = 0, iva = 0, ieps = 0, total = 0;
+    for (const l of lineasSurtidas) {
+      const cant = Number(l.cantidad_entregada) || 0;
+      const vl = ventaLineas.find((v: any) => v.producto_id === l.producto_id);
+      const precio = vl?.precio_unitario ?? l.productos?.precio_principal ?? 0;
+      if (vl) {
+        const pedida = Number(vl.cantidad) || 0;
+        const ratio = pedida > 0 ? cant / pedida : 0;
+        subtotal += Number(vl.subtotal ?? precio * cant) * (pedida > 0 ? ratio : 1);
+        iva += Number(vl.iva_monto ?? 0) * ratio;
+        ieps += Number(vl.ieps_monto ?? 0) * ratio;
+        total += Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1);
+      } else {
+        const t = precio * cant;
+        subtotal += t;
+        total += t;
+      }
+    }
+    return { subtotal, iva, ieps, total };
+  };
+  const entregaTotals = computeEntregaTotals();
+  const entregaTotal = entregaTotals.total;
+
   const handleMarcarClick = () => {
     // If there's any pending balance (this order or other accounts), prompt
     const tienePendiente = (ventaSaldo > 0) || (totalSaldoPendiente > 0);
@@ -253,21 +283,38 @@ export default function RutaEntregaDetalle() {
       notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
     };
 
+    // Build ticket only with lines that were surtidas in THIS delivery.
+    const surtidoPorProd = new Map<string, number>();
+    for (const l of lineasSurtidas) {
+      surtidoPorProd.set(l.producto_id, (surtidoPorProd.get(l.producto_id) ?? 0) + (Number(l.cantidad_entregada) || 0));
+    }
+
     if (venta) {
+      const lineasTicket = ventaLineas
+        .filter((l: any) => (surtidoPorProd.get(l.producto_id) ?? 0) > 0)
+        .map((l: any) => {
+          const pedida = Number(l.cantidad) || 0;
+          const surtida = surtidoPorProd.get(l.producto_id) ?? 0;
+          const ratio = pedida > 0 ? surtida / pedida : 1;
+          return {
+            nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+            cantidad: surtida,
+            precio: l.precio_unitario ?? 0,
+            total: Number(l.total ?? 0) * ratio,
+            iva_monto: Number(l.iva_monto ?? 0) * ratio,
+            ieps_monto: Number(l.ieps_monto ?? 0) * ratio,
+            descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+            producto_id: l.producto_id,
+          };
+        });
       return {
         empresa: empresaData,
         folio: venta.folio ?? 'Sin folio',
         fecha: fmtDate(venta.fecha),
         clienteNombre,
-        lineas: ventaLineas.map((l: any) => ({
-          nombre: l.productos?.nombre ?? l.descripcion ?? '—',
-          cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
-          iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
-          descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
-          producto_id: l.producto_id,
-        })),
-        subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
-        ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
+        lineas: lineasTicket,
+        subtotal: entregaTotals.subtotal, iva: entregaTotals.iva,
+        ieps: entregaTotals.ieps, total: entregaTotal,
         condicionPago: venta.condicion_pago,
         metodoPago: (venta as any).metodo_pago ?? undefined,
         saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
@@ -277,20 +324,15 @@ export default function RutaEntregaDetalle() {
       };
     }
 
-    // Fallback: build ticket from entrega lines
-    const entregaTotal = lineas.reduce((acc: number, l: any) => {
-      const precio = l.productos?.precio_principal ?? 0;
-      return acc + (precio * (l.cantidad_entregada || l.cantidad_pedida || 0));
-    }, 0);
-
+    // Fallback: build ticket from entrega lines (surtidas only)
     return {
       empresa: empresaData,
       folio: entrega.folio ?? 'Sin folio',
       fecha: fmtDate(entrega.fecha),
       clienteNombre,
-      lineas: lineas.map((l: any) => {
+      lineas: lineasSurtidas.map((l: any) => {
         const precio = l.productos?.precio_principal ?? 0;
-        const cant = l.cantidad_entregada || l.cantidad_pedida || 0;
+        const cant = Number(l.cantidad_entregada) || 0;
         return {
           nombre: l.productos?.nombre ?? '—',
           cantidad: cant, precio, total: precio * cant,
@@ -430,8 +472,11 @@ export default function RutaEntregaDetalle() {
 
         {venta && (
           <div className="bg-card border border-border rounded-xl p-4 text-center">
-            <p className="text-[11px] text-muted-foreground mb-1">Total del pedido</p>
-            <p className="text-[28px] font-bold text-foreground">{fmt(ventaTotal)}</p>
+            <p className="text-[11px] text-muted-foreground mb-1">Total de esta entrega</p>
+            <p className="text-[28px] font-bold text-foreground">{fmt(entregaTotal)}</p>
+            {entregaTotal < ventaTotal - 0.005 && (
+              <p className="text-[11px] text-muted-foreground mt-1">Pedido original: {fmt(ventaTotal)}</p>
+            )}
             {ventaSaldo > 0 && <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {fmt(ventaSaldo)}</p>}
           </div>
         )}
@@ -464,20 +509,23 @@ export default function RutaEntregaDetalle() {
         </div>
 
         <div>
-          <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineas.length})</h2>
+          <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineasSurtidas.length})</h2>
           <div className="bg-card border border-border rounded-xl divide-y divide-border">
-            {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
-            {lineas.map((l: any) => {
+            {lineasSurtidas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos surtidos</p>}
+            {lineasSurtidas.map((l: any) => {
               const prod = l.productos;
               const vl = ventaLineas.find((vl: any) => vl.producto_id === l.producto_id);
               const precio = vl?.precio_unitario ?? prod?.precio_principal ?? 0;
-              const total = vl?.total ?? (precio * (l.cantidad_entregada || l.cantidad_pedida));
+              const cant = Number(l.cantidad_entregada) || 0;
+              const pedida = Number(vl?.cantidad) || 0;
+              const ratio = pedida > 0 ? cant / pedida : 1;
+              const total = vl ? Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1) : precio * cant;
               return (
                 <div key={l.id} className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{prod?.nombre ?? '—'}</p>
-                      <p className="text-[11px] text-muted-foreground">{l.cantidad_entregada || l.cantidad_pedida} × {fmt(precio)}</p>
+                      <p className="text-[11px] text-muted-foreground">{cant} × {fmt(precio)}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-[14px] font-bold text-foreground">{fmt(total)}</p>
@@ -488,6 +536,11 @@ export default function RutaEntregaDetalle() {
               );
             })}
           </div>
+          {lineasNoSurtidas > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1.5 px-1">
+              {lineasNoSurtidas} producto{lineasNoSurtidas === 1 ? '' : 's'} sin surtir no se {lineasNoSurtidas === 1 ? 'incluye' : 'incluyen'} en esta entrega
+            </p>
+          )}
         </div>
 
         {venta && (
@@ -498,10 +551,10 @@ export default function RutaEntregaDetalle() {
                 {showTax ? 'Con impuestos' : 'Sin impuestos'}
               </button>
             </div>
-            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{fmt(venta.subtotal ?? 0)}</span></div>}
-            {showTax && (venta.iva_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{fmt(venta.iva_total ?? 0)}</span></div>}
-            {showTax && ((venta as any).ieps_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{fmt((venta as any).ieps_total ?? 0)}</span></div>}
-            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(ventaTotal)}</span></div>
+            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.subtotal)}</span></div>}
+            {showTax && entregaTotals.iva > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.iva)}</span></div>}
+            {showTax && entregaTotals.ieps > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.ieps)}</span></div>}
+            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(entregaTotal)}</span></div>
           </div>
         )}
 
