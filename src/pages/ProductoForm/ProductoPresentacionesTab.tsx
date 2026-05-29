@@ -94,11 +94,11 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
           <thead className="bg-accent/40 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="text-left px-3 py-2 w-8"></th>
+              <th className="text-left px-3 py-2 w-40">Código de barras</th>
               <th className="text-left px-3 py-2">Nombre</th>
               <th className="text-right px-3 py-2 w-32">Factor ({unidad})</th>
               <th className="text-right px-3 py-2 w-40">Precio especial</th>
               <th className="text-right px-3 py-2 w-32">Calculado</th>
-              <th className="text-left px-3 py-2 w-40">Código de barras</th>
               <th className="text-center px-3 py-2 w-16" title="Principal para stock">Stock</th>
               <th className="text-center px-3 py-2 w-20">Activo</th>
               <th className="px-3 py-2 w-10"></th>
@@ -116,6 +116,15 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
               return (
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-2 text-muted-foreground"><GripVertical className="h-3.5 w-3.5" /></td>
+                  <td className="px-3 py-1.5">
+                    <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
+                      placeholder="—"
+                      defaultValue={p.codigo_barras ?? ''}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim() || null;
+                        if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate(p, { codigo_barras: v });
+                      }} />
+                  </td>
                   <td className="px-3 py-1.5">
                     <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1"
                       defaultValue={p.nombre}
@@ -135,15 +144,6 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
                       }} />
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{symbol}{calc.toFixed(2)}</td>
-                  <td className="px-3 py-1.5">
-                    <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
-                      placeholder="—"
-                      defaultValue={p.codigo_barras ?? ''}
-                      onBlur={(e) => {
-                        const v = e.target.value.trim() || null;
-                        if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate(p, { codigo_barras: v });
-                      }} />
-                  </td>
                   <td className="px-3 py-1.5 text-center">
                     <button
                       type="button"
@@ -171,6 +171,12 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
             <tr>
               <td></td>
               <td className="px-3 py-2">
+                <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm font-mono"
+                  placeholder="Cód. barras"
+                  value={draft.codigo_barras}
+                  onChange={(e) => setDraft({ ...draft, codigo_barras: e.target.value })} />
+              </td>
+              <td className="px-3 py-2">
                 <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm"
                   placeholder={esGranel ? `Paquete X ${unidad}` : 'Caja 12 pz'}
                   value={draft.nombre}
@@ -188,14 +194,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
                   value={draft.precio_especial}
                   onChange={(e) => setDraft({ ...draft, precio_especial: e.target.value })} />
               </td>
-              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground text-xs">—</td>
-              <td className="px-3 py-2">
-                <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm font-mono"
-                  placeholder="Cód. barras"
-                  value={draft.codigo_barras}
-                  onChange={(e) => setDraft({ ...draft, codigo_barras: e.target.value })} />
-              </td>
-              <td colSpan={2}></td>
+              <td colSpan={3}></td>
               <td className="text-center">
                 <button onClick={onAdd} disabled={saveMut.isPending}
                   className="bg-primary text-primary-foreground rounded p-1.5 hover:bg-primary/90 disabled:opacity-50">
