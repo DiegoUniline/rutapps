@@ -551,10 +551,10 @@ export default function RutaEntregaDetalle() {
                 {showTax ? 'Con impuestos' : 'Sin impuestos'}
               </button>
             </div>
-            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{fmt(venta.subtotal ?? 0)}</span></div>}
-            {showTax && (venta.iva_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{fmt(venta.iva_total ?? 0)}</span></div>}
-            {showTax && ((venta as any).ieps_total ?? 0) > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{fmt((venta as any).ieps_total ?? 0)}</span></div>}
-            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(ventaTotal)}</span></div>
+            {showTax && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">Subtotal</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.subtotal)}</span></div>}
+            {showTax && entregaTotals.iva > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IVA</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.iva)}</span></div>}
+            {showTax && entregaTotals.ieps > 0 && <div className="flex justify-between"><span className="text-[12px] text-muted-foreground">IEPS</span><span className="text-[13px] text-foreground">{fmt(entregaTotals.ieps)}</span></div>}
+            <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{fmt(entregaTotal)}</span></div>
           </div>
         )}
 
