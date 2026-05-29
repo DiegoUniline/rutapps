@@ -45,10 +45,11 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
         nombre: draft.nombre.trim(),
         factor_base: factor,
         precio_especial: precio,
+        codigo_barras: draft.codigo_barras.trim() || null,
         orden: items.length,
         activo: true,
       });
-      setDraft({ nombre: '', factor_base: '', precio_especial: '' });
+      setDraft({ nombre: '', factor_base: '', precio_especial: '', codigo_barras: '' });
       toast.success('Presentación agregada');
     } catch (e: any) { toast.error(e.message); }
   };
