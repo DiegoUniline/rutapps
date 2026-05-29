@@ -138,6 +138,9 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
         <p>
           Marca con la <Star className="h-3 w-3 inline text-warning" /> la presentación <strong>principal</strong> para mostrar el desglose de stock (ej. "1 caja + 6 pz") en listados, inventario y POS.
         </p>
+        <p>
+          Puedes capturar <strong>varios códigos de barras</strong> por presentación (escribe un alias y presiona Enter). Útil cuando la marca cambia el código pero es el mismo tamaño/presentación.
+        </p>
       </div>
 
       <div className="overflow-x-auto">
