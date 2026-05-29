@@ -98,6 +98,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
               <th className="text-right px-3 py-2 w-32">Factor ({unidad})</th>
               <th className="text-right px-3 py-2 w-40">Precio especial</th>
               <th className="text-right px-3 py-2 w-32">Calculado</th>
+              <th className="text-left px-3 py-2 w-40">Código de barras</th>
               <th className="text-center px-3 py-2 w-16" title="Principal para stock">Stock</th>
               <th className="text-center px-3 py-2 w-20">Activo</th>
               <th className="px-3 py-2 w-10"></th>
