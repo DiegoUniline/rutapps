@@ -283,21 +283,38 @@ export default function RutaEntregaDetalle() {
       notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
     };
 
+    // Build ticket only with lines that were surtidas in THIS delivery.
+    const surtidoPorProd = new Map<string, number>();
+    for (const l of lineasSurtidas) {
+      surtidoPorProd.set(l.producto_id, (surtidoPorProd.get(l.producto_id) ?? 0) + (Number(l.cantidad_entregada) || 0));
+    }
+
     if (venta) {
+      const lineasTicket = ventaLineas
+        .filter((l: any) => (surtidoPorProd.get(l.producto_id) ?? 0) > 0)
+        .map((l: any) => {
+          const pedida = Number(l.cantidad) || 0;
+          const surtida = surtidoPorProd.get(l.producto_id) ?? 0;
+          const ratio = pedida > 0 ? surtida / pedida : 1;
+          return {
+            nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+            cantidad: surtida,
+            precio: l.precio_unitario ?? 0,
+            total: Number(l.total ?? 0) * ratio,
+            iva_monto: Number(l.iva_monto ?? 0) * ratio,
+            ieps_monto: Number(l.ieps_monto ?? 0) * ratio,
+            descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+            producto_id: l.producto_id,
+          };
+        });
       return {
         empresa: empresaData,
         folio: venta.folio ?? 'Sin folio',
         fecha: fmtDate(venta.fecha),
         clienteNombre,
-        lineas: ventaLineas.map((l: any) => ({
-          nombre: l.productos?.nombre ?? l.descripcion ?? '—',
-          cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
-          iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
-          descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
-          producto_id: l.producto_id,
-        })),
-        subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
-        ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
+        lineas: lineasTicket,
+        subtotal: entregaTotals.subtotal, iva: entregaTotals.iva,
+        ieps: entregaTotals.ieps, total: entregaTotal,
         condicionPago: venta.condicion_pago,
         metodoPago: (venta as any).metodo_pago ?? undefined,
         saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
@@ -307,20 +324,15 @@ export default function RutaEntregaDetalle() {
       };
     }
 
-    // Fallback: build ticket from entrega lines
-    const entregaTotal = lineas.reduce((acc: number, l: any) => {
-      const precio = l.productos?.precio_principal ?? 0;
-      return acc + (precio * (l.cantidad_entregada || l.cantidad_pedida || 0));
-    }, 0);
-
+    // Fallback: build ticket from entrega lines (surtidas only)
     return {
       empresa: empresaData,
       folio: entrega.folio ?? 'Sin folio',
       fecha: fmtDate(entrega.fecha),
       clienteNombre,
-      lineas: lineas.map((l: any) => {
+      lineas: lineasSurtidas.map((l: any) => {
         const precio = l.productos?.precio_principal ?? 0;
-        const cant = l.cantidad_entregada || l.cantidad_pedida || 0;
+        const cant = Number(l.cantidad_entregada) || 0;
         return {
           nombre: l.productos?.nombre ?? '—',
           cantidad: cant, precio, total: precio * cant,
