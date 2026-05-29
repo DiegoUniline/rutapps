@@ -472,8 +472,11 @@ export default function RutaEntregaDetalle() {
 
         {venta && (
           <div className="bg-card border border-border rounded-xl p-4 text-center">
-            <p className="text-[11px] text-muted-foreground mb-1">Total del pedido</p>
-            <p className="text-[28px] font-bold text-foreground">{fmt(ventaTotal)}</p>
+            <p className="text-[11px] text-muted-foreground mb-1">Total de esta entrega</p>
+            <p className="text-[28px] font-bold text-foreground">{fmt(entregaTotal)}</p>
+            {entregaTotal < ventaTotal - 0.005 && (
+              <p className="text-[11px] text-muted-foreground mt-1">Pedido original: {fmt(ventaTotal)}</p>
+            )}
             {ventaSaldo > 0 && <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {fmt(ventaSaldo)}</p>}
           </div>
         )}
