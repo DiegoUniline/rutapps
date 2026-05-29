@@ -4037,7 +4037,6 @@ export type Database = {
         Row: {
           activo: boolean
           codigo_barras: string | null
-          codigos_barras: string[]
           created_at: string
           empresa_id: string
           es_principal_stock: boolean
@@ -4052,7 +4051,6 @@ export type Database = {
         Insert: {
           activo?: boolean
           codigo_barras?: string | null
-          codigos_barras?: string[]
           created_at?: string
           empresa_id: string
           es_principal_stock?: boolean
@@ -4067,7 +4065,6 @@ export type Database = {
         Update: {
           activo?: boolean
           codigo_barras?: string | null
-          codigos_barras?: string[]
           created_at?: string
           empresa_id?: string
           es_principal_stock?: boolean

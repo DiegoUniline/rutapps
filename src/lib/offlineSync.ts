@@ -49,7 +49,7 @@ const COLUMN_SELECTS: Record<string, string> = {
   tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',
   tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
   stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
-  producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,codigos_barras,es_principal_stock,orden,activo,created_at',
+  producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
 };
 
 // Friendly names for UI display
