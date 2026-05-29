@@ -1,8 +1,59 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, Star } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePresentaciones, useSavePresentacion, useDeletePresentacion, type ProductoPresentacion } from '@/hooks/usePresentaciones';
 import { useCurrency } from '@/hooks/useCurrency';
+
+/** Celda con código principal + alias (chips). Usado por filas existentes. */
+function BarcodesCell({ p, onUpdate }: { p: ProductoPresentacion; onUpdate: (patch: Partial<ProductoPresentacion>) => void }) {
+  const [aliasDraft, setAliasDraft] = useState('');
+  const aliases = p.codigos_barras ?? [];
+  const addAlias = () => {
+    const v = aliasDraft.trim();
+    if (!v) return;
+    const exists = (p.codigo_barras ?? '').toLowerCase() === v.toLowerCase()
+      || aliases.some(a => a.toLowerCase() === v.toLowerCase());
+    if (exists) { setAliasDraft(''); return; }
+    onUpdate({ codigos_barras: [...aliases, v] });
+    setAliasDraft('');
+  };
+  const removeAlias = (v: string) => {
+    onUpdate({ codigos_barras: aliases.filter(a => a !== v) });
+  };
+  return (
+    <div className="space-y-1">
+      <input
+        className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
+        placeholder="—"
+        defaultValue={p.codigo_barras ?? ''}
+        onBlur={(e) => {
+          const v = e.target.value.trim() || null;
+          if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate({ codigo_barras: v });
+        }}
+      />
+      {aliases.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {aliases.map(a => (
+            <span key={a} className="inline-flex items-center gap-1 bg-accent/60 border border-border rounded px-1.5 py-0.5 text-[10px] font-mono">
+              {a}
+              <button type="button" onClick={() => removeAlias(a)} className="hover:text-destructive">
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        className="w-full bg-transparent border-b border-dashed border-border/60 focus:border-primary outline-none py-0.5 font-mono text-[10px] text-muted-foreground placeholder:text-muted-foreground/60"
+        placeholder="+ alias (Enter)"
+        value={aliasDraft}
+        onChange={(e) => setAliasDraft(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
+        onBlur={addAlias}
+      />
+    </div>
+  );
+}
 
 interface Props {
   productoId?: string;
