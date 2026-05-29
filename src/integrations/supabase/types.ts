@@ -4036,6 +4036,7 @@ export type Database = {
       producto_presentaciones: {
         Row: {
           activo: boolean
+          codigo_barras: string | null
           created_at: string
           empresa_id: string
           es_principal_stock: boolean
@@ -4049,6 +4050,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          codigo_barras?: string | null
           created_at?: string
           empresa_id: string
           es_principal_stock?: boolean
@@ -4062,6 +4064,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          codigo_barras?: string | null
           created_at?: string
           empresa_id?: string
           es_principal_stock?: boolean
