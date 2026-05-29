@@ -229,7 +229,15 @@ function AppRoutes() {
 
   useEffect(() => {
     if (!user?.id || subscription.loading || subscription.status !== 'active') return;
-    localStorage.removeItem(`uniline_subscription_state:${user.id}`);
+    // Limpia TODAS las variantes del cache de suscripción para este usuario
+    // (la clave real es `uniline_subscription_state:userId:empresaId`).
+    try {
+      const prefix = `uniline_subscription_state:${user.id}`;
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) localStorage.removeItem(k);
+      }
+    } catch { /* ignore */ }
     queryClient.invalidateQueries({ queryKey: ['factura-pendiente', profile?.empresa_id] });
   }, [user?.id, profile?.empresa_id, subscription.loading, subscription.status, queryClient]);
 
