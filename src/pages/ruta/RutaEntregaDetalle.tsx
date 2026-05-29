@@ -509,20 +509,23 @@ export default function RutaEntregaDetalle() {
         </div>
 
         <div>
-          <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineas.length})</h2>
+          <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineasSurtidas.length})</h2>
           <div className="bg-card border border-border rounded-xl divide-y divide-border">
-            {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
-            {lineas.map((l: any) => {
+            {lineasSurtidas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos surtidos</p>}
+            {lineasSurtidas.map((l: any) => {
               const prod = l.productos;
               const vl = ventaLineas.find((vl: any) => vl.producto_id === l.producto_id);
               const precio = vl?.precio_unitario ?? prod?.precio_principal ?? 0;
-              const total = vl?.total ?? (precio * (l.cantidad_entregada || l.cantidad_pedida));
+              const cant = Number(l.cantidad_entregada) || 0;
+              const pedida = Number(vl?.cantidad) || 0;
+              const ratio = pedida > 0 ? cant / pedida : 1;
+              const total = vl ? Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1) : precio * cant;
               return (
                 <div key={l.id} className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{prod?.nombre ?? '—'}</p>
-                      <p className="text-[11px] text-muted-foreground">{l.cantidad_entregada || l.cantidad_pedida} × {fmt(precio)}</p>
+                      <p className="text-[11px] text-muted-foreground">{cant} × {fmt(precio)}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-[14px] font-bold text-foreground">{fmt(total)}</p>
@@ -533,6 +536,11 @@ export default function RutaEntregaDetalle() {
               );
             })}
           </div>
+          {lineasNoSurtidas > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1.5 px-1">
+              {lineasNoSurtidas} producto{lineasNoSurtidas === 1 ? '' : 's'} sin surtir no se {lineasNoSurtidas === 1 ? 'incluye' : 'incluyen'} en esta entrega
+            </p>
+          )}
         </div>
 
         {venta && (
