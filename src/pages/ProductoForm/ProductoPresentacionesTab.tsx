@@ -20,8 +20,8 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
 
   const unidad = esGranel ? unidadGranel : 'pz';
 
-  const [draft, setDraft] = useState<{ nombre: string; factor_base: string; precio_especial: string }>({
-    nombre: '', factor_base: '', precio_especial: '',
+  const [draft, setDraft] = useState<{ nombre: string; factor_base: string; precio_especial: string; codigo_barras: string }>({
+    nombre: '', factor_base: '', precio_especial: '', codigo_barras: '',
   });
 
   if (isNew) {
