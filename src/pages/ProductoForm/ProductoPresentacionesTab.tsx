@@ -106,10 +106,10 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={9} className="text-center py-4 text-muted-foreground">Cargando...</td></tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Sin presentaciones. Agrega la primera abajo.</td></tr>
+              <tr><td colSpan={9} className="text-center py-4 text-muted-foreground">Sin presentaciones. Agrega la primera abajo.</td></tr>
             )}
             {items.map(p => {
               const calc = p.precio_especial ?? (precioPorUnidadBase * Number(p.factor_base));
