@@ -132,12 +132,12 @@ export function useSubscription(): SubscriptionState {
   }
 
   if (data) {
-    // If we only have cached/placeholder data (fresh query still in-flight),
-    // don't trust isBlocked:false from the cache — a user may have been
-    // suspended since the cache was written.  Report loading:true so the
-    // app shows the loader until fresh data arrives.
-    if (isPlaceholderData && !data.isBlocked) {
-      return { loading: true, ...data };
+    // Never trust placeholder/cached data for blocking decisions — neither
+    // a stale isBlocked:false (user may have just been suspended) nor a
+    // stale isBlocked:true (user may have just paid and been reactivated).
+    // Always wait for fresh server data to drive the suspended modal.
+    if (isPlaceholderData) {
+      return { loading: true, ...data, isBlocked: false };
     }
     return { loading: false, ...data };
   }
