@@ -1130,15 +1130,8 @@ export default function PuntoVentaPage() {
                 onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && search.trim()) {
-                    const found = productos?.find(p =>
-                      p.codigo.toLowerCase() === search.trim().toLowerCase() ||
-                      (p.clave_alterna && p.clave_alterna.toLowerCase() === search.trim().toLowerCase())
-                    );
-                    if (found) {
-                      addToCart(found);
-                      setSearch('');
-                      toast.success(`${found.nombre} agregado`);
-                    }
+                    handleScan(search.trim());
+                    setSearch('');
                   }
                 }}
                 autoFocus={!isMobile}
