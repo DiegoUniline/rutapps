@@ -117,6 +117,15 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-2 text-muted-foreground"><GripVertical className="h-3.5 w-3.5" /></td>
                   <td className="px-3 py-1.5">
+                    <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
+                      placeholder="—"
+                      defaultValue={p.codigo_barras ?? ''}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim() || null;
+                        if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate(p, { codigo_barras: v });
+                      }} />
+                  </td>
+                  <td className="px-3 py-1.5">
                     <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1"
                       defaultValue={p.nombre}
                       onBlur={(e) => e.target.value !== p.nombre && onUpdate(p, { nombre: e.target.value })} />
@@ -135,15 +144,6 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
                       }} />
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{symbol}{calc.toFixed(2)}</td>
-                  <td className="px-3 py-1.5">
-                    <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
-                      placeholder="—"
-                      defaultValue={p.codigo_barras ?? ''}
-                      onBlur={(e) => {
-                        const v = e.target.value.trim() || null;
-                        if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate(p, { codigo_barras: v });
-                      }} />
-                  </td>
                   <td className="px-3 py-1.5 text-center">
                     <button
                       type="button"
