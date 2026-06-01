@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
         const numUsuariosMetaRaw = invoice.metadata?.num_usuarios || subMetadata.num_usuarios || null;
         const { data: subRow } = await supabase
           .from("subscriptions")
-          .select("current_period_end, max_usuarios, plan_id")
+          .select("id, current_period_end, max_usuarios, plan_id")
           .eq("empresa_id", empresa_id)
           .maybeSingle();
         const numUsuariosMeta = numUsuariosMetaRaw ? parseInt(numUsuariosMetaRaw, 10) : (subRow?.max_usuarios ?? null);
