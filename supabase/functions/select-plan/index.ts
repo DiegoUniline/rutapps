@@ -151,7 +151,6 @@ Deno.serve(async (req) => {
       // Always set period end to the 1st of next month
       current_period_end: primeroDeSiguiente.toISOString(),
     };
-    if (plan.stripe_price_id) subUpdatePayload.stripe_price_id = plan.stripe_price_id;
 
     const { error: subErr } = await supabase
       .from("subscriptions")
@@ -253,7 +252,16 @@ Deno.serve(async (req) => {
             subscription_data: {
               billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
               proration_behavior: "create_prorations",
-              metadata: { empresa_id: profile.empresa_id },
+              metadata: {
+                empresa_id: profile.empresa_id,
+                plan_id: plan.id,
+                num_usuarios: String(qty),
+              },
+            },
+            metadata: {
+              empresa_id: profile.empresa_id,
+              plan_id: plan.id,
+              num_usuarios: String(qty),
             },
             success_url: `${origin}/dashboard?checkout=success`,
             cancel_url: `${origin}/mi-suscripcion?checkout=cancelled`,
@@ -263,6 +271,14 @@ Deno.serve(async (req) => {
           }
           const session = await stripe.checkout.sessions.create(sessionParams);
           stripeCheckoutUrl = session.url || "";
+          await supabase
+            .from("subscriptions")
+            .update({
+              ultimo_checkout_session_id: session.id,
+              stripe_customer_id: customerId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("empresa_id", profile.empresa_id);
           log("Stripe checkout URL generated", { url: stripeCheckoutUrl.slice(0, 60) });
         }
       } catch (e) {
