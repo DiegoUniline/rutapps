@@ -51,4 +51,9 @@ verify_jwt = false
 [functions.get-stripe-invoice-url]
 verify_jwt = false
 
+[functions.void-stripe-invoice]
+verify_jwt = false
+
+
+
 
