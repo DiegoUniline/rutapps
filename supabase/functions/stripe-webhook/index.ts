@@ -115,21 +115,33 @@ Deno.serve(async (req) => {
       }
       // ── Flujo viejo: pago inmediato (upgrades) ──
       else if (empresa_id && session.payment_status === "paid") {
-        const venc = lastDayOfCurrentMonthMx();
+        const stripeSub = stripeSubId ? await stripe.subscriptions.retrieve(stripeSubId) : null;
+        const currentPeriodEnd = stripeSub ? getSubPeriodEnd(stripeSub) : null;
+        const venc = currentPeriodEnd?.slice(0, 10) ?? lastDayOfCurrentMonthMx();
+        const planIdMeta = session.metadata?.plan_id || stripeSub?.metadata?.plan_id || null;
+        const numUsuariosMeta = session.metadata?.num_usuarios || stripeSub?.metadata?.num_usuarios || null;
+        const paymentMethodId = stripeSub
+          ? getStripeId(stripeSub.default_payment_method)
+          : null;
+        const updatePayload: any = {
+          status: "active",
+          fecha_vencimiento: venc,
+          acceso_bloqueado: false,
+          stripe_subscription_id: stripeSubId ?? undefined,
+          stripe_customer_id: stripeCustomerId ?? undefined,
+          current_period_end: currentPeriodEnd ?? venc,
+          cancel_at_period_end: stripeSub?.cancel_at_period_end ?? false,
+          updated_at: new Date().toISOString(),
+        };
+        if (planIdMeta) updatePayload.plan_id = planIdMeta;
+        if (numUsuariosMeta) updatePayload.max_usuarios = parseInt(numUsuariosMeta, 10);
+        if (paymentMethodId) updatePayload.stripe_payment_method_id = paymentMethodId;
         const { error } = await supabase
           .from("subscriptions")
-          .update({
-            status: "active",
-            fecha_vencimiento: venc,
-            acceso_bloqueado: false,
-            stripe_subscription_id: stripeSubId ?? undefined,
-            stripe_customer_id: stripeCustomerId ?? undefined,
-            current_period_end: venc,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq("empresa_id", empresa_id);
         if (error) log("Update error", error);
-        else log("Access granted via checkout", { empresa_id, venc });
+        else log("Access granted via checkout", { empresa_id, venc, stripeSubId, planIdMeta, numUsuariosMeta });
       }
     }
 
@@ -139,8 +151,7 @@ Deno.serve(async (req) => {
       const empresa_id = sub.metadata?.empresa_id;
       if (empresa_id) {
         const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
-        const cpeUnix = (sub.items.data[0] as any)?.current_period_end;
-        const cpe = cpeUnix ? new Date(cpeUnix * 1000).toISOString() : null;
+        const cpe = getSubPeriodEnd(sub);
         const paymentMethodId = typeof sub.default_payment_method === "string"
           ? sub.default_payment_method
           : (sub.default_payment_method as any)?.id ?? null;
