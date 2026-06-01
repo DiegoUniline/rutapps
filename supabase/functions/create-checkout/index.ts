@@ -84,6 +84,30 @@ Deno.serve(async (req) => {
       customerId = newCustomer.id;
     }
 
+    // ── Guard: prevent duplicate subscriptions ──
+    // If this customer already has an active/trialing/past_due subscription for the
+    // same empresa, do NOT create a second one. Stripe would otherwise happily double-charge.
+    const existingSubs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+    });
+    const liveStatuses = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
+    const dupe = existingSubs.data.find(
+      (s) => liveStatuses.has(s.status) && s.metadata?.empresa_id === empresa_id
+    );
+    if (dupe) {
+      log("Duplicate subscription blocked", { existing: dupe.id, status: dupe.status });
+      return new Response(
+        JSON.stringify({
+          error:
+            "Ya tienes una suscripción activa. Administra tu plan o método de pago desde 'Mi Suscripción' en lugar de crear otra.",
+          existing_subscription_id: dupe.id,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── Compute first-period charge ──
     // Reglas:
     //  • Días 1-4 del mes: cobra MES COMPLETO.
