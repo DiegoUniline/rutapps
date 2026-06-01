@@ -23,6 +23,23 @@ function lastDayOfCurrentMonthMx(): string {
   return last.toISOString().slice(0, 10);
 }
 
+function getStripeId(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+function getSubPeriodEnd(sub: Stripe.Subscription): string | null {
+  const itemEnd = (sub.items.data[0] as any)?.current_period_end;
+  const subEnd = (sub as any)?.current_period_end;
+  const unix = itemEnd ?? subEnd ?? sub.trial_end;
+  return unix ? new Date(unix * 1000).toISOString() : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
