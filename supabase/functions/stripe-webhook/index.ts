@@ -23,6 +23,23 @@ function lastDayOfCurrentMonthMx(): string {
   return last.toISOString().slice(0, 10);
 }
 
+function getStripeId(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+function getSubPeriodEnd(sub: Stripe.Subscription): string | null {
+  const itemEnd = (sub.items.data[0] as any)?.current_period_end;
+  const subEnd = (sub as any)?.current_period_end;
+  const unix = itemEnd ?? subEnd ?? sub.trial_end;
+  return unix ? new Date(unix * 1000).toISOString() : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -98,21 +115,33 @@ Deno.serve(async (req) => {
       }
       // ── Flujo viejo: pago inmediato (upgrades) ──
       else if (empresa_id && session.payment_status === "paid") {
-        const venc = lastDayOfCurrentMonthMx();
+        const stripeSub = stripeSubId ? await stripe.subscriptions.retrieve(stripeSubId) : null;
+        const currentPeriodEnd = stripeSub ? getSubPeriodEnd(stripeSub) : null;
+        const venc = currentPeriodEnd?.slice(0, 10) ?? lastDayOfCurrentMonthMx();
+        const planIdMeta = session.metadata?.plan_id || stripeSub?.metadata?.plan_id || null;
+        const numUsuariosMeta = session.metadata?.num_usuarios || stripeSub?.metadata?.num_usuarios || null;
+        const paymentMethodId = stripeSub
+          ? getStripeId(stripeSub.default_payment_method)
+          : null;
+        const updatePayload: any = {
+          status: "active",
+          fecha_vencimiento: venc,
+          acceso_bloqueado: false,
+          stripe_subscription_id: stripeSubId ?? undefined,
+          stripe_customer_id: stripeCustomerId ?? undefined,
+          current_period_end: currentPeriodEnd ?? venc,
+          cancel_at_period_end: stripeSub?.cancel_at_period_end ?? false,
+          updated_at: new Date().toISOString(),
+        };
+        if (planIdMeta) updatePayload.plan_id = planIdMeta;
+        if (numUsuariosMeta) updatePayload.max_usuarios = parseInt(numUsuariosMeta, 10);
+        if (paymentMethodId) updatePayload.stripe_payment_method_id = paymentMethodId;
         const { error } = await supabase
           .from("subscriptions")
-          .update({
-            status: "active",
-            fecha_vencimiento: venc,
-            acceso_bloqueado: false,
-            stripe_subscription_id: stripeSubId ?? undefined,
-            stripe_customer_id: stripeCustomerId ?? undefined,
-            current_period_end: venc,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq("empresa_id", empresa_id);
         if (error) log("Update error", error);
-        else log("Access granted via checkout", { empresa_id, venc });
+        else log("Access granted via checkout", { empresa_id, venc, stripeSubId, planIdMeta, numUsuariosMeta });
       }
     }
 
@@ -122,8 +151,7 @@ Deno.serve(async (req) => {
       const empresa_id = sub.metadata?.empresa_id;
       if (empresa_id) {
         const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
-        const cpeUnix = (sub.items.data[0] as any)?.current_period_end;
-        const cpe = cpeUnix ? new Date(cpeUnix * 1000).toISOString() : null;
+        const cpe = getSubPeriodEnd(sub);
         const paymentMethodId = typeof sub.default_payment_method === "string"
           ? sub.default_payment_method
           : (sub.default_payment_method as any)?.id ?? null;
@@ -162,6 +190,7 @@ Deno.serve(async (req) => {
         : (invoice as any).subscription?.id;
 
       let empresa_id: string | null = invoice.metadata?.empresa_id ?? null;
+      let stripeSubForInvoice: Stripe.Subscription | null = null;
       if (!empresa_id && stripeSubId) {
         const { data } = await supabase
           .from("subscriptions")
@@ -169,6 +198,10 @@ Deno.serve(async (req) => {
           .eq("stripe_subscription_id", stripeSubId)
           .maybeSingle();
         empresa_id = data?.empresa_id ?? null;
+      }
+      if (!empresa_id && stripeSubId) {
+        stripeSubForInvoice = await stripe.subscriptions.retrieve(stripeSubId);
+        empresa_id = stripeSubForInvoice.metadata?.empresa_id ?? null;
       }
       if (!empresa_id && stripeCustomerId) {
         const { data } = await supabase
@@ -180,12 +213,14 @@ Deno.serve(async (req) => {
       }
 
       if (empresa_id) {
+        const subMetadata = stripeSubForInvoice?.metadata ?? {};
         const mesesRaw = invoice.metadata?.meses;
         const meses = mesesRaw ? parseInt(mesesRaw, 10) : 0;
-        const planIdMeta = invoice.metadata?.plan_id || null;
+        const planIdMeta = invoice.metadata?.plan_id || subMetadata.plan_id || null;
         const descPctMeta = invoice.metadata?.descuento_pct ? parseFloat(invoice.metadata.descuento_pct) : null;
         const descPermanente = invoice.metadata?.descuento_permanente === "1";
-        const numUsuariosMeta = invoice.metadata?.num_usuarios ? parseInt(invoice.metadata.num_usuarios, 10) : null;
+        const numUsuariosMetaRaw = invoice.metadata?.num_usuarios || subMetadata.num_usuarios || null;
+        const numUsuariosMeta = numUsuariosMetaRaw ? parseInt(numUsuariosMetaRaw, 10) : null;
 
         let venc: string;
         if (meses > 0) {
@@ -201,20 +236,22 @@ Deno.serve(async (req) => {
           extended.setMonth(extended.getMonth() + meses);
           venc = extended.toISOString().slice(0, 10);
         } else {
-          const cpe = stripeSubId
-            ? (await stripe.subscriptions.retrieve(stripeSubId)).items.data[0]?.current_period_end
-            : null;
-          venc = cpe ? new Date(cpe * 1000).toISOString().slice(0, 10) : lastDayOfCurrentMonthMx();
+          if (!stripeSubForInvoice && stripeSubId) {
+            stripeSubForInvoice = await stripe.subscriptions.retrieve(stripeSubId);
+          }
+          const cpe = stripeSubForInvoice ? getSubPeriodEnd(stripeSubForInvoice) : null;
+          venc = cpe ? cpe.slice(0, 10) : lastDayOfCurrentMonthMx();
         }
 
         const updatePayload: any = {
           status: "active",
           fecha_vencimiento: venc,
           acceso_bloqueado: false,
-          current_period_end: venc,
+          current_period_end: stripeSubForInvoice ? getSubPeriodEnd(stripeSubForInvoice) ?? venc : venc,
           updated_at: new Date().toISOString(),
         };
         if (stripeCustomerId) updatePayload.stripe_customer_id = stripeCustomerId;
+        if (stripeSubId) updatePayload.stripe_subscription_id = stripeSubId;
         if (planIdMeta) updatePayload.plan_id = planIdMeta;
         if (numUsuariosMeta) updatePayload.max_usuarios = numUsuariosMeta;
         if (descPermanente && descPctMeta !== null) {
