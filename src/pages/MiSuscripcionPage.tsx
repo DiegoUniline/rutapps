@@ -543,15 +543,24 @@ export default function MiSuscripcionPage() {
       //    redirect to its hosted_invoice_url instead of generating a new checkout —
       //    otherwise the customer would be charged twice.
       if (factura.stripe_invoice_id) {
-        const { data: invData, error: invErr } = await supabase.functions.invoke('list-invoices');
+        const { data: invData, error: invErr } = await supabase.functions.invoke('get-stripe-invoice-url', {
+          body: { invoice_id: factura.stripe_invoice_id },
+        });
         if (invErr) throw invErr;
-        const match = (invData?.invoices || []).find(
-          (i: any) => i.id === factura.stripe_invoice_id
-        );
-        if (match?.hosted_invoice_url && (match.status === 'open' || match.status === 'draft')) {
-          window.location.href = match.hosted_invoice_url;
+        if (invData?.status === 'paid') {
+          await supabase
+            .from('facturas')
+            .update({ estado: 'pagada', fecha_pago: new Date().toISOString() })
+            .eq('id', factura.id);
+          toast.success('Factura marcada como pagada');
+          loadData();
           return;
         }
+        if (invData?.hosted_invoice_url && invData.status !== 'void') {
+          window.location.href = invData.hosted_invoice_url;
+          return;
+        }
+        throw new Error('No se encontró un enlace de pago válido para esta factura');
       }
 
       // 2) Fallback: legacy flow — create a fresh checkout session
@@ -631,14 +640,7 @@ export default function MiSuscripcionPage() {
     : null;
 
   // Pending invoices
-  const coveredUntil = subData?.status === 'active' && subData?.current_period_end
-    ? new Date(subData.current_period_end)
-    : null;
-  const pendingFacturas = facturas.filter(f => {
-    if (f.estado !== 'pendiente') return false;
-    if (!coveredUntil || !f.periodo_fin) return true;
-    return new Date(f.periodo_fin) > coveredUntil;
-  });
+  const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
 
   const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
