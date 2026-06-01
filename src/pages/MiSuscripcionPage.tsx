@@ -66,6 +66,15 @@ const PERIODO_LABEL: Record<string, string> = {
   anual: 'Anual',
 };
 
+// Parse 'YYYY-MM-DD' as local-midnight Date (avoids UTC TZ shift).
+function parseDateOnly(s: string | null | undefined): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export default function MiSuscripcionPage() {
   const { user, empresa } = useAuth();
   const sub = useSubscription();
@@ -750,7 +759,7 @@ export default function MiSuscripcionPage() {
               {subData.current_period_start && sub.status !== 'trial' && (
                 <div className="flex items-center gap-2 text-sm">
                   <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Último pago:</span>
+                  <span className="text-muted-foreground">Periodo actual:</span>
                   <span className="font-medium text-foreground">
                     {fmtDateLongMx(subData.current_period_start)}
                   </span>
@@ -1049,7 +1058,7 @@ export default function MiSuscripcionPage() {
                             </div>
                           </td>
                           <td className="py-2.5 px-2 text-muted-foreground text-xs">
-                            {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
+                            {format(parseDateOnly(f.periodo_inicio) ?? new Date(), 'dd MMM', { locale: es })} — {format(parseDateOnly(f.periodo_fin) ?? new Date(), 'dd MMM yy', { locale: es })}
                           </td>
                           <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
                           <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
