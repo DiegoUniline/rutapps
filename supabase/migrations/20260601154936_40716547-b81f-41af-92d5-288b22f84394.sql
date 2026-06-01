@@ -1,0 +1,1 @@
+DELETE FROM public.facturas WHERE stripe_invoice_id = 'in_1TdJkwCUpJnsv7ilwNkuJGS7';
