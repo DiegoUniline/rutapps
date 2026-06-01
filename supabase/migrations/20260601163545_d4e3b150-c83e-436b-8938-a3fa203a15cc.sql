@@ -1,0 +1,1 @@
+UPDATE public.facturas SET stripe_invoice_id = NULL WHERE id = '7b95e53c-bc9f-4bf2-abf8-a87558c4940a';
