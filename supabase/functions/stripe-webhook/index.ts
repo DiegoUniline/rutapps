@@ -40,6 +40,16 @@ function getSubPeriodEnd(sub: Stripe.Subscription): string | null {
   return unix ? new Date(unix * 1000).toISOString() : null;
 }
 
+function getInvoicePeriod(invoice: Stripe.Invoice): { inicio: string; fin: string } {
+  const linePeriod = invoice.lines?.data?.[0]?.period;
+  const start = linePeriod?.start ?? (invoice as any).period_start ?? invoice.created;
+  const end = linePeriod?.end ?? (invoice as any).period_end ?? invoice.created;
+  return {
+    inicio: new Date(start * 1000).toISOString().slice(0, 10),
+    fin: new Date(end * 1000).toISOString().slice(0, 10),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -220,15 +230,15 @@ Deno.serve(async (req) => {
         const descPctMeta = invoice.metadata?.descuento_pct ? parseFloat(invoice.metadata.descuento_pct) : null;
         const descPermanente = invoice.metadata?.descuento_permanente === "1";
         const numUsuariosMetaRaw = invoice.metadata?.num_usuarios || subMetadata.num_usuarios || null;
-        const numUsuariosMeta = numUsuariosMetaRaw ? parseInt(numUsuariosMetaRaw, 10) : null;
+        const { data: subRow } = await supabase
+          .from("subscriptions")
+          .select("current_period_end, max_usuarios, plan_id")
+          .eq("empresa_id", empresa_id)
+          .maybeSingle();
+        const numUsuariosMeta = numUsuariosMetaRaw ? parseInt(numUsuariosMetaRaw, 10) : (subRow?.max_usuarios ?? null);
 
         let venc: string;
         if (meses > 0) {
-          const { data: subRow } = await supabase
-            .from("subscriptions")
-            .select("current_period_end")
-            .eq("empresa_id", empresa_id)
-            .maybeSingle();
           const today = nowInMx();
           const currentEnd = subRow?.current_period_end ? new Date(subRow.current_period_end) : today;
           const base = currentEnd > today ? currentEnd : today;
@@ -266,6 +276,31 @@ Deno.serve(async (req) => {
           .eq("empresa_id", empresa_id);
 
         if (invoice.id) {
+          const { count } = await supabase
+            .from("facturas")
+            .select("id", { count: "exact", head: true })
+            .eq("stripe_invoice_id", invoice.id);
+
+          if (!count) {
+            const periodo = getInvoicePeriod(invoice);
+            const total = (invoice.total ?? invoice.amount_paid ?? invoice.amount_due ?? 0) / 100;
+            await supabase.from("facturas").insert({
+              empresa_id,
+              suscripcion_id: subRow?.id ?? null,
+              periodo_inicio: periodo.inicio,
+              periodo_fin: periodo.fin,
+              num_usuarios: numUsuariosMeta ?? 1,
+              precio_unitario: numUsuariosMeta ? total / numUsuariosMeta : total,
+              subtotal: total,
+              total,
+              estado: "pagada",
+              fecha_emision: invoice.created ? new Date(invoice.created * 1000).toISOString() : new Date().toISOString(),
+              fecha_pago: new Date().toISOString(),
+              stripe_invoice_id: invoice.id,
+              es_prorrateo: false,
+            });
+          }
+
           await supabase
             .from("facturas")
             .update({
