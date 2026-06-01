@@ -48,3 +48,7 @@ verify_jwt = false
 [functions.partner-welcome]
 verify_jwt = false
 
+[functions.get-stripe-invoice-url]
+verify_jwt = false
+
+

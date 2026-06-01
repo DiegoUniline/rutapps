@@ -60,12 +60,24 @@ export default function PagarPage() {
     document.head.appendChild(s);
   }, []);
 
-  // Fetch payment link data
+  // Fetch payment link data — Stripe invoices (in_*) redirect to hosted_invoice_url
   useEffect(() => {
     if (!token) return;
     (async () => {
       setLoading(true);
       try {
+        // ── Stripe invoice short link ──
+        if (/^in_[A-Za-z0-9]+$/.test(token)) {
+          const { data, error: fnErr } = await supabase.functions.invoke('get-stripe-invoice-url', {
+            body: { invoice_id: token },
+          });
+          if (fnErr || data?.error) throw new Error(data?.error || fnErr?.message || 'Factura no encontrada');
+          if (!data?.hosted_invoice_url) throw new Error('Esta factura no tiene página de pago disponible');
+          window.location.replace(data.hosted_invoice_url);
+          return;
+        }
+
+        // ── OpenPay subscription link ──
         const { data, error: fnErr } = await supabase.functions.invoke('openpay-public', {
           body: { action: 'get_link', token },
         });
@@ -82,6 +94,7 @@ export default function PagarPage() {
       }
     })();
   }, [token]);
+
 
   const formatCardNumber = useCallback((val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 16);
