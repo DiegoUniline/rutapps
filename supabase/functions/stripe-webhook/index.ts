@@ -162,6 +162,8 @@ Deno.serve(async (req) => {
       if (empresa_id) {
         const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
         const cpe = getSubPeriodEnd(sub);
+        const cpsUnix = (sub.items.data[0] as any)?.current_period_start ?? (sub as any)?.current_period_start;
+        const cps = cpsUnix ? new Date(cpsUnix * 1000).toISOString().slice(0, 10) : null;
         const paymentMethodId = typeof sub.default_payment_method === "string"
           ? sub.default_payment_method
           : (sub.default_payment_method as any)?.id ?? null;
@@ -183,6 +185,7 @@ Deno.serve(async (req) => {
           payload.current_period_end = cpe;
           payload.fecha_vencimiento = cpe.slice(0, 10);
         }
+        if (cps) payload.current_period_start = cps;
         if (paymentMethodId) payload.stripe_payment_method_id = paymentMethodId;
 
         await supabase.from("subscriptions").update(payload).eq("empresa_id", empresa_id);
@@ -253,10 +256,12 @@ Deno.serve(async (req) => {
           venc = cpe ? cpe.slice(0, 10) : lastDayOfCurrentMonthMx();
         }
 
+        const periodoFromInvoice = getInvoicePeriod(invoice);
         const updatePayload: any = {
           status: "active",
           fecha_vencimiento: venc,
           acceso_bloqueado: false,
+          current_period_start: periodoFromInvoice.inicio,
           current_period_end: stripeSubForInvoice ? getSubPeriodEnd(stripeSubForInvoice) ?? venc : venc,
           updated_at: new Date().toISOString(),
         };

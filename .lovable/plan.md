@@ -1,40 +1,104 @@
-# Corrección: productos no surtidos en vista móvil de Entrega
+## Diagnóstico
 
-## Problema
+Revisé la BD, el webhook de Stripe, `billing-cycle` y `MiSuscripcionPage`. **Los períodos en la base de datos están correctos** — el problema es de presentación y un campo desincronizado.
 
-En `RutaEntregaDetalle.tsx`:
-- La sección **Productos** muestra todas las `entrega_lineas`, incluidas las que tienen `cantidad_entregada = 0` (no surtidas por falta de stock).
-- El **total mostrado y el botón "Cobrar"** usan `venta.total` (total original del pedido), por lo que cobran también el producto no surtido.
+### Datos reales en BD para esta empresa
+```
+subscriptions.current_period_start = 2026-05-01   ← desactualizado
+subscriptions.current_period_end   = 2026-07-01   ← correcto
+fecha_vencimiento                  = 2026-07-01   ← correcto
 
-El backend y la lógica de inventario son correctos; solo la UI móvil quedó desfasada.
+facturas:
+ FAC-00001  2026-03-23 → 2026-03-31  (prorrateo, OK)
+ FAC-00002  2026-04-01 → 2026-04-30  (OK)
+ FAC-00003  2026-05-01 → 2026-05-31  (OK)
+ FAC-00004  2026-06-01 → 2026-06-30  (OK, pagada hoy vía Stripe)
+```
 
-## Cambios (solo frontend, `src/pages/ruta/RutaEntregaDetalle.tsx`)
+### Bug 1 — Off-by-one en "Historial de facturas" (TZ shift)
+`MiSuscripcionPage.tsx` línea 1052 hace `new Date('2026-06-01')`. JavaScript lo interpreta como UTC medianoche; en hora de México (-6h) se convierte en **31 may 18:00**, y `date-fns/format` lo imprime como "31 may". Por eso ves:
+- FAC-00004: "31 may — 29 jun 26"  (debe ser 1 jun — 30 jun)
+- FAC-00003: "30 abr — 30 may"     (debe ser 1 may — 31 may)
+- FAC-00002: "31 mar — 29 abr"     (debe ser 1 abr — 30 abr)
+- FAC-00001: "22 mar — 30 mar"     (debe ser 23 mar — 31 mar)
 
-1. **Filtrar líneas no surtidas en el render de Productos**
-   - Definir `lineasSurtidas = lineas.filter(l => (l.cantidad_entregada ?? 0) > 0)`.
-   - Reemplazar el `.map` actual (línea 470) y el contador `({lineas.length})` (línea 467) para usar `lineasSurtidas`.
-   - Si hay líneas no surtidas, mostrar debajo una nota discreta tipo: *"X producto(s) sin surtir no se incluyen en esta entrega"* (estilo `text-muted-foreground text-[11px]`).
+Causa: parsear columnas tipo `DATE` con `new Date(string)` aplica zona horaria del navegador.
 
-2. **Recalcular el total real entregado**
-   - Nuevo `entregaTotal` calculado sumando, por cada línea surtida, `precio_unitario × cantidad_entregada` cruzando con `ventaLineas` por `producto_id` (fallback a `precio_principal` cuando no haya venta).
-   - Para impuestos (IVA/IEPS): prorratear desde `venta` proporcionalmente al `entregaTotal` vs `venta.total`, o sumar `iva_monto`/`ieps_monto` de cada `venta_linea` ponderado por `cantidad_entregada / cantidad_pedida`. Usar la segunda opción para precisión por línea.
+### Bug 2 — "Último pago: 1 de mayo de 2026"
+La tarjeta superior lee `subData.current_period_start`, que sigue en `2026-05-01` porque **ni el webhook de Stripe ni `select-plan` actualizan ese campo cuando renuevan**. Solo se toca `current_period_end`. Cuando se cobró hoy FAC-00004 debió quedar `current_period_start = 2026-06-01`.
 
-3. **Usar `entregaTotal` en lugar de `ventaTotal` en la UI**
-   - Header con el total grande (línea 434).
-   - Bloque "Totales" (línea 504) y subtotales/impuestos prorrateados.
-   - Botón "Cobrar" cuando aplique al monto de esta entrega.
-   - `getTicketData()` (líneas 256-278): filtrar `ventaLineas` a las que están surtidas en la entrega y ajustar `subtotal/iva/ieps/total` al `entregaTotal` para que el ticket impreso refleje sólo lo cargado.
+Adicionalmente, ese label dice "Último pago" pero realmente muestra el **inicio del período vigente**, no la fecha del último pago. Es confuso aunque estuviera actualizado.
 
-4. **Saldo de la venta**
-   - `ventaSaldo` se sigue calculando desde la venta (el saldo real del pedido lo recalcula el trigger de pagos). No se toca aquí; sólo se ajusta lo que se muestra/cobra para esta entrega específica.
+### Bug 3 — "Próximo cobro"
+`2026-07-01` es correcto ✅ (sale de `current_period_end` que sí se sincroniza bien).
 
-## Fuera de alcance
+### Lo que está bien (no tocar)
+- Flujo trial 7 días → factura prorrateada → mes completo siguiente: funcionando.
+- Cálculo de períodos en `stripe-webhook` (`getInvoicePeriod`) guarda fechas correctas.
+- `billing-cycle` se salta empresas con `stripe_subscription_id` para no duplicar facturas (correcto, Stripe emite la suya).
 
-- No se modifica el backend ni el trigger de entrega (ya corregido en la migración previa).
-- No se toca la vista de escritorio (`VentaEntregasTab.tsx`) — el usuario reportó únicamente la vista móvil.
-- No se modifican `venta.total` ni `venta.saldo_pendiente`; eso ya es responsabilidad de los triggers cuando aplique.
+---
 
-## Verificación
+## Plan de arreglo
 
-- Entrega ENT-0795 (Distribuidora MG): la línea con `cantidad_entregada=0` debe desaparecer de "Productos" y el total mostrado/cobrado debe bajar al monto real entregado.
-- Entrega con todas las líneas surtidas: comportamiento idéntico al actual.
+### 1. Parsear fechas DATE sin desplazamiento de zona horaria (frontend)
+
+En `src/pages/MiSuscripcionPage.tsx`, cambiar el renderizado del período del historial (línea ~1052) para construir la fecha como local cuando viene en formato `YYYY-MM-DD`:
+
+```ts
+// helper local
+const parseDateOnly = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d); // local midnight, sin shift
+};
+```
+
+Usarlo en el `format(...)` de `periodo_inicio` y `periodo_fin`. Resultado: FAC-00004 mostrará "1 jun — 30 jun 26".
+
+### 2. Sincronizar `current_period_start` en el webhook de Stripe
+
+En `supabase/functions/stripe-webhook/index.ts`, dentro del handler `invoice.paid / invoice.payment_succeeded`:
+
+- Extraer también el inicio del período de la línea de la factura (ya lo hace `getInvoicePeriod`).
+- Agregar al `updatePayload` de `subscriptions`:
+  ```ts
+  current_period_start: periodo.inicio  // '2026-06-01'
+  ```
+
+También en `customer.subscription.updated/created`, leer `sub.items.data[0].current_period_start` y guardarlo.
+
+### 3. Arreglar el label "Último pago"
+
+Cambiar el texto y la fuente de datos en `MiSuscripcionPage.tsx` líneas 750-757:
+- Mostrar **"Período actual:"** con `current_period_start` → `current_period_end` (más claro y honesto).
+- O alternativamente mostrar "Último pago: {fecha_pago de la última factura pagada}" leyendo de `facturas`.
+
+Recomiendo lo primero (más simple y semánticamente correcto).
+
+### 4. Backfill puntual para esta empresa
+
+```sql
+UPDATE subscriptions
+SET current_period_start = '2026-06-01'
+WHERE empresa_id = '66ac277d-c859-4d0e-beeb-f9162e3ade81';
+```
+
+Y revisar si hay otras empresas con `current_period_start` desfasado respecto a la última factura pagada y normalizarlas.
+
+### 5. Verificación
+
+- Recargar `/mi-suscripcion` y confirmar que el historial muestra "1 jun — 30 jun 26" y que "Período actual" muestra 1 jun → 1 jul.
+- Simular un nuevo `invoice.paid` (próximo 1 de julio) y confirmar que ambos campos se actualizan.
+
+---
+
+## Detalles técnicos (resumen)
+
+| Bug | Archivo | Causa | Fix |
+|---|---|---|---|
+| Fechas -1 día en historial | `MiSuscripcionPage.tsx:1052` | `new Date('YYYY-MM-DD')` parsea como UTC | parser local |
+| "Último pago" desactualizado | `stripe-webhook/index.ts` handler `invoice.paid` | no setea `current_period_start` | agregar al update |
+| Label confuso | `MiSuscripcionPage.tsx:753` | dice "Último pago" pero muestra inicio de período | renombrar a "Período actual" |
+| Empresa actual desincronizada | BD | webhook nunca lo escribió | UPDATE puntual |
+
+**Lo que NO se cambia**: lógica de prorrateo, generación de facturas mensuales en `billing-cycle`, monto cobrado por Stripe, fechas guardadas en `facturas` (ya son correctas).
