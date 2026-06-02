@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/hooks/useCurrency';
+
+const EntregaFormPage = lazy(() => import('./EntregaFormPage'));
 
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -343,6 +345,23 @@ export default function PedidoPendienteDetailPage() {
             </table>
           )}
         </div>
+
+        {/* Embedded entrega detail(s) — same controls as /logistica/entregas/:id */}
+        {entregasActivas.map((e: any) => (
+          <div key={`embed-${e.id}`} className="bg-card border border-border rounded-md overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border bg-accent/30 flex items-center justify-between">
+              <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <Truck className="h-3.5 w-3.5" /> Detalle de entrega {e.folio ?? e.id.slice(0,8)}
+              </h3>
+              <Link to={`/logistica/entregas/${e.id}`} className="text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+                Abrir en pantalla completa <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+            <Suspense fallback={<div className="p-4"><TableSkeleton rows={4} cols={3} /></div>}>
+              <EntregaFormPage entregaIdProp={e.id} embedded />
+            </Suspense>
+          </div>
+        ))}
       </div>
     </div>
   );

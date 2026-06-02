@@ -40,12 +40,13 @@ const STEPS: { key: StatusEntrega; label: string }[] = [
   { key: 'hecho', label: 'Entregado' },
 ];
 
-export default function EntregaFormPage() {
-  const { id } = useParams();
+export default function EntregaFormPage({ entregaIdProp, embedded = false }: { entregaIdProp?: string; embedded?: boolean } = {}) {
+  const params = useParams();
+  const id = entregaIdProp ?? params.id;
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
   const qc = useQueryClient();
-  const isNew = id === 'nuevo';
+  const isNew = !embedded && id === 'nuevo';
 
   const { data: entrega, isLoading } = useEntrega(isNew ? undefined : id);
   const surtirLineaMut = useSurtirLinea();
@@ -331,8 +332,9 @@ export default function EntregaFormPage() {
   });
 
   return (
-    <div className="min-h-full">
+    <div className={embedded ? '' : 'min-h-full'}>
       {/* Header */}
+      {!embedded && (
       <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5">
@@ -388,6 +390,8 @@ export default function EntregaFormPage() {
           )}
         </div>
       </div>
+      )}
+
 
       {/* Statusbar */}
       {!isNew && (
