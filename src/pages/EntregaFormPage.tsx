@@ -40,12 +40,13 @@ const STEPS: { key: StatusEntrega; label: string }[] = [
   { key: 'hecho', label: 'Entregado' },
 ];
 
-export default function EntregaFormPage() {
-  const { id } = useParams();
+export default function EntregaFormPage({ entregaIdProp, embedded = false }: { entregaIdProp?: string; embedded?: boolean } = {}) {
+  const params = useParams();
+  const id = entregaIdProp ?? params.id;
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
   const qc = useQueryClient();
-  const isNew = id === 'nuevo';
+  const isNew = !embedded && id === 'nuevo';
 
   const { data: entrega, isLoading } = useEntrega(isNew ? undefined : id);
   const surtirLineaMut = useSurtirLinea();
