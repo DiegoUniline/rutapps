@@ -82,16 +82,6 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    // Calcular billing_cycle_anchor = primer día del mes SIGUIENTE al fin del trial,
-    // en zona horaria de México (UTC-6). Así Stripe cobra proporcional al terminar la prueba
-    // y luego ancla todos los cobros al día 1 de cada mes.
-    const trialEndMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
-    const trialEndMx = new Date(new Date(trialEndMs).toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
-    const anchorYear = trialEndMx.getMonth() === 11 ? trialEndMx.getFullYear() + 1 : trialEndMx.getFullYear();
-    const anchorMonth = (trialEndMx.getMonth() + 1) % 12; // 0-indexed mes siguiente
-    // Día 1 a las 00:00 hora México = 06:00 UTC
-    const billingCycleAnchor = Math.floor(Date.UTC(anchorYear, anchorMonth, 1, 6, 0, 0) / 1000);
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -99,8 +89,6 @@ Deno.serve(async (req) => {
       line_items: [{ price: plan.stripe_price_id, quantity }],
       subscription_data: {
         trial_period_days: 7,
-        billing_cycle_anchor: billingCycleAnchor,
-        proration_behavior: "create_prorations",
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },
