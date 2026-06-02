@@ -35,7 +35,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   const [pesoOverride, setPesoOverride] = useState(''); // peso real total opcional
   const [pesoLibre, setPesoLibre] = useState('');
 
-  const unidad = producto?.unidad_granel || 'kg';
+  const unidad = producto?.unidad_granel || producto?.unidades?.abreviatura || 'pz';
   const presActivas = presentaciones.filter(p => p.activo);
 
   useEffect(() => {

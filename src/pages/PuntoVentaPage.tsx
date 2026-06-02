@@ -534,12 +534,22 @@ export default function PuntoVentaPage() {
     if (filterMarca) available = available.filter(p => (p as any).marca_id === filterMarca);
     if (!search) return available;
     const s = search.toLowerCase();
-    return available.filter(p =>
-      p.nombre.toLowerCase().includes(s) ||
-      p.codigo.toLowerCase().includes(s) ||
-      (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
-    );
-  }, [productos, search, filterClasificacion, filterMarca]);
+    return available.filter(p => {
+      if (
+        p.nombre.toLowerCase().includes(s) ||
+        p.codigo.toLowerCase().includes(s) ||
+        (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
+      ) return true;
+      // Match by presentation barcode or name
+      const pres = presByProducto.get(p.id) ?? [];
+      return pres.some(pr =>
+        pr.activo && (
+          (pr.codigo_barras && pr.codigo_barras.toLowerCase().includes(s)) ||
+          (pr.nombre && pr.nombre.toLowerCase().includes(s))
+        )
+      );
+    });
+  }, [productos, search, filterClasificacion, filterMarca, presByProducto]);
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
@@ -549,7 +559,9 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
-    if (p?.es_granel) {
+    // Si el producto es a granel, o tiene presentaciones activas, abrir el selector
+    const hasPres = (presByProducto.get(p.id) ?? []).some((x: any) => x.activo);
+    if (p?.es_granel || hasPres) {
       setGranelFor(p);
       return;
     }
@@ -616,11 +628,11 @@ export default function PuntoVentaPage() {
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: p.unidad_granel || 'kg',
+        unidad: p.es_granel ? (p.unidad_granel || 'kg') : 'pz',
         base_precio: pf.basePrecio as BasePrecioMode,
         redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: noLimit ? Infinity : stock,
-        _es_granel: true,
+        _es_granel: !!p.es_granel,
         presentacion_id: presentacion?.id ?? null,
         presentacion_nombre: presentacion?.nombre ?? null,
         presentacion_factor: presentacion?.factor_base ?? null,
@@ -1273,6 +1285,15 @@ export default function PuntoVentaPage() {
                               )}
                               <span className="font-medium text-foreground truncate">{p.nombre}</span>
                               <span className="text-[10px] text-muted-foreground font-mono shrink-0">{p.codigo}</span>
+                              {(() => {
+                                const pres = (presByProducto.get(p.id) ?? []).filter((x: any) => x.activo);
+                                if (!pres.length) return null;
+                                return (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md bg-primary/10 text-primary px-1.5 py-0.5 text-[9px] font-semibold" title={pres.map((x: any) => x.nombre).join(', ')}>
+                                    <Package className="h-2.5 w-2.5" /> {pres.length} pres.
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </td>
                           <td className="px-2 py-2 hidden sm:table-cell">
@@ -1334,7 +1355,18 @@ export default function PuntoVentaPage() {
                         </div>
                       ) : null}
                       <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                      <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                        {(() => {
+                          const pres = (presByProducto.get(p.id) ?? []).filter((x: any) => x.activo);
+                          if (!pres.length) return null;
+                          return (
+                            <span className="inline-flex items-center gap-0.5 rounded bg-primary/10 text-primary px-1 py-0 text-[8px] font-semibold" title={pres.map((x: any) => x.nombre).join(', ')}>
+                              <Package className="h-2 w-2" />{pres.length}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <div className="flex items-baseline justify-between mt-0.5">
                         <span className="text-[11px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[7px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
                         <span className={`text-[8px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
