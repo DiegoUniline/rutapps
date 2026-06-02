@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
-import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList } from 'lucide-react';
+import { useEntregasByPedido, useCrearEntrega, useEntregaExpress, calcRemainingQty } from '@/hooks/useEntregas';
+import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -16,10 +16,13 @@ import { useCurrency } from '@/hooks/useCurrency';
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
   const qc = useQueryClient();
   const crearEntrega = useCrearEntrega();
+  const entregaExpress = useEntregaExpress();
   const { fmt: fmtC } = useCurrency();
+
+
 
   // Load pedido with lines
   const { data: pedido, isLoading } = useQuery({
@@ -82,6 +85,14 @@ export default function PedidoPendienteDetailPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
 
+  // Pre-llenar almacén con el del perfil del usuario y repartidor con el vendedor del pedido
+  useEffect(() => {
+    if (!almacenId && profile?.almacen_id) setAlmacenId(profile.almacen_id);
+  }, [profile?.almacen_id]);
+  useEffect(() => {
+    if (!vendedorRutaId && pedido?.vendedor_id) setVendedorRutaId(pedido.vendedor_id);
+  }, [pedido?.vendedor_id]);
+
   const handleCrearEntrega = async () => {
     if (remaining.length === 0) { toast.info('No hay cantidades pendientes'); return; }
     try {
@@ -98,6 +109,32 @@ export default function PedidoPendienteDetailPage() {
       toast.success(`Entrega ${result.folio} creada`);
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['demanda'] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleEntregaExpress = async () => {
+    if (remaining.length === 0) { toast.info('No hay cantidades pendientes'); return; }
+    if (!almacenId) {
+      toast.error('Selecciona un almacén origen antes de despachar');
+      document.getElementById('opciones-entrega')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    try {
+      const result = await entregaExpress.mutateAsync({
+        pedidoId: pedido.id,
+        vendedorId: pedido.vendedor_id ?? undefined,
+        clienteId: pedido.cliente_id ?? undefined,
+        almacenId,
+        vendedorRutaId: vendedorRutaId || undefined,
+        lineas: remaining.map(r => ({
+          producto_id: r.producto_id,
+          cantidad_pendiente: r.cantidad_pendiente,
+        })),
+      });
+      toast.success(`⚡ Entrega ${result.folio} surtida${vendedorRutaId ? ' y asignada' : ''}`);
+      navigate(`/logistica/entregas/${result.id}`);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -134,9 +171,14 @@ export default function PedidoPendienteDetailPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {!fullyDelivered && (
-            <Button onClick={handleCrearEntrega} size="sm" disabled={crearEntrega.isPending}>
-              <Package className="h-3.5 w-3.5" /> Crear entrega
-            </Button>
+            <>
+              <Button onClick={handleCrearEntrega} size="sm" variant="outline" disabled={crearEntrega.isPending || entregaExpress.isPending}>
+                <Package className="h-3.5 w-3.5" /> Surtir parcial
+              </Button>
+              <Button onClick={handleEntregaExpress} size="sm" disabled={crearEntrega.isPending || entregaExpress.isPending}>
+                <Zap className="h-3.5 w-3.5" /> {entregaExpress.isPending ? 'Despachando…' : 'Surtir y despachar'}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -217,8 +259,8 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Create entrega options */}
         {!fullyDelivered && (
-          <div className="bg-card border border-border rounded-md p-4 space-y-3">
-            <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Opciones para nueva entrega</h3>
+          <div id="opciones-entrega" className="bg-card border border-border rounded-md p-4 space-y-3">
+            <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Almacén y repartidor para la entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="label-odoo label-required">Almacén origen</label>

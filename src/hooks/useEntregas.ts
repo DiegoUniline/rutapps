@@ -341,6 +341,91 @@ export function useCrearEntrega() {
   });
 }
 
+/** Express: Crear entrega + Surtir todas las líneas + (opcional) Asignar repartidor — un solo paso. */
+export function useEntregaExpress() {
+  const { empresa, user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ pedidoId, vendedorId, clienteId, almacenId, vendedorRutaId, lineas }: {
+      pedidoId: string;
+      vendedorId?: string;
+      clienteId?: string;
+      almacenId: string;
+      vendedorRutaId?: string;
+      lineas: { producto_id: string; unidad_id?: string; cantidad_pendiente: number }[];
+    }) => {
+      if (!almacenId) throw new Error('Selecciona un almacén origen');
+      if (lineas.length === 0) throw new Error('No hay cantidades pendientes para surtir');
+
+      let ordenEntrega = 0;
+      if (clienteId) {
+        const { data: cliente } = await supabase.from('clientes').select('orden').eq('id', clienteId).single();
+        ordenEntrega = cliente?.orden ?? 0;
+      }
+
+      const { data: entrega, error: eErr } = await supabase
+        .from('entregas')
+        .insert({
+          empresa_id: empresa!.id,
+          pedido_id: pedidoId,
+          vendedor_id: vendedorId ?? null,
+          cliente_id: clienteId ?? null,
+          almacen_id: almacenId,
+          status: 'borrador',
+          orden_entrega: ordenEntrega,
+        } as any)
+        .select('id, folio')
+        .single();
+      if (eErr) throw eErr;
+
+      const { data: lineasInsertadas, error: lErr } = await supabase
+        .from('entrega_lineas')
+        .insert(lineas.map(l => ({
+          entrega_id: entrega.id,
+          producto_id: l.producto_id,
+          unidad_id: l.unidad_id ?? null,
+          cantidad_pedida: l.cantidad_pendiente,
+          cantidad_entregada: 0,
+          hecho: false,
+        })))
+        .select('id, producto_id, cantidad_pedida');
+      if (lErr) throw lErr;
+
+      for (const l of (lineasInsertadas ?? [])) {
+        const { error } = await supabase.rpc('surtir_linea_entrega', {
+          p_linea_id: l.id,
+          p_producto_id: l.producto_id,
+          p_almacen_origen_id: almacenId,
+          p_cantidad_surtida: l.cantidad_pedida,
+          p_entrega_id: entrega.id,
+          p_empresa_id: empresa!.id,
+          p_user_id: user?.id,
+        });
+        if (error) throw new Error(error.message);
+      }
+
+      const update: any = vendedorRutaId
+        ? { status: 'asignado', vendedor_ruta_id: vendedorRutaId, fecha_asignacion: new Date().toISOString() }
+        : { status: 'surtido' };
+      await supabase.from('entregas').update(update).eq('id', entrega.id);
+
+      return entrega;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
+  });
+}
+
 export function useValidarEntrega() {
   const qc = useQueryClient();
   return useMutation({
