@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
-import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList } from 'lucide-react';
+import { useEntregasByPedido, useCrearEntrega, useEntregaExpress, calcRemainingQty } from '@/hooks/useEntregas';
+import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -12,6 +12,15 @@ import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/hooks/useCurrency';
+
+export default function PedidoPendienteDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { empresa, profile } = useAuth();
+  const qc = useQueryClient();
+  const crearEntrega = useCrearEntrega();
+  const entregaExpress = useEntregaExpress();
+  const { fmt: fmtC } = useCurrency();
 
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
