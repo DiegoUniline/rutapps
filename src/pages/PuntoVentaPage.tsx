@@ -1285,6 +1285,15 @@ export default function PuntoVentaPage() {
                               )}
                               <span className="font-medium text-foreground truncate">{p.nombre}</span>
                               <span className="text-[10px] text-muted-foreground font-mono shrink-0">{p.codigo}</span>
+                              {(() => {
+                                const pres = (presByProducto.get(p.id) ?? []).filter((x: any) => x.activo);
+                                if (!pres.length) return null;
+                                return (
+                                  <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md bg-primary/10 text-primary px-1.5 py-0.5 text-[9px] font-semibold" title={pres.map((x: any) => x.nombre).join(', ')}>
+                                    <Package className="h-2.5 w-2.5" /> {pres.length} pres.
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </td>
                           <td className="px-2 py-2 hidden sm:table-cell">
