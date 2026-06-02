@@ -390,6 +390,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           )}
         </div>
       </div>
+      )}
+
 
       {/* Statusbar */}
       {!isNew && (
