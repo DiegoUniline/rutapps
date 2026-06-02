@@ -136,7 +136,14 @@ export default function PedidoPendienteDetailPage() {
       toast.success(`⚡ Entrega ${result.folio} surtida${vendedorRutaId ? ' y asignada' : ''}`);
       navigate(`/logistica/entregas/${result.id}`);
     } catch (e: any) {
-      toast.error(e.message);
+      if (e?.entregaExistenteId) {
+        toast.error(e.message, {
+          action: { label: 'Abrir entrega', onClick: () => navigate(`/logistica/entregas/${e.entregaExistenteId}`) },
+          duration: 8000,
+        });
+      } else {
+        toast.error(e.message);
+      }
     }
   };
 
