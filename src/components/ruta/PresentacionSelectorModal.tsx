@@ -159,15 +159,17 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">
-                      Peso real total ({unidad}) <span className="normal-case font-normal text-muted-foreground/70">— opcional, si los paquetes pesan distinto</span>
-                    </label>
-                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
-                      value={pesoOverride}
-                      onChange={e => setPesoOverride(e.target.value)}
-                      className="mt-2 w-full h-11 sm:h-12 px-3 bg-card border border-border rounded-lg text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
+                  {esGranel && (
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">
+                        Peso real total ({unidad}) <span className="normal-case font-normal text-muted-foreground/70">— opcional, si los paquetes pesan distinto</span>
+                      </label>
+                      <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
+                        value={pesoOverride}
+                        onChange={e => setPesoOverride(e.target.value)}
+                        className="mt-2 w-full h-11 sm:h-12 px-3 bg-card border border-border rounded-lg text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                  )}
                 </>
               )}
             </>
