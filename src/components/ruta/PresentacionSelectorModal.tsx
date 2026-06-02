@@ -112,18 +112,20 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-          {/* Mode tabs */}
-          <div className="flex gap-1 bg-accent/40 p-1 rounded-lg">
-            <button
-              onClick={() => setMode('pres')}
-              disabled={presActivas.length === 0}
-              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
-            >Presentaciones</button>
-            <button
-              onClick={() => setMode('libre')}
-              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
-            >Peso libre</button>
-          </div>
+          {/* Mode tabs — solo si es granel mostramos peso libre */}
+          {esGranel && (
+            <div className="flex gap-1 bg-accent/40 p-1 rounded-lg">
+              <button
+                onClick={() => setMode('pres')}
+                disabled={presActivas.length === 0}
+                className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
+              >Presentaciones</button>
+              <button
+                onClick={() => setMode('libre')}
+                className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+              >Peso libre</button>
+            </div>
+          )}
 
           {mode === 'pres' && (
             <>
