@@ -632,7 +632,7 @@ export default function PuntoVentaPage() {
         base_precio: pf.basePrecio as BasePrecioMode,
         redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: noLimit ? Infinity : stock,
-        _es_granel: true,
+        _es_granel: !!p.es_granel,
         presentacion_id: presentacion?.id ?? null,
         presentacion_nombre: presentacion?.nombre ?? null,
         presentacion_factor: presentacion?.factor_base ?? null,
