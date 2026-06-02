@@ -171,9 +171,14 @@ export default function PedidoPendienteDetailPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {!fullyDelivered && (
-            <Button onClick={handleCrearEntrega} size="sm" disabled={crearEntrega.isPending}>
-              <Package className="h-3.5 w-3.5" /> Crear entrega
-            </Button>
+            <>
+              <Button onClick={handleCrearEntrega} size="sm" variant="outline" disabled={crearEntrega.isPending || entregaExpress.isPending}>
+                <Package className="h-3.5 w-3.5" /> Surtir parcial
+              </Button>
+              <Button onClick={handleEntregaExpress} size="sm" disabled={crearEntrega.isPending || entregaExpress.isPending}>
+                <Zap className="h-3.5 w-3.5" /> {entregaExpress.isPending ? 'Despachando…' : 'Surtir y despachar'}
+              </Button>
+            </>
           )}
         </div>
       </div>
