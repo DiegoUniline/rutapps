@@ -85,6 +85,14 @@ export default function PedidoPendienteDetailPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
 
+  // Pre-llenar almacén con el del perfil del usuario y repartidor con el vendedor del pedido
+  useEffect(() => {
+    if (!almacenId && profile?.almacen_id) setAlmacenId(profile.almacen_id);
+  }, [profile?.almacen_id]);
+  useEffect(() => {
+    if (!vendedorRutaId && pedido?.vendedor_id) setVendedorRutaId(pedido.vendedor_id);
+  }, [pedido?.vendedor_id]);
+
   const handleCrearEntrega = async () => {
     if (remaining.length === 0) { toast.info('No hay cantidades pendientes'); return; }
     try {
@@ -101,6 +109,32 @@ export default function PedidoPendienteDetailPage() {
       toast.success(`Entrega ${result.folio} creada`);
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['demanda'] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleEntregaExpress = async () => {
+    if (remaining.length === 0) { toast.info('No hay cantidades pendientes'); return; }
+    if (!almacenId) {
+      toast.error('Selecciona un almacén origen antes de despachar');
+      document.getElementById('opciones-entrega')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    try {
+      const result = await entregaExpress.mutateAsync({
+        pedidoId: pedido.id,
+        vendedorId: pedido.vendedor_id ?? undefined,
+        clienteId: pedido.cliente_id ?? undefined,
+        almacenId,
+        vendedorRutaId: vendedorRutaId || undefined,
+        lineas: remaining.map(r => ({
+          producto_id: r.producto_id,
+          cantidad_pendiente: r.cantidad_pendiente,
+        })),
+      });
+      toast.success(`⚡ Entrega ${result.folio} surtida${vendedorRutaId ? ' y asignada' : ''}`);
+      navigate(`/logistica/entregas/${result.id}`);
     } catch (e: any) {
       toast.error(e.message);
     }
