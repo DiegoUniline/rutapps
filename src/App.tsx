@@ -159,7 +159,8 @@ const queryClient = new QueryClient({
       retry: 1,
     },
     mutations: {
-      onError: (error) => {
+      onError: (error: any) => {
+        if (error?.handled) return;
         showAppError(error);
       },
     },

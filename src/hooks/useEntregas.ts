@@ -367,6 +367,7 @@ export function useEntregaExpress() {
       if (existente) {
         const err: any = new Error(`Este pedido ya tiene una entrega activa (${existente.folio ?? existente.id.slice(0,8)}) en estado "${existente.status}". Abre esa entrega o cancélala antes de crear una nueva.`);
         err.entregaExistenteId = existente.id;
+        err.handled = true;
         throw err;
       }
 
