@@ -559,9 +559,10 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
-    // Si el producto es a granel, o tiene presentaciones activas, abrir el selector
+    // Abrir selector solo si el producto vende por presentaciones (y tiene activas) o es a granel
     const hasPres = (presByProducto.get(p.id) ?? []).some((x: any) => x.activo);
-    if (p?.es_granel || hasPres) {
+    const usaPres = !!p?.usa_presentaciones && hasPres;
+    if (p?.es_granel || usaPres) {
       setGranelFor(p);
       return;
     }
