@@ -357,6 +357,19 @@ export function useEntregaExpress() {
       if (!almacenId) throw new Error('Selecciona un almacén origen');
       if (lineas.length === 0) throw new Error('No hay cantidades pendientes para surtir');
 
+      // Evitar duplicado: si ya existe una entrega activa para este pedido, reutilizarla / avisar
+      const { data: existente } = await supabase
+        .from('entregas')
+        .select('id, folio, status')
+        .eq('pedido_id', pedidoId)
+        .in('status', ['borrador', 'asignado', 'cargado'])
+        .maybeSingle();
+      if (existente) {
+        const err: any = new Error(`Este pedido ya tiene una entrega activa (${existente.folio ?? existente.id.slice(0,8)}) en estado "${existente.status}". Abre esa entrega o cancélala antes de crear una nueva.`);
+        err.entregaExistenteId = existente.id;
+        throw err;
+      }
+
       let ordenEntrega = 0;
       if (clienteId) {
         const { data: cliente } = await supabase.from('clientes').select('orden').eq('id', clienteId).single();
