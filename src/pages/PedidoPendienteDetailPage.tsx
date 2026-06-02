@@ -22,13 +22,7 @@ export default function PedidoPendienteDetailPage() {
   const entregaExpress = useEntregaExpress();
   const { fmt: fmtC } = useCurrency();
 
-export default function PedidoPendienteDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { empresa } = useAuth();
-  const qc = useQueryClient();
-  const crearEntrega = useCrearEntrega();
-  const { fmt: fmtC } = useCurrency();
+
 
   // Load pedido with lines
   const { data: pedido, isLoading } = useQuery({
