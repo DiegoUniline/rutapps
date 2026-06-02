@@ -198,7 +198,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, precio_sugerido_publico, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio')
+        .select('id, codigo, nombre, precio_principal, precio_sugerido_publico, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel, usa_listas_precio, usa_presentaciones')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -559,9 +559,10 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
-    // Si el producto es a granel, o tiene presentaciones activas, abrir el selector
+    // Abrir selector solo si el producto vende por presentaciones (y tiene activas) o es a granel
     const hasPres = (presByProducto.get(p.id) ?? []).some((x: any) => x.activo);
-    if (p?.es_granel || hasPres) {
+    const usaPres = !!p?.usa_presentaciones && hasPres;
+    if (p?.es_granel || usaPres) {
       setGranelFor(p);
       return;
     }

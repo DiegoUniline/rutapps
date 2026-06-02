@@ -35,7 +35,10 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   const [pesoOverride, setPesoOverride] = useState(''); // peso real total opcional
   const [pesoLibre, setPesoLibre] = useState('');
 
-  const unidad = producto?.unidad_granel || producto?.unidades?.abreviatura || 'pz';
+  const unidad = producto?.es_granel
+    ? (producto?.unidad_granel || producto?.unidades?.abreviatura || 'kg')
+    : (producto?.unidades?.abreviatura || 'pz');
+  const esGranel = !!producto?.es_granel;
   const presActivas = presentaciones.filter(p => p.activo);
 
   useEffect(() => {
@@ -43,8 +46,11 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
     if (presActivas.length > 0) {
       setMode('pres');
       setPresId(presActivas[0].id);
-    } else {
+    } else if (esGranel) {
       setMode('libre');
+      setPresId(null);
+    } else {
+      setMode('pres');
       setPresId(null);
     }
     setPaquetes('1');
@@ -106,18 +112,20 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-          {/* Mode tabs */}
-          <div className="flex gap-1 bg-accent/40 p-1 rounded-lg">
-            <button
-              onClick={() => setMode('pres')}
-              disabled={presActivas.length === 0}
-              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
-            >Presentaciones</button>
-            <button
-              onClick={() => setMode('libre')}
-              className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
-            >Peso libre</button>
-          </div>
+          {/* Mode tabs — solo si es granel mostramos peso libre */}
+          {esGranel && (
+            <div className="flex gap-1 bg-accent/40 p-1 rounded-lg">
+              <button
+                onClick={() => setMode('pres')}
+                disabled={presActivas.length === 0}
+                className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'pres' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'} disabled:opacity-40`}
+              >Presentaciones</button>
+              <button
+                onClick={() => setMode('libre')}
+                className={`flex-1 py-2 sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-md transition-colors ${mode === 'libre' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+              >Peso libre</button>
+            </div>
+          )}
 
           {mode === 'pres' && (
             <>
@@ -151,15 +159,17 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">
-                      Peso real total ({unidad}) <span className="normal-case font-normal text-muted-foreground/70">— opcional, si los paquetes pesan distinto</span>
-                    </label>
-                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
-                      value={pesoOverride}
-                      onChange={e => setPesoOverride(e.target.value)}
-                      className="mt-2 w-full h-11 sm:h-12 px-3 bg-card border border-border rounded-lg text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
+                  {esGranel && (
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">
+                        Peso real total ({unidad}) <span className="normal-case font-normal text-muted-foreground/70">— opcional, si los paquetes pesan distinto</span>
+                      </label>
+                      <input type="number" inputMode="decimal" step="0.001" min="0" placeholder={`Sugerido: ${fmtQty(paqNum * factor)}`}
+                        value={pesoOverride}
+                        onChange={e => setPesoOverride(e.target.value)}
+                        className="mt-2 w-full h-11 sm:h-12 px-3 bg-card border border-border rounded-lg text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                  )}
                 </>
               )}
             </>
