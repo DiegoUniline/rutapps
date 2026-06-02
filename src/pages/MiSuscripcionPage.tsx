@@ -1317,6 +1317,28 @@ export default function MiSuscripcionPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!deleteFacturaDialog} onOpenChange={(open) => !open && setDeleteFacturaDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Eliminar factura
+            </DialogTitle>
+            <DialogDescription>
+              ¿Eliminar la factura <strong>{deleteFacturaDialog?.numero_factura || deleteFacturaDialog?.id}</strong>? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFacturaDialog(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteFacturaDialog && handleDeleteFactura(deleteFacturaDialog)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Eliminar definitivamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ─── Dialog: Payment Method ─── */}
       <Dialog open={showPayMethod} onOpenChange={setShowPayMethod}>
         <DialogContent className="sm:max-w-md">
