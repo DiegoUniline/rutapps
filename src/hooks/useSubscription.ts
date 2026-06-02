@@ -85,16 +85,15 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
     // When super admin overrides to another empresa, evaluate isBlocked
     // as if they were a regular user so they see the real experience.
     const skipBlockBypass = isSuperAdmin && isOverride;
-    // Bloqueo: respeta acceso_bloqueado solo si NO hay cobertura real
-    // (evita falsos bloqueos cuando facturación quedó marcada pero ya pagaron)
-    const isBlocked = (skipBlockBypass || !isSuperAdmin) && !tieneCobertura && (
-      sub.acceso_bloqueado === true ||
-      sub.status === 'suspended' ||
-      sub.status === 'cancelada' ||
+    // Suspensión/cancelación manual siempre bloquea, aunque exista una fecha futura.
+    // Vencimientos automáticos sí respetan cobertura para evitar falsos bloqueos tras pago.
+    const blockedByAdmin = sub.acceso_bloqueado === true || ['suspended', 'cancelled', 'cancelada'].includes(sub.status || '');
+    const blockedByOverdue = !tieneCobertura && (
       (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
       (sub.status === 'trial' && daysLeft !== null && daysLeft < -3) ||
       (sub.status === 'gracia' && daysLeft !== null && daysLeft < -3)
     );
+    const isBlocked = (skipBlockBypass || !isSuperAdmin) && (blockedByAdmin || blockedByOverdue);
 
     const state = {
       status: sub.status,
