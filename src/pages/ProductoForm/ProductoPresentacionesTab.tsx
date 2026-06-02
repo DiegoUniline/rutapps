@@ -23,6 +23,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
   const [draft, setDraft] = useState<{ nombre: string; factor_base: string; precio_especial: string; codigo_barras: string }>({
     nombre: '', factor_base: '', precio_especial: '', codigo_barras: '',
   });
+  const [duplicateErrs, setDuplicateErrs] = useState<Record<string, boolean>>({});
 
   if (isNew) {
     return (
@@ -32,12 +33,36 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
     );
   }
 
+  const codigoDuplicadoLocal = (codigo: string, excludeId?: string) => {
+    const c = codigo.trim().toLowerCase();
+    if (!c) return false;
+    return items.some(p => p.id !== excludeId && (p.codigo_barras?.trim().toLowerCase() === c));
+  };
+
+  const handleSupabaseError = (e: any) => {
+    const msg = e?.message || String(e);
+    if (/uq_presentaciones_codigo_barras|codigo_barras.*duplicate|violates.*unique.*codigo/i.test(msg)) {
+      toast.error('Código de barras duplicado. Ya existe otra presentación con este código.', {
+        description: 'Cada presentación debe tener un código único en toda tu empresa para evitar confusiones en el POS.',
+      });
+    } else {
+      toast.error(msg);
+    }
+  };
+
   const onAdd = async () => {
     const factor = Number(draft.factor_base);
     if (!draft.nombre.trim() || !factor || factor <= 0) {
       toast.error('Nombre y factor son obligatorios');
       return;
     }
+    const codigo = draft.codigo_barras.trim();
+    if (codigoDuplicadoLocal(codigo)) {
+      setDuplicateErrs(prev => ({ ...prev, draft: true }));
+      toast.error('Este código de barras ya existe en otra presentación de este producto');
+      return;
+    }
+    setDuplicateErrs(prev => { const n = { ...prev }; delete n.draft; return n; });
     const precio = draft.precio_especial.trim() ? Number(draft.precio_especial) : null;
     try {
       await saveMut.mutateAsync({
@@ -45,23 +70,31 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
         nombre: draft.nombre.trim(),
         factor_base: factor,
         precio_especial: precio,
-        codigo_barras: draft.codigo_barras.trim() || null,
+        codigo_barras: codigo || null,
         orden: items.length,
         activo: true,
       });
       setDraft({ nombre: '', factor_base: '', precio_especial: '', codigo_barras: '' });
       toast.success('Presentación agregada');
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { handleSupabaseError(e); }
   };
 
   const onUpdate = async (p: ProductoPresentacion, patch: Partial<ProductoPresentacion>) => {
+    if ('codigo_barras' in patch && patch.codigo_barras !== undefined) {
+      const codigo = String(patch.codigo_barras ?? '');
+      if (codigoDuplicadoLocal(codigo, p.id)) {
+        setDuplicateErrs(prev => ({ ...prev, [p.id]: true }));
+        toast.error('Este código de barras ya existe en otra presentación de este producto');
+        return;
+      }
+    }
+    setDuplicateErrs(prev => { const n = { ...prev }; delete n[p.id]; return n; });
     try { await saveMut.mutateAsync({ id: p.id, producto_id: p.producto_id, ...patch }); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { handleSupabaseError(e); }
   };
 
   const onTogglePrincipal = async (p: ProductoPresentacion) => {
     try {
-      // First unmark any other principal to avoid the unique index conflict
       const others = items.filter(x => x.id !== p.id && x.es_principal_stock);
       for (const o of others) {
         await saveMut.mutateAsync({ id: o.id, producto_id: o.producto_id, es_principal_stock: false });
@@ -76,6 +109,16 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
     catch (e: any) { toast.error(e.message); }
   };
 
+  const barcodeInputClass = (hasError: boolean) =>
+    hasError
+      ? 'w-full bg-transparent border-b border-destructive focus:border-destructive outline-none py-1 font-mono text-xs text-destructive placeholder:text-destructive/50'
+      : 'w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs';
+
+  const draftBarcodeClass = (hasError: boolean) =>
+    hasError
+      ? 'w-full bg-card border border-destructive rounded px-2 py-1 text-sm font-mono text-destructive placeholder:text-destructive/50'
+      : 'w-full bg-card border border-border rounded px-2 py-1 text-sm font-mono';
+
   return (
     <div className="space-y-4 p-1">
       <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded p-3 space-y-1">
@@ -86,6 +129,10 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
         )}
         <p>
           Marca con la <Star className="h-3 w-3 inline text-warning" /> la presentación <strong>principal</strong> para mostrar el desglose de stock (ej. "1 caja + 6 pz") en listados, inventario y POS.
+        </p>
+        <p className="flex items-center gap-1">
+          <AlertCircle className="h-3 w-3 inline text-primary" />
+          El <strong>código de barras</strong> debe ser único en toda la empresa. Si dos presentaciones comparten el mismo código, el POS no sabrá cuál elegir.
         </p>
       </div>
 
@@ -113,17 +160,21 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
             )}
             {items.map(p => {
               const calc = p.precio_especial ?? (precioPorUnidadBase * Number(p.factor_base));
+              const dupErr = duplicateErrs[p.id];
               return (
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-2 text-muted-foreground"><GripVertical className="h-3.5 w-3.5" /></td>
                   <td className="px-3 py-1.5">
-                    <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1 font-mono text-xs"
+                    <input
+                      className={barcodeInputClass(dupErr)}
                       placeholder="—"
                       defaultValue={p.codigo_barras ?? ''}
                       onBlur={(e) => {
                         const v = e.target.value.trim() || null;
                         if ((v ?? null) !== (p.codigo_barras ?? null)) onUpdate(p, { codigo_barras: v });
-                      }} />
+                      }}
+                    />
+                    {dupErr && <p className="text-[10px] text-destructive mt-0.5">Duplicado</p>}
                   </td>
                   <td className="px-3 py-1.5">
                     <input className="w-full bg-transparent border-b border-transparent focus:border-primary outline-none py-1"
@@ -171,10 +222,13 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
             <tr>
               <td></td>
               <td className="px-3 py-2">
-                <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm font-mono"
+                <input
+                  className={draftBarcodeClass(duplicateErrs['draft'])}
                   placeholder="Cód. barras"
                   value={draft.codigo_barras}
-                  onChange={(e) => setDraft({ ...draft, codigo_barras: e.target.value })} />
+                  onChange={(e) => setDraft({ ...draft, codigo_barras: e.target.value })}
+                />
+                {duplicateErrs['draft'] && <p className="text-[10px] text-destructive mt-0.5">Ya existe en otra presentación</p>}
               </td>
               <td className="px-3 py-2">
                 <input className="w-full bg-card border border-border rounded px-2 py-1 text-sm"
