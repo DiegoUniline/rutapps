@@ -628,7 +628,7 @@ export default function PuntoVentaPage() {
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: p.unidad_granel || 'kg',
+        unidad: p.es_granel ? (p.unidad_granel || 'kg') : 'pz',
         base_precio: pf.basePrecio as BasePrecioMode,
         redondeo: pf.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: noLimit ? Infinity : stock,
