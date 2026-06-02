@@ -259,8 +259,8 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Create entrega options */}
         {!fullyDelivered && (
-          <div className="bg-card border border-border rounded-md p-4 space-y-3">
-            <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Opciones para nueva entrega</h3>
+          <div id="opciones-entrega" className="bg-card border border-border rounded-md p-4 space-y-3">
+            <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Almacén y repartidor para la entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="label-odoo label-required">Almacén origen</label>
