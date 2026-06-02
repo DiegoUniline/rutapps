@@ -534,12 +534,22 @@ export default function PuntoVentaPage() {
     if (filterMarca) available = available.filter(p => (p as any).marca_id === filterMarca);
     if (!search) return available;
     const s = search.toLowerCase();
-    return available.filter(p =>
-      p.nombre.toLowerCase().includes(s) ||
-      p.codigo.toLowerCase().includes(s) ||
-      (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
-    );
-  }, [productos, search, filterClasificacion, filterMarca]);
+    return available.filter(p => {
+      if (
+        p.nombre.toLowerCase().includes(s) ||
+        p.codigo.toLowerCase().includes(s) ||
+        (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
+      ) return true;
+      // Match by presentation barcode or name
+      const pres = presByProducto.get(p.id) ?? [];
+      return pres.some(pr =>
+        pr.activo && (
+          (pr.codigo_barras && pr.codigo_barras.toLowerCase().includes(s)) ||
+          (pr.nombre && pr.nombre.toLowerCase().includes(s))
+        )
+      );
+    });
+  }, [productos, search, filterClasificacion, filterMarca, presByProducto]);
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
