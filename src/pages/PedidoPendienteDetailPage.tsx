@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/hooks/useCurrency';
+
+const EntregaFormPage = lazy(() => import('./EntregaFormPage'));
 
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
