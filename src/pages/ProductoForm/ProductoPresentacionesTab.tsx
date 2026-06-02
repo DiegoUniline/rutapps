@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, Star } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Star, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePresentaciones, useSavePresentacion, useDeletePresentacion, type ProductoPresentacion } from '@/hooks/usePresentaciones';
 import { useCurrency } from '@/hooks/useCurrency';

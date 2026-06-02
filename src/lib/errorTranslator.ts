@@ -61,6 +61,15 @@ const patterns: Array<{ test: RegExp | ((msg: string) => boolean); result: Error
   },
   // Duplicate / unique constraint
   {
+    test: /uq_presentaciones_codigo_barras|codigo_barras.*duplicado|codigo_barras.*ya.*existe|duplicate.*codigo_barras/i,
+    result: {
+      title: 'Código de barras duplicado',
+      message: 'Ya existe otra presentación en tu empresa con este mismo código de barras. Cada presentación debe tener un código único para evitar confusiones en el POS e inventario.',
+      suggestion: 'Revisa el código de barras ingresado. Si el producto tiene varias presentaciones, asegúrate de que cada una tenga un código diferente.',
+      icon: 'data',
+    },
+  },
+  {
     test: /duplicate|unique|already exists|violates.*unique|23505/i,
     result: {
       title: 'Registro duplicado',
