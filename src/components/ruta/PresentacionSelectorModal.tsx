@@ -35,7 +35,10 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   const [pesoOverride, setPesoOverride] = useState(''); // peso real total opcional
   const [pesoLibre, setPesoLibre] = useState('');
 
-  const unidad = producto?.unidad_granel || producto?.unidades?.abreviatura || 'pz';
+  const unidad = producto?.es_granel
+    ? (producto?.unidad_granel || producto?.unidades?.abreviatura || 'kg')
+    : (producto?.unidades?.abreviatura || 'pz');
+  const esGranel = !!producto?.es_granel;
   const presActivas = presentaciones.filter(p => p.activo);
 
   useEffect(() => {
@@ -43,8 +46,11 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
     if (presActivas.length > 0) {
       setMode('pres');
       setPresId(presActivas[0].id);
-    } else {
+    } else if (esGranel) {
       setMode('libre');
+      setPresId(null);
+    } else {
+      setMode('pres');
       setPresId(null);
     }
     setPaquetes('1');
