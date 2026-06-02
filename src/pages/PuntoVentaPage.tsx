@@ -1355,7 +1355,18 @@ export default function PuntoVentaPage() {
                         </div>
                       ) : null}
                       <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                      <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                        {(() => {
+                          const pres = (presByProducto.get(p.id) ?? []).filter((x: any) => x.activo);
+                          if (!pres.length) return null;
+                          return (
+                            <span className="inline-flex items-center gap-0.5 rounded bg-primary/10 text-primary px-1 py-0 text-[8px] font-semibold" title={pres.map((x: any) => x.nombre).join(', ')}>
+                              <Package className="h-2 w-2" />{pres.length}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <div className="flex items-baseline justify-between mt-0.5">
                         <span className="text-[11px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[7px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
                         <span className={`text-[8px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
