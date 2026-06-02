@@ -111,6 +111,7 @@ export default function AdminSubscriptionsTab() {
       plan_id: editForm.plan_id || null,
       max_usuarios: editForm.max_usuarios,
       status: editForm.status,
+      acceso_bloqueado: ['suspended', 'cancelled', 'cancelada'].includes(editForm.status),
       descuento_porcentaje: editForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
@@ -133,6 +134,7 @@ export default function AdminSubscriptionsTab() {
       plan_id: createForm.plan_id || null,
       max_usuarios: createForm.max_usuarios,
       status: createForm.status,
+      acceso_bloqueado: ['suspended', 'cancelled', 'cancelada'].includes(createForm.status),
       current_period_start: now.toISOString(),
       current_period_end: periodEnd.toISOString(),
       trial_ends_at: createForm.status === 'trial' ? addDays(now, 7).toISOString() : null,

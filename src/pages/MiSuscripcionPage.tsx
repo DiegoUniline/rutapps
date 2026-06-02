@@ -107,6 +107,7 @@ export default function MiSuscripcionPage() {
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const [deleteFacturaDialog, setDeleteFacturaDialog] = useState<FacturaRow | null>(null);
 
   // Coupons (multiple allowed)
   const [cuponCode, setCuponCode] = useState('');
@@ -595,11 +596,11 @@ export default function MiSuscripcionPage() {
   // ─── Eliminar factura (solo super admin) ───
   async function handleDeleteFactura(factura: FacturaRow) {
     if (!isSuperAdminUser) return;
-    if (!window.confirm(`¿Eliminar la factura ${factura.numero_factura || factura.id}? Esta acción no se puede deshacer.`)) return;
     try {
       const { error } = await supabase.from('facturas').delete().eq('id', factura.id);
       if (error) throw error;
       toast.success('Factura eliminada');
+      setDeleteFacturaDialog(null);
       loadData();
     } catch (e: any) {
       toast.error(e.message || 'No se pudo eliminar la factura');
@@ -1087,7 +1088,7 @@ export default function MiSuscripcionPage() {
                                   variant="ghost"
                                   className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                   title="Eliminar factura (Super Admin)"
-                                  onClick={() => handleDeleteFactura(f)}
+                                  onClick={() => setDeleteFacturaDialog(f)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -1311,6 +1312,28 @@ export default function MiSuscripcionPage() {
               }}
             >
               <ArrowRight className="h-4 w-4 mr-2" /> Confirmar cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteFacturaDialog} onOpenChange={(open) => !open && setDeleteFacturaDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Eliminar factura
+            </DialogTitle>
+            <DialogDescription>
+              ¿Eliminar la factura <strong>{deleteFacturaDialog?.numero_factura || deleteFacturaDialog?.id}</strong>? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFacturaDialog(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteFacturaDialog && handleDeleteFactura(deleteFacturaDialog)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Eliminar definitivamente
             </Button>
           </DialogFooter>
         </DialogContent>

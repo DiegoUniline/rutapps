@@ -187,6 +187,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       plan_id: subForm.plan_id || null,
       max_usuarios: subForm.max_usuarios,
       status: subForm.status,
+      acceso_bloqueado: ['suspended', 'cancelled', 'cancelada'].includes(subForm.status),
       descuento_porcentaje: subForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
