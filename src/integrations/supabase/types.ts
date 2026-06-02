@@ -7001,6 +7001,7 @@ export type Database = {
         Returns: Json
       }
       has_billing_access: { Args: { p_empresa_id: string }; Returns: boolean }
+      is_diego_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_empresa_admin: {
         Args: { p_empresa_id: string; p_user_id: string }
