@@ -33,6 +33,15 @@ interface SolicitudRow {
   profiles?: { nombre: string };
 }
 
+interface FacturaPend {
+  id: string;
+  numero_factura: string | null;
+  total: number;
+  periodo_fin: string | null;
+  fecha_vencimiento: string | null;
+  estado: string;
+}
+
 export default function AdminPaymentRequestsTab() {
   const { user } = useAuth();
   const [solicitudes, setSolicitudes] = useState<SolicitudRow[]>([]);
@@ -41,6 +50,8 @@ export default function AdminPaymentRequestsTab() {
   const [selectedSol, setSelectedSol] = useState<SolicitudRow | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [facturasPend, setFacturasPend] = useState<FacturaPend[]>([]);
+  const [facturasSel, setFacturasSel] = useState<Set<string>>(new Set());
 
   useEffect(() => { load(); }, []);
 
@@ -55,6 +66,32 @@ export default function AdminPaymentRequestsTab() {
     setLoading(false);
   }
 
+  async function openDetail(s: SolicitudRow) {
+    setSelectedSol(s);
+    setAdminNotes(s.notas_admin || '');
+    setFacturasPend([]);
+    setFacturasSel(new Set());
+    if (s.tipo === 'suscripcion' && s.status === 'pendiente') {
+      const { data } = await supabase
+        .from('facturas')
+        .select('id, numero_factura, total, periodo_fin, fecha_vencimiento, estado')
+        .eq('empresa_id', s.empresa_id)
+        .in('estado', ['pendiente', 'procesando', 'past_due'])
+        .order('fecha_emision', { ascending: true });
+      const list = (data as any[]) || [];
+      setFacturasPend(list);
+      setFacturasSel(new Set(list.map(f => f.id)));
+    }
+  }
+
+  function toggleFactura(id: string) {
+    setFacturasSel(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
   async function handleApprove() {
     if (!selectedSol || !user) return;
     setProcessing(true);
@@ -67,7 +104,7 @@ export default function AdminPaymentRequestsTab() {
         notas_admin: adminNotes || null,
       }).eq('id', selectedSol.id);
 
-      // If subscription payment, activate subscription
+      // If subscription payment, activate subscription + clear pending invoices + unblock
       if (selectedSol.tipo === 'suscripcion') {
         const now = new Date();
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -76,8 +113,19 @@ export default function AdminPaymentRequestsTab() {
           max_usuarios: selectedSol.cantidad_usuarios || 3,
           current_period_start: now.toISOString(),
           current_period_end: nextMonth.toISOString(),
+          fecha_vencimiento: nextMonth.toISOString(),
+          acceso_bloqueado: false,
           updated_at: now.toISOString(),
         }).eq('empresa_id', selectedSol.empresa_id);
+
+        // Marcar facturas seleccionadas como pagadas
+        const ids = Array.from(facturasSel);
+        if (ids.length > 0) {
+          await supabase.from('facturas').update({
+            estado: 'pagada',
+            fecha_pago: now.toISOString(),
+          }).in('id', ids);
+        }
       }
 
       // If timbres purchase, add timbres
@@ -199,7 +247,7 @@ export default function AdminPaymentRequestsTab() {
                     </TableCell>
                     <TableCell>{statusBadge(s.status)}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedSol(s); setAdminNotes(s.notas_admin || ''); }}>
+                      <Button size="sm" variant="ghost" onClick={() => openDetail(s)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -245,6 +293,33 @@ export default function AdminPaymentRequestsTab() {
 
               {selectedSol.status === 'pendiente' && (
                 <>
+                  {selectedSol.tipo === 'suscripcion' && facturasPend.length > 0 && (
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                      <div className="text-xs font-semibold text-foreground">
+                        Facturas pendientes — selecciona cuáles cubrir con este pago
+                      </div>
+                      {facturasPend.map(f => (
+                        <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={facturasSel.has(f.id)}
+                            onChange={() => toggleFactura(f.id)}
+                          />
+                          <span className="font-mono text-xs">{f.numero_factura || f.id.slice(0, 8)}</span>
+                          <span className="flex-1">${Number(f.total).toLocaleString('es-MX')} MXN</span>
+                          <Badge variant="outline" className="text-[10px]">{f.estado}</Badge>
+                        </label>
+                      ))}
+                      <p className="text-[11px] text-muted-foreground">
+                        Las facturas marcadas se pondrán como <strong>pagadas</strong> y se desbloqueará el acceso.
+                      </p>
+                    </div>
+                  )}
+                  {selectedSol.tipo === 'suscripcion' && facturasPend.length === 0 && (
+                    <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                      No hay facturas pendientes para esta empresa.
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Notas del admin</label>
                     <Textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="Notas opcionales..." rows={2} />
