@@ -247,7 +247,7 @@ export default function AdminPaymentRequestsTab() {
                     </TableCell>
                     <TableCell>{statusBadge(s.status)}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedSol(s); setAdminNotes(s.notas_admin || ''); }}>
+                      <Button size="sm" variant="ghost" onClick={() => openDetail(s)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
