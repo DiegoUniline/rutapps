@@ -104,7 +104,7 @@ export default function AdminPaymentRequestsTab() {
         notas_admin: adminNotes || null,
       }).eq('id', selectedSol.id);
 
-      // If subscription payment, activate subscription
+      // If subscription payment, activate subscription + clear pending invoices + unblock
       if (selectedSol.tipo === 'suscripcion') {
         const now = new Date();
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -113,8 +113,19 @@ export default function AdminPaymentRequestsTab() {
           max_usuarios: selectedSol.cantidad_usuarios || 3,
           current_period_start: now.toISOString(),
           current_period_end: nextMonth.toISOString(),
+          fecha_vencimiento: nextMonth.toISOString(),
+          acceso_bloqueado: false,
           updated_at: now.toISOString(),
         }).eq('empresa_id', selectedSol.empresa_id);
+
+        // Marcar facturas seleccionadas como pagadas
+        const ids = Array.from(facturasSel);
+        if (ids.length > 0) {
+          await supabase.from('facturas').update({
+            estado: 'pagada',
+            fecha_pago: now.toISOString(),
+          }).in('id', ids);
+        }
       }
 
       // If timbres purchase, add timbres
