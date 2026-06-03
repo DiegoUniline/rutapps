@@ -33,6 +33,15 @@ interface SolicitudRow {
   profiles?: { nombre: string };
 }
 
+interface FacturaPend {
+  id: string;
+  numero_factura: string | null;
+  total: number;
+  periodo_fin: string | null;
+  fecha_vencimiento: string | null;
+  estado: string;
+}
+
 export default function AdminPaymentRequestsTab() {
   const { user } = useAuth();
   const [solicitudes, setSolicitudes] = useState<SolicitudRow[]>([]);
@@ -41,6 +50,8 @@ export default function AdminPaymentRequestsTab() {
   const [selectedSol, setSelectedSol] = useState<SolicitudRow | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [facturasPend, setFacturasPend] = useState<FacturaPend[]>([]);
+  const [facturasSel, setFacturasSel] = useState<Set<string>>(new Set());
 
   useEffect(() => { load(); }, []);
 
@@ -53,6 +64,32 @@ export default function AdminPaymentRequestsTab() {
       .limit(200);
     setSolicitudes((data as any) || []);
     setLoading(false);
+  }
+
+  async function openDetail(s: SolicitudRow) {
+    setSelectedSol(s);
+    setAdminNotes(s.notas_admin || '');
+    setFacturasPend([]);
+    setFacturasSel(new Set());
+    if (s.tipo === 'suscripcion' && s.status === 'pendiente') {
+      const { data } = await supabase
+        .from('facturas')
+        .select('id, numero_factura, total, periodo_fin, fecha_vencimiento, estado')
+        .eq('empresa_id', s.empresa_id)
+        .in('estado', ['pendiente', 'procesando', 'past_due'])
+        .order('fecha_emision', { ascending: true });
+      const list = (data as any[]) || [];
+      setFacturasPend(list);
+      setFacturasSel(new Set(list.map(f => f.id)));
+    }
+  }
+
+  function toggleFactura(id: string) {
+    setFacturasSel(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   }
 
   async function handleApprove() {
