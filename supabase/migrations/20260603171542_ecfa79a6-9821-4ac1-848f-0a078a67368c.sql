@@ -1,0 +1,1 @@
+UPDATE public.subscriptions SET acceso_bloqueado = false WHERE empresa_id='d6abc199-dba8-4f70-ba5b-f2c3563f8b75'; UPDATE public.facturas SET estado='pagada', fecha_pago=now() WHERE id='74356d78-3703-409e-8854-f1d8f917ac69';
