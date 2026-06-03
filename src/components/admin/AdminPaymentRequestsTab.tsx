@@ -293,6 +293,33 @@ export default function AdminPaymentRequestsTab() {
 
               {selectedSol.status === 'pendiente' && (
                 <>
+                  {selectedSol.tipo === 'suscripcion' && facturasPend.length > 0 && (
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                      <div className="text-xs font-semibold text-foreground">
+                        Facturas pendientes — selecciona cuáles cubrir con este pago
+                      </div>
+                      {facturasPend.map(f => (
+                        <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={facturasSel.has(f.id)}
+                            onChange={() => toggleFactura(f.id)}
+                          />
+                          <span className="font-mono text-xs">{f.numero_factura || f.id.slice(0, 8)}</span>
+                          <span className="flex-1">${Number(f.total).toLocaleString('es-MX')} MXN</span>
+                          <Badge variant="outline" className="text-[10px]">{f.estado}</Badge>
+                        </label>
+                      ))}
+                      <p className="text-[11px] text-muted-foreground">
+                        Las facturas marcadas se pondrán como <strong>pagadas</strong> y se desbloqueará el acceso.
+                      </p>
+                    </div>
+                  )}
+                  {selectedSol.tipo === 'suscripcion' && facturasPend.length === 0 && (
+                    <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                      No hay facturas pendientes para esta empresa.
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Notas del admin</label>
                     <Textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="Notas opcionales..." rows={2} />
