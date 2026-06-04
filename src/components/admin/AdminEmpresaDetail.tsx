@@ -427,9 +427,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       num_usuarios: Number(f.num_usuarios || 1),
       precio_unitario: Number(f.precio_unitario || 0),
       descuento_porcentaje: Number(f.descuento_porcentaje || 0),
-      periodo_inicio: f.periodo_inicio ? String(f.periodo_inicio).slice(0, 10) : '',
-      periodo_fin: f.periodo_fin ? String(f.periodo_fin).slice(0, 10) : '',
-      fecha_vencimiento: f.fecha_vencimiento ? String(f.fecha_vencimiento).slice(0, 10) : '',
+      periodo_inicio: datePart(f.periodo_inicio),
+      periodo_fin: datePart(f.periodo_fin),
+      fecha_vencimiento: datePart(f.fecha_vencimiento),
       estado: f.estado || 'pendiente',
       metodo_pago: f.metodo_pago || '',
       referencia_pago: f.referencia_pago || '',
@@ -450,7 +450,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         subtotal,
         periodo_inicio: editFacturaForm.periodo_inicio || null,
         periodo_fin: editFacturaForm.periodo_fin || null,
-        fecha_vencimiento: editFacturaForm.fecha_vencimiento ? new Date(editFacturaForm.fecha_vencimiento).toISOString() : null,
+        fecha_vencimiento: editFacturaForm.fecha_vencimiento || null,
         estado: editFacturaForm.estado,
         metodo_pago: editFacturaForm.metodo_pago || null,
         referencia_pago: editFacturaForm.referencia_pago || null,
@@ -466,8 +466,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       if (editFacturaForm.estado === 'pagada' && subscription?.id
           && editFacturaForm.periodo_inicio && editFacturaForm.periodo_fin) {
         const { error: subErr } = await supabase.from('subscriptions').update({
-          current_period_start: new Date(editFacturaForm.periodo_inicio).toISOString(),
-          current_period_end: new Date(editFacturaForm.periodo_fin).toISOString(),
+          current_period_start: editFacturaForm.periodo_inicio,
+          current_period_end: editFacturaForm.periodo_fin,
           status: 'active',
           acceso_bloqueado: false,
           updated_at: new Date().toISOString(),
