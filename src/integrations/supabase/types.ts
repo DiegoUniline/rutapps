@@ -5071,39 +5071,72 @@ export type Database = {
       subscription_plans: {
         Row: {
           activo: boolean
+          capacitacion_sesiones: number
           created_at: string
+          descripcion: string | null
           descuento_pct: number
+          features_json: Json
           id: string
+          ideal_para: string | null
           meses: number
           nombre: string
+          orden: number
           periodo: string
+          popular: boolean
+          precio_base: number
+          precio_extra_usuario: number
           precio_por_usuario: number
+          slug: string | null
           stripe_price_id: string | null
+          stripe_price_id_extra: string | null
           stripe_product_id: string | null
+          usuarios_incluidos: number
         }
         Insert: {
           activo?: boolean
+          capacitacion_sesiones?: number
           created_at?: string
+          descripcion?: string | null
           descuento_pct?: number
+          features_json?: Json
           id?: string
+          ideal_para?: string | null
           meses?: number
           nombre: string
+          orden?: number
           periodo?: string
+          popular?: boolean
+          precio_base?: number
+          precio_extra_usuario?: number
           precio_por_usuario?: number
+          slug?: string | null
           stripe_price_id?: string | null
+          stripe_price_id_extra?: string | null
           stripe_product_id?: string | null
+          usuarios_incluidos?: number
         }
         Update: {
           activo?: boolean
+          capacitacion_sesiones?: number
           created_at?: string
+          descripcion?: string | null
           descuento_pct?: number
+          features_json?: Json
           id?: string
+          ideal_para?: string | null
           meses?: number
           nombre?: string
+          orden?: number
           periodo?: string
+          popular?: boolean
+          precio_base?: number
+          precio_extra_usuario?: number
           precio_por_usuario?: number
+          slug?: string | null
           stripe_price_id?: string | null
+          stripe_price_id_extra?: string | null
           stripe_product_id?: string | null
+          usuarios_incluidos?: number
         }
         Relationships: []
       }
@@ -5119,6 +5152,7 @@ export type Database = {
           es_manual: boolean | null
           fecha_vencimiento: string | null
           id: string
+          legacy_pricing: boolean
           max_usuarios: number
           plan_id: string | null
           status: string
@@ -5141,6 +5175,7 @@ export type Database = {
           es_manual?: boolean | null
           fecha_vencimiento?: string | null
           id?: string
+          legacy_pricing?: boolean
           max_usuarios?: number
           plan_id?: string | null
           status?: string
@@ -5163,6 +5198,7 @@ export type Database = {
           es_manual?: boolean | null
           fecha_vencimiento?: string | null
           id?: string
+          legacy_pricing?: boolean
           max_usuarios?: number
           plan_id?: string | null
           status?: string
