@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
@@ -37,6 +38,15 @@ const STATUS_MAP: Record<string, { l: string; v: 'default' | 'secondary' | 'dest
 };
 const STATUSES = ['trial', 'active', 'past_due', 'gracia', 'suspended', 'cancelled'] as const;
 const fmtMXN = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Estado efectivo basado en bloqueo + fin de período (no solo en el campo status)
+function getEffectiveStatus(sub: any): { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' } {
+  if (!sub) return { l: '—', v: 'outline' };
+  if (sub.acceso_bloqueado) return { l: 'Suspendida', v: 'destructive' };
+  const ref = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
+  if (ref && new Date(ref) < new Date()) return { l: 'Vencida', v: 'destructive' };
+  return STATUS_MAP[sub.status] || { l: sub.status, v: 'outline' };
+}
 
 export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const { user } = useAuth();
@@ -141,6 +151,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
         descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
         meses_cobro: (subRes.data as any).subscription_plans?.meses || 1,
+        acceso_bloqueado: !!(subRes.data as any).acceso_bloqueado,
       });
     }
 
@@ -187,7 +198,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       plan_id: subForm.plan_id || null,
       max_usuarios: subForm.max_usuarios,
       status: subForm.status,
-      acceso_bloqueado: ['suspended', 'cancelled', 'cancelada'].includes(subForm.status),
+      acceso_bloqueado: !!subForm.acceso_bloqueado,
       descuento_porcentaje: subForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
@@ -471,9 +482,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {subscription && (
-            <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="text-xs">
-              {STATUS_MAP[subscription.status]?.l || subscription.status}
-            </Badge>
+            <>
+              <Badge variant={getEffectiveStatus(subscription).v} className="text-xs">
+                {getEffectiveStatus(subscription).l}
+              </Badge>
+              {subscription.acceso_bloqueado && (
+                <Badge variant="destructive" className="text-xs gap-1">🔒 Bloqueada</Badge>
+              )}
+            </>
           )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -780,7 +796,26 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Label className="text-sm">Fin período</Label>
                     <Input type="date" value={subForm.current_period_end}
                       onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
+                    <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
                   </div>
+
+                  {/* Toggle acceso bloqueado */}
+                  <div className="sm:col-span-2 rounded-lg border p-3 flex items-start justify-between gap-3 bg-muted/20">
+                    <div>
+                      <Label className="text-sm font-semibold flex items-center gap-2">
+                        🔒 Acceso bloqueado
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Si está activo, la empresa <strong>no puede usar la app</strong> aunque el status sea "Activa".
+                        Desactívalo cuando confirmes el pago o quieras dar acceso manual.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!subForm.acceso_bloqueado}
+                      onCheckedChange={(v) => setSubForm((f: any) => ({ ...f, acceso_bloqueado: v }))}
+                    />
+                  </div>
+
 
                   {/* Resumen de cobro */}
                   {(() => {
@@ -837,9 +872,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div>
                     <p className="text-sm text-muted-foreground">Estado</p>
-                    <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="mt-1">
-                      {STATUS_MAP[subscription.status]?.l || subscription.status}
+                    <Badge variant={getEffectiveStatus(subscription).v} className="mt-1">
+                      {getEffectiveStatus(subscription).l}
                     </Badge>
+                    {subscription.acceso_bloqueado && (
+                      <Badge variant="destructive" className="mt-1 ml-1">🔒 Bloqueada</Badge>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Plan</p>
