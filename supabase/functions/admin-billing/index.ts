@@ -4,6 +4,31 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
 
+
+function datePart(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value.split("T")[0];
+  const d = value instanceof Date ? value : new Date(value as string);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseCalendarDate(value: unknown): Date {
+  const part = datePart(value);
+  const match = part.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0);
+  return new Date(value as string);
+}
+
+function addMonthsDatePart(value: unknown, months: number): string {
+  const d = parseCalendarDate(value || new Date());
+  d.setMonth(d.getMonth() + months);
+  return datePart(d);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -611,11 +636,9 @@ Deno.serve(async (req) => {
 
       // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
       const hoy = new Date();
-      // Use provided periodo_inicio/fin if available, else compute from today + meses
-      const periodoInicio = periodoInicioInput ? new Date(periodoInicioInput) : hoy;
-      const periodoFin = periodoFinInput
-        ? new Date(periodoFinInput)
-        : (() => { const d = new Date(periodoInicio); d.setMonth(d.getMonth() + Number(meses)); return d; })();
+      // Use plain calendar dates to avoid UTC timezone shifting the selected day
+      const periodoInicio = periodoInicioInput ? datePart(periodoInicioInput) : datePart(hoy);
+      const periodoFin = periodoFinInput ? datePart(periodoFinInput) : addMonthsDatePart(periodoInicio, Number(meses));
       const vencimiento = new Date(hoy);
       vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
 
@@ -632,8 +655,8 @@ Deno.serve(async (req) => {
           empresa_id,
           suscripcion_id: subRow?.id || null,
           numero_factura: finalizedInv.number || null,
-          periodo_inicio: periodoInicio.toISOString().slice(0, 10),
-          periodo_fin: periodoFin.toISOString().slice(0, 10),
+          periodo_inicio: periodoInicio,
+          periodo_fin: periodoFin,
           num_usuarios: Number(num_usuarios),
           precio_unitario: Number(precio_por_usuario_mes),
           descuento_porcentaje: descPct,
@@ -729,7 +752,7 @@ Deno.serve(async (req) => {
           // Use the invoice's periodo_fin directly as the new subscription end date
           let nuevoFin: Date;
           if (fac.periodo_fin) {
-            nuevoFin = new Date(fac.periodo_fin);
+            nuevoFin = parseCalendarDate(fac.periodo_fin);
           } else {
             // Fallback: extend 1 month from current end or today
             const base = subRow.current_period_end && new Date(subRow.current_period_end) > new Date()
@@ -748,7 +771,7 @@ Deno.serve(async (req) => {
           };
           // Set period_start from the invoice if available, or today if missing
           if (fac.periodo_inicio) {
-            updatePayload.current_period_start = new Date(fac.periodo_inicio).toISOString();
+            updatePayload.current_period_start = datePart(fac.periodo_inicio);
           } else if (!subRow.current_period_start) {
             updatePayload.current_period_start = new Date().toISOString();
           }
