@@ -1336,8 +1336,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </Card>
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
 
       {/* Subscription Invoice Dialog */}
       <Dialog open={showSubInvoice} onOpenChange={setShowSubInvoice}>
