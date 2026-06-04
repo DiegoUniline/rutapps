@@ -640,14 +640,6 @@ Deno.serve(async (req) => {
         customerId = c.id;
       }
 
-      const subtotal = Number(num_usuarios) * Number(meses) * Number(precio_por_usuario_mes);
-      const descPct = Number(descuento_pct) || 0;
-      const descMonto = subtotal * (descPct / 100);
-      const total = subtotal - descMonto;
-
-      const labelPlan = plan_nombre || (meses === 1 ? "Mensual" : meses === 6 ? "Semestral" : meses === 12 ? "Anual" : `${meses} meses`);
-      const conceptoFinal = concepto || `Suscripción Rutapp ${labelPlan} — ${num_usuarios} usuario${num_usuarios > 1 ? "s" : ""} × ${meses} mes${meses > 1 ? "es" : ""}`;
-
       const invoice = await stripe.invoices.create({
         customer: customerId,
         collection_method: "send_invoice",
@@ -688,26 +680,13 @@ Deno.serve(async (req) => {
       try { await stripe.invoices.sendInvoice(invoice.id); } catch (_) {}
 
       // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
-      const hoy = new Date();
-      // Use plain calendar dates to avoid UTC timezone shifting the selected day
-      const periodoInicio = periodoInicioInput ? datePart(periodoInicioInput) : datePart(hoy);
-      const periodoFin = periodoFinInput ? datePart(periodoFinInput) : addMonthsDatePart(periodoInicio, Number(meses));
-      const vencimiento = new Date(hoy);
-      vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
-
-      // Look up current subscription to link the invoice
-      const { data: subRow } = await supabase
-        .from("subscriptions")
-        .select("id")
-        .eq("empresa_id", empresa_id)
-        .maybeSingle();
-
       const { data: facturaRow, error: facturaErr } = await supabase
         .from("facturas")
         .insert({
           empresa_id,
           suscripcion_id: subRow?.id || null,
           numero_factura: finalizedInv.number || null,
+          concepto: conceptoFinal,
           periodo_inicio: periodoInicio,
           periodo_fin: periodoFin,
           num_usuarios: Number(num_usuarios),
