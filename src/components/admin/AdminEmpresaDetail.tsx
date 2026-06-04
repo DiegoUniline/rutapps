@@ -151,6 +151,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
         descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
         meses_cobro: (subRes.data as any).subscription_plans?.meses || 1,
+        acceso_bloqueado: !!(subRes.data as any).acceso_bloqueado,
       });
     }
 
