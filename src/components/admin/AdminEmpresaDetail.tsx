@@ -127,8 +127,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
-    periodo_inicio: new Date().toISOString().slice(0, 10),
-    periodo_fin: new Date().toISOString().slice(0, 10),
+    periodo_inicio: todayInput(),
+    periodo_fin: todayInput(),
   });
 
   const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
@@ -140,7 +140,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [markPaidForm, setMarkPaidForm] = useState({
     metodo_pago: 'transferencia',
     referencia_pago: '',
-    fecha_pago: new Date().toISOString().slice(0, 10),
+    fecha_pago: todayInput(),
     reflect_in_stripe: true,
     extender_periodo: true,
   });
@@ -181,9 +181,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         plan_id: subRes.data.plan_id || '',
         max_usuarios: subRes.data.max_usuarios || 3,
         status: subRes.data.status || 'trial',
-        current_period_start: subRes.data.current_period_start?.split('T')[0] || '',
-        current_period_end: subRes.data.current_period_end?.split('T')[0] || '',
-        trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
+        current_period_start: datePart(subRes.data.current_period_start),
+        current_period_end: datePart(subRes.data.current_period_end),
+        trial_ends_at: datePart(subRes.data.trial_ends_at),
         descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
         acceso_bloqueado: !!(subRes.data as any).acceso_bloqueado,
       });
@@ -298,8 +298,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
-      periodo_inicio: base.toISOString().slice(0, 10),
-      periodo_fin: fin.toISOString().slice(0, 10),
+      periodo_inicio: datePart(base),
+      periodo_fin: datePart(fin),
     });
     setShowSubInvoice(true);
   }
@@ -308,32 +308,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
     setSubInvoiceForm(f => {
-      const ini = new Date(f.periodo_inicio);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + plan.meses);
       return {
         ...f, plan_id: planId, meses: plan.meses,
         precio_por_usuario_mes: plan.precio_por_usuario, concepto: `Suscripción Rutapp ${plan.nombre}`,
-        periodo_fin: fin.toISOString().slice(0, 10),
+        periodo_fin: addMonthsInput(f.periodo_inicio, plan.meses),
       };
     });
   }
 
   function updateInvoiceMeses(meses: number) {
     setSubInvoiceForm(f => {
-      const ini = new Date(f.periodo_inicio);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + meses);
-      return { ...f, meses, periodo_fin: fin.toISOString().slice(0, 10) };
+      return { ...f, meses, periodo_fin: addMonthsInput(f.periodo_inicio, meses) };
     });
   }
 
   function updateInvoicePeriodoInicio(value: string) {
     setSubInvoiceForm(f => {
-      const ini = new Date(value);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + f.meses);
-      return { ...f, periodo_inicio: value, periodo_fin: fin.toISOString().slice(0, 10) };
+      return { ...f, periodo_inicio: value, periodo_fin: addMonthsInput(value, f.meses) };
     });
   }
 
