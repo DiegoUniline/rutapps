@@ -872,8 +872,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                   <div>
                     <p className="text-sm text-muted-foreground">Estado</p>
-                    <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="mt-1">
-                      {STATUS_MAP[subscription.status]?.l || subscription.status}
+                    <Badge variant={getEffectiveStatus(subscription).v} className="mt-1">
+                      {getEffectiveStatus(subscription).l}
+                    </Badge>
+                    {subscription.acceso_bloqueado && (
+                      <Badge variant="destructive" className="mt-1 ml-1">🔒 Bloqueada</Badge>
+                    )}
+                    <Badge variant="outline" className="hidden">_</Badge>
                     </Badge>
                   </div>
                   <div>
