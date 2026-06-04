@@ -1505,6 +1505,50 @@ export default function MiSuscripcionPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!invoiceTransfer} onOpenChange={(open) => { if (!open) setInvoiceTransfer(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar factura por transferencia</DialogTitle>
+            <DialogDescription>{invoiceTransfer?.numero_factura || 'Factura pendiente'} · {invoiceTransfer?.concepto || 'Suscripción'}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl border-2 border-border bg-card p-5 space-y-3 text-center">
+              <div className="text-lg font-bold text-foreground">{BANK_INFO.banco}</div>
+              <div className="text-muted-foreground">{BANK_INFO.titular}</div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">Cuenta</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.cuenta}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.cuenta)}><Copy className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">CLABE</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.clabe}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.clabe)}><Copy className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border">
+                <span className="text-xs text-muted-foreground">Monto: </span>
+                <span className="font-bold text-foreground text-lg">${Number(invoiceTransfer?.total || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 })} MXN</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Referencia / notas</label>
+              <Textarea value={transferNotes} onChange={e => setTransferNotes(e.target.value)} placeholder="Referencia de transferencia, fecha, etc." rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInvoiceTransfer(null)}>Cancelar</Button>
+            <Button onClick={handleSubmitInvoiceTransfer} disabled={!!payingInvoice}>
+              {payingInvoice && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Cancel subscription link */}
       {subData && subData.status !== 'cancelled' && subData.status !== 'cancelling' && (
         <div className="text-center pt-4 pb-8">
