@@ -614,17 +614,9 @@ export default function MiSuscripcionPage() {
         throw new Error('No se encontró un enlace de pago válido para esta factura');
       }
 
-      // 2) Fallback: legacy flow — create a fresh checkout session
-      const plan = currentPlan || subPlans[0];
-      if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { price_id: plan.stripe_price_id, quantity: factura.num_usuarios, empresa_id: empresa?.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (!data?.url) throw new Error('No se recibió URL de pago');
-      window.location.href = data.url;
+      // 2) Factura manual: no se cobra por Stripe; se muestra transferencia.
+      setTransferNotes('');
+      setInvoiceTransfer(factura);
     } catch (e: any) {
       toast.error(e.message || 'Error al generar enlace de pago');
     } finally {
