@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { CreditCard, Loader2, ShieldCheck, Sparkles, Check, LogOut, Star } from 'lucide-react';
+import { CreditCard, Loader2, ShieldCheck, Sparkles, LogOut, Star } from 'lucide-react';
 import { fmtMoney } from '@/lib/currency';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
