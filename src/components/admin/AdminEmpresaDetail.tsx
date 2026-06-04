@@ -66,7 +66,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   // Edit states
   const [editingEmpresa, setEditingEmpresa] = useState(false);
   const [empresaForm, setEmpresaForm] = useState<any>({});
-  const [editingSub, setEditingSub] = useState(false);
+  const [editingSub, setEditingSub] = useState(true);
   const [subForm, setSubForm] = useState<any>({});
   const [savingEmpresa, setSavingEmpresa] = useState(false);
   const [savingSub, setSavingSub] = useState(false);
