@@ -160,15 +160,19 @@ export default function MiSuscripcionPage() {
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
-      supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
+      supabase.from('subscription_plans').select('*').order('orden', { ascending: true }),
       supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
       supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion, vigencia_fin)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
     setPendingSolicitudes(solRes.data || []);
-    const plans = (plansRes.data as SubPlanRow[]) || [];
+    const allPlansRaw = (plansRes.data as SubPlanRow[]) || [];
+    // Show: active plans + current plan (even if inactive, for legacy customers)
+    const currentPlanId = subRes.data?.plan_id;
+    const plans = allPlansRaw.filter(p => p.activo || p.id === currentPlanId);
     setSubPlans(plans);
+
     setFacturas((facturasRes.data as any[]) || []);
 
     // Active coupons (still valid: meses_restantes null or > 0, and not expired)
