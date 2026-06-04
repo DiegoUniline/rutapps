@@ -518,74 +518,91 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" className="py-20 px-6" style={{ background: 'hsl(220, 14%, 98%)' }}>
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight">Precios simples y transparentes</h2>
-            <p className="text-gray-500 mt-3">Un solo plan con todo incluido. Sin costos ocultos.</p>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight">Planes RutApp</h2>
+            <p className="text-gray-500 mt-3 max-w-2xl mx-auto">
+              Elige el plan que se adapta a tu equipo. Todos incluyen acceso completo a RutApp.
+              Cancela cuando quieras · Sin permanencia · 7 días de prueba.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map(plan => (
-              <div key={plan.name} className={cn(
-                "relative rounded-2xl p-8 border-2 transition-all bg-white",
+              <div key={plan.slug} className={cn(
+                "relative rounded-2xl p-7 border-2 transition-all bg-white flex flex-col",
                 plan.popular
-                  ? "border-indigo-500 shadow-xl shadow-indigo-500/10 scale-105"
+                  ? "border-indigo-500 shadow-xl shadow-indigo-500/10 md:scale-105"
                   : "border-gray-100 hover:border-gray-200"
               )}>
-                {plan.tag && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white"
-                    style={{ background: plan.popular ? 'hsl(230, 55%, 52%)' : 'hsl(38, 90%, 50%)' }}>
-                    {plan.tag}
-                  </div>
-                )}
                 {plan.popular && (
-                  <div className="absolute -top-3 right-4 px-3 py-1 rounded-full text-xs font-bold text-white bg-emerald-500">
-                    Recomendado
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white"
+                    style={{ background: 'hsl(230, 55%, 52%)' }}>
+                    ⭐ Más popular
                   </div>
                 )}
-                <h3 className="text-lg font-bold text-center mb-1">{plan.name}</h3>
-                <div className="text-center mb-6">
-                  <span className="text-4xl font-black" style={{ color: plan.popular ? 'hsl(230, 55%, 52%)' : undefined }}>
-                    ${plan.price}
-                  </span>
-                  <span className="text-sm text-gray-500"> {plan.period}</span>
-                  <div className="text-xs text-gray-400 mt-1">por usuario</div>
-                  {plan.discount > 0 && (
-                    <div className="text-xs text-gray-400 mt-1 line-through">${PRICE_MONTHLY}/mes</div>
-                  )}
+                <div className="mb-1">
+                  <h3 className="text-xl font-black">{plan.name}</h3>
+                  <p className="text-xs text-gray-500 mt-1">{plan.idealFor}</p>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    'Todos los módulos incluidos',
-                    'Seguimiento GPS en vivo',
-                    'App móvil offline',
-                    'Optimización de rutas',
-                    'CFDI 4.0 y WhatsApp',
-                    'Soporte prioritario',
-                    'Agrega usuarios según necesites',
-                  ].map(feat => (
-                    <li key={feat} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-4 w-4 shrink-0" style={{ color: 'hsl(152, 56%, 38%)' }} /> {feat}
+                <div className="my-5">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black" style={{ color: plan.popular ? 'hsl(230, 55%, 52%)' : undefined }}>
+                      ${plan.price.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-gray-500">MXN / mes</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1.5">
+                    Incluye {plan.includedUsers} usuario{plan.includedUsers > 1 ? 's' : ''} · {plan.capacitacion}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    Usuario adicional: ${EXTRA_USER_PRICE} MXN / mes
+                  </div>
+                </div>
+                <ul className="space-y-2.5 mb-6 flex-1">
+                  {plan.features.map(feat => (
+                    <li key={feat} className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'hsl(152, 56%, 38%)' }} />
+                      <span>{feat}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/signup" className={cn(
+                <Link to={`/signup?plan=${plan.slug}`} className={cn(
                   "block w-full text-center py-3.5 rounded-xl text-sm font-bold transition-all",
                   plan.popular
                     ? "text-white shadow-lg shadow-indigo-500/25 hover:opacity-90"
-                    : "text-gray-700 border-2 border-gray-200 hover:border-gray-300"
+                    : "text-gray-800 border-2 border-gray-200 hover:border-gray-400"
                 )} style={plan.popular ? { background: 'hsl(230, 55%, 52%)' } : undefined}>
-                  Empezar ahora
+                  {plan.cta}
                 </Link>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-xs text-gray-400 mt-8">
-            Todos los precios están en MXN + IVA. Cancela cuando quieras.
-          </p>
+          {/* Servicios adicionales */}
+          <div className="mt-14">
+            <h3 className="text-center text-xl font-black mb-2">Servicios adicionales</h3>
+            <p className="text-center text-sm text-gray-500 mb-8">Suma capacidad o funcionalidades cuando lo necesites.</p>
+            <div className="grid md:grid-cols-3 gap-4">
+              {SERVICIOS_ADICIONALES.map(s => (
+                <div key={s.title} className="bg-white rounded-xl p-5 border border-gray-100">
+                  <div className="text-sm font-bold text-gray-900">{s.title}</div>
+                  <div className="text-lg font-black mt-1" style={{ color: 'hsl(230, 55%, 52%)' }}>{s.price}</div>
+                  <p className="text-xs text-gray-600 mt-2 leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nota legal */}
+          <div className="mt-10 text-center text-xs text-gray-400 max-w-3xl mx-auto leading-relaxed">
+            Todos los precios son mensuales en MXN. Los planes incluyen acceso a RutApp con sus módulos estándar; no incluyen integraciones externas, reportes especiales ni modificaciones específicas al sistema.
+            Las capacitaciones adicionales son remotas y tienen un costo de $550 MXN por sesión de hasta 60 minutos.
+            Los módulos, adecuaciones, integraciones, automatizaciones o reportes especiales se cotizan por separado de acuerdo con el alcance del proyecto.
+          </div>
         </div>
       </section>
+
 
       {/* Testimonials */}
       <section id="testimonials" className="py-20 px-6">
