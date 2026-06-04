@@ -99,15 +99,38 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    // Line items
+    // Helper: obtener o crear un precio para el periodo elegido (con descuento aplicado al monto)
+    const getOrCreatePeriodPrice = async (basePriceId: string): Promise<string> => {
+      if (periodCfg.months === 1 && periodCfg.discountPct === 0) return basePriceId;
+      const lookupKey = `${basePriceId}_${billing_period}_v1`;
+      const existing = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+      if (existing.data.length > 0) return existing.data[0].id;
+      const base = await stripe.prices.retrieve(basePriceId);
+      const baseAmount = base.unit_amount || 0;
+      const totalAmount = Math.round(baseAmount * periodCfg.months * (1 - periodCfg.discountPct / 100));
+      const newPrice = await stripe.prices.create({
+        currency: base.currency,
+        product: base.product as string,
+        unit_amount: totalAmount,
+        recurring: { interval: "month", interval_count: periodCfg.months },
+        lookup_key: lookupKey,
+        nickname: `${billing_period} (${periodCfg.discountPct}% off)`,
+      });
+      return newPrice.id;
+    };
+
+    // Line items con precio por periodo
     const lineItems: any[] = [];
     if (isNewPlan) {
-      lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
+      const mainPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id);
+      lineItems.push({ price: mainPriceId, quantity: 1 });
       if (extraUsers > 0 && plan.stripe_price_id_extra) {
-        lineItems.push({ price: plan.stripe_price_id_extra, quantity: extraUsers });
+        const extraPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id_extra);
+        lineItems.push({ price: extraPriceId, quantity: extraUsers });
       }
     } else {
-      lineItems.push({ price: plan.stripe_price_id, quantity: qty });
+      const mainPriceId = await getOrCreatePeriodPrice(plan.stripe_price_id);
+      lineItems.push({ price: mainPriceId, quantity: qty });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -120,7 +143,6 @@ Deno.serve(async (req) => {
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },
-        ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
         metadata: {
           empresa_id: profile.empresa_id,
           plan_id: plan.id,
