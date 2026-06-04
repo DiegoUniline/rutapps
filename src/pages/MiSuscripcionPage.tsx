@@ -1222,17 +1222,25 @@ export default function MiSuscripcionPage() {
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Frequency selector */}
+            {/* Plan selector */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Elige tu plan</label>
               <div className="grid grid-cols-3 gap-2">
                 {subPlans.map(plan => {
                   const isPlanCurrent = currentPlan?.id === plan.id;
-                  const isSelected = selectedFreq === plan.periodo;
+                  const isSelected = selectedFreq === plan.id;
+                  const displayPrice = plan.slug ? plan.precio_base : plan.precio_por_usuario;
+                  const displaySuffix = plan.slug ? ' / mes' : ' / u / mes';
                   return (
                     <button
                       key={plan.id}
-                      onClick={() => setSelectedFreq(plan.periodo)}
+                      onClick={() => {
+                        setSelectedFreq(plan.id);
+                        if (plan.slug) {
+                          const minU = Math.max(1, plan.usuarios_incluidos || 1);
+                          setExtraUsers(minU - currentUsuarios);
+                        }
+                      }}
                       className={`relative p-3 rounded-xl border-2 transition-all text-left ${
                         isSelected
                           ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
@@ -1244,14 +1252,17 @@ export default function MiSuscripcionPage() {
                           Actual
                         </span>
                       )}
-                      {plan.descuento_pct > 0 && !isPlanCurrent && (
+                      {plan.popular && !isPlanCurrent && (
                         <span className="absolute -top-2.5 right-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                          {plan.descuento_pct}% desc.
+                          Popular
                         </span>
                       )}
-                      <div className="text-xs font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
-                      <div className="text-xl font-black text-foreground mt-0.5">${plan.precio_por_usuario}</div>
-                      <div className="text-[9px] text-muted-foreground">por usuario / mes</div>
+                      <div className="text-xs font-bold text-foreground">{plan.nombre}</div>
+                      <div className="text-xl font-black text-foreground mt-0.5">${displayPrice.toLocaleString()}</div>
+                      <div className="text-[9px] text-muted-foreground">{displaySuffix.trim()}</div>
+                      {plan.slug && (
+                        <div className="text-[9px] text-muted-foreground mt-0.5">{plan.usuarios_incluidos} usuario{plan.usuarios_incluidos !== 1 ? 's' : ''}</div>
+                      )}
                     </button>
                   );
                 })}
@@ -1263,7 +1274,8 @@ export default function MiSuscripcionPage() {
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
               <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(targetMin - currentUsuarios, q - 1))} disabled={totalNewUsers <= targetMin}>
+
                     <Minus className="h-4 w-4" />
                   </Button>
                   <div className="text-center min-w-[50px]">
