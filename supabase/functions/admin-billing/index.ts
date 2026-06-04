@@ -92,6 +92,49 @@ Deno.serve(async (req) => {
 
     if (action === "list_all_invoices") {
       const statusFilter = url.searchParams.get("status") || "all"; // 'paid' | 'open' | 'all'
+      const empresaIdParam = url.searchParams.get("empresa_id");
+
+      // FAST PATH: si nos piden una empresa específica, solo traemos sus invoices
+      // (por customer_id de subscriptions/facturas) en lugar de toda la plataforma.
+      if (empresaIdParam) {
+        const [subRes, factsRes, empRes] = await Promise.all([
+          supabase.from("subscriptions").select("stripe_customer_id").eq("empresa_id", empresaIdParam).maybeSingle(),
+          supabase.from("facturas").select("stripe_invoice_id").eq("empresa_id", empresaIdParam),
+          supabase.from("empresas").select("id, nombre, email, owner_user_id").eq("id", empresaIdParam).maybeSingle(),
+        ]);
+        const customerIds = new Set<string>();
+        if (subRes.data?.stripe_customer_id) customerIds.add(subRes.data.stripe_customer_id);
+        const localInvoiceIds = new Set<string>((factsRes.data || []).map((f: any) => f.stripe_invoice_id).filter(Boolean));
+
+        const collected: any[] = [];
+        for (const cid of customerIds) {
+          try {
+            const params: any = { customer: cid, limit: 100, expand: ["data.lines.data.price"] };
+            if (statusFilter !== "all") params.status = statusFilter;
+            const page = await stripe.invoices.list(params);
+            collected.push(...page.data);
+          } catch (_) { /* ignore */ }
+        }
+        // Traer también las que estén referenciadas en facturas (por si vinieron de otro customer)
+        const haveIds = new Set(collected.map((i: any) => i.id));
+        for (const id of localInvoiceIds) {
+          if (!haveIds.has(id)) {
+            try { collected.push(await stripe.invoices.retrieve(id, { expand: ["lines.data.price"] })); } catch (_) {}
+          }
+        }
+        const empresa = empRes.data;
+        const enriched = collected.map((inv: any) => ({
+          ...inv,
+          empresa_id: empresaIdParam,
+          empresa_nombre: empresa?.nombre || null,
+          empresa_email: empresa?.email || null,
+        })).sort((a, b) => (b.created || 0) - (a.created || 0));
+
+        return new Response(JSON.stringify({ invoices: enriched }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
 
       // Paginate through ALL invoices (Stripe caps each page at 100)
       const allInvoices: any[] = [];
