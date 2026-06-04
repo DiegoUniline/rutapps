@@ -104,6 +104,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   });
 
   const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
+  const [editFactura, setEditFactura] = useState<any | null>(null);
+  const [editFacturaForm, setEditFacturaForm] = useState<any>({});
+  const [savingFactura, setSavingFactura] = useState(false);
+  const [deletingFacturaId, setDeletingFacturaId] = useState<string | null>(null);
+  const [confirmDeleteFactura, setConfirmDeleteFactura] = useState<any | null>(null);
   const [markPaidForm, setMarkPaidForm] = useState({
     metodo_pago: 'transferencia',
     referencia_pago: '',
