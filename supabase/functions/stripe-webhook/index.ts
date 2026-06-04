@@ -188,10 +188,43 @@ Deno.serve(async (req) => {
         if (cps) payload.current_period_start = cps;
         if (paymentMethodId) payload.stripe_payment_method_id = paymentMethodId;
 
+        // Recompute max_usuarios from items: base (qty 1) + extras (qty N) OR legacy single item
+        try {
+          const { data: subRow } = await supabase
+            .from("subscriptions")
+            .select("plan_id")
+            .eq("empresa_id", empresa_id)
+            .maybeSingle();
+          if (subRow?.plan_id) {
+            const { data: planRow } = await supabase
+              .from("subscription_plans")
+              .select("slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra")
+              .eq("id", subRow.plan_id)
+              .maybeSingle();
+            if (planRow?.slug && planRow.stripe_price_id_extra) {
+              const baseItem = sub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id);
+              const extraItem = sub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id_extra);
+              const baseQty = baseItem ? 1 : 0;
+              const extraQty = extraItem?.quantity || 0;
+              if (baseItem) {
+                payload.max_usuarios = (planRow.usuarios_incluidos || 0) + extraQty;
+                payload.legacy_pricing = false;
+              }
+            } else {
+              // legacy single-item
+              const q = sub.items.data[0]?.quantity;
+              if (typeof q === "number" && q > 0) payload.max_usuarios = q;
+            }
+          }
+        } catch (e) {
+          log("max_usuarios recompute skipped", (e as Error).message);
+        }
+
         await supabase.from("subscriptions").update(payload).eq("empresa_id", empresa_id);
-        log("Subscription synced", { empresa_id, status: internalStatus, cancel_at_period_end: sub.cancel_at_period_end });
+        log("Subscription synced", { empresa_id, status: internalStatus, cancel_at_period_end: sub.cancel_at_period_end, max_usuarios: payload.max_usuarios });
       }
     }
+
 
     if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
       const invoice = event.data.object as Stripe.Invoice;
