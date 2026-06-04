@@ -610,28 +610,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="border border-border/60 p-1 h-auto">
-          <TabsTrigger value="general" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Building2 className="h-4 w-4" /> General
-          </TabsTrigger>
-          <TabsTrigger value="usuarios" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
-          </TabsTrigger>
-          <TabsTrigger value="suscripcion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <CreditCard className="h-4 w-4" /> Suscripción
-          </TabsTrigger>
-          <TabsTrigger value="timbres" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Stamp className="h-4 w-4" /> Timbres
-          </TabsTrigger>
-          <TabsTrigger value="facturacion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Receipt className="h-4 w-4" /> Facturación
-          </TabsTrigger>
-        </TabsList>
+      {/* Single stacked view */}
+      <div className="space-y-6">
+        {/* ═══ General ═══ */}
+        <div>
 
-        {/* ═══ TAB: General ═══ */}
-        <TabsContent value="general">
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -689,10 +672,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* ═══ TAB: Usuarios ═══ */}
-        <TabsContent value="usuarios">
+        {/* ═══ Usuarios ═══ */}
+        <div>
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold flex items-center gap-2">
@@ -768,10 +752,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </div>
             )}
           </div>
-        </TabsContent>
+        </div>
 
-        {/* ═══ TAB: Suscripción ═══ */}
-        <TabsContent value="suscripcion">
+        {/* ═══ Suscripción ═══ */}
+        <div>
+
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -787,7 +772,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
               {!subscription ? (
                 <p className="text-muted-foreground py-8 text-center">Sin suscripción activa</p>
-              ) : editingSub ? (
+              ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Plan</Label>
@@ -1005,216 +990,15 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     );
                   })()}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Estado</p>
-                    <Badge variant={getEffectiveStatus(subscription).v} className="mt-1">
-                      {getEffectiveStatus(subscription).l}
-                    </Badge>
-                    {subscription.acceso_bloqueado && (
-                      <Badge variant="destructive" className="mt-1 ml-1">🔒 Bloqueada</Badge>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Plan</p>
-                    <p className="font-medium mt-1">{subscription.subscription_plans?.nombre || 'Sin plan'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Usuarios</p>
-                    <p className="font-medium mt-1">{profiles.length} / {subscription.max_usuarios}</p>
-                  </div>
-                  {subscription.subscription_plans?.precio_por_usuario && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Precio/usuario</p>
-                      <p className="font-medium mt-1">{fmtMXN(subscription.subscription_plans.precio_por_usuario)}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted-foreground">Próximo cobro</p>
-                    <p className="font-medium mt-1">
-                      {subscription.current_period_end
-                        ? (() => {
-                            const d = new Date(subscription.current_period_end);
-                            const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                            return format(normalized, "dd MMM yyyy", { locale: es });
-                          })()
-                        : '—'}
-                    </p>
-                  </div>
-                  {daysLeft !== null && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Días restantes</p>
-                      <Badge variant={daysLeft <= 3 ? 'destructive' : daysLeft <= 7 ? 'secondary' : 'outline'} className="mt-1">
-                        {daysLeft <= 0 ? 'Vencido' : `${daysLeft} días`}
-                      </Badge>
-                    </div>
-                  )}
-                  {subscription.trial_ends_at && subscription.status === 'trial' && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fin trial</p>
-                      <p className="font-medium mt-1">{format(new Date(subscription.trial_ends_at), "dd MMM yyyy", { locale: es })}</p>
-                    </div>
-                  )}
-                  {subscription.stripe_customer_id && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Stripe Customer</p>
-                      <p className="font-mono text-sm mt-1 text-muted-foreground">{subscription.stripe_customer_id}</p>
-                    </div>
-                  )}
-                  {subscription.card_last4 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tarjeta</p>
-                      <p className="font-mono font-medium mt-1">
-                        {subscription.card_brand ? `${subscription.card_brand} ` : ''}•••• {subscription.card_last4}
-                      </p>
-                    </div>
-                  )}
-                </div>
               )}
+
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* ═══ TAB: Timbres ═══ */}
-        <TabsContent value="timbres">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Saldo + Venta */}
-            <Card className="border border-border/60 shadow-sm">
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold flex items-center gap-2">
-                    <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => setShowTimbresSale(!showTimbresSale)}>
-                    <ShoppingCart className="h-4 w-4 mr-1.5" /> Nueva venta
-                  </Button>
-                </div>
+        {/* ═══ Facturación ═══ */}
+        <div>
 
-                <div className="flex items-center justify-between bg-card rounded-lg p-4">
-                  <span className="text-muted-foreground">Saldo actual</span>
-                  <span className={`text-3xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
-                    {timbres}
-                  </span>
-                </div>
-
-                {showTimbresSale && (
-                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-card/80">
-                    <p className="text-sm font-semibold flex items-center gap-1.5">
-                      <ShoppingCart className="h-4 w-4 text-primary" /> Registrar venta de timbres
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-sm">Paquetes (×100)</Label>
-                        <Input type="number" min={1} value={timbresForm.paquetes}
-                          onChange={e => setTimbresForm(f => ({ ...f, paquetes: parseInt(e.target.value) || 1 }))}
-                          className="font-mono" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-sm">Precio/timbre</Label>
-                        <Input type="number" min={0} step={0.5} value={timbresForm.precio_timbre}
-                          onChange={e => setTimbresForm(f => ({ ...f, precio_timbre: parseFloat(e.target.value) || 0 }))}
-                          className="font-mono" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-sm flex items-center gap-1">
-                        <Percent className="h-3.5 w-3.5" /> Descuento (%)
-                      </Label>
-                      <Input type="number" min={0} max={100} value={timbresForm.descuento_pct}
-                        onChange={e => setTimbresForm(f => ({ ...f, descuento_pct: parseFloat(e.target.value) || 0 }))}
-                        className="font-mono" />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Notas</Label>
-                      <Textarea value={timbresForm.notas}
-                        onChange={e => setTimbresForm(f => ({ ...f, notas: e.target.value }))}
-                        className="resize-none h-16" placeholder="Notas de la venta..." />
-                    </div>
-
-                    <div className="bg-background border border-border/40 rounded-lg p-3 space-y-1.5">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{timbresCount} timbres × ${timbresForm.precio_timbre}</span>
-                        <span>{fmtMXN(timbresSubtotal)}</span>
-                      </div>
-                      {timbresForm.descuento_pct > 0 && (
-                        <div className="flex justify-between text-sm text-primary">
-                          <span>Descuento ({timbresForm.descuento_pct}%)</span>
-                          <span>-{fmtMXN(timbresDescuento)}</span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="flex justify-between font-bold">
-                        <span>Total</span>
-                        <span>{fmtMXN(timbresTotal)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="generar-factura"
-                        checked={timbresForm.generar_factura}
-                        onCheckedChange={v => setTimbresForm(f => ({ ...f, generar_factura: !!v }))}
-                      />
-                      <Label htmlFor="generar-factura" className="text-sm cursor-pointer">
-                        Generar factura Stripe y enviar por correo
-                      </Label>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1" onClick={() => setShowTimbresSale(false)}>
-                        Cancelar
-                      </Button>
-                      <Button className="flex-1" disabled={addingTimbres} onClick={handleTimbresSale}>
-                        {addingTimbres ? 'Procesando...' : `Vender ${timbresCount} timbres`}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Historial */}
-            <Card className="border border-border/60 shadow-sm">
-              <CardContent className="pt-6">
-                <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
-                  <History className="h-4 w-4 text-primary" /> Historial de movimientos
-                </h3>
-                {timbresMovimientos.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">Sin movimientos</p>
-                ) : (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {timbresMovimientos.map(m => (
-                      <div key={m.id} className="flex items-start justify-between border border-border/30 rounded-lg p-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={m.tipo === 'compra' || m.tipo === 'recarga' ? 'default' : 'secondary'}>
-                              {m.tipo === 'compra' ? '🛒 Compra' : m.tipo === 'consumo' ? '📄 Uso' : m.tipo === 'recarga' ? '🔄 Recarga' : m.tipo}
-                            </Badge>
-                            <span className={`font-mono font-semibold ${m.cantidad >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                              {m.cantidad >= 0 ? '+' : ''}{m.cantidad}
-                            </span>
-                          </div>
-                          {m.notas && <p className="text-sm text-muted-foreground mt-1 truncate">{m.notas}</p>}
-                        </div>
-                        <div className="text-right shrink-0 ml-3">
-                          <p className="font-mono text-muted-foreground text-sm">→ {m.saldo_nuevo}</p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(m.created_at), 'dd/MM/yy HH:mm')}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* ═══ TAB: Facturación ═══ */}
-        <TabsContent value="facturacion">
           <div className="space-y-6">
             {/* Action: Create subscription invoice */}
             <Card className="border border-primary/30 bg-primary/5 shadow-sm">
@@ -1487,8 +1271,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </Card>
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
 
       {/* Subscription Invoice Dialog */}
       <Dialog open={showSubInvoice} onOpenChange={setShowSubInvoice}>
