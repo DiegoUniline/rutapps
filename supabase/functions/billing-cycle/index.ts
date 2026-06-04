@@ -427,31 +427,69 @@ Deno.serve(async (req) => {
     if (stripe) {
       const { data: stripeSubs } = await supabase
         .from("subscriptions")
-        .select("id, empresa_id, max_usuarios, stripe_subscription_id")
+        .select("id, empresa_id, max_usuarios, stripe_subscription_id, plan_id, legacy_pricing")
         .not("stripe_subscription_id", "is", null)
         .in("status", ["active", "past_due", "gracia"]);
 
       for (const sub of stripeSubs || []) {
         try {
+          // Load plan to know usuarios_incluidos + add-on price
+          let planRow: any = null;
+          if (sub.plan_id) {
+            const { data: sp } = await supabase
+              .from("subscription_plans")
+              .select("slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra")
+              .eq("id", sub.plan_id)
+              .maybeSingle();
+            planRow = sp;
+          }
+          const isNewPlan = !!planRow?.slug && sub.legacy_pricing !== true;
+
           const { count: activeProfilesCount } = await supabase
             .from("profiles")
             .select("id", { count: "exact", head: true })
             .eq("empresa_id", sub.empresa_id)
             .eq("estado", "activo");
           const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
-          const qty = Math.max(3, realUsers);
+          const minQty = isNewPlan ? Math.max(1, planRow.usuarios_incluidos || 1) : 3;
+          const qty = Math.max(minQty, realUsers);
 
           const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
-          const item = stripeSub.items.data[0];
-          if (!item) continue;
-          const currentStripeQty = item.quantity || 0;
 
-          if (qty !== currentStripeQty) {
-            await stripe.subscriptions.update(sub.stripe_subscription_id, {
-              items: [{ id: item.id, quantity: qty }],
-              proration_behavior: "none", // no immediate charge; bills on next renewal
-            });
-            log("Stripe quantity synced", { empresa: sub.empresa_id, prev: currentStripeQty, new: qty });
+          if (isNewPlan && planRow.stripe_price_id_extra) {
+            // Two-line-item model: base (qty 1) + extras (qty = qty - incluidos)
+            const baseItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id);
+            const extraItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id_extra);
+            const desiredExtras = Math.max(0, qty - (planRow.usuarios_incluidos || 0));
+            const currentExtras = extraItem?.quantity || 0;
+
+            if (desiredExtras !== currentExtras) {
+              const items: any[] = [];
+              if (baseItem) items.push({ id: baseItem.id, quantity: 1 });
+              if (extraItem) {
+                if (desiredExtras === 0) items.push({ id: extraItem.id, deleted: true });
+                else items.push({ id: extraItem.id, quantity: desiredExtras });
+              } else if (desiredExtras > 0) {
+                items.push({ price: planRow.stripe_price_id_extra, quantity: desiredExtras });
+              }
+              await stripe.subscriptions.update(sub.stripe_subscription_id, {
+                items,
+                proration_behavior: "none",
+              });
+              log("Stripe extras synced", { empresa: sub.empresa_id, prev: currentExtras, new: desiredExtras });
+            }
+          } else {
+            // Legacy single-item model
+            const item = stripeSub.items.data[0];
+            if (!item) continue;
+            const currentStripeQty = item.quantity || 0;
+            if (qty !== currentStripeQty) {
+              await stripe.subscriptions.update(sub.stripe_subscription_id, {
+                items: [{ id: item.id, quantity: qty }],
+                proration_behavior: "none",
+              });
+              log("Stripe quantity synced (legacy)", { empresa: sub.empresa_id, prev: currentStripeQty, new: qty });
+            }
           }
 
           if (qty !== sub.max_usuarios) {
@@ -462,6 +500,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
     log("Cycle completed");
 
