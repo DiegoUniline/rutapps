@@ -1338,8 +1338,9 @@ export default function MiSuscripcionPage() {
                 )}
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
+                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / monthsBilled).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
                 </div>
+
 
                 {hasChanges && updateCharge && (
                   <>
