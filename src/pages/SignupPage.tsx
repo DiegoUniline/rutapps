@@ -10,7 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText, Check, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface SignupPlanRow {
+  id: string;
+  slug: string | null;
+  nombre: string;
+  precio_base: number | null;
+  usuarios_incluidos: number | null;
+  precio_extra_usuario: number | null;
+  popular: boolean | null;
+  ideal_para: string | null;
+  orden: number | null;
+}
+
+const SELECTED_PLAN_KEY = 'rutapp_selected_plan';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -42,10 +57,12 @@ const REF_KEY = 'rutapp_partner_ref';
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [cuponCodigo, setCuponCodigo] = useState('');
   const [partnerRef, setPartnerRef] = useState<string>('');
+  const [plans, setPlans] = useState<SignupPlanRow[]>([]);
+  const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
 
   // Capture ?ref= from URL or localStorage
   useEffect(() => {
@@ -60,6 +77,36 @@ export default function SignupPage() {
     const urlCupon = searchParams.get('cupon') || searchParams.get('coupon');
     if (urlCupon) setCuponCodigo(urlCupon.toUpperCase());
   }, [searchParams]);
+
+  // Load active subscription plans for selector
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('subscription_plans')
+        .select('id, slug, nombre, precio_base, usuarios_incluidos, precio_extra_usuario, popular, ideal_para, orden')
+        .eq('activo', true)
+        .not('slug', 'is', null)
+        .order('orden', { ascending: true });
+      const rows = (data as SignupPlanRow[] | null) || [];
+      setPlans(rows);
+      const urlPlan = searchParams.get('plan');
+      const fromUrl = urlPlan ? rows.find(p => p.slug === urlPlan) : null;
+      const popular = rows.find(p => p.popular);
+      const chosen = fromUrl || popular || rows[0];
+      if (chosen?.slug) setSelectedPlanSlug(chosen.slug);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSelectPlan(slug: string) {
+    setSelectedPlanSlug(slug);
+    const next = new URLSearchParams(searchParams);
+    next.set('plan', slug);
+    setSearchParams(next, { replace: true });
+  }
+
+  const selectedPlan = plans.find(p => p.slug === selectedPlanSlug) || null;
+
 
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -329,11 +376,16 @@ export default function SignupPage() {
         });
       } catch { /* silent - welcome msg is best-effort */ }
 
-      toast.success('¡Cuenta creada! Ahora elige tu plan y captura tu tarjeta para iniciar tu prueba.', { duration: 8000 });
+      toast.success('¡Cuenta creada! Ahora captura tu tarjeta para iniciar tu prueba.', { duration: 8000 });
+      // Persist plan choice so /completar-registro lo preselecciona
+      if (selectedPlanSlug) {
+        try { localStorage.setItem(SELECTED_PLAN_KEY, selectedPlanSlug); } catch {}
+      }
+      const planQuery = selectedPlanSlug ? `?plan=${encodeURIComponent(selectedPlanSlug)}` : '';
       // After signUp the user is already authenticated; send them to capture card.
       // If session is not yet ready, redirect to /login which will then route to /completar-registro via the guard.
       const { data: { session } } = await supabase.auth.getSession();
-      navigate(session ? '/completar-registro' : '/login');
+      navigate(session ? `/completar-registro${planQuery}` : '/login');
     } catch (err: any) {
       const msg = err.message || 'Error al crear la cuenta';
       if (msg.includes('duplicate') && msg.includes('email')) {
@@ -369,6 +421,54 @@ export default function SignupPage() {
           <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
           <p className="text-sm text-muted-foreground">7 días de prueba gratis · Se requiere tarjeta para activar la cuenta</p>
 
+          {/* Plan selector */}
+          {plans.length > 0 && (
+            <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-left">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary mb-3">
+                <Sparkles className="h-4 w-4" />
+                Elige tu plan
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {plans.map(p => {
+                  const isSel = p.slug === selectedPlanSlug;
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => p.slug && handleSelectPlan(p.slug)}
+                      className={cn(
+                        'relative rounded-lg border p-3 text-left transition-all bg-card hover:border-primary',
+                        isSel ? 'border-primary ring-2 ring-primary shadow-md' : 'border-border'
+                      )}
+                    >
+                      {p.popular && (
+                        <span className="absolute -top-2 right-2 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5">
+                          <Star className="h-2.5 w-2.5" /> Popular
+                        </span>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-foreground">{p.nombre}</span>
+                        {isSel && <Check className="h-4 w-4 text-primary" />}
+                      </div>
+                      {p.ideal_para && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{p.ideal_para}</p>
+                      )}
+                      <div className="mt-2">
+                        <span className="text-lg font-black text-foreground">
+                          ${Number(p.precio_base || 0).toLocaleString('es-MX')}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground"> MXN/mes</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {p.usuarios_incluidos || 1} usuario{(p.usuarios_incluidos || 1) > 1 ? 's' : ''} incluidos
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Pricing & card disclosure */}
           <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-left space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -376,9 +476,14 @@ export default function SignupPage() {
               Cómo funciona el cobro
             </div>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-              <li><strong className="text-foreground">$300 MXN por usuario al mes</strong> (planes semestral -10% y anual -15%).</li>
-              <li>El contrato es de <strong className="text-foreground">3 usuarios iniciales</strong> y de ahí hacia arriba puedes agregar los que necesites.</li>
-              <li>En el siguiente paso capturas tu tarjeta y eliges plan. <strong className="text-foreground">No se cobra nada durante los 7 días de prueba.</strong></li>
+              {selectedPlan ? (
+                <li>
+                  Plan <strong className="text-foreground">{selectedPlan.nombre}</strong>: ${Number(selectedPlan.precio_base || 0).toLocaleString('es-MX')} MXN/mes con {selectedPlan.usuarios_incluidos || 1} usuario{(selectedPlan.usuarios_incluidos || 1) > 1 ? 's' : ''} incluidos. Usuarios adicionales: ${Number(selectedPlan.precio_extra_usuario || 0).toLocaleString('es-MX')} MXN c/u.
+                </li>
+              ) : (
+                <li><strong className="text-foreground">$300 MXN por usuario al mes</strong> (planes semestral -10% y anual -15%).</li>
+              )}
+              <li>En el siguiente paso capturas tu tarjeta y confirmas tu plan. <strong className="text-foreground">No se cobra nada durante los 7 días de prueba.</strong></li>
               <li>Al terminar la prueba se realiza el primer cargo automático según el plan elegido.</li>
               <li>Puedes cancelar antes del día 7 desde tu cuenta sin ningún cargo.</li>
               <li><strong className="text-foreground">Si no capturas la tarjeta, la cuenta no se activa</strong> y no podrás acceder al sistema.</li>
