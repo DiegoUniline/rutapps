@@ -1296,18 +1296,24 @@ export default function MiSuscripcionPage() {
 
             {/* Summary */}
             {targetPlan && (() => {
-              const baseSubtotal = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+              const monthsBilled = targetPlan.meses || 1;
+              const monthlyBase = planMonthlyCost(targetPlan, totalNewUsers);
+              const baseSubtotal = monthlyBase * monthsBilled;
               const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
               const totalConDesc = companyDiscount > 0
                 ? Math.round(baseSubtotal * (1 - companyDiscount / 100))
                 : baseSubtotal;
               const ahorro = baseSubtotal - totalConDesc;
+              const extras = targetPlan.slug ? Math.max(0, totalNewUsers - (targetPlan.usuarios_incluidos || 0)) : 0;
               return (
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
-                    {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
+                    {targetPlan.slug
+                      ? <>Base {targetPlan.nombre} ${Number(targetPlan.precio_base).toLocaleString()} + {extras} extra × ${targetPlan.precio_extra_usuario}</>
+                      : <>{totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {monthsBilled} mes{monthsBilled !== 1 ? 'es' : ''}</>}
                   </div>
+
                   <div className="text-right">
                     {companyDiscount > 0 && (
                       <div className="text-xs text-muted-foreground line-through">
