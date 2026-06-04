@@ -13,7 +13,6 @@ const log = (step: string, details?: any) =>
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 const FACTURACION_URL = "https://rutapp.mx/mi-suscripcion";
 
-/* ─── Send WhatsApp text ─── */
 async function sendWA(waToken: string, phone: string, message: string): Promise<boolean> {
   try {
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
@@ -26,23 +25,6 @@ async function sendWA(waToken: string, phone: string, message: string): Promise<
   } catch {
     return false;
   }
-}
-
-/* ─── Send billing email ─── */
-async function sendEmail(supabase: any, to: string, subject: string, html: string) {
-  try {
-    await supabase.from("billing_notifications").insert({
-      customer_email: to,
-      channel: "email",
-      tipo: "factura_pendiente",
-      mensaje: subject,
-      status: "logged",
-    });
-    // Also try billing-notify-email for actual delivery
-    await supabase.functions.invoke("billing-notify-email", {
-      body: { to, empresa: "", plan: subject, amount: 0, url: "" },
-    }).catch(() => {});
-  } catch { /* silent */ }
 }
 
 Deno.serve(async (req) => {
@@ -69,7 +51,6 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    // Get user's empresa
     const { data: profile } = await supabase
       .from("profiles")
       .select("empresa_id, nombre, telefono")
@@ -77,8 +58,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!profile?.empresa_id) throw new Error("Sin empresa");
 
-    // Quantity = real active users (min 3). If client passes a higher num_usuarios
-    // (e.g. user is pre-purchasing extra seats), respect it.
+    const { data: currentSub } = await supabase
+      .from("subscriptions")
+      .select("id, legacy_pricing, descuento_porcentaje, stripe_customer_id")
+      .eq("empresa_id", profile.empresa_id)
+      .maybeSingle();
+
     const { count: activeProfilesCount } = await supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -86,27 +71,16 @@ Deno.serve(async (req) => {
       .eq("estado", "activo");
     const realUsers = activeProfilesCount ?? 0;
     const requested = parseInt(num_usuarios) || 0;
-    const qty = Math.max(3, realUsers, requested);
 
-    // Get plan details — try `subscription_plans` first (used by frontend),
-    // then fall back to legacy `planes` table.
+    // Plan
     let plan: any = null;
     const { data: spPlan } = await supabase
       .from("subscription_plans")
       .select("*")
       .eq("id", plan_id)
-      .eq("activo", true)
       .maybeSingle();
-
     if (spPlan) {
-      // Normalise to the shape the rest of this function expects
-      plan = {
-        id: spPlan.id,
-        nombre: spPlan.nombre,
-        activo: spPlan.activo,
-        stripe_price_id: spPlan.stripe_price_id,
-        precio_base_mes: spPlan.precio_por_usuario,
-      };
+      plan = spPlan;
     } else {
       const { data: legacyPlan } = await supabase
         .from("planes")
@@ -114,14 +88,40 @@ Deno.serve(async (req) => {
         .eq("id", plan_id)
         .eq("activo", true)
         .maybeSingle();
-      plan = legacyPlan;
+      if (legacyPlan) {
+        plan = {
+          ...legacyPlan,
+          precio_por_usuario: legacyPlan.precio_base_mes,
+          usuarios_incluidos: 0,
+          precio_base: 0,
+          precio_extra_usuario: legacyPlan.precio_base_mes,
+        };
+      }
+    }
+    if (!plan) throw new Error("Plan no encontrado");
+
+    // New plan = tiene slug. Legacy = no slug.
+    const isNewPlan = !!plan.slug;
+    const stayingInLegacy = currentSub?.legacy_pricing === true && !isNewPlan;
+
+    const minQty = stayingInLegacy ? 3 : Math.max(1, plan.usuarios_incluidos || 1);
+    const qty = Math.max(minQty, realUsers, requested);
+
+    // Pricing
+    let subtotal: number;
+    let precioUnitarioForInvoice: number;
+    let extraUsers = 0;
+    if (isNewPlan) {
+      extraUsers = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+      subtotal = Number(plan.precio_base || 0) + extraUsers * Number(plan.precio_extra_usuario || 0);
+      precioUnitarioForInvoice = qty > 0 ? Math.round((subtotal / qty) * 100) / 100 : Number(plan.precio_base || 0);
+    } else {
+      precioUnitarioForInvoice = Number(plan.precio_por_usuario || 300);
+      subtotal = precioUnitarioForInvoice * qty;
     }
 
-    if (!plan) throw new Error("Plan no encontrado o inactivo");
+    log("Plan selected", { plan: plan.nombre, qty, isNewPlan, extraUsers, subtotal });
 
-    log("Plan selected", { plan: plan.nombre, qty, empresa: profile.empresa_id });
-
-    // Calculate proration
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
@@ -130,8 +130,6 @@ Deno.serve(async (req) => {
     const diasRestantes = diasEnMes - diaActual + 1;
     const esProrrateo = diaActual !== 1;
 
-    const precioUnitario = plan.precio_base_mes;
-    const subtotal = precioUnitario * qty;
     const total = esProrrateo
       ? Math.round((subtotal / diasEnMes) * diasRestantes * 100) / 100
       : subtotal;
@@ -140,40 +138,32 @@ Deno.serve(async (req) => {
     const primeroDeSiguiente = new Date(year, month + 1, 1);
     const periodoFin = new Date(primeroDeSiguiente.getTime() - 86400000).toISOString().slice(0, 10);
 
-    log("Proration calculated", { diasEnMes, diaActual, diasRestantes, esProrrateo, subtotal, total });
-
-    const subUpdatePayload: Record<string, any> = {
-      plan_id: plan.id,
-      status: "pendiente_pago",
-      max_usuarios: qty,
-      es_manual: true,
-      updated_at: new Date().toISOString(),
-      // Always set period end to the 1st of next month
-      current_period_end: primeroDeSiguiente.toISOString(),
-    };
-
     const { error: subErr } = await supabase
       .from("subscriptions")
-      .update(subUpdatePayload)
+      .update({
+        plan_id: plan.id,
+        status: "pendiente_pago",
+        max_usuarios: qty,
+        es_manual: true,
+        legacy_pricing: stayingInLegacy, // si elige plan nuevo, deja de ser legacy
+        updated_at: new Date().toISOString(),
+        current_period_end: primeroDeSiguiente.toISOString(),
+      })
       .eq("empresa_id", profile.empresa_id);
-
     if (subErr) log("Sub update error", subErr);
 
-    // Delete previous pending invoices for this empresa
     await supabase
       .from("facturas")
       .delete()
       .eq("empresa_id", profile.empresa_id)
       .eq("estado", "pendiente");
 
-    // Get subscription id
     const { data: sub } = await supabase
       .from("subscriptions")
       .select("id")
       .eq("empresa_id", profile.empresa_id)
       .maybeSingle();
 
-    // Create new invoice
     const { data: factura, error: facErr } = await supabase
       .from("facturas")
       .insert({
@@ -182,7 +172,7 @@ Deno.serve(async (req) => {
         periodo_inicio: periodoInicio,
         periodo_fin: periodoFin,
         num_usuarios: qty,
-        precio_unitario: precioUnitario,
+        precio_unitario: precioUnitarioForInvoice,
         subtotal,
         total,
         estado: "pendiente",
@@ -197,21 +187,14 @@ Deno.serve(async (req) => {
       throw new Error("Error creando factura");
     }
 
-    log("Invoice created", { facturaId: factura.id, total, esProrrateo });
-
-    // ═══════════════════════════════════════════════
-    // SEND NOTIFICATIONS: WA + Email with payment link
-    // ═══════════════════════════════════════════════
+    // Stripe checkout
     let stripeCheckoutUrl = "";
-
-    // Generate Stripe checkout URL if plan has stripe_price_id
     if (plan.stripe_price_id) {
       try {
         const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
         if (stripeKey) {
           const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-          // Find or create Stripe customer
           const email = userData.user.email!;
           const customers = await stripe.customers.list({ email, limit: 1 });
           let customerId: string;
@@ -227,14 +210,8 @@ Deno.serve(async (req) => {
 
           const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-          // Check for empresa discount
           let discounts: any[] = [];
-          const { data: subDiscount } = await supabase
-            .from("subscriptions")
-            .select("descuento_porcentaje")
-            .eq("empresa_id", profile.empresa_id)
-            .maybeSingle();
-          const descPct = subDiscount?.descuento_porcentaje || 0;
+          const descPct = currentSub?.descuento_porcentaje || 0;
           if (descPct > 0) {
             const coupon = await stripe.coupons.create({
               percent_off: descPct,
@@ -242,12 +219,21 @@ Deno.serve(async (req) => {
               name: `Descuento ${descPct}% - ${profile.empresa_id.slice(0, 8)}`,
             });
             discounts = [{ coupon: coupon.id }];
-            log("Applied discount coupon", { descPct, couponId: coupon.id });
+          }
+
+          const lineItems: any[] = [];
+          if (isNewPlan) {
+            lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
+            if (extraUsers > 0 && plan.stripe_price_id_extra) {
+              lineItems.push({ price: plan.stripe_price_id_extra, quantity: extraUsers });
+            }
+          } else {
+            lineItems.push({ price: plan.stripe_price_id, quantity: qty });
           }
 
           const sessionParams: any = {
             customer: customerId,
-            line_items: [{ price: plan.stripe_price_id, quantity: qty }],
+            line_items: lineItems,
             mode: "subscription",
             subscription_data: {
               billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
@@ -256,19 +242,20 @@ Deno.serve(async (req) => {
                 empresa_id: profile.empresa_id,
                 plan_id: plan.id,
                 num_usuarios: String(qty),
+                plan_slug: plan.slug || "",
               },
             },
             metadata: {
               empresa_id: profile.empresa_id,
               plan_id: plan.id,
               num_usuarios: String(qty),
+              plan_slug: plan.slug || "",
             },
             success_url: `${origin}/dashboard?checkout=success`,
             cancel_url: `${origin}/mi-suscripcion?checkout=cancelled`,
           };
-          if (discounts.length > 0) {
-            sessionParams.discounts = discounts;
-          }
+          if (discounts.length > 0) sessionParams.discounts = discounts;
+
           const session = await stripe.checkout.sessions.create(sessionParams);
           stripeCheckoutUrl = session.url || "";
           await supabase
@@ -279,14 +266,13 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq("empresa_id", profile.empresa_id);
-          log("Stripe checkout URL generated", { url: stripeCheckoutUrl.slice(0, 60) });
         }
       } catch (e) {
         log("Stripe checkout URL generation error (non-blocking)", (e as Error).message);
       }
     }
 
-    // Get empresa name
+    // Notifications (WA + email)
     const { data: empresaData } = await supabase
       .from("empresas")
       .select("nombre")
@@ -298,7 +284,6 @@ Deno.serve(async (req) => {
     const numFactura = factura.numero_factura || "N/A";
     const fechaLimite = new Date(now.getTime() + 3 * 86400000).toLocaleDateString("es-MX");
 
-    // ─── WhatsApp notification ───
     const { data: waConfig } = await supabase
       .from("whatsapp_config")
       .select("api_token")
@@ -313,20 +298,15 @@ Deno.serve(async (req) => {
         `de *${empresaNombre}*,\n`,
         `Se ha generado tu factura:`,
         `📋 *Factura:* ${numFactura}`,
-        `📦 *Plan:* ${plan.nombre} — ${qty} usuarios`,
+        `📦 *Plan:* ${plan.nombre} — ${qty} usuario${qty !== 1 ? "s" : ""}${extraUsers > 0 ? ` (${extraUsers} extra)` : ""}`,
         `💰 *Monto:* $${total.toLocaleString()} MXN`,
         esProrrateo ? `📅 *Prorrateo:* ${diasRestantes} días restantes del mes` : "",
         `📅 *Fecha límite:* ${fechaLimite}\n`,
         `Puedes pagar con tarjeta desde aquí:`,
         `👉 ${payLink}\n`,
-        `O desde la app → *Mi Suscripción* → *Pagar*\n`,
         `¡Gracias por confiar en Rutapp! 🚀`,
       ].filter(Boolean).join("\n");
-
       const sent = await sendWA(waConfig.api_token, profile.telefono, waMsg);
-      log("WhatsApp notification", { sent, phone: profile.telefono });
-
-      // Log to billing_notifications
       try {
         await supabase.from("billing_notifications").insert({
           customer_email: userData.user.email || "",
@@ -340,85 +320,20 @@ Deno.serve(async (req) => {
       } catch { /* silent */ }
     }
 
-    // ─── Email notification ───
     if (userData.user.email) {
-      const emailHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden;">
-  <tr><td style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:24px 32px;">
-    <h1 style="margin:0;font-size:20px;font-weight:700;color:#ffffff;">💳 Factura pendiente de pago</h1>
-  </td></tr>
-  <tr><td style="padding:32px;">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding-bottom:16px;font-size:16px;color:#111827;">
-        Hola <strong>${profile.nombre || empresaNombre}</strong>,
-      </td></tr>
-      <tr><td style="padding-bottom:20px;font-size:14px;color:#374151;">
-        Se ha generado una nueva factura para tu suscripci&oacute;n en Rutapp:
-      </td></tr>
-      <tr><td style="padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-size:13px;color:#6b7280;padding:4px 0;">Factura:</td>
-              <td style="font-size:14px;font-weight:600;color:#111827;text-align:right;">${numFactura}</td></tr>
-          <tr><td style="font-size:13px;color:#6b7280;padding:4px 0;">Plan:</td>
-              <td style="font-size:14px;font-weight:600;color:#111827;text-align:right;">${plan.nombre} &mdash; ${qty} usuarios</td></tr>
-          <tr><td style="font-size:13px;color:#6b7280;padding:4px 0;">Periodo:</td>
-              <td style="font-size:14px;font-weight:600;color:#111827;text-align:right;">${periodoInicio} al ${periodoFin}</td></tr>
-          ${esProrrateo ? `<tr><td style="font-size:13px;color:#6b7280;padding:4px 0;">Prorrateo:</td>
-              <td style="font-size:14px;font-weight:600;color:#f59e0b;text-align:right;">${diasRestantes} d&iacute;as</td></tr>` : ""}
-          <tr><td style="font-size:13px;color:#6b7280;padding:8px 0 4px;border-top:1px solid #e5e7eb;">Total:</td>
-              <td style="font-size:18px;font-weight:700;color:#111827;text-align:right;border-top:1px solid #e5e7eb;padding-top:8px;">$${total.toLocaleString()} MXN</td></tr>
-        </table>
-      </td></tr>
-      <tr><td style="padding:8px 0;font-size:13px;color:#f59e0b;font-weight:600;">
-        ⏳ Fecha l&iacute;mite de pago: ${fechaLimite}
-      </td></tr>
-      <tr><td style="padding:16px 0;text-align:center;">
-        <a href="${payLink}" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#ffffff;font-weight:600;font-size:16px;border-radius:8px;text-decoration:none;">Pagar ahora</a>
-      </td></tr>
-      <tr><td style="padding:8px 0;text-align:center;font-size:12px;color:#9ca3af;">
-        Tambi&eacute;n puedes pagar desde la app &rarr; Mi Suscripci&oacute;n &rarr; Pagar
-      </td></tr>
-      <tr><td style="padding:24px 0 0;font-size:13px;color:#9ca3af;border-top:1px solid #e5e7eb;margin-top:24px;">
-        &iexcl;Gracias por confiar en Rutapp! 🚀<br>
-        <span style="font-size:12px;">Este es un mensaje autom&aacute;tico, no responder.</span>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
-
-      // Send via billing-notify-email
       try {
         await supabase.functions.invoke("billing-notify-email", {
           body: {
             to: userData.user.email,
             empresa: empresaNombre,
-            plan: `${plan.nombre} — ${qty} usuarios`,
+            plan: `${plan.nombre} — ${qty} usuario${qty !== 1 ? "s" : ""}`,
             amount: total,
             url: payLink,
           },
         });
-        log("Email notification sent", { email: userData.user.email });
       } catch (e) {
         log("Email notification error (non-blocking)", (e as Error).message);
       }
-
-      // Log email notification
-      try {
-        await supabase.from("billing_notifications").insert({
-          customer_email: userData.user.email,
-          channel: "email",
-          tipo: "factura_pendiente",
-          mensaje: `Factura ${numFactura} — $${total} MXN — ${plan.nombre}`,
-          monto_centavos: Math.round(total * 100),
-          status: "sent",
-        });
-      } catch { /* silent */ }
     }
 
     return new Response(JSON.stringify({
@@ -435,7 +350,11 @@ Deno.serve(async (req) => {
         periodo_fin: periodoFin,
         plan_nombre: plan.nombre,
         num_usuarios: qty,
-        precio_unitario: precioUnitario,
+        usuarios_incluidos: plan.usuarios_incluidos || 0,
+        usuarios_extra: extraUsers,
+        precio_base: Number(plan.precio_base || 0),
+        precio_extra_usuario: Number(plan.precio_extra_usuario || 0),
+        precio_unitario: precioUnitarioForInvoice,
       },
       checkout_url: stripeCheckoutUrl || null,
     }), {
