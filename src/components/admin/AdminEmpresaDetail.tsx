@@ -610,28 +610,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="border border-border/60 p-1 h-auto">
-          <TabsTrigger value="general" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Building2 className="h-4 w-4" /> General
-          </TabsTrigger>
-          <TabsTrigger value="usuarios" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
-          </TabsTrigger>
-          <TabsTrigger value="suscripcion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <CreditCard className="h-4 w-4" /> Suscripción
-          </TabsTrigger>
-          <TabsTrigger value="timbres" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Stamp className="h-4 w-4" /> Timbres
-          </TabsTrigger>
-          <TabsTrigger value="facturacion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Receipt className="h-4 w-4" /> Facturación
-          </TabsTrigger>
-        </TabsList>
+      {/* Single stacked view */}
+      <div className="space-y-6">
+        {/* ═══ General ═══ */}
+        <div>
 
-        {/* ═══ TAB: General ═══ */}
-        <TabsContent value="general">
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
