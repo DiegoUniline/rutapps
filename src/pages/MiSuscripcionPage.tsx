@@ -632,6 +632,32 @@ export default function MiSuscripcionPage() {
     }
   }
 
+  async function handleSubmitInvoiceTransfer() {
+    if (!empresa?.id || !user || !invoiceTransfer) return;
+    setPayingInvoice(invoiceTransfer.id);
+    try {
+      const { error } = await supabase.from('solicitudes_pago').insert({
+        empresa_id: empresa.id,
+        user_id: user.id,
+        tipo: 'suscripcion',
+        concepto: invoiceTransfer.concepto || invoiceTransfer.numero_factura || 'Factura de suscripción',
+        monto_centavos: Math.round(Number(invoiceTransfer.total || 0) * 100),
+        metodo: 'transferencia',
+        notas: transferNotes || null,
+        cantidad_usuarios: invoiceTransfer.num_usuarios,
+      } as any);
+      if (error) throw error;
+      toast.success('Solicitud enviada. Te avisaremos cuando confirmemos tu pago.');
+      setInvoiceTransfer(null);
+      setTransferNotes('');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al enviar solicitud');
+    } finally {
+      setPayingInvoice(null);
+    }
+  }
+
   const isSuperAdminUser = user?.email === 'diego.leon@uniline.mx';
 
   // ─── Eliminar factura (solo super admin) ───
