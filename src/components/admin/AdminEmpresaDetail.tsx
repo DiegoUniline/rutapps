@@ -796,7 +796,26 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Label className="text-sm">Fin período</Label>
                     <Input type="date" value={subForm.current_period_end}
                       onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
+                    <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
                   </div>
+
+                  {/* Toggle acceso bloqueado */}
+                  <div className="sm:col-span-2 rounded-lg border p-3 flex items-start justify-between gap-3 bg-muted/20">
+                    <div>
+                      <Label className="text-sm font-semibold flex items-center gap-2">
+                        🔒 Acceso bloqueado
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Si está activo, la empresa <strong>no puede usar la app</strong> aunque el status sea "Activa".
+                        Desactívalo cuando confirmes el pago o quieras dar acceso manual.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!subForm.acceso_bloqueado}
+                      onCheckedChange={(v) => setSubForm((f: any) => ({ ...f, acceso_bloqueado: v }))}
+                    />
+                  </div>
+
 
                   {/* Resumen de cobro */}
                   {(() => {
