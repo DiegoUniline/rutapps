@@ -1151,7 +1151,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               <div className="space-y-1.5">
                 <Label>Meses</Label>
                 <Input type="number" min={1} value={subInvoiceForm.meses}
-                  onChange={e => setSubInvoiceForm(f => ({ ...f, meses: Math.max(1, parseInt(e.target.value) || 1) }))} />
+                  onChange={e => updateInvoiceMeses(Math.max(1, parseInt(e.target.value) || 1))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Usuarios</Label>
