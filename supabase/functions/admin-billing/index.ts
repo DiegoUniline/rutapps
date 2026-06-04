@@ -721,19 +721,18 @@ Deno.serve(async (req) => {
           .eq("empresa_id", empresa_id)
           .maybeSingle();
         if (subRow) {
-          // Calculate months from factura period
-          let meses = 1;
-          if (fac.periodo_inicio && fac.periodo_fin) {
-            const ini = new Date(fac.periodo_inicio);
-            const fin = new Date(fac.periodo_fin);
-            meses = Math.max(1, Math.round((fin.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+          // Use the invoice's periodo_fin directly as the new subscription end date
+          let nuevoFin: Date;
+          if (fac.periodo_fin) {
+            nuevoFin = new Date(fac.periodo_fin);
+          } else {
+            // Fallback: extend 1 month from current end or today
+            const base = subRow.current_period_end && new Date(subRow.current_period_end) > new Date()
+              ? new Date(subRow.current_period_end)
+              : new Date();
+            nuevoFin = new Date(base);
+            nuevoFin.setMonth(nuevoFin.getMonth() + 1);
           }
-          // Base date: if current period end is in the future, extend from there; else from today
-          const base = subRow.current_period_end && new Date(subRow.current_period_end) > new Date()
-            ? new Date(subRow.current_period_end)
-            : new Date();
-          const nuevoFin = new Date(base);
-          nuevoFin.setMonth(nuevoFin.getMonth() + meses);
           nuevoFinPeriodo = nuevoFin.toISOString();
 
           const updatePayload: any = {
@@ -742,8 +741,10 @@ Deno.serve(async (req) => {
             acceso_bloqueado: false,
             updated_at: new Date().toISOString(),
           };
-          // If was in trial or had no start date, set start date too
-          if (!subRow.current_period_start) {
+          // Set period_start from the invoice if available, or today if missing
+          if (fac.periodo_inicio) {
+            updatePayload.current_period_start = new Date(fac.periodo_inicio).toISOString();
+          } else if (!subRow.current_period_start) {
             updatePayload.current_period_start = new Date().toISOString();
           }
           await supabase.from("subscriptions").update(updatePayload).eq("id", subRow.id);
