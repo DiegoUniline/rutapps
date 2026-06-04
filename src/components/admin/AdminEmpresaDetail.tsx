@@ -990,73 +990,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     );
                   })()}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Estado</p>
-                    <Badge variant={getEffectiveStatus(subscription).v} className="mt-1">
-                      {getEffectiveStatus(subscription).l}
-                    </Badge>
-                    {subscription.acceso_bloqueado && (
-                      <Badge variant="destructive" className="mt-1 ml-1">🔒 Bloqueada</Badge>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Plan</p>
-                    <p className="font-medium mt-1">{subscription.subscription_plans?.nombre || 'Sin plan'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Usuarios</p>
-                    <p className="font-medium mt-1">{profiles.length} / {subscription.max_usuarios}</p>
-                  </div>
-                  {subscription.subscription_plans?.precio_por_usuario && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Precio/usuario</p>
-                      <p className="font-medium mt-1">{fmtMXN(subscription.subscription_plans.precio_por_usuario)}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted-foreground">Próximo cobro</p>
-                    <p className="font-medium mt-1">
-                      {subscription.current_period_end
-                        ? (() => {
-                            const d = new Date(subscription.current_period_end);
-                            const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                            return format(normalized, "dd MMM yyyy", { locale: es });
-                          })()
-                        : '—'}
-                    </p>
-                  </div>
-                  {daysLeft !== null && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Días restantes</p>
-                      <Badge variant={daysLeft <= 3 ? 'destructive' : daysLeft <= 7 ? 'secondary' : 'outline'} className="mt-1">
-                        {daysLeft <= 0 ? 'Vencido' : `${daysLeft} días`}
-                      </Badge>
-                    </div>
-                  )}
-                  {subscription.trial_ends_at && subscription.status === 'trial' && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fin trial</p>
-                      <p className="font-medium mt-1">{format(new Date(subscription.trial_ends_at), "dd MMM yyyy", { locale: es })}</p>
-                    </div>
-                  )}
-                  {subscription.stripe_customer_id && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Stripe Customer</p>
-                      <p className="font-mono text-sm mt-1 text-muted-foreground">{subscription.stripe_customer_id}</p>
-                    </div>
-                  )}
-                  {subscription.card_last4 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tarjeta</p>
-                      <p className="font-mono font-medium mt-1">
-                        {subscription.card_brand ? `${subscription.card_brand} ` : ''}•••• {subscription.card_last4}
-                      </p>
-                    </div>
-                  )}
-                </div>
               )}
+
             </CardContent>
           </Card>
         </div>
