@@ -1338,78 +1338,89 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                     )}
                                   </TableCell>
                                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                    {isPending && hostedUrl && (
-                                      <div className="flex justify-end gap-1">
+                                    <div className="flex justify-end gap-1 flex-wrap">
+                                      {isPending && (
                                         <Button
                                           size="sm"
-                                          variant="ghost"
-                                          title="Copiar link"
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(hostedUrl);
-                                            toast.success('Link de pago copiado');
-                                          }}
+                                          variant="default"
+                                          className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                          title="Registrar pago manual (transferencia/efectivo)"
+                                          onClick={() => openMarkPaid(f)}
                                         >
-                                          <Copy className="h-3.5 w-3.5" />
+                                          ✓ Marcar pagada
                                         </Button>
-                                        <Button
-                                          size="sm"
-                                          className="bg-green-600 hover:bg-green-700 text-white h-8"
-                                          disabled={sendingWaId === f.id}
-                                          title="Enviar por WhatsApp"
-                                          onClick={async () => {
-                                            const tel = (empresa?.telefono || '').replace(/\D/g, '');
-                                            if (!tel) {
-                                              toast.error('La empresa no tiene teléfono registrado');
-                                              return;
-                                            }
-                                            try {
-                                              setSendingWaId(f.id);
-                                              const { data, error } = await supabase.functions.invoke('admin-billing', {
-                                                body: {
-                                                  action: 'send_invoice_notification',
-                                                  channel: 'whatsapp',
-                                                  phone_override: tel,
-                                                  empresa_id: empresaId,
-                                                  empresa_nombre: empresa?.nombre || '',
-                                                  folio: f.numero_factura || '',
-                                                  fecha_vencimiento: f.fecha_vencimiento || null,
-                                                  amount: Math.round(Number(f.total || 0) * 100),
-                                                  hosted_url: hostedUrl,
-                                                  invoice_id: f.stripe_invoice_id || null,
-                                                  description: `Factura ${f.numero_factura || ''}`,
-                                                },
-                                              });
-                                              if (error) throw error;
-                                              if (data?.success === false) throw new Error(data?.error || 'Error');
-                                              toast.success('WhatsApp enviado al cliente ✅');
-                                            } catch (e: any) {
-                                              toast.error(`No se pudo enviar: ${e.message || e}`);
-                                            } finally {
-                                              setSendingWaId(null);
-                                            }
-                                          }}
-                                        >
-                                          {sendingWaId === f.id
-                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            : <MessageCircle className="h-3.5 w-3.5" />}
-                                        </Button>
-                                        <Button size="sm" variant="ghost" asChild title="Abrir página de pago">
-                                          <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                          </a>
-                                        </Button>
-                                      </div>
-                                    )}
-                                    {isPending && !hostedUrl && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {hasStripeInvoice ? 'Buscando link…' : 'Sin link'}
-                                      </span>
-                                    )}
+                                      )}
+                                      {isPending && hostedUrl && (
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            title="Copiar link"
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(hostedUrl);
+                                              toast.success('Link de pago copiado');
+                                            }}
+                                          >
+                                            <Copy className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white h-8"
+                                            disabled={sendingWaId === f.id}
+                                            title="Enviar por WhatsApp"
+                                            onClick={async () => {
+                                              const tel = (empresa?.telefono || '').replace(/\D/g, '');
+                                              if (!tel) {
+                                                toast.error('La empresa no tiene teléfono registrado');
+                                                return;
+                                              }
+                                              try {
+                                                setSendingWaId(f.id);
+                                                const { data, error } = await supabase.functions.invoke('admin-billing', {
+                                                  body: {
+                                                    action: 'send_invoice_notification',
+                                                    channel: 'whatsapp',
+                                                    phone_override: tel,
+                                                    empresa_id: empresaId,
+                                                    empresa_nombre: empresa?.nombre || '',
+                                                    folio: f.numero_factura || '',
+                                                    fecha_vencimiento: f.fecha_vencimiento || null,
+                                                    amount: Math.round(Number(f.total || 0) * 100),
+                                                    hosted_url: hostedUrl,
+                                                    invoice_id: f.stripe_invoice_id || null,
+                                                    description: `Factura ${f.numero_factura || ''}`,
+                                                  },
+                                                });
+                                                if (error) throw error;
+                                                if (data?.success === false) throw new Error(data?.error || 'Error');
+                                                toast.success('WhatsApp enviado al cliente ✅');
+                                              } catch (e: any) {
+                                                toast.error(`No se pudo enviar: ${e.message || e}`);
+                                              } finally {
+                                                setSendingWaId(null);
+                                              }
+                                            }}
+                                          >
+                                            {sendingWaId === f.id
+                                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              : <MessageCircle className="h-3.5 w-3.5" />}
+                                          </Button>
+                                          <Button size="sm" variant="ghost" asChild title="Abrir página de pago">
+                                            <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
+                                              <ExternalLink className="h-3.5 w-3.5" />
+                                            </a>
+                                          </Button>
+                                        </>
+                                      )}
+                                      {!isPending && (
+                                        <span className="text-xs text-emerald-700 font-medium">✓ Pagada</span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                                 {isExpanded && (
                                   <TableRow key={`${f.id}-exp`} className="bg-muted/20 hover:bg-muted/20">
-                                    <TableCell colSpan={8} className="p-4">
+                                    <TableCell colSpan={9} className="p-4">
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                                         {fields.map(([k, v]) => (
                                           <div key={k} className="flex flex-col border-b border-border/30 pb-1">
