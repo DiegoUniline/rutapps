@@ -772,7 +772,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
               {!subscription ? (
                 <p className="text-muted-foreground py-8 text-center">Sin suscripción activa</p>
-              ) : editingSub ? (
+              ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Plan</Label>
