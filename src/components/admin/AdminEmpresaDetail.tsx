@@ -367,6 +367,63 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     finally { setMarkingPaid(false); }
   }
 
+  function openEditFactura(f: any) {
+    setEditFactura(f);
+    setEditFacturaForm({
+      numero_factura: f.numero_factura || '',
+      total: Number(f.total || 0),
+      num_usuarios: Number(f.num_usuarios || 1),
+      precio_unitario: Number(f.precio_unitario || 0),
+      descuento_porcentaje: Number(f.descuento_porcentaje || 0),
+      periodo_inicio: f.periodo_inicio ? String(f.periodo_inicio).slice(0, 10) : '',
+      periodo_fin: f.periodo_fin ? String(f.periodo_fin).slice(0, 10) : '',
+      fecha_vencimiento: f.fecha_vencimiento ? String(f.fecha_vencimiento).slice(0, 10) : '',
+      estado: f.estado || 'pendiente',
+      metodo_pago: f.metodo_pago || '',
+      referencia_pago: f.referencia_pago || '',
+    });
+  }
+
+  async function handleSaveFactura() {
+    if (!editFactura) return;
+    setSavingFactura(true);
+    try {
+      const subtotal = editFacturaForm.num_usuarios * editFacturaForm.precio_unitario;
+      const payload: any = {
+        numero_factura: editFacturaForm.numero_factura || null,
+        total: editFacturaForm.total,
+        num_usuarios: editFacturaForm.num_usuarios,
+        precio_unitario: editFacturaForm.precio_unitario,
+        descuento_porcentaje: editFacturaForm.descuento_porcentaje,
+        subtotal,
+        periodo_inicio: editFacturaForm.periodo_inicio || null,
+        periodo_fin: editFacturaForm.periodo_fin || null,
+        fecha_vencimiento: editFacturaForm.fecha_vencimiento ? new Date(editFacturaForm.fecha_vencimiento).toISOString() : null,
+        estado: editFacturaForm.estado,
+        metodo_pago: editFacturaForm.metodo_pago || null,
+        referencia_pago: editFacturaForm.referencia_pago || null,
+      };
+      const { error } = await supabase.from('facturas').update(payload).eq('id', editFactura.id);
+      if (error) throw error;
+      toast.success('Factura actualizada');
+      setEditFactura(null);
+      load();
+    } catch (e: any) { toast.error(e.message || 'Error al guardar'); }
+    finally { setSavingFactura(false); }
+  }
+
+  async function handleDeleteFactura(f: any) {
+    setDeletingFacturaId(f.id);
+    try {
+      const { error } = await supabase.from('facturas').delete().eq('id', f.id);
+      if (error) throw error;
+      toast.success('Factura eliminada');
+      setConfirmDeleteFactura(null);
+      load();
+    } catch (e: any) { toast.error(e.message || 'Error al eliminar'); }
+    finally { setDeletingFacturaId(null); }
+  }
+
   async function handleDeleteEmpresa() {
     if (!user) return;
     setDeleting(true);
