@@ -1181,6 +1181,22 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   </span>
                 </label>
               </div>
+              <div className="space-y-1.5">
+                <Label>Período: inicio</Label>
+                <Input type="date" value={subInvoiceForm.periodo_inicio}
+                  onChange={e => updateInvoicePeriodoInicio(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Período: fin</Label>
+                <Input type="date" value={subInvoiceForm.periodo_fin}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, periodo_fin: e.target.value }))} />
+              </div>
+              <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
+                Al pagarse, la suscripción quedará vigente del{' '}
+                <strong>{format(new Date(subInvoiceForm.periodo_inicio), 'dd MMM yyyy', { locale: es })}</strong>
+                {' '}al{' '}
+                <strong>{format(new Date(subInvoiceForm.periodo_fin), 'dd MMM yyyy', { locale: es })}</strong>.
+              </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
                 <Input type="number" min={1} value={subInvoiceForm.days_until_due}
