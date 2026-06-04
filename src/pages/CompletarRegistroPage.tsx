@@ -123,6 +123,7 @@ export default function CompletarRegistroPage() {
         body: {
           plan_id: selectedPlan.id,
           quantity,
+          billing_period: billingPeriod,
           accepted_terms: true,
         },
       });
