@@ -523,6 +523,8 @@ Deno.serve(async (req) => {
         days_until_due,
         concepto,
         plan_nombre,
+        periodo_inicio: periodoInicioInput,
+        periodo_fin: periodoFinInput,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
