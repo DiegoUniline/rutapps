@@ -1,117 +1,106 @@
-## Diagnóstico
 
-Hoy el tab **Suscripción** te pide datos sueltos (plan, status, fechas) pero **el descuento y los meses del plan solo se ven dentro del modal "Crear factura"** en el tab Facturación. Además:
+# Rediseño: Detalle de Empresa (Super Admin)
 
-- Solo hay planes **Mensual** activos (Individual/Equipo/Empresa). Los planes **Semestral (-10%)** y **Anual (-15%)** existen en BD pero están `activo=false`, por eso no aparecen en el dropdown.
-- No hay forma de registrar que ya **te pagaron por transferencia** y marcar la factura como pagada (con o sin reflejarlo en Stripe).
-- Si la empresa **agrega un usuario a mitad del período**, no se genera prorrateo automático: hoy solo subes `max_usuarios` y no se cobra el excedente.
-- **Fin trial** siempre se muestra aunque la empresa ya no esté en trial.
+Reestructuro `src/components/admin/AdminEmpresaDetail.tsx` y agrego las piezas de datos que faltan para soportar el modelo de facturación por asientos + pagos manuales/Stripe.
 
-## Plan
+## 1. Layout (full width)
 
-### 1. Activar planes Semestral y Anual
-- Migración de datos: poner `activo = true` en los planes `Semestral` y `Anual` de `subscription_plans`.
-- Resultado: el dropdown "Plan" en el tab Suscripción muestra Mensual / Semestral (-10%) / Anual (-15%) con sus meses.
-
-### 2. Rediseñar el tab Suscripción (más claro y guiado)
-Reorganizar el formulario de edición para que en una sola pantalla decidas todo:
-
-```text
-┌─ Plan y duración ─────────────────────────────┐
-│  Plan: [Anual — $300/usr × 12 meses (-15%)▾] │
-│  Máx. usuarios: [4]                           │
-│  Descuento adicional %: [0]   (sobre el plan) │
-└───────────────────────────────────────────────┘
-
-┌─ Estado ──────────────────────────────────────┐
-│  Status: [Activa ▾]                           │
-│  🔒 Acceso bloqueado: [○]                     │
-└───────────────────────────────────────────────┘
-
-┌─ Vigencia ────────────────────────────────────┐
-│  Inicio período: [27/05/2026]                 │
-│  Fin período:    [27/05/2027]  ← base estado  │
-│  (Fin trial solo si status = trial)           │
-└───────────────────────────────────────────────┘
-
-┌─ 💰 Resumen de cobro (siempre visible) ───────┐
-│  $300/usr − 15% = $255/usr × 4 = $1,020/mes  │
-│  Total período (12 meses): $12,240 MXN        │
-│  [📄 Generar factura de este período]         │
-└───────────────────────────────────────────────┘
+```
+┌────────────────────────────────────────────────────────────────┐
+│ ← Empresas   🏢 Nombre Empresa           [Activa]  [Eliminar] │
+│              Registrada 12/03/2026                             │
+├────────────────────────────────────────────────────────────────┤
+│ [Total a cobrar] [Total cobrado] [Saldo pend.] [Próximo cobro]│
+├──────────────────────────────────┬─────────────────────────────┤
+│  Datos de empresa (60%) [Editar]│  Suscripción actual (40%)   │
+│  Email · Tel · RFC · Razón ...  │  Plan · Status · Asientos   │
+│  (oculta vacíos)                │  [Editar plan]              │
+├──────────────────────────────────┴─────────────────────────────┤
+│ Tabs:  Usuarios | Facturas | Pagos | Histórico                 │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-Detalles:
-- **Fin trial**: oculto si `status ≠ 'trial'`. Si está en trial y la fecha ya pasó, queda deshabilitado en gris.
-- **Inicio/Fin período**: visibles solo cuando hay plan asignado (no en trial).
-- **Resumen de cobro**: panel grande siempre visible con el cálculo: precio base × usuarios × meses, descuento del plan, descuento extra, total mensual y total del período.
-- Botón **"📄 Generar factura de este período"** justo debajo del resumen; abre el modal existente prellenado con plan, usuarios, meses, descuento y fechas.
+- Header full-width, KPIs en `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`.
+- Saldo pendiente: rojo si >0, verde si 0.
+- Datos vacíos se ocultan; si todo vacío → aviso único "Datos fiscales incompletos · Completar".
+- Edición de datos en modal (`Dialog`), no inline.
 
-### 3. Registrar pago manual (transferencia / efectivo) en cada factura
-En cada fila de **Facturas internas** que esté pendiente, agregar acción **"Marcar como pagada"** que abre un mini-modal:
+## 2. Cambios de datos (Supabase)
 
-- **Método de pago**: Transferencia / Efectivo / Depósito / Otro
-- **Fecha de pago**: hoy por default
-- **Referencia**: texto libre (folio de transferencia, último 4 de tarjeta, etc.)
-- **Reflejar también en Stripe**: checkbox (marcado por default si la factura tiene `stripe_invoice_id`)
+Esquema actual ya tiene: `empresas`, `subscriptions`, `subscription_plans`, `facturas` (con campos de línea embebidos), `profiles`, `cobros` (pero ese `cobros` es de ventas de clientes, NO de pagos de suscripción).
 
-Al confirmar:
-- Si la factura tiene `stripe_invoice_id` y marcaste el checkbox → llamar nueva acción edge `mark_invoice_paid_out_of_band` que ejecuta `stripe.invoices.pay(id, { paid_out_of_band: true })`.
-- Actualizar fila en `facturas`: `estado='pagada'`, `fecha_pago`, `metodo_pago`, `referencia_pago`.
-- **Extender la suscripción**: si la factura cubre N meses, mover `current_period_end` hacia adelante N meses y dejar `acceso_bloqueado=false`.
-- Toast: "Pago registrado. Suscripción activa hasta DD/MM/YYYY."
+**Migración nueva (`supabase/migrations/...`):**
 
-Migración: agregar columnas `metodo_pago text` y `referencia_pago text` a `public.facturas`.
+1. `billing_pagos` — pagos hacia la plataforma:
+   - `empresa_id`, `factura_id` (nullable), `monto`, `metodo` (`stripe|transferencia|efectivo|otro`), `referencia`, `fecha`, `aplicado_por` (uuid profile), `origen` (`automatico|manual`), `notas`.
+2. `factura_items` — líneas por factura (concepto, cantidad, precio_unitario, subtotal). Se siembran desde los campos actuales de `facturas` en migración.
+3. `billing_historial` — cambios de plan/suscripción/pagos: `empresa_id`, `entidad`, `entidad_id`, `accion`, `campo`, `valor_anterior`, `valor_nuevo`, `usuario_id`, `fecha`.
+4. Añadir a `facturas.estado` los valores `parcial` y `fallida` (ya existe `pendiente|pagada|cancelada`).
+5. RLS + GRANTs para super_admin (leer/escribir) y empresa (solo lectura propia). service_role para edge functions.
 
-### 4. Prorrateo automático por usuarios extra mid-período
-Cuando, en el formulario de Suscripción, **subes** `max_usuarios` por encima del valor actual y la suscripción está activa:
+## 3. Suscripción + edición de plan
 
-- Calcular días restantes del período: `(current_period_end − hoy)`.
-- Calcular prorrateo: `usuarios_extra × precio_por_usuario_mes × (días_restantes / 30)`.
-- Mostrar banner amarillo:
-  > "Estás agregando **2 usuarios**. Quedan **18 días** del período actual → se generará una factura de prorrateo por **$360 MXN**."
-- Botón **"Generar factura de prorrateo y guardar"**: crea factura interna con `es_prorrateo=true`, llama a `create_pro_invoice` en Stripe (acción que ya existe), y guarda el nuevo `max_usuarios`.
-- Botón secundario **"Solo actualizar (sin cobrar)"** por si el super admin quiere regalar el extra.
+Tarjeta compacta:
+- Plan, Status, Máx. usuarios, Base prepagada, Precio por usuario, Periodo inicio/fin, toggle "Acceso bloqueado" (con tooltip explicativo).
 
-### 5. Mejora visual del tab Facturación
-- Mostrar columna **Método** (Stripe / Transferencia / Efectivo).
-- Filas pagadas en verde claro, pendientes en amarillo, vencidas en rojo.
-- Quitar la acción "Marcar pagada" si ya está pagada.
+Botón "Editar plan" → `Dialog`:
+- Select de plan (lee `subscription_plans`) que autocompleta `precio_usuario` y `ciclo`.
+- Inputs: máx. usuarios, base prepagada, precio/usuario, fechas de periodo.
+- Toggle acceso bloqueado.
+- Al guardar: `UPDATE subscriptions` + un INSERT por cada campo cambiado en `billing_historial`.
 
----
+## 4. Lógica de asientos extra
 
-## Detalles técnicos
+Implementada en edge function `admin-billing` (ya existe, la extiendo):
 
-**Migración SQL (data + schema):**
-```sql
-UPDATE subscription_plans SET activo = true WHERE nombre IN ('Semestral', 'Anual');
-ALTER TABLE public.facturas
-  ADD COLUMN IF NOT EXISTS metodo_pago text,
-  ADD COLUMN IF NOT EXISTS referencia_pago text;
-```
+- **Base prepagada**: `base_usuarios` cubiertos al inicio del periodo, no generan cargos durante el periodo.
+- **Asientos extra**: cada usuario activo por encima de `base_usuarios` → factura mensual recurrente con un `factura_items` que describe `"1 usuario adicional · periodo X–Y · $monto"`.
+- **Alta** de usuario por encima de la base → programar/crear factura mensual del asiento (job mensual + creación inicial prorrateada al día de alta hasta fin de mes).
+- **Baja** → marcar fin del asiento; no genera más cargos desde el ciclo siguiente. La base nunca se afecta.
+- **Switch a prorrateo único**: punto único de cálculo en la función `calcularItemAsiento(meses_restantes)` con flag `prorrateo_unico`.
 
-**Archivos a tocar:**
-- `src/components/admin/AdminEmpresaDetail.tsx` — rediseño tab Suscripción, banner de prorrateo, modal "Marcar como pagada", columna Método en facturación.
-- `supabase/functions/admin-billing/index.ts` — nueva acción `mark_invoice_paid_out_of_band` (Stripe `paid_out_of_band: true` + update factura local + extender `current_period_end`), reutilizar `create_pro_invoice` para prorrateo.
-- `src/integrations/supabase/types.ts` — regenerado tras migración.
+KPIs:
+- Total a cobrar = `SUM(facturas.total)` no canceladas.
+- Total cobrado = `SUM(billing_pagos.monto)`.
+- Saldo = diferencia. Próximo cobro = próxima `factura` con `fecha_vencimiento` futura + nº usuarios activos actuales.
 
-**Lógica de extensión de período:**
-- Si `facturas.es_prorrateo = false` y se marca pagada → `current_period_end += meses` (tomados de la metadata o de `(periodo_fin - periodo_inicio)`).
-- Si `es_prorrateo = true` → no se mueve el período, solo se actualiza `max_usuarios`.
+## 5. Cobros (Stripe + manual)
 
-**Cálculo del prorrateo (cliente):**
-```ts
-const diasRest = Math.max(0, daysBetween(today, current_period_end));
-const totalDias = daysBetween(current_period_start, current_period_end);
-const proporcion = diasRest / totalDias;
-const prorrateo = usuariosExtra * precioMensual * mesesDelPeriodo * proporcion;
-```
+- **Stripe automático**: ya hay `stripe_invoice_id`. Webhook (o polling de `admin-billing`) marca factura `pagada` y crea `billing_pagos` con `metodo=stripe, origen=automatico`.
+- **Fallo Stripe** → `estado=fallida`, badge rojo, botón "Aplicar pago".
+- **Pago manual**: modal "Aplicar pago" → método, monto, referencia, fecha. Inserta `billing_pagos(origen=manual)`. Si `Σ pagos >= total` → `pagada`; si menor → `parcial`. Log en `billing_historial`.
 
----
+## 6. Tabs
 
-## Lo que NO se toca (para mantenerlo acotado)
-- Lógica de cobro automático recurrente vía Stripe (suscripciones nativas). Seguimos con facturas manuales por período.
-- Renovación automática al vencer el período (eso requiere webhook, lo dejamos fuera).
-- Multi-moneda y multi-tenant (no aplica aquí).
+- **Usuarios**: tabla (`profiles` join `user_roles`): Nombre, Email, Teléfono, Rol (chip), Último acceso, Registro, toggle Activo, "Resetear contraseña". Botones superiores: "Forzar cambio de contraseña a todos", "Agregar usuario". Aviso de impacto en asientos al togglear.
+- **Facturas**: tabla con folio, periodo, monto, método, estado (chip color), fecha. Filas expandibles → `factura_items`. Acciones: Ver / Aplicar pago / Cancelar.
+- **Pagos**: tabla estado de cuenta: Fecha, Factura, Monto, Método, Origen, Aplicado por. Columna "saldo corriente" calculada en cliente.
+- **Histórico**: lista cronológica de `billing_historial` ("Plan: Mensual → Anual", "Precio: 350 → 400", "Aplicado pago $1,200 · transferencia").
 
-¿Procedo con todo, o quieres que primero haga solo el rediseño del tab + activación de planes y dejamos el pago manual y prorrateo para un segundo paso?
+## 7. Estilo
+
+- Mantener paleta y chips actuales.
+- Fondo `bg-muted/30` entre secciones para jerarquía.
+- Tablas con `hover:bg-muted/50`, filas cómodas (py-3).
+- Responsive: KPIs 2x2 móvil, columnas se apilan, tabs scrollables horizontal.
+- Ocultar campos vacíos en lugar de "—".
+
+## Archivos a tocar
+
+1. **Nuevo**: `supabase/migrations/<ts>_billing_pagos_items_historial.sql` (tablas + GRANT + RLS + seed desde facturas existentes).
+2. **Reescribir**: `src/components/admin/AdminEmpresaDetail.tsx` — layout completo.
+3. **Nuevos componentes** (en `src/components/admin/empresa-detail/`):
+   - `HeaderEmpresa.tsx`
+   - `KpiRow.tsx`
+   - `DatosEmpresaCard.tsx` + `EditDatosDialog.tsx`
+   - `SuscripcionCard.tsx` + `EditPlanDialog.tsx`
+   - `UsuariosTab.tsx`, `FacturasTab.tsx` (con fila expandible), `PagosTab.tsx`, `HistorialTab.tsx`
+   - `AplicarPagoDialog.tsx`
+4. **Extender**: `supabase/functions/admin-billing/index.ts` — endpoints `aplicar_pago_manual`, `editar_plan`, `recalcular_asientos`, logging a `billing_historial`.
+5. Hooks: `useEmpresaDetalle(empresaId)` que devuelva `{ empresa, suscripcion, facturas, pagos, usuarios, historial, kpis }` con React Query (queryKeys incluyen `empresa_id`).
+
+## Aclaraciones antes de implementar
+
+1. **Asientos extra**: ¿cobro mensual recurrente (default del plan) o prorrateo único hasta `periodo_fin`? Lo dejo configurable con flag, default = mensual recurrente según tu spec.
+2. **Datos en `cobros` actual** son de ventas de clientes — no los toco; el módulo nuevo usa `billing_pagos` aparte.
+3. ¿La tabla `factura_items` la siembro desde los campos `num_usuarios/precio_unitario/subtotal` actuales (1 ítem por factura existente)? Asumo que sí.
