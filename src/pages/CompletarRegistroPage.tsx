@@ -195,13 +195,54 @@ export default function CompletarRegistroPage() {
                   <div className="text-xs text-muted-foreground mb-2">{selectedPlan.ideal_para}</div>
                 )}
                 <div className="text-2xl font-black text-primary">
-                  {fmtMoney(calcTotal(selectedPlan, quantity))}
+                  {fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}
                   <span className="text-sm font-normal text-muted-foreground"> / mes</span>
+                  {PERIOD_DISCOUNT[billingPeriod] > 0 && (
+                    <span className="ml-2 text-xs font-bold text-emerald-600">
+                      -{PERIOD_DISCOUNT[billingPeriod]}%
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Incluye {selectedPlan.usuarios_incluidos || 1} usuario{(selectedPlan.usuarios_incluidos || 1) > 1 ? 's' : ''}
                   {selectedPlan.precio_extra_usuario > 0 && ` · +${fmtMoney(selectedPlan.precio_extra_usuario)} MXN / extra`}
                 </div>
+              </div>
+            )}
+
+            {/* Selector de periodo de facturación */}
+            {selectedPlan && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">Periodo de facturación</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['mensual', 'semestral', 'anual'] as BillingPeriod[]).map(p => {
+                    const isActive = billingPeriod === p;
+                    const disc = PERIOD_DISCOUNT[p];
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setBillingPeriod(p)}
+                        className={`relative rounded-lg border-2 p-3 text-center transition ${
+                          isActive ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="text-sm font-bold capitalize">{p}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          {p === 'mensual' ? 'Cobro cada mes' : p === 'semestral' ? 'Cobro cada mes' : 'Cobro cada mes'}
+                        </div>
+                        {disc > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            -{disc}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Semestral y Anual aplican descuento permanente en cada cobro mensual mientras mantengas tu suscripción activa.
+                </p>
               </div>
             )}
 
