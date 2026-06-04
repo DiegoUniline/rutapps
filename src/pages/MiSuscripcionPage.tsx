@@ -93,15 +93,6 @@ const PERIODO_LABEL: Record<string, string> = {
   anual: 'Anual',
 };
 
-// Parse 'YYYY-MM-DD' as local-midnight Date (avoids UTC TZ shift).
-function parseDateOnly(s: string | null | undefined): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
-
 export default function MiSuscripcionPage() {
   const { user, empresa } = useAuth();
   const sub = useSubscription();
