@@ -523,6 +523,8 @@ Deno.serve(async (req) => {
         days_until_due,
         concepto,
         plan_nombre,
+        periodo_inicio: periodoInicioInput,
+        periodo_fin: periodoFinInput,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
@@ -609,8 +611,11 @@ Deno.serve(async (req) => {
 
       // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
       const hoy = new Date();
-      const periodoFin = new Date(hoy);
-      periodoFin.setMonth(periodoFin.getMonth() + Number(meses));
+      // Use provided periodo_inicio/fin if available, else compute from today + meses
+      const periodoInicio = periodoInicioInput ? new Date(periodoInicioInput) : hoy;
+      const periodoFin = periodoFinInput
+        ? new Date(periodoFinInput)
+        : (() => { const d = new Date(periodoInicio); d.setMonth(d.getMonth() + Number(meses)); return d; })();
       const vencimiento = new Date(hoy);
       vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
 
@@ -627,7 +632,7 @@ Deno.serve(async (req) => {
           empresa_id,
           suscripcion_id: subRow?.id || null,
           numero_factura: finalizedInv.number || null,
-          periodo_inicio: hoy.toISOString().slice(0, 10),
+          periodo_inicio: periodoInicio.toISOString().slice(0, 10),
           periodo_fin: periodoFin.toISOString().slice(0, 10),
           num_usuarios: Number(num_usuarios),
           precio_unitario: Number(precio_por_usuario_mes),

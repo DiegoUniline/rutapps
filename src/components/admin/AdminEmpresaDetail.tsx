@@ -101,6 +101,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
+    periodo_inicio: new Date().toISOString().slice(0, 10),
+    periodo_fin: new Date().toISOString().slice(0, 10),
   });
 
   const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
@@ -260,10 +262,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const precio = plan?.precio_por_usuario || currentPlan?.precio_por_usuario || 300;
     const planNombre = plan?.nombre || currentPlan?.nombre || 'Mensual';
     const descPlan = currentPlan?.descuento_pct || 0;
+    // Periodo: arranca al fin del periodo vigente (si está en el futuro) o hoy
+    const base = subscription?.current_period_end && new Date(subscription.current_period_end) > new Date()
+      ? new Date(subscription.current_period_end)
+      : new Date();
+    const fin = new Date(base);
+    fin.setMonth(fin.getMonth() + meses);
     setSubInvoiceForm({
       plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
+      periodo_inicio: base.toISOString().slice(0, 10),
+      periodo_fin: fin.toISOString().slice(0, 10),
     });
     setShowSubInvoice(true);
   }
@@ -271,11 +281,36 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   function applyPlanToInvoice(planId: string) {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
-    setSubInvoiceForm(f => ({
-      ...f, plan_id: planId, meses: plan.meses,
-      precio_por_usuario_mes: plan.precio_por_usuario, concepto: `Suscripción Rutapp ${plan.nombre}`,
-    }));
+    setSubInvoiceForm(f => {
+      const ini = new Date(f.periodo_inicio);
+      const fin = new Date(ini);
+      fin.setMonth(fin.getMonth() + plan.meses);
+      return {
+        ...f, plan_id: planId, meses: plan.meses,
+        precio_por_usuario_mes: plan.precio_por_usuario, concepto: `Suscripción Rutapp ${plan.nombre}`,
+        periodo_fin: fin.toISOString().slice(0, 10),
+      };
+    });
   }
+
+  function updateInvoiceMeses(meses: number) {
+    setSubInvoiceForm(f => {
+      const ini = new Date(f.periodo_inicio);
+      const fin = new Date(ini);
+      fin.setMonth(fin.getMonth() + meses);
+      return { ...f, meses, periodo_fin: fin.toISOString().slice(0, 10) };
+    });
+  }
+
+  function updateInvoicePeriodoInicio(value: string) {
+    setSubInvoiceForm(f => {
+      const ini = new Date(value);
+      const fin = new Date(ini);
+      fin.setMonth(fin.getMonth() + f.meses);
+      return { ...f, periodo_inicio: value, periodo_fin: fin.toISOString().slice(0, 10) };
+    });
+  }
+
 
   async function handleCreateSubInvoice() {
     if (subInvoiceForm.num_usuarios < 1 || subInvoiceForm.meses < 1) {
@@ -304,6 +339,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             descuento_permanente: subInvoiceForm.descuento_permanente,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
+            periodo_inicio: subInvoiceForm.periodo_inicio || undefined,
+            periodo_fin: subInvoiceForm.periodo_fin || undefined,
           }),
         }
       );
@@ -1114,7 +1151,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               <div className="space-y-1.5">
                 <Label>Meses</Label>
                 <Input type="number" min={1} value={subInvoiceForm.meses}
-                  onChange={e => setSubInvoiceForm(f => ({ ...f, meses: Math.max(1, parseInt(e.target.value) || 1) }))} />
+                  onChange={e => updateInvoiceMeses(Math.max(1, parseInt(e.target.value) || 1))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Usuarios</Label>
@@ -1143,6 +1180,22 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       : 'Solo para esta factura.'}
                   </span>
                 </label>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Período: inicio</Label>
+                <Input type="date" value={subInvoiceForm.periodo_inicio}
+                  onChange={e => updateInvoicePeriodoInicio(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Período: fin</Label>
+                <Input type="date" value={subInvoiceForm.periodo_fin}
+                  onChange={e => setSubInvoiceForm(f => ({ ...f, periodo_fin: e.target.value }))} />
+              </div>
+              <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
+                Al pagarse, la suscripción quedará vigente del{' '}
+                <strong>{format(new Date(subInvoiceForm.periodo_inicio), 'dd MMM yyyy', { locale: es })}</strong>
+                {' '}al{' '}
+                <strong>{format(new Date(subInvoiceForm.periodo_fin), 'dd MMM yyyy', { locale: es })}</strong>.
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
