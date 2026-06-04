@@ -656,6 +656,107 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── Mark an internal invoice as paid (out of band: transferencia, efectivo, etc.) ───
+    if (action === "mark_invoice_paid_out_of_band") {
+      const {
+        factura_id,
+        empresa_id,
+        metodo_pago,
+        referencia_pago,
+        fecha_pago,
+        reflect_in_stripe,
+        extender_periodo,
+      } = body;
+
+      if (!factura_id) throw new Error("factura_id requerido");
+      if (!metodo_pago) throw new Error("metodo_pago requerido");
+
+      const { data: fac, error: facErr } = await supabase
+        .from("facturas")
+        .select("*")
+        .eq("id", factura_id)
+        .maybeSingle();
+      if (facErr || !fac) throw new Error("Factura no encontrada");
+
+      const paidAt = fecha_pago ? new Date(fecha_pago) : new Date();
+
+      // Reflect in Stripe (paid out of band) if requested and possible
+      let stripePaid = false;
+      if (reflect_in_stripe && fac.stripe_invoice_id) {
+        try {
+          // Stripe API needs invoice in 'open' status to mark as paid out of band
+          const inv = await stripe.invoices.retrieve(fac.stripe_invoice_id);
+          if (inv.status === "open" || inv.status === "draft") {
+            if (inv.status === "draft") {
+              await stripe.invoices.finalizeInvoice(fac.stripe_invoice_id);
+            }
+            await stripe.invoices.pay(fac.stripe_invoice_id, { paid_out_of_band: true });
+            stripePaid = true;
+          } else if (inv.status === "paid") {
+            stripePaid = true;
+          }
+        } catch (e) {
+          console.error("[mark_invoice_paid_out_of_band] stripe pay error:", e);
+          // don't fail the whole request; we still mark local as paid
+        }
+      }
+
+      // Update factura local
+      await supabase
+        .from("facturas")
+        .update({
+          estado: "pagada",
+          fecha_pago: paidAt.toISOString(),
+          metodo_pago,
+          referencia_pago: referencia_pago || null,
+        })
+        .eq("id", factura_id);
+
+      // Extend subscription period if requested and not a prorrateo
+      let nuevoFinPeriodo: string | null = null;
+      if (extender_periodo && !fac.es_prorrateo && empresa_id) {
+        const { data: subRow } = await supabase
+          .from("subscriptions")
+          .select("id, current_period_end, current_period_start")
+          .eq("empresa_id", empresa_id)
+          .maybeSingle();
+        if (subRow) {
+          // Calculate months from factura period
+          let meses = 1;
+          if (fac.periodo_inicio && fac.periodo_fin) {
+            const ini = new Date(fac.periodo_inicio);
+            const fin = new Date(fac.periodo_fin);
+            meses = Math.max(1, Math.round((fin.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+          }
+          // Base date: if current period end is in the future, extend from there; else from today
+          const base = subRow.current_period_end && new Date(subRow.current_period_end) > new Date()
+            ? new Date(subRow.current_period_end)
+            : new Date();
+          const nuevoFin = new Date(base);
+          nuevoFin.setMonth(nuevoFin.getMonth() + meses);
+          nuevoFinPeriodo = nuevoFin.toISOString();
+
+          const updatePayload: any = {
+            current_period_end: nuevoFinPeriodo,
+            status: "active",
+            acceso_bloqueado: false,
+            updated_at: new Date().toISOString(),
+          };
+          // If was in trial or had no start date, set start date too
+          if (!subRow.current_period_start) {
+            updatePayload.current_period_start = new Date().toISOString();
+          }
+          await supabase.from("subscriptions").update(updatePayload).eq("id", subRow.id);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        stripe_paid: stripePaid,
+        nuevo_fin_periodo: nuevoFinPeriodo,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ─── Create professional invoice with empresa, plan, users ───
     if (action === "create_pro_invoice") {
       const {
