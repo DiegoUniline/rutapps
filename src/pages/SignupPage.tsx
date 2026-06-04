@@ -78,6 +78,36 @@ export default function SignupPage() {
     if (urlCupon) setCuponCodigo(urlCupon.toUpperCase());
   }, [searchParams]);
 
+  // Load active subscription plans for selector
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('subscription_plans')
+        .select('id, slug, nombre, precio_base, usuarios_incluidos, precio_extra_usuario, popular, ideal_para, orden')
+        .eq('activo', true)
+        .not('slug', 'is', null)
+        .order('orden', { ascending: true });
+      const rows = (data as SignupPlanRow[] | null) || [];
+      setPlans(rows);
+      const urlPlan = searchParams.get('plan');
+      const fromUrl = urlPlan ? rows.find(p => p.slug === urlPlan) : null;
+      const popular = rows.find(p => p.popular);
+      const chosen = fromUrl || popular || rows[0];
+      if (chosen?.slug) setSelectedPlanSlug(chosen.slug);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSelectPlan(slug: string) {
+    setSelectedPlanSlug(slug);
+    const next = new URLSearchParams(searchParams);
+    next.set('plan', slug);
+    setSearchParams(next, { replace: true });
+  }
+
+  const selectedPlan = plans.find(p => p.slug === selectedPlanSlug) || null;
+
+
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
