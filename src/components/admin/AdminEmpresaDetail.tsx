@@ -881,6 +881,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                 </>
                               )}
                               {f.estado === 'pagada' && <span className="text-xs text-emerald-700 font-medium px-2">✓ Pagada</span>}
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Editar factura"
+                                onClick={() => openEditFactura(f)}>
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Eliminar factura"
+                                onClick={() => setConfirmDeleteFactura(f)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
