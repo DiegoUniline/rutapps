@@ -23,6 +23,7 @@ import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
+import { WhatsAppFloatButton } from "@/components/WhatsAppFloatButton";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -727,6 +728,7 @@ const App = () => (
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
+              <WhatsAppFloatButton />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
