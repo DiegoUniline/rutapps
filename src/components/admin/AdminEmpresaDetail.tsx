@@ -482,14 +482,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {subscription && (
-            <Badge variant={getEffectiveStatus(subscription).v} className="text-xs">
-              {getEffectiveStatus(subscription).l}
-            </Badge>
-            {subscription.acceso_bloqueado && (
-              <Badge variant="destructive" className="text-xs gap-1">🔒 Bloqueada</Badge>
-            )}
-            <Badge variant="outline" className="text-xs">_remove_me_</Badge>
-            </Badge>
+            <>
+              <Badge variant={getEffectiveStatus(subscription).v} className="text-xs">
+                {getEffectiveStatus(subscription).l}
+              </Badge>
+              {subscription.acceso_bloqueado && (
+                <Badge variant="destructive" className="text-xs gap-1">🔒 Bloqueada</Badge>
+              )}
+            </>
           )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
