@@ -898,7 +898,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       return (
                         <TableRow key={f.id} className="hover:bg-muted/30">
                           <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[280px] truncate">{periodo}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                            <div className="truncate font-medium text-foreground/80">{f.concepto || 'Suscripción Rutapp'}</div>
+                            <div className="truncate text-xs">{periodo}</div>
+                          </TableCell>
                           <TableCell className="text-sm">{f.fecha_emision ? fmtDate(f.fecha_emision) : '—'}</TableCell>
                           <TableCell className="text-sm">{f.fecha_vencimiento ? fmtDate(f.fecha_vencimiento) : '—'}</TableCell>
                           <TableCell className="text-right font-semibold text-primary">{fmtMXN(Number(f.total || 0))}</TableCell>
