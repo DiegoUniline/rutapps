@@ -42,6 +42,32 @@ const STATUSES = ['trial', 'active', 'past_due', 'gracia', 'suspended', 'cancell
 const fmtMXN = (v: number) =>
   `$${(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const datePart = (value: any) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.split('T')[0];
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const parseCalendarDate = (value: any) => {
+  const part = datePart(value);
+  const match = part.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0);
+  return new Date(value);
+};
+
+const todayInput = () => datePart(new Date());
+const addMonthsInput = (value: string, months: number) => {
+  const d = parseCalendarDate(value);
+  d.setMonth(d.getMonth() + months);
+  return datePart(d);
+};
+const fmtDate = (value: any, pattern = 'dd MMM yyyy') => value ? format(parseCalendarDate(value), pattern, { locale: es }) : '—';
+
 function getEffectiveStatus(sub: any): { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' } {
   if (!sub) return { l: '—', v: 'outline' };
   if (sub.acceso_bloqueado) return { l: 'Suspendida', v: 'destructive' };
@@ -101,8 +127,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
-    periodo_inicio: new Date().toISOString().slice(0, 10),
-    periodo_fin: new Date().toISOString().slice(0, 10),
+    periodo_inicio: todayInput(),
+    periodo_fin: todayInput(),
   });
 
   const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
@@ -114,7 +140,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [markPaidForm, setMarkPaidForm] = useState({
     metodo_pago: 'transferencia',
     referencia_pago: '',
-    fecha_pago: new Date().toISOString().slice(0, 10),
+    fecha_pago: todayInput(),
     reflect_in_stripe: true,
     extender_periodo: true,
   });
@@ -155,9 +181,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         plan_id: subRes.data.plan_id || '',
         max_usuarios: subRes.data.max_usuarios || 3,
         status: subRes.data.status || 'trial',
-        current_period_start: subRes.data.current_period_start?.split('T')[0] || '',
-        current_period_end: subRes.data.current_period_end?.split('T')[0] || '',
-        trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
+        current_period_start: datePart(subRes.data.current_period_start),
+        current_period_end: datePart(subRes.data.current_period_end),
+        trial_ends_at: datePart(subRes.data.trial_ends_at),
         descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
         acceso_bloqueado: !!(subRes.data as any).acceso_bloqueado,
       });
@@ -262,18 +288,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const precio = plan?.precio_por_usuario || currentPlan?.precio_por_usuario || 300;
     const planNombre = plan?.nombre || currentPlan?.nombre || 'Mensual';
     const descPlan = currentPlan?.descuento_pct || 0;
-    // Periodo: arranca al fin del periodo vigente (si está en el futuro) o hoy
-    const base = subscription?.current_period_end && new Date(subscription.current_period_end) > new Date()
-      ? new Date(subscription.current_period_end)
-      : new Date();
-    const fin = new Date(base);
-    fin.setMonth(fin.getMonth() + meses);
+    // Periodo: arranca al fin del periodo vigente (si está en el futuro) o hoy, sin conversión UTC
+    const currentEnd = datePart(subscription?.current_period_end);
+    const today = todayInput();
+    const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
     setSubInvoiceForm({
       plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
-      periodo_inicio: base.toISOString().slice(0, 10),
-      periodo_fin: fin.toISOString().slice(0, 10),
+      periodo_inicio: base,
+      periodo_fin: addMonthsInput(base, meses),
     });
     setShowSubInvoice(true);
   }
@@ -282,32 +306,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
     setSubInvoiceForm(f => {
-      const ini = new Date(f.periodo_inicio);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + plan.meses);
       return {
         ...f, plan_id: planId, meses: plan.meses,
         precio_por_usuario_mes: plan.precio_por_usuario, concepto: `Suscripción Rutapp ${plan.nombre}`,
-        periodo_fin: fin.toISOString().slice(0, 10),
+        periodo_fin: addMonthsInput(f.periodo_inicio, plan.meses),
       };
     });
   }
 
   function updateInvoiceMeses(meses: number) {
     setSubInvoiceForm(f => {
-      const ini = new Date(f.periodo_inicio);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + meses);
-      return { ...f, meses, periodo_fin: fin.toISOString().slice(0, 10) };
+      return { ...f, meses, periodo_fin: addMonthsInput(f.periodo_inicio, meses) };
     });
   }
 
   function updateInvoicePeriodoInicio(value: string) {
     setSubInvoiceForm(f => {
-      const ini = new Date(value);
-      const fin = new Date(ini);
-      fin.setMonth(fin.getMonth() + f.meses);
-      return { ...f, periodo_inicio: value, periodo_fin: fin.toISOString().slice(0, 10) };
+      return { ...f, periodo_inicio: value, periodo_fin: addMonthsInput(value, f.meses) };
     });
   }
 
@@ -358,7 +373,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setMarkPaidForm({
       metodo_pago: 'transferencia',
       referencia_pago: '',
-      fecha_pago: new Date().toISOString().slice(0, 10),
+      fecha_pago: todayInput(),
       reflect_in_stripe: !!f.stripe_invoice_id,
       extender_periodo: !f.es_prorrateo,
     });
@@ -395,7 +410,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       const msgParts = ['Pago registrado'];
       if (data.stripe_paid) msgParts.push('reflejado en Stripe');
       if (data.nuevo_fin_periodo) {
-        msgParts.push(`período hasta ${format(new Date(data.nuevo_fin_periodo), 'dd MMM yyyy', { locale: es })}`);
+        msgParts.push(`período hasta ${fmtDate(data.nuevo_fin_periodo)}`);
       }
       toast.success(msgParts.join(' · '));
       setMarkPaidFactura(null);
@@ -412,9 +427,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       num_usuarios: Number(f.num_usuarios || 1),
       precio_unitario: Number(f.precio_unitario || 0),
       descuento_porcentaje: Number(f.descuento_porcentaje || 0),
-      periodo_inicio: f.periodo_inicio ? String(f.periodo_inicio).slice(0, 10) : '',
-      periodo_fin: f.periodo_fin ? String(f.periodo_fin).slice(0, 10) : '',
-      fecha_vencimiento: f.fecha_vencimiento ? String(f.fecha_vencimiento).slice(0, 10) : '',
+      periodo_inicio: datePart(f.periodo_inicio),
+      periodo_fin: datePart(f.periodo_fin),
+      fecha_vencimiento: datePart(f.fecha_vencimiento),
       estado: f.estado || 'pendiente',
       metodo_pago: f.metodo_pago || '',
       referencia_pago: f.referencia_pago || '',
@@ -435,7 +450,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         subtotal,
         periodo_inicio: editFacturaForm.periodo_inicio || null,
         periodo_fin: editFacturaForm.periodo_fin || null,
-        fecha_vencimiento: editFacturaForm.fecha_vencimiento ? new Date(editFacturaForm.fecha_vencimiento).toISOString() : null,
+        fecha_vencimiento: editFacturaForm.fecha_vencimiento || null,
         estado: editFacturaForm.estado,
         metodo_pago: editFacturaForm.metodo_pago || null,
         referencia_pago: editFacturaForm.referencia_pago || null,
@@ -451,8 +466,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       if (editFacturaForm.estado === 'pagada' && subscription?.id
           && editFacturaForm.periodo_inicio && editFacturaForm.periodo_fin) {
         const { error: subErr } = await supabase.from('subscriptions').update({
-          current_period_start: new Date(editFacturaForm.periodo_inicio).toISOString(),
-          current_period_end: new Date(editFacturaForm.periodo_fin).toISOString(),
+          current_period_start: editFacturaForm.periodo_inicio,
+          current_period_end: editFacturaForm.periodo_fin,
           status: 'active',
           acceso_bloqueado: false,
           updated_at: new Date().toISOString(),
@@ -729,15 +744,15 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 )}
                 <Row label="Precio / usuario" value={fmtMXN(precioFinal)} />
                 {subscription.status === 'trial' && subscription.trial_ends_at && (
-                  <Row label="Fin de prueba" value={format(new Date(subscription.trial_ends_at), 'dd MMM yyyy', { locale: es })} />
+                  <Row label="Fin de prueba" value={fmtDate(subscription.trial_ends_at)} />
                 )}
                 {subscription.status !== 'trial' && (
                   <>
                     {subscription.current_period_start && (
-                      <Row label="Inicio período" value={format(new Date(subscription.current_period_start), 'dd MMM yyyy', { locale: es })} />
+                      <Row label="Inicio período" value={fmtDate(subscription.current_period_start)} />
                     )}
                     {subscription.current_period_end && (
-                      <Row label="Fin período" value={format(new Date(subscription.current_period_end), 'dd MMM yyyy', { locale: es })} />
+                      <Row label="Fin período" value={fmtDate(subscription.current_period_end)} />
                     )}
                   </>
                 )}
@@ -874,14 +889,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       const hostedUrl = stripeMatch?.hosted_invoice_url || null;
                       const isPending = (f.estado || 'pendiente') !== 'pagada' && f.estado !== 'cancelada';
                       const periodo = f.periodo_inicio && f.periodo_fin
-                        ? `${format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} – ${format(new Date(f.periodo_fin), 'dd MMM yyyy', { locale: es })}`
+                        ? `${fmtDate(f.periodo_inicio, 'dd MMM')} – ${fmtDate(f.periodo_fin)}`
                         : `${f.num_usuarios ?? '—'} usuarios`;
                       return (
                         <TableRow key={f.id} className="hover:bg-muted/30">
                           <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
                           <TableCell className="text-sm text-muted-foreground max-w-[280px] truncate">{periodo}</TableCell>
-                          <TableCell className="text-sm">{f.fecha_emision ? format(new Date(f.fecha_emision), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
-                          <TableCell className="text-sm">{f.fecha_vencimiento ? format(new Date(f.fecha_vencimiento), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
+                          <TableCell className="text-sm">{f.fecha_emision ? fmtDate(f.fecha_emision) : '—'}</TableCell>
+                          <TableCell className="text-sm">{f.fecha_vencimiento ? fmtDate(f.fecha_vencimiento) : '—'}</TableCell>
                           <TableCell className="text-right font-semibold text-primary">{fmtMXN(Number(f.total || 0))}</TableCell>
                           <TableCell>{estadoFacturaBadge(f.estado || 'pendiente')}</TableCell>
                           <TableCell className="text-xs">
@@ -1211,9 +1226,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </div>
               <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
                 Al pagarse, la suscripción quedará vigente del{' '}
-                <strong>{format(new Date(subInvoiceForm.periodo_inicio), 'dd MMM yyyy', { locale: es })}</strong>
+                <strong>{fmtDate(subInvoiceForm.periodo_inicio)}</strong>
                 {' '}al{' '}
-                <strong>{format(new Date(subInvoiceForm.periodo_fin), 'dd MMM yyyy', { locale: es })}</strong>.
+                <strong>{fmtDate(subInvoiceForm.periodo_fin)}</strong>.
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
