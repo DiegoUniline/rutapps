@@ -899,20 +899,26 @@ export default function MiSuscripcionPage() {
                   </h2>
                   {currentPlan ? (() => {
                     const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
-                    const basePrice = currentPlan.precio_por_usuario;
-                    const effectivePrice = companyDiscount > 0
-                      ? Math.round(basePrice * (1 - companyDiscount / 100))
-                      : basePrice;
-                    const totalPeriodo = effectivePrice * currentUsuarios * currentPlan.meses;
-                    const totalMes = effectivePrice * currentUsuarios;
-                    const totalSinDescuento = basePrice * currentUsuarios * currentPlan.meses;
+                    const baseMonthly = planMonthlyCost(currentPlan, currentUsuarios);
+                    const effectiveMonthly = companyDiscount > 0
+                      ? Math.round(baseMonthly * (1 - companyDiscount / 100))
+                      : baseMonthly;
+                    const totalPeriodo = effectiveMonthly * (currentPlan.meses || 1);
+                    const totalMes = effectiveMonthly;
+                    const totalSinDescuento = baseMonthly * (currentPlan.meses || 1);
                     const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
+                    const planLabel = currentPlan.slug ? currentPlan.nombre : (PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre);
 
                     return (
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
                       <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
-                        {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
+                        {planLabel}
                       </Badge>
+                      {isLegacyCustomer && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700">
+                          Plan anterior
+                        </Badge>
+                      )}
                       {companyDiscount > 0 && (
                         <Badge className="bg-green-600 text-white text-xs">
                           {companyDiscount}% descuento especial
@@ -920,9 +926,10 @@ export default function MiSuscripcionPage() {
                       )}
                       {currentPlan.descuento_pct > 0 && (
                         <Badge className="bg-primary text-primary-foreground text-xs">
-                          +{currentPlan.descuento_pct}% por plan {PERIODO_LABEL[currentPlan.periodo]}
+                          +{currentPlan.descuento_pct}% por plan {planLabel}
                         </Badge>
                       )}
+
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div className="text-sm text-foreground w-full sm:w-auto">
                         <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
