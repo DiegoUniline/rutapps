@@ -6,7 +6,19 @@ interface Plan {
   id: string;
   nombre: string;
   precio_por_usuario: number;
+  precio_base: number | null;
+  usuarios_incluidos: number | null;
+  precio_extra_usuario: number | null;
+  slug: string | null;
   meses: number;
+}
+
+function planCost(plan: Plan, qty: number): number {
+  if (plan.slug) {
+    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+  }
+  return plan.precio_por_usuario * qty;
 }
 
 const fxDefaults: Record<string, number> = {
@@ -39,16 +51,17 @@ export default function CostoSimuladorCard({ defaultUsers = 1 }: Props) {
     (async () => {
       const { data } = await supabase
         .from('subscription_plans')
-        .select('id,nombre,precio_por_usuario,meses')
+        .select('id,nombre,precio_por_usuario,precio_base,usuarios_incluidos,precio_extra_usuario,slug,meses,orden')
         .eq('activo', true)
-        .order('precio_por_usuario');
+        .order('orden');
       setPlans((data || []) as Plan[]);
       if (data && data.length) setSimPlanId((prev) => prev || (data[0] as Plan).id);
     })();
   }, []);
 
   const simPlan = plans.find((p) => p.id === simPlanId);
-  const simMonthlyMXN = simPlan ? simPlan.precio_por_usuario * simUsers : 0;
+  const simMonthlyMXN = simPlan ? planCost(simPlan, simUsers) : 0;
+
   const simPeriodMXN = simPlan ? simMonthlyMXN * simPlan.meses : 0;
 
   const fxLabel = useMemo(() => `1 ${currency} = ${fxRate} MXN`, [currency, fxRate]);
@@ -86,9 +99,10 @@ export default function CostoSimuladorCard({ defaultUsers = 1 }: Props) {
           >
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.nombre} — {fmtMXN(p.precio_por_usuario)}/u/mes
+                {p.nombre}{p.slug ? ` — ${fmtMXN(p.precio_base || 0)}/mes` : ` — ${fmtMXN(p.precio_por_usuario)}/u/mes`}
               </option>
             ))}
+
           </select>
         </label>
         <label className="space-y-1">
@@ -136,9 +150,11 @@ export default function CostoSimuladorCard({ defaultUsers = 1 }: Props) {
           <div className="rounded-lg bg-muted/40 p-2 text-muted-foreground">
             <div>Detalle</div>
             <div className="text-foreground font-semibold">
-              {simUsers} × {fmtMXN(simPlan.precio_por_usuario)} × {simPlan.meses}
-              {simPlan.meses === 1 ? ' mes' : ' meses'}
+              {simPlan.slug
+                ? `Base ${fmtMXN(simPlan.precio_base || 0)} + ${Math.max(0, simUsers - (simPlan.usuarios_incluidos || 0))} extra × ${fmtMXN(simPlan.precio_extra_usuario || 0)}`
+                : `${simUsers} × ${fmtMXN(simPlan.precio_por_usuario)} × ${simPlan.meses}${simPlan.meses === 1 ? ' mes' : ' meses'}`}
             </div>
+
             <div className="text-[10px]">{fxLabel}</div>
           </div>
         </div>
