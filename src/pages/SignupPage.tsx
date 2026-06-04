@@ -10,7 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText, Check, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface SignupPlanRow {
+  id: string;
+  slug: string | null;
+  nombre: string;
+  precio_base: number | null;
+  usuarios_incluidos: number | null;
+  precio_extra_usuario: number | null;
+  popular: boolean | null;
+  ideal_para: string | null;
+  orden: number | null;
+}
+
+const SELECTED_PLAN_KEY = 'rutapp_selected_plan';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
