@@ -57,9 +57,12 @@ const REF_KEY = 'rutapp_partner_ref';
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [cuponCodigo, setCuponCodigo] = useState('');
+  const [partnerRef, setPartnerRef] = useState<string>('');
+  const [plans, setPlans] = useState<SignupPlanRow[]>([]);
+  const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
   const [partnerRef, setPartnerRef] = useState<string>('');
 
   // Capture ?ref= from URL or localStorage
