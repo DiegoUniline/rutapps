@@ -1116,16 +1116,18 @@ export default function MiSuscripcionPage() {
                       {facturas.map(f => (
                         <tr key={f.id} className="border-b border-border/50 hover:bg-card">
                           <td className="py-2.5 px-2">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
+                              <Badge variant="outline" className="text-[9px] px-1 py-0">{f.stripe_invoice_id ? 'Stripe' : 'Manual'}</Badge>
                               {f.es_prorrateo && (
                                 <Badge variant="outline" className="text-[9px] px-1 py-0">Prorrateo</Badge>
                               )}
                             </div>
+                            {f.concepto && <div className="text-[11px] text-muted-foreground truncate max-w-[220px] mt-0.5">{f.concepto}</div>}
                           </td>
                           <td className="py-2.5 px-2 text-muted-foreground text-xs">
-                            {format(parseDateOnly(f.periodo_inicio) ?? new Date(), 'dd MMM', { locale: es })} — {format(parseDateOnly(f.periodo_fin) ?? new Date(), 'dd MMM yy', { locale: es })}
+                            {fmtDate(f.periodo_inicio)} — {fmtDate(f.periodo_fin)}
                           </td>
                           <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
                           <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
@@ -1144,7 +1146,7 @@ export default function MiSuscripcionPage() {
                                   disabled={payingInvoice === f.id}
                                   onClick={() => handlePayInvoice(f)}
                                 >
-                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : f.stripe_invoice_id ? <CreditCard className="h-3 w-3" /> : <BanknoteIcon className="h-3 w-3" />}
                                   Pagar
                                 </Button>
                               )}
