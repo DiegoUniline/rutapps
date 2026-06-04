@@ -339,6 +339,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             descuento_permanente: subInvoiceForm.descuento_permanente,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
+            periodo_inicio: subInvoiceForm.periodo_inicio || undefined,
+            periodo_fin: subInvoiceForm.periodo_fin || undefined,
           }),
         }
       );
