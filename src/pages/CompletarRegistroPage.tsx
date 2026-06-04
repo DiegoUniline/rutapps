@@ -66,11 +66,14 @@ export default function CompletarRegistroPage() {
         .order('orden', { ascending: true });
       const rows = (data as PlanRow[] | null) || [];
       setPlans(rows);
-      // Preselect from URL ?plan=slug, fallback to popular or first
+      // Preselect from URL ?plan=slug, fallback to localStorage, popular, or first
       const urlPlan = searchParams.get('plan');
+      let storedPlan: string | null = null;
+      try { storedPlan = localStorage.getItem('rutapp_selected_plan'); } catch {}
       const fromUrl = urlPlan ? rows.find(p => p.slug === urlPlan) : null;
+      const fromStorage = !fromUrl && storedPlan ? rows.find(p => p.slug === storedPlan) : null;
       const popular = rows.find(p => p.popular);
-      const chosen = fromUrl || popular || rows[0];
+      const chosen = fromUrl || fromStorage || popular || rows[0];
       if (chosen) {
         setSelectedPlanId(chosen.id);
         setQuantity(Math.max(1, chosen.usuarios_incluidos || 1));
