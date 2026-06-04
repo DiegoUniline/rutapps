@@ -94,33 +94,28 @@ Deno.serve(async (req) => {
 
     // ═══ PART 1: Generate monthly invoices (day 1) ═══
     if (isFirstOfMonth) {
-      // Include active, past_due, gracia, and expired trial subs
       const { data: activeSubs } = await supabase
         .from("subscriptions")
-        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje, status, trial_ends_at")
+        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje, status, trial_ends_at, legacy_pricing")
         .in("status", ["active", "past_due", "gracia", "trial"]);
 
-      // Filter: active subs always, others only if trial already ended
       const subsToInvoice = (activeSubs || []).filter(s => {
         if (s.status === "active") return true;
         if (s.status === "trial") {
           return s.trial_ends_at && new Date(s.trial_ends_at) <= now;
         }
-        return true; // past_due, gracia
+        return true;
       });
 
       log("Subs to invoice", { count: subsToInvoice.length });
 
       for (const sub of subsToInvoice) {
-        // Skip if Stripe handles this subscription — Stripe emits the renewal invoice
-        // automatically and the webhook (invoice.created/paid) syncs it into `facturas`.
-        // Generating it here too would duplicate.
+        // Stripe handles billing if subscription exists in Stripe
         if (sub.stripe_subscription_id) {
-          log("Skipped (Stripe handles billing)", { empresa: sub.empresa_id, stripeSub: sub.stripe_subscription_id });
+          log("Skipped (Stripe handles billing)", { empresa: sub.empresa_id });
           continue;
         }
 
-        // Skip if pending invoice already exists for this period
         const { data: existingInv } = await supabase
           .from("facturas")
           .select("id")
@@ -133,38 +128,66 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get plan price + duration
-        let precioUnitario = 300; // default
-        let planMeses = 1; // default monthly
+        // Load plan from subscription_plans (new) — fallback to legacy `planes`
+        let planRow: any = null;
+        let planMeses = 1;
         if (sub.plan_id) {
-          const { data: plan } = await supabase
-            .from("planes")
-            .select("precio_base_mes, meses")
+          const { data: sp } = await supabase
+            .from("subscription_plans")
+            .select("id, slug, precio_por_usuario, precio_base, precio_extra_usuario, usuarios_incluidos, meses")
             .eq("id", sub.plan_id)
-            .single();
-          if (plan) {
-            precioUnitario = plan.precio_base_mes;
-            planMeses = plan.meses || 1;
+            .maybeSingle();
+          if (sp) {
+            planRow = sp;
+            planMeses = sp.meses || 1;
+          } else {
+            const { data: legacyPlan } = await supabase
+              .from("planes")
+              .select("precio_base_mes, meses")
+              .eq("id", sub.plan_id)
+              .single();
+            if (legacyPlan) {
+              planRow = {
+                slug: null,
+                precio_por_usuario: legacyPlan.precio_base_mes,
+                precio_base: 0,
+                precio_extra_usuario: legacyPlan.precio_base_mes,
+                usuarios_incluidos: 0,
+              };
+              planMeses = legacyPlan.meses || 1;
+            }
           }
         }
+        if (!planRow) {
+          planRow = {
+            slug: null,
+            precio_por_usuario: 300,
+            precio_base: 0,
+            precio_extra_usuario: 300,
+            usuarios_incluidos: 0,
+          };
+        }
 
-        // Recompute quantity from actual active users (min 3)
+        const isNewPlan = !!planRow.slug;
+        const isLegacy = sub.legacy_pricing === true || !isNewPlan;
+
+        // Recompute seat count
         const { count: activeProfilesCount } = await supabase
           .from("profiles")
           .select("id", { count: "exact", head: true })
           .eq("empresa_id", sub.empresa_id)
           .eq("estado", "activo");
         const realUsers = activeProfilesCount ?? (sub.max_usuarios || 3);
-        const qty = Math.max(3, realUsers);
+        const minQty = isLegacy ? 3 : Math.max(1, planRow.usuarios_incluidos || 1);
+        const qty = Math.max(minQty, realUsers);
 
-        // Persist the recomputed seat count so UI/limits stay in sync
         if (qty !== sub.max_usuarios) {
           await supabase.from("subscriptions").update({ max_usuarios: qty }).eq("id", sub.id);
           log("Seat count recomputed", { empresa: sub.empresa_id, prev: sub.max_usuarios, new: qty });
         }
+
         let descuento = sub.descuento_porcentaje || 0;
 
-        // ─── Check active coupon ───
         const { data: cuponUso } = await supabase
           .from("cupon_usos")
           .select("id, meses_restantes, cupon_id, cupones:cupon_id(descuento_pct, acumulable)")
@@ -184,35 +207,36 @@ Deno.serve(async (req) => {
               descuento = Math.max(descuento, cuponDescuento);
             }
           }
-
-          // Decrement meses_restantes by REAL months covered by this invoice
           if (cuponUso.meses_restantes !== null) {
             const consumed = Math.min(cuponUso.meses_restantes, planMeses);
             const newMeses = Math.max(0, cuponUso.meses_restantes - consumed);
             await supabase.from("cupon_usos").update({ meses_restantes: newMeses }).eq("id", cuponUso.id);
-
-            // If coupon expired, recalculate subscription discount without it
             if (newMeses <= 0 && cupon?.acumulable) {
               const baseDiscount = sub.descuento_porcentaje || 0;
               await supabase.from("subscriptions").update({ descuento_porcentaje: baseDiscount }).eq("id", sub.id);
             }
           }
-          log("Coupon applied", { empresa: sub.empresa_id, cuponDescuento, totalDescuento: descuento, mesesRestantes: cuponUso.meses_restantes, planMeses });
         }
 
-        // Round per-user price to whole peso to avoid fractional totals
-        const precioConDescuento = descuento > 0
-          ? Math.round(precioUnitario * (1 - descuento / 100))
-          : precioUnitario;
-        const subtotal = precioUnitario * qty;
-        const total = precioConDescuento * qty;
+        // ─── Subtotal calculation ───
+        let subtotal: number;
+        let precioUnitario: number;
+        if (isNewPlan && !isLegacy) {
+          const extras = Math.max(0, qty - (planRow.usuarios_incluidos || 0));
+          subtotal = Number(planRow.precio_base || 0) + extras * Number(planRow.precio_extra_usuario || 0);
+          precioUnitario = qty > 0 ? Math.round((subtotal / qty) * 100) / 100 : Number(planRow.precio_base || 0);
+        } else {
+          precioUnitario = Number(planRow.precio_por_usuario || 300);
+          subtotal = precioUnitario * qty;
+        }
+        const total = descuento > 0
+          ? Math.round(subtotal * (1 - descuento / 100))
+          : subtotal;
 
         const mesActual = mxNow.toLocaleDateString("es-MX", { month: "long", year: "numeric", timeZone: TZ_MX });
-        // Last day of the current MX month
         const lastDay = new Date(mxNow.getFullYear(), mxNow.getMonth() + 1, 0).getDate();
         const periodoFin = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-        // Create invoice
         const { data: factura } = await supabase
           .from("facturas")
           .insert({
@@ -232,7 +256,6 @@ Deno.serve(async (req) => {
           .select("numero_factura")
           .single();
 
-        // Get empresa name
         const { data: empresa } = await supabase
           .from("empresas")
           .select("nombre")
@@ -242,15 +265,15 @@ Deno.serve(async (req) => {
         const empresaNombre = empresa?.nombre || "tu empresa";
         const numFactura = factura?.numero_factura || "N/A";
 
-        // WhatsApp notification (only manual/OpenPay subs reach this point)
         const fechaLimite = new Date(now.getTime() + DIAS_GRACIA * 86400000).toLocaleDateString("es-MX");
         await sendWhatsApp(supabase, sub.empresa_id,
           `¡Hola! 👋\nSe ha generado tu factura de *${mesActual}* para *${empresaNombre}*.\n📋 *Factura:* ${numFactura}\n💰 *Monto:* $${total.toLocaleString()} MXN\n📅 *Fecha límite:* ${fechaLimite}\nTienes *${DIAS_GRACIA} días de gracia* para realizar tu pago.`
         );
 
-        log("Invoice generated", { empresa: sub.empresa_id, total, numFactura });
+        log("Invoice generated", { empresa: sub.empresa_id, total, numFactura, isNewPlan });
       }
     }
+
 
     // ═══ PART 2: Enforce grace period (daily) ═══
     // Check subs in grace/past_due status
