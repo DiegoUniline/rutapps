@@ -106,12 +106,74 @@ const TESTIMONIALS = [
   { name: 'Roberto S.', role: 'Fundador', company: 'Botanas Express', text: 'La optimización de rutas nos ahorró miles de pesos en gasolina el primer mes. Se pagó solo.' },
 ];
 
-const PRICE_MONTHLY = 300;
+const EXTRA_USER_PRICE = 300;
 const PLANS = [
-  { name: 'Mensual', period: '/mes', price: PRICE_MONTHLY, discount: 0, tag: null, popular: false },
-  { name: 'Semestral', period: '/mes', price: Math.round(PRICE_MONTHLY * 0.9), discount: 10, tag: '10% OFF', popular: false },
-  { name: 'Anual', period: '/mes', price: Math.round(PRICE_MONTHLY * 0.85), discount: 15, tag: '15% OFF', popular: true },
+  {
+    slug: 'individual',
+    name: 'Individual',
+    price: 450,
+    includedUsers: 1,
+    idealFor: 'Personas o negocios pequeños',
+    capacitacion: '1 sesión inicial',
+    popular: false,
+    cta: 'Empezar gratis',
+    features: [
+      '1 usuario incluido',
+      'Acceso completo a RutApp',
+      'Registro de rutas, entregas y actividades',
+      'Consulta de historial',
+      'Panel básico de información',
+      'Soporte por WhatsApp',
+      'Actualizaciones del sistema',
+      'Capacitación inicial remota (1 sesión)',
+    ],
+  },
+  {
+    slug: 'equipo',
+    name: 'Equipo',
+    price: 900,
+    includedUsers: 3,
+    idealFor: 'Equipos de ventas y reparto',
+    capacitacion: '2 sesiones',
+    popular: true,
+    cta: 'Empezar gratis',
+    features: [
+      '3 usuarios incluidos',
+      'Todo lo del plan Individual',
+      'Coordinación multiusuario',
+      'Reportes por usuario y por ruta',
+      'Soporte prioritario por WhatsApp',
+      'Capacitación remota (2 sesiones)',
+      'Roles y permisos',
+    ],
+  },
+  {
+    slug: 'empresa',
+    name: 'Empresa',
+    price: 1500,
+    includedUsers: 5,
+    idealFor: 'Empresas con varias rutas o almacenes',
+    capacitacion: '3 sesiones',
+    popular: false,
+    cta: 'Empezar gratis',
+    features: [
+      '5 usuarios incluidos',
+      'Todo lo del plan Equipo',
+      'Reportes avanzados',
+      'Gestión de múltiples almacenes',
+      'Soporte preferente',
+      'Capacitación remota (3 sesiones)',
+      'Asesoría para crecimiento operativo',
+    ],
+  },
 ];
+
+const SERVICIOS_ADICIONALES = [
+  { title: 'Usuario adicional', price: '$300 MXN / mes', desc: 'Por cada usuario extra sobre los incluidos en tu plan.' },
+  { title: 'Capacitación extra', price: '$550 MXN / sesión', desc: 'Sesión remota de hasta 60 minutos para tu equipo.' },
+  { title: 'Desarrollos a la medida', price: 'Cotización', desc: 'Módulos, integraciones, automatizaciones o reportes especiales.' },
+];
+
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
