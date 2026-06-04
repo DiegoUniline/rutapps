@@ -1407,6 +1407,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 </Select>
               </div>
             </div>
+            <div>
+              <Label className="text-xs">Concepto</Label>
+              <Input value={editFacturaForm.concepto || ''}
+                onChange={e => setEditFacturaForm((f: any) => ({ ...f, concepto: e.target.value }))} />
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Usuarios</Label>
