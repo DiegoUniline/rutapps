@@ -435,6 +435,61 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
+  function openMarkPaid(f: any) {
+    setMarkPaidFactura(f);
+    setMarkPaidForm({
+      metodo_pago: 'transferencia',
+      referencia_pago: '',
+      fecha_pago: new Date().toISOString().slice(0, 10),
+      reflect_in_stripe: !!f.stripe_invoice_id,
+      extender_periodo: !f.es_prorrateo,
+    });
+  }
+
+  async function handleMarkPaid() {
+    if (!markPaidFactura) return;
+    setMarkingPaid(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=mark_invoice_paid_out_of_band`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            factura_id: markPaidFactura.id,
+            empresa_id: empresaId,
+            metodo_pago: markPaidForm.metodo_pago,
+            referencia_pago: markPaidForm.referencia_pago,
+            fecha_pago: markPaidForm.fecha_pago,
+            reflect_in_stripe: markPaidForm.reflect_in_stripe,
+            extender_periodo: markPaidForm.extender_periodo,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al marcar pago');
+      const msgParts = ['Pago registrado'];
+      if (data.stripe_paid) msgParts.push('reflejado en Stripe');
+      if (data.nuevo_fin_periodo) {
+        msgParts.push(`período activo hasta ${format(new Date(data.nuevo_fin_periodo), 'dd MMM yyyy', { locale: es })}`);
+      }
+      toast.success(msgParts.join(' · '));
+      setMarkPaidFactura(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
+
+
   async function handleDeleteEmpresa() {
     if (!user) return;
     setDeleting(true);
