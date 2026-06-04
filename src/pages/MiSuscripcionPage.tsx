@@ -316,47 +316,57 @@ export default function MiSuscripcionPage() {
     }
   }
 
-  const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || 3;
-  const newSelectedPlan = subPlans.find(p => p.periodo === selectedFreq) || null;
+  const isLegacyCustomer = subData?.legacy_pricing === true;
+  const minCurrentUsuarios = isLegacyCustomer ? 3 : 1;
+  const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || minCurrentUsuarios;
+  // selectedFreq now stores plan_id
+  const newSelectedPlan = subPlans.find(p => p.id === selectedFreq) || null;
 
   // ─── Derived update state ───
   const targetPlan = newSelectedPlan || currentPlan;
-  const totalNewUsers = currentUsuarios + extraUsers;
+  const targetMin = planMinUsers(targetPlan, isLegacyCustomer);
+  const totalNewUsers = Math.max(targetMin, currentUsuarios + extraUsers);
   const isInitialPlanSelection = !currentPlan && !!selectedFreq;
-  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.periodo;
+  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
   const isUserChange = extraUsers !== 0;
   const hasChanges = isInitialPlanSelection || isFreqChange || isUserChange;
 
-  // Calculate what to charge for the update
   function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean; totalPeriodo: number } {
     if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false, totalPeriodo: 0 };
 
-    // Full period cost for new config
-    const newTotalPeriodo = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
-    // What the user already paid this period (from last paid factura or current plan)
-    const currentTotalPeriodo = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses : 0;
+    const monthsBilled = targetPlan.meses || 1;
+    const newMonthly = planMonthlyCost(targetPlan, totalNewUsers);
+    const newTotalPeriodo = newMonthly * monthsBilled;
+    const currentMonthly = currentPlan ? planMonthlyCost(currentPlan, currentUsuarios) : 0;
+    const currentTotalPeriodo = currentMonthly * (currentPlan?.meses || 1);
 
     const diff = newTotalPeriodo - currentTotalPeriodo;
     const isDowngrade = diff < 0;
 
     const parts: string[] = [];
-    if (isFreqChange) parts.push(`${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isFreqChange) parts.push(targetPlan.nombre);
     if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
     if (isUserChange && extraUsers < 0) parts.push(`${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`);
 
-    const periodoLabel = PERIODO_LABEL[targetPlan.periodo] || targetPlan.periodo;
+    const planLabel = targetPlan.slug ? targetPlan.nombre : (PERIODO_LABEL[targetPlan.periodo] || targetPlan.nombre);
+    const fmtBreakdown = () => {
+      if (targetPlan.slug) {
+        const extras = Math.max(0, totalNewUsers - (targetPlan.usuarios_incluidos || 0));
+        return `Base ${targetPlan.nombre} $${Number(targetPlan.precio_base).toLocaleString()} + ${extras} usuario${extras !== 1 ? 's' : ''} extra × $${targetPlan.precio_extra_usuario} = $${newMonthly.toLocaleString()} MXN/mes`;
+      }
+      return `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${monthsBilled} mes${monthsBilled !== 1 ? 'es' : ''} = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+    };
 
     if (isDowngrade) {
       return {
         amount: 0,
         label: 'Reducción de plan',
-        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/${periodoLabel.toLowerCase()}`,
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/${planLabel.toLowerCase()}`,
         isDowngrade: true,
         totalPeriodo: newTotalPeriodo,
       };
     }
 
-    // If user has a pending invoice, we'll cancel it and charge the full new amount
     const hasPendingInvoice = pendingFacturas.length > 0;
     const pendingTotal = pendingFacturas.reduce((s, f) => s + f.total, 0);
 
@@ -364,17 +374,14 @@ export default function MiSuscripcionPage() {
     let chargeDetail: string;
 
     if (hasPendingInvoice) {
-      // Cancel pending invoice, charge new full period
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
+      chargeDetail = `${fmtBreakdown()}\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
     } else if (currentPlan && diff > 0) {
-      // Proportional difference
       chargeAmount = diff;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+      chargeDetail = `${fmtBreakdown()}\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
     } else {
-      // First time / no current plan
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+      chargeDetail = fmtBreakdown();
     }
 
     return {
@@ -383,6 +390,7 @@ export default function MiSuscripcionPage() {
       detail: chargeDetail,
       isDowngrade: false,
       totalPeriodo: newTotalPeriodo,
+
     };
   }
 
