@@ -118,7 +118,20 @@ export default function CompletarRegistroPage() {
       if (error) throw new Error(error.message || 'Error al crear el checkout');
       if (data?.error) throw new Error(data.error);
       if (!data?.url) throw new Error('No se recibió la URL de pago');
-      window.location.href = data.url;
+      // Open Stripe Checkout in a new tab — required when running inside an iframe (preview)
+      // because Stripe blocks iframe embedding (X-Frame-Options: DENY).
+      const popup = window.open(data.url, '_blank');
+      if (!popup) {
+        // Popup blocked → fallback to top-level redirect
+        if (window.top) {
+          window.top.location.href = data.url;
+        } else {
+          window.location.href = data.url;
+        }
+      } else {
+        toast.success('Se abrió el checkout en una nueva pestaña');
+        setSubmitting(false);
+      }
     } catch (err: any) {
       toast.error(err?.message || 'No se pudo abrir el checkout');
       setSubmitting(false);
