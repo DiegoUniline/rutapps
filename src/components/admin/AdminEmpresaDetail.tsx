@@ -412,7 +412,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       const msgParts = ['Pago registrado'];
       if (data.stripe_paid) msgParts.push('reflejado en Stripe');
       if (data.nuevo_fin_periodo) {
-        msgParts.push(`período hasta ${format(new Date(data.nuevo_fin_periodo), 'dd MMM yyyy', { locale: es })}`);
+        msgParts.push(`período hasta ${fmtDate(data.nuevo_fin_periodo)}`);
       }
       toast.success(msgParts.join(' · '));
       setMarkPaidFactura(null);
@@ -746,15 +746,15 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 )}
                 <Row label="Precio / usuario" value={fmtMXN(precioFinal)} />
                 {subscription.status === 'trial' && subscription.trial_ends_at && (
-                  <Row label="Fin de prueba" value={format(new Date(subscription.trial_ends_at), 'dd MMM yyyy', { locale: es })} />
+                  <Row label="Fin de prueba" value={fmtDate(subscription.trial_ends_at)} />
                 )}
                 {subscription.status !== 'trial' && (
                   <>
                     {subscription.current_period_start && (
-                      <Row label="Inicio período" value={format(new Date(subscription.current_period_start), 'dd MMM yyyy', { locale: es })} />
+                      <Row label="Inicio período" value={fmtDate(subscription.current_period_start)} />
                     )}
                     {subscription.current_period_end && (
-                      <Row label="Fin período" value={format(new Date(subscription.current_period_end), 'dd MMM yyyy', { locale: es })} />
+                      <Row label="Fin período" value={fmtDate(subscription.current_period_end)} />
                     )}
                   </>
                 )}
@@ -891,14 +891,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       const hostedUrl = stripeMatch?.hosted_invoice_url || null;
                       const isPending = (f.estado || 'pendiente') !== 'pagada' && f.estado !== 'cancelada';
                       const periodo = f.periodo_inicio && f.periodo_fin
-                        ? `${format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} – ${format(new Date(f.periodo_fin), 'dd MMM yyyy', { locale: es })}`
+                        ? `${fmtDate(f.periodo_inicio, 'dd MMM')} – ${fmtDate(f.periodo_fin)}`
                         : `${f.num_usuarios ?? '—'} usuarios`;
                       return (
                         <TableRow key={f.id} className="hover:bg-muted/30">
                           <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
                           <TableCell className="text-sm text-muted-foreground max-w-[280px] truncate">{periodo}</TableCell>
-                          <TableCell className="text-sm">{f.fecha_emision ? format(new Date(f.fecha_emision), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
-                          <TableCell className="text-sm">{f.fecha_vencimiento ? format(new Date(f.fecha_vencimiento), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
+                          <TableCell className="text-sm">{f.fecha_emision ? fmtDate(f.fecha_emision) : '—'}</TableCell>
+                          <TableCell className="text-sm">{f.fecha_vencimiento ? fmtDate(f.fecha_vencimiento) : '—'}</TableCell>
                           <TableCell className="text-right font-semibold text-primary">{fmtMXN(Number(f.total || 0))}</TableCell>
                           <TableCell>{estadoFacturaBadge(f.estado || 'pendiente')}</TableCell>
                           <TableCell className="text-xs">
@@ -1228,9 +1228,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </div>
               <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
                 Al pagarse, la suscripción quedará vigente del{' '}
-                <strong>{format(new Date(subInvoiceForm.periodo_inicio), 'dd MMM yyyy', { locale: es })}</strong>
+                <strong>{fmtDate(subInvoiceForm.periodo_inicio)}</strong>
                 {' '}al{' '}
-                <strong>{format(new Date(subInvoiceForm.periodo_fin), 'dd MMM yyyy', { locale: es })}</strong>.
+                <strong>{fmtDate(subInvoiceForm.periodo_fin)}</strong>.
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Días para pagar</Label>
