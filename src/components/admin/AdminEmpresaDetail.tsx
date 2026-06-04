@@ -1656,6 +1656,106 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Modal: Marcar factura como pagada (pago manual) ═══ */}
+      <Dialog open={!!markPaidFactura} onOpenChange={(o) => !o && setMarkPaidFactura(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar pago de factura</DialogTitle>
+            <DialogDescription>
+              {markPaidFactura?.numero_factura
+                ? `Factura ${markPaidFactura.numero_factura}`
+                : 'Factura interna'}
+              {' · '}
+              <span className="font-semibold text-primary">
+                {markPaidFactura?.total != null ? fmtMXN(Number(markPaidFactura.total)) : ''}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Método de pago</Label>
+              <Select
+                value={markPaidForm.metodo_pago}
+                onValueChange={(v) => setMarkPaidForm((f) => ({ ...f, metodo_pago: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transferencia">Transferencia bancaria</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="deposito">Depósito</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Fecha de pago</Label>
+              <Input
+                type="date"
+                value={markPaidForm.fecha_pago}
+                onChange={(e) => setMarkPaidForm((f) => ({ ...f, fecha_pago: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Referencia / Folio</Label>
+              <Input
+                placeholder="Ej: ABC-1234, últimos 4 dígitos, número de transferencia…"
+                value={markPaidForm.referencia_pago}
+                onChange={(e) => setMarkPaidForm((f) => ({ ...f, referencia_pago: e.target.value }))}
+              />
+            </div>
+
+            {markPaidFactura?.stripe_invoice_id && (
+              <div className="flex items-start gap-2 rounded-lg border p-3 bg-muted/20">
+                <Checkbox
+                  id="reflect-stripe"
+                  checked={markPaidForm.reflect_in_stripe}
+                  onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, reflect_in_stripe: !!v }))}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="reflect-stripe" className="text-sm cursor-pointer font-medium">
+                    Reflejar también en Stripe
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Marca la factura de Stripe como pagada ("paid out of band").
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!markPaidFactura?.es_prorrateo && (
+              <div className="flex items-start gap-2 rounded-lg border p-3 bg-emerald-50">
+                <Checkbox
+                  id="extender-periodo"
+                  checked={markPaidForm.extender_periodo}
+                  onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, extender_periodo: !!v }))}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="extender-periodo" className="text-sm cursor-pointer font-medium">
+                    Extender período de la suscripción
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Activa la suscripción y mueve "Fin período" según los meses cubiertos por esta factura.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setMarkPaidFactura(null)} disabled={markingPaid}>
+                Cancelar
+              </Button>
+              <Button onClick={handleMarkPaid} disabled={markingPaid}>
+                {markingPaid ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : '✓ '}
+                Registrar pago
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
