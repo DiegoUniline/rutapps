@@ -31,13 +31,23 @@ interface PlanRow {
   activo: boolean;
 }
 
-function calcTotal(plan: PlanRow, qty: number) {
-  if (plan.slug) {
-    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
-    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
-  }
-  const subtotal = plan.precio_por_usuario * qty * plan.meses;
-  return plan.descuento_pct > 0 ? subtotal * (1 - plan.descuento_pct / 100) : subtotal;
+type BillingPeriod = 'mensual' | 'semestral' | 'anual';
+
+const PERIOD_DISCOUNT: Record<BillingPeriod, number> = {
+  mensual: 0,
+  semestral: 10,
+  anual: 15,
+};
+
+function calcMonthly(plan: PlanRow, qty: number) {
+  const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+  return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+}
+
+function calcTotalWithPeriod(plan: PlanRow, qty: number, period: BillingPeriod) {
+  const monthly = calcMonthly(plan, qty);
+  const disc = PERIOD_DISCOUNT[period];
+  return disc > 0 ? monthly * (1 - disc / 100) : monthly;
 }
 
 export default function CompletarRegistroPage() {
@@ -47,6 +57,7 @@ export default function CompletarRegistroPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('mensual');
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
