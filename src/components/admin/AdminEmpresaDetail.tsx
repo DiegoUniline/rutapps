@@ -39,6 +39,15 @@ const STATUS_MAP: Record<string, { l: string; v: 'default' | 'secondary' | 'dest
 const STATUSES = ['trial', 'active', 'past_due', 'gracia', 'suspended', 'cancelled'] as const;
 const fmtMXN = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Estado efectivo basado en bloqueo + fin de período (no solo en el campo status)
+function getEffectiveStatus(sub: any): { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' } {
+  if (!sub) return { l: '—', v: 'outline' };
+  if (sub.acceso_bloqueado) return { l: 'Suspendida', v: 'destructive' };
+  const ref = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
+  if (ref && new Date(ref) < new Date()) return { l: 'Vencida', v: 'destructive' };
+  return STATUS_MAP[sub.status] || { l: sub.status, v: 'outline' };
+}
+
 export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
