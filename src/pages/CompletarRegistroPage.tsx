@@ -31,13 +31,23 @@ interface PlanRow {
   activo: boolean;
 }
 
-function calcTotal(plan: PlanRow, qty: number) {
-  if (plan.slug) {
-    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
-    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
-  }
-  const subtotal = plan.precio_por_usuario * qty * plan.meses;
-  return plan.descuento_pct > 0 ? subtotal * (1 - plan.descuento_pct / 100) : subtotal;
+type BillingPeriod = 'mensual' | 'semestral' | 'anual';
+
+const PERIOD_DISCOUNT: Record<BillingPeriod, number> = {
+  mensual: 0,
+  semestral: 10,
+  anual: 15,
+};
+
+function calcMonthly(plan: PlanRow, qty: number) {
+  const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+  return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+}
+
+function calcTotalWithPeriod(plan: PlanRow, qty: number, period: BillingPeriod) {
+  const monthly = calcMonthly(plan, qty);
+  const disc = PERIOD_DISCOUNT[period];
+  return disc > 0 ? monthly * (1 - disc / 100) : monthly;
 }
 
 export default function CompletarRegistroPage() {
@@ -47,6 +57,7 @@ export default function CompletarRegistroPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('mensual');
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +123,7 @@ export default function CompletarRegistroPage() {
         body: {
           plan_id: selectedPlan.id,
           quantity,
+          billing_period: billingPeriod,
           accepted_terms: true,
         },
       });
@@ -183,13 +195,54 @@ export default function CompletarRegistroPage() {
                   <div className="text-xs text-muted-foreground mb-2">{selectedPlan.ideal_para}</div>
                 )}
                 <div className="text-2xl font-black text-primary">
-                  {fmtMoney(calcTotal(selectedPlan, quantity))}
+                  {fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}
                   <span className="text-sm font-normal text-muted-foreground"> / mes</span>
+                  {PERIOD_DISCOUNT[billingPeriod] > 0 && (
+                    <span className="ml-2 text-xs font-bold text-emerald-600">
+                      -{PERIOD_DISCOUNT[billingPeriod]}%
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Incluye {selectedPlan.usuarios_incluidos || 1} usuario{(selectedPlan.usuarios_incluidos || 1) > 1 ? 's' : ''}
                   {selectedPlan.precio_extra_usuario > 0 && ` · +${fmtMoney(selectedPlan.precio_extra_usuario)} MXN / extra`}
                 </div>
+              </div>
+            )}
+
+            {/* Selector de periodo de facturación */}
+            {selectedPlan && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">Periodo de facturación</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['mensual', 'semestral', 'anual'] as BillingPeriod[]).map(p => {
+                    const isActive = billingPeriod === p;
+                    const disc = PERIOD_DISCOUNT[p];
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setBillingPeriod(p)}
+                        className={`relative rounded-lg border-2 p-3 text-center transition ${
+                          isActive ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="text-sm font-bold capitalize">{p}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          {p === 'mensual' ? 'Cobro cada mes' : p === 'semestral' ? 'Cobro cada mes' : 'Cobro cada mes'}
+                        </div>
+                        {disc > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            -{disc}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Semestral y Anual aplican descuento permanente en cada cobro mensual mientras mantengas tu suscripción activa.
+                </p>
               </div>
             )}
 
@@ -240,7 +293,7 @@ export default function CompletarRegistroPage() {
                 )}
                 <div className="flex justify-between pt-1 border-t font-bold text-sm">
                   <span>Total mensual</span>
-                  <span className="text-primary">{fmtMoney(calcTotal(selectedPlan, quantity))}</span>
+                  <span className="text-primary">{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</span>
                 </div>
               </div>
             )}
@@ -258,7 +311,7 @@ export default function CompletarRegistroPage() {
                     <li>• <strong>Hoy:</strong> capturas tu tarjeta (no se cobra nada).</li>
                     <li>• <strong>7 días:</strong> usas Rutapp completo y gratis.</li>
                     <li>
-                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotal(selectedPlan, quantity))}</strong> y arranca tu mes de servicio.
+                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</strong> y arranca tu mes de servicio.
                     </li>
                     <li>• Puedes cancelar en cualquier momento desde tu panel.</li>
                   </ul>
@@ -274,7 +327,7 @@ export default function CompletarRegistroPage() {
                 <span className="text-xs leading-relaxed">
                   Acepto que inicio mis 7 días de prueba gratis. Entiendo que el{' '}
                   <strong>{format(chargeDate, 'd \'de\' MMMM \'de\' yyyy', { locale: es })}</strong> se cobrará automáticamente{' '}
-                  <strong>{fmtMoney(calcTotal(selectedPlan, quantity))} MXN</strong> a mi tarjeta por el plan{' '}
+                  <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
                   <strong>{selectedPlan.nombre}</strong>, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
                 </span>
               </label>

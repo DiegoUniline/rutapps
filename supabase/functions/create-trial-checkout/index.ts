@@ -43,9 +43,18 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user?.email) throw new Error("No autenticado");
 
     const body = await req.json().catch(() => ({}));
-    const { plan_id, quantity, accepted_terms = false } = body;
+    const { plan_id, quantity, accepted_terms = false, billing_period = "mensual" } = body;
     if (!plan_id) throw new Error("plan_id es requerido");
     if (!accepted_terms) throw new Error("Debes aceptar los términos del cobro automático");
+
+    // Cupones de descuento por periodo de facturación
+    // Mensual: sin descuento; Semestral: -10%; Anual: -15%
+    const PERIOD_COUPONS: Record<string, string | null> = {
+      mensual: null,
+      semestral: "Z18le12R",
+      anual: "R68zBDb7",
+    };
+    const couponId = PERIOD_COUPONS[billing_period] ?? null;
 
     // Obtener empresa del usuario
     const { data: profile } = await supabase
@@ -109,11 +118,13 @@ Deno.serve(async (req) => {
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },
+        ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
         metadata: {
           empresa_id: profile.empresa_id,
           plan_id: plan.id,
           plan_slug: plan.slug || "",
           num_usuarios: String(qty),
+          billing_period,
           flow: "trial_signup",
         },
       },
@@ -124,6 +135,7 @@ Deno.serve(async (req) => {
         plan_id: plan.id,
         plan_slug: plan.slug || "",
         num_usuarios: String(qty),
+        billing_period,
         flow: "trial_signup",
         accepted_terms_at: new Date().toISOString(),
       },
