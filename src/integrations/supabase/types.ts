@@ -2620,11 +2620,13 @@ export type Database = {
           fecha_pago: string | null
           fecha_vencimiento: string | null
           id: string
+          metodo_pago: string | null
           num_usuarios: number
           numero_factura: string | null
           periodo_fin: string
           periodo_inicio: string
           precio_unitario: number
+          referencia_pago: string | null
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
           subtotal: number
@@ -2641,11 +2643,13 @@ export type Database = {
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          metodo_pago?: string | null
           num_usuarios?: number
           numero_factura?: string | null
           periodo_fin: string
           periodo_inicio: string
           precio_unitario?: number
+          referencia_pago?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal?: number
@@ -2662,11 +2666,13 @@ export type Database = {
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          metodo_pago?: string | null
           num_usuarios?: number
           numero_factura?: string | null
           periodo_fin?: string
           periodo_inicio?: string
           precio_unitario?: number
+          referencia_pago?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           subtotal?: number
