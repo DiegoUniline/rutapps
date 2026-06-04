@@ -707,6 +707,16 @@ Deno.serve(async (req) => {
         .single();
       if (facturaErr) console.error("[admin-billing] insert factura error:", facturaErr);
 
+      if (finalizedInv.status === "paid" && subRow?.id) {
+        await supabase.from("subscriptions").update({
+          current_period_start: periodoInicio,
+          current_period_end: periodoFin,
+          status: "active",
+          acceso_bloqueado: false,
+          updated_at: new Date().toISOString(),
+        }).eq("id", subRow.id);
+      }
+
       return new Response(JSON.stringify({
         invoice_id: finalizedInv.id,
         hosted_url: finalizedInv.hosted_invoice_url,
@@ -715,6 +725,7 @@ Deno.serve(async (req) => {
         total,
         meses,
         factura_id: facturaRow?.id,
+        stripe: true,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
