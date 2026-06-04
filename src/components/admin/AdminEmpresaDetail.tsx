@@ -1275,6 +1275,127 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ─────── Dialog: Editar factura ─────── */}
+      <Dialog open={!!editFactura} onOpenChange={(o) => !o && setEditFactura(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar factura</DialogTitle>
+            <DialogDescription>
+              Los cambios solo aplican localmente. No se reflejan en Stripe.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Folio</Label>
+                <Input value={editFacturaForm.numero_factura || ''}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, numero_factura: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Estado</Label>
+                <Select value={editFacturaForm.estado}
+                  onValueChange={v => setEditFacturaForm((f: any) => ({ ...f, estado: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendiente">Pendiente</SelectItem>
+                    <SelectItem value="pagada">Pagada</SelectItem>
+                    <SelectItem value="parcial">Parcial</SelectItem>
+                    <SelectItem value="fallida">Fallida</SelectItem>
+                    <SelectItem value="cancelada">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Usuarios</Label>
+                <Input type="number" min={1} value={editFacturaForm.num_usuarios}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, num_usuarios: Math.max(1, parseInt(e.target.value) || 1) }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Precio/usuario</Label>
+                <Input type="number" step="0.01" value={editFacturaForm.precio_unitario}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, precio_unitario: parseFloat(e.target.value) || 0 }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Total (MXN)</Label>
+                <Input type="number" step="0.01" value={editFacturaForm.total}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, total: parseFloat(e.target.value) || 0 }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Período inicio</Label>
+                <Input type="date" value={editFacturaForm.periodo_inicio}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, periodo_inicio: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Período fin</Label>
+                <Input type="date" value={editFacturaForm.periodo_fin}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, periodo_fin: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Vencimiento</Label>
+                <Input type="date" value={editFacturaForm.fecha_vencimiento}
+                  onChange={e => setEditFacturaForm((f: any) => ({ ...f, fecha_vencimiento: e.target.value }))} />
+              </div>
+            </div>
+            {editFacturaForm.estado === 'pagada' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Método de pago</Label>
+                  <Select value={editFacturaForm.metodo_pago || 'transferencia'}
+                    onValueChange={v => setEditFacturaForm((f: any) => ({ ...f, metodo_pago: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="transferencia">Transferencia</SelectItem>
+                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                      <SelectItem value="stripe">Stripe</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Referencia</Label>
+                  <Input value={editFacturaForm.referencia_pago || ''}
+                    onChange={e => setEditFacturaForm((f: any) => ({ ...f, referencia_pago: e.target.value }))} />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEditFactura(null)} disabled={savingFactura}>Cancelar</Button>
+            <Button onClick={handleSaveFactura} disabled={savingFactura}>
+              {savingFactura && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─────── Confirmar eliminar factura ─────── */}
+      <AlertDialog open={!!confirmDeleteFactura} onOpenChange={(o) => !o && setConfirmDeleteFactura(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar factura?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la factura <strong>{confirmDeleteFactura?.numero_factura || 'sin folio'}</strong> por{' '}
+              <strong>{fmtMXN(Number(confirmDeleteFactura?.total || 0))}</strong>. Esta acción no se puede deshacer
+              y no afecta a Stripe.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!deletingFacturaId}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!!deletingFacturaId}
+              onClick={(e) => { e.preventDefault(); if (confirmDeleteFactura) handleDeleteFactura(confirmDeleteFactura); }}>
+              {deletingFacturaId ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
