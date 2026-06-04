@@ -118,11 +118,13 @@ Deno.serve(async (req) => {
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },
+        ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
         metadata: {
           empresa_id: profile.empresa_id,
           plan_id: plan.id,
           plan_slug: plan.slug || "",
           num_usuarios: String(qty),
+          billing_period,
           flow: "trial_signup",
         },
       },
@@ -133,6 +135,7 @@ Deno.serve(async (req) => {
         plan_id: plan.id,
         plan_slug: plan.slug || "",
         num_usuarios: String(qty),
+        billing_period,
         flow: "trial_signup",
         accepted_terms_at: new Date().toISOString(),
       },
