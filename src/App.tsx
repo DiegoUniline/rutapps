@@ -727,6 +727,7 @@ const App = () => (
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
+              <WhatsAppFloatButton />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
