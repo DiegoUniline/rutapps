@@ -27,10 +27,36 @@ interface SubPlanRow {
   periodo: string;
   meses: number;
   precio_por_usuario: number;
+  precio_base: number;
+  usuarios_incluidos: number;
+  precio_extra_usuario: number;
+  slug: string | null;
+  orden: number;
+  popular: boolean;
+  ideal_para: string | null;
   descuento_pct: number;
   stripe_price_id: string | null;
   activo: boolean;
 }
+
+// Returns the monthly cost for a plan + qty.
+// New plans (with slug): precio_base + max(0, qty - incluidos) * precio_extra_usuario
+// Legacy plans: precio_por_usuario * qty
+function planMonthlyCost(plan: SubPlanRow | null | undefined, qty: number): number {
+  if (!plan) return 0;
+  if (plan.slug) {
+    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+  }
+  return Number(plan.precio_por_usuario || 0) * qty;
+}
+
+function planMinUsers(plan: SubPlanRow | null | undefined, isLegacy: boolean): number {
+  if (!plan) return isLegacy ? 3 : 1;
+  if (plan.slug) return Math.max(1, plan.usuarios_incluidos || 1);
+  return 3;
+}
+
 
 interface FacturaRow {
   id: string;
