@@ -1321,6 +1321,22 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                       {f.estado || 'pendiente'}
                                     </Badge>
                                   </TableCell>
+                                  <TableCell className="text-xs">
+                                    {f.estado === 'pagada' ? (
+                                      <div className="flex flex-col">
+                                        <span className="capitalize font-medium">
+                                          {f.metodo_pago || (f.stripe_payment_intent_id ? 'Stripe' : '—')}
+                                        </span>
+                                        {f.referencia_pago && (
+                                          <span className="text-muted-foreground font-mono truncate max-w-[140px]" title={f.referencia_pago}>
+                                            {f.referencia_pago}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                     {isPending && hostedUrl && (
                                       <div className="flex justify-end gap-1">
