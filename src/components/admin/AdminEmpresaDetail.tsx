@@ -105,6 +105,17 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     concepto: '',
   });
 
+  // Mark invoice as paid (manual: transferencia/efectivo/...)
+  const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
+  const [markPaidForm, setMarkPaidForm] = useState({
+    metodo_pago: 'transferencia',
+    referencia_pago: '',
+    fecha_pago: new Date().toISOString().slice(0, 10),
+    reflect_in_stripe: true,
+    extender_periodo: true,
+  });
+  const [markingPaid, setMarkingPaid] = useState(false);
+
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
