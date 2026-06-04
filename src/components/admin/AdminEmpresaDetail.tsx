@@ -672,10 +672,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* ═══ TAB: Usuarios ═══ */}
-        <TabsContent value="usuarios">
+        {/* ═══ Usuarios ═══ */}
+        <div>
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold flex items-center gap-2">
