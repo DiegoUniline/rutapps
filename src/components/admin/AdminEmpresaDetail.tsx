@@ -120,6 +120,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
   const [subInvoiceForm, setSubInvoiceForm] = useState({
     plan_id: '' as string,
+    crear_con_stripe: true,
     meses: 1,
     num_usuarios: 1,
     precio_por_usuario_mes: 300,
@@ -293,7 +294,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const today = todayInput();
     const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
     setSubInvoiceForm({
-      plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
+      plan_id: planId, crear_con_stripe: true, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
       periodo_inicio: base,
@@ -352,6 +353,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
             descuento_pct: subInvoiceForm.descuento_pct,
             descuento_permanente: subInvoiceForm.descuento_permanente,
+            crear_con_stripe: subInvoiceForm.crear_con_stripe,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
             periodo_inicio: subInvoiceForm.periodo_inicio || undefined,
@@ -361,7 +363,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       );
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error al crear factura');
-      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}`);
+      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}${data.stripe === false ? ' · pendiente manual' : ' · enviada por Stripe'}`);
       setShowSubInvoice(false);
       load();
     } catch (e: any) { toast.error(e.message); }
@@ -433,6 +435,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       estado: f.estado || 'pendiente',
       metodo_pago: f.metodo_pago || '',
       referencia_pago: f.referencia_pago || '',
+      concepto: f.concepto || '',
     });
   }
 
@@ -448,6 +451,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         precio_unitario: editFacturaForm.precio_unitario,
         descuento_porcentaje: editFacturaForm.descuento_porcentaje,
         subtotal,
+        concepto: editFacturaForm.concepto || null,
         periodo_inicio: editFacturaForm.periodo_inicio || null,
         periodo_fin: editFacturaForm.periodo_fin || null,
         fecha_vencimiento: editFacturaForm.fecha_vencimiento || null,
@@ -894,7 +898,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       return (
                         <TableRow key={f.id} className="hover:bg-muted/30">
                           <TableCell className="font-mono font-semibold text-sm">{f.numero_factura || '—'}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[280px] truncate">{periodo}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                            <div className="truncate font-medium text-foreground/80">{f.concepto || 'Suscripción Rutapp'}</div>
+                            <div className="truncate text-xs">{periodo}</div>
+                          </TableCell>
                           <TableCell className="text-sm">{f.fecha_emision ? fmtDate(f.fecha_emision) : '—'}</TableCell>
                           <TableCell className="text-sm">{f.fecha_vencimiento ? fmtDate(f.fecha_vencimiento) : '—'}</TableCell>
                           <TableCell className="text-right font-semibold text-primary">{fmtMXN(Number(f.total || 0))}</TableCell>
@@ -902,12 +909,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                           <TableCell className="text-xs">
                             {f.estado === 'pagada' ? (
                               <div className="flex flex-col">
-                                <span className="capitalize font-medium">{f.metodo_pago || (f.stripe_payment_intent_id ? 'Stripe' : '—')}</span>
+                                <span className="capitalize font-medium">{f.metodo_pago || (f.stripe_payment_intent_id || f.stripe_invoice_id ? 'Stripe' : '—')}</span>
                                 {f.referencia_pago && (
                                   <span className="text-muted-foreground font-mono truncate max-w-[140px]" title={f.referencia_pago}>{f.referencia_pago}</span>
                                 )}
                               </div>
-                            ) : <span className="text-muted-foreground">—</span>}
+                            ) : <span className="text-muted-foreground">{f.stripe_invoice_id ? 'Stripe' : 'Manual'}</span>}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1 flex-wrap">
@@ -1168,6 +1175,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+              <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
+                <Checkbox id="crear-stripe" checked={subInvoiceForm.crear_con_stripe}
+                  onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, crear_con_stripe: !!v }))} />
+                <label htmlFor="crear-stripe" className="text-sm cursor-pointer leading-tight">
+                  <span className="font-medium">Crear con Stripe y enviar cobro</span><br />
+                  <span className="text-muted-foreground text-xs">
+                    Si lo desactivas, se crea solo como factura pendiente manual para transferencia/efectivo.
+                  </span>
+                </label>
+              </div>
             <div className="space-y-1.5">
               <Label>Plan</Label>
               <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -1259,7 +1276,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>Cancelar</Button>
             <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
               {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
-              Crear factura
+              {subInvoiceForm.crear_con_stripe ? 'Crear y cobrar con Stripe' : 'Crear pendiente manual'}
             </Button>
           </div>
         </DialogContent>
@@ -1392,6 +1409,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">Concepto</Label>
+              <Input value={editFacturaForm.concepto || ''}
+                onChange={e => setEditFacturaForm((f: any) => ({ ...f, concepto: e.target.value }))} />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>

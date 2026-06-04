@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { fmtDateLongMx } from '@/lib/utils';
+import { fmtDate, fmtDateLongMx } from '@/lib/utils';
 import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
 
 interface SubPlanRow {
@@ -61,6 +61,7 @@ function planMinUsers(plan: SubPlanRow | null | undefined, isLegacy: boolean): n
 interface FacturaRow {
   id: string;
   numero_factura: string | null;
+  concepto: string | null;
   periodo_inicio: string;
   periodo_fin: string;
   num_usuarios: number;
@@ -91,15 +92,6 @@ const PERIODO_LABEL: Record<string, string> = {
   semestral: 'Semestral',
   anual: 'Anual',
 };
-
-// Parse 'YYYY-MM-DD' as local-midnight Date (avoids UTC TZ shift).
-function parseDateOnly(s: string | null | undefined): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
 
 export default function MiSuscripcionPage() {
   const { user, empresa } = useAuth();
@@ -133,6 +125,7 @@ export default function MiSuscripcionPage() {
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const [invoiceTransfer, setInvoiceTransfer] = useState<FacturaRow | null>(null);
   const [deleteFacturaDialog, setDeleteFacturaDialog] = useState<FacturaRow | null>(null);
 
   // Coupons (multiple allowed)
@@ -161,7 +154,7 @@ export default function MiSuscripcionPage() {
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').order('orden', { ascending: true }),
-      supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
+      supabase.from('facturas').select('id, numero_factura, concepto, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
       supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion, vigencia_fin)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
@@ -612,19 +605,37 @@ export default function MiSuscripcionPage() {
         throw new Error('No se encontró un enlace de pago válido para esta factura');
       }
 
-      // 2) Fallback: legacy flow — create a fresh checkout session
-      const plan = currentPlan || subPlans[0];
-      if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { price_id: plan.stripe_price_id, quantity: factura.num_usuarios, empresa_id: empresa?.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (!data?.url) throw new Error('No se recibió URL de pago');
-      window.location.href = data.url;
+      // 2) Factura manual: no se cobra por Stripe; se muestra transferencia.
+      setTransferNotes('');
+      setInvoiceTransfer(factura);
     } catch (e: any) {
       toast.error(e.message || 'Error al generar enlace de pago');
+    } finally {
+      setPayingInvoice(null);
+    }
+  }
+
+  async function handleSubmitInvoiceTransfer() {
+    if (!empresa?.id || !user || !invoiceTransfer) return;
+    setPayingInvoice(invoiceTransfer.id);
+    try {
+      const { error } = await supabase.from('solicitudes_pago').insert({
+        empresa_id: empresa.id,
+        user_id: user.id,
+        tipo: 'suscripcion',
+        concepto: invoiceTransfer.concepto || invoiceTransfer.numero_factura || 'Factura de suscripción',
+        monto_centavos: Math.round(Number(invoiceTransfer.total || 0) * 100),
+        metodo: 'transferencia',
+        notas: transferNotes || null,
+        cantidad_usuarios: invoiceTransfer.num_usuarios,
+      } as any);
+      if (error) throw error;
+      toast.success('Solicitud enviada. Te avisaremos cuando confirmemos tu pago.');
+      setInvoiceTransfer(null);
+      setTransferNotes('');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al enviar solicitud');
     } finally {
       setPayingInvoice(null);
     }
@@ -1096,16 +1107,18 @@ export default function MiSuscripcionPage() {
                       {facturas.map(f => (
                         <tr key={f.id} className="border-b border-border/50 hover:bg-card">
                           <td className="py-2.5 px-2">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
+                              <Badge variant="outline" className="text-[9px] px-1 py-0">{f.stripe_invoice_id ? 'Stripe' : 'Manual'}</Badge>
                               {f.es_prorrateo && (
                                 <Badge variant="outline" className="text-[9px] px-1 py-0">Prorrateo</Badge>
                               )}
                             </div>
+                            {f.concepto && <div className="text-[11px] text-muted-foreground truncate max-w-[220px] mt-0.5">{f.concepto}</div>}
                           </td>
                           <td className="py-2.5 px-2 text-muted-foreground text-xs">
-                            {format(parseDateOnly(f.periodo_inicio) ?? new Date(), 'dd MMM', { locale: es })} — {format(parseDateOnly(f.periodo_fin) ?? new Date(), 'dd MMM yy', { locale: es })}
+                            {fmtDate(f.periodo_inicio)} — {fmtDate(f.periodo_fin)}
                           </td>
                           <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
                           <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
@@ -1124,7 +1137,7 @@ export default function MiSuscripcionPage() {
                                   disabled={payingInvoice === f.id}
                                   onClick={() => handlePayInvoice(f)}
                                 >
-                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : f.stripe_invoice_id ? <CreditCard className="h-3 w-3" /> : <BanknoteIcon className="h-3 w-3" />}
                                   Pagar
                                 </Button>
                               )}
@@ -1487,6 +1500,50 @@ export default function MiSuscripcionPage() {
             <Button onClick={handleSubmitTransfer} disabled={paying}>
               {paying && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí, enviar solicitud
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!invoiceTransfer} onOpenChange={(open) => { if (!open) setInvoiceTransfer(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar factura por transferencia</DialogTitle>
+            <DialogDescription>{invoiceTransfer?.numero_factura || 'Factura pendiente'} · {invoiceTransfer?.concepto || 'Suscripción'}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl border-2 border-border bg-card p-5 space-y-3 text-center">
+              <div className="text-lg font-bold text-foreground">{BANK_INFO.banco}</div>
+              <div className="text-muted-foreground">{BANK_INFO.titular}</div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">Cuenta</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.cuenta}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.cuenta)}><Copy className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">CLABE</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.clabe}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.clabe)}><Copy className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border">
+                <span className="text-xs text-muted-foreground">Monto: </span>
+                <span className="font-bold text-foreground text-lg">${Number(invoiceTransfer?.total || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 })} MXN</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Referencia / notas</label>
+              <Textarea value={transferNotes} onChange={e => setTransferNotes(e.target.value)} placeholder="Referencia de transferencia, fecha, etc." rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInvoiceTransfer(null)}>Cancelar</Button>
+            <Button onClick={handleSubmitInvoiceTransfer} disabled={!!payingInvoice}>
+              {payingInvoice && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí
             </Button>
           </DialogFooter>
         </DialogContent>
