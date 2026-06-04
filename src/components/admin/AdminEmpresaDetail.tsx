@@ -752,10 +752,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </div>
             )}
           </div>
-        </TabsContent>
+        </div>
 
-        {/* ═══ TAB: Suscripción ═══ */}
-        <TabsContent value="suscripcion">
+        {/* ═══ Suscripción ═══ */}
+        <div>
+
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
