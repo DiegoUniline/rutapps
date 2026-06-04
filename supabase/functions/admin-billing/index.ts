@@ -642,8 +642,7 @@ Deno.serve(async (req) => {
 
       const invoice = await stripe.invoices.create({
         customer: customerId,
-        collection_method: "send_invoice",
-        days_until_due: days_until_due || 7,
+        collection_method: "charge_automatically",
         auto_advance: true,
         description: conceptoFinal,
         metadata: {
@@ -676,8 +675,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
-      try { await stripe.invoices.sendInvoice(invoice.id); } catch (_) {}
+      let finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+      try {
+        if (finalizedInv.status === "open") finalizedInv = await stripe.invoices.pay(invoice.id);
+      } catch (_) {
+        finalizedInv = await stripe.invoices.retrieve(invoice.id);
+      }
 
       // Insert row in `facturas` so it appears in the client's "Mi Suscripción" page
       const { data: facturaRow, error: facturaErr } = await supabase
@@ -694,8 +697,9 @@ Deno.serve(async (req) => {
           descuento_porcentaje: descPct,
           subtotal,
           total,
-          estado: "pendiente",
+          estado: finalizedInv.status === "paid" ? "pagada" : "pendiente",
           es_prorrateo: false,
+          fecha_pago: finalizedInv.status === "paid" ? new Date().toISOString() : null,
           fecha_vencimiento: vencimiento.toISOString(),
           stripe_invoice_id: finalizedInv.id,
         })
