@@ -2611,6 +2611,7 @@ export type Database = {
       }
       facturas: {
         Row: {
+          concepto: string | null
           creado_en: string | null
           descuento_porcentaje: number | null
           empresa_id: string
@@ -2634,6 +2635,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          concepto?: string | null
           creado_en?: string | null
           descuento_porcentaje?: number | null
           empresa_id: string
@@ -2657,6 +2659,7 @@ export type Database = {
           total?: number
         }
         Update: {
+          concepto?: string | null
           creado_en?: string | null
           descuento_porcentaje?: number | null
           empresa_id?: string
