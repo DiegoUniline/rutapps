@@ -42,6 +42,32 @@ const STATUSES = ['trial', 'active', 'past_due', 'gracia', 'suspended', 'cancell
 const fmtMXN = (v: number) =>
   `$${(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const datePart = (value: any) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.split('T')[0];
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const parseCalendarDate = (value: any) => {
+  const part = datePart(value);
+  const match = part.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0);
+  return new Date(value);
+};
+
+const todayInput = () => datePart(new Date());
+const addMonthsInput = (value: string, months: number) => {
+  const d = parseCalendarDate(value);
+  d.setMonth(d.getMonth() + months);
+  return datePart(d);
+};
+const fmtDate = (value: any, pattern = 'dd MMM yyyy') => value ? format(parseCalendarDate(value), pattern, { locale: es }) : '—';
+
 function getEffectiveStatus(sub: any): { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' } {
   if (!sub) return { l: '—', v: 'outline' };
   if (sub.acceso_bloqueado) return { l: 'Suspendida', v: 'destructive' };
