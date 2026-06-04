@@ -161,59 +161,37 @@ export default function CompletarRegistroPage() {
           </p>
         </div>
 
+        {/* Resumen del plan elegido (solo lectura) */}
         <Card className="border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" /> Elige tu plan
+              <Sparkles className="h-5 w-5 text-primary" /> Plan seleccionado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid md:grid-cols-3 gap-3">
-              {plans.map(plan => {
-                const isSelected = selectedPlanId === plan.id;
-                const total = calcTotal(plan, Math.max(quantity, plan.usuarios_incluidos || 1));
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPlanId(plan.id);
-                      setQuantity(Math.max(1, plan.usuarios_incluidos || 1));
-                    }}
-                    className={`relative text-left rounded-xl border-2 p-4 transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    {plan.popular && (
-                      <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground gap-1 text-[10px]">
-                        <Star className="h-3 w-3 fill-current" /> Más popular
-                      </Badge>
-                    )}
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-base">{plan.nombre}</span>
-                      {isSelected && <Check className="h-5 w-5 text-primary" />}
-                    </div>
-                    {plan.ideal_para && (
-                      <div className="text-[11px] text-muted-foreground mb-2 leading-snug">
-                        {plan.ideal_para}
-                      </div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      Incluye {plan.usuarios_incluidos || 1} usuario{(plan.usuarios_incluidos || 1) > 1 ? 's' : ''}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      +${plan.precio_extra_usuario} MXN / usuario extra
-                    </div>
-                    <div className="mt-3 text-xl font-black text-primary">
-                      {fmtMoney(total)}
-                      <span className="text-xs font-normal text-muted-foreground"> / mes</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            {selectedPlan && (
+              <div className="rounded-xl border-2 border-primary bg-primary/5 p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-lg">{selectedPlan.nombre}</span>
+                  {selectedPlan.popular && (
+                    <Badge className="bg-primary text-primary-foreground gap-1 text-[10px]">
+                      <Star className="h-3 w-3 fill-current" /> Más popular
+                    </Badge>
+                  )}
+                </div>
+                {selectedPlan.ideal_para && (
+                  <div className="text-xs text-muted-foreground mb-2">{selectedPlan.ideal_para}</div>
+                )}
+                <div className="text-2xl font-black text-primary">
+                  {fmtMoney(calcTotal(selectedPlan, quantity))}
+                  <span className="text-sm font-normal text-muted-foreground"> / mes</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Incluye {selectedPlan.usuarios_incluidos || 1} usuario{(selectedPlan.usuarios_incluidos || 1) > 1 ? 's' : ''}
+                  {selectedPlan.precio_extra_usuario > 0 && ` · +${fmtMoney(selectedPlan.precio_extra_usuario)} MXN / extra`}
+                </div>
+              </div>
+            )}
 
             {/* Cantidad de usuarios */}
             {selectedPlan && (
