@@ -435,6 +435,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       estado: f.estado || 'pendiente',
       metodo_pago: f.metodo_pago || '',
       referencia_pago: f.referencia_pago || '',
+      concepto: f.concepto || '',
     });
   }
 
@@ -450,6 +451,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         precio_unitario: editFacturaForm.precio_unitario,
         descuento_porcentaje: editFacturaForm.descuento_porcentaje,
         subtotal,
+        concepto: editFacturaForm.concepto || null,
         periodo_inicio: editFacturaForm.periodo_inicio || null,
         periodo_fin: editFacturaForm.periodo_fin || null,
         fecha_vencimiento: editFacturaForm.fecha_vencimiento || null,
