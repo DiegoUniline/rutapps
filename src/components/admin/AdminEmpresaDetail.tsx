@@ -105,6 +105,17 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     concepto: '',
   });
 
+  // Mark invoice as paid (manual: transferencia/efectivo/...)
+  const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
+  const [markPaidForm, setMarkPaidForm] = useState({
+    metodo_pago: 'transferencia',
+    referencia_pago: '',
+    fecha_pago: new Date().toISOString().slice(0, 10),
+    reflect_in_stripe: true,
+    extender_periodo: true,
+  });
+  const [markingPaid, setMarkingPaid] = useState(false);
+
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
@@ -424,6 +435,61 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
+  function openMarkPaid(f: any) {
+    setMarkPaidFactura(f);
+    setMarkPaidForm({
+      metodo_pago: 'transferencia',
+      referencia_pago: '',
+      fecha_pago: new Date().toISOString().slice(0, 10),
+      reflect_in_stripe: !!f.stripe_invoice_id,
+      extender_periodo: !f.es_prorrateo,
+    });
+  }
+
+  async function handleMarkPaid() {
+    if (!markPaidFactura) return;
+    setMarkingPaid(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=mark_invoice_paid_out_of_band`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            factura_id: markPaidFactura.id,
+            empresa_id: empresaId,
+            metodo_pago: markPaidForm.metodo_pago,
+            referencia_pago: markPaidForm.referencia_pago,
+            fecha_pago: markPaidForm.fecha_pago,
+            reflect_in_stripe: markPaidForm.reflect_in_stripe,
+            extender_periodo: markPaidForm.extender_periodo,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al marcar pago');
+      const msgParts = ['Pago registrado'];
+      if (data.stripe_paid) msgParts.push('reflejado en Stripe');
+      if (data.nuevo_fin_periodo) {
+        msgParts.push(`período activo hasta ${format(new Date(data.nuevo_fin_periodo), 'dd MMM yyyy', { locale: es })}`);
+      }
+      toast.success(msgParts.join(' · '));
+      setMarkPaidFactura(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
+
+
   async function handleDeleteEmpresa() {
     if (!user) return;
     setDeleting(true);
@@ -740,7 +806,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     }}>
                       <SelectTrigger><SelectValue placeholder="Sin plan" /></SelectTrigger>
                       <SelectContent>
-                        {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} — ${p.precio_por_usuario}/usr</SelectItem>)}
+                        {plans.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nombre} — ${p.precio_por_usuario}/usr × {p.meses}{' '}
+                            {p.meses === 1 ? 'mes' : 'meses'}
+                            {p.descuento_pct > 0 ? ` (-${p.descuento_pct}%)` : ''}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -757,6 +829,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Label className="text-sm">Máx. usuarios</Label>
                     <Input type="number" min={1} value={subForm.max_usuarios}
                       onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
+                    {subscription?.max_usuarios != null && subForm.max_usuarios > subscription.max_usuarios && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        +{subForm.max_usuarios - subscription.max_usuarios} usuarios nuevos
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm">Precio final por usuario</Label>
@@ -789,22 +866,84 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       );
                     })()}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Fin trial</Label>
-                    <Input type="date" value={subForm.trial_ends_at}
-                      onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Inicio período</Label>
-                    <Input type="date" value={subForm.current_period_start}
-                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Fin período</Label>
-                    <Input type="date" value={subForm.current_period_end}
-                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
-                    <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
-                  </div>
+
+                  {/* Fin trial — solo si status = trial */}
+                  {subForm.status === 'trial' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Fin trial</Label>
+                      <Input
+                        type="date"
+                        value={subForm.trial_ends_at}
+                        disabled={!!subForm.trial_ends_at && new Date(subForm.trial_ends_at) < new Date()}
+                        onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))}
+                      />
+                      {subForm.trial_ends_at && new Date(subForm.trial_ends_at) < new Date() && (
+                        <p className="text-xs text-destructive">El trial ya venció (no editable).</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inicio/Fin período — solo si NO está en trial */}
+                  {subForm.status !== 'trial' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Inicio período</Label>
+                        <Input type="date" value={subForm.current_period_start}
+                          onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Fin período</Label>
+                        <Input type="date" value={subForm.current_period_end}
+                          onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
+                        <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Banner de prorrateo cuando agregas usuarios mid-período */}
+                  {(() => {
+                    const usuariosExtra = subForm.max_usuarios - (subscription?.max_usuarios || 0);
+                    if (usuariosExtra <= 0) return null;
+                    if (!subscription?.current_period_end || !subscription?.current_period_start) return null;
+                    if (subForm.status === 'trial') return null;
+                    const hoy = new Date();
+                    const fin = new Date(subscription.current_period_end);
+                    const ini = new Date(subscription.current_period_start);
+                    if (fin <= hoy) return null;
+                    const diasRest = Math.max(0, Math.ceil((fin.getTime() - hoy.getTime()) / 86400000));
+                    const totalDias = Math.max(1, Math.ceil((fin.getTime() - ini.getTime()) / 86400000));
+                    const selectedPlan = plans.find(p => p.id === subForm.plan_id);
+                    const precioBase = selectedPlan?.precio_por_usuario || 0;
+                    const precioFinal = precioBase * (1 - (subForm.descuento_porcentaje || 0) / 100);
+                    const mesesPeriodo = selectedPlan?.meses || 1;
+                    const proporcion = diasRest / totalDias;
+                    const prorrateo = usuariosExtra * precioFinal * mesesPeriodo * proporcion;
+                    return (
+                      <div className="sm:col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+                          ⚠️ Prorrateo por usuarios extra
+                        </p>
+                        <p className="text-sm text-amber-900">
+                          Estás agregando <strong>{usuariosExtra} usuario{usuariosExtra > 1 ? 's' : ''}</strong> con{' '}
+                          <strong>{diasRest} día{diasRest !== 1 ? 's' : ''}</strong> restantes del período actual de{' '}
+                          {totalDias} días.
+                        </p>
+                        <div className="bg-white rounded p-2 text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              {usuariosExtra} × ${Math.round(precioFinal)}/usr × {mesesPeriodo} {mesesPeriodo === 1 ? 'mes' : 'meses'} × ({diasRest}/{totalDias} días)
+                            </span>
+                            <span className="font-bold text-amber-900">{fmtMXN(prorrateo)}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-800">
+                          Al guardar puedes generar una factura de prorrateo desde la pestaña <strong>Facturación → Nueva factura</strong>{' '}
+                          (marcando "es prorrateo" en concepto) o simplemente guardar sin cobrar este excedente.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
 
                   {/* Toggle acceso bloqueado */}
                   <div className="sm:col-span-2 rounded-lg border p-3 flex items-start justify-between gap-3 bg-muted/20">
@@ -1123,6 +1262,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                           <TableHead>Usuarios</TableHead>
                           <TableHead className="text-right">Total</TableHead>
                           <TableHead>Estado</TableHead>
+                          <TableHead>Método</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1181,79 +1321,106 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                                       {f.estado || 'pendiente'}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                    {isPending && hostedUrl && (
-                                      <div className="flex justify-end gap-1">
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          title="Copiar link"
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(hostedUrl);
-                                            toast.success('Link de pago copiado');
-                                          }}
-                                        >
-                                          <Copy className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          className="bg-green-600 hover:bg-green-700 text-white h-8"
-                                          disabled={sendingWaId === f.id}
-                                          title="Enviar por WhatsApp"
-                                          onClick={async () => {
-                                            const tel = (empresa?.telefono || '').replace(/\D/g, '');
-                                            if (!tel) {
-                                              toast.error('La empresa no tiene teléfono registrado');
-                                              return;
-                                            }
-                                            try {
-                                              setSendingWaId(f.id);
-                                              const { data, error } = await supabase.functions.invoke('admin-billing', {
-                                                body: {
-                                                  action: 'send_invoice_notification',
-                                                  channel: 'whatsapp',
-                                                  phone_override: tel,
-                                                  empresa_id: empresaId,
-                                                  empresa_nombre: empresa?.nombre || '',
-                                                  folio: f.numero_factura || '',
-                                                  fecha_vencimiento: f.fecha_vencimiento || null,
-                                                  amount: Math.round(Number(f.total || 0) * 100),
-                                                  hosted_url: hostedUrl,
-                                                  invoice_id: f.stripe_invoice_id || null,
-                                                  description: `Factura ${f.numero_factura || ''}`,
-                                                },
-                                              });
-                                              if (error) throw error;
-                                              if (data?.success === false) throw new Error(data?.error || 'Error');
-                                              toast.success('WhatsApp enviado al cliente ✅');
-                                            } catch (e: any) {
-                                              toast.error(`No se pudo enviar: ${e.message || e}`);
-                                            } finally {
-                                              setSendingWaId(null);
-                                            }
-                                          }}
-                                        >
-                                          {sendingWaId === f.id
-                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            : <MessageCircle className="h-3.5 w-3.5" />}
-                                        </Button>
-                                        <Button size="sm" variant="ghost" asChild title="Abrir página de pago">
-                                          <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                          </a>
-                                        </Button>
+                                  <TableCell className="text-xs">
+                                    {f.estado === 'pagada' ? (
+                                      <div className="flex flex-col">
+                                        <span className="capitalize font-medium">
+                                          {f.metodo_pago || (f.stripe_payment_intent_id ? 'Stripe' : '—')}
+                                        </span>
+                                        {f.referencia_pago && (
+                                          <span className="text-muted-foreground font-mono truncate max-w-[140px]" title={f.referencia_pago}>
+                                            {f.referencia_pago}
+                                          </span>
+                                        )}
                                       </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
                                     )}
-                                    {isPending && !hostedUrl && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {hasStripeInvoice ? 'Buscando link…' : 'Sin link'}
-                                      </span>
-                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex justify-end gap-1 flex-wrap">
+                                      {isPending && (
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                          title="Registrar pago manual (transferencia/efectivo)"
+                                          onClick={() => openMarkPaid(f)}
+                                        >
+                                          ✓ Marcar pagada
+                                        </Button>
+                                      )}
+                                      {isPending && hostedUrl && (
+                                        <>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            title="Copiar link"
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(hostedUrl);
+                                              toast.success('Link de pago copiado');
+                                            }}
+                                          >
+                                            <Copy className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white h-8"
+                                            disabled={sendingWaId === f.id}
+                                            title="Enviar por WhatsApp"
+                                            onClick={async () => {
+                                              const tel = (empresa?.telefono || '').replace(/\D/g, '');
+                                              if (!tel) {
+                                                toast.error('La empresa no tiene teléfono registrado');
+                                                return;
+                                              }
+                                              try {
+                                                setSendingWaId(f.id);
+                                                const { data, error } = await supabase.functions.invoke('admin-billing', {
+                                                  body: {
+                                                    action: 'send_invoice_notification',
+                                                    channel: 'whatsapp',
+                                                    phone_override: tel,
+                                                    empresa_id: empresaId,
+                                                    empresa_nombre: empresa?.nombre || '',
+                                                    folio: f.numero_factura || '',
+                                                    fecha_vencimiento: f.fecha_vencimiento || null,
+                                                    amount: Math.round(Number(f.total || 0) * 100),
+                                                    hosted_url: hostedUrl,
+                                                    invoice_id: f.stripe_invoice_id || null,
+                                                    description: `Factura ${f.numero_factura || ''}`,
+                                                  },
+                                                });
+                                                if (error) throw error;
+                                                if (data?.success === false) throw new Error(data?.error || 'Error');
+                                                toast.success('WhatsApp enviado al cliente ✅');
+                                              } catch (e: any) {
+                                                toast.error(`No se pudo enviar: ${e.message || e}`);
+                                              } finally {
+                                                setSendingWaId(null);
+                                              }
+                                            }}
+                                          >
+                                            {sendingWaId === f.id
+                                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              : <MessageCircle className="h-3.5 w-3.5" />}
+                                          </Button>
+                                          <Button size="sm" variant="ghost" asChild title="Abrir página de pago">
+                                            <a href={hostedUrl} target="_blank" rel="noopener noreferrer">
+                                              <ExternalLink className="h-3.5 w-3.5" />
+                                            </a>
+                                          </Button>
+                                        </>
+                                      )}
+                                      {!isPending && (
+                                        <span className="text-xs text-emerald-700 font-medium">✓ Pagada</span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                                 {isExpanded && (
                                   <TableRow key={`${f.id}-exp`} className="bg-muted/20 hover:bg-muted/20">
-                                    <TableCell colSpan={8} className="p-4">
+                                    <TableCell colSpan={9} className="p-4">
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                                         {fields.map(([k, v]) => (
                                           <div key={k} className="flex flex-col border-b border-border/30 pb-1">
@@ -1484,6 +1651,106 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               >
                 {resettingPw ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
                 Restablecer contraseña
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ Modal: Marcar factura como pagada (pago manual) ═══ */}
+      <Dialog open={!!markPaidFactura} onOpenChange={(o) => !o && setMarkPaidFactura(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar pago de factura</DialogTitle>
+            <DialogDescription>
+              {markPaidFactura?.numero_factura
+                ? `Factura ${markPaidFactura.numero_factura}`
+                : 'Factura interna'}
+              {' · '}
+              <span className="font-semibold text-primary">
+                {markPaidFactura?.total != null ? fmtMXN(Number(markPaidFactura.total)) : ''}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Método de pago</Label>
+              <Select
+                value={markPaidForm.metodo_pago}
+                onValueChange={(v) => setMarkPaidForm((f) => ({ ...f, metodo_pago: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transferencia">Transferencia bancaria</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="deposito">Depósito</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Fecha de pago</Label>
+              <Input
+                type="date"
+                value={markPaidForm.fecha_pago}
+                onChange={(e) => setMarkPaidForm((f) => ({ ...f, fecha_pago: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Referencia / Folio</Label>
+              <Input
+                placeholder="Ej: ABC-1234, últimos 4 dígitos, número de transferencia…"
+                value={markPaidForm.referencia_pago}
+                onChange={(e) => setMarkPaidForm((f) => ({ ...f, referencia_pago: e.target.value }))}
+              />
+            </div>
+
+            {markPaidFactura?.stripe_invoice_id && (
+              <div className="flex items-start gap-2 rounded-lg border p-3 bg-muted/20">
+                <Checkbox
+                  id="reflect-stripe"
+                  checked={markPaidForm.reflect_in_stripe}
+                  onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, reflect_in_stripe: !!v }))}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="reflect-stripe" className="text-sm cursor-pointer font-medium">
+                    Reflejar también en Stripe
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Marca la factura de Stripe como pagada ("paid out of band").
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!markPaidFactura?.es_prorrateo && (
+              <div className="flex items-start gap-2 rounded-lg border p-3 bg-emerald-50">
+                <Checkbox
+                  id="extender-periodo"
+                  checked={markPaidForm.extender_periodo}
+                  onCheckedChange={(v) => setMarkPaidForm((f) => ({ ...f, extender_periodo: !!v }))}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="extender-periodo" className="text-sm cursor-pointer font-medium">
+                    Extender período de la suscripción
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Activa la suscripción y mueve "Fin período" según los meses cubiertos por esta factura.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setMarkPaidFactura(null)} disabled={markingPaid}>
+                Cancelar
+              </Button>
+              <Button onClick={handleMarkPaid} disabled={markingPaid}>
+                {markingPaid ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : '✓ '}
+                Registrar pago
               </Button>
             </div>
           </div>
