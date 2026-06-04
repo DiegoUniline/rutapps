@@ -1262,6 +1262,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                           <TableHead>Usuarios</TableHead>
                           <TableHead className="text-right">Total</TableHead>
                           <TableHead>Estado</TableHead>
+                          <TableHead>Método</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
