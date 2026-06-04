@@ -293,7 +293,7 @@ export default function CompletarRegistroPage() {
                 )}
                 <div className="flex justify-between pt-1 border-t font-bold text-sm">
                   <span>Total mensual</span>
-                  <span className="text-primary">{fmtMoney(calcTotal(selectedPlan, quantity))}</span>
+                  <span className="text-primary">{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</span>
                 </div>
               </div>
             )}
@@ -311,7 +311,7 @@ export default function CompletarRegistroPage() {
                     <li>• <strong>Hoy:</strong> capturas tu tarjeta (no se cobra nada).</li>
                     <li>• <strong>7 días:</strong> usas Rutapp completo y gratis.</li>
                     <li>
-                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotal(selectedPlan, quantity))}</strong> y arranca tu mes de servicio.
+                      • <strong>El {format(chargeDate, 'd \'de\' MMMM', { locale: es })}</strong> se cobra automáticamente <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))}</strong> y arranca tu mes de servicio.
                     </li>
                     <li>• Puedes cancelar en cualquier momento desde tu panel.</li>
                   </ul>
@@ -327,7 +327,7 @@ export default function CompletarRegistroPage() {
                 <span className="text-xs leading-relaxed">
                   Acepto que inicio mis 7 días de prueba gratis. Entiendo que el{' '}
                   <strong>{format(chargeDate, 'd \'de\' MMMM \'de\' yyyy', { locale: es })}</strong> se cobrará automáticamente{' '}
-                  <strong>{fmtMoney(calcTotal(selectedPlan, quantity))} MXN</strong> a mi tarjeta por el plan{' '}
+                  <strong>{fmtMoney(calcTotalWithPeriod(selectedPlan, quantity, billingPeriod))} MXN</strong> a mi tarjeta por el plan{' '}
                   <strong>{selectedPlan.nombre}</strong>, y que <strong>ese primer cargo no es reembolsable</strong>. Puedo cancelar en cualquier momento desde mi panel.
                 </span>
               </label>
