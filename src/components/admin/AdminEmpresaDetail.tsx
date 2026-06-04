@@ -806,7 +806,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     }}>
                       <SelectTrigger><SelectValue placeholder="Sin plan" /></SelectTrigger>
                       <SelectContent>
-                        {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} — ${p.precio_por_usuario}/usr</SelectItem>)}
+                        {plans.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nombre} — ${p.precio_por_usuario}/usr × {p.meses}{' '}
+                            {p.meses === 1 ? 'mes' : 'meses'}
+                            {p.descuento_pct > 0 ? ` (-${p.descuento_pct}%)` : ''}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -823,6 +829,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Label className="text-sm">Máx. usuarios</Label>
                     <Input type="number" min={1} value={subForm.max_usuarios}
                       onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
+                    {subscription?.max_usuarios != null && subForm.max_usuarios > subscription.max_usuarios && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        +{subForm.max_usuarios - subscription.max_usuarios} usuarios nuevos
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm">Precio final por usuario</Label>
@@ -855,22 +866,84 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       );
                     })()}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Fin trial</Label>
-                    <Input type="date" value={subForm.trial_ends_at}
-                      onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Inicio período</Label>
-                    <Input type="date" value={subForm.current_period_start}
-                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Fin período</Label>
-                    <Input type="date" value={subForm.current_period_end}
-                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
-                    <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
-                  </div>
+
+                  {/* Fin trial — solo si status = trial */}
+                  {subForm.status === 'trial' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Fin trial</Label>
+                      <Input
+                        type="date"
+                        value={subForm.trial_ends_at}
+                        disabled={!!subForm.trial_ends_at && new Date(subForm.trial_ends_at) < new Date()}
+                        onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))}
+                      />
+                      {subForm.trial_ends_at && new Date(subForm.trial_ends_at) < new Date() && (
+                        <p className="text-xs text-destructive">El trial ya venció (no editable).</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inicio/Fin período — solo si NO está en trial */}
+                  {subForm.status !== 'trial' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Inicio período</Label>
+                        <Input type="date" value={subForm.current_period_start}
+                          onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Fin período</Label>
+                        <Input type="date" value={subForm.current_period_end}
+                          onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
+                        <p className="text-xs text-muted-foreground">El estado efectivo se calcula con esta fecha.</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Banner de prorrateo cuando agregas usuarios mid-período */}
+                  {(() => {
+                    const usuariosExtra = subForm.max_usuarios - (subscription?.max_usuarios || 0);
+                    if (usuariosExtra <= 0) return null;
+                    if (!subscription?.current_period_end || !subscription?.current_period_start) return null;
+                    if (subForm.status === 'trial') return null;
+                    const hoy = new Date();
+                    const fin = new Date(subscription.current_period_end);
+                    const ini = new Date(subscription.current_period_start);
+                    if (fin <= hoy) return null;
+                    const diasRest = Math.max(0, Math.ceil((fin.getTime() - hoy.getTime()) / 86400000));
+                    const totalDias = Math.max(1, Math.ceil((fin.getTime() - ini.getTime()) / 86400000));
+                    const selectedPlan = plans.find(p => p.id === subForm.plan_id);
+                    const precioBase = selectedPlan?.precio_por_usuario || 0;
+                    const precioFinal = precioBase * (1 - (subForm.descuento_porcentaje || 0) / 100);
+                    const mesesPeriodo = selectedPlan?.meses || 1;
+                    const proporcion = diasRest / totalDias;
+                    const prorrateo = usuariosExtra * precioFinal * mesesPeriodo * proporcion;
+                    return (
+                      <div className="sm:col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-2">
+                        <p className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+                          ⚠️ Prorrateo por usuarios extra
+                        </p>
+                        <p className="text-sm text-amber-900">
+                          Estás agregando <strong>{usuariosExtra} usuario{usuariosExtra > 1 ? 's' : ''}</strong> con{' '}
+                          <strong>{diasRest} día{diasRest !== 1 ? 's' : ''}</strong> restantes del período actual de{' '}
+                          {totalDias} días.
+                        </p>
+                        <div className="bg-white rounded p-2 text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              {usuariosExtra} × ${Math.round(precioFinal)}/usr × {mesesPeriodo} {mesesPeriodo === 1 ? 'mes' : 'meses'} × ({diasRest}/{totalDias} días)
+                            </span>
+                            <span className="font-bold text-amber-900">{fmtMXN(prorrateo)}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-800">
+                          Al guardar puedes generar una factura de prorrateo desde la pestaña <strong>Facturación → Nueva factura</strong>{' '}
+                          (marcando "es prorrateo" en concepto) o simplemente guardar sin cobrar este excedente.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
 
                   {/* Toggle acceso bloqueado */}
                   <div className="sm:col-span-2 rounded-lg border p-3 flex items-start justify-between gap-3 bg-muted/20">
