@@ -226,7 +226,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
     const { error } = await supabase.from('subscriptions').update(payload).eq('id', subscription.id);
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción actualizada'); setEditingSub(false); load(); }
+    else { toast.success('Suscripción actualizada'); load(); }
     setSavingSub(false);
   }
 
