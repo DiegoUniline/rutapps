@@ -932,7 +932,7 @@ export default function MiSuscripcionPage() {
 
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div className="text-sm text-foreground w-full sm:w-auto">
-                        <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                        <strong>{currentUsuarios}</strong> usuarios{currentPlan.slug ? ` (${currentPlan.usuarios_incluidos} incluidos)` : ''} — <strong>${effectiveMonthly.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong> MXN/mes{currentPlan.meses > 1 ? ` × ${currentPlan.meses} meses` : ''}
                         {hasAnyDiscount && (
                           <span className="block text-xs text-muted-foreground line-through">
                             Sin descuento: ${totalSinDescuento.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
@@ -964,7 +964,7 @@ export default function MiSuscripcionPage() {
                   className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                   onClick={() => {
                     setExtraUsers(0);
-                    if (currentPlan) setSelectedFreq(currentPlan.periodo);
+                    if (currentPlan) setSelectedFreq(currentPlan.id);
                     setShowUpdateDialog(true);
                   }}
                 >
