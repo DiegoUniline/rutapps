@@ -47,14 +47,16 @@ Deno.serve(async (req) => {
     if (!plan_id) throw new Error("plan_id es requerido");
     if (!accepted_terms) throw new Error("Debes aceptar los términos del cobro automático");
 
-    // Cupones de descuento por periodo de facturación
-    // Mensual: sin descuento; Semestral: -10%; Anual: -15%
-    const PERIOD_COUPONS: Record<string, string | null> = {
-      mensual: null,
-      semestral: "Z18le12R",
-      anual: "R68zBDb7",
+    // Configuración por periodo: meses cobrados por adelantado + descuento
+    // Mensual: 1 mes, sin descuento
+    // Semestral: 6 meses por adelantado, -10%
+    // Anual: 12 meses por adelantado, -15%
+    const PERIOD_CONFIG: Record<string, { months: number; discountPct: number }> = {
+      mensual: { months: 1, discountPct: 0 },
+      semestral: { months: 6, discountPct: 10 },
+      anual: { months: 12, discountPct: 15 },
     };
-    const couponId = PERIOD_COUPONS[billing_period] ?? null;
+    const periodCfg = PERIOD_CONFIG[billing_period] || PERIOD_CONFIG.mensual;
 
     // Obtener empresa del usuario
     const { data: profile } = await supabase
