@@ -1172,6 +1172,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+              <div className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
+                <Checkbox id="crear-stripe" checked={subInvoiceForm.crear_con_stripe}
+                  onCheckedChange={(v) => setSubInvoiceForm(f => ({ ...f, crear_con_stripe: !!v }))} />
+                <label htmlFor="crear-stripe" className="text-sm cursor-pointer leading-tight">
+                  <span className="font-medium">Crear con Stripe y enviar cobro</span><br />
+                  <span className="text-muted-foreground text-xs">
+                    Si lo desactivas, se crea solo como factura pendiente manual para transferencia/efectivo.
+                  </span>
+                </label>
+              </div>
             <div className="space-y-1.5">
               <Label>Plan</Label>
               <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -1263,7 +1273,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             <Button variant="outline" onClick={() => setShowSubInvoice(false)} disabled={creatingSubInvoice}>Cancelar</Button>
             <Button onClick={handleCreateSubInvoice} disabled={creatingSubInvoice}>
               {creatingSubInvoice ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Receipt className="h-4 w-4 mr-1.5" />}
-              Crear factura
+              {subInvoiceForm.crear_con_stripe ? 'Crear y cobrar con Stripe' : 'Crear pendiente manual'}
             </Button>
           </div>
         </DialogContent>
