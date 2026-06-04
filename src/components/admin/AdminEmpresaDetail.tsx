@@ -612,9 +612,9 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* Single stacked view */}
       <div className="space-y-6">
-        {/* ═══ General ═══ */}
-        <div>
-
+        {/* ═══ Top: General | Suscripción ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -672,91 +672,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* ═══ Usuarios ═══ */}
-        <div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" /> Usuarios de {empresa.nombre}
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={forcingAll || allUsers.length === 0}
-                onClick={handleForceChangeAll}
-                className="gap-1.5"
-              >
-                {forcingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-                Forzar cambio de contraseña a todos
-              </Button>
-            </div>
-
-            {allUsers.length === 0 ? (
-              <Card className="border border-border/60">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Sin usuarios registrados
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="border border-border/60 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-card">
-                      <TableHead className="font-semibold">Nombre</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Teléfono</TableHead>
-                      <TableHead className="font-semibold">Rol</TableHead>
-                      <TableHead className="font-semibold">Último acceso</TableHead>
-                      <TableHead className="font-semibold">Registro</TableHead>
-                      <TableHead className="font-semibold text-center w-28">Contraseña</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allUsers.map((u: any) => (
-                      <TableRow key={u.id} className="hover:bg-card/50">
-                        <TableCell className="font-medium">{u.nombre || 'Sin nombre'}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{u.rol || 'Sin rol'}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {u.last_sign_in_at
-                            ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es })
-                            : 'Nunca'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : '—'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => {
-                              setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email });
-                              setResetPassword('');
-                              setResetForceChange(true);
-                            }}
-                          >
-                            <KeyRound className="h-3.5 w-3.5" /> Resetear
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* ═══ Suscripción ═══ */}
-        <div>
-
+          <div>
           <Card className="border border-border/60 shadow-sm max-w-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -994,11 +911,102 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
             </CardContent>
           </Card>
+          </div>
         </div>
 
-        {/* ═══ Facturación ═══ */}
-        <div>
+        {/* ═══ Tabs: Usuarios | Facturas | Estado de cuenta ═══ */}
+        <Tabs defaultValue="usuarios" className="space-y-4">
+          <TabsList className="border border-border/60 p-1 h-auto">
+            <TabsTrigger value="usuarios" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
+            </TabsTrigger>
+            <TabsTrigger value="facturas" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Receipt className="h-4 w-4" /> Facturas ({facturas.length})
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <FileText className="h-4 w-4" /> Estado de cuenta
+            </TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="usuarios">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Usuarios de {empresa.nombre}
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={forcingAll || allUsers.length === 0}
+                onClick={handleForceChangeAll}
+                className="gap-1.5"
+              >
+                {forcingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                Forzar cambio de contraseña a todos
+              </Button>
+            </div>
+
+            {allUsers.length === 0 ? (
+              <Card className="border border-border/60">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Sin usuarios registrados
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="border border-border/60 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-card">
+                      <TableHead className="font-semibold">Nombre</TableHead>
+                      <TableHead className="font-semibold">Email</TableHead>
+                      <TableHead className="font-semibold">Teléfono</TableHead>
+                      <TableHead className="font-semibold">Rol</TableHead>
+                      <TableHead className="font-semibold">Último acceso</TableHead>
+                      <TableHead className="font-semibold">Registro</TableHead>
+                      <TableHead className="font-semibold text-center w-28">Contraseña</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allUsers.map((u: any) => (
+                      <TableRow key={u.id} className="hover:bg-card/50">
+                        <TableCell className="font-medium">{u.nombre || 'Sin nombre'}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{u.rol || 'Sin rol'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {u.last_sign_in_at
+                            ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es })
+                            : 'Nunca'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : '—'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => {
+                              setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email });
+                              setResetPassword('');
+                              setResetForceChange(true);
+                            }}
+                          >
+                            <KeyRound className="h-3.5 w-3.5" /> Resetear
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          </TabsContent>
+
+          <TabsContent value="facturas">
           <div className="space-y-6">
             {/* Action: Create subscription invoice */}
             <Card className="border border-primary/30 bg-primary/5 shadow-sm">
@@ -1271,7 +1279,86 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               </Card>
             )}
           </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="pagos">
+            <div className="space-y-6">
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                  <Receipt className="h-4 w-4 text-primary" /> Estado de cuenta
+                </h3>
+                {(() => {
+                  const total = facturas.reduce((s, f) => s + Number(f.total || 0), 0);
+                  const pagado = facturas.filter(f => f.estado === 'pagada').reduce((s, f) => s + Number(f.total || 0), 0);
+                  const pendiente = total - pagado;
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                      <div className="rounded-lg border p-3 bg-card">
+                        <p className="text-xs text-muted-foreground">Total facturado</p>
+                        <p className="text-2xl font-bold text-foreground">{fmtMXN(total)}</p>
+                      </div>
+                      <div className="rounded-lg border p-3 bg-emerald-50 border-emerald-200">
+                        <p className="text-xs text-emerald-700">Pagado</p>
+                        <p className="text-2xl font-bold text-emerald-700">{fmtMXN(pagado)}</p>
+                      </div>
+                      <div className="rounded-lg border p-3 bg-destructive/10 border-destructive/30">
+                        <p className="text-xs text-destructive">Saldo pendiente</p>
+                        <p className="text-2xl font-bold text-destructive">{fmtMXN(pendiente)}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {facturas.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Sin movimientos</p>
+                ) : (
+                  <div className="border border-border/60 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Concepto</TableHead>
+                          <TableHead>Método</TableHead>
+                          <TableHead className="text-right">Cargo</TableHead>
+                          <TableHead className="text-right">Abono</TableHead>
+                          <TableHead className="text-right">Saldo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const movs: any[] = [];
+                          [...facturas]
+                            .sort((a, b) => new Date(a.fecha_emision || a.creado_en || 0).getTime() - new Date(b.fecha_emision || b.creado_en || 0).getTime())
+                            .forEach(f => {
+                              movs.push({ tipo: 'cargo', fecha: f.fecha_emision || f.creado_en, concepto: `Factura ${f.numero_factura || ''}`, metodo: '—', monto: Number(f.total || 0) });
+                              if (f.estado === 'pagada') {
+                                movs.push({ tipo: 'abono', fecha: f.fecha_pago || f.fecha_emision, concepto: `Pago factura ${f.numero_factura || ''}`, metodo: f.metodo_pago || (f.stripe_payment_intent_id ? 'Stripe' : 'Manual'), monto: Number(f.total || 0) });
+                              }
+                            });
+                          let saldo = 0;
+                          return movs.map((m, i) => {
+                            saldo += m.tipo === 'cargo' ? m.monto : -m.monto;
+                            return (
+                              <TableRow key={i}>
+                                <TableCell className="text-sm">{m.fecha ? format(new Date(m.fecha), 'dd MMM yyyy', { locale: es }) : '—'}</TableCell>
+                                <TableCell className="text-sm">{m.concepto}</TableCell>
+                                <TableCell className="text-xs capitalize">{m.metodo}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">{m.tipo === 'cargo' ? fmtMXN(m.monto) : '—'}</TableCell>
+                                <TableCell className="text-right font-mono text-sm text-emerald-700">{m.tipo === 'abono' ? fmtMXN(m.monto) : '—'}</TableCell>
+                                <TableCell className={`text-right font-mono text-sm font-semibold ${saldo > 0 ? 'text-destructive' : 'text-foreground'}`}>{fmtMXN(saldo)}</TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
 
