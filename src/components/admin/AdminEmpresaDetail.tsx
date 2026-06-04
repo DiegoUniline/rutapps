@@ -120,6 +120,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [creatingSubInvoice, setCreatingSubInvoice] = useState(false);
   const [subInvoiceForm, setSubInvoiceForm] = useState({
     plan_id: '' as string,
+    crear_con_stripe: true,
     meses: 1,
     num_usuarios: 1,
     precio_por_usuario_mes: 300,
@@ -293,7 +294,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const today = todayInput();
     const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
     setSubInvoiceForm({
-      plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
+      plan_id: planId, crear_con_stripe: true, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
       periodo_inicio: base,
@@ -352,6 +353,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             precio_por_usuario_mes: subInvoiceForm.precio_por_usuario_mes,
             descuento_pct: subInvoiceForm.descuento_pct,
             descuento_permanente: subInvoiceForm.descuento_permanente,
+            crear_con_stripe: subInvoiceForm.crear_con_stripe,
             days_until_due: subInvoiceForm.days_until_due,
             concepto: subInvoiceForm.concepto,
             periodo_inicio: subInvoiceForm.periodo_inicio || undefined,
@@ -361,7 +363,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       );
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Error al crear factura');
-      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}`);
+      toast.success(`Factura ${data.folio} creada por ${fmtMXN(data.total)}${data.stripe === false ? ' · pendiente manual' : ' · enviada por Stripe'}`);
       setShowSubInvoice(false);
       load();
     } catch (e: any) { toast.error(e.message); }
