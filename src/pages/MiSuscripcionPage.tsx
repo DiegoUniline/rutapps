@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { fmtDateLongMx } from '@/lib/utils';
+import { fmtDate, fmtDateLongMx } from '@/lib/utils';
 import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
 
 interface SubPlanRow {
@@ -61,6 +61,7 @@ function planMinUsers(plan: SubPlanRow | null | undefined, isLegacy: boolean): n
 interface FacturaRow {
   id: string;
   numero_factura: string | null;
+  concepto: string | null;
   periodo_inicio: string;
   periodo_fin: string;
   num_usuarios: number;
@@ -133,6 +134,7 @@ export default function MiSuscripcionPage() {
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const [invoiceTransfer, setInvoiceTransfer] = useState<FacturaRow | null>(null);
   const [deleteFacturaDialog, setDeleteFacturaDialog] = useState<FacturaRow | null>(null);
 
   // Coupons (multiple allowed)
@@ -161,7 +163,7 @@ export default function MiSuscripcionPage() {
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').order('orden', { ascending: true }),
-      supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
+      supabase.from('facturas').select('id, numero_factura, concepto, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
       supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion, vigencia_fin)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
