@@ -440,8 +440,26 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         metodo_pago: editFacturaForm.metodo_pago || null,
         referencia_pago: editFacturaForm.referencia_pago || null,
       };
+      // If transitioning to "pagada", set fecha_pago to today if missing
+      if (editFacturaForm.estado === 'pagada' && !editFactura.fecha_pago) {
+        payload.fecha_pago = new Date().toISOString();
+      }
       const { error } = await supabase.from('facturas').update(payload).eq('id', editFactura.id);
       if (error) throw error;
+
+      // If invoice is now paid, sync subscription period with factura's periodo
+      if (editFacturaForm.estado === 'pagada' && subscription?.id
+          && editFacturaForm.periodo_inicio && editFacturaForm.periodo_fin) {
+        const { error: subErr } = await supabase.from('subscriptions').update({
+          current_period_start: new Date(editFacturaForm.periodo_inicio).toISOString(),
+          current_period_end: new Date(editFacturaForm.periodo_fin).toISOString(),
+          status: 'active',
+          acceso_bloqueado: false,
+          updated_at: new Date().toISOString(),
+        }).eq('id', subscription.id);
+        if (subErr) console.error('[sync sub period]', subErr);
+      }
+
       toast.success('Factura actualizada');
       setEditFactura(null);
       load();
