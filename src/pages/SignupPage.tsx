@@ -63,7 +63,6 @@ export default function SignupPage() {
   const [partnerRef, setPartnerRef] = useState<string>('');
   const [plans, setPlans] = useState<SignupPlanRow[]>([]);
   const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
-  const [partnerRef, setPartnerRef] = useState<string>('');
 
   // Capture ?ref= from URL or localStorage
   useEffect(() => {
