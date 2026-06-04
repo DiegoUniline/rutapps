@@ -9,7 +9,19 @@ interface Plan {
   id: string;
   nombre: string;
   precio_por_usuario: number;
+  precio_base: number | null;
+  usuarios_incluidos: number | null;
+  precio_extra_usuario: number | null;
+  slug: string | null;
   meses: number;
+}
+
+function planCost(plan: Plan, qty: number): number {
+  if (plan.slug) {
+    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+  }
+  return plan.precio_por_usuario * qty;
 }
 
 const fmtMXN = (n: number) =>
@@ -29,18 +41,20 @@ export default function PlanSimuladorCard({ activeUsers, isTrial }: Props) {
     (async () => {
       if (!empresa?.id) return;
       const { data: sub } = await supabase.from('subscriptions').select('plan_id').eq('empresa_id', empresa.id).maybeSingle();
+      const cols = 'id,nombre,precio_por_usuario,precio_base,usuarios_incluidos,precio_extra_usuario,slug,meses';
       if (!sub?.plan_id) {
-        const { data: ps } = await supabase.from('subscription_plans').select('id,nombre,precio_por_usuario,meses').eq('activo', true).order('precio_por_usuario').limit(1);
+        const { data: ps } = await supabase.from('subscription_plans').select(cols).eq('activo', true).order('orden').limit(1);
         setCurrentPlan((ps?.[0] as Plan) || null);
         return;
       }
-      const { data } = await supabase.from('subscription_plans').select('id,nombre,precio_por_usuario,meses').eq('id', sub.plan_id).maybeSingle();
+      const { data } = await supabase.from('subscription_plans').select(cols).eq('id', sub.plan_id).maybeSingle();
       setCurrentPlan((data as Plan) || null);
     })();
   }, [empresa?.id]);
 
-  const monthlyMXN = currentPlan ? currentPlan.precio_por_usuario * activeUsers : 0;
+  const monthlyMXN = currentPlan ? planCost(currentPlan, activeUsers) : 0;
   const periodMXN = currentPlan ? monthlyMXN * currentPlan.meses : 0;
+
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 md:p-5 space-y-4">
@@ -59,10 +73,12 @@ export default function PlanSimuladorCard({ activeUsers, isTrial }: Props) {
             {currentPlan ? (
               <>
                 Plan <span className="font-semibold text-foreground">{currentPlan.nombre}</span> ·
-                {' '}{fmtMXN(currentPlan.precio_por_usuario)}/usuario/mes ·
-                {' '}{currentPlan.meses} {currentPlan.meses === 1 ? 'mes' : 'meses'}
+                {currentPlan.slug
+                  ? <> {fmtMXN(currentPlan.precio_base || 0)} base ({currentPlan.usuarios_incluidos || 1} usuario{(currentPlan.usuarios_incluidos || 1) !== 1 ? 's' : ''}) · +{fmtMXN(currentPlan.precio_extra_usuario || 0)}/usuario extra</>
+                  : <> {fmtMXN(currentPlan.precio_por_usuario)}/usuario/mes · {currentPlan.meses} {currentPlan.meses === 1 ? 'mes' : 'meses'}</>}
               </>
             ) : 'Sin plan asignado'}
+
           </div>
         </div>
         <Button size="sm" onClick={() => navigate('/mi-suscripcion')} className="gap-1">

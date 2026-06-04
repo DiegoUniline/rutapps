@@ -27,10 +27,36 @@ interface SubPlanRow {
   periodo: string;
   meses: number;
   precio_por_usuario: number;
+  precio_base: number;
+  usuarios_incluidos: number;
+  precio_extra_usuario: number;
+  slug: string | null;
+  orden: number;
+  popular: boolean;
+  ideal_para: string | null;
   descuento_pct: number;
   stripe_price_id: string | null;
   activo: boolean;
 }
+
+// Returns the monthly cost for a plan + qty.
+// New plans (with slug): precio_base + max(0, qty - incluidos) * precio_extra_usuario
+// Legacy plans: precio_por_usuario * qty
+function planMonthlyCost(plan: SubPlanRow | null | undefined, qty: number): number {
+  if (!plan) return 0;
+  if (plan.slug) {
+    const extras = Math.max(0, qty - (plan.usuarios_incluidos || 0));
+    return Number(plan.precio_base || 0) + extras * Number(plan.precio_extra_usuario || 0);
+  }
+  return Number(plan.precio_por_usuario || 0) * qty;
+}
+
+function planMinUsers(plan: SubPlanRow | null | undefined, isLegacy: boolean): number {
+  if (!plan) return isLegacy ? 3 : 1;
+  if (plan.slug) return Math.max(1, plan.usuarios_incluidos || 1);
+  return 3;
+}
+
 
 interface FacturaRow {
   id: string;
@@ -134,15 +160,19 @@ export default function MiSuscripcionPage() {
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
-      supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
+      supabase.from('subscription_plans').select('*').order('orden', { ascending: true }),
       supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago, stripe_invoice_id').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
       supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion, vigencia_fin)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
     setPendingSolicitudes(solRes.data || []);
-    const plans = (plansRes.data as SubPlanRow[]) || [];
+    const allPlansRaw = (plansRes.data as SubPlanRow[]) || [];
+    // Show: active plans + current plan (even if inactive, for legacy customers)
+    const currentPlanId = subRes.data?.plan_id;
+    const plans = allPlansRaw.filter(p => p.activo || p.id === currentPlanId);
     setSubPlans(plans);
+
     setFacturas((facturasRes.data as any[]) || []);
 
     // Active coupons (still valid: meses_restantes null or > 0, and not expired)
@@ -159,7 +189,7 @@ export default function MiSuscripcionPage() {
     if (subRes.data?.plan_id) {
       const cp = plans.find(p => p.id === subRes.data.plan_id) || null;
       setCurrentPlan(cp);
-      if (cp) setSelectedFreq(cp.periodo);
+      if (cp) setSelectedFreq(cp.id);
     } else {
       setCurrentPlan(null);
       setSelectedFreq(null);
@@ -168,6 +198,7 @@ export default function MiSuscripcionPage() {
     setExtraUsers(0);
     setLoading(false);
   }
+
 
   async function verifyTimbresPurchase(sessionId: string) {
     try {
@@ -286,47 +317,57 @@ export default function MiSuscripcionPage() {
     }
   }
 
-  const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || 3;
-  const newSelectedPlan = subPlans.find(p => p.periodo === selectedFreq) || null;
+  const isLegacyCustomer = subData?.legacy_pricing === true;
+  const minCurrentUsuarios = isLegacyCustomer ? 3 : 1;
+  const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || minCurrentUsuarios;
+  // selectedFreq now stores plan_id
+  const newSelectedPlan = subPlans.find(p => p.id === selectedFreq) || null;
 
   // ─── Derived update state ───
   const targetPlan = newSelectedPlan || currentPlan;
-  const totalNewUsers = currentUsuarios + extraUsers;
+  const targetMin = planMinUsers(targetPlan, isLegacyCustomer);
+  const totalNewUsers = Math.max(targetMin, currentUsuarios + extraUsers);
   const isInitialPlanSelection = !currentPlan && !!selectedFreq;
-  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.periodo;
+  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
   const isUserChange = extraUsers !== 0;
   const hasChanges = isInitialPlanSelection || isFreqChange || isUserChange;
 
-  // Calculate what to charge for the update
   function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean; totalPeriodo: number } {
     if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false, totalPeriodo: 0 };
 
-    // Full period cost for new config
-    const newTotalPeriodo = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
-    // What the user already paid this period (from last paid factura or current plan)
-    const currentTotalPeriodo = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses : 0;
+    const monthsBilled = targetPlan.meses || 1;
+    const newMonthly = planMonthlyCost(targetPlan, totalNewUsers);
+    const newTotalPeriodo = newMonthly * monthsBilled;
+    const currentMonthly = currentPlan ? planMonthlyCost(currentPlan, currentUsuarios) : 0;
+    const currentTotalPeriodo = currentMonthly * (currentPlan?.meses || 1);
 
     const diff = newTotalPeriodo - currentTotalPeriodo;
     const isDowngrade = diff < 0;
 
     const parts: string[] = [];
-    if (isFreqChange) parts.push(`${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isFreqChange) parts.push(targetPlan.nombre);
     if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
     if (isUserChange && extraUsers < 0) parts.push(`${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`);
 
-    const periodoLabel = PERIODO_LABEL[targetPlan.periodo] || targetPlan.periodo;
+    const planLabel = targetPlan.slug ? targetPlan.nombre : (PERIODO_LABEL[targetPlan.periodo] || targetPlan.nombre);
+    const fmtBreakdown = () => {
+      if (targetPlan.slug) {
+        const extras = Math.max(0, totalNewUsers - (targetPlan.usuarios_incluidos || 0));
+        return `Base ${targetPlan.nombre} $${Number(targetPlan.precio_base).toLocaleString()} + ${extras} usuario${extras !== 1 ? 's' : ''} extra × $${targetPlan.precio_extra_usuario} = $${newMonthly.toLocaleString()} MXN/mes`;
+      }
+      return `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${monthsBilled} mes${monthsBilled !== 1 ? 'es' : ''} = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+    };
 
     if (isDowngrade) {
       return {
         amount: 0,
         label: 'Reducción de plan',
-        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/${periodoLabel.toLowerCase()}`,
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/${planLabel.toLowerCase()}`,
         isDowngrade: true,
         totalPeriodo: newTotalPeriodo,
       };
     }
 
-    // If user has a pending invoice, we'll cancel it and charge the full new amount
     const hasPendingInvoice = pendingFacturas.length > 0;
     const pendingTotal = pendingFacturas.reduce((s, f) => s + f.total, 0);
 
@@ -334,17 +375,14 @@ export default function MiSuscripcionPage() {
     let chargeDetail: string;
 
     if (hasPendingInvoice) {
-      // Cancel pending invoice, charge new full period
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
+      chargeDetail = `${fmtBreakdown()}\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
     } else if (currentPlan && diff > 0) {
-      // Proportional difference
       chargeAmount = diff;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+      chargeDetail = `${fmtBreakdown()}\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
     } else {
-      // First time / no current plan
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
+      chargeDetail = fmtBreakdown();
     }
 
     return {
@@ -353,6 +391,7 @@ export default function MiSuscripcionPage() {
       detail: chargeDetail,
       isDowngrade: false,
       totalPeriodo: newTotalPeriodo,
+
     };
   }
 
@@ -860,20 +899,26 @@ export default function MiSuscripcionPage() {
                   </h2>
                   {currentPlan ? (() => {
                     const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
-                    const basePrice = currentPlan.precio_por_usuario;
-                    const effectivePrice = companyDiscount > 0
-                      ? Math.round(basePrice * (1 - companyDiscount / 100))
-                      : basePrice;
-                    const totalPeriodo = effectivePrice * currentUsuarios * currentPlan.meses;
-                    const totalMes = effectivePrice * currentUsuarios;
-                    const totalSinDescuento = basePrice * currentUsuarios * currentPlan.meses;
+                    const baseMonthly = planMonthlyCost(currentPlan, currentUsuarios);
+                    const effectiveMonthly = companyDiscount > 0
+                      ? Math.round(baseMonthly * (1 - companyDiscount / 100))
+                      : baseMonthly;
+                    const totalPeriodo = effectiveMonthly * (currentPlan.meses || 1);
+                    const totalMes = effectiveMonthly;
+                    const totalSinDescuento = baseMonthly * (currentPlan.meses || 1);
                     const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
+                    const planLabel = currentPlan.slug ? currentPlan.nombre : (PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre);
 
                     return (
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
                       <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
-                        {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
+                        {planLabel}
                       </Badge>
+                      {isLegacyCustomer && (
+                        <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700">
+                          Plan anterior
+                        </Badge>
+                      )}
                       {companyDiscount > 0 && (
                         <Badge className="bg-green-600 text-white text-xs">
                           {companyDiscount}% descuento especial
@@ -881,12 +926,13 @@ export default function MiSuscripcionPage() {
                       )}
                       {currentPlan.descuento_pct > 0 && (
                         <Badge className="bg-primary text-primary-foreground text-xs">
-                          +{currentPlan.descuento_pct}% por plan {PERIODO_LABEL[currentPlan.periodo]}
+                          +{currentPlan.descuento_pct}% por plan {planLabel}
                         </Badge>
                       )}
+
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div className="text-sm text-foreground w-full sm:w-auto">
-                        <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                        <strong>{currentUsuarios}</strong> usuarios{currentPlan.slug ? ` (${currentPlan.usuarios_incluidos} incluidos)` : ''} — <strong>${effectiveMonthly.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong> MXN/mes{currentPlan.meses > 1 ? ` × ${currentPlan.meses} meses` : ''}
                         {hasAnyDiscount && (
                           <span className="block text-xs text-muted-foreground line-through">
                             Sin descuento: ${totalSinDescuento.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
@@ -918,7 +964,7 @@ export default function MiSuscripcionPage() {
                   className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                   onClick={() => {
                     setExtraUsers(0);
-                    if (currentPlan) setSelectedFreq(currentPlan.periodo);
+                    if (currentPlan) setSelectedFreq(currentPlan.id);
                     setShowUpdateDialog(true);
                   }}
                 >
@@ -1176,17 +1222,25 @@ export default function MiSuscripcionPage() {
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Frequency selector */}
+            {/* Plan selector */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Elige tu plan</label>
               <div className="grid grid-cols-3 gap-2">
                 {subPlans.map(plan => {
                   const isPlanCurrent = currentPlan?.id === plan.id;
-                  const isSelected = selectedFreq === plan.periodo;
+                  const isSelected = selectedFreq === plan.id;
+                  const displayPrice = plan.slug ? plan.precio_base : plan.precio_por_usuario;
+                  const displaySuffix = plan.slug ? ' / mes' : ' / u / mes';
                   return (
                     <button
                       key={plan.id}
-                      onClick={() => setSelectedFreq(plan.periodo)}
+                      onClick={() => {
+                        setSelectedFreq(plan.id);
+                        if (plan.slug) {
+                          const minU = Math.max(1, plan.usuarios_incluidos || 1);
+                          setExtraUsers(minU - currentUsuarios);
+                        }
+                      }}
                       className={`relative p-3 rounded-xl border-2 transition-all text-left ${
                         isSelected
                           ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
@@ -1198,14 +1252,17 @@ export default function MiSuscripcionPage() {
                           Actual
                         </span>
                       )}
-                      {plan.descuento_pct > 0 && !isPlanCurrent && (
+                      {plan.popular && !isPlanCurrent && (
                         <span className="absolute -top-2.5 right-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                          {plan.descuento_pct}% desc.
+                          Popular
                         </span>
                       )}
-                      <div className="text-xs font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
-                      <div className="text-xl font-black text-foreground mt-0.5">${plan.precio_por_usuario}</div>
-                      <div className="text-[9px] text-muted-foreground">por usuario / mes</div>
+                      <div className="text-xs font-bold text-foreground">{plan.nombre}</div>
+                      <div className="text-xl font-black text-foreground mt-0.5">${displayPrice.toLocaleString()}</div>
+                      <div className="text-[9px] text-muted-foreground">{displaySuffix.trim()}</div>
+                      {plan.slug && (
+                        <div className="text-[9px] text-muted-foreground mt-0.5">{plan.usuarios_incluidos} usuario{plan.usuarios_incluidos !== 1 ? 's' : ''}</div>
+                      )}
                     </button>
                   );
                 })}
@@ -1217,7 +1274,8 @@ export default function MiSuscripcionPage() {
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
               <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(targetMin - currentUsuarios, q - 1))} disabled={totalNewUsers <= targetMin}>
+
                     <Minus className="h-4 w-4" />
                   </Button>
                   <div className="text-center min-w-[50px]">
@@ -1238,18 +1296,24 @@ export default function MiSuscripcionPage() {
 
             {/* Summary */}
             {targetPlan && (() => {
-              const baseSubtotal = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+              const monthsBilled = targetPlan.meses || 1;
+              const monthlyBase = planMonthlyCost(targetPlan, totalNewUsers);
+              const baseSubtotal = monthlyBase * monthsBilled;
               const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
               const totalConDesc = companyDiscount > 0
                 ? Math.round(baseSubtotal * (1 - companyDiscount / 100))
                 : baseSubtotal;
               const ahorro = baseSubtotal - totalConDesc;
+              const extras = targetPlan.slug ? Math.max(0, totalNewUsers - (targetPlan.usuarios_incluidos || 0)) : 0;
               return (
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
-                    {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
+                    {targetPlan.slug
+                      ? <>Base {targetPlan.nombre} ${Number(targetPlan.precio_base).toLocaleString()} + {extras} extra × ${targetPlan.precio_extra_usuario}</>
+                      : <>{totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {monthsBilled} mes{monthsBilled !== 1 ? 'es' : ''}</>}
                   </div>
+
                   <div className="text-right">
                     {companyDiscount > 0 && (
                       <div className="text-xs text-muted-foreground line-through">
@@ -1274,8 +1338,9 @@ export default function MiSuscripcionPage() {
                 )}
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
+                  Equivalente a <strong className="text-foreground">${Math.round(totalConDesc / monthsBilled).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
                 </div>
+
 
                 {hasChanges && updateCharge && (
                   <>

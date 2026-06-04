@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user?.email) throw new Error("No autenticado");
 
     const body = await req.json().catch(() => ({}));
-    const { plan_id, quantity = 3, accepted_terms = false } = body;
+    const { plan_id, quantity, accepted_terms = false } = body;
     if (!plan_id) throw new Error("plan_id es requerido");
     if (!accepted_terms) throw new Error("Debes aceptar los términos del cobro automático");
 
@@ -55,19 +55,25 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!profile?.empresa_id) throw new Error("Sin empresa asociada");
 
-    // Obtener el plan elegido (Mensual / Semestral / Anual)
+    // Plan elegido
     const { data: plan } = await supabase
       .from("subscription_plans")
-      .select("id, nombre, periodo, meses, precio_por_usuario, stripe_price_id")
+      .select("id, nombre, periodo, meses, precio_por_usuario, precio_base, precio_extra_usuario, usuarios_incluidos, slug, stripe_price_id, stripe_price_id_extra")
       .eq("id", plan_id)
       .eq("activo", true)
       .maybeSingle();
     if (!plan) throw new Error("Plan no encontrado");
     if (!plan.stripe_price_id) throw new Error(`El plan ${plan.nombre} no tiene precio configurado en Stripe`);
 
+    const isNewPlan = !!plan.slug;
+    const minQty = isNewPlan ? Math.max(1, plan.usuarios_incluidos || 1) : 3;
+    const requested = parseInt(String(quantity ?? minQty)) || minQty;
+    const qty = Math.max(minQty, requested);
+    const extraUsers = isNewPlan ? Math.max(0, qty - (plan.usuarios_incluidos || 0)) : 0;
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Buscar o crear customer en Stripe
+    // Customer
     const customers = await stripe.customers.list({ email: userData.user.email, limit: 1 });
     let customerId: string;
     if (customers.data.length > 0) {
@@ -82,11 +88,22 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
+    // Line items
+    const lineItems: any[] = [];
+    if (isNewPlan) {
+      lineItems.push({ price: plan.stripe_price_id, quantity: 1 });
+      if (extraUsers > 0 && plan.stripe_price_id_extra) {
+        lineItems.push({ price: plan.stripe_price_id_extra, quantity: extraUsers });
+      }
+    } else {
+      lineItems.push({ price: plan.stripe_price_id, quantity: qty });
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       payment_method_collection: "always",
-      line_items: [{ price: plan.stripe_price_id, quantity }],
+      line_items: lineItems,
       subscription_data: {
         trial_period_days: 7,
         trial_settings: {
@@ -95,6 +112,8 @@ Deno.serve(async (req) => {
         metadata: {
           empresa_id: profile.empresa_id,
           plan_id: plan.id,
+          plan_slug: plan.slug || "",
+          num_usuarios: String(qty),
           flow: "trial_signup",
         },
       },
@@ -103,6 +122,8 @@ Deno.serve(async (req) => {
       metadata: {
         empresa_id: profile.empresa_id,
         plan_id: plan.id,
+        plan_slug: plan.slug || "",
+        num_usuarios: String(qty),
         flow: "trial_signup",
         accepted_terms_at: new Date().toISOString(),
       },
@@ -115,10 +136,12 @@ Deno.serve(async (req) => {
         ultimo_checkout_session_id: session.id,
         terms_accepted_at: new Date().toISOString(),
         plan_id: plan.id,
-        max_usuarios: quantity,
+        max_usuarios: qty,
+        legacy_pricing: !isNewPlan,
         updated_at: new Date().toISOString(),
       })
       .eq("empresa_id", profile.empresa_id);
+
 
     log("Trial checkout session created", { sessionId: session.id, empresa_id: profile.empresa_id });
 
