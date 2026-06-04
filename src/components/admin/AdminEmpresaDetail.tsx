@@ -288,18 +288,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     const precio = plan?.precio_por_usuario || currentPlan?.precio_por_usuario || 300;
     const planNombre = plan?.nombre || currentPlan?.nombre || 'Mensual';
     const descPlan = currentPlan?.descuento_pct || 0;
-    // Periodo: arranca al fin del periodo vigente (si está en el futuro) o hoy
-    const base = subscription?.current_period_end && new Date(subscription.current_period_end) > new Date()
-      ? new Date(subscription.current_period_end)
-      : new Date();
-    const fin = new Date(base);
-    fin.setMonth(fin.getMonth() + meses);
+    // Periodo: arranca al fin del periodo vigente (si está en el futuro) o hoy, sin conversión UTC
+    const currentEnd = datePart(subscription?.current_period_end);
+    const today = todayInput();
+    const base = currentEnd && parseCalendarDate(currentEnd) > parseCalendarDate(today) ? currentEnd : today;
     setSubInvoiceForm({
       plan_id: planId, meses, num_usuarios: subscription?.max_usuarios || 1,
       precio_por_usuario_mes: precio, descuento_pct: descPlan, descuento_permanente: false,
       days_until_due: 7, concepto: `Suscripción Rutapp ${planNombre}`,
-      periodo_inicio: datePart(base),
-      periodo_fin: datePart(fin),
+      periodo_inicio: base,
+      periodo_fin: addMonthsInput(base, meses),
     });
     setShowSubInvoice(true);
   }
@@ -375,7 +373,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setMarkPaidForm({
       metodo_pago: 'transferencia',
       referencia_pago: '',
-      fecha_pago: new Date().toISOString().slice(0, 10),
+      fecha_pago: todayInput(),
       reflect_in_stripe: !!f.stripe_invoice_id,
       extender_periodo: !f.es_prorrateo,
     });
