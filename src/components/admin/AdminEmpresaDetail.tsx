@@ -109,23 +109,19 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
   async function load() {
     setLoading(true);
-    const [empRes, subRes, plansRes, factRes, timbresRes, profilesRes, movRes] = await Promise.all([
+
+    // 1) Carga rápida (lo que se ve en pantalla). Bloquea solo lo esencial.
+    const [empRes, subRes, plansRes, profilesRes] = await Promise.all([
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
-      supabase.from('facturas').select('*').eq('empresa_id', empresaId).order('creado_en', { ascending: false }).limit(20),
-      supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('profiles').select('id, nombre, telefono, rol, user_id').eq('empresa_id', empresaId),
-      supabase.from('timbres_movimientos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(50),
     ]);
 
     setEmpresa(empRes.data);
     setSubscription(subRes.data);
     setPlans((plansRes.data || []) as any[]);
-    setFacturas((factRes.data || []) as any[]);
-    setTimbres(timbresRes.data?.saldo ?? 0);
     setProfiles((profilesRes.data || []) as any[]);
-    setTimbresMovimientos((movRes.data || []) as any[]);
 
     if (empRes.data) {
       setEmpresaForm({
@@ -155,33 +151,47 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       });
     }
 
-    try {
-      const { data: usersData, error: usersErr } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'list-empresa-users', empresa_id: empresaId },
-      });
-      if (!usersErr && usersData?.users) setUsersDetailed(usersData.users);
-    } catch { /* silent */ }
-
-    try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      const facturaStripeIds = new Set((factRes.data || []).map((f: any) => f.stripe_invoice_id).filter(Boolean));
-      if (subRes.data?.stripe_customer_id || facturaStripeIds.size > 0) {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=all`,
-          { headers: { 'Authorization': `Bearer ${token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
-        );
-        const data = await res.json();
-        const customerId = subRes.data.stripe_customer_id;
-        // Match by empresa_id, Stripe customer, or the exact invoice id stored in facturas.
-        setStripeInvoices((data.invoices || []).filter((i: any) =>
-          i.empresa_id === empresaId || i.customer === customerId || facturaStripeIds.has(i.id)
-        ));
-      }
-    } catch { /* silent */ }
-
+    // YA mostramos la pantalla. Lo demás carga en segundo plano.
     setLoading(false);
+
+    // 2) Datos secundarios en paralelo (no bloquean el render principal).
+    supabase.from('facturas').select('*').eq('empresa_id', empresaId).order('creado_en', { ascending: false }).limit(20)
+      .then(({ data }) => setFacturas((data || []) as any[]));
+
+    supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresaId).maybeSingle()
+      .then(({ data }) => setTimbres(data?.saldo ?? 0));
+
+    supabase.from('timbres_movimientos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => setTimbresMovimientos((data || []) as any[]));
+
+    // 3) Edge function de usuarios detallados (lenta) — en background
+    supabase.functions.invoke('admin-users', {
+      body: { action: 'list-empresa-users', empresa_id: empresaId },
+    }).then(({ data: usersData, error: usersErr }) => {
+      if (!usersErr && usersData?.users) setUsersDetailed(usersData.users);
+    }).catch(() => { /* silent */ });
+
+    // 4) Stripe invoices (MUY lenta: lista todas las del platform y filtra)
+    //    Solo dispararla si hay customer_id. En background.
+    if (subRes.data?.stripe_customer_id) {
+      (async () => {
+        try {
+          const session = await supabase.auth.getSession();
+          const token = session.data.session?.access_token;
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=all`,
+            { headers: { 'Authorization': `Bearer ${token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+          );
+          const data = await res.json();
+          const customerId = subRes.data.stripe_customer_id;
+          setStripeInvoices((data.invoices || []).filter((i: any) =>
+            i.empresa_id === empresaId || i.customer === customerId
+          ));
+        } catch { /* silent */ }
+      })();
+    }
   }
+
 
   async function saveEmpresa() {
     setSavingEmpresa(true);
