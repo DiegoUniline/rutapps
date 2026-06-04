@@ -376,11 +376,16 @@ export default function SignupPage() {
         });
       } catch { /* silent - welcome msg is best-effort */ }
 
-      toast.success('¡Cuenta creada! Ahora elige tu plan y captura tu tarjeta para iniciar tu prueba.', { duration: 8000 });
+      toast.success('¡Cuenta creada! Ahora captura tu tarjeta para iniciar tu prueba.', { duration: 8000 });
+      // Persist plan choice so /completar-registro lo preselecciona
+      if (selectedPlanSlug) {
+        try { localStorage.setItem(SELECTED_PLAN_KEY, selectedPlanSlug); } catch {}
+      }
+      const planQuery = selectedPlanSlug ? `?plan=${encodeURIComponent(selectedPlanSlug)}` : '';
       // After signUp the user is already authenticated; send them to capture card.
       // If session is not yet ready, redirect to /login which will then route to /completar-registro via the guard.
       const { data: { session } } = await supabase.auth.getSession();
-      navigate(session ? '/completar-registro' : '/login');
+      navigate(session ? `/completar-registro${planQuery}` : '/login');
     } catch (err: any) {
       const msg = err.message || 'Error al crear la cuenta';
       if (msg.includes('duplicate') && msg.includes('email')) {
