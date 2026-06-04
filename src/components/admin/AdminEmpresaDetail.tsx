@@ -878,8 +878,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     {subscription.acceso_bloqueado && (
                       <Badge variant="destructive" className="mt-1 ml-1">🔒 Bloqueada</Badge>
                     )}
-                    <Badge variant="outline" className="hidden">_</Badge>
-                    </Badge>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Plan</p>
