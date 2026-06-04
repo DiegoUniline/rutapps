@@ -778,20 +778,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <h3 className="text-base font-semibold flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-primary" /> Suscripción
                 </h3>
-                {subscription && !editingSub ? (
-                  <Button size="sm" variant="outline" onClick={() => setEditingSub(true)}>
-                    <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                {subscription && (
+                  <Button size="sm" disabled={savingSub} onClick={saveSub}>
+                    <Save className="h-3.5 w-3.5 mr-1" /> Guardar cambios
                   </Button>
-                ) : subscription && editingSub ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingSub(false)}>
-                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                    </Button>
-                    <Button size="sm" disabled={savingSub} onClick={saveSub}>
-                      <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-                    </Button>
-                  </div>
-                ) : null}
+                )}
               </div>
 
               {!subscription ? (
