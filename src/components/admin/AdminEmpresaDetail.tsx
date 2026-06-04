@@ -66,7 +66,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   // Edit states
   const [editingEmpresa, setEditingEmpresa] = useState(false);
   const [empresaForm, setEmpresaForm] = useState<any>({});
-  const [editingSub, setEditingSub] = useState(false);
+  const [editingSub, setEditingSub] = useState(true);
   const [subForm, setSubForm] = useState<any>({});
   const [savingEmpresa, setSavingEmpresa] = useState(false);
   const [savingSub, setSavingSub] = useState(false);
@@ -226,7 +226,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
     const { error } = await supabase.from('subscriptions').update(payload).eq('id', subscription.id);
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción actualizada'); setEditingSub(false); load(); }
+    else { toast.success('Suscripción actualizada'); load(); }
     setSavingSub(false);
   }
 
@@ -778,20 +778,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 <h3 className="text-base font-semibold flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-primary" /> Suscripción
                 </h3>
-                {subscription && !editingSub ? (
-                  <Button size="sm" variant="outline" onClick={() => setEditingSub(true)}>
-                    <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                {subscription && (
+                  <Button size="sm" disabled={savingSub} onClick={saveSub}>
+                    <Save className="h-3.5 w-3.5 mr-1" /> Guardar cambios
                   </Button>
-                ) : subscription && editingSub ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingSub(false)}>
-                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                    </Button>
-                    <Button size="sm" disabled={savingSub} onClick={saveSub}>
-                      <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-                    </Button>
-                  </div>
-                ) : null}
+                )}
               </div>
 
               {!subscription ? (
