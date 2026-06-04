@@ -101,6 +101,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     descuento_permanente: false,
     days_until_due: 7,
     concepto: '',
+    periodo_inicio: new Date().toISOString().slice(0, 10),
+    periodo_fin: new Date().toISOString().slice(0, 10),
   });
 
   const [markPaidFactura, setMarkPaidFactura] = useState<any | null>(null);
