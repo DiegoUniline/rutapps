@@ -545,6 +545,7 @@ Deno.serve(async (req) => {
         precio_por_usuario_mes,
         descuento_pct,
         descuento_permanente,
+        crear_con_stripe = true,
         days_until_due,
         concepto,
         plan_nombre,
@@ -570,7 +571,59 @@ Deno.serve(async (req) => {
         const { data: u } = await supabase.auth.admin.getUserById(empData.owner_user_id);
         clientEmail = u?.user?.email || null;
       }
-      if (!clientEmail) throw new Error("No se encontró email para esta empresa");
+      if (crear_con_stripe !== false && !clientEmail) throw new Error("No se encontró email para esta empresa");
+
+      const subtotal = Number(num_usuarios) * Number(meses) * Number(precio_por_usuario_mes);
+      const descPct = Number(descuento_pct) || 0;
+      const descMonto = subtotal * (descPct / 100);
+      const total = subtotal - descMonto;
+      const labelPlan = plan_nombre || (meses === 1 ? "Mensual" : meses === 6 ? "Semestral" : meses === 12 ? "Anual" : `${meses} meses`);
+      const conceptoFinal = concepto || `Suscripción Rutapp ${labelPlan} — ${num_usuarios} usuario${num_usuarios > 1 ? "s" : ""} × ${meses} mes${meses > 1 ? "es" : ""}`;
+      const hoy = new Date();
+      const periodoInicio = periodoInicioInput ? datePart(periodoInicioInput) : datePart(hoy);
+      const periodoFin = periodoFinInput ? datePart(periodoFinInput) : addMonthsDatePart(periodoInicio, Number(meses));
+      const vencimiento = new Date(hoy);
+      vencimiento.setDate(vencimiento.getDate() + (days_until_due || 7));
+
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("empresa_id", empresa_id)
+        .maybeSingle();
+
+      if (crear_con_stripe === false) {
+        const folioManual = `RUT-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+        const { data: facturaRow, error: facturaErr } = await supabase
+          .from("facturas")
+          .insert({
+            empresa_id,
+            suscripcion_id: subRow?.id || null,
+            numero_factura: folioManual,
+            concepto: conceptoFinal,
+            periodo_inicio: periodoInicio,
+            periodo_fin: periodoFin,
+            num_usuarios: Number(num_usuarios),
+            precio_unitario: Number(precio_por_usuario_mes),
+            descuento_porcentaje: descPct,
+            subtotal,
+            total,
+            estado: "pendiente",
+            es_prorrateo: false,
+            fecha_vencimiento: vencimiento.toISOString(),
+            stripe_invoice_id: null,
+          })
+          .select()
+          .single();
+        if (facturaErr) throw facturaErr;
+
+        return new Response(JSON.stringify({
+          stripe: false,
+          folio: facturaRow?.numero_factura,
+          total,
+          meses,
+          factura_id: facturaRow?.id,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
       // Find or create Stripe customer
       const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
