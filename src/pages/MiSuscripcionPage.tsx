@@ -189,7 +189,7 @@ export default function MiSuscripcionPage() {
     if (subRes.data?.plan_id) {
       const cp = plans.find(p => p.id === subRes.data.plan_id) || null;
       setCurrentPlan(cp);
-      if (cp) setSelectedFreq(cp.periodo);
+      if (cp) setSelectedFreq(cp.id);
     } else {
       setCurrentPlan(null);
       setSelectedFreq(null);
@@ -198,6 +198,7 @@ export default function MiSuscripcionPage() {
     setExtraUsers(0);
     setLoading(false);
   }
+
 
   async function verifyTimbresPurchase(sessionId: string) {
     try {
