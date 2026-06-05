@@ -354,8 +354,12 @@ export default function MiSuscripcionPage() {
     const currentMonthly = currentPlan ? planMonthlyCost(currentPlan, currentUsuarios) : 0;
     const currentTotalPeriodo = currentMonthly * (currentPlan?.meses || 1);
 
-    const diff = newTotalPeriodo - currentTotalPeriodo;
-    const isDowngrade = diff < 0;
+    // Si la suscripción está inactiva, no hay "plan actual" contra el cual comparar:
+    // se trata como contratación nueva (cobro completo, nunca downgrade).
+    const effectiveCurrentMonthly = isInactiveSubscription ? 0 : currentMonthly;
+    const effectiveCurrentTotalPeriodo = isInactiveSubscription ? 0 : currentTotalPeriodo;
+    const diff = newTotalPeriodo - effectiveCurrentTotalPeriodo;
+    const isDowngrade = !isInactiveSubscription && diff < 0;
 
     const parts: string[] = [];
     if (isFreqChange) parts.push(targetPlan.nombre);
