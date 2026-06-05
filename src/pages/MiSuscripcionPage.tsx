@@ -479,7 +479,7 @@ export default function MiSuscripcionPage() {
 
         if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
-        if (subData?.stripe_subscription_id) {
+        if (subData?.stripe_subscription_id && !isInactiveSubscription) {
           // Update existing Stripe subscription
           if (isFreqChange && tgtPlan) {
             const { data, error } = await supabase.functions.invoke('manage-subscription', {
@@ -508,7 +508,8 @@ export default function MiSuscripcionPage() {
           loadData();
           return;
         } else {
-          // No existing Stripe sub — select plan & create checkout
+          // Sin Stripe sub activa, o suscripción inactiva (cancelada/suspendida/vencida)
+          // → ruta de alta nueva: select-plan genera factura + checkout fresco.
           if (!tgtPlan?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
 
           const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
