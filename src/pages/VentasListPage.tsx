@@ -338,6 +338,46 @@ export default function VentasListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {selected.size} venta{selected.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Las ventas con pagos aplicados no podrán eliminarse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleting}
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+            >
+              {bulkDeleting ? 'Eliminando...' : `Eliminar ${selected.size}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DocumentPreviewModal
+        open={!!bulkPdfBlob}
+        onClose={() => { setBulkPdfBlob(null); setBulkPdfName(''); }}
+        pdfBlob={bulkPdfBlob}
+        fileName={bulkPdfName}
+        empresaId={empresa?.id ?? ''}
+      />
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="venta"
+        actions={[
+          { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExport },
+          { label: 'Imprimir PDF', icon: Printer, onClick: handleBulkPrint, loading: bulkPrinting },
+          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true), hidden: !canDelete },
+        ]}
+      />
     </div>
   );
 }
