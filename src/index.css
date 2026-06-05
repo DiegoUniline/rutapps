@@ -417,3 +417,11 @@ html, body {
 .animate-banner-pulse {
   animation: banner-pulse-glow 1.5s ease-in-out infinite;
 }
+
+/* Global table zebra striping: white + very subtle gray */
+table tbody tr:nth-child(even) > td {
+  background-color: hsl(220 14% 98%);
+}
+.dark table tbody tr:nth-child(even) > td {
+  background-color: hsl(220 14% 12%);
+}
