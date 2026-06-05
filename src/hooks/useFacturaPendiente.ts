@@ -42,7 +42,7 @@ export function useFacturaPendiente(): FacturaPendienteState {
           .maybeSingle(),
         supabase
           .from('facturas')
-          .select('id, numero_factura, total, fecha_vencimiento, estado, periodo_fin')
+          .select('id, numero_factura, total, fecha_vencimiento, fecha_emision, estado, periodo_fin')
           .eq('empresa_id', empresa.id)
           .in('estado', ['pendiente', 'procesando', 'past_due'])
           .order('fecha_emision', { ascending: true })
