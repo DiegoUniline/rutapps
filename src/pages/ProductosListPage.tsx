@@ -329,6 +329,7 @@ export default function ProductosListPage() {
         />
         <div className="flex items-center gap-2 shrink-0">
           {/* Bulk actions moved to floating BulkActionsBar */}
+          {!isMobile && (
             <>
               <ExportButton
                 onExcel={() => exportToExcel({
