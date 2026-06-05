@@ -9,6 +9,8 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   empresa: Empresa | null;
+  /** The user's REAL empresa (ignores super-admin overrides). */
+  realEmpresa: Empresa | null;
   loading: boolean;
   signOut: () => Promise<void>;
   /** Super-admin only: override the active empresa to view another company's data */
@@ -20,7 +22,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, profile: null, empresa: null, loading: true, signOut: async () => {},
+  user: null, profile: null, empresa: null, realEmpresa: null, loading: true, signOut: async () => {},
   overrideEmpresaId: null, setOverrideEmpresaId: () => {},
   overrideVendedorId: null, setOverrideVendedorId: () => {},
 });
