@@ -273,43 +273,64 @@ export default function ComprasPage() {
             <th className="th-odoo text-right">Total</th>
             <th className="th-odoo text-right hidden sm:table-cell">Saldo</th>
             <th className="th-odoo text-center">Estado</th>
+            <th className="th-odoo w-8" />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
+            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
           )}
-          {items.map((c: any) => (
-            <tr
-              key={c.id}
-              className="border-b border-table-border cursor-pointer hover:bg-table-hover transition-colors"
-              onClick={() => navigate(`/almacen/compras/${c.id}`)}
-            >
-              <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
-              <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
-              <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
-              <td className="py-1.5 px-3 hidden sm:table-cell text-center">
-                <span className={cn(
-                  "text-xxs font-medium px-2 py-0.5 rounded-full",
-                  c.condicion_pago === 'credito' ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
-                )}>
-                  {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
-                </span>
-              </td>
-              <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
-              <td className="py-1.5 px-3 text-right hidden sm:table-cell">
-                {(c.saldo_pendiente ?? 0) > 0 ? (
-                  <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
-                ) : (
-                  <span className="text-muted-foreground">{fmt(0)}</span>
+          {items.map((c: any) => {
+            const isExpanded = expandedId === c.id;
+            return (
+              <>
+                <tr
+                  key={c.id}
+                  className={cn(
+                    "border-b border-table-border cursor-pointer transition-colors",
+                    isExpanded ? "bg-primary/5" : "hover:bg-table-hover"
+                  )}
+                  onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                >
+                  <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
+                  <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
+                  <td className="py-1.5 px-3 hidden sm:table-cell text-center">
+                    <span className={cn(
+                      "text-xxs font-medium px-2 py-0.5 rounded-full",
+                      c.condicion_pago === 'credito' ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                    )}>
+                      {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
+                    </span>
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
+                  <td className="py-1.5 px-3 text-right hidden sm:table-cell">
+                    {(c.saldo_pendiente ?? 0) > 0 ? (
+                      <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{fmt(0)}</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 px-3 text-center">
+                    <StatusChip status={c.status} />
+                  </td>
+                  <td className="py-1.5 px-2 text-center w-8">
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
+                  </td>
+                </tr>
+                {isExpanded && (
+                  <CompraExpandedRow
+                    key={`exp-${c.id}`}
+                    compra={c}
+                    colSpan={9}
+                    fmt={fmt}
+                    onCollapse={() => setExpandedId(null)}
+                  />
                 )}
-              </td>
-              <td className="py-1.5 px-3 text-center">
-                <StatusChip status={c.status} />
-              </td>
-            </tr>
-          ))}
+              </>
+            );
+          })}
         </tbody>
         {items.length > 0 && (
           <tfoot>
@@ -317,7 +338,7 @@ export default function ComprasPage() {
               <td colSpan={5} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, c: any) => s + (c.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden sm:table-cell tabular-nums text-destructive font-bold">{fmt(items.reduce((s: number, c: any) => s + (c.saldo_pendiente ?? 0), 0))}</td>
-              <td />
+              <td colSpan={2} />
             </tr>
           </tfoot>
         )}
