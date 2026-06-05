@@ -371,7 +371,7 @@ export default function ComprasPage() {
                   <CompraExpandedRow
                     key={`exp-${c.id}`}
                     compra={c}
-                    colSpan={9}
+                    colSpan={10}
                     fmt={fmt}
                     onCollapse={() => setExpandedId(null)}
                   />
