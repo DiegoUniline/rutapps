@@ -316,12 +316,32 @@ export default function MiSuscripcionPage() {
   // selectedFreq now stores plan_id
   const newSelectedPlan = subPlans.find(p => p.id === selectedFreq) || null;
 
+  // ─── Inactive subscription detection ───
+  // Cancelled/suspended/past_due, acceso bloqueado, o cobertura ya vencida (no manual)
+  // → cualquier contratación es alta nueva, no un cambio.
+  const isInactiveSubscription = (() => {
+    if (!subData) return false;
+    if (subData.acceso_bloqueado === true) return true;
+    if (['cancelled', 'cancelada', 'suspended', 'past_due'].includes(subData.status || '')) return true;
+    const candidates = [subData.current_period_end, subData.fecha_vencimiento]
+      .filter(Boolean)
+      .map((d: string) => new Date(d));
+    if (!subData.es_manual && candidates.length) {
+      const endDate = new Date(Math.max(...candidates.map((d: Date) => d.getTime())));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (endDate < today) return true;
+    }
+    return false;
+  })();
+
   // ─── Derived update state ───
   const targetPlan = newSelectedPlan || currentPlan;
   const targetMin = planMinUsers(targetPlan, isLegacyCustomer);
   const totalNewUsers = Math.max(targetMin, currentUsuarios + extraUsers);
-  const isInitialPlanSelection = !currentPlan && !!selectedFreq;
-  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
+  // Si la suscripción está inactiva, tratamos como alta nueva aunque haya currentPlan.
+  const isInitialPlanSelection = (!currentPlan && !!selectedFreq) || (isInactiveSubscription && !!selectedFreq);
+  const isFreqChange = !isInactiveSubscription && !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
   const isUserChange = extraUsers !== 0;
   const hasChanges = isInitialPlanSelection || isFreqChange || isUserChange;
 
