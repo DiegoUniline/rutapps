@@ -192,6 +192,36 @@ export default function TraspasosListPage() {
     setSelected(next);
   };
 
+  const handleBulkExportTraspasos = () => {
+    if (selected.size === 0) return;
+    const sel: any[] = filtered.filter((t: any) => selected.has(t.id));
+    exportToExcel({
+      fileName: `Traspasos-seleccion-${sel.length}`,
+      title: `Traspasos seleccionados (${sel.length})`,
+      columns: TRASPASOS_COLUMNS,
+      data: sel.map((t: any) => ({
+        folio: t.folio ?? '', tipo: TIPO_LABELS[t.tipo] ?? t.tipo ?? '',
+        origen: getOrigenLabel(t), destino: getDestinoLabel(t),
+        fecha: t.fecha, status: (t.status ?? '').charAt(0).toUpperCase() + (t.status ?? '').slice(1),
+      })),
+    });
+    toast.success(`${sel.length} traspasos exportados`);
+  };
+
+  const handleBulkDeleteTraspasos = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('traspasos').delete().in('id', ids);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ['traspasos'] });
+    setSelected(new Set());
+    toast.success(`${ids.length} traspaso${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}`);
+  };
+
+
   const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
     if (key === 'status') return (item.status ?? '').charAt(0).toUpperCase() + (item.status ?? '').slice(1);
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo ?? 'Sin tipo';
