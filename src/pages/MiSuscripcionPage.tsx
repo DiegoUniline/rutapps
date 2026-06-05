@@ -316,12 +316,32 @@ export default function MiSuscripcionPage() {
   // selectedFreq now stores plan_id
   const newSelectedPlan = subPlans.find(p => p.id === selectedFreq) || null;
 
+  // ─── Inactive subscription detection ───
+  // Cancelled/suspended/past_due, acceso bloqueado, o cobertura ya vencida (no manual)
+  // → cualquier contratación es alta nueva, no un cambio.
+  const isInactiveSubscription = (() => {
+    if (!subData) return false;
+    if (subData.acceso_bloqueado === true) return true;
+    if (['cancelled', 'cancelada', 'suspended', 'past_due'].includes(subData.status || '')) return true;
+    const candidates = [subData.current_period_end, subData.fecha_vencimiento]
+      .filter(Boolean)
+      .map((d: string) => new Date(d));
+    if (!subData.es_manual && candidates.length) {
+      const endDate = new Date(Math.max(...candidates.map((d: Date) => d.getTime())));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (endDate < today) return true;
+    }
+    return false;
+  })();
+
   // ─── Derived update state ───
   const targetPlan = newSelectedPlan || currentPlan;
   const targetMin = planMinUsers(targetPlan, isLegacyCustomer);
   const totalNewUsers = Math.max(targetMin, currentUsuarios + extraUsers);
-  const isInitialPlanSelection = !currentPlan && !!selectedFreq;
-  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
+  // Si la suscripción está inactiva, tratamos como alta nueva aunque haya currentPlan.
+  const isInitialPlanSelection = (!currentPlan && !!selectedFreq) || (isInactiveSubscription && !!selectedFreq);
+  const isFreqChange = !isInactiveSubscription && !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.id;
   const isUserChange = extraUsers !== 0;
   const hasChanges = isInitialPlanSelection || isFreqChange || isUserChange;
 
@@ -334,8 +354,12 @@ export default function MiSuscripcionPage() {
     const currentMonthly = currentPlan ? planMonthlyCost(currentPlan, currentUsuarios) : 0;
     const currentTotalPeriodo = currentMonthly * (currentPlan?.meses || 1);
 
-    const diff = newTotalPeriodo - currentTotalPeriodo;
-    const isDowngrade = diff < 0;
+    // Si la suscripción está inactiva, no hay "plan actual" contra el cual comparar:
+    // se trata como contratación nueva (cobro completo, nunca downgrade).
+    const effectiveCurrentMonthly = isInactiveSubscription ? 0 : currentMonthly;
+    const effectiveCurrentTotalPeriodo = isInactiveSubscription ? 0 : currentTotalPeriodo;
+    const diff = newTotalPeriodo - effectiveCurrentTotalPeriodo;
+    const isDowngrade = !isInactiveSubscription && diff < 0;
 
     const parts: string[] = [];
     if (isFreqChange) parts.push(targetPlan.nombre);
@@ -370,6 +394,9 @@ export default function MiSuscripcionPage() {
     if (hasPendingInvoice) {
       chargeAmount = newTotalPeriodo;
       chargeDetail = `${fmtBreakdown()}\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
+    } else if (isInactiveSubscription) {
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${fmtBreakdown()}\nContratación nueva — se generará la factura correspondiente.`;
     } else if (currentPlan && diff > 0) {
       chargeAmount = diff;
       chargeDetail = `${fmtBreakdown()}\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
@@ -406,7 +433,7 @@ export default function MiSuscripcionPage() {
     setCart(filtered);
     toast.success(
       isInitialPlanSelection
-        ? 'Plan agregado al pedido'
+        ? (isInactiveSubscription ? 'Plan agregado al pedido — se generará factura' : 'Plan agregado al pedido')
         : charge.isDowngrade
           ? 'Cambio programado para el siguiente periodo'
           : 'Actualización agregada al pedido'
@@ -452,7 +479,7 @@ export default function MiSuscripcionPage() {
 
         if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
-        if (subData?.stripe_subscription_id) {
+        if (subData?.stripe_subscription_id && !isInactiveSubscription) {
           // Update existing Stripe subscription
           if (isFreqChange && tgtPlan) {
             const { data, error } = await supabase.functions.invoke('manage-subscription', {
@@ -481,7 +508,8 @@ export default function MiSuscripcionPage() {
           loadData();
           return;
         } else {
-          // No existing Stripe sub — select plan & create checkout
+          // Sin Stripe sub activa, o suscripción inactiva (cancelada/suspendida/vencida)
+          // → ruta de alta nueva: select-plan genera factura + checkout fresco.
           if (!tgtPlan?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
 
           const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
