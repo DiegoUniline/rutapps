@@ -418,14 +418,14 @@ html, body {
   animation: banner-pulse-glow 1.5s ease-in-out infinite;
 }
 
-/* Global table zebra striping: white + subtle gray */
+/* Global table zebra striping: white + very subtle gray */
 table tbody tr:nth-child(odd) > td,
 table tbody tr:nth-child(odd) > th {
   background-color: hsl(0 0% 100%);
 }
 table tbody tr:nth-child(even) > td,
 table tbody tr:nth-child(even) > th {
-  background-color: hsl(220 14% 96%);
+  background-color: hsl(220 14% 99%);
 }
 .dark table tbody tr:nth-child(odd) > td,
 .dark table tbody tr:nth-child(odd) > th {
@@ -433,5 +433,5 @@ table tbody tr:nth-child(even) > th {
 }
 .dark table tbody tr:nth-child(even) > td,
 .dark table tbody tr:nth-child(even) > th {
-  background-color: hsl(220 14% 14%);
+  background-color: hsl(220 14% 11%);
 }
