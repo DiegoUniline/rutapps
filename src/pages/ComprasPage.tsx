@@ -307,6 +307,9 @@ export default function ComprasPage() {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-table-border">
+            <th className="th-odoo w-8 text-center" onClick={e => e.stopPropagation()}>
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+            </th>
             <th className="th-odoo text-left">Folio</th>
             <th className="th-odoo text-left">Proveedor</th>
             <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
