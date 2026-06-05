@@ -204,6 +204,41 @@ export default function ComprasPage() {
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = filteredCompras.slice(from - 1, to);
+  const allSelected = pageData.length > 0 && pageData.every((c: any) => selected.has(c.id));
+  const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map((c: any) => c.id)));
+  const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
+
+  const handleBulkExportCompras = () => {
+    if (selected.size === 0) return;
+    const sel: any[] = filteredCompras.filter((c: any) => selected.has(c.id));
+    exportToExcel({
+      fileName: `Compras-seleccion-${sel.length}`,
+      title: `Compras seleccionadas (${sel.length})`,
+      columns: COMPRAS_COLUMNS,
+      data: sel.map((c: any) => ({
+        folio: c.folio ?? '', proveedor: c.proveedores?.nombre ?? '', fecha: c.fecha,
+        condicion_pago: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
+        subtotal: c.subtotal ?? 0, iva_total: c.iva_total ?? 0, total: c.total ?? 0,
+        saldo_pendiente: c.saldo_pendiente ?? 0, status: STATUS_MAP[c.status]?.label ?? c.status,
+      })),
+      totals: { total: sel.reduce((s, c) => s + (c.total ?? 0), 0), saldo_pendiente: sel.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0) },
+    });
+    toast.success(`${sel.length} compras exportadas`);
+  };
+
+  const handleBulkDeleteCompras = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('compras').delete().in('id', ids);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ['compras'] });
+    setSelected(new Set());
+    toast.success(`${ids.length} compra${ids.length !== 1 ? 's' : ''} eliminada${ids.length !== 1 ? 's' : ''}`);
+  };
+
 
   const totalCompras = filteredCompras.reduce((s, c) => s + ((c as any).total ?? 0), 0);
   const totalSaldo = filteredCompras.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0);
