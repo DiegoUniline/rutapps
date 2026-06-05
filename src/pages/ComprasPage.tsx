@@ -323,7 +323,7 @@ export default function ComprasPage() {
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
+            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
           )}
           {items.map((c: any) => {
             const isExpanded = expandedId === c.id;
@@ -333,10 +333,13 @@ export default function ComprasPage() {
                   key={c.id}
                   className={cn(
                     "border-b border-table-border cursor-pointer transition-colors",
-                    isExpanded ? "bg-primary/5" : "hover:bg-table-hover"
+                    isExpanded ? "bg-primary/5" : selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
                   )}
                   onClick={() => setExpandedId(isExpanded ? null : c.id)}
                 >
+                  <td className="py-1.5 px-3 text-center w-8" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
+                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
+                  </td>
                   <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
                   <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
