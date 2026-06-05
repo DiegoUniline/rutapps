@@ -1,106 +1,89 @@
+# Plan: Homologación de catálogo por código origen + Importación
 
-# Rediseño: Detalle de Empresa (Super Admin)
+Funcionalidad **global** (disponible para todas las empresas del SaaS, aislada por `empresa_id`) basada en la propuesta UNL-2026-001.
 
-Reestructuro `src/components/admin/AdminEmpresaDetail.tsx` y agrego las piezas de datos que faltan para soportar el modelo de facturación por asientos + pagos manuales/Stripe.
+## 1. Modelo de datos
 
-## 1. Layout (full width)
+Aprovechamos que `productos` ya tiene `codigo` (interno) y agregamos soporte explícito al **código origen externo** + tabla de equivalencias.
 
+```text
+productos
+  + codigo_origen TEXT NULL          -- código del sistema externo (índice único por empresa cuando no es null)
+
+producto_equivalencias               -- NUEVA: mapea N códigos externos a un producto interno
+  id, empresa_id, producto_id (FK productos)
+  codigo_externo TEXT, sistema_origen TEXT NULL, notas TEXT NULL
+  UNIQUE (empresa_id, codigo_externo, sistema_origen)
+
+import_jobs                          -- NUEVA: encabezado de cada importación
+  id, empresa_id, tipo ('homologacion_catalogo')
+  archivo_nombre, total_filas, matched, sin_coincidencia, errores
+  status ('procesando' | 'completado' | 'fallido')
+  resumen JSONB, created_by, created_at
+
+import_job_lineas                    -- NUEVA: detalle por fila importada
+  id, job_id, fila_num, codigo_externo, descripcion_externa
+  producto_id NULL, match_tipo ('exacto' | 'parcial' | 'duplicado' | 'sin_match' | 'error')
+  mensaje TEXT, raw JSONB
 ```
-┌────────────────────────────────────────────────────────────────┐
-│ ← Empresas   🏢 Nombre Empresa           [Activa]  [Eliminar] │
-│              Registrada 12/03/2026                             │
-├────────────────────────────────────────────────────────────────┤
-│ [Total a cobrar] [Total cobrado] [Saldo pend.] [Próximo cobro]│
-├──────────────────────────────────┬─────────────────────────────┤
-│  Datos de empresa (60%) [Editar]│  Suscripción actual (40%)   │
-│  Email · Tel · RFC · Razón ...  │  Plan · Status · Asientos   │
-│  (oculta vacíos)                │  [Editar plan]              │
-├──────────────────────────────────┴─────────────────────────────┤
-│ Tabs:  Usuarios | Facturas | Pagos | Histórico                 │
-└────────────────────────────────────────────────────────────────┘
-```
 
-- Header full-width, KPIs en `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`.
-- Saldo pendiente: rojo si >0, verde si 0.
-- Datos vacíos se ocultan; si todo vacío → aviso único "Datos fiscales incompletos · Completar".
-- Edición de datos en modal (`Dialog`), no inline.
+RLS por `empresa_id` (patrón estándar del proyecto) + GRANTs estándar.
 
-## 2. Cambios de datos (Supabase)
+## 2. UI nueva — Configuración › Importación / Homologación
 
-Esquema actual ya tiene: `empresas`, `subscriptions`, `subscription_plans`, `facturas` (con campos de línea embebidos), `profiles`, `cobros` (pero ese `cobros` es de ventas de clientes, NO de pagos de suscripción).
+Nueva sección en el sidebar de **Configuración** (visible solo con permiso `import_catalogo`):
 
-**Migración nueva (`supabase/migrations/...`):**
+1. **Equivalencias de código origen**
+   - Lista paginada de `producto_equivalencias` con búsqueda por código externo / producto interno.
+   - Alta/edición/borrado manual.
+   - Acción “Generar desde catálogo” → llena `codigo_externo = productos.codigo_origen` para los productos que ya tengan el campo.
 
-1. `billing_pagos` — pagos hacia la plataforma:
-   - `empresa_id`, `factura_id` (nullable), `monto`, `metodo` (`stripe|transferencia|efectivo|otro`), `referencia`, `fecha`, `aplicado_por` (uuid profile), `origen` (`automatico|manual`), `notas`.
-2. `factura_items` — líneas por factura (concepto, cantidad, precio_unitario, subtotal). Se siembran desde los campos actuales de `facturas` en migración.
-3. `billing_historial` — cambios de plan/suscripción/pagos: `empresa_id`, `entidad`, `entidad_id`, `accion`, `campo`, `valor_anterior`, `valor_nuevo`, `usuario_id`, `fecha`.
-4. Añadir a `facturas.estado` los valores `parcial` y `fallida` (ya existe `pendiente|pagada|cancelada`).
-5. RLS + GRANTs para super_admin (leer/escribir) y empresa (solo lectura propia). service_role para edge functions.
+2. **Nueva importación**
+   - Upload **Excel/CSV** (drag & drop, reutiliza patrón de `mass-import-catalog`).
+   - Mapeo de columnas: `codigo_externo`, `descripcion`, `cantidad`, `precio` (configurable, recuerda última selección).
+   - **Preview** con primeras 50 filas y conteo de matches antes de confirmar.
+   - Botón “Importar” crea `import_jobs` + ejecuta el cruce.
 
-## 3. Suscripción + edición de plan
+3. **Reporte de resultados** (vista del `import_job`)
+   - KPIs: Total / Matched / Sin coincidencia / Errores / Duplicados.
+   - Tabla de `import_job_lineas` con filtros por `match_tipo`.
+   - Acciones por fila sin match: **Crear producto**, **Vincular a producto existente** (crea `producto_equivalencias`), **Ignorar**.
+   - Exportar reporte a Excel.
 
-Tarjeta compacta:
-- Plan, Status, Máx. usuarios, Base prepagada, Precio por usuario, Periodo inicio/fin, toggle "Acceso bloqueado" (con tooltip explicativo).
+## 3. Lógica de cruce (homologación)
 
-Botón "Editar plan" → `Dialog`:
-- Select de plan (lee `subscription_plans`) que autocompleta `precio_usuario` y `ciclo`.
-- Inputs: máx. usuarios, base prepagada, precio/usuario, fechas de periodo.
-- Toggle acceso bloqueado.
-- Al guardar: `UPDATE subscriptions` + un INSERT por cada campo cambiado en `billing_historial`.
+Resuelta 100% en cliente con la utilidad existente `fetchAllPages` sobre `productos` + `producto_equivalencias`:
 
-## 4. Lógica de asientos extra
+1. **Match exacto** por `codigo_externo` en `producto_equivalencias`.
+2. Si no, **match exacto** por `productos.codigo_origen`.
+3. Si no, **match exacto** por `productos.codigo` (SKU interno).
+4. Si no, **match parcial** por nombre normalizado (lowercase, sin acentos) → marca `parcial` para revisión manual.
+5. **Duplicados**: misma fila externa apareciendo >1 vez en el archivo.
+6. **Errores**: filas con `codigo_externo` vacío o tipos inválidos.
 
-Implementada en edge function `admin-billing` (ya existe, la extiendo):
+Cada match exitoso vía paso 2-4 propone (no obligatorio) crear la equivalencia automáticamente — checkbox “Auto-vincular matches resueltos” en el preview.
 
-- **Base prepagada**: `base_usuarios` cubiertos al inicio del periodo, no generan cargos durante el periodo.
-- **Asientos extra**: cada usuario activo por encima de `base_usuarios` → factura mensual recurrente con un `factura_items` que describe `"1 usuario adicional · periodo X–Y · $monto"`.
-- **Alta** de usuario por encima de la base → programar/crear factura mensual del asiento (job mensual + creación inicial prorrateada al día de alta hasta fin de mes).
-- **Baja** → marcar fin del asiento; no genera más cargos desde el ciclo siguiente. La base nunca se afecta.
-- **Switch a prorrateo único**: punto único de cálculo en la función `calcularItemAsiento(meses_restantes)` con flag `prorrateo_unico`.
+## 4. Permisos y navegación
 
-KPIs:
-- Total a cobrar = `SUM(facturas.total)` no canceladas.
-- Total cobrado = `SUM(billing_pagos.monto)`.
-- Saldo = diferencia. Próximo cobro = próxima `factura` con `fecha_vencimiento` futura + nº usuarios activos actuales.
+- Nuevo módulo lógico `import_catalogo` (view/edit/delete) en `roles-permissions`.
+- Entrada en Configuración: **Importación de catálogo**.
+- Super Admin (`diego.leon@uniline.mx`) tiene acceso global como siempre.
 
-## 5. Cobros (Stripe + manual)
+## 5. Entregables vs propuesta
 
-- **Stripe automático**: ya hay `stripe_invoice_id`. Webhook (o polling de `admin-billing`) marca factura `pagada` y crea `billing_pagos` con `metodo=stripe, origen=automatico`.
-- **Fallo Stripe** → `estado=fallida`, badge rojo, botón "Aplicar pago".
-- **Pago manual**: modal "Aplicar pago" → método, monto, referencia, fecha. Inserta `billing_pagos(origen=manual)`. Si `Σ pagos >= total` → `pagada`; si menor → `parcial`. Log en `billing_historial`.
+- [x] 2.1 Homologación por código origen (tabla equivalencias + cruce + manejo de parciales/duplicados/sin match).
+- [x] 2.2 Proceso de importación con validación + normalización + reporte.
+- [ ] 2.3 Layout de ventas a detalle por ticket → **excluido** según tu respuesta.
 
-## 6. Tabs
+## Archivos a tocar (estimado)
 
-- **Usuarios**: tabla (`profiles` join `user_roles`): Nombre, Email, Teléfono, Rol (chip), Último acceso, Registro, toggle Activo, "Resetear contraseña". Botones superiores: "Forzar cambio de contraseña a todos", "Agregar usuario". Aviso de impacto en asientos al togglear.
-- **Facturas**: tabla con folio, periodo, monto, método, estado (chip color), fecha. Filas expandibles → `factura_items`. Acciones: Ver / Aplicar pago / Cancelar.
-- **Pagos**: tabla estado de cuenta: Fecha, Factura, Monto, Método, Origen, Aplicado por. Columna "saldo corriente" calculada en cliente.
-- **Histórico**: lista cronológica de `billing_historial` ("Plan: Mensual → Anual", "Precio: 350 → 400", "Aplicado pago $1,200 · transferencia").
+- `supabase/migrations/...` (nuevas tablas + RLS + grants + columna `productos.codigo_origen`)
+- `src/pages/configuracion/ImportCatalogoPage.tsx` (nueva, con tabs Equivalencias / Nueva importación / Historial)
+- `src/components/import-catalogo/UploadStep.tsx`, `MapColumnsStep.tsx`, `PreviewStep.tsx`, `ResultReport.tsx`
+- `src/hooks/useEquivalencias.ts`, `useImportJobs.ts`
+- `src/lib/catalogMatcher.ts` (algoritmo de cruce, testeable)
+- `src/components/AppSidebar.tsx` (entrada en Configuración)
+- `src/lib/permissions.ts` (módulo `import_catalogo`)
+- `src/version.ts`
 
-## 7. Estilo
-
-- Mantener paleta y chips actuales.
-- Fondo `bg-muted/30` entre secciones para jerarquía.
-- Tablas con `hover:bg-muted/50`, filas cómodas (py-3).
-- Responsive: KPIs 2x2 móvil, columnas se apilan, tabs scrollables horizontal.
-- Ocultar campos vacíos en lugar de "—".
-
-## Archivos a tocar
-
-1. **Nuevo**: `supabase/migrations/<ts>_billing_pagos_items_historial.sql` (tablas + GRANT + RLS + seed desde facturas existentes).
-2. **Reescribir**: `src/components/admin/AdminEmpresaDetail.tsx` — layout completo.
-3. **Nuevos componentes** (en `src/components/admin/empresa-detail/`):
-   - `HeaderEmpresa.tsx`
-   - `KpiRow.tsx`
-   - `DatosEmpresaCard.tsx` + `EditDatosDialog.tsx`
-   - `SuscripcionCard.tsx` + `EditPlanDialog.tsx`
-   - `UsuariosTab.tsx`, `FacturasTab.tsx` (con fila expandible), `PagosTab.tsx`, `HistorialTab.tsx`
-   - `AplicarPagoDialog.tsx`
-4. **Extender**: `supabase/functions/admin-billing/index.ts` — endpoints `aplicar_pago_manual`, `editar_plan`, `recalcular_asientos`, logging a `billing_historial`.
-5. Hooks: `useEmpresaDetalle(empresaId)` que devuelva `{ empresa, suscripcion, facturas, pagos, usuarios, historial, kpis }` con React Query (queryKeys incluyen `empresa_id`).
-
-## Aclaraciones antes de implementar
-
-1. **Asientos extra**: ¿cobro mensual recurrente (default del plan) o prorrateo único hasta `periodo_fin`? Lo dejo configurable con flag, default = mensual recurrente según tu spec.
-2. **Datos en `cobros` actual** son de ventas de clientes — no los toco; el módulo nuevo usa `billing_pagos` aparte.
-3. ¿La tabla `factura_items` la siembro desde los campos `num_usuarios/precio_unitario/subtotal` actuales (1 ítem por factura existente)? Asumo que sí.
+¿Procedo o quieres ajustar algo (p. ej. ¿lo quieres en Productos en vez de Configuración, o incluir también campos como `unidad`/`marca` en el mapeo)?
