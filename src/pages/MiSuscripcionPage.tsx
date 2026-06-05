@@ -433,7 +433,7 @@ export default function MiSuscripcionPage() {
     setCart(filtered);
     toast.success(
       isInitialPlanSelection
-        ? 'Plan agregado al pedido'
+        ? (isInactiveSubscription ? 'Plan agregado al pedido — se generará factura' : 'Plan agregado al pedido')
         : charge.isDowngrade
           ? 'Cambio programado para el siguiente periodo'
           : 'Actualización agregada al pedido'
