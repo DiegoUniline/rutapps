@@ -127,6 +127,7 @@ export default function ComprasPage() {
   const [viewMode, setViewMode] = useState<'compras' | 'detalle'>('compras');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   // Detalle state
