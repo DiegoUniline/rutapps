@@ -391,8 +391,8 @@ export default function MiSuscripcionPage() {
   // ─── Cart helpers ───
   function addUpdateToCart() {
     if (!targetPlan || !hasChanges) return;
-    if (totalNewUsers < 3) {
-      toast.error('Mínimo 3 usuarios');
+    if (totalNewUsers < targetMin) {
+      toast.error(`Mínimo ${targetMin} usuario${targetMin !== 1 ? 's' : ''} para el plan ${targetPlan.nombre}`);
       return;
     }
     const charge = calcUpdateCharge();
