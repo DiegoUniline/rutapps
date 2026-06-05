@@ -458,6 +458,28 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           )}
         </>
       )}
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="cliente"
+        actions={[
+          {
+            label: 'Exportar',
+            icon: FileSpreadsheet,
+            onClick: () => {
+              const sel = clientes.filter(c => selected.has(c.id));
+              if (sel.length === 0) return;
+              exportToExcel({ fileName: `Clientes-seleccion-${sel.length}`, title: `Clientes seleccionados (${sel.length})`, columns: CLIENTES_COLUMNS, data: sel.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })) });
+              toast.success(`${sel.length} clientes exportados`);
+            },
+          },
+          forcedStatus === 'inactivo'
+            ? { label: 'Activar', icon: CheckCircle2, onClick: () => setConfirmActivateOpen(true), hidden: !canDelete }
+            : { label: 'Dar de baja', icon: Trash2, variant: 'destructive', onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete },
+          ...(forcedStatus === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
+        ]}
+      />
     </div>
   );
 }
