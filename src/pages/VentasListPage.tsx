@@ -69,6 +69,11 @@ export default function VentasListPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkPrinting, setBulkPrinting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkPdfBlob, setBulkPdfBlob] = useState<Blob | null>(null);
+  const [bulkPdfName, setBulkPdfName] = useState('');
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
