@@ -3,22 +3,25 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, List, Package, ChevronDown } from 'lucide-react';
+import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { CompraExpandedRow } from './compras/CompraExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { getNombreCompra } from '@/lib/productoNombres';
+import { toast } from 'sonner';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
