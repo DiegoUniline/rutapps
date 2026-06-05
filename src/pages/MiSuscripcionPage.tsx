@@ -394,6 +394,9 @@ export default function MiSuscripcionPage() {
     if (hasPendingInvoice) {
       chargeAmount = newTotalPeriodo;
       chargeDetail = `${fmtBreakdown()}\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
+    } else if (isInactiveSubscription) {
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${fmtBreakdown()}\nContratación nueva — se generará la factura correspondiente.`;
     } else if (currentPlan && diff > 0) {
       chargeAmount = diff;
       chargeDetail = `${fmtBreakdown()}\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
