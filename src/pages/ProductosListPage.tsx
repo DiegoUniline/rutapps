@@ -445,6 +445,28 @@ export default function ProductosListPage() {
           )}
         </>
       )}
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="producto"
+        actions={[
+          {
+            label: 'Exportar',
+            icon: FileSpreadsheet,
+            onClick: () => {
+              const sel = (productos ?? []).filter(p => selected.has(p.id));
+              if (sel.length === 0) return;
+              exportToExcel({ fileName: `Productos-seleccion-${sel.length}`, title: `Productos seleccionados (${sel.length})`, columns: PRODUCTOS_COLUMNS, data: sel });
+              toast.success(`${sel.length} productos exportados`);
+            },
+          },
+          statusFilter === 'inactivo'
+            ? { label: 'Activar', icon: CheckCircle2, onClick: () => setConfirmActivateOpen(true), hidden: !canDelete }
+            : { label: 'Dar de baja', icon: Trash2, variant: 'destructive', onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete },
+          ...(statusFilter === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
+        ]}
+      />
     </div>
   );
 }
