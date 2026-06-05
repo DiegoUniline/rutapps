@@ -33,69 +33,60 @@ Deno.serve(async (req) => {
 
     const result: Record<string, any> = { today, dayOfMonth };
 
-    // ── DÍA 4+: Bloquear empresas sin pago confirmado ──
-    if (dayOfMonth >= 4) {
-      const { data: bloqueables, error: errSelect } = await supabase
-        .from("subscriptions")
-        .select("empresa_id, fecha_vencimiento, current_period_end, status, es_manual")
-        .neq("es_manual", true)
-        .eq("acceso_bloqueado", false)
-        .or(`fecha_vencimiento.lt.${today},fecha_vencimiento.is.null`)
-        .neq("status", "trial");
-
-      if (errSelect) log("Select error", errSelect);
-
-      // SAFETY NET: revalidar contra cobertura real (factura pagada que cubre hoy,
-      // current_period_end vigente, manual, etc.) para no bloquear empresas pagadas.
-      const candidatos = bloqueables || [];
-      const ids: string[] = [];
-      for (const s of candidatos) {
-        // Skip si current_period_end aún cubre hoy
-        if (s.current_period_end && s.current_period_end >= today) {
-          log("Skip block (period_end vigente)", { empresa: s.empresa_id, end: s.current_period_end });
-          continue;
-        }
-        const { data: cubierta } = await supabase.rpc("tiene_cobertura_vigente", { p_empresa_id: s.empresa_id });
-        if (cubierta === true) {
-          // Auto-sanar: marcar como activa si tiene factura pagada vigente
-          const { data: facturaCubre } = await supabase
-            .from("facturas")
-            .select("periodo_fin")
-            .eq("empresa_id", s.empresa_id)
-            .eq("estado", "pagada")
-            .gte("periodo_fin", today)
-            .order("periodo_fin", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (facturaCubre?.periodo_fin) {
-            await supabase
-              .from("subscriptions")
-              .update({
-                status: "active",
-                acceso_bloqueado: false,
-                fecha_vencimiento: facturaCubre.periodo_fin,
-                current_period_end: facturaCubre.periodo_fin,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("empresa_id", s.empresa_id);
-            log("Auto-healed (factura pagada)", { empresa: s.empresa_id, periodo_fin: facturaCubre.periodo_fin });
-          } else {
-            log("Skip block (cobertura vigente)", { empresa: s.empresa_id });
-          }
-          continue;
-        }
-        ids.push(s.empresa_id);
+    // ── Bloquear empresas con facturas pendientes vencidas (3 días de gracia) ──
+    // Regla: si una empresa tiene UNA factura pendiente/procesando/past_due cuya
+    // fecha de vencimiento ya pasó (o cuya fecha_emision + 3 días ya pasó si
+    // fecha_vencimiento es NULL), debe bloquearse. Esto se evalúa SIEMPRE,
+    // no solo a partir del día 4 del mes — un cobro puede emitirse en cualquier día.
+    {
+      // 1) Backfill defensivo: cualquier factura pendiente sin fecha_vencimiento
+      //    recibe fecha_emision + 3 días.
+      const { data: sinVenc } = await supabase
+        .from("facturas")
+        .select("id, fecha_emision")
+        .in("estado", ["pendiente", "procesando", "past_due"])
+        .is("fecha_vencimiento", null);
+      for (const f of sinVenc || []) {
+        const emi = f.fecha_emision ? new Date(f.fecha_emision) : new Date();
+        const venc = new Date(emi.getTime() + 3 * 86400000).toISOString();
+        await supabase.from("facturas").update({ fecha_vencimiento: venc }).eq("id", f.id);
       }
-      if (ids.length > 0) {
+      if ((sinVenc?.length || 0) > 0) log("Backfilled fecha_vencimiento", { count: sinVenc!.length });
+
+      // 2) Buscar facturas pendientes ya vencidas → candidatos a bloqueo.
+      const { data: vencidas } = await supabase
+        .from("facturas")
+        .select("empresa_id, numero_factura, fecha_vencimiento, estado")
+        .in("estado", ["pendiente", "procesando", "past_due"])
+        .lt("fecha_vencimiento", new Date().toISOString());
+
+      const empresasConVencidas = Array.from(
+        new Set((vencidas || []).map((f: any) => f.empresa_id).filter(Boolean))
+      );
+
+      const idsBloqueables: string[] = [];
+      for (const empresaId of empresasConVencidas) {
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("acceso_bloqueado, es_manual, status")
+          .eq("empresa_id", empresaId)
+          .maybeSingle();
+        if (!sub) continue;
+        if (sub.es_manual) continue;          // pagos manuales — no automatizar bloqueo
+        if (sub.acceso_bloqueado) continue;   // ya bloqueada
+        idsBloqueables.push(empresaId);
+      }
+
+      if (idsBloqueables.length > 0) {
         const { error: errUpd } = await supabase
           .from("subscriptions")
           .update({ acceso_bloqueado: true, status: "past_due", updated_at: new Date().toISOString() })
-          .in("empresa_id", ids);
+          .in("empresa_id", idsBloqueables);
         if (errUpd) log("Block update error", errUpd);
-        else log("Blocked", { count: ids.length, ids });
+        else log("Blocked (factura vencida)", { count: idsBloqueables.length, ids: idsBloqueables });
       }
-      result.blocked_count = ids.length;
-      result.skipped_with_coverage = candidatos.length - ids.length;
+      result.blocked_count = idsBloqueables.length;
+      result.empresas_con_facturas_vencidas = empresasConVencidas.length;
     }
 
     // ── DÍA 1: Reset acceso_bloqueado para que entren los días 1-3 de gracia ──
