@@ -103,6 +103,7 @@ const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
+const HomologacionCatalogoPage = lazy(() => import("@/pages/configuracion/HomologacionCatalogoPage"));
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
@@ -692,6 +693,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
+      <Route path="/configuracion/homologacion" element={<HomologacionCatalogoPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
       {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}

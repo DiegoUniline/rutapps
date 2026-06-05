@@ -2753,6 +2753,123 @@ export type Database = {
           },
         ]
       }
+      import_job_lineas: {
+        Row: {
+          cantidad: number | null
+          codigo_externo: string | null
+          created_at: string
+          descripcion_externa: string | null
+          empresa_id: string
+          fila_num: number
+          id: string
+          job_id: string
+          match_tipo: string
+          mensaje: string | null
+          precio: number | null
+          producto_id: string | null
+          raw: Json | null
+        }
+        Insert: {
+          cantidad?: number | null
+          codigo_externo?: string | null
+          created_at?: string
+          descripcion_externa?: string | null
+          empresa_id: string
+          fila_num: number
+          id?: string
+          job_id: string
+          match_tipo: string
+          mensaje?: string | null
+          precio?: number | null
+          producto_id?: string | null
+          raw?: Json | null
+        }
+        Update: {
+          cantidad?: number | null
+          codigo_externo?: string | null
+          created_at?: string
+          descripcion_externa?: string | null
+          empresa_id?: string
+          fila_num?: number
+          id?: string
+          job_id?: string
+          match_tipo?: string
+          mensaje?: string | null
+          precio?: number | null
+          producto_id?: string | null
+          raw?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_job_lineas_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "import_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_job_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_jobs: {
+        Row: {
+          archivo_nombre: string | null
+          created_at: string
+          created_by: string | null
+          duplicados: number
+          empresa_id: string
+          errores: number
+          id: string
+          matched: number
+          resumen: Json | null
+          sin_coincidencia: number
+          sistema_origen: string | null
+          status: string
+          tipo: string
+          total_filas: number
+          updated_at: string
+        }
+        Insert: {
+          archivo_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicados?: number
+          empresa_id: string
+          errores?: number
+          id?: string
+          matched?: number
+          resumen?: Json | null
+          sin_coincidencia?: number
+          sistema_origen?: string | null
+          status?: string
+          tipo?: string
+          total_filas?: number
+          updated_at?: string
+        }
+        Update: {
+          archivo_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicados?: number
+          empresa_id?: string
+          errores?: number
+          id?: string
+          matched?: number
+          resumen?: Json | null
+          sin_coincidencia?: number
+          sistema_origen?: string | null
+          status?: string
+          tipo?: string
+          total_filas?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lista_precios: {
         Row: {
           activa: boolean
@@ -3981,6 +4098,50 @@ export type Database = {
         }
         Relationships: []
       }
+      producto_equivalencias: {
+        Row: {
+          codigo_externo: string
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          notas: string | null
+          producto_id: string
+          sistema_origen: string | null
+          updated_at: string
+        }
+        Insert: {
+          codigo_externo: string
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          notas?: string | null
+          producto_id: string
+          sistema_origen?: string | null
+          updated_at?: string
+        }
+        Update: {
+          codigo_externo?: string
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          sistema_origen?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_equivalencias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producto_lotes: {
         Row: {
           almacen_id: string | null
@@ -4187,6 +4348,7 @@ export type Database = {
           clasificacion_id: string | null
           clave_alterna: string | null
           codigo: string
+          codigo_origen: string | null
           codigo_sat: string | null
           contador: number | null
           contador_tarifas: number | null
@@ -4244,6 +4406,7 @@ export type Database = {
           clasificacion_id?: string | null
           clave_alterna?: string | null
           codigo: string
+          codigo_origen?: string | null
           codigo_sat?: string | null
           contador?: number | null
           contador_tarifas?: number | null
@@ -4301,6 +4464,7 @@ export type Database = {
           clasificacion_id?: string | null
           clave_alterna?: string | null
           codigo?: string
+          codigo_origen?: string | null
           codigo_sat?: string | null
           contador?: number | null
           contador_tarifas?: number | null
