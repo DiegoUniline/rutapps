@@ -42,39 +42,48 @@ export function useFacturaPendiente(): FacturaPendienteState {
           .maybeSingle(),
         supabase
           .from('facturas')
-          .select('id, numero_factura, total, fecha_vencimiento, estado, periodo_fin')
+          .select('id, numero_factura, total, fecha_vencimiento, fecha_emision, estado, periodo_fin')
           .eq('empresa_id', empresa.id)
           .in('estado', ['pendiente', 'procesando', 'past_due'])
           .order('fecha_emision', { ascending: true })
           .limit(10),
       ]);
 
-      // Si la suscripción es manual o tiene cobertura vigente,
-      // ignorar facturas cuyo periodo_fin ya está cubierto.
+      // Solo las suscripciones MANUALES pueden ocultar facturas pendientes
+      // cuya cobertura ya está garantizada por el admin. Para suscripciones
+      // automáticas, una factura pendiente siempre debe mostrarse — el hecho
+      // de que current_period_end haya avanzado no significa que se haya pagado.
       const subEndCandidates = [sub?.current_period_end, sub?.fecha_vencimiento]
         .filter(Boolean)
         .map((d) => new Date(d as string));
       const subEnd = subEndCandidates.length
         ? new Date(Math.max(...subEndCandidates.map((d) => d.getTime())))
         : null;
-      const subTieneCobertura = !!sub?.es_manual || (subEnd !== null && subEnd >= new Date());
+      const subTieneCoberturaManual = !!sub?.es_manual && subEnd !== null && subEnd >= new Date();
 
       const f = facturas?.find((factura) => {
         const facturaPeriodEnd = factura.periodo_fin ? new Date(factura.periodo_fin) : null;
-        const coveredByActiveSubscription =
-          subTieneCobertura &&
+        const coveredByManualSubscription =
+          subTieneCoberturaManual &&
           subEnd !== null &&
           facturaPeriodEnd !== null &&
           facturaPeriodEnd <= subEnd;
-        return !coveredByActiveSubscription;
+        return !coveredByManualSubscription;
       });
       if (!f) return EMPTY;
 
-      const venc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null;
+      // Si no hay fecha_vencimiento explícita, derivarla: fecha_emision + 3 días de gracia.
+      // Esto cubre facturas creadas por integraciones (Stripe webhook, etc.) que no la setean.
+      let vencISO = f.fecha_vencimiento;
+      if (!vencISO) {
+        const emi = (f as any).fecha_emision ? new Date((f as any).fecha_emision) : new Date();
+        vencISO = new Date(emi.getTime() + 3 * 86400000).toISOString();
+      }
+      const venc = new Date(vencISO);
       const today = new Date();
-      const diasRestantes = venc ? differenceInCalendarDays(venc, today) : null;
+      const diasRestantes = differenceInCalendarDays(venc, today);
       // Bloquea cuando ya pasó la fecha de vencimiento (día siguiente al límite)
-      const shouldBlock = diasRestantes !== null && diasRestantes < 0;
+      const shouldBlock = diasRestantes < 0;
 
       return {
         hasPendiente: true,
