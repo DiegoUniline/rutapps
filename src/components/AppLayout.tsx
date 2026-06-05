@@ -154,6 +154,7 @@ const navItems: NavItem[] = [
       { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
+      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
     ],
   },
