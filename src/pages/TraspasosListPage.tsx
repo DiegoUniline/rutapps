@@ -5,8 +5,8 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, List, Package, ChevronDown } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { TraspasoExpandedRow } from './traspasos/TraspasoExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -14,9 +14,12 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { ExportButton } from '@/components/ExportButton';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate, fmtNum, cn } from '@/lib/utils';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { toast } from 'sonner';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
