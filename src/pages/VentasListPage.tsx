@@ -4,13 +4,14 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package } from 'lucide-react';
+import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
@@ -23,6 +24,9 @@ import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
+import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
+import { mergePdfBlobs } from '@/lib/mergePdfs';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
@@ -65,6 +69,11 @@ export default function VentasListPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkPrinting, setBulkPrinting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkPdfBlob, setBulkPdfBlob] = useState<Blob | null>(null);
+  const [bulkPdfName, setBulkPdfName] = useState('');
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
@@ -109,6 +118,57 @@ export default function VentasListPage() {
   const handlePageSizeChange = (size: PageSizeOption) => { setPageSize(size); setPage(1); try { localStorage.setItem('table-page-size', String(size)); } catch {} };
   const toggleAll = () => { allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map(v => v.id))); };
   const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
+
+  const selectedVentas = useMemo(() => ventas.filter(v => selected.has(v.id)), [ventas, selected]);
+
+  const handleBulkExport = () => {
+    if (selectedVentas.length === 0) return;
+    const totalSel = selectedVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const saldoSel = selectedVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    exportToExcel({
+      fileName: `Ventas-seleccion-${selectedVentas.length}`,
+      title: `Ventas seleccionadas (${selectedVentas.length})`,
+      columns: VENTAS_COLUMNS,
+      data: selectedVentas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })),
+      totals: { total: totalSel, saldo_pendiente: saldoSel },
+    });
+    toast.success(`${selectedVentas.length} ventas exportadas`);
+  };
+
+  const handleBulkPrint = async () => {
+    if (selectedVentas.length === 0 || !empresa?.id) return;
+    setBulkPrinting(true);
+    try {
+      const blobs: Blob[] = [];
+      for (const v of selectedVentas) {
+        try { const { blob } = await generateVentaPdfById(v.id, empresa.id); blobs.push(blob); }
+        catch (e) { console.error('PDF venta', v.id, e); }
+      }
+      if (blobs.length === 0) { toast.error('No se pudo generar ningún PDF'); return; }
+      const merged = await mergePdfBlobs(blobs);
+      setBulkPdfBlob(merged);
+      setBulkPdfName(`Ventas-${blobs.length}.pdf`);
+      toast.success(`${blobs.length} documentos combinados`);
+    } catch (e: any) {
+      toast.error(e.message || 'Error generando PDFs');
+    } finally {
+      setBulkPrinting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedVentas.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    for (const v of selectedVentas) {
+      try { await deleteVenta.mutateAsync(v.id); ok++; } catch { fail++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    setSelected(new Set());
+    if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
+    if (fail > 0) toast.error(`${fail} no se pudieron eliminar`);
+  };
 
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
@@ -278,6 +338,46 @@ export default function VentasListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {selected.size} venta{selected.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Las ventas con pagos aplicados no podrán eliminarse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleting}
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+            >
+              {bulkDeleting ? 'Eliminando...' : `Eliminar ${selected.size}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DocumentPreviewModal
+        open={!!bulkPdfBlob}
+        onClose={() => { setBulkPdfBlob(null); setBulkPdfName(''); }}
+        pdfBlob={bulkPdfBlob}
+        fileName={bulkPdfName}
+        empresaId={empresa?.id ?? ''}
+      />
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="venta"
+        actions={[
+          { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExport },
+          { label: 'Imprimir PDF', icon: Printer, onClick: handleBulkPrint, loading: bulkPrinting },
+          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true), hidden: !canDelete },
+        ]}
+      />
     </div>
   );
 }

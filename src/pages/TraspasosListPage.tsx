@@ -5,8 +5,8 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, List, Package, ChevronDown } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { TraspasoExpandedRow } from './traspasos/TraspasoExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -14,9 +14,12 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { ExportButton } from '@/components/ExportButton';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate, fmtNum, cn } from '@/lib/utils';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { toast } from 'sonner';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -95,6 +98,9 @@ export default function TraspasosListPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const qc = useQueryClient();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
@@ -185,6 +191,36 @@ export default function TraspasosListPage() {
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
   };
+
+  const handleBulkExportTraspasos = () => {
+    if (selected.size === 0) return;
+    const sel: any[] = filtered.filter((t: any) => selected.has(t.id));
+    exportToExcel({
+      fileName: `Traspasos-seleccion-${sel.length}`,
+      title: `Traspasos seleccionados (${sel.length})`,
+      columns: TRASPASOS_COLUMNS,
+      data: sel.map((t: any) => ({
+        folio: t.folio ?? '', tipo: TIPO_LABELS[t.tipo] ?? t.tipo ?? '',
+        origen: getOrigenLabel(t), destino: getDestinoLabel(t),
+        fecha: t.fecha, status: (t.status ?? '').charAt(0).toUpperCase() + (t.status ?? '').slice(1),
+      })),
+    });
+    toast.success(`${sel.length} traspasos exportados`);
+  };
+
+  const handleBulkDeleteTraspasos = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('traspasos').delete().in('id', ids);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ['traspasos'] });
+    setSelected(new Set());
+    toast.success(`${ids.length} traspaso${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}`);
+  };
+
 
   const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
     if (key === 'status') return (item.status ?? '').charAt(0).toUpperCase() + (item.status ?? '').slice(1);
@@ -538,6 +574,31 @@ export default function TraspasosListPage() {
           )}
         </>
       )}
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {selected.size} traspaso{selected.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={bulkDeleting} onClick={(e) => { e.preventDefault(); handleBulkDeleteTraspasos(); }}>
+              {bulkDeleting ? 'Eliminando...' : `Eliminar ${selected.size}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="traspaso"
+        actions={[
+          { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExportTraspasos },
+          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true) },
+        ]}
+      />
     </div>
   );
 }

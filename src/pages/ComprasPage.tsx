@@ -3,22 +3,25 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, List, Package, ChevronDown } from 'lucide-react';
+import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { CompraExpandedRow } from './compras/CompraExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { getNombreCompra } from '@/lib/productoNombres';
+import { toast } from 'sonner';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -128,6 +131,10 @@ export default function ComprasPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const qc = useQueryClient();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   // Detalle state
@@ -197,6 +204,41 @@ export default function ComprasPage() {
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = filteredCompras.slice(from - 1, to);
+  const allSelected = pageData.length > 0 && pageData.every((c: any) => selected.has(c.id));
+  const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map((c: any) => c.id)));
+  const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
+
+  const handleBulkExportCompras = () => {
+    if (selected.size === 0) return;
+    const sel: any[] = filteredCompras.filter((c: any) => selected.has(c.id));
+    exportToExcel({
+      fileName: `Compras-seleccion-${sel.length}`,
+      title: `Compras seleccionadas (${sel.length})`,
+      columns: COMPRAS_COLUMNS,
+      data: sel.map((c: any) => ({
+        folio: c.folio ?? '', proveedor: c.proveedores?.nombre ?? '', fecha: c.fecha,
+        condicion_pago: c.condicion_pago === 'credito' ? 'Crédito' : 'Contado',
+        subtotal: c.subtotal ?? 0, iva_total: c.iva_total ?? 0, total: c.total ?? 0,
+        saldo_pendiente: c.saldo_pendiente ?? 0, status: STATUS_MAP[c.status]?.label ?? c.status,
+      })),
+      totals: { total: sel.reduce((s, c) => s + (c.total ?? 0), 0), saldo_pendiente: sel.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0) },
+    });
+    toast.success(`${sel.length} compras exportadas`);
+  };
+
+  const handleBulkDeleteCompras = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('compras').delete().in('id', ids);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ['compras'] });
+    setSelected(new Set());
+    toast.success(`${ids.length} compra${ids.length !== 1 ? 's' : ''} eliminada${ids.length !== 1 ? 's' : ''}`);
+  };
+
 
   const totalCompras = filteredCompras.reduce((s, c) => s + ((c as any).total ?? 0), 0);
   const totalSaldo = filteredCompras.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0);
@@ -265,6 +307,9 @@ export default function ComprasPage() {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-table-border">
+            <th className="th-odoo w-8 text-center" onClick={e => e.stopPropagation()}>
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+            </th>
             <th className="th-odoo text-left">Folio</th>
             <th className="th-odoo text-left">Proveedor</th>
             <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
@@ -278,7 +323,7 @@ export default function ComprasPage() {
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
+            <tr><td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
           )}
           {items.map((c: any) => {
             const isExpanded = expandedId === c.id;
@@ -288,10 +333,13 @@ export default function ComprasPage() {
                   key={c.id}
                   className={cn(
                     "border-b border-table-border cursor-pointer transition-colors",
-                    isExpanded ? "bg-primary/5" : "hover:bg-table-hover"
+                    isExpanded ? "bg-primary/5" : selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
                   )}
                   onClick={() => setExpandedId(isExpanded ? null : c.id)}
                 >
+                  <td className="py-1.5 px-3 text-center w-8" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
+                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
+                  </td>
                   <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
                   <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
@@ -323,7 +371,7 @@ export default function ComprasPage() {
                   <CompraExpandedRow
                     key={`exp-${c.id}`}
                     compra={c}
-                    colSpan={9}
+                    colSpan={10}
                     fmt={fmt}
                     onCollapse={() => setExpandedId(null)}
                   />
@@ -335,7 +383,7 @@ export default function ComprasPage() {
         {items.length > 0 && (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
-              <td colSpan={5} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
+              <td colSpan={6} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, c: any) => s + (c.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden sm:table-cell tabular-nums text-destructive font-bold">{fmt(items.reduce((s: number, c: any) => s + (c.saldo_pendiente ?? 0), 0))}</td>
               <td colSpan={2} />
@@ -558,6 +606,32 @@ export default function ComprasPage() {
           )}
         </>
       )}
+
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {selected.size} compra{selected.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={bulkDeleting} onClick={(e) => { e.preventDefault(); handleBulkDeleteCompras(); }}>
+              {bulkDeleting ? 'Eliminando...' : `Eliminar ${selected.size}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="compra"
+        actions={[
+          { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExportCompras },
+          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true) },
+        ]}
+      />
     </div>
   );
 }

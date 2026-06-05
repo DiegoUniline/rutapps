@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { usePermisos } from '@/hooks/usePermisos';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, Upload, AlertTriangle, Trash2, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -338,42 +339,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {selected.size > 0 && (
-            <>
-              {forcedStatus === 'inactivo' ? (
-                <>
-                  <button
-                    onClick={() => setConfirmActivateOpen(true)}
-                    disabled={bulkActivating || !canDelete}
-                    title={!canDelete ? 'No tienes permiso para reactivar clientes' : ''}
-                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-success text-success-foreground hover:bg-success/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Activar ({selected.size})
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteOpen(true)}
-                    disabled={bulkDeleting || !canDelete}
-                    title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
-                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Eliminar ({selected.size})
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setConfirmDeleteOpen(true)}
-                  disabled={bulkDeleting || !canDelete}
-                  title={!canDelete ? 'No tienes permiso para eliminar clientes' : ''}
-                  className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Dar de baja ({selected.size})
-                </button>
-              )}
-            </>
-          )}
+          {/* Bulk actions moved to floating BulkActionsBar */}
           {!isMobile && (
             <>
               <ExportButton
@@ -492,6 +458,28 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           )}
         </>
       )}
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="cliente"
+        actions={[
+          {
+            label: 'Exportar',
+            icon: FileSpreadsheet,
+            onClick: () => {
+              const sel = clientes.filter(c => selected.has(c.id));
+              if (sel.length === 0) return;
+              exportToExcel({ fileName: `Clientes-seleccion-${sel.length}`, title: `Clientes seleccionados (${sel.length})`, columns: CLIENTES_COLUMNS, data: sel.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })) });
+              toast.success(`${sel.length} clientes exportados`);
+            },
+          },
+          forcedStatus === 'inactivo'
+            ? { label: 'Activar', icon: CheckCircle2, onClick: () => setConfirmActivateOpen(true), hidden: !canDelete }
+            : { label: 'Dar de baja', icon: Trash2, variant: 'destructive', onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete },
+          ...(forcedStatus === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
+        ]}
+      />
     </div>
   );
 }

@@ -3,7 +3,8 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, Upload, Trash2, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -327,41 +328,7 @@ export default function ProductosListPage() {
           onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {selected.size > 0 && (
-            <>
-              {statusFilter === 'inactivo' ? (
-                <>
-                  <button
-                    onClick={() => setConfirmActivateOpen(true)}
-                    disabled={bulkActivating || !canDelete}
-                    title={!canDelete ? 'No tienes permiso para reactivar productos' : ''}
-                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-success text-success-foreground hover:bg-success/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Activar ({selected.size})
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteOpen(true)}
-                    disabled={bulkDeleting || !canDelete}
-                    title={!canDelete ? 'No tienes permiso para eliminar productos' : ''}
-                    className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Eliminar ({selected.size})
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setConfirmDeleteOpen(true)}
-                  disabled={bulkDeleting || !canDelete}
-                  title={!canDelete ? 'No tienes permiso para eliminar productos' : ''}
-                  className="inline-flex items-center gap-1 px-3 h-8 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-medium shrink-0 disabled:opacity-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Dar de baja ({selected.size})
-                </button>
-              )}
-            </>
-          )}
+          {/* Bulk actions moved to floating BulkActionsBar */}
           {!isMobile && (
             <>
               <ExportButton
@@ -478,6 +445,28 @@ export default function ProductosListPage() {
           )}
         </>
       )}
+
+      <BulkActionsBar
+        count={selected.size}
+        onClear={() => setSelected(new Set())}
+        noun="producto"
+        actions={[
+          {
+            label: 'Exportar',
+            icon: FileSpreadsheet,
+            onClick: () => {
+              const sel = (productos ?? []).filter(p => selected.has(p.id));
+              if (sel.length === 0) return;
+              exportToExcel({ fileName: `Productos-seleccion-${sel.length}`, title: `Productos seleccionados (${sel.length})`, columns: PRODUCTOS_COLUMNS, data: sel });
+              toast.success(`${sel.length} productos exportados`);
+            },
+          },
+          statusFilter === 'inactivo'
+            ? { label: 'Activar', icon: CheckCircle2, onClick: () => setConfirmActivateOpen(true), hidden: !canDelete }
+            : { label: 'Dar de baja', icon: Trash2, variant: 'destructive', onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete },
+          ...(statusFilter === 'inactivo' ? [{ label: 'Eliminar', icon: Trash2, variant: 'destructive' as const, onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete }] : []),
+        ]}
+      />
     </div>
   );
 }
