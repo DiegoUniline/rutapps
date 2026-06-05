@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/hooks/useSubscription';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, X, Search, ChevronDown, Check } from 'lucide-react';
+import { Building2, X, Search, ChevronDown, Check, AlertTriangle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 type StatusFilter = 'todas' | 'active' | 'trial' | 'past_due' | 'gracia' | 'suspended' | 'cancelled';
 
@@ -29,15 +29,18 @@ const STATUS_CONFIG: Record<StatusFilter, { label: string; color: string }> = {
 };
 
 export default function SuperAdminEmpresaSelector() {
-  const { user, empresa, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
-  const { isSuperAdmin } = useSubscription();
+  const { user, empresa, realEmpresa, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
   const qc = useQueryClient();
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todas');
 
-  const isAllowed = isSuperAdmin && user?.email === 'diego.leon@uniline.mx';
+  // Gate by email only. The empresas query is RLS-gated and will return only
+  // the user's own empresa for non-super-admins (so the selector renders but
+  // does nothing useful). This avoids depending on useSubscription's async
+  // isSuperAdmin flag, which during initial load returns false and hid the bar.
+  const isAllowed = isSuperAdminEmail(user?.email);
 
   useEffect(() => {
     if (!isAllowed) return;
@@ -72,7 +75,7 @@ export default function SuperAdminEmpresaSelector() {
       });
       setEmpresas(all);
     })();
-  }, [isAllowed, empresa?.id]);
+  }, [isAllowed, realEmpresa?.id]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -85,12 +88,13 @@ export default function SuperAdminEmpresaSelector() {
 
   if (!isAllowed) return null;
 
+  const realId = realEmpresa?.id || '';
   const currentId = overrideEmpresaId || empresa?.id || '';
-  const currentEmpresa = empresas.find(e => e.id === currentId);
+  const currentEmpresa = empresas.find(e => e.id === currentId) || (empresa ? { id: empresa.id, nombre: empresa.nombre, status: null } as any : null);
+  const isOverridden = !!overrideEmpresaId && overrideEmpresaId !== realId;
 
   const handleSelect = async (val: string) => {
-    const realEmpresaId = empresa?.id;
-    if (val === realEmpresaId || !val) {
+    if (!val || val === realId) {
       await setOverrideEmpresaId(null);
     } else {
       await setOverrideEmpresaId(val);
@@ -107,21 +111,34 @@ export default function SuperAdminEmpresaSelector() {
     return c;
   }, [empresas]);
 
+  // When override is active, render a LOUD red bar so it's impossible to miss.
+  const wrapperClass = isOverridden
+    ? 'flex items-center gap-2 px-3 py-2 bg-destructive text-destructive-foreground border-b-2 border-destructive shadow-md'
+    : 'flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20';
+
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20">
-      <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-      <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 whitespace-nowrap">
-        Viendo:
+    <div className={wrapperClass}>
+      {isOverridden ? (
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+      ) : (
+        <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+      )}
+      <span className={`text-[11px] font-bold whitespace-nowrap ${isOverridden ? '' : 'text-amber-700 dark:text-amber-300'}`}>
+        {isOverridden ? '⚠ VIENDO OTRA EMPRESA:' : 'Viendo:'}
       </span>
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="h-7 rounded-md border border-amber-300 dark:border-amber-700 bg-background px-2 text-xs font-medium flex items-center gap-1.5 min-w-[180px] max-w-xs justify-between hover:bg-amber-50 dark:hover:bg-amber-950/30"
+            className={`h-7 rounded-md border px-2 text-xs font-semibold flex items-center gap-1.5 min-w-[180px] max-w-xs justify-between ${
+              isOverridden
+                ? 'border-destructive-foreground/40 bg-destructive-foreground/10 text-destructive-foreground hover:bg-destructive-foreground/20'
+                : 'border-amber-300 dark:border-amber-700 bg-background hover:bg-amber-50 dark:hover:bg-amber-950/30'
+            }`}
           >
             <span className="truncate">{currentEmpresa?.nombre || 'Selecciona empresa'}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[380px] p-0" align="start">
@@ -138,6 +155,22 @@ export default function SuperAdminEmpresaSelector() {
               />
             </div>
           </div>
+
+          {/* Quick: back to my empresa */}
+          {realEmpresa && (
+            <button
+              onClick={() => handleSelect('')}
+              className={`w-full text-left px-3 py-2 border-b text-xs font-semibold flex items-center justify-between gap-2 ${
+                !isOverridden ? 'bg-primary/5 text-primary' : 'hover:bg-muted'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5" />
+                MI EMPRESA · {realEmpresa.nombre}
+              </span>
+              {!isOverridden && <Check className="h-3.5 w-3.5" />}
+            </button>
+          )}
 
           {/* Status filter chips */}
           <div className="p-2 border-b flex flex-wrap gap-1">
@@ -166,6 +199,7 @@ export default function SuperAdminEmpresaSelector() {
             ) : (
               filtered.map(emp => {
                 const isCurrent = emp.id === currentId;
+                const isMine = emp.id === realId;
                 const cfg = STATUS_CONFIG[(emp.status as StatusFilter) || 'todas'] || STATUS_CONFIG.todas;
                 return (
                   <button
@@ -178,6 +212,7 @@ export default function SuperAdminEmpresaSelector() {
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {isCurrent && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                       <span className={`text-sm truncate ${isCurrent ? 'font-semibold' : ''}`}>{emp.nombre}</span>
+                      {isMine && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">MÍA</span>}
                     </div>
                     {emp.status && (
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${cfg.color} shrink-0`}>
@@ -192,13 +227,14 @@ export default function SuperAdminEmpresaSelector() {
         </PopoverContent>
       </Popover>
 
-      {overrideEmpresaId && (
+      {isOverridden && (
         <button
           onClick={() => handleSelect('')}
-          className="p-1 rounded hover:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+          className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-destructive-foreground text-destructive text-[11px] font-bold hover:opacity-90"
           title="Volver a mi empresa"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3 w-3" />
+          Volver a mi empresa
         </button>
       )}
     </div>
