@@ -119,6 +119,57 @@ export default function VentasListPage() {
   const toggleAll = () => { allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map(v => v.id))); };
   const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
 
+  const selectedVentas = useMemo(() => ventas.filter(v => selected.has(v.id)), [ventas, selected]);
+
+  const handleBulkExport = () => {
+    if (selectedVentas.length === 0) return;
+    const totalSel = selectedVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const saldoSel = selectedVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    exportToExcel({
+      fileName: `Ventas-seleccion-${selectedVentas.length}`,
+      title: `Ventas seleccionadas (${selectedVentas.length})`,
+      columns: VENTAS_COLUMNS,
+      data: selectedVentas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })),
+      totals: { total: totalSel, saldo_pendiente: saldoSel },
+    });
+    toast.success(`${selectedVentas.length} ventas exportadas`);
+  };
+
+  const handleBulkPrint = async () => {
+    if (selectedVentas.length === 0 || !empresa?.id) return;
+    setBulkPrinting(true);
+    try {
+      const blobs: Blob[] = [];
+      for (const v of selectedVentas) {
+        try { const { blob } = await generateVentaPdfById(v.id, empresa.id); blobs.push(blob); }
+        catch (e) { console.error('PDF venta', v.id, e); }
+      }
+      if (blobs.length === 0) { toast.error('No se pudo generar ningún PDF'); return; }
+      const merged = await mergePdfBlobs(blobs);
+      setBulkPdfBlob(merged);
+      setBulkPdfName(`Ventas-${blobs.length}.pdf`);
+      toast.success(`${blobs.length} documentos combinados`);
+    } catch (e: any) {
+      toast.error(e.message || 'Error generando PDFs');
+    } finally {
+      setBulkPrinting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedVentas.length === 0) return;
+    setBulkDeleting(true);
+    let ok = 0, fail = 0;
+    for (const v of selectedVentas) {
+      try { await deleteVenta.mutateAsync(v.id); ok++; } catch { fail++; }
+    }
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+    setSelected(new Set());
+    if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
+    if (fail > 0) toast.error(`${fail} no se pudieron eliminar`);
+  };
+
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
