@@ -693,6 +693,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
+      <Route path="/configuracion/homologacion" element={<HomologacionCatalogoPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
       {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
