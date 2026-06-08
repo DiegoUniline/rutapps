@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 /**
  * Bootstrap prefetch: on login, pre-warm React Query cache with all base catalogs
