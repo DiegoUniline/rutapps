@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { queueOperation } from '@/lib/syncQueue';
 import { getSyncConfig } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 /**
  * Hook that reads from IndexedDB first (instant), then from Supabase if online
