@@ -1,53 +1,25 @@
-# Fix: "Cuenta suspendida" falso en datos móviles
-
 ## Problema
 
-Distribuidora e Inversiones Salgado tiene en BD: `status='active'`, `acceso_bloqueado=false`, sin facturas pendientes. Sin embargo aparece "Cuenta suspendida" al usar datos móviles, mientras que en Wi-Fi funciona.
+PostgREST limita las consultas a 1,000 filas por defecto. El admin de GLOBAL TRADE LOGISTICS ve los 1,686 clientes porque usa `useClientesPaginated` (que ya pagina con `.range()`), pero los demás usuarios entran por la ruta móvil `/ruta/clientes`, donde las consultas no paginan y se cortan en 1,000.
 
-## Causa raíz
+## Archivos a modificar
 
-En `src/hooks/useSubscription.ts` (líneas 60-71), cuando `supabase.from('subscriptions').select(...)` devuelve un error de red (común en conexiones móviles inestables), Supabase retorna `{ data: null, error: PostgrestError }` **sin lanzar excepción**. El código actual hace:
+1. **`src/hooks/useOfflineData.ts`** — `useOfflineQuery` ejecuta `await query` sin paginar. Reemplazar por `fetchAllPages` para traer todas las filas en bloques de 1,000.
 
-```ts
-if (error || !sub) {
-  const state = { ..., isBlocked: !sub, ... }; // → true
-  writeCache(userId, empresaId, state);        // ← persiste el bloqueo falso
-  return state;
-}
-```
+2. **`src/hooks/useBootstrapPrefetch.ts`** — El prefetch de `clientes` con `status='activo'` no pagina. Reemplazar por `fetchAllPages` con los mismos filtros (`empresa_id`, `status='activo'`, `order('orden')`).
 
-Esto provoca dos efectos:
-1. Marca la cuenta como bloqueada en respuesta a un fallo de red.
-2. Guarda ese estado erróneo en `localStorage`, así que persiste incluso al reconectar.
+3. **`src/pages/ruta/RutaClientes.tsx`** — La rama de super admin (`saRes`) no pagina. Aplicar `fetchAllPages` con `.eq('empresa_id', ...).eq('status','activo').order('orden')`.
 
-El `catch` externo solo cubre excepciones lanzadas (ej. `TypeError: failed to fetch`), no errores devueltos por Supabase.
-
-El mismo patrón existe en `useFacturaPendiente.ts`: si la query falla, podría llegar a evaluar como factura pendiente vencida según el contexto.
-
-## Cambios propuestos
-
-### 1. `src/hooks/useSubscription.ts`
-
-- Distinguir entre "no hay suscripción" (sub legítimamente null sin error) y "no se pudo consultar" (error de red).
-- Si hay `error`, tratarlo como fallo de red: NO bloquear, NO sobrescribir cache. Usar cache previo si existe; de lo contrario devolver estado offline neutro (`isBlocked: false`).
-- Solo marcar `isBlocked: true` cuando la consulta fue exitosa y realmente no existe fila de subscription para la empresa (caso real de empresa sin suscripción).
-- Asegurar que cualquier branch que devuelva por error de red NO llame a `writeCache` para no contaminar el cache con un estado de bloqueo falso.
-
-### 2. `src/hooks/useFacturaPendiente.ts`
-
-- Capturar errores de las dos consultas paralelas. Si alguna falla, retornar `EMPTY` (no bloquear). Esto evita que un fallo intermitente de red dispare `shouldBlock=true`.
-
-### 3. Limpieza preventiva del cache contaminado
-
-En `src/App.tsx` (ya existe un effect en líneas 233-245 que limpia el cache cuando `subscription.status === 'active'`), confirmar que también se ejecute después del fix para borrar estados `isBlocked: true` cacheados durante el bug.
-
-## Resultado esperado
-
-- Salgado y cualquier empresa activa siguen entrando normalmente sin importar Wi-Fi o datos móviles.
-- Ante una red inestable, la app muestra carga / usa último estado conocido en lugar de bloquear.
-- Empresas realmente suspendidas (`acceso_bloqueado=true` o `status` cancelado) siguen siendo bloqueadas correctamente porque ese branch requiere respuesta exitosa del servidor.
+4. **`src/version.ts`** — bump a 1.0.119.
 
 ## Fuera de alcance
 
-- Lógica de daily-billing, periodo de gracia, generación de facturas.
-- Cambios en RLS o backend (el problema es 100% cliente).
+- RLS (ya permite ver compañeros del mismo `empresa_id`).
+- `useClientesPaginated` (ya funciona para admin).
+- `useDataVisibility` (filtra después del fetch, no afecta el total).
+
+## Validación
+
+- Usuario no-admin de GLOBAL TRADE LOGISTICS en `/ruta/clientes` debe ver 1,686 clientes activos.
+- Selector de clientes en POS móvil y caches offline deben reflejar el total completo.
+- Admin sigue viendo 1,686 sin cambios.
