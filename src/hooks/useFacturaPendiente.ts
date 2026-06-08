@@ -34,20 +34,31 @@ export function useFacturaPendiente(): FacturaPendienteState {
     queryKey: ['factura-pendiente', empresa?.id],
     queryFn: async (): Promise<Omit<FacturaPendienteState, 'loading'>> => {
       if (!empresa?.id) return EMPTY;
-      const [{ data: sub }, { data: facturas }] = await Promise.all([
-        supabase
-          .from('subscriptions')
-          .select('status, current_period_end, fecha_vencimiento, es_manual, acceso_bloqueado')
-          .eq('empresa_id', empresa.id)
-          .maybeSingle(),
-        supabase
-          .from('facturas')
-          .select('id, numero_factura, total, fecha_vencimiento, fecha_emision, estado, periodo_fin')
-          .eq('empresa_id', empresa.id)
-          .in('estado', ['pendiente', 'procesando', 'past_due'])
-          .order('fecha_emision', { ascending: true })
-          .limit(10),
-      ]);
+      let sub: any = null;
+      let facturas: any[] | null = null;
+      try {
+        const [subRes, facRes] = await Promise.all([
+          supabase
+            .from('subscriptions')
+            .select('status, current_period_end, fecha_vencimiento, es_manual, acceso_bloqueado')
+            .eq('empresa_id', empresa.id)
+            .maybeSingle(),
+          supabase
+            .from('facturas')
+            .select('id, numero_factura, total, fecha_vencimiento, fecha_emision, estado, periodo_fin')
+            .eq('empresa_id', empresa.id)
+            .in('estado', ['pendiente', 'procesando', 'past_due'])
+            .order('fecha_emision', { ascending: true })
+            .limit(10),
+        ]);
+        // Si alguna query falló, NO bloquear (red inestable, p.ej. datos móviles).
+        if (subRes.error || facRes.error) return EMPTY;
+        sub = subRes.data;
+        facturas = facRes.data;
+      } catch {
+        return EMPTY;
+      }
+
 
       // Solo las suscripciones MANUALES pueden ocultar facturas pendientes
       // cuya cobertura ya está garantizada por el admin. Para suscripciones
