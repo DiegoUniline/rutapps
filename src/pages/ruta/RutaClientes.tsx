@@ -12,6 +12,7 @@ import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
