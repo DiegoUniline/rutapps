@@ -64,8 +64,19 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       .eq('empresa_id', empresaId)
       .maybeSingle();
 
-    if (error || !sub) {
-      const state = { status: null, daysLeft: null, isBlocked: !sub, isSuperAdmin, maxUsuarios: 0 };
+    // Network/server error: NEVER block on a failed query. Prefer cached state;
+    // otherwise return a neutral offline state. Do NOT overwrite cache with a
+    // bogus blocked=true entry (this was the root cause of false "Cuenta
+    // suspendida" on unstable mobile connections).
+    if (error) {
+      const cached = readCache(userId, empresaId);
+      if (cached) return cached;
+      return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: 3 };
+    }
+
+    // Legit "no subscription row" — only here we mark blocked (real signup gap).
+    if (!sub) {
+      const state = { status: null, daysLeft: null, isBlocked: !isSuperAdmin, isSuperAdmin, maxUsuarios: 0 };
       writeCache(userId, empresaId, state);
       return state;
     }
