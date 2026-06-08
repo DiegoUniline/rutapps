@@ -82,31 +82,32 @@ export function useOfflineQuery<T = any>(
     // 3. If connected, fetch fresh data from server and update cache
     if (await hasRealConnection()) {
       try {
-        let query = (supabase.from as any)(table).select(options?.select || '*');
+        const serverData = await fetchAllPages((from, to) => {
+          let query = (supabase.from as any)(table).select(options?.select || '*');
 
-        if (filters) {
-          Object.entries(filters).forEach(([key, value]) => {
-            if (value === undefined || value === null) return;
-            if (Array.isArray(value)) {
-              query = query.in(key, value);
-            } else {
-              query = query.eq(key, value);
-            }
-          });
-        }
-
-        if (options?.orderBy) {
-          query = query.order(options.orderBy, { ascending: options.ascending !== false });
-        }
-
-        const { data: serverData, error } = await query;
-        if (!error && serverData) {
-          setData(serverData as T[]);
-
-          // Update local cache
-          if (localTable && serverData.length > 0) {
-            await localTable.bulkPut(serverData);
+          if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+              if (value === undefined || value === null) return;
+              if (Array.isArray(value)) {
+                query = query.in(key, value);
+              } else {
+                query = query.eq(key, value);
+              }
+            });
           }
+
+          if (options?.orderBy) {
+            query = query.order(options.orderBy, { ascending: options.ascending !== false });
+          }
+
+          return query.range(from, to);
+        });
+
+        setData(serverData as T[]);
+
+        // Update local cache
+        if (localTable && serverData.length > 0) {
+          await localTable.bulkPut(serverData);
         }
       } catch (err) {
         console.warn('Server fetch failed, using cached data:', err);
