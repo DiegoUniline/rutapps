@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 /**
  * Bootstrap prefetch: on login, pre-warm React Query cache with all base catalogs
@@ -36,10 +37,13 @@ export function useBootstrapPrefetch() {
         queryKey: ['clientes', '', 'activo'],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('clientes')
-            .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
-            .eq('status', 'activo')
-            .order('orden', { ascending: true });
+          const data = await fetchAllPages((from, to) =>
+            supabase.from('clientes')
+              .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
+              .eq('status', 'activo')
+              .order('orden', { ascending: true })
+              .range(from, to)
+          );
           return data ?? [];
         },
       }),

@@ -12,6 +12,7 @@ import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
@@ -155,9 +156,10 @@ export default function RutaClientes() {
     queryKey: ['sa-ruta-clientes', empresa?.id],
     enabled: !!empresa?.id && isSAOverride,
     queryFn: async () => {
-      const { data, error } = await supabase.from('clientes')
-        .select('*').eq('empresa_id', empresa!.id).eq('status', 'activo').order('orden');
-      if (error) throw error;
+      const data = await fetchAllPages((from, to) =>
+        supabase.from('clientes')
+          .select('*').eq('empresa_id', empresa!.id).eq('status', 'activo').order('orden').range(from, to)
+      );
       return data ?? [];
     },
   });
