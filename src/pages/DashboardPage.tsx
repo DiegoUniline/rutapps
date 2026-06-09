@@ -1080,8 +1080,8 @@ export default function DashboardPage() {
 
         {/* === MES VS MES === */}
         <TabsContent value="comparativo" className="mt-4 space-y-4">
-          <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
-          <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
+          <VentasPorMesTable data={ventasPorMes ?? []} money={money} cSym={cSym} />
+          <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} cSym={cSym} />
         </TabsContent>
       </Tabs>
 
