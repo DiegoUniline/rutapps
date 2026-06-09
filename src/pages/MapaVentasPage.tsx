@@ -30,15 +30,8 @@ export default function MapaVentasPage() {
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
-  const [optimizing, setOptimizing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [routeResult, setRouteResult] = useState<{
-    orderedIds: string[];
-    polyline: string | null;
-    distance_meters: number;
-    duration: string;
-  } | null>(null);
   const mapRef = useRef<MapRef | null>(null);
+
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -106,14 +99,6 @@ export default function MapaVentasPage() {
     return result;
   }, [entregasData]);
 
-  const uniqueWaypoints = useMemo(() => {
-    return entregasConGps.map((e: any) => ({
-      id: e.id,
-      lat: e.clientes.gps_lat,
-      lng: e.clientes.gps_lng,
-    }));
-  }, [entregasConGps]);
-
   const stats = useMemo(() => {
     const all = entregasData ?? [];
     return {
@@ -140,83 +125,46 @@ export default function MapaVentasPage() {
     mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
   }, [entregasConGps, originPoint]);
 
+  // Polilínea recta uniendo los puntos en el orden ya definido por el cliente.
+  // Si hay punto de partida, arranca desde ahí. Sin llamadas a APIs externas → sin costo.
   const polylineGeoJson = useMemo(() => {
-    if (!routeResult?.polyline) return null;
-    const coords = decodePolyline(routeResult.polyline);
+    if (entregasConGps.length < 1) return null;
+    const coords: [number, number][] = [];
+    if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
+    entregasConGps.forEach((e: any) => coords.push([e._displayLng, e._displayLat]));
+    if (coords.length < 2) return null;
     return {
       type: 'Feature' as const,
       geometry: { type: 'LineString' as const, coordinates: coords },
       properties: {},
     };
-  }, [routeResult]);
+  }, [entregasConGps, originPoint]);
 
-  const orderedItems = useMemo(() => {
-    if (!routeResult) return null;
-    return routeResult.orderedIds.map(id => {
-      const entrega = entregasConGps.find((e: any) => e.id === id);
-      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega._displayLat, lng: entrega._displayLng } : null;
-    }).filter(Boolean);
-  }, [routeResult, entregasConGps]);
+  // Distancia total en línea recta (Haversine) — referencial, sin costo
+  const totalKm = useMemo(() => {
+    if (!polylineGeoJson) return 0;
+    const coords = polylineGeoJson.geometry.coordinates as [number, number][];
+    const R = 6371;
+    let sum = 0;
+    for (let i = 1; i < coords.length; i++) {
+      const [lng1, lat1] = coords[i - 1];
+      const [lng2, lat2] = coords[i];
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLng = ((lng2 - lng1) * Math.PI) / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      sum += 2 * R * Math.asin(Math.sqrt(a));
+    }
+    return sum;
+  }, [polylineGeoJson]);
 
   const handleMapClick = useCallback((e: any) => {
     if (settingOrigin && e.lngLat) {
       setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       setSettingOrigin(false);
-      setRouteResult(null);
       toast.success('Punto de partida establecido');
     }
   }, [settingOrigin]);
 
-  const saveEntregaOrder = async (orderedIds: string[]) => {
-    setSaving(true);
-    try {
-      const updates = orderedIds.map((id: string, idx: number) =>
-        supabase.from('entregas').update({ orden_entrega: idx + 1 } as any).eq('id', id)
-      );
-      await Promise.all(updates);
-      toast.success('Orden de entregas guardado');
-    } catch (err: any) {
-      toast.error('Error al guardar orden');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleOptimize = async () => {
-    if (!originPoint) { toast.error('Primero establece un punto de partida'); return; }
-    if (uniqueWaypoints.length < 2) { toast.error('Se necesitan al menos 2 entregas con GPS'); return; }
-    setOptimizing(true);
-    setRouteResult(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) { toast.error('Sesión no válida'); return; }
-
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ origin: originPoint, waypoints: uniqueWaypoints }),
-      });
-
-      const result = await res.json();
-      if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
-
-      setRouteResult({
-        orderedIds: result.optimized_order,
-        polyline: result.polyline,
-        distance_meters: result.distance_meters,
-        duration: result.duration,
-      });
-
-      await saveEntregaOrder(result.optimized_order);
-      toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
-    } catch (err: any) {
-      toast.error(err.message || 'Error al optimizar ruta');
-    } finally {
-      setOptimizing(false);
-    }
-  };
 
   const formatDuration = (d?: string) => {
     if (!d) return '';
