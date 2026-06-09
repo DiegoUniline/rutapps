@@ -904,18 +904,18 @@ export default function DashboardPage() {
         <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
       </div>
 
-      <Tabs defaultValue="resumen" className="mt-5 flex flex-row gap-4">
-        <TabsList className="flex flex-col h-auto w-48 bg-accent/50 p-1 rounded-lg gap-1 shrink-0 self-start">
-          <TabsTrigger value="resumen" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+      <Tabs defaultValue="resumen" className="mt-5">
+        <TabsList className="flex flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
+          <TabsTrigger value="resumen" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <BarChart3 className="h-3.5 w-3.5 mr-2" /> Resumen
           </TabsTrigger>
-          <TabsTrigger value="rankings" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="rankings" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <TrendingUp className="h-3.5 w-3.5 mr-2" /> Productos y Clientes
           </TabsTrigger>
-          <TabsTrigger value="evolucion" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="evolucion" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Activity className="h-3.5 w-3.5 mr-2" /> Evolución mensual
           </TabsTrigger>
-          <TabsTrigger value="comparativo" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="comparativo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <ArrowUpRight className="h-3.5 w-3.5 mr-2" /> Mes vs Mes
           </TabsTrigger>
         </TabsList>
