@@ -27,6 +27,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 
 const PRESETS = [
@@ -182,6 +183,61 @@ function SectionTitle({ children, icon: Icon }: { children: string; icon: React.
 }
 
 // ============ Rankings: Top/Bottom productos & clientes con selector N ============
+function buildParetoInsight(sortedDesc: { nombre: string; total: number }[], totalAll: number, label: string) {
+  if (totalAll <= 0 || sortedDesc.length === 0) return null;
+  let acc = 0;
+  let count50 = 0;
+  for (const it of sortedDesc) {
+    acc += it.total;
+    count50 += 1;
+    if (acc / totalAll >= 0.5) break;
+  }
+  const top1Pct = (sortedDesc[0].total / totalAll) * 100;
+  return { count50, pct50: (acc / totalAll) * 100, top1Pct, top1Name: sortedDesc[0].nombre, totalAll, label };
+}
+
+function RankingRow({
+  pos, nombre, sub, total, pct, accPct, money, tone,
+}: {
+  pos: number; nombre: string; sub?: string; total: number; pct: number; accPct: number;
+  money: (n: number) => string; tone: 'top' | 'bottom';
+}) {
+  return (
+    <div className="flex items-center gap-2 py-1.5 border-b border-border/30 last:border-0">
+      <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+        tone === 'top' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>{pos}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-medium text-foreground truncate">{nombre}</div>
+        {sub && <div className="text-[10px] text-muted-foreground">{sub}</div>}
+        <div className="mt-1 h-1 bg-accent rounded-full overflow-hidden">
+          <div className={cn("h-full rounded-full", tone === 'top' ? 'bg-primary' : 'bg-destructive')}
+            style={{ width: `${Math.min(pct, 100)}%` }} />
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <div className="text-xs font-semibold text-foreground tabular-nums">{money(total)}</div>
+        <div className="text-[10px] text-muted-foreground tabular-nums">
+          <span className="font-semibold text-foreground/80">{pct.toFixed(1)}%</span>
+          <span className="opacity-60"> · acum {accPct.toFixed(0)}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ParetoBanner({ insight, kind }: { insight: ReturnType<typeof buildParetoInsight>; kind: 'productos' | 'clientes' }) {
+  if (!insight) return null;
+  return (
+    <div className="rounded-lg bg-primary/[0.06] border border-primary/20 px-3 py-2 mb-3 text-[11px] leading-snug text-foreground">
+      <strong className="text-primary">{insight.count50} {kind === 'productos' ? 'producto' : 'cliente'}{insight.count50 === 1 ? '' : 's'}</strong>
+      {' '}representa{insight.count50 === 1 ? '' : 'n'} el <strong>{insight.pct50.toFixed(0)}%</strong> de tus ventas.
+      {insight.top1Pct >= 15 && (
+        <> Solo <strong>{insight.top1Name}</strong> aporta el <strong>{insight.top1Pct.toFixed(0)}%</strong>.</>
+      )}
+    </div>
+  );
+}
+
 function RankingsSection({
   topProductos,
   topClientesAll,
@@ -191,27 +247,48 @@ function RankingsSection({
   topClientesAll: { id: string; nombre: string; total: number; count: number }[];
   money: (n: number) => string;
 }) {
-  const [nProd, setNProd] = useState(5);
+  const [nProd, setNProd] = useState(10);
   const [ordProd, setOrdProd] = useState<'top' | 'bottom'>('top');
-  const [nCli, setNCli] = useState(5);
+  const [nCli, setNCli] = useState(10);
   const [ordCli, setOrdCli] = useState<'top' | 'bottom'>('top');
 
-  const prodsSorted = useMemo(() => {
-    const arr = topProductos.filter(p => p.total > 0);
-    return ordProd === 'top'
-      ? [...arr].sort((a, b) => b.total - a.total).slice(0, nProd)
-      : [...arr].sort((a, b) => a.total - b.total).slice(0, nProd);
-  }, [topProductos, nProd, ordProd]);
+  const prodActive = topProductos.filter(p => p.total > 0);
+  const cliActive = topClientesAll.filter(c => c.total > 0);
+  const totalProd = prodActive.reduce((s, p) => s + p.total, 0);
+  const totalCli = cliActive.reduce((s, c) => s + c.total, 0);
 
-  const cliSorted = useMemo(() => {
-    const arr = topClientesAll.filter(c => c.total > 0);
-    return ordCli === 'top'
-      ? [...arr].sort((a, b) => b.total - a.total).slice(0, nCli)
-      : [...arr].sort((a, b) => a.total - b.total).slice(0, nCli);
-  }, [topClientesAll, nCli, ordCli]);
+  const prodSortedFull = useMemo(
+    () => [...prodActive].sort((a, b) => b.total - a.total),
+    [prodActive],
+  );
+  const cliSortedFull = useMemo(
+    () => [...cliActive].sort((a, b) => b.total - a.total),
+    [cliActive],
+  );
+  const paretoProd = useMemo(() => buildParetoInsight(prodSortedFull, totalProd, 'productos'), [prodSortedFull, totalProd]);
+  const paretoCli = useMemo(() => buildParetoInsight(cliSortedFull, totalCli, 'clientes'), [cliSortedFull, totalCli]);
+
+  // Cumulative is always computed from the descending order (so even "Menos" view shows real ranking position)
+  const prodWithCum = useMemo(() => {
+    let acc = 0;
+    return prodSortedFull.map(p => {
+      acc += p.total;
+      return { ...p, pct: totalProd > 0 ? (p.total / totalProd) * 100 : 0, accPct: totalProd > 0 ? (acc / totalProd) * 100 : 0 };
+    });
+  }, [prodSortedFull, totalProd]);
+  const cliWithCum = useMemo(() => {
+    let acc = 0;
+    return cliSortedFull.map(c => {
+      acc += c.total;
+      return { ...c, pct: totalCli > 0 ? (c.total / totalCli) * 100 : 0, accPct: totalCli > 0 ? (acc / totalCli) * 100 : 0 };
+    });
+  }, [cliSortedFull, totalCli]);
+
+  const prodsView = ordProd === 'top' ? prodWithCum.slice(0, nProd) : [...prodWithCum].reverse().slice(0, nProd);
+  const cliView = ordCli === 'top' ? cliWithCum.slice(0, nCli) : [...cliWithCum].reverse().slice(0, nCli);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Productos */}
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -229,20 +306,29 @@ function RankingsSection({
             </select>
           </div>
         </div>
-        <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
-          {prodsSorted.map((p, i) => (
-            <div key={p.id} className="flex items-center gap-2 py-1 border-b border-border/30 last:border-0">
-              <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                ordProd === 'top' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
-                <div className="text-[10px] text-muted-foreground">{fmtNum(p.qty)} uds{p.codigo ? ` · ${p.codigo}` : ''}</div>
-              </div>
-              <span className="text-xs font-semibold text-foreground tabular-nums">{money(p.total)}</span>
-            </div>
+        {ordProd === 'top' && <ParetoBanner insight={paretoProd} kind="productos" />}
+        <div className="space-y-0 max-h-[460px] overflow-y-auto pr-1">
+          {prodsView.map((p, i) => (
+            <RankingRow
+              key={p.id}
+              pos={ordProd === 'top' ? i + 1 : prodWithCum.length - i}
+              nombre={p.nombre}
+              sub={`${fmtNum(p.qty)} uds${p.codigo ? ` · ${p.codigo}` : ''}`}
+              total={p.total}
+              pct={p.pct}
+              accPct={p.accPct}
+              money={money}
+              tone={ordProd}
+            />
           ))}
-          {prodsSorted.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
+          {prodsView.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
         </div>
+        {totalProd > 0 && (
+          <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground">Total ventas (productos)</span>
+            <span className="font-bold tabular-nums">{money(totalProd)}</span>
+          </div>
+        )}
       </div>
 
       {/* Clientes */}
@@ -262,20 +348,29 @@ function RankingsSection({
             </select>
           </div>
         </div>
-        <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
-          {cliSorted.map((c, i) => (
-            <div key={c.id} className="flex items-center gap-2 py-1 border-b border-border/30 last:border-0">
-              <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                ordCli === 'top' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                <div className="text-[10px] text-muted-foreground">{c.count} ventas</div>
-              </div>
-              <span className="text-xs font-semibold text-foreground tabular-nums">{money(c.total)}</span>
-            </div>
+        {ordCli === 'top' && <ParetoBanner insight={paretoCli} kind="clientes" />}
+        <div className="space-y-0 max-h-[460px] overflow-y-auto pr-1">
+          {cliView.map((c, i) => (
+            <RankingRow
+              key={c.id}
+              pos={ordCli === 'top' ? i + 1 : cliWithCum.length - i}
+              nombre={c.nombre}
+              sub={`${c.count} venta${c.count === 1 ? '' : 's'}`}
+              total={c.total}
+              pct={c.pct}
+              accPct={c.accPct}
+              money={money}
+              tone={ordCli}
+            />
           ))}
-          {cliSorted.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
+          {cliView.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
         </div>
+        {totalCli > 0 && (
+          <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground">Total ventas (clientes)</span>
+            <span className="font-bold tabular-nums">{money(totalCli)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -681,192 +776,209 @@ export default function DashboardPage() {
         <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-5">
-        {/* Sales trend */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Tendencia de ventas</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={ventasPorDia ?? []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={v => { try { return format(new Date(v + 'T12:00:00'), 'd MMM', { locale: es }); } catch { return v; }}} />
-              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                formatter={(v: number) => [money(v), 'Total']}
-                labelFormatter={v => { try { return format(new Date(v + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es }); } catch { return v; }}}
-              />
-              <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <Tabs defaultValue="resumen" className="mt-5">
+        <TabsList className="bg-accent/50 p-1 rounded-lg flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="resumen" className="text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm px-3 py-1.5">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Resumen
+          </TabsTrigger>
+          <TabsTrigger value="rankings" className="text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm px-3 py-1.5">
+            <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Productos y Clientes
+          </TabsTrigger>
+          <TabsTrigger value="evolucion" className="text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm px-3 py-1.5">
+            <Activity className="h-3.5 w-3.5 mr-1.5" /> Evolución mensual
+          </TabsTrigger>
+          <TabsTrigger value="comparativo" className="text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm px-3 py-1.5">
+            <ArrowUpRight className="h-3.5 w-3.5 mr-1.5" /> Mes vs Mes
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Sales by vendedor */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Ventas por vendedor</h3>
-          {(ventasPorVendedor ?? []).length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={ventasPorVendedor ?? []} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90}
-                  label={({ nombre, percent }) => `${(nombre as string).slice(0, 10)} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false} fontSize={10}>
-                  {(ventasPorVendedor ?? []).map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => money(v)} contentStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[260px] flex items-center justify-center text-xs text-muted-foreground">Sin datos</div>
+        {/* === RESUMEN === */}
+        <TabsContent value="resumen" className="mt-4 space-y-4">
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Sales trend */}
+            <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Tendencia de ventas</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={ventasPorDia ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={v => { try { return format(new Date(v + 'T12:00:00'), 'd MMM', { locale: es }); } catch { return v; }}} />
+                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => [money(v), 'Total']}
+                    labelFormatter={v => { try { return format(new Date(v + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es }); } catch { return v; }}}
+                  />
+                  <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Sales by vendedor */}
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Ventas por vendedor</h3>
+              {(ventasPorVendedor ?? []).length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={ventasPorVendedor ?? []} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90}
+                      label={({ nombre, percent }) => `${(nombre as string).slice(0, 10)} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false} fontSize={10}>
+                      {(ventasPorVendedor ?? []).map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => money(v)} contentStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-xs text-muted-foreground">Sin datos</div>
+              )}
+            </div>
+          </div>
+
+          {/* Devoluciones charts */}
+          {devStats.count > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card border border-border rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por motivo
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={devStats.motivoChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false} fontSize={10}>
+                      {devStats.motivoChart.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por tipo
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={devStats.tipoChart} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={80} />
+                    <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="value" fill="hsl(var(--chart-5))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           )}
-        </div>
-      </div>
 
-      {/* Devoluciones charts */}
-      {devStats.count > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {/* Low stock alerts */}
           <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por motivo
-            </h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={devStats.motivoChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false} fontSize={10}>
-                  {devStats.motivoChart.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por tipo
-            </h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={devStats.tipoChart} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={80} />
-                <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="value" fill="hsl(var(--chart-5))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {/* (Bloque "Clientes en riesgo" reemplazado por la banda "HOY" arriba) */}
-
-      {/* Bottom row: Top/Bottom products, Top/Bottom clients, Low stock */}
-      <RankingsSection
-        topProductos={topProductos ?? []}
-        topClientesAll={topClientsAll}
-        money={money}
-      />
-
-      {/* Low stock alerts */}
-      <div className="grid grid-cols-1 mt-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <SectionTitle icon={AlertTriangle}>
-            {`Alertas de stock (${kpis.productosBajoMinimo})`}
-          </SectionTitle>
-          {lowStockProducts.length > 0 ? (
-            <div className="space-y-2">
-              {lowStockProducts.map(p => (
-                <div key={p.id} className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full shrink-0",
-                    Number(p.cantidad ?? 0) <= 0 ? "bg-destructive" : "bg-[hsl(var(--warning))]"
-                  )} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
-                    <div className="text-[10px] text-muted-foreground">{p.codigo}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className={cn("text-xs font-bold", Number(p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-[hsl(var(--warning))]")}>
-                      {fmtNum(Number(p.cantidad ?? 0))}
+            <SectionTitle icon={AlertTriangle}>
+              {`Alertas de stock (${kpis.productosBajoMinimo})`}
+            </SectionTitle>
+            {lowStockProducts.length > 0 ? (
+              <div className="space-y-2">
+                {lowStockProducts.map(p => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <div className={cn("w-2 h-2 rounded-full shrink-0",
+                      Number(p.cantidad ?? 0) <= 0 ? "bg-destructive" : "bg-[hsl(var(--warning))]"
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">{p.codigo}</div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">mín: {fmtNum(Number(p.min ?? 0))}</div>
+                    <div className="text-right">
+                      <div className={cn("text-xs font-bold", Number(p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-[hsl(var(--warning))]")}>
+                        {fmtNum(Number(p.cantidad ?? 0))}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">mín: {fmtNum(Number(p.min ?? 0))}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 text-center">
+                <p className="text-xs text-muted-foreground">Sin productos bajo mínimo</p>
+              </div>
+            )}
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+              <span className="text-[11px] text-muted-foreground">Valor del inventario</span>
+              <span className="text-sm font-bold text-foreground">{money(kpis.valorInventario)}</span>
             </div>
-          ) : (
-            <div className="py-6 text-center">
-              <p className="text-xs text-muted-foreground">Sin productos bajo mínimo</p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[11px] text-muted-foreground">Productos activos</span>
+              <span className="text-sm font-semibold text-foreground">{kpis.productosTotal}</span>
+            </div>
+          </div>
+
+          {/* Vendedor detail table */}
+          {!vendedorId && (ventasPorVendedor ?? []).length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <SectionTitle icon={Users}>Detalle por vendedor</SectionTitle>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 text-muted-foreground font-medium">Vendedor</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Ventas</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Total</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Ticket prom.</th>
+                      <th className="text-left py-2 text-muted-foreground font-medium pl-4">Participación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(ventasPorVendedor ?? []).map(v => {
+                      const pct = kpis.totalVentas > 0 ? (v.total / kpis.totalVentas) * 100 : 0;
+                      return (
+                        <tr key={v.id} className="border-b border-border/30 hover:bg-accent/30">
+                          <td className="py-2 font-medium text-foreground">{v.nombre}</td>
+                          <td className="py-2 text-right text-muted-foreground">{v.count}</td>
+                          <td className="py-2 text-right font-semibold text-foreground">{money(v.total)}</td>
+                          <td className="py-2 text-right text-muted-foreground">{money(v.count > 0 ? v.total / v.count : 0)}</td>
+                          <td className="py-2 pl-4">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
+        </TabsContent>
 
-          {/* Inventory value */}
-          <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Valor del inventario</span>
-            <span className="text-sm font-bold text-foreground">{money(kpis.valorInventario)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[11px] text-muted-foreground">Productos activos</span>
-            <span className="text-sm font-semibold text-foreground">{kpis.productosTotal}</span>
-          </div>
-        </div>
-      </div>
+        {/* === RANKINGS === */}
+        <TabsContent value="rankings" className="mt-4">
+          <RankingsSection
+            topProductos={topProductos ?? []}
+            topClientesAll={topClientsAll}
+            money={money}
+          />
+        </TabsContent>
 
-      {/* === Evolución mensual con selección múltiple === */}
-      <EvolucionMensualSection evolucion={evolucion} money={money} cSym={cSym} />
+        {/* === EVOLUCIÓN === */}
+        <TabsContent value="evolucion" className="mt-4">
+          <EvolucionMensualSection evolucion={evolucion} money={money} cSym={cSym} />
+        </TabsContent>
 
-      {/* === Ventas por mes con crecimiento === */}
-      <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
+        {/* === MES VS MES === */}
+        <TabsContent value="comparativo" className="mt-4 space-y-4">
+          <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
+          <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
+        </TabsContent>
+      </Tabs>
 
-      {/* === Ventas por usuario: mes actual vs mes anterior === */}
-      <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
-
-
-
-      {/* Vendedor detail table */}
-      {!vendedorId && (ventasPorVendedor ?? []).length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4 mt-4">
-          <SectionTitle icon={Users}>Detalle por vendedor</SectionTitle>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 text-muted-foreground font-medium">Vendedor</th>
-                  <th className="text-right py-2 text-muted-foreground font-medium">Ventas</th>
-                  <th className="text-right py-2 text-muted-foreground font-medium">Total</th>
-                  <th className="text-right py-2 text-muted-foreground font-medium">Ticket prom.</th>
-                  <th className="text-left py-2 text-muted-foreground font-medium pl-4">Participación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(ventasPorVendedor ?? []).map(v => {
-                  const pct = kpis.totalVentas > 0 ? (v.total / kpis.totalVentas) * 100 : 0;
-                  return (
-                    <tr key={v.id} className="border-b border-border/30 hover:bg-accent/30">
-                      <td className="py-2 font-medium text-foreground">{v.nombre}</td>
-                      <td className="py-2 text-right text-muted-foreground">{v.count}</td>
-                      <td className="py-2 text-right font-semibold text-foreground">{money(v.total)}</td>
-                      <td className="py-2 text-right text-muted-foreground">{money(v.count > 0 ? v.total / v.count : 0)}</td>
-                      <td className="py-2 pl-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
