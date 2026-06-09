@@ -986,7 +986,7 @@ export default function MapaClientesPage() {
 
       {/* Map area */}
       <div className="flex-1 relative">
-        {(isLoading || !isLoaded) && (
+        {isLoading && (
           <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
