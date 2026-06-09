@@ -1059,160 +1059,196 @@ export default function MapaClientesPage() {
           )}
         </div>
 
-        {isLoaded && (
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={withGps.length > 0 ? { lat: withGps[0].gps_lat, lng: withGps[0].gps_lng } : defaultCenter}
-            zoom={6}
-            onLoad={onMapLoad}
-            onClick={handleMapClick}
-            options={{
-              styles: [
-                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-              ],
-              mapTypeControl: false,
-              streetViewControl: false,
-              fullscreenControl: true,
-              draggableCursor: settingOrigin ? 'crosshair' : undefined,
-            }}
-          >
-            {/* My current location (blue dot) */}
-            <MyLocationMarker />
-            {/* Live seller positions */}
-            <LiveVendedoresLayer />
+        <MapGL
+          ref={mapRef}
+          mapStyle="https://tiles.openfreemap.org/styles/bright"
+          initialViewState={{
+            longitude: withGps.length > 0 ? Number(withGps[0].gps_lng) : defaultCenter.lng,
+            latitude: withGps.length > 0 ? Number(withGps[0].gps_lat) : defaultCenter.lat,
+            zoom: 6,
+          }}
+          style={{ width: '100%', height: '100%', cursor: settingOrigin ? 'crosshair' : undefined }}
+          onClick={handleMapClick}
+          attributionControl={{ compact: true }}
+        >
+          <NavigationControl position="top-right" showCompass={false} />
 
-            {/* Origin */}
-            {originPoint && (
-              <Marker
-                position={originPoint}
-                icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: '#059669', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3, scale: 14 }}
-                label={{ text: '▶', color: '#fff', fontSize: '10px', fontWeight: '700' }}
+          {/* My current location (blue dot) */}
+          <MyLocationMarkerML />
+          {/* Live seller positions */}
+          <LiveVendedoresLayerML />
+
+          {/* Origin */}
+          {originPoint && (
+            <Marker longitude={originPoint.lng} latitude={originPoint.lat} anchor="center">
+              <div
+                className="rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
+                style={{ width: 30, height: 30, backgroundColor: '#059669', border: '3px solid #fff' }}
+                title={originPoint.label ?? 'Origen'}
+              >▶</div>
+            </Marker>
+          )}
+
+          {/* Route polyline (single-route flow) */}
+          {polylinePoints && !multiResults && (
+            <Source
+              id="single-route"
+              type="geojson"
+              data={{
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: polylinePoints },
+              }}
+            >
+              <Layer
+                id="single-route-casing"
+                type="line"
+                paint={{ 'line-color': '#ffffff', 'line-width': 7, 'line-opacity': 0.7 }}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
               />
-            )}
-
-            {/* Route polyline (single-route flow) */}
-            {polylinePoints && !multiResults && (
-              <Polyline path={polylinePoints} options={{ strokeColor: 'hsl(230, 55%, 52%)', strokeWeight: 4, strokeOpacity: 0.8 }} />
-            )}
-
-            {/* Multi-route overlay (polylines + numbered stops + per-route origin) */}
-            {multiResults && (
-              <MultiRouteOverlay
-                results={multiResults}
-                clientesById={clientesById}
-                visibility={routeVisibility}
+              <Layer
+                id="single-route-line"
+                type="line"
+                paint={{ 'line-color': 'hsl(230, 55%, 52%)', 'line-width': 4, 'line-opacity': 0.9 }}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
               />
-            )}
+            </Source>
+          )}
 
-            {/* Markers with clustering when no route is active */}
-            {orderedClients ? (
-              orderedClients.map((c: any, idx: number) => (
+          {/* Multi-route overlay (polylines + numbered stops + per-route origin) */}
+          {multiResults && (
+            <MultiRouteOverlayML
+              results={multiResults}
+              clientesById={clientesById}
+              visibility={routeVisibility}
+            />
+          )}
+
+          {/* Markers when no route is active */}
+          {orderedClients ? (
+            orderedClients.map((c: any, idx: number) => {
+              const p = posOf(c);
+              return (
                 <Marker
                   key={c.id}
-                  position={posOf(c)}
-                  icon={createNumberedLabel()}
-                  label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
-                  onClick={() => setSelectedCliente(c)}
-                />
-              ))
-            ) : multiResults ? null : (
-              <>
-                {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => (
+                  longitude={Number(p.lng)}
+                  latitude={Number(p.lat)}
+                  anchor="center"
+                  onClick={(ev) => { ev.originalEvent.stopPropagation(); setSelectedCliente(c); }}
+                >
+                  <div
+                    className="rounded-full flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
+                    style={{
+                      width: 32, height: 32,
+                      backgroundColor: 'hsl(230, 55%, 52%)',
+                      border: '3px solid #fff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+                    }}
+                  >{idx + 1}</div>
+                </Marker>
+              );
+            })
+          ) : multiResults ? null : (
+            <>
+              {withGps.filter((c: any) => ordenRutaMap.has(c.id)).map((c: any) => {
+                const p = posOf(c);
+                return (
                   <Marker
                     key={c.id}
-                    position={posOf(c)}
-                    icon={{
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: getMarkerColor(c),
-                      fillOpacity: 1,
-                      strokeColor: '#fff',
-                      strokeWeight: 2.5,
-                      scale: 14,
-                      labelOrigin: new google.maps.Point(0, 0),
-                    }}
-                    label={{ text: `${ordenRutaMap.get(c.id)}`, color: '#fff', fontSize: '10px', fontWeight: '700' }}
-                    onClick={() => setSelectedCliente(c)}
-                    title={c.nombre}
-                  />
-                ))}
-                {/* Non-ordered markers stay clustered (skip clustering when spread is on so the user can see the separation) */}
-                {spreadOverlapping ? (
-                  withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
-                    <Marker
-                      key={c.id}
-                      position={posOf(c)}
-                      icon={getMarkerIcon(c)}
-                      onClick={() => setSelectedCliente(c)}
+                    longitude={Number(p.lng)}
+                    latitude={Number(p.lat)}
+                    anchor="center"
+                    onClick={(ev) => { ev.originalEvent.stopPropagation(); setSelectedCliente(c); }}
+                  >
+                    <div
+                      className="rounded-full flex items-center justify-center text-white text-[10px] font-bold cursor-pointer"
+                      style={{
+                        width: 28, height: 28,
+                        backgroundColor: getMarkerColor(c),
+                        border: '2.5px solid #fff',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      }}
+                      title={c.nombre}
+                    >{ordenRutaMap.get(c.id)}</div>
+                  </Marker>
+                );
+              })}
+              {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => {
+                const p = posOf(c);
+                const visited = ventasHoy?.has(c.id);
+                const size = getMarkerSize(c);
+                return (
+                  <Marker
+                    key={c.id}
+                    longitude={Number(p.lng)}
+                    latitude={Number(p.lat)}
+                    anchor="center"
+                    onClick={(ev) => { ev.originalEvent.stopPropagation(); setSelectedCliente(c); }}
+                  >
+                    <div
+                      className="rounded-full cursor-pointer"
+                      style={{
+                        width: size, height: size,
+                        backgroundColor: getMarkerColor(c),
+                        opacity: visited && colorMode === 'visitado' ? 1 : 0.9,
+                        border: `${visited && colorMode === 'visitado' ? 3 : 2}px solid #fff`,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
+                      }}
                       title={c.nombre}
                     />
-                  ))
-                ) : (
-                  <MarkerClusterer
-                    options={{ maxZoom: 14, gridSize: 50, minimumClusterSize: 5 }}
-                  >
-                    {(clusterer) => (
-                      <>
-                        {withGps.filter((c: any) => !ordenRutaMap.has(c.id)).map((c: any) => (
-                          <Marker
-                            key={c.id}
-                            position={posOf(c)}
-                            icon={getMarkerIcon(c)}
-                            onClick={() => setSelectedCliente(c)}
-                            title={c.nombre}
-                            clusterer={clusterer}
-                          />
-                        ))}
-                      </>
-                    )}
-                  </MarkerClusterer>
-                )}
-              </>
-            )}
+                  </Marker>
+                );
+              })}
+            </>
+          )}
 
-            {selectedCliente && (
-              <InfoWindow
-                position={posOf(selectedCliente)}
-                onCloseClick={() => setSelectedCliente(null)}
-              >
-                <div className="min-w-[220px] p-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="font-bold text-sm flex-1">{selectedCliente.nombre}</div>
-                    {ventasHoy?.has(selectedCliente.id) ? (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Visitado</span>
-                    ) : selectedCliente.dia_visita?.includes(DIA_HOY) ? (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Pendiente</span>
-                    ) : null}
-                  </div>
-                  {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
-                  {ordenRutaMap.has(selectedCliente.id) && (
-                    <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{ordenRutaMap.get(selectedCliente.id)}</strong></div>
-                  )}
-                  {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
-                  {selectedCliente.vendedores?.nombre && (
-                    <div className="text-[10px] text-gray-500 mb-1">🧑‍💼 {selectedCliente.vendedores.nombre}</div>
-                  )}
-                  {selectedCliente.dia_visita?.length > 0 && (
-                    <div className="flex gap-1 flex-wrap mb-2">
-                      {selectedCliente.dia_visita.map((d: string) => (
-                        <span key={d} className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
-                          style={{ backgroundColor: `${DIA_COLORS[d]}20`, color: DIA_COLORS[d] }}>
-                          {d.slice(0, 3)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-1 pt-1 border-t border-gray-100">
-                    <Link to={`/clientes/${selectedCliente.id}`} className="text-xs text-blue-600 hover:underline font-medium">Ver ficha</Link>
-                    {selectedCliente.telefono && <a href={`tel:${selectedCliente.telefono}`} className="text-xs text-green-600 hover:underline">Llamar</a>}
-                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCliente.gps_lat},${selectedCliente.gps_lng}`}
-                      target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Navegar</a>
-                  </div>
+          {selectedCliente && selectedCliente.gps_lat && selectedCliente.gps_lng && (
+            <Popup
+              longitude={Number(posOf(selectedCliente).lng)}
+              latitude={Number(posOf(selectedCliente).lat)}
+              anchor="bottom"
+              onClose={() => setSelectedCliente(null)}
+              closeOnClick={false}
+              maxWidth="280px"
+            >
+              <div className="min-w-[220px] p-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="font-bold text-sm flex-1">{selectedCliente.nombre}</div>
+                  {ventasHoy?.has(selectedCliente.id) ? (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Visitado</span>
+                  ) : selectedCliente.dia_visita?.includes(DIA_HOY) ? (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Pendiente</span>
+                  ) : null}
                 </div>
-              </InfoWindow>
-            )}
-          </GoogleMap>
-        )}
+                {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
+                {ordenRutaMap.has(selectedCliente.id) && (
+                  <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{ordenRutaMap.get(selectedCliente.id)}</strong></div>
+                )}
+                {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
+                {selectedCliente.vendedores?.nombre && (
+                  <div className="text-[10px] text-gray-500 mb-1">🧑‍💼 {selectedCliente.vendedores.nombre}</div>
+                )}
+                {selectedCliente.dia_visita?.length > 0 && (
+                  <div className="flex gap-1 flex-wrap mb-2">
+                    {selectedCliente.dia_visita.map((d: string) => (
+                      <span key={d} className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                        style={{ backgroundColor: `${DIA_COLORS[d]}20`, color: DIA_COLORS[d] }}>
+                        {d.slice(0, 3)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-1 pt-1 border-t border-gray-100">
+                  <Link to={`/clientes/${selectedCliente.id}`} className="text-xs text-blue-600 hover:underline font-medium">Ver ficha</Link>
+                  {selectedCliente.telefono && <a href={`tel:${selectedCliente.telefono}`} className="text-xs text-green-600 hover:underline">Llamar</a>}
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCliente.gps_lat},${selectedCliente.gps_lng}`}
+                    target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Navegar</a>
+                </div>
+              </div>
+            </Popup>
+          )}
+        </MapGL>
+
         <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar (single route, hidden when multi-route panel is active) */}
