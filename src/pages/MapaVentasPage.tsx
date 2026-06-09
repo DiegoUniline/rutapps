@@ -166,14 +166,6 @@ export default function MapaVentasPage() {
   }, [settingOrigin]);
 
 
-  const formatDuration = (d?: string) => {
-    if (!d) return '';
-    const secs = parseInt(d.replace('s', ''));
-    if (isNaN(secs)) return d;
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    return h > 0 ? `${h}h ${m}min` : `${m} min`;
-  };
 
   const STATUS_COLORS: Record<string, string> = {
     surtido: '#3b82f6',
@@ -195,7 +187,7 @@ export default function MapaVentasPage() {
 
           <div className="flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <OdooDatePicker value={fechaEntregas} onChange={v => { setFechaEntregas(v); setRouteResult(null); }} />
+            <OdooDatePicker value={fechaEntregas} onChange={v => setFechaEntregas(v)} />
           </div>
 
           <button onClick={() => setShowFilters(!showFilters)}
@@ -215,19 +207,9 @@ export default function MapaVentasPage() {
             {settingOrigin ? 'Click en el mapa...' : originPoint ? 'Punto establecido' : 'Punto de partida'}
           </button>
           {originPoint && !settingOrigin && (
-            <button onClick={() => { setOriginPoint(null); setRouteResult(null); }}
+            <button onClick={() => setOriginPoint(null)}
               className="text-xs text-destructive hover:underline py-2">
               <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {isAdmin && originPoint && uniqueWaypoints.length >= 2 && (
-            <button onClick={handleOptimize} disabled={optimizing}
-              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all",
-                routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
-                optimizing && "opacity-70")}>
-              {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : routeResult ? <CheckCircle2 className="h-4 w-4" /> : <Route className="h-4 w-4" />}
-              {optimizing ? 'Optimizando...' : routeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
             </button>
           )}
 
@@ -240,8 +222,11 @@ export default function MapaVentasPage() {
             <div className="flex flex-col text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" />{stats.conGps} en mapa</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-muted-foreground/40" />{stats.sinGps} sin GPS</span>
-              {routeResult && (
-                <span className="text-emerald-600 font-medium">{(routeResult.distance_meters / 1000).toFixed(1)} km · {formatDuration(routeResult.duration)}</span>
+              {totalKm > 0 && (
+                <span className="text-emerald-600 font-medium flex items-center gap-1">
+                  <Route className="h-3 w-3" />
+                  {totalKm.toFixed(1)} km <span className="text-muted-foreground font-normal">(línea recta)</span>
+                </span>
               )}
             </div>
           </div>
@@ -254,7 +239,7 @@ export default function MapaVentasPage() {
               <SearchableSelect
                 options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
                 value={vendedorFilter}
-                onChange={val => { setVendedorFilter(val); setRouteResult(null); }}
+                onChange={val => setVendedorFilter(val)}
                 placeholder="Vendedor..."
               />
             </div>
@@ -274,6 +259,7 @@ export default function MapaVentasPage() {
             )}
           </div>
         )}
+
 
         {!originPoint && !routeResult && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
