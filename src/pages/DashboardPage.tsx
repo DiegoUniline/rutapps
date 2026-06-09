@@ -819,7 +819,7 @@ export default function DashboardPage() {
       <TrialCountdownBanner />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <div>
+        <div className="shrink-0">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Dashboard
             <HelpButton title={HELP.dashboard.title} sections={HELP.dashboard.sections} />
@@ -830,26 +830,21 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Presets */}
-          <div className="flex bg-accent/50 rounded-lg p-0.5 gap-0.5">
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <div className="flex bg-accent/50 rounded-lg p-0.5 gap-0.5 shrink-0">
             {PRESETS.map((p, i) => (
               <button key={i} onClick={() => handlePreset(i)}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
                   activePreset === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}>
                 {p.label}
               </button>
             ))}
           </div>
-
-          {/* Custom dates */}
-          <OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
-          <OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
-
-          {/* Vendedor filter */}
-          <div className="min-w-[160px]">
+          <div className="shrink-0"><OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
+          <div className="shrink-0"><OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
+          <div className="w-[180px] shrink-0">
             <SearchableSelect
               options={[{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
               value={vendedorId}
@@ -909,18 +904,18 @@ export default function DashboardPage() {
         <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
       </div>
 
-      <Tabs defaultValue="resumen" className="mt-5 flex flex-row gap-4">
-        <TabsList className="flex flex-col h-auto w-48 bg-accent/50 p-1 rounded-lg gap-1 shrink-0 self-start">
-          <TabsTrigger value="resumen" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+      <Tabs defaultValue="resumen" className="mt-5">
+        <TabsList className="flex flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
+          <TabsTrigger value="resumen" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <BarChart3 className="h-3.5 w-3.5 mr-2" /> Resumen
           </TabsTrigger>
-          <TabsTrigger value="rankings" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="rankings" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <TrendingUp className="h-3.5 w-3.5 mr-2" /> Productos y Clientes
           </TabsTrigger>
-          <TabsTrigger value="evolucion" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="evolucion" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Activity className="h-3.5 w-3.5 mr-2" /> Evolución mensual
           </TabsTrigger>
-          <TabsTrigger value="comparativo" className="text-xs justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2 w-full">
+          <TabsTrigger value="comparativo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <ArrowUpRight className="h-3.5 w-3.5 mr-2" /> Mes vs Mes
           </TabsTrigger>
         </TabsList>
