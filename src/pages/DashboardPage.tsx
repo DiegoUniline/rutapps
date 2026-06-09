@@ -27,6 +27,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 
 const PRESETS = [
