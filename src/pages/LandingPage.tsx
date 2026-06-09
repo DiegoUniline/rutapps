@@ -218,6 +218,12 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
+      <Seo
+        title="Rutapp · ERP de venta en ruta con app móvil offline"
+        description="Vende, cobra, entrega y factura desde el celular. Rutas optimizadas, inventario en tiempo real y CFDI 4.0 para distribuidoras en México."
+        path="/"
+        jsonLd={LANDING_JSON_LD}
+      />
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 pt-[env(safe-area-inset-top)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-[max(1.5rem,env(safe-area-inset-left))] h-16">
