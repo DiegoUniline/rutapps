@@ -123,17 +123,17 @@ export async function runReporte(
   const ventas = await fetchAllPages<any>(ventasQ as any);
   if (ventas.length === 0) return [];
 
-  const ventaIds = ventas.map(v => v.id);
-  const clienteIds = Array.from(new Set(ventas.map(v => v.cliente_id).filter(Boolean)));
-  const vendedorIds = Array.from(new Set(ventas.map(v => v.vendedor_id).filter(Boolean)));
+  const ventaIds = (ventas as any[]).map(v => v.id as string);
+  const clienteIds = Array.from(new Set((ventas as any[]).map(v => v.cliente_id as string).filter(Boolean)));
+  const vendedorIds = Array.from(new Set((ventas as any[]).map(v => v.vendedor_id as string).filter(Boolean)));
 
   // 2. catálogos clientes / vendedores
   const [clientesRes, vendedoresRes] = await Promise.all([
     clienteIds.length
-      ? supabase.from('clientes').select('id, codigo, nombre').in('id', clienteIds)
+      ? supabase.from('clientes').select('id, codigo, nombre').in('id', clienteIds as string[])
       : Promise.resolve({ data: [] as any[] }),
     vendedorIds.length
-      ? supabase.from('profiles').select('id, nombre').in('id', vendedorIds)
+      ? supabase.from('profiles').select('id, nombre').in('id', vendedorIds as string[])
       : Promise.resolve({ data: [] as any[] }),
   ]);
   const clientesMap = new Map((clientesRes.data || []).map((c: any) => [c.id, c]));
@@ -147,9 +147,9 @@ export async function runReporte(
   const lineas = await fetchAllPages<any>(lineasQ as any);
 
   // 4. productos
-  const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
+  const productoIds = Array.from(new Set((lineas as any[]).map(l => l.producto_id as string).filter(Boolean)));
   const productosRes = productoIds.length
-    ? await supabase.from('productos').select('id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta').in('id', productoIds)
+    ? await supabase.from('productos').select('id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta').in('id', productoIds as string[])
     : { data: [] as any[] };
   const productosMap = new Map((productosRes.data || []).map((p: any) => [p.id, p]));
 
