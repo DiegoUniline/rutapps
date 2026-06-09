@@ -416,22 +416,16 @@ export default function MapaVentasPage() {
 function PanelEntregas({
   entregasData,
   entregasConGps,
-  orderedItems,
   selectedEntrega,
   setSelectedEntrega,
   STATUS_COLORS,
-  optimizing,
-  saving,
   mapRef,
 }: {
   entregasData: any[];
   entregasConGps: any[];
-  orderedItems: any[] | null;
   selectedEntrega: any | null;
   setSelectedEntrega: (e: any) => void;
   STATUS_COLORS: Record<string, string>;
-  optimizing: boolean;
-  saving: boolean;
   mapRef: React.MutableRefObject<MapRef | null>;
 }) {
   const [tab, setTab] = useState<'ruta' | 'todas' | 'sinGps'>('ruta');
@@ -440,15 +434,12 @@ function PanelEntregas({
     [entregasData]
   );
 
-  // Si no hay ruta optimizada, en la pestaña "ruta" muestra las entregas con GPS en su orden actual
+  // Las entregas ya vienen ordenadas por `orden_entrega` (definido en la ruta del cliente)
   const filaList: any[] = useMemo(() => {
     if (tab === 'sinGps') return sinGps;
     if (tab === 'todas') return entregasData;
-    if (orderedItems) {
-      return orderedItems.map((o: any) => entregasConGps.find((e: any) => e.id === o.id)).filter(Boolean);
-    }
     return entregasConGps;
-  }, [tab, orderedItems, entregasConGps, entregasData, sinGps]);
+  }, [tab, entregasConGps, entregasData, sinGps]);
 
   const handleRowClick = (e: any) => {
     setSelectedEntrega(e);
@@ -458,10 +449,11 @@ function PanelEntregas({
   };
 
   const tabs = [
-    { id: 'ruta' as const, label: orderedItems ? 'Ruta optimizada' : 'Por entregar', count: entregasConGps.length, icon: Route },
+    { id: 'ruta' as const, label: 'Por entregar', count: entregasConGps.length, icon: Route },
     { id: 'todas' as const, label: 'Todas', count: entregasData.length, icon: Truck },
     { id: 'sinGps' as const, label: 'Sin GPS', count: sinGps.length, icon: MapPin },
   ];
+
 
   return (
     <>
@@ -489,21 +481,8 @@ function PanelEntregas({
         })}
       </div>
 
-      {/* Status bar */}
-      {tab === 'ruta' && (orderedItems || optimizing || saving) && (
-        <div className="px-3 py-1.5 bg-primary/5 border-b border-border text-[11px] flex items-center justify-between shrink-0">
-          {optimizing ? (
-            <span className="flex items-center gap-1.5 text-primary font-medium"><Loader2 className="h-3 w-3 animate-spin" /> Optimizando ruta...</span>
-          ) : orderedItems ? (
-            <>
-              <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                <CheckCircle2 className="h-3 w-3" /> Ruta optimizada{saving && ' · guardando...'}
-              </span>
-              <span className="text-muted-foreground">{orderedItems.length} paradas</span>
-            </>
-          ) : null}
-        </div>
-      )}
+
+
 
       {/* Table */}
       <div className="flex-1 overflow-auto min-h-0">
