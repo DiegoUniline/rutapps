@@ -356,3 +356,100 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
     },
   });
 }
+
+export function useDashboardHoy(vendedorId?: string) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-hoy', empresa?.id, vendedorId],
+    enabled: !!empresa?.id,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    queryFn: async () => {
+      const eid = empresa!.id;
+      // today in company timezone (YYYY-MM-DD)
+      const tz = (empresa as any)?.zona_horaria || 'America/Mexico_City';
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      const tomorrowDate = new Date(today + 'T00:00:00');
+      tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+      const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+
+      const baseVisitas = supabase
+        .from('visitas')
+        .select('id, user_id, cliente_id', { count: 'exact' })
+        .eq('empresa_id', eid)
+        .gte('fecha', today)
+        .lt('fecha', tomorrow);
+      const visitasQ = vendedorId ? baseVisitas.eq('user_id', vendedorId) : baseVisitas;
+
+      const baseEntregas = supabase
+        .from('entregas')
+        .select('id, status, vendedor_id')
+        .eq('empresa_id', eid)
+        .eq('fecha', today);
+      const entregasQ = vendedorId ? baseEntregas.eq('vendedor_id', vendedorId) : baseEntregas;
+
+      const baseVentas = supabase
+        .from('ventas')
+        .select('id, total, tipo, vendedor_id', { count: 'exact' })
+        .eq('empresa_id', eid)
+        .eq('es_saldo_inicial', false)
+        .neq('status', 'cancelado' as any)
+        .eq('fecha', today);
+      const ventasQ = vendedorId ? baseVentas.eq('vendedor_id', vendedorId) : baseVentas;
+
+      const cobrosQ = supabase
+        .from('cobros')
+        .select('id, monto', { count: 'exact' })
+        .eq('empresa_id', eid)
+        .neq('status', 'cancelado')
+        .eq('fecha', today);
+
+      const pedidosBase = supabase
+        .from('ventas')
+        .select('id, vendedor_id', { count: 'exact', head: false })
+        .eq('empresa_id', eid)
+        .eq('tipo', 'pedido')
+        .not('status', 'in', '(entregado,cancelado)' as any);
+      const pedidosQ = vendedorId ? pedidosBase.eq('vendedor_id', vendedorId) : pedidosBase;
+
+      const baseGastos = supabase
+        .from('gastos')
+        .select('id, monto, vendedor_id', { count: 'exact' })
+        .eq('empresa_id', eid)
+        .eq('fecha', today);
+      const gastosQ = vendedorId ? baseGastos.eq('vendedor_id', vendedorId) : baseGastos;
+
+      const [vRes, eRes, sRes, cRes, pRes, gRes] = await Promise.all([
+        visitasQ, entregasQ, ventasQ, cobrosQ, pedidosQ, gastosQ,
+      ]);
+
+      const visitasRows = (vRes.data ?? []) as any[];
+      const entregasRows = (eRes.data ?? []) as any[];
+      const ventasRows = (sRes.data ?? []) as any[];
+      const cobrosRows = (cRes.data ?? []) as any[];
+      const gastosRows = (gRes.data ?? []) as any[];
+
+      const vendedoresActivos = new Set(visitasRows.map(v => v.user_id).filter(Boolean));
+      const entregasHechas = entregasRows.filter(e => e.status === 'hecho').length;
+      const entregasTotales = entregasRows.length;
+      const ventasTotal = ventasRows.reduce((s, v) => s + Number(v.total ?? 0), 0);
+      const cobrosTotal = cobrosRows.reduce((s, c) => s + Number(c.monto ?? 0), 0);
+      const gastosTotal = gastosRows.reduce((s, g) => s + Number(g.monto ?? 0), 0);
+
+      return {
+        today,
+        visitasCount: visitasRows.length,
+        vendedoresActivos: vendedoresActivos.size,
+        entregasHechas,
+        entregasTotales,
+        ventasTotal,
+        ventasCount: ventasRows.length,
+        cobrosTotal,
+        cobrosCount: cobrosRows.length,
+        pedidosPendientes: pRes.count ?? (pRes.data?.length ?? 0),
+        gastosTotal,
+        gastosCount: gastosRows.length,
+      };
+    },
+  });
+}
