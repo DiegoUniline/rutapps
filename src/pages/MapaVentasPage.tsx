@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Map as MapGL, Marker, Popup, NavigationControl, MapRef } from 'react-map-gl/maplibre';
+import { Map as MapGL, Marker, Popup, NavigationControl, MapRef, Source, Layer } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -30,6 +30,10 @@ export default function MapaVentasPage() {
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
+  const [routeGeometry, setRouteGeometry] = useState<any | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ km: number; min: number } | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const routeCacheRef = useRef<Map<string, { geometry: any; km: number; min: number }>>(new Map());
   const mapRef = useRef<MapRef | null>(null);
 
 
@@ -126,6 +130,56 @@ export default function MapaVentasPage() {
   }, [entregasConGps, originPoint]);
 
 
+  // Build ordered list of coordinates for ORS (origin -> entregas in client order)
+  const routeCoords = useMemo<[number, number][]>(() => {
+    const coords: [number, number][] = [];
+    if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
+    entregasConGps.forEach((e: any) => {
+      coords.push([Number(e.clientes.gps_lng), Number(e.clientes.gps_lat)]);
+    });
+    return coords;
+  }, [entregasConGps, originPoint]);
+
+  // Fetch road-following polyline from ORS edge function (cached by coords signature)
+  useEffect(() => {
+    if (routeCoords.length < 2) {
+      setRouteGeometry(null);
+      setRouteInfo(null);
+      return;
+    }
+    const key = routeCoords.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join('|');
+    const cached = routeCacheRef.current.get(key);
+    if (cached) {
+      setRouteGeometry(cached.geometry);
+      setRouteInfo({ km: cached.km, min: cached.min });
+      return;
+    }
+    let cancelled = false;
+    setLoadingRoute(true);
+    supabase.functions
+      .invoke('route-ors', { body: { coordinates: routeCoords } })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.geometry) {
+          console.error('ORS fetch error', error, data);
+          setRouteGeometry(null);
+          setRouteInfo(null);
+          return;
+        }
+        const km = (data.distanceMeters ?? 0) / 1000;
+        const min = (data.durationSeconds ?? 0) / 60;
+        routeCacheRef.current.set(key, { geometry: data.geometry, km, min });
+        setRouteGeometry(data.geometry);
+        setRouteInfo({ km, min });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRoute(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeCoords]);
+
   const handleMapClick = useCallback((e: any) => {
     if (settingOrigin && e.lngLat) {
       setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
@@ -184,6 +238,19 @@ export default function MapaVentasPage() {
 
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            {routeInfo && (
+              <div className="bg-emerald-500/10 rounded-lg px-3 py-1.5 text-center flex items-center gap-2">
+                {loadingRoute ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                ) : (
+                  <Route className="h-3.5 w-3.5 text-emerald-600" />
+                )}
+                <div>
+                  <div className="text-sm font-bold text-emerald-700 leading-tight">{routeInfo.km.toFixed(1)} km</div>
+                  <div className="text-[10px] text-emerald-600 font-medium leading-tight">~{Math.round(routeInfo.min)} min</div>
+                </div>
+              </div>
+            )}
             <div className="bg-primary/10 rounded-lg px-3 py-1.5 text-center">
               <div className="text-lg font-bold text-primary">{stats.total}</div>
               <div className="text-[10px] text-muted-foreground font-medium">Entregas</div>
@@ -226,7 +293,7 @@ export default function MapaVentasPage() {
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          <span>El orden de visita lo define la configuración de ruta de cada cliente. Puedes marcar un punto de partida para visualizar tu ubicación actual o el almacén.</span>
+          <span>El orden de visita lo define la configuración de ruta de cada cliente. La línea azul sigue las calles reales conectando los puntos en ese orden.</span>
         </div>
       </div>
 
@@ -273,6 +340,36 @@ export default function MapaVentasPage() {
             {/* Mi ubicación + vendedores en vivo */}
             <MyLocationMarkerML />
             <LiveVendedoresLayerML enabled={!!isAdmin} />
+
+            {/* Ruta siguiendo calles reales (OpenRouteService) */}
+            {routeGeometry && (
+              <Source
+                id="ors-route"
+                type="geojson"
+                data={{ type: 'Feature', properties: {}, geometry: routeGeometry }}
+              >
+                <Layer
+                  id="ors-route-casing"
+                  type="line"
+                  paint={{
+                    'line-color': '#ffffff',
+                    'line-width': 7,
+                    'line-opacity': 0.85,
+                  }}
+                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                />
+                <Layer
+                  id="ors-route-line"
+                  type="line"
+                  paint={{
+                    'line-color': '#2563eb',
+                    'line-width': 4,
+                    'line-opacity': 0.9,
+                  }}
+                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                />
+              </Source>
+            )}
 
 
             {/* Punto de partida */}
