@@ -30,10 +30,10 @@ export default function MapaVentasPage() {
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
-  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<any | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ km: number; min: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
-  const routeCacheRef = useRef<Map<string, { geometry: GeoJSON.LineString; km: number; min: number }>>(new Map());
+  const routeCacheRef = useRef<Map<string, { geometry: any; km: number; min: number }>>(new Map());
   const mapRef = useRef<MapRef | null>(null);
 
 
