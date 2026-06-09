@@ -222,8 +222,18 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
               <Input value={config.nombre} onChange={(e) => onChange({ ...config, nombre: e.target.value })} placeholder="Ej. Layout Integración Venta" />
             </div>
             <div>
-              <Label>Fuente</Label>
-              <Input value="Ventas (líneas)" disabled />
+              <Label>Fuente de datos</Label>
+              <select
+                className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                value={config.fuente}
+                onChange={(e) => onChange({ ...config, fuente: e.target.value as ReporteFuente, columnas: [] })}
+                disabled={!!config.id}
+              >
+                {FUENTES.map(f => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">{fuenteMeta.description}</p>
             </div>
           </div>
           <div>
