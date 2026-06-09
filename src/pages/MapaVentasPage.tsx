@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
-import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save, MapPin } from 'lucide-react';
+import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -21,20 +21,6 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 const DEFAULT_CENTER = { lng: -102.5528, lat: 23.6345 };
 const today = new Date().toISOString().split('T')[0];
 
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = [];
-  let index = 0, lat = 0, lng = 0;
-  while (index < encoded.length) {
-    let shift = 0, result = 0, byte: number;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-    shift = 0; result = 0;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    points.push([lng / 1e5, lat / 1e5]);
-  }
-  return points;
-}
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
