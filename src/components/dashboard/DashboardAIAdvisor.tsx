@@ -172,12 +172,12 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
     setHistory((data as RecoRow[]) ?? []);
   };
 
-  const remaining = Math.max(0, DAILY_LIMIT - usedToday);
+  const remaining = Math.max(0, MONTHLY_LIMIT - usedThisMonth);
   const reachedLimit = remaining <= 0;
 
   const handleAnalyze = async () => {
     if (reachedLimit) {
-      toast.error(`Alcanzaste el límite de ${DAILY_LIMIT} análisis por día.`);
+      toast.error(`Alcanzaste el límite de ${MONTHLY_LIMIT} análisis por mes.`);
       return;
     }
     setLoading(true);
@@ -189,14 +189,14 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
       });
       if (fnErr) throw fnErr;
       if ((data as any)?.error) {
-        if (typeof (data as any).usedToday === 'number') setUsedToday((data as any).usedToday);
+        if (typeof (data as any).usedThisMonth === 'number') setUsedThisMonth((data as any).usedThisMonth);
         throw new Error((data as any).error);
       }
       const txt = (data as any)?.advice ?? '';
       if (!txt) throw new Error('Respuesta vacía del asesor IA');
       setAdvice(txt);
       setGeneratedAt(new Date((data as any)?.createdAt ?? Date.now()));
-      if (typeof (data as any).usedToday === 'number') setUsedToday((data as any).usedToday);
+      if (typeof (data as any).usedThisMonth === 'number') setUsedThisMonth((data as any).usedThisMonth);
       toast.success('Nuevo análisis listo');
       refreshHistory();
     } catch (e: any) {
