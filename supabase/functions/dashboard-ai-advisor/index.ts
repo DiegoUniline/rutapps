@@ -180,15 +180,15 @@ REGLAS DURAS:
       .single();
     if (insErr) {
       // Still return advice but flag persistence error
-      return json({ advice, usedToday: usedToday + 1, dailyLimit: DAILY_LIMIT, persisted: false, warn: insErr.message }, 200);
+      return json({ advice, usedThisMonth: usedThisMonth + 1, monthlyLimit: MONTHLY_LIMIT, persisted: false, warn: insErr.message }, 200);
     }
 
     return json({
       advice,
       id: inserted.id,
       createdAt: inserted.created_at,
-      usedToday: usedToday + 1,
-      dailyLimit: DAILY_LIMIT,
+      usedThisMonth: usedThisMonth + 1,
+      monthlyLimit: MONTHLY_LIMIT,
       persisted: true,
     }, 200);
   } catch (e: any) {
