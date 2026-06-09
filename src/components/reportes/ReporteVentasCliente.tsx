@@ -17,6 +17,10 @@ export function ReporteVentasCliente({ data }: { data: any }) {
   const { fmt } = useCurrency();
   const { visible, setVisible, isVisible } = useColumnVisibility(COLUMNS);
   const items: any[] = data.ventasPorCliente ?? [];
+  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+    if (k === 'margen') return r.total > 0 ? ((r.utilidad ?? 0) / r.total) * 100 : 0;
+    return r?.[k];
+  });
   const totalVendido = items.reduce((s, c) => s + c.total, 0);
   const totalPendiente = items.reduce((s, c) => s + c.pendiente, 0);
   const totalUtilidad = items.reduce((s, c) => s + (c.utilidad ?? 0), 0);
