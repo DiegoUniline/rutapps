@@ -30,7 +30,7 @@ interface Props {
 export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, stockMax = Infinity, onConfirm }: Props) {
   const { symbol } = useCurrency();
   const [mode, setMode] = useState<'pres' | 'libre'>('pres');
-  const [presId, setPresId] = useState<string | null>(null);
+  const [presId, setPresId] = useState<string | null>(null); // null => unidad base
   const [paquetes, setPaquetes] = useState('1');
   const [pesoOverride, setPesoOverride] = useState(''); // peso real total opcional
   const [pesoLibre, setPesoLibre] = useState('');
@@ -43,15 +43,12 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
   useEffect(() => {
     if (!open) return;
-    if (presActivas.length > 0) {
-      setMode('pres');
-      setPresId(presActivas[0].id);
-    } else if (esGranel) {
+    if (esGranel && presActivas.length === 0) {
       setMode('libre');
       setPresId(null);
     } else {
       setMode('pres');
-      setPresId(null);
+      setPresId(null); // por defecto: unidad base (1 {unidad})
     }
     setPaquetes('1');
     setPesoOverride('');
