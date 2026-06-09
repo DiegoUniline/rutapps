@@ -6,7 +6,7 @@
  * El ejecutor obtiene los datos, los aplana y los entrega a exportUtils.
  */
 import { supabase } from '@/integrations/supabase/client';
-import { fetchAllPages } from '@/lib/fetchAllPages';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import type { ExportColumn } from '@/lib/exportUtils';
 
 export type ReporteFuente = 'ventas';
