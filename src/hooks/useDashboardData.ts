@@ -141,7 +141,7 @@ export function useDashboardStock() {
 export function useDashboardTopProductos(range: DateRange) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-top-productos', empresa?.id, fmt(range.from), fmt(range.to)],
+    queryKey: ['dashboard-top-productos-all', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const data = await fetchAllPages((from, to) =>
@@ -157,26 +157,243 @@ export function useDashboardTopProductos(range: DateRange) {
 
       const map = new Map<string, { qty: number; total: number }>();
       data.forEach((l: any) => {
+        if (!l.producto_id) return;
         const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
         existing.qty += Number(l.cantidad);
         existing.total += Number(l.total ?? 0);
         map.set(l.producto_id, existing);
       });
 
-      const ids = [...map.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 10).map(([id]) => id);
+      const ids = [...map.keys()];
       if (ids.length === 0) return [];
-      const { data: prods } = await supabase
-        .from('productos')
-        .select('id, nombre, codigo')
-        .in('id', ids);
+      // Resolve names in batches of 500
+      const prodMap = new Map<string, { nombre: string; codigo: string }>();
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ids.slice(i, i + 500);
+        const { data: prods } = await supabase
+          .from('productos')
+          .select('id, nombre, codigo')
+          .in('id', batch);
+        (prods ?? []).forEach((p: any) => prodMap.set(p.id, { nombre: p.nombre, codigo: p.codigo }));
+      }
 
       return ids
         .map(id => {
-          const prod = prods?.find(p => p.id === id);
+          const prod = prodMap.get(id);
           const agg = map.get(id)!;
           return { id, nombre: prod?.nombre ?? 'N/A', codigo: prod?.codigo ?? '', qty: agg.qty, total: agg.total };
         })
         .sort((a, b) => b.total - a.total);
+    },
+  });
+}
+
+// ============ Mensual: evolución por producto/cliente/vendedor ============
+function monthsBack(n: number) {
+  const arr: { key: string; label: string }[] = [];
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), 1);
+  for (let i = n - 1; i >= 0; i--) {
+    const md = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    const key = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}`;
+    arr.push({ key, label: md.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }) });
+  }
+  return arr;
+}
+
+export function useDashboardEvolucionMensual(months: number = 12) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-evolucion-mensual', empresa?.id, months],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const lineas = await fetchAllPages((f, t) =>
+        supabase
+          .from('venta_lineas')
+          .select('producto_id, cantidad, total, ventas!inner(fecha, status, empresa_id, vendedor_id, cliente_id)')
+          .eq('ventas.empresa_id', empresa!.id)
+          .gte('ventas.fecha', fmt(from))
+          .lte('ventas.fecha', fmt(to))
+          .neq('ventas.status', 'cancelado')
+          .range(f, t)
+      );
+
+      const meses = monthsBack(months);
+      // Aggregate per (entityKind, entityId, monthKey)
+      const agg = {
+        producto: new Map<string, Map<string, number>>(),
+        cliente: new Map<string, Map<string, number>>(),
+        vendedor: new Map<string, Map<string, number>>(),
+      };
+      const totales = {
+        producto: new Map<string, number>(),
+        cliente: new Map<string, number>(),
+        vendedor: new Map<string, number>(),
+      };
+
+      const bump = (
+        kind: 'producto' | 'cliente' | 'vendedor',
+        id: string | null | undefined,
+        monthKey: string,
+        value: number,
+      ) => {
+        if (!id) return;
+        let inner = agg[kind].get(id);
+        if (!inner) { inner = new Map(); agg[kind].set(id, inner); }
+        inner.set(monthKey, (inner.get(monthKey) ?? 0) + value);
+        totales[kind].set(id, (totales[kind].get(id) ?? 0) + value);
+      };
+
+      lineas.forEach((l: any) => {
+        const v = l.ventas;
+        if (!v?.fecha) return;
+        const monthKey = String(v.fecha).slice(0, 7);
+        const total = Number(l.total ?? 0);
+        bump('producto', l.producto_id, monthKey, total);
+        bump('cliente', v.cliente_id, monthKey, total);
+        bump('vendedor', v.vendedor_id, monthKey, total);
+      });
+
+      // Resolve names
+      const resolveNames = async (
+        ids: string[],
+        table: 'productos' | 'clientes' | 'profiles',
+      ) => {
+        const out = new Map<string, string>();
+        for (let i = 0; i < ids.length; i += 500) {
+          const batch = ids.slice(i, i + 500);
+          const { data } = await supabase
+            .from(table)
+            .select('id, nombre')
+            .in('id', batch);
+          (data ?? []).forEach((r: any) => out.set(r.id, r.nombre));
+        }
+        return out;
+      };
+
+      const [prodNames, cliNames, vendNames] = await Promise.all([
+        resolveNames([...agg.producto.keys()], 'productos'),
+        resolveNames([...agg.cliente.keys()], 'clientes'),
+        resolveNames([...agg.vendedor.keys()], 'profiles'),
+      ]);
+
+      const build = (
+        kind: 'producto' | 'cliente' | 'vendedor',
+        names: Map<string, string>,
+      ) =>
+        [...agg[kind].entries()]
+          .map(([id, m]) => ({
+            id,
+            nombre: names.get(id) ?? 'N/A',
+            total: totales[kind].get(id) ?? 0,
+            porMes: Object.fromEntries(meses.map(({ key }) => [key, m.get(key) ?? 0])),
+          }))
+          .sort((a, b) => b.total - a.total);
+
+      return {
+        meses,
+        productos: build('producto', prodNames),
+        clientes: build('cliente', cliNames),
+        vendedores: build('vendedor', vendNames),
+      };
+    },
+  });
+}
+
+// ============ Mensual: total ventas por mes con crecimiento ============
+export function useDashboardVentasPorMes(months: number = 12) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-ventas-por-mes', empresa?.id, months],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const data = await fetchAllPages((f, t) =>
+        supabase
+          .from('ventas')
+          .select('fecha, total')
+          .eq('empresa_id', empresa!.id)
+          .eq('es_saldo_inicial', false)
+          .neq('status', 'cancelado')
+          .gte('fecha', fmt(from))
+          .lte('fecha', fmt(to))
+          .range(f, t),
+      );
+      const meses = monthsBack(months);
+      const map = new Map<string, { total: number; count: number }>();
+      data.forEach((v: any) => {
+        const k = String(v.fecha).slice(0, 7);
+        const cur = map.get(k) ?? { total: 0, count: 0 };
+        cur.total += Number(v.total ?? 0);
+        cur.count += 1;
+        map.set(k, cur);
+      });
+      return meses.map(({ key, label }, idx) => {
+        const cur = map.get(key) ?? { total: 0, count: 0 };
+        const prev = idx > 0 ? (map.get(meses[idx - 1].key) ?? { total: 0, count: 0 }) : null;
+        const growth =
+          prev && prev.total > 0 ? ((cur.total - prev.total) / prev.total) * 100 : null;
+        return { key, label, total: cur.total, count: cur.count, prev: prev?.total ?? 0, growth };
+      });
+    },
+  });
+}
+
+// ============ Por usuario: mes actual vs anterior ============
+export function useDashboardVentasUsuarioMes() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-ventas-usuario-mes', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const now = new Date();
+      const startCur = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endCur = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const data = await fetchAllPages((f, t) =>
+        supabase
+          .from('ventas')
+          .select('vendedor_id, fecha, total, vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .eq('es_saldo_inicial', false)
+          .neq('status', 'cancelado')
+          .gte('fecha', fmt(startPrev))
+          .lte('fecha', fmt(endCur))
+          .not('vendedor_id', 'is', null)
+          .range(f, t),
+      );
+      const curKey = `${startCur.getFullYear()}-${String(startCur.getMonth() + 1).padStart(2, '0')}`;
+      const prevKey = `${startPrev.getFullYear()}-${String(startPrev.getMonth() + 1).padStart(2, '0')}`;
+      const map = new Map<string, { nombre: string; cur: number; prev: number; curCount: number; prevCount: number }>();
+      data.forEach((v: any) => {
+        const id = v.vendedor_id as string;
+        const nombre = v.vendedores?.nombre ?? 'N/A';
+        const k = String(v.fecha).slice(0, 7);
+        const cur = map.get(id) ?? { nombre, cur: 0, prev: 0, curCount: 0, prevCount: 0 };
+        if (k === curKey) { cur.cur += Number(v.total ?? 0); cur.curCount += 1; }
+        else if (k === prevKey) { cur.prev += Number(v.total ?? 0); cur.prevCount += 1; }
+        map.set(id, cur);
+      });
+      return [...map.entries()]
+        .map(([id, r]) => ({
+          id,
+          nombre: r.nombre,
+          cur: r.cur,
+          prev: r.prev,
+          curCount: r.curCount,
+          prevCount: r.prevCount,
+          growth: r.prev > 0 ? ((r.cur - r.prev) / r.prev) * 100 : r.cur > 0 ? 100 : 0,
+        }))
+        .sort((a, b) => b.cur - a.cur);
     },
   });
 }

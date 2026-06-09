@@ -19,6 +19,7 @@ import {
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
   useDashboardDevoluciones, useDashboardHoy,
+  useDashboardEvolucionMensual, useDashboardVentasPorMes, useDashboardVentasUsuarioMes,
   type DateRange
 } from '@/hooks/useDashboardData';
 import {
@@ -180,7 +181,323 @@ function SectionTitle({ children, icon: Icon }: { children: string; icon: React.
   );
 }
 
+// ============ Rankings: Top/Bottom productos & clientes con selector N ============
+function RankingsSection({
+  topProductos,
+  topClientesAll,
+  money,
+}: {
+  topProductos: { id: string; nombre: string; codigo?: string; qty: number; total: number }[];
+  topClientesAll: { id: string; nombre: string; total: number; count: number }[];
+  money: (n: number) => string;
+}) {
+  const [nProd, setNProd] = useState(5);
+  const [ordProd, setOrdProd] = useState<'top' | 'bottom'>('top');
+  const [nCli, setNCli] = useState(5);
+  const [ordCli, setOrdCli] = useState<'top' | 'bottom'>('top');
+
+  const prodsSorted = useMemo(() => {
+    const arr = topProductos.filter(p => p.total > 0);
+    return ordProd === 'top'
+      ? [...arr].sort((a, b) => b.total - a.total).slice(0, nProd)
+      : [...arr].sort((a, b) => a.total - b.total).slice(0, nProd);
+  }, [topProductos, nProd, ordProd]);
+
+  const cliSorted = useMemo(() => {
+    const arr = topClientesAll.filter(c => c.total > 0);
+    return ordCli === 'top'
+      ? [...arr].sort((a, b) => b.total - a.total).slice(0, nCli)
+      : [...arr].sort((a, b) => a.total - b.total).slice(0, nCli);
+  }, [topClientesAll, nCli, ordCli]);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      {/* Productos */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+            {ordProd === 'top' ? <TrendingUp className="h-4 w-4 text-primary" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
+            {ordProd === 'top' ? 'Productos más vendidos' : 'Productos menos vendidos'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+              <button onClick={() => setOrdProd('top')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordProd === 'top' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Más</button>
+              <button onClick={() => setOrdProd('bottom')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordProd === 'bottom' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Menos</button>
+            </div>
+            <select value={nProd} onChange={e => setNProd(Number(e.target.value))} className="text-[11px] border border-border rounded-md bg-card px-2 py-1 font-medium">
+              {[5, 10, 15, 20, 30, 50].map(n => <option key={n} value={n}>Top {n}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+          {prodsSorted.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-2 py-1 border-b border-border/30 last:border-0">
+              <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                ordProd === 'top' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
+                <div className="text-[10px] text-muted-foreground">{fmtNum(p.qty)} uds{p.codigo ? ` · ${p.codigo}` : ''}</div>
+              </div>
+              <span className="text-xs font-semibold text-foreground tabular-nums">{money(p.total)}</span>
+            </div>
+          ))}
+          {prodsSorted.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
+        </div>
+      </div>
+
+      {/* Clientes */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            {ordCli === 'top' ? 'Mejores clientes' : 'Clientes con menos compras'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+              <button onClick={() => setOrdCli('top')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordCli === 'top' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Más</button>
+              <button onClick={() => setOrdCli('bottom')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordCli === 'bottom' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Menos</button>
+            </div>
+            <select value={nCli} onChange={e => setNCli(Number(e.target.value))} className="text-[11px] border border-border rounded-md bg-card px-2 py-1 font-medium">
+              {[5, 10, 15, 20, 30, 50].map(n => <option key={n} value={n}>Top {n}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+          {cliSorted.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-2 py-1 border-b border-border/30 last:border-0">
+              <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                ordCli === 'top' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
+                <div className="text-[10px] text-muted-foreground">{c.count} ventas</div>
+              </div>
+              <span className="text-xs font-semibold text-foreground tabular-nums">{money(c.total)}</span>
+            </div>
+          ))}
+          {cliSorted.length === 0 && <p className="text-xs text-muted-foreground py-2">Sin datos</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ Evolución mensual con selección múltiple ============
+const EVO_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#f97316', '#06b6d4', '#8b5cf6'];
+
+function EvolucionMensualSection({
+  evolucion,
+  money,
+  cSym,
+}: {
+  evolucion: any;
+  money: (n: number) => string;
+  cSym: string;
+}) {
+  const [tipo, setTipo] = useState<'producto' | 'cliente' | 'vendedor'>('producto');
+  const [seleccion, setSeleccion] = useState<Record<string, string[]>>({ producto: [], cliente: [], vendedor: [] });
+  const [search, setSearch] = useState('');
+
+  const lista = useMemo(() => {
+    if (!evolucion) return [];
+    const arr = (tipo === 'producto' ? evolucion.productos : tipo === 'cliente' ? evolucion.clientes : evolucion.vendedores) as any[];
+    return arr;
+  }, [evolucion, tipo]);
+
+  // Auto-seleccionar top 3 al cambiar tipo si vacío
+  const seleccionados = seleccion[tipo];
+  const effective = seleccionados.length > 0
+    ? lista.filter(x => seleccionados.includes(x.id))
+    : lista.slice(0, 3);
+
+  const chartData = useMemo(() => {
+    if (!evolucion) return [];
+    return evolucion.meses.map(({ key, label }: any) => {
+      const row: any = { label };
+      effective.forEach((e: any) => { row[e.nombre] = e.porMes[key] ?? 0; });
+      return row;
+    });
+  }, [evolucion, effective]);
+
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return s ? lista.filter(x => x.nombre.toLowerCase().includes(s)) : lista.slice(0, 30);
+  }, [lista, search]);
+
+  const toggle = (id: string) => {
+    setSeleccion(prev => {
+      const cur = prev[tipo];
+      const next = cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 8 ? cur : [...cur, id];
+      return { ...prev, [tipo]: next };
+    });
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 mt-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" /> Crecimiento de ventas por mes (12 meses)
+        </h2>
+        <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+          {(['producto', 'cliente', 'vendedor'] as const).map(t => (
+            <button key={t} onClick={() => setTipo(t)} className={cn("px-3 py-1 rounded text-[11px] font-semibold capitalize", tipo === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
+              {t === 'producto' ? 'Productos' : t === 'cliente' ? 'Clientes' : 'Vendedores'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-1 border border-border rounded-lg p-2 bg-accent/20">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={`Buscar ${tipo}...`}
+            className="w-full text-xs px-2 py-1.5 border border-border rounded-md bg-card mb-2"
+          />
+          <div className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wide font-bold flex items-center justify-between">
+            <span>Selección ({seleccionados.length}/8)</span>
+            {seleccionados.length > 0 && (
+              <button onClick={() => setSeleccion(p => ({ ...p, [tipo]: [] }))} className="text-primary hover:underline normal-case">Limpiar</button>
+            )}
+          </div>
+          <div className="max-h-[260px] overflow-y-auto space-y-0.5">
+            {filtered.map((x: any) => {
+              const checked = seleccionados.includes(x.id);
+              return (
+                <label key={x.id} className={cn("flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-[11px] hover:bg-accent/50", checked && "bg-primary/10")}>
+                  <input type="checkbox" checked={checked} onChange={() => toggle(x.id)} className="shrink-0" />
+                  <span className="flex-1 truncate font-medium">{x.nombre}</span>
+                  <span className="tabular-nums text-muted-foreground">{money(x.total)}</span>
+                </label>
+              );
+            })}
+            {filtered.length === 0 && <p className="text-[11px] text-muted-foreground p-2">Sin resultados</p>}
+          </div>
+          {seleccionados.length === 0 && <p className="text-[10px] text-muted-foreground mt-2 italic">Mostrando top 3 por defecto</p>}
+        </div>
+
+        <div className="lg:col-span-3">
+          {chartData.length > 0 && effective.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => money(v)} />
+                {effective.map((e: any, i: number) => (
+                  <Line key={e.id} type="monotone" dataKey={e.nombre} stroke={EVO_COLORS[i % EVO_COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-xs text-muted-foreground">Selecciona elementos para ver su evolución</div>
+          )}
+          {effective.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {effective.map((e: any, i: number) => (
+                <span key={e.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-accent/50">
+                  <span className="w-2 h-2 rounded-full" style={{ background: EVO_COLORS[i % EVO_COLORS.length] }} />
+                  {e.nombre}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ Tabla: ventas por mes con crecimiento ============
+function VentasPorMesTable({ data, money }: { data: any[]; money: (n: number) => string }) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 mt-4">
+      <SectionTitle icon={BarChart3}>Ventas por mes — Crecimiento vs mes anterior</SectionTitle>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-2 text-muted-foreground font-medium">Mes</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Operaciones</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Total</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Mes anterior</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Crecimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map(r => (
+              <tr key={r.key} className="border-b border-border/30 hover:bg-accent/30">
+                <td className="py-2 font-medium text-foreground capitalize">{r.label}</td>
+                <td className="py-2 text-right text-muted-foreground tabular-nums">{r.count}</td>
+                <td className="py-2 text-right font-semibold text-foreground tabular-nums">{money(r.total)}</td>
+                <td className="py-2 text-right text-muted-foreground tabular-nums">{money(r.prev)}</td>
+                <td className="py-2 text-right">
+                  {r.growth === null ? <span className="text-muted-foreground">—</span> : (
+                    <span className={cn("inline-flex items-center gap-0.5 font-semibold tabular-nums",
+                      r.growth >= 0 ? 'text-emerald-600' : 'text-red-500'
+                    )}>
+                      {r.growth >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {Math.abs(r.growth).toFixed(1)}%
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {(!data || data.length === 0) && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">Sin datos</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ============ Tabla: ventas por usuario mes actual vs anterior ============
+function UsuarioMesVsMesTable({ data, money }: { data: any[]; money: (n: number) => string }) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 mt-4">
+      <SectionTitle icon={Users}>Ventas por usuario — Mes actual vs mes anterior</SectionTitle>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-2 text-muted-foreground font-medium">Vendedor</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Mes anterior</th>
+              <th className="text-right py-2 text-muted-foreground font-medium"># mes ant.</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Mes actual</th>
+              <th className="text-right py-2 text-muted-foreground font-medium"># mes act.</th>
+              <th className="text-right py-2 text-muted-foreground font-medium">Crecimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map(r => (
+              <tr key={r.id} className="border-b border-border/30 hover:bg-accent/30">
+                <td className="py-2 font-medium text-foreground">{r.nombre}</td>
+                <td className="py-2 text-right text-muted-foreground tabular-nums">{money(r.prev)}</td>
+                <td className="py-2 text-right text-muted-foreground tabular-nums">{r.prevCount}</td>
+                <td className="py-2 text-right font-semibold text-foreground tabular-nums">{money(r.cur)}</td>
+                <td className="py-2 text-right text-muted-foreground tabular-nums">{r.curCount}</td>
+                <td className="py-2 text-right">
+                  <span className={cn("inline-flex items-center gap-0.5 font-semibold tabular-nums",
+                    r.growth >= 0 ? 'text-emerald-600' : 'text-red-500'
+                  )}>
+                    {r.growth >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {Math.abs(r.growth).toFixed(1)}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {(!data || data.length === 0) && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Sin datos</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+
+
   const { symbol: cSym, code: cCode } = useCurrency();
   const money = (n: number) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: cCode, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -272,7 +589,7 @@ export default function DashboardPage() {
     [stock]
   );
 
-  const topClients = useMemo(() => {
+  const topClientsAll = useMemo(() => {
     const map = new Map<string, { nombre: string; total: number; count: number }>();
     (ventas ?? []).forEach((v: any) => {
       if (!v.cliente_id) return;
@@ -283,9 +600,13 @@ export default function DashboardPage() {
     });
     return [...map.entries()]
       .map(([id, val]) => ({ id, ...val }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
+      .sort((a, b) => b.total - a.total);
   }, [ventas]);
+
+  // Mensual data
+  const { data: evolucion } = useDashboardEvolucionMensual(12);
+  const { data: ventasPorMes } = useDashboardVentasPorMes(12);
+  const { data: usuarioMes } = useDashboardVentasUsuarioMes();
 
   const handlePreset = (idx: number) => {
     setActivePreset(idx);
@@ -444,45 +765,15 @@ export default function DashboardPage() {
 
       {/* (Bloque "Clientes en riesgo" reemplazado por la banda "HOY" arriba) */}
 
-      {/* Bottom row: Top products, Top clients, Low stock */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {/* Top Products */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <SectionTitle icon={TrendingUp}>Productos más vendidos</SectionTitle>
-          <div className="space-y-2">
-            {(topProductos ?? []).slice(0, 6).map((p, i) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
-                  <div className="text-[10px] text-muted-foreground">{p.qty} uds</div>
-                </div>
-                <span className="text-xs font-semibold text-foreground">{money(p.total)}</span>
-              </div>
-            ))}
-            {(topProductos ?? []).length === 0 && <p className="text-xs text-muted-foreground">Sin datos</p>}
-          </div>
-        </div>
+      {/* Bottom row: Top/Bottom products, Top/Bottom clients, Low stock */}
+      <RankingsSection
+        topProductos={topProductos ?? []}
+        topClientesAll={topClientsAll}
+        money={money}
+      />
 
-        {/* Top Clients */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <SectionTitle icon={Users}>Mejores clientes</SectionTitle>
-          <div className="space-y-2">
-            {topClients.slice(0, 6).map((c, i) => (
-              <div key={c.id} className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                  <div className="text-[10px] text-muted-foreground">{c.count} ventas</div>
-                </div>
-                <span className="text-xs font-semibold text-foreground">{money(c.total)}</span>
-              </div>
-            ))}
-            {topClients.length === 0 && <p className="text-xs text-muted-foreground">Sin datos</p>}
-          </div>
-        </div>
-
-        {/* Low stock alerts */}
+      {/* Low stock alerts */}
+      <div className="grid grid-cols-1 mt-4">
         <div className="bg-card border border-border rounded-xl p-4">
           <SectionTitle icon={AlertTriangle}>
             {`Alertas de stock (${kpis.productosBajoMinimo})`}
@@ -524,6 +815,17 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* === Evolución mensual con selección múltiple === */}
+      <EvolucionMensualSection evolucion={evolucion} money={money} cSym={cSym} />
+
+      {/* === Ventas por mes con crecimiento === */}
+      <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
+
+      {/* === Ventas por usuario: mes actual vs mes anterior === */}
+      <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
+
+
 
       {/* Vendedor detail table */}
       {!vendedorId && (ventasPorVendedor ?? []).length > 0 && (
