@@ -36,7 +36,7 @@ function useCobros() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
-        .select('*, clientes(id, nombre, telefono)')
+        .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (error) throw error;
