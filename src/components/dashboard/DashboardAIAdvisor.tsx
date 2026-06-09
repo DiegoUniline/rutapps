@@ -184,7 +184,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
     try {
       const snapshot = buildSnapshot();
       const { data, error: fnErr } = await supabase.functions.invoke('dashboard-ai-advisor', {
-        body: { snapshot, empresaNombre: (empresa as any)?.nombre },
+        body: { snapshot, empresaNombre: (empresa as any)?.nombre, empresaId },
       });
       if (fnErr) throw fnErr;
       if ((data as any)?.error) {
