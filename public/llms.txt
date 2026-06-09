@@ -1,0 +1,16 @@
+# Rutapp
+
+> ERP de venta en ruta para vendedores móviles: funciona offline, optimiza rutas, captura pedidos, cobros y entregas desde el celular, y mantiene inventario y facturación CFDI 4.0 sincronizados.
+
+Rutapp es un sistema diseñado para distribuidoras, mayoristas y empresas con fuerza de ventas en campo. Cubre punto de venta, preventa, autoventa, cobranza, entregas, inventario multi-almacén, listas de precios, promociones, reportes y facturación electrónica en México.
+
+## Pages
+- [Inicio](/): Resumen del producto, planes y casos de uso.
+- [Tutoriales](/tutoriales): Videos guía sobre el uso de cada módulo.
+- [Partners](/partners): Programa de socios e integradores.
+- [Crear cuenta](/signup): Registro con 7 días de prueba.
+- [Iniciar sesión](/login): Acceso para clientes existentes.
+
+## Optional
+- [Términos de Servicio](/terminos)
+- [Política de Privacidad](/privacidad)
