@@ -419,18 +419,19 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Almacén destino</TableHead>
               <TableHead className="text-[11px]">Ruta asignada</TableHead>
               <TableHead className="text-[11px]">Fecha pedido</TableHead>
-              <TableHead className="text-[11px]">Fecha entrega</TableHead>
+              <TableHead className="text-[11px]">Fecha programada</TableHead>
+              <TableHead className="text-[11px]">Fecha real</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
               <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && (
-              <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay entregas
                 </TableCell>
@@ -499,6 +500,7 @@ export default function EntregaListPage() {
                   <TableCell className="text-[12px] text-muted-foreground py-2">{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{e.ventas?.fecha ? fmtDate(e.ventas.fecha) : '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
+                  <TableCell className="text-[12px] py-2">{e.fecha_entrega ? <span className="text-success font-medium">{fmtDate(e.fecha_entrega)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell className="text-center py-2">
                     <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
                   </TableCell>
@@ -508,7 +510,7 @@ export default function EntregaListPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow key={`exp-${e.id}`} className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={12} className="p-0">
+                    <TableCell colSpan={13} className="p-0">
                       <div className="px-6 py-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
