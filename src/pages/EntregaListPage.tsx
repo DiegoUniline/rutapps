@@ -418,7 +418,8 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Almacén origen</TableHead>
               <TableHead className="text-[11px]">Almacén destino</TableHead>
               <TableHead className="text-[11px]">Ruta asignada</TableHead>
-              <TableHead className="text-[11px]">Fecha</TableHead>
+              <TableHead className="text-[11px]">Fecha pedido</TableHead>
+              <TableHead className="text-[11px]">Fecha entrega</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
               <TableHead className="w-8" />
             </TableRow>
@@ -496,6 +497,7 @@ export default function EntregaListPage() {
                   <TableCell className="text-[12px] text-muted-foreground py-2" title={originTitle}>{originLabel}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{destinoNombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{e.ventas?.fecha ? fmtDate(e.ventas.fecha) : '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
                   <TableCell className="text-center py-2">
                     <Badge variant={badge.variant} className={`text-[10px] ${badge.className ?? ''}`}>{badge.label}</Badge>
