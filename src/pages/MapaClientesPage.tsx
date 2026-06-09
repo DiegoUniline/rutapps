@@ -96,7 +96,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 
 export default function MapaClientesPage() {
   const { user, empresa } = useAuth();
-  const { isLoaded } = useGoogleMaps();
+  // OpenFreeMap = tiles MapLibre gratuitos, sin API key, sin watermark.
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
