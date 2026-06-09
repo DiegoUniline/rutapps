@@ -125,37 +125,6 @@ export default function MapaVentasPage() {
     mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
   }, [entregasConGps, originPoint]);
 
-  // Polilínea recta uniendo los puntos en el orden ya definido por el cliente.
-  // Si hay punto de partida, arranca desde ahí. Sin llamadas a APIs externas → sin costo.
-  const polylineGeoJson = useMemo(() => {
-    if (entregasConGps.length < 1) return null;
-    const coords: [number, number][] = [];
-    if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
-    entregasConGps.forEach((e: any) => coords.push([e._displayLng, e._displayLat]));
-    if (coords.length < 2) return null;
-    return {
-      type: 'Feature' as const,
-      geometry: { type: 'LineString' as const, coordinates: coords },
-      properties: {},
-    };
-  }, [entregasConGps, originPoint]);
-
-  // Distancia total en línea recta (Haversine) — referencial, sin costo
-  const totalKm = useMemo(() => {
-    if (!polylineGeoJson) return 0;
-    const coords = polylineGeoJson.geometry.coordinates as [number, number][];
-    const R = 6371;
-    let sum = 0;
-    for (let i = 1; i < coords.length; i++) {
-      const [lng1, lat1] = coords[i - 1];
-      const [lng2, lat2] = coords[i];
-      const dLat = ((lat2 - lat1) * Math.PI) / 180;
-      const dLng = ((lng2 - lng1) * Math.PI) / 180;
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-      sum += 2 * R * Math.asin(Math.sqrt(a));
-    }
-    return sum;
-  }, [polylineGeoJson]);
 
   const handleMapClick = useCallback((e: any) => {
     if (settingOrigin && e.lngLat) {
@@ -222,12 +191,6 @@ export default function MapaVentasPage() {
             <div className="flex flex-col text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" />{stats.conGps} en mapa</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-muted-foreground/40" />{stats.sinGps} sin GPS</span>
-              {totalKm > 0 && (
-                <span className="text-emerald-600 font-medium flex items-center gap-1">
-                  <Route className="h-3 w-3" />
-                  {totalKm.toFixed(1)} km <span className="text-muted-foreground font-normal">(línea recta)</span>
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -263,7 +226,7 @@ export default function MapaVentasPage() {
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          <span>El orden de visita lo define la configuración de ruta de cada cliente. Opcionalmente puedes marcar un punto de partida para ver la línea desde el almacén o tu ubicación actual.</span>
+          <span>El orden de visita lo define la configuración de ruta de cada cliente. Puedes marcar un punto de partida para visualizar tu ubicación actual o el almacén.</span>
         </div>
       </div>
 
@@ -311,17 +274,6 @@ export default function MapaVentasPage() {
             <MyLocationMarkerML />
             <LiveVendedoresLayerML enabled={!!isAdmin} />
 
-            {/* Polyline ruta */}
-            {polylineGeoJson && (
-              <Source id="route-line" type="geojson" data={polylineGeoJson as any}>
-                <Layer
-                  id="route-line-layer"
-                  type="line"
-                  paint={{ 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.8 }}
-                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-                />
-              </Source>
-            )}
 
             {/* Punto de partida */}
             {originPoint && (
