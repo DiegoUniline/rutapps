@@ -127,7 +127,7 @@ export default function MapaClientesPage() {
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
