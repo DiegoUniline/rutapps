@@ -509,7 +509,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className="text-xs text-muted-foreground">Todo en orden 👍</p>
+              <p className="text-xs text-muted-foreground">Sin productos bajo mínimo</p>
             </div>
           )}
 
