@@ -273,7 +273,7 @@ export default function DashboardPage() {
     [stock]
   );
 
-  const topClients = useMemo(() => {
+  const topClientsAll = useMemo(() => {
     const map = new Map<string, { nombre: string; total: number; count: number }>();
     (ventas ?? []).forEach((v: any) => {
       if (!v.cliente_id) return;
@@ -284,9 +284,13 @@ export default function DashboardPage() {
     });
     return [...map.entries()]
       .map(([id, val]) => ({ id, ...val }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
+      .sort((a, b) => b.total - a.total);
   }, [ventas]);
+
+  // Mensual data
+  const { data: evolucion } = useDashboardEvolucionMensual(12);
+  const { data: ventasPorMes } = useDashboardVentasPorMes(12);
+  const { data: usuarioMes } = useDashboardVentasUsuarioMes();
 
   const handlePreset = (idx: number) => {
     setActivePreset(idx);
