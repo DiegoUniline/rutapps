@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
-import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save } from 'lucide-react';
+import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -349,158 +349,327 @@ export default function MapaVentasPage() {
         )}
       </div>
 
-      {/* Map */}
-      <div className="flex-1 relative">
-        {loadingEntregas && (
-          <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        )}
-        {settingOrigin && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
-            Haz click en el mapa para establecer el punto de partida
-          </div>
-        )}
-        <MapGL
-          ref={mapRef}
-          mapStyle={MAP_STYLE}
-          initialViewState={{
-            longitude: DEFAULT_CENTER.lng,
-            latitude: DEFAULT_CENTER.lat,
-            zoom: 5,
-          }}
-          style={{ width: '100%', height: '100%', cursor: settingOrigin ? 'crosshair' : undefined }}
-          onClick={handleMapClick}
-          attributionControl={{ compact: true }}
-        >
-          <NavigationControl position="top-right" showCompass={false} />
+      {/* Split: tabla izquierda + mapa derecha */}
+      <div className="flex-1 flex min-h-0">
+        {/* Panel izquierdo: tabla con tabs */}
+        <div className="w-1/2 border-r border-border flex flex-col bg-card min-h-0">
+          <PanelEntregas
+            entregasData={entregasData ?? []}
+            entregasConGps={entregasConGps}
+            orderedItems={orderedItems}
+            selectedEntrega={selectedEntrega}
+            setSelectedEntrega={setSelectedEntrega}
+            STATUS_COLORS={STATUS_COLORS}
+            optimizing={optimizing}
+            saving={saving}
+            mapRef={mapRef}
+          />
+        </div>
 
-          {/* Mi ubicación + vendedores en vivo */}
-          <MyLocationMarkerML />
-          <LiveVendedoresLayerML enabled={!!isAdmin} />
-
-          {/* Polyline ruta */}
-          {polylineGeoJson && (
-            <Source id="route-line" type="geojson" data={polylineGeoJson as any}>
-              <Layer
-                id="route-line-layer"
-                type="line"
-                paint={{ 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.8 }}
-                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-              />
-            </Source>
+        {/* Mapa derecha */}
+        <div className="w-1/2 relative min-h-0">
+          {loadingEntregas && (
+            <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
           )}
-
-          {/* Punto de partida */}
-          {originPoint && (
-            <Marker longitude={originPoint.lng} latitude={originPoint.lat} anchor="center">
-              <div className="w-8 h-8 rounded-full bg-emerald-600 border-[3px] border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
-                ▶
-              </div>
-            </Marker>
+          {settingOrigin && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+              Haz click en el mapa para establecer el punto de partida
+            </div>
           )}
+          <MapGL
+            ref={mapRef}
+            mapStyle={MAP_STYLE}
+            initialViewState={{
+              longitude: DEFAULT_CENTER.lng,
+              latitude: DEFAULT_CENTER.lat,
+              zoom: 5,
+            }}
+            style={{ width: '100%', height: '100%', cursor: settingOrigin ? 'crosshair' : undefined }}
+            onClick={handleMapClick}
+            attributionControl={{ compact: true }}
+          >
+            <NavigationControl position="top-right" showCompass={false} />
 
-          {/* Entregas */}
-          {(orderedItems ?? entregasConGps).map((e: any, idx: number) => {
-            const isOrdered = !!orderedItems;
-            const lng = isOrdered ? e.lng : e._displayLng;
-            const lat = isOrdered ? e.lat : e._displayLat;
-            const color = isOrdered ? '#6366f1' : (STATUS_COLORS[e.status] ?? '#714BF4');
-            return (
-              <Marker
-                key={e.id}
-                longitude={lng}
-                latitude={lat}
-                anchor="center"
-                onClick={(ev) => {
-                  ev.originalEvent.stopPropagation();
-                  const ent = isOrdered ? entregasConGps.find((x: any) => x.id === e.id) : e;
-                  if (ent) setSelectedEntrega(ent);
-                }}
-              >
-                <div
-                  className="rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold cursor-pointer hover:scale-110 transition-transform"
-                  style={{
-                    backgroundColor: color,
-                    width: isOrdered ? 30 : 22,
-                    height: isOrdered ? 30 : 22,
-                    fontSize: isOrdered ? 12 : 10,
-                  }}
-                  title={isOrdered ? `${idx + 1}. ${e.nombre}` : `${e.folio} - ${e.clientes.nombre}`}
-                >
-                  {isOrdered ? idx + 1 : ''}
+            {/* Mi ubicación + vendedores en vivo */}
+            <MyLocationMarkerML />
+            <LiveVendedoresLayerML enabled={!!isAdmin} />
+
+            {/* Polyline ruta */}
+            {polylineGeoJson && (
+              <Source id="route-line" type="geojson" data={polylineGeoJson as any}>
+                <Layer
+                  id="route-line-layer"
+                  type="line"
+                  paint={{ 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.8 }}
+                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                />
+              </Source>
+            )}
+
+            {/* Punto de partida */}
+            {originPoint && (
+              <Marker longitude={originPoint.lng} latitude={originPoint.lat} anchor="center">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 border-[3px] border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+                  ▶
                 </div>
               </Marker>
-            );
-          })}
+            )}
 
-          {/* Popup */}
-          {selectedEntrega && (
-            <Popup
-              longitude={selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng}
-              latitude={selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat}
-              anchor="bottom"
-              onClose={() => setSelectedEntrega(null)}
-              closeButton={true}
-              closeOnClick={false}
-              offset={20}
-            >
-              <div className="min-w-[200px] p-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-sm font-mono">{selectedEntrega.folio}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${STATUS_COLORS[selectedEntrega.status]}20`, color: STATUS_COLORS[selectedEntrega.status] }}>
-                    {selectedEntrega.status.replace('_', ' ')}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-600 font-medium mb-0.5">{selectedEntrega.clientes?.nombre}</div>
-                {selectedEntrega.clientes?.direccion && <div className="text-xs text-gray-500 mb-1">{selectedEntrega.clientes.direccion}</div>}
-                {selectedEntrega.vendedor_ruta?.nombre && <div className="text-[10px] text-gray-400">Ruta: {selectedEntrega.vendedor_ruta.nombre}</div>}
-                {selectedEntrega.orden_entrega > 0 && <div className="text-[10px] text-gray-400">Orden: #{selectedEntrega.orden_entrega}</div>}
-                <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
-                  <Link to={`/logistica/entregas/${selectedEntrega.id}`} className="text-xs text-blue-600 hover:underline">Ver entrega</Link>
-                </div>
-              </div>
-            </Popup>
-          )}
-        </MapGL>
+            {/* Entregas: SIEMPRE numeradas por orden de entrega */}
+            {entregasConGps.map((e: any, idx: number) => {
+              const orderIdx = orderedItems
+                ? orderedItems.findIndex((o: any) => o.id === e.id)
+                : idx;
+              const numero = orderIdx >= 0 ? orderIdx + 1 : idx + 1;
+              const color = orderedItems ? '#6366f1' : (STATUS_COLORS[e.status] ?? '#714BF4');
+              const isSelected = selectedEntrega?.id === e.id;
+              return (
+                <Marker
+                  key={e.id}
+                  longitude={e._displayLng}
+                  latitude={e._displayLat}
+                  anchor="center"
+                  onClick={(ev) => {
+                    ev.originalEvent.stopPropagation();
+                    setSelectedEntrega(e);
+                  }}
+                >
+                  <div
+                    className={cn(
+                      "rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold cursor-pointer hover:scale-110 transition-transform",
+                      isSelected && "ring-4 ring-primary/40 scale-125"
+                    )}
+                    style={{
+                      backgroundColor: color,
+                      width: 28,
+                      height: 28,
+                      fontSize: 11,
+                    }}
+                    title={`#${numero} · ${e.folio} - ${e.clientes.nombre}`}
+                  >
+                    {numero}
+                  </div>
+                </Marker>
+              );
+            })}
 
-        <button
-          onClick={handleRecenter}
-          className="absolute bottom-6 left-3 z-10 bg-card border border-border rounded-full p-2.5 shadow-lg hover:bg-accent transition-colors"
-          title="Centrar mapa"
-        >
-          <Navigation className="h-4 w-4 text-foreground" />
-        </button>
-
-        {orderedItems && orderedItems.length > 0 && (
-          <div className="absolute top-3 right-14 z-10 bg-card border border-border rounded-xl shadow-lg w-72 max-h-[60vh] flex flex-col">
-            <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Route className="h-3.5 w-3.5 text-primary" />
-                Orden de entrega
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-[10px] text-emerald-600">
-                  <Save className="h-3 w-3" /> Guardado
-                </span>
-                <span className="text-[10px] text-muted-foreground">{orderedItems.length} paradas</span>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {orderedItems.map((c: any, idx: number) => (
-                <div key={c.id} className="flex items-center gap-2 px-3 py-2 border-b border-border/30 last:border-0">
-                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold shrink-0">{idx + 1}</div>
-                  <div className="min-w-0 flex-1">
-                    {c.folio && <div className="text-[10px] font-mono text-muted-foreground">{c.folio}</div>}
-                    <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                    {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
+            {/* Popup */}
+            {selectedEntrega && (
+              <Popup
+                longitude={selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng}
+                latitude={selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat}
+                anchor="bottom"
+                onClose={() => setSelectedEntrega(null)}
+                closeButton={true}
+                closeOnClick={false}
+                offset={20}
+              >
+                <div className="min-w-[200px] p-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm font-mono">{selectedEntrega.folio}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${STATUS_COLORS[selectedEntrega.status]}20`, color: STATUS_COLORS[selectedEntrega.status] }}>
+                      {selectedEntrega.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium mb-0.5">{selectedEntrega.clientes?.nombre}</div>
+                  {selectedEntrega.clientes?.direccion && <div className="text-xs text-gray-500 mb-1">{selectedEntrega.clientes.direccion}</div>}
+                  {selectedEntrega.vendedor_ruta?.nombre && <div className="text-[10px] text-gray-400">Ruta: {selectedEntrega.vendedor_ruta.nombre}</div>}
+                  {selectedEntrega.orden_entrega > 0 && <div className="text-[10px] text-gray-400">Orden: #{selectedEntrega.orden_entrega}</div>}
+                  <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
+                    <Link to={`/logistica/entregas/${selectedEntrega.id}`} className="text-xs text-blue-600 hover:underline">Ver entrega</Link>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </Popup>
+            )}
+          </MapGL>
+
+          <button
+            onClick={handleRecenter}
+            className="absolute bottom-6 left-3 z-10 bg-card border border-border rounded-full p-2.5 shadow-lg hover:bg-accent transition-colors"
+            title="Centrar mapa"
+          >
+            <Navigation className="h-4 w-4 text-foreground" />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
+// ============================================================
+// Panel lateral con tabs: Ruta optimizada / Todas / Sin GPS
+// ============================================================
+function PanelEntregas({
+  entregasData,
+  entregasConGps,
+  orderedItems,
+  selectedEntrega,
+  setSelectedEntrega,
+  STATUS_COLORS,
+  optimizing,
+  saving,
+  mapRef,
+}: {
+  entregasData: any[];
+  entregasConGps: any[];
+  orderedItems: any[] | null;
+  selectedEntrega: any | null;
+  setSelectedEntrega: (e: any) => void;
+  STATUS_COLORS: Record<string, string>;
+  optimizing: boolean;
+  saving: boolean;
+  mapRef: React.MutableRefObject<MapRef | null>;
+}) {
+  const [tab, setTab] = useState<'ruta' | 'todas' | 'sinGps'>('ruta');
+  const sinGps = useMemo(
+    () => (entregasData ?? []).filter((e: any) => !e.clientes?.gps_lat || !e.clientes?.gps_lng),
+    [entregasData]
+  );
+
+  // Si no hay ruta optimizada, en la pestaña "ruta" muestra las entregas con GPS en su orden actual
+  const filaList: any[] = useMemo(() => {
+    if (tab === 'sinGps') return sinGps;
+    if (tab === 'todas') return entregasData;
+    if (orderedItems) {
+      return orderedItems.map((o: any) => entregasConGps.find((e: any) => e.id === o.id)).filter(Boolean);
+    }
+    return entregasConGps;
+  }, [tab, orderedItems, entregasConGps, entregasData, sinGps]);
+
+  const handleRowClick = (e: any) => {
+    setSelectedEntrega(e);
+    if (mapRef.current && e._displayLat && e._displayLng) {
+      mapRef.current.flyTo({ center: [e._displayLng, e._displayLat], zoom: 15, duration: 600 });
+    }
+  };
+
+  const tabs = [
+    { id: 'ruta' as const, label: orderedItems ? 'Ruta optimizada' : 'Por entregar', count: entregasConGps.length, icon: Route },
+    { id: 'todas' as const, label: 'Todas', count: entregasData.length, icon: Truck },
+    { id: 'sinGps' as const, label: 'Sin GPS', count: sinGps.length, icon: MapPin },
+  ];
+
+  return (
+    <>
+      {/* Tab bar */}
+      <div className="flex border-b border-border bg-card shrink-0">
+        {tabs.map(t => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors",
+                active ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{t.label}</span>
+              <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                {t.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Status bar */}
+      {tab === 'ruta' && (orderedItems || optimizing || saving) && (
+        <div className="px-3 py-1.5 bg-primary/5 border-b border-border text-[11px] flex items-center justify-between shrink-0">
+          {optimizing ? (
+            <span className="flex items-center gap-1.5 text-primary font-medium"><Loader2 className="h-3 w-3 animate-spin" /> Optimizando ruta...</span>
+          ) : orderedItems ? (
+            <>
+              <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                <CheckCircle2 className="h-3 w-3" /> Ruta optimizada{saving && ' · guardando...'}
+              </span>
+              <span className="text-muted-foreground">{orderedItems.length} paradas</span>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto min-h-0">
+        {filaList.length === 0 ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {tab === 'sinGps' ? 'Todas las entregas tienen GPS 🎉' : 'No hay entregas para mostrar'}
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-muted/50 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-2 py-2 text-left w-8">#</th>
+                <th className="px-2 py-2 text-left">Folio / Cliente</th>
+                <th className="px-2 py-2 text-left">Estado</th>
+                <th className="px-2 py-2 text-left">Ruta</th>
+                <th className="px-2 py-2 text-right w-12"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filaList.map((e: any, idx: number) => {
+                const isSelected = selectedEntrega?.id === e.id;
+                const hasGps = !!(e.clientes?.gps_lat && e.clientes?.gps_lng);
+                return (
+                  <tr
+                    key={e.id}
+                    onClick={() => hasGps && handleRowClick(e)}
+                    className={cn(
+                      "border-b border-border/40 transition-colors",
+                      hasGps ? "cursor-pointer hover:bg-accent/50" : "opacity-70",
+                      isSelected && "bg-primary/10"
+                    )}
+                  >
+                    <td className="px-2 py-2">
+                      {hasGps ? (
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold">
+                          {idx + 1}
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[11px] font-bold">
+                          ?
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-2 min-w-0">
+                      <div className="font-mono text-[10px] text-muted-foreground">{e.folio}</div>
+                      <div className="font-medium text-foreground truncate max-w-[180px]">{e.clientes?.nombre}</div>
+                      {e.clientes?.direccion && (
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">{e.clientes.direccion}</div>
+                      )}
+                    </td>
+                    <td className="px-2 py-2">
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
+                        style={{ backgroundColor: `${STATUS_COLORS[e.status]}20`, color: STATUS_COLORS[e.status] }}
+                      >
+                        {e.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-muted-foreground truncate max-w-[100px]">
+                      {e.vendedor_ruta?.nombre ?? e.vendedores?.nombre ?? '—'}
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <Link
+                        to={`/logistica/entregas/${e.id}`}
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="text-primary hover:underline text-[10px]"
+                      >
+                        Ver
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
