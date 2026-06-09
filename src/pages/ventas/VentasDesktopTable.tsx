@@ -163,17 +163,34 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           );
         })}
       </tbody>
-      {items.length > 0 && (
-        <tfoot>
-          <tr className="bg-card border-t border-border font-semibold text-[12px]">
-            <td colSpan={Math.max(1, totalCols - (v('saldo') ? 3 : 2))} className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>
-            {v('total') && <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, r: any) => s + (r.total ?? 0), 0))}</td>}
-            {v('saldo') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(items.reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0))}</td>}
-            {v('status') && <td />}
-            <td />
-          </tr>
-        </tfoot>
-      )}
+      {items.length > 0 && (() => {
+        const totSubtotal = items.reduce((s: number, r: any) => s + (r.subtotal ?? 0), 0);
+        const totDescuento = items.reduce((s: number, r: any) => s + (r.descuento_total ?? 0), 0);
+        const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
+        const totTotal = items.reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+        const totSaldo = items.reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+        return (
+          <tfoot>
+            <tr className="bg-card border-t border-border font-semibold text-[12px]">
+              <td className="py-2 px-3" />
+              {v('folio') && <td className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>}
+              {v('tipo') && <td />}
+              {v('cliente') && <td />}
+              {v('vendedor') && <td className="hidden md:table-cell" />}
+              {v('almacen') && <td className="hidden md:table-cell" />}
+              {v('condicion') && <td className="hidden lg:table-cell" />}
+              {v('fecha') && <td className="hidden lg:table-cell" />}
+              {v('subtotal') && <td className="py-2 px-3 text-right hidden md:table-cell tabular-nums font-bold">{fmt(totSubtotal)}</td>}
+              {v('descuento') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold text-destructive">{totDescuento > 0 ? `-${fmt(totDescuento)}` : '—'}</td>}
+              {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums font-bold">{fmt(totIva)}</td>}
+              {v('total') && <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totTotal)}</td>}
+              {v('saldo') && <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(totSaldo)}</td>}
+              {v('status') && <td />}
+              <td />
+            </tr>
+          </tfoot>
+        );
+      })()}
     </table>
   );
 }
