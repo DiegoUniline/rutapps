@@ -498,7 +498,7 @@ async function runClientes(filtros: ReporteFiltros, empresaId: string) {
       .eq('empresa_id', empresaId)
       .order('nombre', { ascending: true })
       .range(from, to);
-    if (filtros.status?.length) q = q.in('status', filtros.status);
+    if (filtros.status?.length) q = q.in('status', filtros.status as any);
     return q;
   });
   if (!clientes.length) return [];
