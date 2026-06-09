@@ -20,6 +20,7 @@ import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { fmtDate, fmtDateLongMx } from '@/lib/utils';
 import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
+import DatosFiscalesCard from '@/components/suscripcion/DatosFiscalesCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SubPlanRow {
