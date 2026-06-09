@@ -645,9 +645,10 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
       <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
       <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-      <Route path="/ventas/rutas" element={<GoogleMapsProvider blocking><MapaClientesPage /></GoogleMapsProvider>} />
-      <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider blocking><MapaClientesPage /></GoogleMapsProvider>} />
-      <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider blocking><MapaVentasPage /></GoogleMapsProvider>} />
+      <Route path="/ventas/rutas" element={<MapaClientesPage />} />
+      <Route path="/ventas/mapa-clientes" element={<MapaClientesPage />} />
+      <Route path="/ventas/mapa-ventas" element={<MapaVentasPage />} />
+
       <Route path="/ventas/promociones" element={<PromocionesPage />} />
       <Route path="/pos/admin" element={<Suspense fallback={<PageLoader />}><PosAdminPage /></Suspense>} />
       <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
