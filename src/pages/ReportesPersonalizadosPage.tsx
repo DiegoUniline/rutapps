@@ -26,7 +26,7 @@ import {
   type ReporteFuente,
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney } from '@/lib/currency';
 
 export default function ReportesPersonalizadosPage() {
   const { user, empresa } = useAuth();
