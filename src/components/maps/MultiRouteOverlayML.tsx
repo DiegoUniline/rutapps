@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { Marker, Source, Layer } from 'react-map-gl/maplibre';
 import { getRouteColor, type RouteResultEntry } from './MultiRoutePanel';
 
@@ -83,7 +83,7 @@ export function MultiRouteOverlayML({
         };
 
         return (
-          <div key={r.vendedor_id} style={{ display: 'contents' }}>
+          <Fragment key={r.vendedor_id}>
             {/* Polylines */}
             {!hidePolylines && polylines.length > 0 && (
               <Source id={sourceId} type="geojson" data={featureCollection}>
@@ -149,7 +149,7 @@ export function MultiRouteOverlayML({
                 </Marker>
               );
             })}
-          </div>
+          </Fragment>
         );
       })}
     </>

@@ -127,6 +127,7 @@ export default function MapaClientesPage() {
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [showListPanel, setShowListPanel] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
 
   const { data: isAdmin } = useQuery({
@@ -827,6 +828,14 @@ export default function MapaClientesPage() {
             ))}
           </div>
 
+          <button onClick={() => setShowListPanel(s => !s)}
+            className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+              showListPanel ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+            <Users className="h-3.5 w-3.5" />
+            Lista ({filtered.length})
+          </button>
+
           {/* Route controls */}
           <div className="flex items-center gap-1 ml-auto relative">
             {isMultiVendor && (
@@ -1269,6 +1278,82 @@ export default function MapaClientesPage() {
         )}
 
         {/* "Sin GPS" panel moved to toolbar dropdown next to "Origen" */}
+
+        {/* Floating clients list panel */}
+        {showListPanel && (
+          <div className="absolute top-3 right-3 md:top-16 md:right-3 z-20 w-[340px] max-w-[calc(100vw-1.5rem)]
+            bg-card border border-border rounded-xl shadow-xl flex flex-col max-h-[70vh]">
+            <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold text-foreground">Clientes filtrados</span>
+              <span className="ml-auto text-[10px] text-muted-foreground">{filtered.length}</span>
+              <button onClick={() => setShowListPanel(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="overflow-auto flex-1">
+              <table className="w-full text-[11px]">
+                <thead className="bg-muted/40 sticky top-0">
+                  <tr className="text-left text-muted-foreground">
+                    <th className="px-2 py-1.5 font-medium w-8">#</th>
+                    <th className="px-2 py-1.5 font-medium">Cliente</th>
+                    <th className="px-2 py-1.5 font-medium">Día</th>
+                    <th className="px-2 py-1.5 font-medium">Vend.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">Sin clientes</td></tr>
+                  )}
+                  {filtered.map((c: any) => {
+                    const orden = ordenRutaMap.get(c.id);
+                    const visited = ventasHoy?.has(c.id);
+                    const hasGps = !!(c.gps_lat && c.gps_lng);
+                    return (
+                      <tr key={c.id}
+                        onClick={() => {
+                          if (hasGps) {
+                            setSelectedCliente(c);
+                            mapRef.current?.flyTo({ center: [Number(c.gps_lng), Number(c.gps_lat)], zoom: 16, duration: 600 });
+                          }
+                        }}
+                        className={cn("border-b border-border/40 cursor-pointer hover:bg-accent/40 transition-colors",
+                          !hasGps && "opacity-60")}>
+                        <td className="px-2 py-1.5">
+                          {orden ? (
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">{orden}</span>
+                          ) : !hasGps ? (
+                            <MapPinOff className="h-3 w-3 text-amber-500" />
+                          ) : (
+                            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: getMarkerColor(c) }} />
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <div className="font-medium text-foreground truncate max-w-[140px]">{c.nombre}</div>
+                          {c.codigo && <div className="text-[9px] text-muted-foreground font-mono">{c.codigo}</div>}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <div className="flex gap-0.5 flex-wrap">
+                            {(c.dia_visita ?? []).slice(0, 3).map((d: string) => (
+                              <span key={d} className="text-[8px] px-1 py-0.5 rounded font-semibold"
+                                style={{ backgroundColor: `${DIA_COLORS[d]}22`, color: DIA_COLORS[d] }}>
+                                {d.slice(0, 2)}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-2 py-1.5 text-[10px] text-muted-foreground truncate max-w-[80px]">
+                          {c.vendedores?.nombre ?? '—'}
+                          {visited && <CheckCircle2 className="inline h-2.5 w-2.5 ml-1 text-[hsl(var(--success))]" />}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* First-time hint */}
         {!originPoint && !routeResult && withGps.length > 0 && (
