@@ -352,7 +352,7 @@ export default function MapaVentasPage() {
       {/* Split: tabla izquierda + mapa derecha */}
       <div className="flex-1 flex min-h-0">
         {/* Panel izquierdo: tabla con tabs */}
-        <div className="w-1/2 border-r border-border flex flex-col bg-card min-h-0">
+        <div className="w-[420px] border-r border-border flex flex-col bg-card min-h-0 shrink-0">
           <PanelEntregas
             entregasData={entregasData ?? []}
             entregasConGps={entregasConGps}
@@ -367,7 +367,7 @@ export default function MapaVentasPage() {
         </div>
 
         {/* Mapa derecha */}
-        <div className="w-1/2 relative min-h-0">
+        <div className="flex-1 relative min-h-0">
           {loadingEntregas && (
             <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
