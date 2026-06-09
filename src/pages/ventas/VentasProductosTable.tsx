@@ -3,6 +3,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { ClienteLink, ProductoLink } from '@/components/links/EntityLinks';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 interface Props {
   items: any[];
