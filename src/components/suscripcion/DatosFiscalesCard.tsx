@@ -308,7 +308,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleSave} disabled={saving || !isDirty} variant={isDirty ? 'default' : 'outline'} className={isDirty ? 'bg-primary hover:bg-primary/90' : ''}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Guardar datos fiscales
           </Button>
