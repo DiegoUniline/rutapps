@@ -634,6 +634,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     visibleNavItems={visibleNavItems}
                     isSuperAdmin={isSuperAdmin}
                     setupComplete={setupComplete}
+                    onOpenPalette={() => setPaletteOpen(true)}
                   />
                 </div>
                 <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 safe-area-bottom">
