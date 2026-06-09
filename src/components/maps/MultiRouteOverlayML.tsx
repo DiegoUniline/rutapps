@@ -83,7 +83,7 @@ export function MultiRouteOverlayML({
         };
 
         return (
-          <div key={r.vendedor_id} style={{ display: 'contents' }}>
+          <Fragment key={r.vendedor_id}>
             {/* Polylines */}
             {!hidePolylines && polylines.length > 0 && (
               <Source id={sourceId} type="geojson" data={featureCollection}>
