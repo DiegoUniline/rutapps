@@ -103,10 +103,15 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
 
-  // Load latest + today's count + small history
   useEffect(() => {
     if (!empresaId || !userId) return;
     let cancelled = false;
+    // Reset state when company or user changes to avoid showing data from another tenant
+    setAdvice(null);
+    setGeneratedAt(null);
+    setHistory([]);
+    setError(null);
+    setBootLoading(true);
     (async () => {
       try {
         const since = new Date();
@@ -124,6 +129,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
           supabase
             .from('dashboard_ai_recomendaciones')
             .select('id', { count: 'exact', head: true })
+            .eq('empresa_id', empresaId)
             .eq('user_id', userId)
             .gte('created_at', since.toISOString()),
           supabase
@@ -138,6 +144,9 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
         if (last) {
           setAdvice(last.content);
           setGeneratedAt(new Date(last.created_at));
+        } else {
+          setAdvice(null);
+          setGeneratedAt(null);
         }
         setUsedToday(count ?? 0);
         setHistory((hist as RecoRow[]) ?? []);

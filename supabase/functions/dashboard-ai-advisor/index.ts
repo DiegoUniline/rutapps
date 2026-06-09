@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       .from("dashboard_ai_recomendaciones")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
+      .eq("empresa_id", empresaId)
       .gte("created_at", since.toISOString());
     if (cntErr) return json({ error: cntErr.message }, 500);
     const usedToday = count ?? 0;
