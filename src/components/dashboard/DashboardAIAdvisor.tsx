@@ -98,7 +98,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
   const [advice, setAdvice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
-  const [usedToday, setUsedToday] = useState(0);
+  const [usedThisMonth, setUsedThisMonth] = useState(0);
   const [history, setHistory] = useState<RecoRow[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
@@ -115,6 +115,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
     (async () => {
       try {
         const since = new Date();
+        since.setDate(1);
         since.setHours(0, 0, 0, 0);
 
         const [{ data: last }, { count }, { data: hist }] = await Promise.all([
@@ -148,7 +149,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
           setAdvice(null);
           setGeneratedAt(null);
         }
-        setUsedToday(count ?? 0);
+        setUsedThisMonth(count ?? 0);
         setHistory((hist as RecoRow[]) ?? []);
       } catch (e) {
         // silent
