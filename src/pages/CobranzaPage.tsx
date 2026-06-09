@@ -218,8 +218,15 @@ export default function CobranzaPage() {
   }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
 
   const CobrosTable = ({ items }: { items: any[] }) => {
+    const getFolios = (r: any): { id: string; folio: string }[] => {
+      const apps = (r.cobro_aplicaciones ?? []) as any[];
+      return apps
+        .map(a => ({ id: a.ventas?.id ?? a.venta_id, folio: a.ventas?.folio ?? (a.venta_id ? String(a.venta_id).slice(0, 8) : '') }))
+        .filter(x => x.id);
+    };
     const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
       if (k === 'fecha') return r.fecha ?? '';
+      if (k === 'folio') return getFolios(r).map(f => f.folio).join(', ');
       if (k === 'cliente') return (r.clientes as any)?.nombre ?? '';
       if (k === 'vendedor') return vendedorMap.get(r.user_id) || '';
       if (k === 'metodo') return r.metodo_pago ?? '';
@@ -233,25 +240,46 @@ export default function CobranzaPage() {
         <TableHeader>
           <TableRow>
             <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Fecha</SortableTh>
+            <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Folio</SortableTh>
             <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Cliente</SortableTh>
             <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Vendedor</SortableTh>
             <SortableTh sortKey="metodo" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Método</SortableTh>
             <SortableTh sortKey="referencia" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Referencia</SortableTh>
-            <SortableTh sortKey="estado" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Estado</SortableTh>
+            <SortableTh sortKey="estado" sort={sort} onToggle={toggle} align="center" className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px] text-center">Estado</SortableTh>
             <SortableTh sortKey="monto" sort={sort} onToggle={toggle} align="right" className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px] text-right">Monto</SortableTh>
-            <TableHead className="text-[11px] text-center w-12"></TableHead>
+            <TableHead className="text-[11px] text-center w-20"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sorted.map(c => (
+          {sorted.map(c => {
+            const folios = getFolios(c);
+            return (
             <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
-              <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
+              <TableCell className="text-[12px] whitespace-nowrap">{fmtDate(c.fecha)}</TableCell>
+              <TableCell className="text-[12px] font-mono">
+                {folios.length === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {folios.map(f => (
+                      <a
+                        key={f.id}
+                        href={`/ventas/${f.id}`}
+                        onClick={e => { e.preventDefault(); window.location.href = `/ventas/${f.id}`; }}
+                        className="text-primary hover:underline"
+                      >
+                        {f.folio}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </TableCell>
               <TableCell className="font-medium text-[12px]"><ClienteLink id={(c as any).cliente_id ?? (c.clientes as any)?.id}>{(c.clientes as any)?.nombre ?? '—'}</ClienteLink></TableCell>
               <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
               <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
               <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
-              <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
-              <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
+              <TableCell className="text-[12px] text-center"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
+              <TableCell className="text-right font-bold text-success tabular-nums">{fmtC(c.monto)}</TableCell>
               <TableCell className="text-center">
                 <div className="flex items-center justify-center gap-0.5">
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handlePrintCobro(c)} title="Imprimir ticket">
@@ -263,16 +291,17 @@ export default function CobranzaPage() {
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
           {items.length === 0 && (
-            <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+            <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
           )}
         </TableBody>
         {items.length > 0 && (
           <tfoot>
             <TableRow className="bg-card border-t border-border font-semibold">
-              <TableCell colSpan={6} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
-              <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
+              <TableCell colSpan={7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+              <TableCell className="text-right text-[12px] text-success font-bold tabular-nums">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
               <TableCell />
             </TableRow>
           </tfoot>
