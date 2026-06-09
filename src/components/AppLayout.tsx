@@ -416,18 +416,75 @@ function Breadcrumb() {
   );
 }
 
-function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setupComplete }: {
+function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setupComplete, onOpenPalette }: {
   collapsed: boolean;
   onNavigate?: () => void;
   visibleNavItems: NavItem[];
   isSuperAdmin: boolean;
   setupComplete: boolean | undefined;
+  onOpenPalette?: () => void;
 }) {
   const location = useLocation();
   const setupActive = location.pathname === '/configuracion-inicial';
+  const [query, setQuery] = useState('');
+
+  const filteredItems = useMemo(() => {
+    if (!query.trim()) return visibleNavItems;
+    const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return visibleItems => {
+      const out: NavItem[] = [];
+      for (const item of visibleNavItems) {
+        const labelMatch = item.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q);
+        if (!item.children) {
+          if (labelMatch) out.push(item);
+          continue;
+        }
+        const matchedChildren = item.children.filter(c =>
+          c.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+        );
+        if (labelMatch || matchedChildren.length > 0) {
+          out.push({ ...item, children: labelMatch ? item.children : matchedChildren });
+        }
+      }
+      return out;
+    }();
+  }, [visibleNavItems, query]);
 
   return (
     <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2 space-y-0.5">
+      {!collapsed && (
+        <div className="px-1 mb-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar vistas..."
+              className="w-full h-8 pl-8 pr-6 rounded-md bg-sidebar-hover border border-sidebar-border/40 text-[12px] text-sidebar-foreground placeholder:text-sidebar-foreground/40 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-sidebar-foreground/40 hover:text-sidebar-foreground"
+              >
+                <span className="text-[10px]">×</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {collapsed && onOpenPalette && (
+        <div className="px-1 mb-2 flex justify-center">
+          <button
+            onClick={onOpenPalette}
+            className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+            title="Buscar vistas (⌘K)"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {setupComplete === false && (
         <Link
           to="/configuracion-inicial"
@@ -445,9 +502,14 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
           {!collapsed && <span>Configuración inicial</span>}
         </Link>
       )}
-      {visibleNavItems.map(item => (
+      {filteredItems.map(item => (
         <SidebarItem key={item.path} item={item} collapsed={collapsed} onNavigate={onNavigate} />
       ))}
+      {filteredItems.length === 0 && query.trim() && !collapsed && (
+        <div className="px-3 py-6 text-center text-[11px] text-sidebar-foreground/40">
+          No se encontraron vistas
+        </div>
+      )}
       {isSuperAdmin && (
         <Link
           to="/super-admin"
@@ -466,6 +528,7 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
     </nav>
   );
 }
+
 
 const DemoWelcomeDialog = lazy(() => import('@/components/DemoWelcomeDialog'));
 
