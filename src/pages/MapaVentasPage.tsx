@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { toast } from 'sonner';
+import MyLocationMarkerML from '@/components/MyLocationMarkerML';
+import LiveVendedoresLayerML from '@/components/LiveVendedoresLayerML';
 
 // OpenFreeMap = tiles MapLibre gratuitos, sin API key, sin watermark.
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
@@ -372,6 +374,10 @@ export default function MapaVentasPage() {
           attributionControl={{ compact: true }}
         >
           <NavigationControl position="top-right" showCompass={false} />
+
+          {/* Mi ubicación + vendedores en vivo */}
+          <MyLocationMarkerML />
+          <LiveVendedoresLayerML enabled={!!isAdmin} />
 
           {/* Polyline ruta */}
           {polylineGeoJson && (
