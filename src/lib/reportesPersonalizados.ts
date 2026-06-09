@@ -180,7 +180,7 @@ export async function runReporte(
   const rows: Record<string, any>[] = [];
 
   for (const l of lineas) {
-    const v = ventasMap.get(l.venta_id);
+    const v = ventasMap.get(l.venta_id) as any;
     if (!v) continue;
     const c = clientesMap.get(v.cliente_id);
     const vd = vendedoresMap.get(v.vendedor_id);
