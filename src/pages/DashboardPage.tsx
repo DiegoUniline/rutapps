@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import {
   DollarSign, TrendingUp, TrendingDown, ShoppingCart, CreditCard,
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
-  BarChart3, Users, UserX, Loader2, RotateCcw
+  BarChart3, Users, UserX, Loader2, RotateCcw,
+  MapPin, Truck, ClipboardList, Activity,
 } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -17,10 +18,9 @@ import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
-  useDashboardDevoluciones, useDashboardClientesEnRiesgo,
+  useDashboardDevoluciones, useDashboardHoy,
   type DateRange
 } from '@/hooks/useDashboardData';
-import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
@@ -72,6 +72,105 @@ function KpiCard({ title, value, subtitle, icon: Icon, trend, color }: {
   );
 }
 
+function HoyTile({ label, value, sub, icon: Icon, tone = 'default' }: {
+  label: string; value: string; sub?: string; icon: React.ElementType;
+  tone?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+}) {
+  const toneMap = {
+    default: 'before:bg-primary text-foreground',
+    success: 'before:bg-[hsl(var(--success))] text-foreground',
+    warning: 'before:bg-[hsl(var(--warning))] text-foreground',
+    danger:  'before:bg-destructive text-foreground',
+    info:    'before:bg-[hsl(var(--chart-2))] text-foreground',
+  } as const;
+  return (
+    <div className={cn(
+      "relative bg-card border border-border rounded-lg pl-3 pr-3 py-2.5",
+      "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full",
+      toneMap[tone]
+    )}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
+        <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
+      </div>
+      <div className="text-xl md:text-2xl font-black tabular-nums tracking-tight text-foreground leading-tight mt-0.5">{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
+    </div>
+  );
+}
+
+function HoyBand({ hoy, money }: { hoy: any; money: (n: number) => string }) {
+  const todayLabel = (() => {
+    try {
+      const d = hoy?.today ? new Date(hoy.today + 'T12:00:00') : new Date();
+      return format(d, "EEEE d 'de' MMMM", { locale: es });
+    } catch { return ''; }
+  })();
+  const pctEntregas = hoy && hoy.entregasTotales > 0 ? Math.round((hoy.entregasHechas / hoy.entregasTotales) * 100) : null;
+  const entregasTone: 'success' | 'warning' | 'danger' | 'info' =
+    pctEntregas === null ? 'info' : pctEntregas >= 90 ? 'success' : pctEntregas >= 60 ? 'warning' : 'danger';
+
+  return (
+    <section className="bg-gradient-to-br from-primary/[0.04] via-card to-card border border-primary/20 rounded-xl p-4 mb-5">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </div>
+          <h2 className="text-sm font-black uppercase tracking-[0.15em] text-foreground">Hoy</h2>
+          <span className="text-xs text-muted-foreground capitalize">· {todayLabel}</span>
+        </div>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Actualizado en vivo</span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <HoyTile
+          label="Visitas"
+          value={fmtNum(hoy?.visitasCount ?? 0)}
+          sub={`${hoy?.vendedoresActivos ?? 0} vendedor${(hoy?.vendedoresActivos ?? 0) === 1 ? '' : 'es'} activo${(hoy?.vendedoresActivos ?? 0) === 1 ? '' : 's'}`}
+          icon={MapPin}
+          tone="info"
+        />
+        <HoyTile
+          label="Entregas"
+          value={`${fmtNum(hoy?.entregasHechas ?? 0)} / ${fmtNum(hoy?.entregasTotales ?? 0)}`}
+          sub={pctEntregas === null ? 'Sin programadas' : `${pctEntregas}% completado`}
+          icon={Truck}
+          tone={entregasTone}
+        />
+        <HoyTile
+          label="Ventas"
+          value={money(hoy?.ventasTotal ?? 0)}
+          sub={`${hoy?.ventasCount ?? 0} operaciones`}
+          icon={ShoppingCart}
+          tone="default"
+        />
+        <HoyTile
+          label="Cobros"
+          value={money(hoy?.cobrosTotal ?? 0)}
+          sub={`${hoy?.cobrosCount ?? 0} movimientos`}
+          icon={Wallet}
+          tone="success"
+        />
+        <HoyTile
+          label="Pedidos pend."
+          value={fmtNum(hoy?.pedidosPendientes ?? 0)}
+          sub="Por entregar"
+          icon={ClipboardList}
+          tone={(hoy?.pedidosPendientes ?? 0) > 0 ? 'warning' : 'default'}
+        />
+        <HoyTile
+          label="Gastos"
+          value={money(hoy?.gastosTotal ?? 0)}
+          sub={`${hoy?.gastosCount ?? 0} movimientos`}
+          icon={Activity}
+          tone={(hoy?.gastosTotal ?? 0) > 0 ? 'danger' : 'default'}
+        />
+      </div>
+    </section>
+  );
+}
+
 function SectionTitle({ children, icon: Icon }: { children: string; icon: React.ElementType }) {
   return (
     <h2 className="text-sm font-bold text-foreground flex items-center gap-2 mt-6 mb-3">
@@ -103,7 +202,7 @@ export default function DashboardPage() {
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
-  const { data: clientesEnRiesgo } = useDashboardClientesEnRiesgo(dateRange, vendedorId || undefined);
+  const { data: hoy } = useDashboardHoy(vendedorId || undefined);
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
@@ -245,6 +344,11 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* === HOY · Banda ejecutiva === */}
+      <HoyBand hoy={hoy} money={money} />
+
+
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
@@ -338,17 +442,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Clientes en Riesgo */}
-      {(clientesEnRiesgo ?? []).length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4 mt-4">
-          <SectionTitle icon={UserX}>Clientes sin visitar — Ingreso en riesgo</SectionTitle>
-          <ClientesEnRiesgoWidget
-            clientes={clientesEnRiesgo ?? []}
-            fmtMoney={money}
-            maxItems={8}
-          />
-        </div>
-      )}
+      {/* (Bloque "Clientes en riesgo" reemplazado por la banda "HOY" arriba) */}
 
       {/* Bottom row: Top products, Top clients, Low stock */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -415,7 +509,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className="text-xs text-muted-foreground">Todo en orden 👍</p>
+              <p className="text-xs text-muted-foreground">Sin productos bajo mínimo</p>
             </div>
           )}
 
