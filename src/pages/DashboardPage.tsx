@@ -869,7 +869,34 @@ export default function DashboardPage() {
       {/* === HOY · Banda ejecutiva === */}
       <HoyBand hoy={hoy} money={money} />
 
-
+      {/* === Asesor IA === */}
+      <DashboardAIAdvisor buildSnapshot={() => ({
+        periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
+        hoy: hoy ? {
+          ventasHoy: hoy.ventasTotal, ventasOps: hoy.ventasCount,
+          cobrosHoy: hoy.cobrosTotal, cobrosOps: hoy.cobrosCount,
+          visitas: hoy.visitasCount, vendedoresActivos: hoy.vendedoresActivos,
+          entregasHechas: hoy.entregasHechas, entregasTotales: hoy.entregasTotales,
+          pedidosPendientes: hoy.pedidosPendientes, gastos: hoy.gastosTotal,
+        } : null,
+        kpis: {
+          totalVentas: kpis.totalVentas, numVentas: kpis.numVentas, ticketPromedio: kpis.ticketPromedio,
+          pedidos: kpis.pedidos, ventasDirectas: kpis.ventasDirectas,
+          totalCobrado: kpis.totalCobrado, totalCartera: kpis.totalCartera, clientesMorosos: kpis.clientesMorosos,
+          totalCompras: kpis.totalCompras, saldoProveedores: kpis.saldoProveedores,
+          totalGastos: kpis.totalGastos, utilidadBruta: kpis.utilidadBruta,
+          productosBajoMinimo: kpis.productosBajoMinimo, valorInventario: kpis.valorInventario,
+        },
+        top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),
+        top5Clientes: topClientsAll.slice(0, 5).map((c: any) => ({ nombre: c.nombre, total: c.total, ventas: c.count })),
+        ventasPorVendedor: (ventasPorVendedor ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
+        ventasUltimos12Meses: (ventasPorMes ?? []).map((m: any) => ({ mes: m.label, total: m.total, growth: m.growth })),
+        mesVsMesPorVendedor: (usuarioMes ?? []).slice(0, 10).map((u: any) => ({
+          nombre: u.nombre, mesActual: u.cur, mesAnterior: u.prev, growthPct: u.growth,
+        })),
+        devoluciones: { count: devStats.count, unidades: devStats.totalUnidades, credito: devStats.totalCredito },
+        stockCritico: lowStockProducts.slice(0, 10).map((p: any) => ({ nombre: p.nombre, cantidad: Number(p.cantidad ?? 0), min: Number(p.min ?? 0) })),
+      })} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
