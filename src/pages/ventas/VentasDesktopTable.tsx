@@ -5,6 +5,7 @@ import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 interface Props {
   items: any[];
