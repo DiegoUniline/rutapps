@@ -20,6 +20,7 @@ import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { fmtDate, fmtDateLongMx } from '@/lib/utils';
 import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
+import DatosFiscalesCard from '@/components/suscripcion/DatosFiscalesCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SubPlanRow {
@@ -839,6 +840,7 @@ export default function MiSuscripcionPage() {
           <TabsTrigger value="resumen" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Resumen</TabsTrigger>
           <TabsTrigger value="plan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Plan & Cupones</TabsTrigger>
           <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas{user?.email === 'diego.leon@uniline.mx' ? ' & Timbres' : ''}</TabsTrigger>
+          <TabsTrigger value="fiscal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Datos fiscales</TabsTrigger>
           <TabsTrigger value="simulador" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Simulador de costos</TabsTrigger>
         </TabsList>
 
@@ -1341,6 +1343,11 @@ export default function MiSuscripcionPage() {
             </div>
             <div className="lg:col-span-1">{cartCard}</div>
           </div>
+        </TabsContent>
+
+        {/* ─── Tab: Datos fiscales ─── */}
+        <TabsContent value="fiscal" className="mt-4">
+          {empresa?.id && <DatosFiscalesCard empresaId={empresa.id} />}
         </TabsContent>
 
         {/* ─── Tab: Simulador de costos ─── */}

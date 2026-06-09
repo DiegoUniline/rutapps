@@ -2352,14 +2352,19 @@ export type Database = {
           colonia: string | null
           cp: string | null
           created_at: string
+          csf_url: string | null
           demo_expires_at: string | null
           direccion: string | null
           email: string
+          email_cc_facturacion: string | null
+          email_facturacion: string | null
           estado: string | null
+          forma_pago_sat: string | null
           id: string
           is_partner_sandbox: boolean
           jornada_permite_sin_vehiculo: boolean
           logo_url: string | null
+          metodo_pago_sat: string | null
           moneda: string
           nombre: string
           notas_ticket: string | null
@@ -2374,6 +2379,7 @@ export type Database = {
           telefono: string
           ticket_ancho: string
           ticket_campos: Json | null
+          uso_cfdi: string | null
           zona_horaria: string
         }
         Insert: {
@@ -2382,14 +2388,19 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          csf_url?: string | null
           demo_expires_at?: string | null
           direccion?: string | null
           email: string
+          email_cc_facturacion?: string | null
+          email_facturacion?: string | null
           estado?: string | null
+          forma_pago_sat?: string | null
           id?: string
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
+          metodo_pago_sat?: string | null
           moneda?: string
           nombre: string
           notas_ticket?: string | null
@@ -2404,6 +2415,7 @@ export type Database = {
           telefono: string
           ticket_ancho?: string
           ticket_campos?: Json | null
+          uso_cfdi?: string | null
           zona_horaria?: string
         }
         Update: {
@@ -2412,14 +2424,19 @@ export type Database = {
           colonia?: string | null
           cp?: string | null
           created_at?: string
+          csf_url?: string | null
           demo_expires_at?: string | null
           direccion?: string | null
           email?: string
+          email_cc_facturacion?: string | null
+          email_facturacion?: string | null
           estado?: string | null
+          forma_pago_sat?: string | null
           id?: string
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
+          metodo_pago_sat?: string | null
           moneda?: string
           nombre?: string
           notas_ticket?: string | null
@@ -2434,6 +2451,7 @@ export type Database = {
           telefono?: string
           ticket_ancho?: string
           ticket_campos?: Json | null
+          uso_cfdi?: string | null
           zona_horaria?: string
         }
         Relationships: [
