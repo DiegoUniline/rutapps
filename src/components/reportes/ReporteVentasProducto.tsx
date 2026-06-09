@@ -17,6 +17,11 @@ export function ReporteVentasProducto({ data }: { data: any }) {
   const { fmt } = useCurrency();
   const { visible, setVisible, isVisible } = useColumnVisibility(COLUMNS);
   const items: any[] = data.ventasPorProducto ?? [];
+  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+    if (k === 'margen') return r.total > 0 ? ((r.utilidad ?? 0) / r.total) * 100 : 0;
+    if (k === 'costo') return (r.costo ?? 0) * (r.cantidad ?? 0);
+    return r?.[k];
+  });
   const totalGeneral = items.reduce((s, p) => s + p.total, 0);
   const totalUnidades = items.reduce((s, p) => s + p.cantidad, 0);
   const totalUtilidad = items.reduce((s, p) => s + (p.utilidad ?? 0), 0);
