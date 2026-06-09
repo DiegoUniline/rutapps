@@ -10,6 +10,38 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
+import { Seo } from '@/components/seo/Seo';
+
+const LANDING_JSON_LD = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Rutapp',
+    url: 'https://rutapp.mx',
+    logo: 'https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png',
+    sameAs: ['https://www.youtube.com/@RutAppMx'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Rutapp',
+    url: 'https://rutapp.mx',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Rutapp',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Android, iOS',
+    description: 'ERP de venta en ruta con app móvil offline, cobranza, inventario y facturación CFDI 4.0.',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'MXN',
+      description: '7 días de prueba gratis',
+    },
+  },
+];
 
 // ── Hero highlight: seguimiento en tiempo real ──
 const REALTIME_BULLETS = [
