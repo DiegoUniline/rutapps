@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
-  const { data: clientesEnRiesgo } = useDashboardClientesEnRiesgo(dateRange, vendedorId || undefined);
+  const { data: hoy } = useDashboardHoy(vendedorId || undefined);
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
@@ -338,17 +338,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Clientes en Riesgo */}
-      {(clientesEnRiesgo ?? []).length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-4 mt-4">
-          <SectionTitle icon={UserX}>Clientes sin visitar — Ingreso en riesgo</SectionTitle>
-          <ClientesEnRiesgoWidget
-            clientes={clientesEnRiesgo ?? []}
-            fmtMoney={money}
-            maxItems={8}
-          />
-        </div>
-      )}
+      {/* (Bloque "Clientes en riesgo" reemplazado por la banda "HOY" arriba) */}
 
       {/* Bottom row: Top products, Top clients, Low stock */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
