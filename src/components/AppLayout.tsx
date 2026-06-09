@@ -431,23 +431,21 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
   const filteredItems = useMemo(() => {
     if (!query.trim()) return visibleNavItems;
     const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return visibleItems => {
-      const out: NavItem[] = [];
-      for (const item of visibleNavItems) {
-        const labelMatch = item.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q);
-        if (!item.children) {
-          if (labelMatch) out.push(item);
-          continue;
-        }
-        const matchedChildren = item.children.filter(c =>
-          c.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
-        );
-        if (labelMatch || matchedChildren.length > 0) {
-          out.push({ ...item, children: labelMatch ? item.children : matchedChildren });
-        }
+    const out: NavItem[] = [];
+    for (const item of visibleNavItems) {
+      const labelMatch = item.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q);
+      if (!item.children) {
+        if (labelMatch) out.push(item);
+        continue;
       }
-      return out;
-    }();
+      const matchedChildren = item.children.filter(c =>
+        c.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+      );
+      if (labelMatch || matchedChildren.length > 0) {
+        out.push({ ...item, children: labelMatch ? item.children : matchedChildren });
+      }
+    }
+    return out;
   }, [visibleNavItems, query]);
 
   return (
