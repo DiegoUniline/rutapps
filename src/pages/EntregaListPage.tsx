@@ -427,11 +427,11 @@ export default function EntregaListPage() {
           </TableHeader>
           <TableBody>
             {isLoading && (
-              <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay entregas
                 </TableCell>
@@ -510,7 +510,7 @@ export default function EntregaListPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow key={`exp-${e.id}`} className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell colSpan={12} className="p-0">
+                    <TableCell colSpan={13} className="p-0">
                       <div className="px-6 py-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="text-[12px] font-semibold text-foreground flex items-center gap-1.5">
