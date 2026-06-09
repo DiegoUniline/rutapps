@@ -605,9 +605,9 @@ function PanelEntregas({
               <tr>
                 <th className="px-2 py-2 text-left w-8">#</th>
                 <th className="px-2 py-2 text-left">Folio / Cliente</th>
-                <th className="px-2 py-2 text-left">Estado</th>
-                <th className="px-2 py-2 text-left">Ruta</th>
-                <th className="px-2 py-2 text-right w-12"></th>
+                <th className="px-2 py-2 text-left w-16">Est.</th>
+                <th className="px-2 py-2 text-left w-20">Ruta</th>
+                <th className="px-1 py-2 text-right w-8"></th>
               </tr>
             </thead>
             <tbody>
@@ -637,9 +637,9 @@ function PanelEntregas({
                     </td>
                     <td className="px-2 py-2 min-w-0">
                       <div className="font-mono text-[10px] text-muted-foreground">{e.folio}</div>
-                      <div className="font-medium text-foreground truncate max-w-[180px]">{e.clientes?.nombre}</div>
+                      <div className="font-medium text-foreground truncate max-w-[150px]">{e.clientes?.nombre}</div>
                       {e.clientes?.direccion && (
-                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">{e.clientes.direccion}</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">{e.clientes.direccion}</div>
                       )}
                     </td>
                     <td className="px-2 py-2">
@@ -650,10 +650,10 @@ function PanelEntregas({
                         {e.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-muted-foreground truncate max-w-[100px]">
+                    <td className="px-2 py-2 text-muted-foreground truncate max-w-[80px] text-[10px]">
                       {e.vendedor_ruta?.nombre ?? e.vendedores?.nombre ?? '—'}
                     </td>
-                    <td className="px-2 py-2 text-right">
+                    <td className="px-1 py-2 text-right">
                       <Link
                         to={`/logistica/entregas/${e.id}`}
                         onClick={(ev) => ev.stopPropagation()}
