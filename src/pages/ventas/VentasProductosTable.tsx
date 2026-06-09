@@ -12,6 +12,17 @@ interface Props {
 
 export function VentasProductosTable({ items, fmt }: Props) {
   const navigate = useNavigate();
+  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+    if (k === 'cliente') return r.cliente_nombre ?? '';
+    if (k === 'vendedor') return r.vendedor_nombre ?? '';
+    if (k === 'codigo') return r.producto_codigo ?? '';
+    if (k === 'producto') return r.producto_nombre ?? '';
+    if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (k === 'precio') return r.precio_unitario ?? 0;
+    if (k === 'total') return r.linea_total ?? 0;
+    if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
+    return r?.[k];
+  });
 
   return (
     <table className="w-full text-[13px]">
