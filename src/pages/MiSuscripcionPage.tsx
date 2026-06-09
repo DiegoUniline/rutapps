@@ -1345,6 +1345,11 @@ export default function MiSuscripcionPage() {
           </div>
         </TabsContent>
 
+        {/* ─── Tab: Datos fiscales ─── */}
+        <TabsContent value="fiscal" className="mt-4">
+          {empresa?.id && <DatosFiscalesCard empresaId={empresa.id} />}
+        </TabsContent>
+
         {/* ─── Tab: Simulador de costos ─── */}
         <TabsContent value="simulador" className="mt-4">
           <CostoSimuladorCard defaultUsers={currentUsuarios} />
