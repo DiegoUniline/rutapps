@@ -245,6 +245,11 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* === HOY · Banda ejecutiva === */}
+      <HoyBand hoy={hoy} money={money} />
+
+
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
