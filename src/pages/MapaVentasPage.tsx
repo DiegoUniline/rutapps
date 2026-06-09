@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
-import { Filter, Truck, X, Calendar, Loader2, Navigation, Info, MapPin } from 'lucide-react';
+import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
