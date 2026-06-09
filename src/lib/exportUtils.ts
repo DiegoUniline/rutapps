@@ -79,7 +79,22 @@ export function exportToExcel(options: ExportOptions) {
       if ((col.format === 'currency' || col.format === 'number' || col.format === 'percent') && val !== null && val !== undefined) {
         return Number(val);
       }
-      if (col.format === 'date' && val) return val;
+      if (col.format === 'date' && val) {
+        const s = String(val);
+        // Detect if it has time component
+        const hasTime = /T\d{2}:\d{2}/.test(s);
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return s;
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        if (hasTime) {
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mi = String(d.getMinutes()).padStart(2, '0');
+          return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+        }
+        return `${dd}/${mm}/${yyyy}`;
+      }
       return val ?? '';
     }));
   });
