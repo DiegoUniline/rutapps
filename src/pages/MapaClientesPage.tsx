@@ -127,6 +127,7 @@ export default function MapaClientesPage() {
   const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [showListPanel, setShowListPanel] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
 
   const { data: isAdmin } = useQuery({
