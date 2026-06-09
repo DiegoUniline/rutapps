@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Map as MapGL, Marker, Popup, Source, Layer, NavigationControl, MapRef } from 'react-map-gl/maplibre';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import SearchableSelect from '@/components/SearchableSelect';
-import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -9,19 +11,16 @@ import { Link } from 'react-router-dom';
 import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import MapRecenterButton from '@/components/MapRecenterButton';
-import MyLocationMarker from '@/components/MyLocationMarker';
-import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
 
-const mapContainerStyle = { width: '100%', height: '100%' };
-const defaultCenter = { lat: 23.6345, lng: -102.5528 };
+// OpenFreeMap = tiles MapLibre gratuitos, sin API key, sin watermark.
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
+const DEFAULT_CENTER = { lng: -102.5528, lat: 23.6345 };
 const today = new Date().toISOString().split('T')[0];
 
-function decodePolyline(encoded: string): { lat: number; lng: number }[] {
-  const points: { lat: number; lng: number }[] = [];
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
   let index = 0, lat = 0, lng = 0;
   while (index < encoded.length) {
     let shift = 0, result = 0, byte: number;
@@ -30,14 +29,13 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
     shift = 0; result = 0;
     do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
     lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    points.push([lng / 1e5, lat / 1e5]);
   }
   return points;
 }
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
-  const { isLoaded } = useGoogleMaps();
   const [fechaEntregas, setFechaEntregas] = useState(today);
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -52,7 +50,7 @@ export default function MapaVentasPage() {
     distance_meters: number;
     duration: string;
   } | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -72,7 +70,6 @@ export default function MapaVentasPage() {
 
   const { data: vendedores } = useVendedores();
 
-  // ── Entregas data filtered by date ──
   const { data: entregasData, isLoading: loadingEntregas } = useQuery({
     queryKey: ['mapa-entregas', empresa?.id, fechaEntregas, vendedorFilter],
     queryFn: async () => {
@@ -91,8 +88,6 @@ export default function MapaVentasPage() {
     enabled: !!empresa?.id,
   });
 
-  // Spread overlapping markers in a small ring so they don't stack into a single dot.
-  // Mutates a per-render copy: each entrega gets _displayLat/_displayLng.
   const entregasConGps = useMemo(() => {
     const filtered = (entregasData ?? []).filter((e: any) => e.clientes?.gps_lat && e.clientes?.gps_lng);
     const groups = new Map<string, any[]>();
@@ -107,7 +102,6 @@ export default function MapaVentasPage() {
         const e = group[0];
         result.push({ ...e, _displayLat: e.clientes.gps_lat, _displayLng: e.clientes.gps_lng });
       } else {
-        // Spread in a circle ~25m radius (≈0.00022° lat). Scale lng by cos(lat).
         const radius = 0.00022;
         const lat0 = group[0].clientes.gps_lat;
         const lngScale = 1 / Math.max(0.0001, Math.cos((lat0 * Math.PI) / 180));
@@ -141,31 +135,31 @@ export default function MapaVentasPage() {
     };
   }, [entregasData, entregasConGps]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
-
+  // Auto-fit bounds when entregas change
   useEffect(() => {
-    if (mapRef.current && entregasConGps.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
-      if (originPoint) bounds.extend(originPoint);
-      mapRef.current.fitBounds(bounds, 50);
-    }
+    if (!mapRef.current || entregasConGps.length === 0) return;
+    const bounds = new maplibregl.LngLatBounds();
+    entregasConGps.forEach((e: any) => bounds.extend([e._displayLng, e._displayLat]));
+    if (originPoint) bounds.extend([originPoint.lng, originPoint.lat]);
+    mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
   }, [entregasConGps, originPoint]);
 
   const handleRecenter = useCallback(() => {
-    if (mapRef.current && entregasConGps.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      entregasConGps.forEach((e: any) => bounds.extend({ lat: e._displayLat, lng: e._displayLng }));
-      if (originPoint) bounds.extend(originPoint);
-      mapRef.current.fitBounds(bounds, 50);
-    }
+    if (!mapRef.current || entregasConGps.length === 0) return;
+    const bounds = new maplibregl.LngLatBounds();
+    entregasConGps.forEach((e: any) => bounds.extend([e._displayLng, e._displayLat]));
+    if (originPoint) bounds.extend([originPoint.lng, originPoint.lat]);
+    mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
   }, [entregasConGps, originPoint]);
 
-  const polylinePoints = useMemo(() => {
+  const polylineGeoJson = useMemo(() => {
     if (!routeResult?.polyline) return null;
-    return decodePolyline(routeResult.polyline);
+    const coords = decodePolyline(routeResult.polyline);
+    return {
+      type: 'Feature' as const,
+      geometry: { type: 'LineString' as const, coordinates: coords },
+      properties: {},
+    };
   }, [routeResult]);
 
   const orderedItems = useMemo(() => {
@@ -176,14 +170,29 @@ export default function MapaVentasPage() {
     }).filter(Boolean);
   }, [routeResult, entregasConGps]);
 
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (settingOrigin && e.latLng) {
-      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+  const handleMapClick = useCallback((e: any) => {
+    if (settingOrigin && e.lngLat) {
+      setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       setSettingOrigin(false);
       setRouteResult(null);
       toast.success('Punto de partida establecido');
     }
   }, [settingOrigin]);
+
+  const saveEntregaOrder = async (orderedIds: string[]) => {
+    setSaving(true);
+    try {
+      const updates = orderedIds.map((id: string, idx: number) =>
+        supabase.from('entregas').update({ orden_entrega: idx + 1 } as any).eq('id', id)
+      );
+      await Promise.all(updates);
+      toast.success('Orden de entregas guardado');
+    } catch (err: any) {
+      toast.error('Error al guardar orden');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleOptimize = async () => {
     if (!originPoint) { toast.error('Primero establece un punto de partida'); return; }
@@ -221,21 +230,6 @@ export default function MapaVentasPage() {
     }
   };
 
-  const saveEntregaOrder = async (orderedIds: string[]) => {
-    setSaving(true);
-    try {
-      const updates = orderedIds.map((id: string, idx: number) =>
-        supabase.from('entregas').update({ orden_entrega: idx + 1 } as any).eq('id', id)
-      );
-      await Promise.all(updates);
-      toast.success('Orden de entregas guardado');
-    } catch (err: any) {
-      toast.error('Error al guardar orden');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const formatDuration = (d?: string) => {
     if (!d) return '';
     const secs = parseInt(d.replace('s', ''));
@@ -252,25 +246,6 @@ export default function MapaVentasPage() {
     en_ruta: '#22c55e',
   };
 
-  const getEntregaIcon = (status: string) => ({
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: STATUS_COLORS[status] ?? '#714BF4',
-    fillOpacity: 0.9,
-    strokeColor: '#fff',
-    strokeWeight: 2,
-    scale: 10,
-  });
-
-  const createNumberedLabel = (): google.maps.Symbol => ({
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: '#6366f1',
-    fillOpacity: 1,
-    strokeColor: '#fff',
-    strokeWeight: 3,
-    scale: 16,
-    labelOrigin: new google.maps.Point(0, 0),
-  });
-
   const activeFiltersCount = [vendedorFilter].filter(Boolean).length;
 
   return (
@@ -282,7 +257,6 @@ export default function MapaVentasPage() {
             <Truck className="h-4 w-4 text-primary" /> Mapa de entregas
           </div>
 
-          {/* Date filter */}
           <div className="flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <OdooDatePicker value={fechaEntregas} onChange={v => { setFechaEntregas(v); setRouteResult(null); }} />
@@ -295,7 +269,6 @@ export default function MapaVentasPage() {
             {activeFiltersCount > 0 && <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">{activeFiltersCount}</Badge>}
           </button>
 
-          {/* Optimize controls */}
           <button
             onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Haz click en el mapa para establecer el punto de partida'); }}
             className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
@@ -369,15 +342,15 @@ export default function MapaVentasPage() {
         {!originPoint && !routeResult && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
             <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
+            <span>Mapa OpenStreetMap (sin costo). Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
           </div>
         )}
       </div>
 
       {/* Map */}
       <div className="flex-1 relative">
-        {(loadingEntregas || !isLoaded) && (
-          <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center">
+        {loadingEntregas && (
+          <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
@@ -386,102 +359,115 @@ export default function MapaVentasPage() {
             Haz click en el mapa para establecer el punto de partida
           </div>
         )}
-        {isLoaded && (
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={entregasConGps.length > 0 ? { lat: entregasConGps[0].clientes.gps_lat, lng: entregasConGps[0].clientes.gps_lng } : defaultCenter}
-            zoom={6}
-            onLoad={onMapLoad}
-            onClick={handleMapClick}
-            options={{
-              styles: [
-                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-                { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-              ],
-              mapTypeControl: false,
-              streetViewControl: false,
-              fullscreenControl: true,
-              draggableCursor: settingOrigin ? 'crosshair' : undefined,
-            }}
-          >
-            <MyLocationMarker />
-            <LiveVendedoresLayer />
-            {originPoint && (
+        <MapGL
+          ref={mapRef}
+          mapStyle={MAP_STYLE}
+          initialViewState={{
+            longitude: DEFAULT_CENTER.lng,
+            latitude: DEFAULT_CENTER.lat,
+            zoom: 5,
+          }}
+          style={{ width: '100%', height: '100%', cursor: settingOrigin ? 'crosshair' : undefined }}
+          onClick={handleMapClick}
+          attributionControl={{ compact: true }}
+        >
+          <NavigationControl position="top-right" showCompass={false} />
+
+          {/* Polyline ruta */}
+          {polylineGeoJson && (
+            <Source id="route-line" type="geojson" data={polylineGeoJson as any}>
+              <Layer
+                id="route-line-layer"
+                type="line"
+                paint={{ 'line-color': '#6366f1', 'line-width': 4, 'line-opacity': 0.8 }}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              />
+            </Source>
+          )}
+
+          {/* Punto de partida */}
+          {originPoint && (
+            <Marker longitude={originPoint.lng} latitude={originPoint.lat} anchor="center">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 border-[3px] border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+                ▶
+              </div>
+            </Marker>
+          )}
+
+          {/* Entregas */}
+          {(orderedItems ?? entregasConGps).map((e: any, idx: number) => {
+            const isOrdered = !!orderedItems;
+            const lng = isOrdered ? e.lng : e._displayLng;
+            const lat = isOrdered ? e.lat : e._displayLat;
+            const color = isOrdered ? '#6366f1' : (STATUS_COLORS[e.status] ?? '#714BF4');
+            return (
               <Marker
-                position={originPoint}
-                icon={{
-                  path: google.maps.SymbolPath.CIRCLE,
-                  fillColor: '#059669',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 3,
-                  scale: 14,
+                key={e.id}
+                longitude={lng}
+                latitude={lat}
+                anchor="center"
+                onClick={(ev) => {
+                  ev.originalEvent.stopPropagation();
+                  const ent = isOrdered ? entregasConGps.find((x: any) => x.id === e.id) : e;
+                  if (ent) setSelectedEntrega(ent);
                 }}
-                label={{ text: '▶', color: '#fff', fontSize: '10px', fontWeight: '700' }}
-              />
-            )}
-
-            {polylinePoints && (
-              <Polyline
-                path={polylinePoints}
-                options={{ strokeColor: '#6366f1', strokeWeight: 4, strokeOpacity: 0.8 }}
-              />
-            )}
-
-            {orderedItems ? (
-              orderedItems.map((c: any, idx: number) => (
-                <Marker
-                  key={c.id}
-                  position={{ lat: c.lat, lng: c.lng }}
-                  icon={createNumberedLabel()}
-                  label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
-                  onClick={() => {
-                    const ent = entregasConGps.find((e: any) => e.id === c.id);
-                    if (ent) { setSelectedEntrega(ent); }
-                  }}
-                />
-              ))
-            ) : (
-              entregasConGps.map((e: any) => (
-                <Marker
-                  key={e.id}
-                  position={{ lat: e._displayLat, lng: e._displayLng }}
-                  icon={getEntregaIcon(e.status)}
-                  onClick={() => setSelectedEntrega(e)}
-                  title={`${e.folio} - ${e.clientes.nombre}`}
-                />
-              ))
-            )}
-
-            {selectedEntrega && (
-              <InfoWindow
-                position={{ lat: selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat, lng: selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng }}
-                onCloseClick={() => setSelectedEntrega(null)}
               >
-                <div className="min-w-[200px] p-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-sm font-mono">{selectedEntrega.folio}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${STATUS_COLORS[selectedEntrega.status]}20`, color: STATUS_COLORS[selectedEntrega.status] }}>
-                      {selectedEntrega.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium mb-0.5">{selectedEntrega.clientes?.nombre}</div>
-                  {selectedEntrega.clientes?.direccion && <div className="text-xs text-gray-500 mb-1">{selectedEntrega.clientes.direccion}</div>}
-                  {selectedEntrega.vendedor_ruta?.nombre && <div className="text-[10px] text-gray-400">Ruta: {selectedEntrega.vendedor_ruta.nombre}</div>}
-                  {selectedEntrega.orden_entrega > 0 && <div className="text-[10px] text-gray-400">Orden: #{selectedEntrega.orden_entrega}</div>}
-                  <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
-                    <Link to={`/logistica/entregas/${selectedEntrega.id}`} className="text-xs text-blue-600 hover:underline">Ver entrega</Link>
-                  </div>
+                <div
+                  className="rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold cursor-pointer hover:scale-110 transition-transform"
+                  style={{
+                    backgroundColor: color,
+                    width: isOrdered ? 30 : 22,
+                    height: isOrdered ? 30 : 22,
+                    fontSize: isOrdered ? 12 : 10,
+                  }}
+                  title={isOrdered ? `${idx + 1}. ${e.nombre}` : `${e.folio} - ${e.clientes.nombre}`}
+                >
+                  {isOrdered ? idx + 1 : ''}
                 </div>
-              </InfoWindow>
-            )}
-          </GoogleMap>
-        )}
-        <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
+              </Marker>
+            );
+          })}
+
+          {/* Popup */}
+          {selectedEntrega && (
+            <Popup
+              longitude={selectedEntrega._displayLng ?? selectedEntrega.clientes.gps_lng}
+              latitude={selectedEntrega._displayLat ?? selectedEntrega.clientes.gps_lat}
+              anchor="bottom"
+              onClose={() => setSelectedEntrega(null)}
+              closeButton={true}
+              closeOnClick={false}
+              offset={20}
+            >
+              <div className="min-w-[200px] p-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-sm font-mono">{selectedEntrega.folio}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${STATUS_COLORS[selectedEntrega.status]}20`, color: STATUS_COLORS[selectedEntrega.status] }}>
+                    {selectedEntrega.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600 font-medium mb-0.5">{selectedEntrega.clientes?.nombre}</div>
+                {selectedEntrega.clientes?.direccion && <div className="text-xs text-gray-500 mb-1">{selectedEntrega.clientes.direccion}</div>}
+                {selectedEntrega.vendedor_ruta?.nombre && <div className="text-[10px] text-gray-400">Ruta: {selectedEntrega.vendedor_ruta.nombre}</div>}
+                {selectedEntrega.orden_entrega > 0 && <div className="text-[10px] text-gray-400">Orden: #{selectedEntrega.orden_entrega}</div>}
+                <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
+                  <Link to={`/logistica/entregas/${selectedEntrega.id}`} className="text-xs text-blue-600 hover:underline">Ver entrega</Link>
+                </div>
+              </div>
+            </Popup>
+          )}
+        </MapGL>
+
+        <button
+          onClick={handleRecenter}
+          className="absolute bottom-6 left-3 z-10 bg-card border border-border rounded-full p-2.5 shadow-lg hover:bg-accent transition-colors"
+          title="Centrar mapa"
+        >
+          <Navigation className="h-4 w-4 text-foreground" />
+        </button>
 
         {orderedItems && orderedItems.length > 0 && (
-          <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-72 max-h-[60vh] flex flex-col">
+          <div className="absolute top-3 right-14 z-10 bg-card border border-border rounded-xl shadow-lg w-72 max-h-[60vh] flex flex-col">
             <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Route className="h-3.5 w-3.5 text-primary" />
