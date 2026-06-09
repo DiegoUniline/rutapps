@@ -635,8 +635,20 @@ export function exportToCSV(opts: { fileName: string; columns: ExportColumn[]; d
     lines.push(columns.map(c => {
       const v = row[c.key];
       if (c.format === 'date' && v) {
-        const d = new Date(v);
-        if (!isNaN(d.getTime())) return csvEscape(d.toISOString().slice(0, 10));
+        const s = String(v);
+        const hasTime = /T\d{2}:\d{2}/.test(s);
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const yyyy = d.getFullYear();
+          if (hasTime) {
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            return csvEscape(`${dd}/${mm}/${yyyy} ${hh}:${mi}`);
+          }
+          return csvEscape(`${dd}/${mm}/${yyyy}`);
+        }
       }
       return csvEscape(v);
     }).join(','));
