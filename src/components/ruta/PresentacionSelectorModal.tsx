@@ -162,7 +162,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
 
                   <div>
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">Cantidad de paquetes</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">{presSel ? 'Cantidad de paquetes' : `Cantidad (${unidad})`}</label>
                     <div className="flex items-center gap-2 mt-2">
                       <button onClick={() => adjustPaquetes(-1)} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-accent flex items-center justify-center active:scale-95"><Minus className="h-5 w-5" /></button>
                       <input type="number" inputMode="decimal" step="0.001" min="0" value={paquetes}
