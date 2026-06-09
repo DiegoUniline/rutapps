@@ -16,7 +16,7 @@ type RecoRow = {
   created_at: string;
 };
 
-const DAILY_LIMIT = 3;
+const MONTHLY_LIMIT = 4;
 
 // Parse markdown into ## sections → tabs
 function parseSections(md: string): { title: string; icon: string; body: string }[] {
@@ -98,7 +98,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
   const [advice, setAdvice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
-  const [usedToday, setUsedToday] = useState(0);
+  const [usedThisMonth, setUsedThisMonth] = useState(0);
   const [history, setHistory] = useState<RecoRow[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
@@ -115,6 +115,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
     (async () => {
       try {
         const since = new Date();
+        since.setDate(1);
         since.setHours(0, 0, 0, 0);
 
         const [{ data: last }, { count }, { data: hist }] = await Promise.all([
@@ -148,7 +149,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
           setAdvice(null);
           setGeneratedAt(null);
         }
-        setUsedToday(count ?? 0);
+        setUsedThisMonth(count ?? 0);
         setHistory((hist as RecoRow[]) ?? []);
       } catch (e) {
         // silent
@@ -171,12 +172,12 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
     setHistory((data as RecoRow[]) ?? []);
   };
 
-  const remaining = Math.max(0, DAILY_LIMIT - usedToday);
+  const remaining = Math.max(0, MONTHLY_LIMIT - usedThisMonth);
   const reachedLimit = remaining <= 0;
 
   const handleAnalyze = async () => {
     if (reachedLimit) {
-      toast.error(`Alcanzaste el límite de ${DAILY_LIMIT} análisis por día.`);
+      toast.error(`Alcanzaste el límite de ${MONTHLY_LIMIT} análisis por mes.`);
       return;
     }
     setLoading(true);
@@ -188,14 +189,14 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
       });
       if (fnErr) throw fnErr;
       if ((data as any)?.error) {
-        if (typeof (data as any).usedToday === 'number') setUsedToday((data as any).usedToday);
+        if (typeof (data as any).usedThisMonth === 'number') setUsedThisMonth((data as any).usedThisMonth);
         throw new Error((data as any).error);
       }
       const txt = (data as any)?.advice ?? '';
       if (!txt) throw new Error('Respuesta vacía del asesor IA');
       setAdvice(txt);
       setGeneratedAt(new Date((data as any)?.createdAt ?? Date.now()));
-      if (typeof (data as any).usedToday === 'number') setUsedToday((data as any).usedToday);
+      if (typeof (data as any).usedThisMonth === 'number') setUsedThisMonth((data as any).usedThisMonth);
       toast.success('Nuevo análisis listo');
       refreshHistory();
     } catch (e: any) {
@@ -224,7 +225,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary uppercase tracking-wider">Beta</span>
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Análisis ejecutivo automático · {remaining}/{DAILY_LIMIT} usos restantes hoy
+                Análisis ejecutivo automático · {remaining}/{MONTHLY_LIMIT} usos restantes este mes
               </p>
             </div>
           </div>
@@ -243,12 +244,12 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
                 "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
                 "disabled:opacity-60 disabled:cursor-not-allowed"
               )}
-              title={reachedLimit ? 'Límite diario alcanzado' : 'Generar nuevo análisis'}
+              title={reachedLimit ? 'Límite mensual alcanzado' : 'Generar nuevo análisis'}
             >
               {loading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Analizando…</>
               ) : reachedLimit ? (
-                <><Clock className="h-4 w-4" /> Sin usos hoy</>
+                <><Clock className="h-4 w-4" /> Sin usos este mes</>
               ) : advice ? (
                 <><RefreshCw className="h-4 w-4" /> Actualizar análisis</>
               ) : (
@@ -270,7 +271,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
             <div className="py-6 text-center">
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 Obtén un diagnóstico ejecutivo: oportunidades, riesgos y acciones concretas para los próximos 7 días.
-                Tienes {DAILY_LIMIT} análisis disponibles al día.
+                Tienes {MONTHLY_LIMIT} análisis disponibles al mes.
               </p>
             </div>
           )}

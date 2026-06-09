@@ -1,6 +1,6 @@
 // Lovable AI advisor for executive dashboard.
 // - Authenticates the user via JWT
-// - Enforces max 3 generations per user per day
+// - Enforces max 4 generations per user per month (~1 per week)
 // - Uses a low-cost model
 // - Persists each recommendation in dashboard_ai_recomendaciones
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -10,7 +10,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DAILY_LIMIT = 3;
+const MONTHLY_LIMIT = 4;
 const MODEL = "google/gemini-2.5-flash-lite"; // cheapest tier
 
 Deno.serve(async (req) => {
@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Count today's runs scoped to the EFFECTIVE empresa (UTC day)
+    // Count this month's runs scoped to the EFFECTIVE empresa (UTC month)
     const since = new Date();
+    since.setUTCDate(1);
     since.setUTCHours(0, 0, 0, 0);
     const { count, error: cntErr } = await supabaseAuth
       .from("dashboard_ai_recomendaciones")
@@ -67,13 +68,13 @@ Deno.serve(async (req) => {
       .eq("empresa_id", empresaId)
       .gte("created_at", since.toISOString());
     if (cntErr) return json({ error: cntErr.message }, 500);
-    const usedToday = count ?? 0;
+    const usedThisMonth = count ?? 0;
 
-    if (usedToday >= DAILY_LIMIT) {
+    if (usedThisMonth >= MONTHLY_LIMIT) {
       return json({
-        error: `Alcanzaste el límite de ${DAILY_LIMIT} análisis por día. Inténtalo mañana.`,
-        usedToday,
-        dailyLimit: DAILY_LIMIT,
+        error: `Alcanzaste el límite de ${MONTHLY_LIMIT} análisis por mes. Inténtalo el próximo mes.`,
+        usedThisMonth,
+        monthlyLimit: MONTHLY_LIMIT,
       }, 429);
     }
 
@@ -179,15 +180,15 @@ REGLAS DURAS:
       .single();
     if (insErr) {
       // Still return advice but flag persistence error
-      return json({ advice, usedToday: usedToday + 1, dailyLimit: DAILY_LIMIT, persisted: false, warn: insErr.message }, 200);
+      return json({ advice, usedThisMonth: usedThisMonth + 1, monthlyLimit: MONTHLY_LIMIT, persisted: false, warn: insErr.message }, 200);
     }
 
     return json({
       advice,
       id: inserted.id,
       createdAt: inserted.created_at,
-      usedToday: usedToday + 1,
-      dailyLimit: DAILY_LIMIT,
+      usedThisMonth: usedThisMonth + 1,
+      monthlyLimit: MONTHLY_LIMIT,
       persisted: true,
     }, 200);
   } catch (e: any) {
