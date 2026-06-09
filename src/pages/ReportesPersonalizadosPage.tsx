@@ -400,24 +400,46 @@ function RunDialog({ open, onClose, config, empresaId, empresaNombre }: {
               <Input type="date" value={filtros.fechaHasta} onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })} />
             </div>
           </div>
-          <div>
-            <Label className="text-xs">Estado</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {STATUS_OPTS.map(s => {
-                const active = (filtros.status ?? []).includes(s);
-                return (
-                  <button key={s} type="button"
-                    onClick={() => {
-                      const arr = new Set(filtros.status ?? []);
-                      active ? arr.delete(s) : arr.add(s);
-                      setFiltros({ ...filtros, status: Array.from(arr) });
-                    }}
-                    className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                  >{s}</button>
-                );
-              })}
+          {STATUS_OPTS.length > 0 && (
+            <div>
+              <Label className="text-xs">Estado</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {STATUS_OPTS.map(s => {
+                  const active = (filtros.status ?? []).includes(s);
+                  return (
+                    <button key={s} type="button"
+                      onClick={() => {
+                        const arr = new Set(filtros.status ?? []);
+                        active ? arr.delete(s) : arr.add(s);
+                        setFiltros({ ...filtros, status: Array.from(arr) });
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+                    >{s}</button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+          {TIPO_OPTS.length > 0 && (
+            <div>
+              <Label className="text-xs">Tipo</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {TIPO_OPTS.map(s => {
+                  const active = (filtros.tipo ?? []).includes(s);
+                  return (
+                    <button key={s} type="button"
+                      onClick={() => {
+                        const arr = new Set(filtros.tipo ?? []);
+                        active ? arr.delete(s) : arr.add(s);
+                        setFiltros({ ...filtros, tipo: Array.from(arr) });
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+                    >{s}</button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
