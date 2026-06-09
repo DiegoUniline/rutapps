@@ -495,6 +495,9 @@ function UsuarioMesVsMesTable({ data, money }: { data: any[]; money: (n: number)
   );
 }
 
+export default function DashboardPage() {
+
+
   const { symbol: cSym, code: cCode } = useCurrency();
   const money = (n: number) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: cCode, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
