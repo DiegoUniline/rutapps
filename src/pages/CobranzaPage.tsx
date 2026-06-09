@@ -24,6 +24,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { ClienteLink } from '@/components/links/EntityLinks';
+import { Link } from 'react-router-dom';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 
