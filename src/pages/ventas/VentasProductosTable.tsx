@@ -28,17 +28,17 @@ export function VentasProductosTable({ items, fmt }: Props) {
     <table className="w-full text-[13px]">
       <thead>
         <tr className="border-b border-table-border text-left">
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center hidden lg:table-cell">Estado</th>
+          <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</SortableTh>
+          <SortableTh sortKey="tipo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</SortableTh>
+          <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
+          <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>
+          <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+          <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
+          <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
+          <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
+          <SortableTh sortKey="precio" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">P. Unit.</SortableTh>
+          <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</SortableTh>
+          <SortableTh sortKey="status" sort={sort} onToggle={toggle} align="center" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center hidden lg:table-cell">Estado</SortableTh>
         </tr>
       </thead>
       <tbody>
@@ -47,7 +47,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
             <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay líneas de producto.</td>
           </tr>
         )}
-        {items.map((row: any, i: number) => (
+        {sorted.map((row: any, i: number) => (
           <tr
             key={`${row.venta_id}-${row.linea_id}-${i}`}
             className="border-b border-table-border cursor-pointer transition-colors hover:bg-table-hover"
