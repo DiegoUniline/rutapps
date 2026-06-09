@@ -1,5 +1,6 @@
 import { useCurrency } from '@/hooks/useCurrency';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 const COLUMNS: ColumnDef[] = [
   { key: '#', label: '#' },
