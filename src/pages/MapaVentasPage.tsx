@@ -344,7 +344,7 @@ export default function MapaVentasPage() {
         {!originPoint && !routeResult && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
             <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Mapa OpenStreetMap (sin costo). Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
+            <span>Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
           </div>
         )}
       </div>
