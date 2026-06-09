@@ -123,6 +123,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
         email_cc_facturacion: form.email_cc_facturacion.trim() || null,
       }).eq('id', empresaId);
       if (error) throw error;
+      setOriginalForm({ ...form });
       toast.success('Datos fiscales guardados');
     } catch (e: any) {
       toast.error(e.message || 'Error al guardar');
