@@ -327,14 +327,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
                     </span>
                   </summary>
                   <div className="px-4 py-3 border-t">
-                    <article className={cn(
-                      "prose prose-sm max-w-none",
-                      "prose-headings:font-bold prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5 prose-headings:text-[12px] prose-headings:uppercase prose-headings:tracking-wide",
-                      "prose-p:text-foreground prose-p:text-xs prose-p:my-1",
-                      "prose-li:text-foreground prose-li:text-xs"
-                    )}>
-                      <ReactMarkdown>{row.content}</ReactMarkdown>
-                    </article>
+                    <AdviceTabs content={row.content} />
                   </div>
                 </details>
               ))}
