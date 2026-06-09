@@ -18,6 +18,77 @@ type RecoRow = {
 
 const DAILY_LIMIT = 3;
 
+// Parse markdown into ## sections → tabs
+function parseSections(md: string): { title: string; icon: string; body: string }[] {
+  const lines = md.split('\n');
+  const sections: { title: string; icon: string; body: string }[] = [];
+  let cur: { title: string; icon: string; body: string } | null = null;
+  for (const ln of lines) {
+    const m = ln.match(/^##\s+(.+)$/);
+    if (m) {
+      if (cur) sections.push(cur);
+      const raw = m[1].trim();
+      // Extract leading emoji as icon
+      const emojiMatch = raw.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation})\s*/u);
+      const icon = emojiMatch ? emojiMatch[1] : '•';
+      const title = emojiMatch ? raw.slice(emojiMatch[0].length).trim() : raw;
+      cur = { title, icon, body: '' };
+    } else if (cur) {
+      cur.body += ln + '\n';
+    }
+  }
+  if (cur) sections.push(cur);
+  return sections;
+}
+
+function AdviceTabs({ content }: { content: string }) {
+  const sections = parseSections(content);
+  const [active, setActive] = useState(0);
+
+  if (sections.length === 0) {
+    // Fallback: raw markdown if no sections were parsed
+    return (
+      <article className="prose prose-sm max-w-none prose-p:text-xs prose-li:text-xs">
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </article>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-3 bg-accent/40 p-1 rounded-lg">
+        {sections.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => setActive(i)}
+            className={cn(
+              "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1.5 whitespace-nowrap",
+              active === i
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-card"
+            )}
+          >
+            <span className="text-sm leading-none">{s.icon}</span>
+            <span>{s.title}</span>
+          </button>
+        ))}
+      </div>
+      <article className={cn(
+        "prose prose-sm max-w-none",
+        "prose-headings:font-bold prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5 prose-headings:text-[12px] prose-headings:uppercase prose-headings:tracking-wide",
+        "prose-p:text-foreground prose-p:text-xs prose-p:my-1.5 prose-p:leading-relaxed",
+        "prose-li:text-foreground prose-li:text-xs prose-li:my-0.5",
+        "prose-strong:text-foreground prose-strong:font-bold",
+        "prose-ul:my-1.5 prose-ol:my-1.5",
+        "prose-table:text-xs prose-th:font-bold prose-th:text-foreground prose-td:text-foreground"
+      )}>
+        <ReactMarkdown>{sections[active].body.trim()}</ReactMarkdown>
+      </article>
+    </div>
+  );
+}
+
+
 export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
   const { empresa, profile } = useAuth();
   const empresaId = (empresa as any)?.id;
