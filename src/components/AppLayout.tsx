@@ -139,6 +139,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Reportes generales', path: '/reportes' },
       { label: 'Reporte entregas', path: '/reportes/entregas' },
+      { label: 'Reportes personalizados', path: '/reportes/personalizados' },
     ],
   },
   // ── Admin & Config ──

@@ -4937,6 +4937,53 @@ export type Database = {
           },
         ]
       }
+      reportes_personalizados: {
+        Row: {
+          columnas: Json
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          empresa_id: string
+          filtros_default: Json
+          fuente: string
+          id: string
+          nombre: string
+          updated_at: string
+        }
+        Insert: {
+          columnas?: Json
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          empresa_id: string
+          filtros_default?: Json
+          fuente?: string
+          id?: string
+          nombre: string
+          updated_at?: string
+        }
+        Update: {
+          columnas?: Json
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          empresa_id?: string
+          filtros_default?: Json
+          fuente?: string
+          id?: string
+          nombre?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reportes_personalizados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permisos: {
         Row: {
           accion: string
