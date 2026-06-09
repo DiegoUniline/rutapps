@@ -989,6 +989,70 @@ export default function MiSuscripcionPage() {
                   </div>
                 </div>
               )}
+
+              {/* Quick: Últimas facturas */}
+              {facturas.length > 0 && (
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
+                      <Receipt className="h-5 w-5 text-primary" /> Últimas facturas
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
+                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
+                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
+                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {facturas.slice(0, 5).map(f => (
+                            <tr key={f.id} className="border-b border-border/50 hover:bg-card">
+                              <td className="py-2.5 px-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-2 text-muted-foreground text-xs">
+                                {fmtDate(f.periodo_inicio)} — {fmtDate(f.periodo_fin)}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
+                              <td className="py-2.5 px-2 text-center">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
+                                  {facturaStatusLabel[f.estado] || f.estado}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                {f.estado === 'pendiente' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs gap-1"
+                                    disabled={payingInvoice === f.id}
+                                    onClick={() => handlePayInvoice(f)}
+                                  >
+                                    {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : f.stripe_invoice_id ? <CreditCard className="h-3 w-3" /> : <BanknoteIcon className="h-3 w-3" />}
+                                    Pagar
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {facturas.length > 5 && (
+                      <p className="text-xs text-muted-foreground mt-3 text-center">
+                        Ver historial completo en la pestaña <strong>Facturas</strong>.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
             <div className="lg:col-span-1">{cartCard}</div>
           </div>
