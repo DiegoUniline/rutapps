@@ -225,7 +225,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary uppercase tracking-wider">Beta</span>
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Análisis ejecutivo automático · {remaining}/{DAILY_LIMIT} usos restantes hoy
+                Análisis ejecutivo automático · {remaining}/{MONTHLY_LIMIT} usos restantes este mes
               </p>
             </div>
           </div>
