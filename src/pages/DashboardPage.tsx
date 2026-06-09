@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import {
   DollarSign, TrendingUp, TrendingDown, ShoppingCart, CreditCard,
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
-  BarChart3, Users, UserX, Loader2, RotateCcw
+  BarChart3, Users, UserX, Loader2, RotateCcw,
+  MapPin, Truck, ClipboardList, Activity,
 } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -17,10 +18,9 @@ import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
-  useDashboardDevoluciones, useDashboardClientesEnRiesgo,
+  useDashboardDevoluciones, useDashboardHoy,
   type DateRange
 } from '@/hooks/useDashboardData';
-import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
