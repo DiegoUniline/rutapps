@@ -26,6 +26,18 @@ interface Props {
 export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, empresaId, empresa, clientesList, columnVisibility }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
+  const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+    if (k === 'cliente') return r.clientes?.nombre ?? '';
+    if (k === 'vendedor') return r.vendedores?.nombre ?? '';
+    if (k === 'almacen') return r.almacenes?.nombre ?? '';
+    if (k === 'condicion') return CONDICION_LABELS[r.condicion_pago] || r.condicion_pago;
+    if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
+    if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (k === 'descuento') return r.descuento_total ?? 0;
+    if (k === 'iva') return r.iva_total ?? 0;
+    if (k === 'saldo') return r.saldo_pendiente ?? 0;
+    return r?.[k];
+  });
 
   // Count visible data columns for the empty/footer colSpan
   const dataCols = ['folio','tipo','cliente','vendedor','almacen','condicion','fecha','subtotal','descuento','iva','total','saldo','status']
