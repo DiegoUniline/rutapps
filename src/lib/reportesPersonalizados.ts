@@ -176,7 +176,7 @@ export async function runReporte(
   }
 
   // 6. armar filas (una por línea)
-  const ventasMap = new Map(ventas.map(v => [v.id, v]));
+  const ventasMap = new Map((ventas as any[]).map(v => [v.id as string, v]));
   const rows: Record<string, any>[] = [];
 
   for (const l of lineas) {
