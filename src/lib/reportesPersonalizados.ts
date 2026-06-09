@@ -1,30 +1,34 @@
 /**
  * Reportes Personalizados — Constructor genérico de reportes por empresa.
- * Fuente inicial: ventas (a nivel línea de venta).
- *
- * Cada campo define un `key` (estable), `label` UI y `format` para export.
- * El ejecutor obtiene los datos, los aplana y los entrega a exportUtils.
+ * Soporta múltiples fuentes de datos. Cada fuente define su catálogo de campos
+ * y su ejecutor que arma filas planas para exportar (Excel / CSV / PDF).
  */
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import type { ExportColumn } from '@/lib/exportUtils';
 
-export type ReporteFuente = 'ventas';
+export type ReporteFuente =
+  | 'ventas'
+  | 'cobranza'
+  | 'inventario'
+  | 'compras'
+  | 'clientes'
+  | 'entregas'
+  | 'visitas';
 
 export interface CampoDef {
   key: string;
   label: string;
   format: ExportColumn['format'];
   width?: number;
-  /** descripción humana del campo */
   hint?: string;
 }
 
 export interface ReporteFiltros {
-  fechaDesde?: string; // ISO date
+  fechaDesde?: string;
   fechaHasta?: string;
-  status?: string[];   // ej. ['pagada','parcial','pendiente','borrador']
-  tipo?: string[];     // ej. ['venta','presale','remision']
+  status?: string[];
+  tipo?: string[];
 }
 
 export interface ReporteConfig {
@@ -33,13 +37,12 @@ export interface ReporteConfig {
   nombre: string;
   descripcion?: string;
   fuente: ReporteFuente;
-  /** lista ordenada de keys de CAMPOS_VENTAS */
   columnas: { key: string; header?: string }[];
   filtros_default?: ReporteFiltros;
 }
 
 // ──────────────────────────────────────────────────────────────
-// Catálogo de campos disponibles (fuente: ventas)
+// Catálogos de campos
 // ──────────────────────────────────────────────────────────────
 export const CAMPOS_VENTAS: CampoDef[] = [
   { key: 'fecha',              label: 'Fecha',                 format: 'date',     width: 12 },
@@ -49,12 +52,12 @@ export const CAMPOS_VENTAS: CampoDef[] = [
   { key: 'cliente_codigo',     label: 'Código Cliente',        format: 'text',     width: 12 },
   { key: 'cliente',            label: 'Cliente',               format: 'text',     width: 28 },
   { key: 'vendedor',           label: 'Vendedor',              format: 'text',     width: 20 },
-  { key: 'codigo',             label: 'EAN / Código',          format: 'text',     width: 16, hint: 'productos.codigo' },
+  { key: 'codigo',             label: 'EAN / Código',          format: 'text',     width: 16 },
   { key: 'codigo_alterno',     label: 'Código alterno',        format: 'text',     width: 16 },
   { key: 'codigo_sat',         label: 'Código SAT',            format: 'text',     width: 12 },
   { key: 'descripcion',        label: 'Descripción producto',  format: 'text',     width: 32 },
   { key: 'cantidad',           label: 'Cantidad',              format: 'number',   width: 10 },
-  { key: 'precio_antes_imp',   label: 'Precio antes de imp.',  format: 'currency', width: 14, hint: 'Precio unitario' },
+  { key: 'precio_antes_imp',   label: 'Precio antes de imp.',  format: 'currency', width: 14 },
   { key: 'tasa_iva',           label: 'Tasa IVA',              format: 'percent',  width: 10 },
   { key: 'tasa_ieps',          label: 'Tasa IEPS',             format: 'percent',  width: 10 },
   { key: 'importe_iva_pieza',  label: 'Importe IVA / pieza',   format: 'currency', width: 14 },
@@ -64,13 +67,143 @@ export const CAMPOS_VENTAS: CampoDef[] = [
   { key: 'subtotal_linea',     label: 'Subtotal línea',        format: 'currency', width: 14 },
   { key: 'total_linea',        label: 'Total línea',           format: 'currency', width: 14 },
   { key: 'descuento_pct',      label: 'Descuento %',           format: 'percent',  width: 10 },
-  { key: 'forma_pago',         label: 'Forma de Pago',         format: 'text',     width: 18, hint: 'Métodos de los cobros aplicados (o condición si no hay cobros)' },
+  { key: 'forma_pago',         label: 'Forma de Pago',         format: 'text',     width: 18 },
   { key: 'condicion_pago',     label: 'Condición de pago',     format: 'text',     width: 12 },
+  { key: 'total_venta',        label: 'Total venta',           format: 'currency', width: 14 },
+  { key: 'saldo_pendiente',    label: 'Saldo pendiente venta', format: 'currency', width: 14 },
 ];
 
+export const CAMPOS_COBRANZA: CampoDef[] = [
+  { key: 'fecha',          label: 'Fecha cobro',     format: 'date',     width: 12 },
+  { key: 'cobro_id',       label: 'ID cobro',        format: 'text',     width: 14 },
+  { key: 'metodo_pago',    label: 'Método de pago',  format: 'text',     width: 14 },
+  { key: 'referencia',     label: 'Referencia',      format: 'text',     width: 18 },
+  { key: 'cliente_codigo', label: 'Código Cliente',  format: 'text',     width: 12 },
+  { key: 'cliente',        label: 'Cliente',         format: 'text',     width: 28 },
+  { key: 'cobrador',       label: 'Cobrador / Usuario', format: 'text',  width: 20 },
+  { key: 'venta_folio',    label: 'Folio venta aplicada', format: 'text', width: 14 },
+  { key: 'venta_fecha',    label: 'Fecha venta',     format: 'date',     width: 12 },
+  { key: 'monto_aplicado', label: 'Monto aplicado',  format: 'currency', width: 14 },
+  { key: 'monto_cobro',    label: 'Monto cobro',     format: 'currency', width: 14 },
+  { key: 'status',         label: 'Estado cobro',    format: 'text',     width: 10 },
+  { key: 'notas',          label: 'Notas',           format: 'text',     width: 24 },
+];
+
+export const CAMPOS_INVENTARIO: CampoDef[] = [
+  { key: 'fecha',           label: 'Fecha',           format: 'date',     width: 12 },
+  { key: 'tipo',            label: 'Tipo movimiento', format: 'text',     width: 14 },
+  { key: 'codigo',          label: 'EAN / Código',    format: 'text',     width: 16 },
+  { key: 'codigo_alterno',  label: 'Código alterno',  format: 'text',     width: 16 },
+  { key: 'producto',        label: 'Producto',        format: 'text',     width: 32 },
+  { key: 'cantidad',        label: 'Cantidad',        format: 'number',   width: 10 },
+  { key: 'almacen_origen',  label: 'Almacén origen',  format: 'text',     width: 18 },
+  { key: 'almacen_destino', label: 'Almacén destino', format: 'text',     width: 18 },
+  { key: 'vendedor_destino',label: 'Vendedor destino',format: 'text',     width: 18 },
+  { key: 'referencia_tipo', label: 'Documento',       format: 'text',     width: 14 },
+  { key: 'referencia_id',   label: 'ID documento',    format: 'text',     width: 14 },
+  { key: 'usuario',         label: 'Usuario',         format: 'text',     width: 18 },
+  { key: 'notas',           label: 'Notas',           format: 'text',     width: 24 },
+];
+
+export const CAMPOS_COMPRAS: CampoDef[] = [
+  { key: 'fecha',          label: 'Fecha',         format: 'date',     width: 12 },
+  { key: 'folio',          label: 'Folio',         format: 'text',     width: 14 },
+  { key: 'status',         label: 'Estado',        format: 'text',     width: 12 },
+  { key: 'proveedor',      label: 'Proveedor',     format: 'text',     width: 28 },
+  { key: 'proveedor_rfc',  label: 'RFC proveedor', format: 'text',     width: 14 },
+  { key: 'almacen',        label: 'Almacén',       format: 'text',     width: 18 },
+  { key: 'codigo',         label: 'EAN / Código',  format: 'text',     width: 16 },
+  { key: 'producto',       label: 'Producto',      format: 'text',     width: 32 },
+  { key: 'cantidad',       label: 'Cantidad',      format: 'number',   width: 10 },
+  { key: 'precio_unitario',label: 'Costo unitario',format: 'currency', width: 14 },
+  { key: 'subtotal_linea', label: 'Subtotal línea',format: 'currency', width: 14 },
+  { key: 'total_linea',    label: 'Total línea',   format: 'currency', width: 14 },
+  { key: 'total_compra',   label: 'Total compra',  format: 'currency', width: 14 },
+  { key: 'saldo_pendiente',label: 'Saldo pendiente',format: 'currency',width: 14 },
+  { key: 'condicion_pago', label: 'Condición pago',format: 'text',     width: 12 },
+];
+
+export const CAMPOS_CLIENTES: CampoDef[] = [
+  { key: 'codigo',         label: 'Código',         format: 'text',     width: 12 },
+  { key: 'nombre',         label: 'Nombre',         format: 'text',     width: 30 },
+  { key: 'rfc',            label: 'RFC',            format: 'text',     width: 14 },
+  { key: 'telefono',       label: 'Teléfono',       format: 'text',     width: 14 },
+  { key: 'email',          label: 'Email',          format: 'text',     width: 22 },
+  { key: 'direccion',      label: 'Dirección',      format: 'text',     width: 28 },
+  { key: 'colonia',        label: 'Colonia',        format: 'text',     width: 18 },
+  { key: 'cp',             label: 'CP',             format: 'text',     width: 8 },
+  { key: 'vendedor',       label: 'Vendedor',       format: 'text',     width: 20 },
+  { key: 'cobrador',       label: 'Cobrador',       format: 'text',     width: 20 },
+  { key: 'zona',           label: 'Zona',           format: 'text',     width: 16 },
+  { key: 'lista_precio',   label: 'Lista de precios',format: 'text',    width: 18 },
+  { key: 'credito',        label: 'Crédito',        format: 'text',     width: 10 },
+  { key: 'limite_credito', label: 'Límite crédito', format: 'currency', width: 14 },
+  { key: 'dias_credito',   label: 'Días crédito',   format: 'number',   width: 10 },
+  { key: 'frecuencia',     label: 'Frecuencia',     format: 'text',     width: 12 },
+  { key: 'dia_visita',     label: 'Día(s) visita',  format: 'text',     width: 18 },
+  { key: 'status',         label: 'Estado',         format: 'text',     width: 10 },
+  { key: 'fecha_alta',     label: 'Alta',           format: 'date',     width: 12 },
+];
+
+export const CAMPOS_ENTREGAS: CampoDef[] = [
+  { key: 'fecha',             label: 'Fecha',             format: 'date',     width: 12 },
+  { key: 'folio',             label: 'Folio entrega',     format: 'text',     width: 14 },
+  { key: 'status',            label: 'Estado',            format: 'text',     width: 12 },
+  { key: 'pedido_folio',      label: 'Folio pedido',      format: 'text',     width: 14 },
+  { key: 'cliente_codigo',    label: 'Código Cliente',    format: 'text',     width: 12 },
+  { key: 'cliente',           label: 'Cliente',           format: 'text',     width: 28 },
+  { key: 'vendedor',          label: 'Vendedor',          format: 'text',     width: 20 },
+  { key: 'vendedor_ruta',     label: 'Vendedor ruta',     format: 'text',     width: 20 },
+  { key: 'almacen',           label: 'Almacén',           format: 'text',     width: 18 },
+  { key: 'orden_entrega',     label: 'Orden',             format: 'number',   width: 8 },
+  { key: 'fecha_entrega',     label: 'Fecha entregado',   format: 'date',     width: 12 },
+  { key: 'motivo_no_entrega', label: 'Motivo no entrega', format: 'text',     width: 22 },
+  { key: 'codigo',            label: 'EAN / Código',      format: 'text',     width: 16 },
+  { key: 'producto',          label: 'Producto',          format: 'text',     width: 32 },
+  { key: 'cantidad_pedida',   label: 'Cant. pedida',      format: 'number',   width: 10 },
+  { key: 'cantidad_entregada',label: 'Cant. entregada',   format: 'number',   width: 10 },
+];
+
+export const CAMPOS_VISITAS: CampoDef[] = [
+  { key: 'fecha',          label: 'Fecha',         format: 'date',     width: 14 },
+  { key: 'tipo',           label: 'Tipo',          format: 'text',     width: 12 },
+  { key: 'motivo',         label: 'Motivo',        format: 'text',     width: 22 },
+  { key: 'cliente_codigo', label: 'Código Cliente',format: 'text',     width: 12 },
+  { key: 'cliente',        label: 'Cliente',       format: 'text',     width: 28 },
+  { key: 'usuario',        label: 'Usuario',       format: 'text',     width: 20 },
+  { key: 'gps_lat',        label: 'GPS Lat',       format: 'number',   width: 12 },
+  { key: 'gps_lng',        label: 'GPS Lng',       format: 'number',   width: 12 },
+  { key: 'venta_folio',    label: 'Folio venta',   format: 'text',     width: 14 },
+  { key: 'notas',          label: 'Notas',         format: 'text',     width: 24 },
+];
+
+export interface FuenteMeta {
+  key: ReporteFuente;
+  label: string;
+  description: string;
+  campos: CampoDef[];
+  /** Status options válidos en filtros */
+  statusOptions?: string[];
+  /** Tipos válidos en filtros */
+  tipoOptions?: string[];
+}
+
+export const FUENTES: FuenteMeta[] = [
+  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','pendiente','parcial','pagada','cancelada'], tipoOptions: ['venta','presale','remision'] },
+  { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'] },
+  { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'] },
+  { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'] },
+  { key: 'clientes',   label: 'Clientes (catálogo)',   description: 'Una fila por cliente.', campos: CAMPOS_CLIENTES, statusOptions: ['activo','inactivo'] },
+  { key: 'entregas',   label: 'Entregas / Rutas',      description: 'Una fila por línea de entrega.', campos: CAMPOS_ENTREGAS, statusOptions: ['borrador','asignado','cargado','hecho','no_entregado','cancelado'] },
+  { key: 'visitas',    label: 'Visitas a clientes',    description: 'Una fila por visita registrada.', campos: CAMPOS_VISITAS },
+];
+
+export function getFuenteMeta(f: ReporteFuente): FuenteMeta {
+  return FUENTES.find(x => x.key === f) ?? FUENTES[0];
+}
+
 export function getCampos(fuente: ReporteFuente): CampoDef[] {
-  if (fuente === 'ventas') return CAMPOS_VENTAS;
-  return [];
+  return getFuenteMeta(fuente).campos;
 }
 
 export function buildExportColumns(config: ReporteConfig): ExportColumn[] {
@@ -91,7 +224,7 @@ export function buildExportColumns(config: ReporteConfig): ExportColumn[] {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Ejecutor — fuente: ventas
+// Ejecutor
 // ──────────────────────────────────────────────────────────────
 const METODO_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
@@ -101,18 +234,35 @@ const METODO_LABELS: Record<string, string> = {
   deposito: 'Depósito',
 };
 
+async function loadMap<T extends { id: string }>(table: string, ids: string[], cols: string): Promise<Map<string, any>> {
+  if (!ids.length) return new Map();
+  const { data } = await supabase.from(table as any).select(cols).in('id', ids);
+  return new Map((data || []).map((r: any) => [r.id, r]));
+}
+
 export async function runReporte(
   config: ReporteConfig,
   filtros: ReporteFiltros,
   empresaId: string,
 ): Promise<Record<string, any>[]> {
-  if (config.fuente !== 'ventas') return [];
+  switch (config.fuente) {
+    case 'ventas':     return runVentas(config, filtros, empresaId);
+    case 'cobranza':   return runCobranza(filtros, empresaId);
+    case 'inventario': return runInventario(filtros, empresaId);
+    case 'compras':    return runCompras(filtros, empresaId);
+    case 'clientes':   return runClientes(filtros, empresaId);
+    case 'entregas':   return runEntregas(filtros, empresaId);
+    case 'visitas':    return runVisitas(filtros, empresaId);
+    default: return [];
+  }
+}
 
-  // 1. ventas filtradas
+// ─── Ventas ────────────────────────────────────────────────────
+async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresaId: string) {
   const ventas = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('ventas')
-      .select('id, folio, fecha, tipo, status, condicion_pago, cliente_id, vendedor_id')
+      .select('id, folio, fecha, tipo, status, condicion_pago, cliente_id, vendedor_id, total, saldo_pendiente')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: true })
       .range(from, to);
@@ -122,25 +272,17 @@ export async function runReporte(
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
     return q;
   });
-  if (ventas.length === 0) return [];
+  if (!ventas.length) return [];
 
-  const ventaIds = (ventas as any[]).map(v => v.id as string);
-  const clienteIds = Array.from(new Set((ventas as any[]).map(v => v.cliente_id as string).filter(Boolean)));
-  const vendedorIds = Array.from(new Set((ventas as any[]).map(v => v.vendedor_id as string).filter(Boolean)));
+  const ventaIds = ventas.map(v => v.id);
+  const clienteIds = Array.from(new Set(ventas.map(v => v.cliente_id).filter(Boolean)));
+  const vendedorIds = Array.from(new Set(ventas.map(v => v.vendedor_id).filter(Boolean)));
 
-  // 2. catálogos clientes / vendedores
-  const [clientesRes, vendedoresRes] = await Promise.all([
-    clienteIds.length
-      ? supabase.from('clientes').select('id, codigo, nombre').in('id', clienteIds as string[])
-      : Promise.resolve({ data: [] as any[] }),
-    vendedorIds.length
-      ? supabase.from('profiles').select('id, nombre').in('id', vendedorIds as string[])
-      : Promise.resolve({ data: [] as any[] }),
+  const [clientesMap, vendedoresMap] = await Promise.all([
+    loadMap('clientes', clienteIds, 'id, codigo, nombre'),
+    loadMap('profiles', vendedorIds, 'id, nombre'),
   ]);
-  const clientesMap = new Map((clientesRes.data || []).map((c: any) => [c.id, c]));
-  const vendedoresMap = new Map((vendedoresRes.data || []).map((v: any) => [v.id, v]));
 
-  // 3. líneas (paginadas)
   const lineas = await fetchAllPages<any>((from, to) =>
     supabase
       .from('venta_lineas')
@@ -149,60 +291,36 @@ export async function runReporte(
       .range(from, to)
   );
 
-  // 4. productos
-  const productoIds = Array.from(new Set((lineas as any[]).map(l => l.producto_id as string).filter(Boolean)));
-  const productosRes = productoIds.length
-    ? await supabase.from('productos').select('id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta').in('id', productoIds as string[])
-    : { data: [] as any[] };
-  const productosMap = new Map((productosRes.data || []).map((p: any) => [p.id, p]));
+  const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
+  const productosMap = await loadMap('productos', productoIds, 'id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta');
 
-  // 5. forma de pago: cobros aplicados por venta
   const formaPagoMap = new Map<string, string>();
-  const needFormaPago = config.columnas.some(c => c.key === 'forma_pago');
-  if (needFormaPago) {
+  if (config.columnas.some(c => c.key === 'forma_pago')) {
     const aplicaciones = await fetchAllPages<any>((from, to) =>
-      supabase
-        .from('cobro_aplicaciones')
-        .select('venta_id, cobros!inner(metodo_pago)')
-        .in('venta_id', ventaIds)
-        .range(from, to)
+      supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago)').in('venta_id', ventaIds).range(from, to)
     );
     const tmp = new Map<string, Set<string>>();
     for (const a of aplicaciones) {
-      const m = a.cobros?.metodo_pago;
-      if (!m) continue;
+      const m = a.cobros?.metodo_pago; if (!m) continue;
       const set = tmp.get(a.venta_id) ?? new Set<string>();
       set.add(METODO_LABELS[m] ?? m);
       tmp.set(a.venta_id, set);
     }
-    for (const [vid, set] of tmp) {
-      formaPagoMap.set(vid, Array.from(set).join(', '));
-    }
+    for (const [vid, set] of tmp) formaPagoMap.set(vid, Array.from(set).join(', '));
   }
 
-  // 6. armar filas (una por línea)
-  const ventasMap = new Map((ventas as any[]).map(v => [v.id as string, v]));
+  const ventasMap = new Map(ventas.map(v => [v.id, v]));
   const rows: Record<string, any>[] = [];
-
   for (const l of lineas) {
-    const v = ventasMap.get(l.venta_id) as any;
-    if (!v) continue;
+    const v = ventasMap.get(l.venta_id); if (!v) continue;
     const c = clientesMap.get(v.cliente_id);
     const vd = vendedoresMap.get(v.vendedor_id);
     const p = productosMap.get(l.producto_id);
     const cantidad = Number(l.cantidad || 0);
-
     rows.push({
-      fecha: v.fecha,
-      folio: v.folio,
-      tipo: v.tipo,
-      status: v.status,
-      cliente_codigo: c?.codigo ?? '',
-      cliente: c?.nombre ?? '',
-      vendedor: vd?.nombre ?? '',
-      codigo: p?.codigo ?? '',
-      codigo_alterno: p?.clave_alterna ?? '',
-      codigo_sat: p?.codigo_sat ?? '',
+      fecha: v.fecha, folio: v.folio, tipo: v.tipo, status: v.status,
+      cliente_codigo: c?.codigo ?? '', cliente: c?.nombre ?? '', vendedor: vd?.nombre ?? '',
+      codigo: p?.codigo ?? '', codigo_alterno: p?.clave_alterna ?? '', codigo_sat: p?.codigo_sat ?? '',
       descripcion: l.descripcion || p?.nombre_venta || p?.nombre || '',
       cantidad,
       precio_antes_imp: Number(l.precio_unitario || 0),
@@ -217,10 +335,286 @@ export async function runReporte(
       descuento_pct: Number(l.descuento_pct || 0),
       forma_pago: formaPagoMap.get(v.id) ?? (v.condicion_pago === 'contado' ? 'Contado' : 'Crédito'),
       condicion_pago: v.condicion_pago,
+      total_venta: Number(v.total || 0),
+      saldo_pendiente: Number(v.saldo_pendiente || 0),
     });
   }
-
   return rows;
+}
+
+// ─── Cobranza ──────────────────────────────────────────────────
+async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
+  const cobros = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('cobros')
+      .select('id, fecha, monto, metodo_pago, referencia, notas, status, user_id, cliente_id')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.status?.length) q = q.in('status', filtros.status);
+    return q;
+  });
+  if (!cobros.length) return [];
+  const cobroIds = cobros.map(c => c.id);
+  const clienteIds = Array.from(new Set(cobros.map(c => c.cliente_id).filter(Boolean)));
+  const userIds = Array.from(new Set(cobros.map(c => c.user_id).filter(Boolean)));
+
+  const [clientesMap, usersMap, apps] = await Promise.all([
+    loadMap('clientes', clienteIds, 'id, codigo, nombre'),
+    loadMap('profiles', userIds, 'id, nombre'),
+    fetchAllPages<any>((from, to) =>
+      supabase.from('cobro_aplicaciones').select('cobro_id, venta_id, monto_aplicado').in('cobro_id', cobroIds).range(from, to)
+    ),
+  ]);
+  const ventaIds = Array.from(new Set(apps.map(a => a.venta_id).filter(Boolean)));
+  const ventasMap = await loadMap('ventas', ventaIds, 'id, folio, fecha');
+
+  const cobrosMap = new Map(cobros.map(c => [c.id, c]));
+  const rows: Record<string, any>[] = [];
+  for (const a of apps) {
+    const c = cobrosMap.get(a.cobro_id); if (!c) continue;
+    const cl = clientesMap.get(c.cliente_id);
+    const u = usersMap.get(c.user_id);
+    const v = ventasMap.get(a.venta_id);
+    rows.push({
+      fecha: c.fecha, cobro_id: c.id.slice(0,8), metodo_pago: METODO_LABELS[c.metodo_pago] ?? c.metodo_pago,
+      referencia: c.referencia ?? '', cliente_codigo: cl?.codigo ?? '', cliente: cl?.nombre ?? '',
+      cobrador: u?.nombre ?? '', venta_folio: v?.folio ?? '', venta_fecha: v?.fecha ?? '',
+      monto_aplicado: Number(a.monto_aplicado || 0), monto_cobro: Number(c.monto || 0),
+      status: c.status, notas: c.notas ?? '',
+    });
+  }
+  // si un cobro no tiene aplicaciones (ej. anticipo), aún incluirlo
+  const usados = new Set(apps.map(a => a.cobro_id));
+  for (const c of cobros) {
+    if (usados.has(c.id)) continue;
+    const cl = clientesMap.get(c.cliente_id);
+    const u = usersMap.get(c.user_id);
+    rows.push({
+      fecha: c.fecha, cobro_id: c.id.slice(0,8), metodo_pago: METODO_LABELS[c.metodo_pago] ?? c.metodo_pago,
+      referencia: c.referencia ?? '', cliente_codigo: cl?.codigo ?? '', cliente: cl?.nombre ?? '',
+      cobrador: u?.nombre ?? '', venta_folio: '', venta_fecha: '',
+      monto_aplicado: 0, monto_cobro: Number(c.monto || 0),
+      status: c.status, notas: c.notas ?? '',
+    });
+  }
+  return rows;
+}
+
+// ─── Inventario ────────────────────────────────────────────────
+async function runInventario(filtros: ReporteFiltros, empresaId: string) {
+  const movs = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('movimientos_inventario')
+      .select('fecha, tipo, producto_id, cantidad, almacen_origen_id, almacen_destino_id, vendedor_destino_id, referencia_tipo, referencia_id, notas, user_id')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    return q;
+  });
+  if (!movs.length) return [];
+  const productoIds = Array.from(new Set(movs.map(m => m.producto_id).filter(Boolean)));
+  const almacenIds = Array.from(new Set(movs.flatMap(m => [m.almacen_origen_id, m.almacen_destino_id]).filter(Boolean)));
+  const userIds = Array.from(new Set(movs.flatMap(m => [m.user_id, m.vendedor_destino_id]).filter(Boolean)));
+  const [productosMap, almacenesMap, usersMap] = await Promise.all([
+    loadMap('productos', productoIds, 'id, codigo, clave_alterna, nombre'),
+    loadMap('almacenes', almacenIds, 'id, nombre'),
+    loadMap('profiles', userIds, 'id, nombre'),
+  ]);
+  return movs.map(m => {
+    const p = productosMap.get(m.producto_id);
+    return {
+      fecha: m.fecha, tipo: m.tipo,
+      codigo: p?.codigo ?? '', codigo_alterno: p?.clave_alterna ?? '', producto: p?.nombre ?? '',
+      cantidad: Number(m.cantidad || 0),
+      almacen_origen: almacenesMap.get(m.almacen_origen_id)?.nombre ?? '',
+      almacen_destino: almacenesMap.get(m.almacen_destino_id)?.nombre ?? '',
+      vendedor_destino: usersMap.get(m.vendedor_destino_id)?.nombre ?? '',
+      referencia_tipo: m.referencia_tipo ?? '', referencia_id: m.referencia_id ? String(m.referencia_id).slice(0,8) : '',
+      usuario: usersMap.get(m.user_id)?.nombre ?? '', notas: m.notas ?? '',
+    };
+  });
+}
+
+// ─── Compras ───────────────────────────────────────────────────
+async function runCompras(filtros: ReporteFiltros, empresaId: string) {
+  const compras = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('compras')
+      .select('id, fecha, folio, status, proveedor_id, almacen_id, total, saldo_pendiente, condicion_pago')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.status?.length) q = q.in('status', filtros.status);
+    return q;
+  });
+  if (!compras.length) return [];
+  const compraIds = compras.map(c => c.id);
+  const provIds = Array.from(new Set(compras.map(c => c.proveedor_id).filter(Boolean)));
+  const almIds = Array.from(new Set(compras.map(c => c.almacen_id).filter(Boolean)));
+  const [provMap, almMap, lineas] = await Promise.all([
+    loadMap('proveedores', provIds, 'id, nombre, rfc'),
+    loadMap('almacenes', almIds, 'id, nombre'),
+    fetchAllPages<any>((from, to) =>
+      supabase.from('compra_lineas').select('compra_id, producto_id, cantidad, precio_unitario, subtotal, total').in('compra_id', compraIds).range(from, to)
+    ),
+  ]);
+  const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
+  const productosMap = await loadMap('productos', productoIds, 'id, codigo, nombre');
+  const comprasMap = new Map(compras.map(c => [c.id, c]));
+  return lineas.map(l => {
+    const c = comprasMap.get(l.compra_id); if (!c) return null;
+    const p = productosMap.get(l.producto_id);
+    const prov = provMap.get(c.proveedor_id);
+    return {
+      fecha: c.fecha, folio: c.folio ?? '', status: c.status,
+      proveedor: prov?.nombre ?? '', proveedor_rfc: prov?.rfc ?? '',
+      almacen: almMap.get(c.almacen_id)?.nombre ?? '',
+      codigo: p?.codigo ?? '', producto: p?.nombre ?? '',
+      cantidad: Number(l.cantidad || 0),
+      precio_unitario: Number(l.precio_unitario || 0),
+      subtotal_linea: Number(l.subtotal || 0),
+      total_linea: Number(l.total || 0),
+      total_compra: Number(c.total || 0),
+      saldo_pendiente: Number(c.saldo_pendiente || 0),
+      condicion_pago: c.condicion_pago,
+    };
+  }).filter(Boolean) as Record<string, any>[];
+}
+
+// ─── Clientes ──────────────────────────────────────────────────
+async function runClientes(filtros: ReporteFiltros, empresaId: string) {
+  const clientes = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('clientes')
+      .select('id, codigo, nombre, rfc, telefono, email, direccion, colonia, cp, vendedor_id, cobrador_id, zona_id, lista_precio_id, credito, limite_credito, dias_credito, frecuencia, dia_visita, status, fecha_alta')
+      .eq('empresa_id', empresaId)
+      .order('nombre', { ascending: true })
+      .range(from, to);
+    if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    return q;
+  });
+  if (!clientes.length) return [];
+  const vendIds = Array.from(new Set(clientes.flatMap(c => [c.vendedor_id, c.cobrador_id]).filter(Boolean)));
+  const zonaIds = Array.from(new Set(clientes.map(c => c.zona_id).filter(Boolean)));
+  const listaIds = Array.from(new Set(clientes.map(c => c.lista_precio_id).filter(Boolean)));
+  const [profMap, zonasMap, listasMap] = await Promise.all([
+    loadMap('profiles', vendIds, 'id, nombre'),
+    loadMap('zonas', zonaIds, 'id, nombre'),
+    loadMap('tarifas', listaIds, 'id, nombre'),
+  ]);
+  return clientes.map(c => ({
+    codigo: c.codigo ?? '', nombre: c.nombre, rfc: c.rfc ?? '',
+    telefono: c.telefono ?? '', email: c.email ?? '',
+    direccion: c.direccion ?? '', colonia: c.colonia ?? '', cp: c.cp ?? '',
+    vendedor: profMap.get(c.vendedor_id)?.nombre ?? '',
+    cobrador: profMap.get(c.cobrador_id)?.nombre ?? '',
+    zona: zonasMap.get(c.zona_id)?.nombre ?? '',
+    lista_precio: listasMap.get(c.lista_precio_id)?.nombre ?? '',
+    credito: c.credito ? 'Sí' : 'No',
+    limite_credito: Number(c.limite_credito || 0),
+    dias_credito: Number(c.dias_credito || 0),
+    frecuencia: c.frecuencia ?? '',
+    dia_visita: Array.isArray(c.dia_visita) ? c.dia_visita.join(', ') : '',
+    status: c.status ?? '',
+    fecha_alta: c.fecha_alta ?? '',
+  }));
+}
+
+// ─── Entregas ──────────────────────────────────────────────────
+async function runEntregas(filtros: ReporteFiltros, empresaId: string) {
+  const entregas = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('entregas')
+      .select('id, folio, fecha, status, pedido_id, cliente_id, vendedor_id, vendedor_ruta_id, almacen_id, orden_entrega, fecha_entrega, motivo_no_entrega')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    return q;
+  });
+  if (!entregas.length) return [];
+  const entregaIds = entregas.map(e => e.id);
+  const clienteIds = Array.from(new Set(entregas.map(e => e.cliente_id).filter(Boolean)));
+  const vendIds = Array.from(new Set(entregas.flatMap(e => [e.vendedor_id, e.vendedor_ruta_id]).filter(Boolean)));
+  const almIds = Array.from(new Set(entregas.map(e => e.almacen_id).filter(Boolean)));
+  const pedidoIds = Array.from(new Set(entregas.map(e => e.pedido_id).filter(Boolean)));
+  const [clientesMap, profMap, almMap, ventasMap, lineas] = await Promise.all([
+    loadMap('clientes', clienteIds, 'id, codigo, nombre'),
+    loadMap('profiles', vendIds, 'id, nombre'),
+    loadMap('almacenes', almIds, 'id, nombre'),
+    loadMap('ventas', pedidoIds, 'id, folio'),
+    fetchAllPages<any>((from, to) =>
+      supabase.from('entrega_lineas').select('entrega_id, producto_id, cantidad_pedida, cantidad_entregada').in('entrega_id', entregaIds).range(from, to)
+    ),
+  ]);
+  const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
+  const productosMap = await loadMap('productos', productoIds, 'id, codigo, nombre');
+  const entregasMap = new Map(entregas.map(e => [e.id, e]));
+  return lineas.map(l => {
+    const e = entregasMap.get(l.entrega_id); if (!e) return null;
+    const cl = clientesMap.get(e.cliente_id);
+    const p = productosMap.get(l.producto_id);
+    return {
+      fecha: e.fecha, folio: e.folio ?? '', status: e.status,
+      pedido_folio: ventasMap.get(e.pedido_id)?.folio ?? '',
+      cliente_codigo: cl?.codigo ?? '', cliente: cl?.nombre ?? '',
+      vendedor: profMap.get(e.vendedor_id)?.nombre ?? '',
+      vendedor_ruta: profMap.get(e.vendedor_ruta_id)?.nombre ?? '',
+      almacen: almMap.get(e.almacen_id)?.nombre ?? '',
+      orden_entrega: Number(e.orden_entrega || 0),
+      fecha_entrega: e.fecha_entrega ?? '',
+      motivo_no_entrega: e.motivo_no_entrega ?? '',
+      codigo: p?.codigo ?? '', producto: p?.nombre ?? '',
+      cantidad_pedida: Number(l.cantidad_pedida || 0),
+      cantidad_entregada: Number(l.cantidad_entregada || 0),
+    };
+  }).filter(Boolean) as Record<string, any>[];
+}
+
+// ─── Visitas ───────────────────────────────────────────────────
+async function runVisitas(filtros: ReporteFiltros, empresaId: string) {
+  const visitas = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('visitas')
+      .select('fecha, tipo, motivo, cliente_id, user_id, gps_lat, gps_lng, venta_id, notas')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta + 'T23:59:59');
+    if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo);
+    return q;
+  });
+  if (!visitas.length) return [];
+  const clienteIds = Array.from(new Set(visitas.map(v => v.cliente_id).filter(Boolean)));
+  const userIds = Array.from(new Set(visitas.map(v => v.user_id).filter(Boolean)));
+  const ventaIds = Array.from(new Set(visitas.map(v => v.venta_id).filter(Boolean)));
+  const [clientesMap, usersMap, ventasMap] = await Promise.all([
+    loadMap('clientes', clienteIds, 'id, codigo, nombre'),
+    loadMap('profiles', userIds, 'id, nombre'),
+    loadMap('ventas', ventaIds, 'id, folio'),
+  ]);
+  return visitas.map(v => {
+    const cl = clientesMap.get(v.cliente_id);
+    return {
+      fecha: v.fecha, tipo: v.tipo, motivo: v.motivo ?? '',
+      cliente_codigo: cl?.codigo ?? '', cliente: cl?.nombre ?? '',
+      usuario: usersMap.get(v.user_id)?.nombre ?? '',
+      gps_lat: v.gps_lat ?? '', gps_lng: v.gps_lng ?? '',
+      venta_folio: ventasMap.get(v.venta_id)?.folio ?? '',
+      notas: v.notas ?? '',
+    };
+  });
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -242,7 +636,7 @@ export function exportToCSV(opts: { fileName: string; columns: ExportColumn[]; d
       const v = row[c.key];
       if (c.format === 'date' && v) {
         const d = new Date(v);
-        return csvEscape(d.toISOString().slice(0, 10));
+        if (!isNaN(d.getTime())) return csvEscape(d.toISOString().slice(0, 10));
       }
       return csvEscape(v);
     }).join(','));

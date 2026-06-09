@@ -12,17 +12,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Play, FileSpreadsheet, FileText, FileDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  CAMPOS_VENTAS,
   buildExportColumns,
   exportToCSV,
   runReporte,
+  getFuenteMeta,
+  FUENTES,
   type ReporteConfig,
   type ReporteFiltros,
+  type ReporteFuente,
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-
-const STATUS_OPTS = ['borrador', 'pendiente', 'parcial', 'pagada', 'cancelada'];
-const TIPO_OPTS = ['venta', 'presale', 'remision'];
 
 export default function ReportesPersonalizadosPage() {
   const { user, empresa } = useAuth();
@@ -181,7 +180,10 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
   open: boolean; onClose: () => void; config: ReporteConfig;
   onChange: (c: ReporteConfig) => void; onSave: () => void; saving: boolean;
 }) {
-  const allCampos = CAMPOS_VENTAS;
+  const fuenteMeta = getFuenteMeta(config.fuente);
+  const allCampos = fuenteMeta.campos;
+  const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
+  const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
   const selectedKeys = new Set(config.columnas.map(c => c.key));
 
   const toggle = (key: string) => {
@@ -220,8 +222,18 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
               <Input value={config.nombre} onChange={(e) => onChange({ ...config, nombre: e.target.value })} placeholder="Ej. Layout Integración Venta" />
             </div>
             <div>
-              <Label>Fuente</Label>
-              <Input value="Ventas (líneas)" disabled />
+              <Label>Fuente de datos</Label>
+              <select
+                className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                value={config.fuente}
+                onChange={(e) => onChange({ ...config, fuente: e.target.value as ReporteFuente, columnas: [] })}
+                disabled={!!config.id}
+              >
+                {FUENTES.map(f => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">{fuenteMeta.description}</p>
             </div>
           </div>
           <div>
@@ -341,6 +353,9 @@ function RunDialog({ open, onClose, config, empresaId, empresaNombre }: {
     tipo: config.filtros_default?.tipo,
   });
   const [loading, setLoading] = useState<null | 'xlsx' | 'csv' | 'pdf'>(null);
+  const fuenteMeta = getFuenteMeta(config.fuente);
+  const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
+  const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
 
   const run = async (kind: 'xlsx' | 'csv' | 'pdf') => {
     try {
@@ -385,24 +400,46 @@ function RunDialog({ open, onClose, config, empresaId, empresaNombre }: {
               <Input type="date" value={filtros.fechaHasta} onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })} />
             </div>
           </div>
-          <div>
-            <Label className="text-xs">Estado</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {STATUS_OPTS.map(s => {
-                const active = (filtros.status ?? []).includes(s);
-                return (
-                  <button key={s} type="button"
-                    onClick={() => {
-                      const arr = new Set(filtros.status ?? []);
-                      active ? arr.delete(s) : arr.add(s);
-                      setFiltros({ ...filtros, status: Array.from(arr) });
-                    }}
-                    className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                  >{s}</button>
-                );
-              })}
+          {STATUS_OPTS.length > 0 && (
+            <div>
+              <Label className="text-xs">Estado</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {STATUS_OPTS.map(s => {
+                  const active = (filtros.status ?? []).includes(s);
+                  return (
+                    <button key={s} type="button"
+                      onClick={() => {
+                        const arr = new Set(filtros.status ?? []);
+                        active ? arr.delete(s) : arr.add(s);
+                        setFiltros({ ...filtros, status: Array.from(arr) });
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+                    >{s}</button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+          {TIPO_OPTS.length > 0 && (
+            <div>
+              <Label className="text-xs">Tipo</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {TIPO_OPTS.map(s => {
+                  const active = (filtros.tipo ?? []).includes(s);
+                  return (
+                    <button key={s} type="button"
+                      onClick={() => {
+                        const arr = new Set(filtros.tipo ?? []);
+                        active ? arr.delete(s) : arr.add(s);
+                        setFiltros({ ...filtros, tipo: Array.from(arr) });
+                      }}
+                      className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+                    >{s}</button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
