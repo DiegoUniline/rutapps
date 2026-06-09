@@ -777,424 +777,8 @@ export default function MiSuscripcionPage() {
         </Button>
       </div>
 
-      {/* Simulador de costo */}
-      <CostoSimuladorCard defaultUsers={currentUsuarios} />
-
-      {/* Status Banner */}
-      <Card className={`overflow-hidden border-2 ${
-        sub.isBlocked ? 'border-destructive/50' :
-        sub.status === 'active' ? 'border-green-300 dark:border-green-700' :
-        sub.status === 'trial' ? 'border-blue-300 dark:border-blue-700' :
-        'border-border'
-      }`}>
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              <div className={`h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                sub.isBlocked ? 'bg-destructive/10' :
-                sub.status === 'active' ? 'bg-green-100 dark:bg-green-900/30' :
-                'bg-blue-100 dark:bg-blue-900/30'
-              }`}>
-                {sub.isBlocked ? <AlertTriangle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" /> :
-                 sub.status === 'active' ? <Check className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" /> :
-                 <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${statusColor[sub.status || ''] || 'bg-muted text-muted-foreground'}`}>
-                    {statusLabel[sub.status || ''] || sub.status || 'Sin suscripción'}
-                  </span>
-                  {currentPlan && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                      Plan {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
-                    </span>
-                  )}
-                </div>
-                {sub.isBlocked && (
-                  <p className="text-sm text-destructive mt-1 font-medium">Tu acceso está suspendido. Contrata un plan para continuar.</p>
-                )}
-                {!sub.isBlocked && daysLeft !== null && daysLeft < 999 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {daysLeft > 0 ? `Quedan ${daysLeft} días de tu periodo actual` : 'Tu periodo ha vencido'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 sm:gap-6 justify-around sm:justify-end">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{currentUsuarios}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Usuarios</div>
-              </div>
-              <Separator orientation="vertical" className="h-10" />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{timbresBalance ?? 0}</div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Timbres</div>
-              </div>
-            </div>
-          </div>
-
-          {subData && (subData.current_period_start || subData.current_period_end || subData.trial_ends_at) && (
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
-              {subData.current_period_start && sub.status !== 'trial' && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Periodo actual:</span>
-                  <span className="font-medium text-foreground">
-                    {fmtDateLongMx(subData.current_period_start)}
-                  </span>
-                </div>
-              )}
-              {sub.status === 'trial' && subData.trial_ends_at && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Vence:</span>
-                  <span className="font-medium text-foreground">
-                    {fmtDateLongMx(subData.trial_ends_at)}
-                  </span>
-                </div>
-              )}
-              {sub.status === 'trial' && trialChargeDate && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Próximo cobro:</span>
-                  <span className="font-medium text-foreground">
-                    {fmtDateLongMx(trialChargeDate)}
-                  </span>
-                </div>
-              )}
-              {sub.status !== 'trial' && subData.current_period_end && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Próximo cobro:</span>
-                  <span className="font-medium text-foreground">
-                    {fmtDateLongMx(subData.current_period_end)}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ⚠️ PROMINENT: Pending Invoice Banner */}
-      {pendingFacturas.length > 0 && (
-        <Card className="border-2 border-destructive/60 bg-destructive/5">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-destructive">
-                    Tienes {pendingFacturas.length} factura{pendingFacturas.length > 1 ? 's' : ''} pendiente{pendingFacturas.length > 1 ? 's' : ''} de pago
-                  </p>
-                  <p className="text-lg font-black text-foreground">
-                    ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="lg"
-                className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
-                disabled={payingInvoice !== null}
-                onClick={() => handlePayInvoice(pendingFacturas[0])}
-              >
-                {payingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-                Pagar ahora
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Pending transfer requests */}
-      {pendingSolicitudes.length > 0 && (
-        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 flex items-start gap-3">
-          <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-              Tienes {pendingSolicitudes.length} solicitud(es) de pago pendiente(s) de aprobación
-            </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-              Se activará tu servicio cuando confirmemos el pago por transferencia.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Two-column layout */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Plan + Timbres + History */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* ─── Tu plan actual + Actualizar ─── */}
-          <Card className="border-primary/20">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
-                    <Crown className="h-5 w-5 text-primary" /> Tu plan actual
-                  </h2>
-                  {currentPlan ? (() => {
-                    const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
-                    const baseMonthly = planMonthlyCost(currentPlan, currentUsuarios);
-                    const effectiveMonthly = companyDiscount > 0
-                      ? Math.round(baseMonthly * (1 - companyDiscount / 100))
-                      : baseMonthly;
-                    const totalPeriodo = effectiveMonthly * (currentPlan.meses || 1);
-                    const totalMes = effectiveMonthly;
-                    const totalSinDescuento = baseMonthly * (currentPlan.meses || 1);
-                    const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
-                    const planLabel = currentPlan.slug ? currentPlan.nombre : (PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre);
-
-                    return (
-                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
-                      <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
-                        {planLabel}
-                      </Badge>
-                      {isLegacyCustomer && (
-                        <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700">
-                          Plan anterior
-                        </Badge>
-                      )}
-                      {companyDiscount > 0 && (
-                        <Badge className="bg-green-600 text-white text-xs">
-                          {companyDiscount}% descuento especial
-                        </Badge>
-                      )}
-                      {currentPlan.descuento_pct > 0 && (
-                        <Badge className="bg-primary text-primary-foreground text-xs">
-                          +{currentPlan.descuento_pct}% por plan {planLabel}
-                        </Badge>
-                      )}
-
-                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div className="text-sm text-foreground w-full sm:w-auto">
-                        <strong>{currentUsuarios}</strong> usuarios{currentPlan.slug ? ` (${currentPlan.usuarios_incluidos} incluidos)` : ''} — <strong>${effectiveMonthly.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong> MXN/mes{currentPlan.meses > 1 ? ` × ${currentPlan.meses} meses` : ''}
-                        {hasAnyDiscount && (
-                          <span className="block text-xs text-muted-foreground line-through">
-                            Sin descuento: ${totalSinDescuento.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
-                          </span>
-                        )}
-                      </div>
-                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                      <div className="w-full sm:w-auto">
-                        <div className="text-lg font-black text-foreground">
-                          ${totalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          ${totalMes.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes
-                          {hasAnyDiscount && (
-                            <span className="ml-1 text-green-600 font-semibold">
-                              (ahorras ${(totalSinDescuento - totalPeriodo).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })() : (
-                    <p className="text-sm text-muted-foreground">Sin plan activo — elige uno para continuar.</p>
-                  )}
-                </div>
-                <Button
-                  size="lg"
-                  className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
-                  onClick={() => {
-                    setExtraUsers(0);
-                    if (currentPlan) setSelectedFreq(currentPlan.id);
-                    setShowUpdateDialog(true);
-                  }}
-                >
-                  <RefreshCw className="h-5 w-5" />
-                  {currentPlan ? 'Actualizar plan' : 'Elegir plan'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          {/* ─── Cupones de descuento ─── */}
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                <Ticket className="h-5 w-5 text-primary" /> Cupones de descuento
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Puedes aplicar varios cupones. Los <strong>acumulables</strong> se suman; los <strong>no acumulables</strong> usan el de mayor descuento.
-              </p>
-
-              {activeCupones.length > 0 && (
-                <div className="space-y-2 mt-3">
-                  {activeCupones.map((u) => {
-                    const c = u.cupones as any;
-                    return (
-                      <div
-                        key={u.id}
-                        className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-3 flex items-center justify-between gap-3 flex-wrap"
-                      >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className="bg-green-600 text-white font-mono">{c?.codigo}</Badge>
-                          <span className="text-sm font-semibold text-green-800 dark:text-green-300">
-                            {c?.descuento_pct}% de descuento
-                          </span>
-                          {c?.acumulable ? (
-                            <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">Acumulable</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px]">No acumulable</Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-green-700 dark:text-green-400">
-                          {u.meses_restantes === null
-                            ? 'Permanente'
-                            : u.meses_restantes > 0
-                              ? `${u.meses_restantes} mes${u.meses_restantes > 1 ? 'es' : ''} restante${u.meses_restantes > 1 ? 's' : ''}`
-                              : 'Último mes'}
-                          {c?.vigencia_fin ? ` · Vence ${format(new Date(c.vigencia_fin), 'dd MMM yy', { locale: es })}` : ''}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 mt-3">
-                <Input
-                  value={cuponCode}
-                  onChange={e => setCuponCode(e.target.value.toUpperCase())}
-                  placeholder={activeCupones.length > 0 ? 'Aplicar otro código' : 'Ingresa tu código'}
-                  className="max-w-[220px] font-mono"
-                />
-                <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
-                  {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Timbres Section — solo visible para super admin */}
-          {user?.email === 'diego.leon@uniline.mx' && (
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                <Stamp className="h-5 w-5 text-primary" /> Timbres CFDI
-              </h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                Paquetes de 100 timbres a $1 MXN c/u. Saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 bg-muted/30 rounded-xl p-3 sm:p-4">
-                <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
-                    <Minus className="h-3.5 w-3.5" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={timbresPacks}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
-                      if (!isNaN(v) && v >= 1) setTimbresPacks(v);
-                      else if (e.target.value === '') setTimbresPacks(1);
-                    }}
-                    className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => p + 1)}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <span className="text-sm font-semibold text-foreground">{timbresPacks * 100} timbres = ${(timbresPacks * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
-                <Button size="sm" className="ml-auto" onClick={addTimbresToCart}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          )}
-
-          {/* Invoice History */}
-          {facturas.length > 0 && (
-            <Card>
-              <CardContent className="p-4 sm:p-6">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
-                  <Receipt className="h-5 w-5 text-primary" /> Historial de facturas
-                </h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
-                        <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
-                        <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
-                        <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
-                        <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
-                        <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facturas.map(f => (
-                        <tr key={f.id} className="border-b border-border/50 hover:bg-card">
-                          <td className="py-2.5 px-2">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
-                              <Badge variant="outline" className="text-[9px] px-1 py-0">{f.stripe_invoice_id ? 'Stripe' : 'Manual'}</Badge>
-                              {f.es_prorrateo && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0">Prorrateo</Badge>
-                              )}
-                            </div>
-                            {f.concepto && <div className="text-[11px] text-muted-foreground truncate max-w-[220px] mt-0.5">{f.concepto}</div>}
-                          </td>
-                          <td className="py-2.5 px-2 text-muted-foreground text-xs">
-                            {fmtDate(f.periodo_inicio)} — {fmtDate(f.periodo_fin)}
-                          </td>
-                          <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
-                          <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-2 text-center">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
-                              {facturaStatusLabel[f.estado] || f.estado}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              {f.estado === 'pendiente' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs gap-1"
-                                  disabled={payingInvoice === f.id}
-                                  onClick={() => handlePayInvoice(f)}
-                                >
-                                  {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : f.stripe_invoice_id ? <CreditCard className="h-3 w-3" /> : <BanknoteIcon className="h-3 w-3" />}
-                                  Pagar
-                                </Button>
-                              )}
-                              {isSuperAdminUser && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  title="Eliminar factura (Super Admin)"
-                                  onClick={() => setDeleteFacturaDialog(f)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Right: Cart */}
-        <div className="lg:col-span-1">
+      {(() => {
+        const cartCard = (
           <Card className="lg:sticky lg:top-6 border-2 border-primary/20">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -1246,8 +830,462 @@ export default function MiSuscripcionPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
+        );
+
+        return (
+      <Tabs defaultValue="resumen" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="plan">Plan & Cupones</TabsTrigger>
+          <TabsTrigger value="facturas">Facturas{user?.email === 'diego.leon@uniline.mx' ? ' & Timbres' : ''}</TabsTrigger>
+          <TabsTrigger value="simulador">Simulador de costos</TabsTrigger>
+        </TabsList>
+
+        {/* ─── Tab: Resumen ─── */}
+        <TabsContent value="resumen" className="space-y-6 mt-4">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Status Banner */}
+              <Card className={`overflow-hidden border-2 ${
+                sub.isBlocked ? 'border-destructive/50' :
+                sub.status === 'active' ? 'border-green-300 dark:border-green-700' :
+                sub.status === 'trial' ? 'border-blue-300 dark:border-blue-700' :
+                'border-border'
+              }`}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className={`h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                        sub.isBlocked ? 'bg-destructive/10' :
+                        sub.status === 'active' ? 'bg-green-100 dark:bg-green-900/30' :
+                        'bg-blue-100 dark:bg-blue-900/30'
+                      }`}>
+                        {sub.isBlocked ? <AlertTriangle className="h-6 w-6 sm:h-7 sm:w-7 text-destructive" /> :
+                         sub.status === 'active' ? <Check className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" /> :
+                         <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${statusColor[sub.status || ''] || 'bg-muted text-muted-foreground'}`}>
+                            {statusLabel[sub.status || ''] || sub.status || 'Sin suscripción'}
+                          </span>
+                          {currentPlan && (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                              Plan {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
+                            </span>
+                          )}
+                        </div>
+                        {sub.isBlocked && (
+                          <p className="text-sm text-destructive mt-1 font-medium">Tu acceso está suspendido. Contrata un plan para continuar.</p>
+                        )}
+                        {!sub.isBlocked && daysLeft !== null && daysLeft < 999 && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {daysLeft > 0 ? `Quedan ${daysLeft} días de tu periodo actual` : 'Tu periodo ha vencido'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 sm:gap-6 justify-around sm:justify-end">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-foreground">{currentUsuarios}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Usuarios</div>
+                      </div>
+                      <Separator orientation="vertical" className="h-10" />
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-foreground">{timbresBalance ?? 0}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Timbres</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {subData && (subData.current_period_start || subData.current_period_end || subData.trial_ends_at) && (
+                    <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+                      {subData.current_period_start && sub.status !== 'trial' && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">Periodo actual:</span>
+                          <span className="font-medium text-foreground">
+                            {fmtDateLongMx(subData.current_period_start)}
+                          </span>
+                        </div>
+                      )}
+                      {sub.status === 'trial' && subData.trial_ends_at && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">Vence:</span>
+                          <span className="font-medium text-foreground">
+                            {fmtDateLongMx(subData.trial_ends_at)}
+                          </span>
+                        </div>
+                      )}
+                      {sub.status === 'trial' && trialChargeDate && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">Próximo cobro:</span>
+                          <span className="font-medium text-foreground">
+                            {fmtDateLongMx(trialChargeDate)}
+                          </span>
+                        </div>
+                      )}
+                      {sub.status !== 'trial' && subData.current_period_end && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground">Próximo cobro:</span>
+                          <span className="font-medium text-foreground">
+                            {fmtDateLongMx(subData.current_period_end)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ⚠️ PROMINENT: Pending Invoice Banner */}
+              {pendingFacturas.length > 0 && (
+                <Card className="border-2 border-destructive/60 bg-destructive/5">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="h-6 w-6 text-destructive" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-destructive">
+                            Tienes {pendingFacturas.length} factura{pendingFacturas.length > 1 ? 's' : ''} pendiente{pendingFacturas.length > 1 ? 's' : ''} de pago
+                          </p>
+                          <p className="text-lg font-black text-foreground">
+                            ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="lg"
+                        className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
+                        disabled={payingInvoice !== null}
+                        onClick={() => handlePayInvoice(pendingFacturas[0])}
+                      >
+                        {payingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                        Pagar ahora
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Pending transfer requests */}
+              {pendingSolicitudes.length > 0 && (
+                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      Tienes {pendingSolicitudes.length} solicitud(es) de pago pendiente(s) de aprobación
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      Se activará tu servicio cuando confirmemos el pago por transferencia.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="lg:col-span-1">{cartCard}</div>
+          </div>
+        </TabsContent>
+
+        {/* ─── Tab: Plan & Cupones ─── */}
+        <TabsContent value="plan" className="space-y-6 mt-4">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* ─── Tu plan actual + Actualizar ─── */}
+              <Card className="border-primary/20">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
+                        <Crown className="h-5 w-5 text-primary" /> Tu plan actual
+                      </h2>
+                      {currentPlan ? (() => {
+                        const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
+                        const baseMonthly = planMonthlyCost(currentPlan, currentUsuarios);
+                        const effectiveMonthly = companyDiscount > 0
+                          ? Math.round(baseMonthly * (1 - companyDiscount / 100))
+                          : baseMonthly;
+                        const totalPeriodo = effectiveMonthly * (currentPlan.meses || 1);
+                        const totalMes = effectiveMonthly;
+                        const totalSinDescuento = baseMonthly * (currentPlan.meses || 1);
+                        const hasAnyDiscount = companyDiscount > 0 || currentPlan.descuento_pct > 0;
+                        const planLabel = currentPlan.slug ? currentPlan.nombre : (PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre);
+
+                        return (
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-border p-3 sm:p-4">
+                          <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
+                            {planLabel}
+                          </Badge>
+                          {isLegacyCustomer && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700">
+                              Plan anterior
+                            </Badge>
+                          )}
+                          {companyDiscount > 0 && (
+                            <Badge className="bg-green-600 text-white text-xs">
+                              {companyDiscount}% descuento especial
+                            </Badge>
+                          )}
+                          {currentPlan.descuento_pct > 0 && (
+                            <Badge className="bg-primary text-primary-foreground text-xs">
+                              +{currentPlan.descuento_pct}% por plan {planLabel}
+                            </Badge>
+                          )}
+
+                          <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                          <div className="text-sm text-foreground w-full sm:w-auto">
+                            <strong>{currentUsuarios}</strong> usuarios{currentPlan.slug ? ` (${currentPlan.usuarios_incluidos} incluidos)` : ''} — <strong>${effectiveMonthly.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong> MXN/mes{currentPlan.meses > 1 ? ` × ${currentPlan.meses} meses` : ''}
+                            {hasAnyDiscount && (
+                              <span className="block text-xs text-muted-foreground line-through">
+                                Sin descuento: ${totalSinDescuento.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                              </span>
+                            )}
+                          </div>
+                          <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                          <div className="w-full sm:w-auto">
+                            <div className="text-lg font-black text-foreground">
+                              ${totalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              ${totalMes.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes
+                              {hasAnyDiscount && (
+                                <span className="ml-1 text-green-600 font-semibold">
+                                  (ahorras ${(totalSinDescuento - totalPeriodo).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        );
+                      })() : (
+                        <p className="text-sm text-muted-foreground">Sin plan activo — elige uno para continuar.</p>
+                      )}
+                    </div>
+                    <Button
+                      size="lg"
+                      className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
+                      onClick={() => {
+                        setExtraUsers(0);
+                        if (currentPlan) setSelectedFreq(currentPlan.id);
+                        setShowUpdateDialog(true);
+                      }}
+                    >
+                      <RefreshCw className="h-5 w-5" />
+                      {currentPlan ? 'Actualizar plan' : 'Elegir plan'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              {/* ─── Cupones de descuento ─── */}
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+                    <Ticket className="h-5 w-5 text-primary" /> Cupones de descuento
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Puedes aplicar varios cupones. Los <strong>acumulables</strong> se suman; los <strong>no acumulables</strong> usan el de mayor descuento.
+                  </p>
+
+                  {activeCupones.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      {activeCupones.map((u) => {
+                        const c = u.cupones as any;
+                        return (
+                          <div
+                            key={u.id}
+                            className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-3 flex items-center justify-between gap-3 flex-wrap"
+                          >
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className="bg-green-600 text-white font-mono">{c?.codigo}</Badge>
+                              <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                                {c?.descuento_pct}% de descuento
+                              </span>
+                              {c?.acumulable ? (
+                                <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">Acumulable</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">No acumulable</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-green-700 dark:text-green-400">
+                              {u.meses_restantes === null
+                                ? 'Permanente'
+                                : u.meses_restantes > 0
+                                  ? `${u.meses_restantes} mes${u.meses_restantes > 1 ? 'es' : ''} restante${u.meses_restantes > 1 ? 's' : ''}`
+                                  : 'Último mes'}
+                              {c?.vigencia_fin ? ` · Vence ${format(new Date(c.vigencia_fin), 'dd MMM yy', { locale: es })}` : ''}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-3">
+                    <Input
+                      value={cuponCode}
+                      onChange={e => setCuponCode(e.target.value.toUpperCase())}
+                      placeholder={activeCupones.length > 0 ? 'Aplicar otro código' : 'Ingresa tu código'}
+                      className="max-w-[220px] font-mono"
+                    />
+                    <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
+                      {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-1">{cartCard}</div>
+          </div>
+        </TabsContent>
+
+        {/* ─── Tab: Facturas (& Timbres super admin) ─── */}
+        <TabsContent value="facturas" className="space-y-6 mt-4">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Timbres Section — solo visible para super admin */}
+              {user?.email === 'diego.leon@uniline.mx' && (
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+                    <Stamp className="h-5 w-5 text-primary" /> Timbres CFDI
+                  </h2>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Paquetes de 100 timbres a $1 MXN c/u. Saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3 bg-muted/30 rounded-xl p-3 sm:p-4">
+                    <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
+                        <Minus className="h-3.5 w-3.5" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={timbresPacks}
+                        onChange={e => {
+                          const v = parseInt(e.target.value);
+                          if (!isNaN(v) && v >= 1) setTimbresPacks(v);
+                          else if (e.target.value === '') setTimbresPacks(1);
+                        }}
+                        className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => p + 1)}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{timbresPacks * 100} timbres = ${(timbresPacks * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
+                    <Button size="sm" className="ml-auto" onClick={addTimbresToCart}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              )}
+
+              {/* Invoice History */}
+              {facturas.length > 0 ? (
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+                      <Receipt className="h-5 w-5 text-primary" /> Historial de facturas
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
+                            <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
+                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
+                            <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
+                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                            <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {facturas.map(f => (
+                            <tr key={f.id} className="border-b border-border/50 hover:bg-card">
+                              <td className="py-2.5 px-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0">{f.stripe_invoice_id ? 'Stripe' : 'Manual'}</Badge>
+                                  {f.es_prorrateo && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0">Prorrateo</Badge>
+                                  )}
+                                </div>
+                                {f.concepto && <div className="text-[11px] text-muted-foreground truncate max-w-[220px] mt-0.5">{f.concepto}</div>}
+                              </td>
+                              <td className="py-2.5 px-2 text-muted-foreground text-xs">
+                                {fmtDate(f.periodo_inicio)} — {fmtDate(f.periodo_fin)}
+                              </td>
+                              <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
+                              <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
+                              <td className="py-2.5 px-2 text-center">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
+                                  {facturaStatusLabel[f.estado] || f.estado}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {f.estado === 'pendiente' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs gap-1"
+                                      disabled={payingInvoice === f.id}
+                                      onClick={() => handlePayInvoice(f)}
+                                    >
+                                      {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : f.stripe_invoice_id ? <CreditCard className="h-3 w-3" /> : <BanknoteIcon className="h-3 w-3" />}
+                                      Pagar
+                                    </Button>
+                                  )}
+                                  {isSuperAdminUser && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      title="Eliminar factura (Super Admin)"
+                                      onClick={() => setDeleteFacturaDialog(f)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                    Aún no tienes facturas emitidas.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            <div className="lg:col-span-1">{cartCard}</div>
+          </div>
+        </TabsContent>
+
+        {/* ─── Tab: Simulador de costos ─── */}
+        <TabsContent value="simulador" className="mt-4">
+          <CostoSimuladorCard defaultUsers={currentUsuarios} />
+        </TabsContent>
+      </Tabs>
+        );
+      })()}
+
 
       {/* ─── Dialog: Actualizar plan ─── */}
       <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
