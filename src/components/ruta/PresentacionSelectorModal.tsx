@@ -132,11 +132,20 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
           {mode === 'pres' && (
             <>
-              {presActivas.length === 0 ? (
+              {presActivas.length === 0 && !esGranel ? null : presActivas.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Este producto no tiene presentaciones definidas.</p>
               ) : (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                    {/* Unidad base (1 {unidad}) */}
+                    {!esGranel && (
+                      <button onClick={() => setPresId(null)}
+                        className={`text-left rounded-lg px-3 py-3 border-2 transition-all ${presId === null ? 'border-primary bg-primary/10' : 'border-border bg-card hover:bg-accent/40'}`}>
+                        <p className="text-sm sm:text-base font-semibold leading-tight">1 {unidad}</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground tabular-nums mt-0.5">Unidad base</p>
+                        <p className="text-sm sm:text-base font-bold text-primary tabular-nums mt-1">{symbol}{fmtNum(precioPorUnidadBase)}</p>
+                      </button>
+                    )}
                     {presActivas.map(p => {
                       const active = p.id === presId;
                       const pUnit = p.precio_especial ?? (precioPorUnidadBase * Number(p.factor_base));
@@ -150,6 +159,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                       );
                     })}
                   </div>
+
 
                   <div>
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">Cantidad de paquetes</label>
