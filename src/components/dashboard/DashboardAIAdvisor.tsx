@@ -271,7 +271,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
             <div className="py-6 text-center">
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 Obtén un diagnóstico ejecutivo: oportunidades, riesgos y acciones concretas para los próximos 7 días.
-                Tienes {DAILY_LIMIT} análisis disponibles al día.
+                Tienes {MONTHLY_LIMIT} análisis disponibles al mes.
               </p>
             </div>
           )}
