@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Count today's runs scoped to the EFFECTIVE empresa (UTC day)
+    // Count this month's runs scoped to the EFFECTIVE empresa (UTC month)
     const since = new Date();
+    since.setUTCDate(1);
     since.setUTCHours(0, 0, 0, 0);
     const { count, error: cntErr } = await supabaseAuth
       .from("dashboard_ai_recomendaciones")
@@ -67,13 +68,13 @@ Deno.serve(async (req) => {
       .eq("empresa_id", empresaId)
       .gte("created_at", since.toISOString());
     if (cntErr) return json({ error: cntErr.message }, 500);
-    const usedToday = count ?? 0;
+    const usedThisMonth = count ?? 0;
 
-    if (usedToday >= DAILY_LIMIT) {
+    if (usedThisMonth >= MONTHLY_LIMIT) {
       return json({
-        error: `Alcanzaste el límite de ${DAILY_LIMIT} análisis por día. Inténtalo mañana.`,
-        usedToday,
-        dailyLimit: DAILY_LIMIT,
+        error: `Alcanzaste el límite de ${MONTHLY_LIMIT} análisis por mes. Inténtalo el próximo mes.`,
+        usedThisMonth,
+        monthlyLimit: MONTHLY_LIMIT,
       }, 429);
     }
 
