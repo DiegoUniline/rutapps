@@ -30,7 +30,7 @@ interface Props {
 export function PresentacionSelectorModal({ open, onClose, producto, presentaciones, precioPorUnidadBase, stockMax = Infinity, onConfirm }: Props) {
   const { symbol } = useCurrency();
   const [mode, setMode] = useState<'pres' | 'libre'>('pres');
-  const [presId, setPresId] = useState<string | null>(null);
+  const [presId, setPresId] = useState<string | null>(null); // null => unidad base
   const [paquetes, setPaquetes] = useState('1');
   const [pesoOverride, setPesoOverride] = useState(''); // peso real total opcional
   const [pesoLibre, setPesoLibre] = useState('');
@@ -43,15 +43,12 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
   useEffect(() => {
     if (!open) return;
-    if (presActivas.length > 0) {
-      setMode('pres');
-      setPresId(presActivas[0].id);
-    } else if (esGranel) {
+    if (esGranel && presActivas.length === 0) {
       setMode('libre');
       setPresId(null);
     } else {
       setMode('pres');
-      setPresId(null);
+      setPresId(null); // por defecto: unidad base (1 {unidad})
     }
     setPaquetes('1');
     setPesoOverride('');
@@ -71,10 +68,16 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   let cantidadBase = 0;
   let precioUnitario = precioPorUnidadBase;
 
-  if (mode === 'pres' && presSel) {
-    cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
-    if (presSel.precio_especial != null && factor > 0) {
-      precioUnitario = Number(presSel.precio_especial) / factor;
+  if (mode === 'pres') {
+    if (presSel) {
+      cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
+      if (presSel.precio_especial != null && factor > 0) {
+        precioUnitario = Number(presSel.precio_especial) / factor;
+      }
+    } else {
+      // Unidad base (1 {unidad})
+      cantidadBase = paqNum;
+      precioUnitario = precioPorUnidadBase;
     }
   } else {
     cantidadBase = Math.max(0, Number(pesoLibre) || 0);
@@ -129,11 +132,20 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
           {mode === 'pres' && (
             <>
-              {presActivas.length === 0 ? (
+              {presActivas.length === 0 && !esGranel ? null : presActivas.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Este producto no tiene presentaciones definidas.</p>
               ) : (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                    {/* Unidad base (1 {unidad}) */}
+                    {!esGranel && (
+                      <button onClick={() => setPresId(null)}
+                        className={`text-left rounded-lg px-3 py-3 border-2 transition-all ${presId === null ? 'border-primary bg-primary/10' : 'border-border bg-card hover:bg-accent/40'}`}>
+                        <p className="text-sm sm:text-base font-semibold leading-tight">1 {unidad}</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground tabular-nums mt-0.5">Unidad base</p>
+                        <p className="text-sm sm:text-base font-bold text-primary tabular-nums mt-1">{symbol}{fmtNum(precioPorUnidadBase)}</p>
+                      </button>
+                    )}
                     {presActivas.map(p => {
                       const active = p.id === presId;
                       const pUnit = p.precio_especial ?? (precioPorUnidadBase * Number(p.factor_base));
@@ -148,8 +160,9 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
                     })}
                   </div>
 
+
                   <div>
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">Cantidad de paquetes</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground uppercase">{presSel ? 'Cantidad de paquetes' : `Cantidad (${unidad})`}</label>
                     <div className="flex items-center gap-2 mt-2">
                       <button onClick={() => adjustPaquetes(-1)} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-accent flex items-center justify-center active:scale-95"><Minus className="h-5 w-5" /></button>
                       <input type="number" inputMode="decimal" step="0.001" min="0" value={paquetes}
