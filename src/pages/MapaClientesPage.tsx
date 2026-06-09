@@ -683,35 +683,11 @@ export default function MapaClientesPage() {
     return '#9ca3af';
   };
 
-  const getMarkerIcon = (cliente: any) => {
-    const color = getMarkerColor(cliente);
+  const getMarkerSize = (cliente: any) => {
     const visited = ventasHoy?.has(cliente.id);
-    return {
-      path: google.maps.SymbolPath.CIRCLE,
-      fillColor: color,
-      fillOpacity: visited && colorMode === 'visitado' ? 1 : 0.85,
-      strokeColor: '#fff',
-      strokeWeight: visited && colorMode === 'visitado' ? 3 : 2,
-      scale: visited && colorMode === 'visitado' ? 12 : 9,
-    };
+    return visited && colorMode === 'visitado' ? 18 : 14;
   };
 
-  const createNumberedLabel = (): google.maps.Symbol => ({
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: 'hsl(230, 55%, 52%)',
-    fillOpacity: 1,
-    strokeColor: '#fff',
-    strokeWeight: 3,
-    scale: 16,
-    labelOrigin: new google.maps.Point(0, 0),
-  });
-
-  // Cluster styles
-  const clusterStyles = [
-    { textColor: 'white', textSize: 12, width: 40, height: 40, url: '' },
-    { textColor: 'white', textSize: 13, width: 48, height: 48, url: '' },
-    { textColor: 'white', textSize: 14, width: 56, height: 56, url: '' },
-  ];
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
