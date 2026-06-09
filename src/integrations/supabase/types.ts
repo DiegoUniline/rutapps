@@ -2036,6 +2036,36 @@ export type Database = {
           },
         ]
       }
+      dashboard_ai_recomendaciones: {
+        Row: {
+          content: string
+          created_at: string
+          empresa_id: string
+          id: string
+          model: string | null
+          snapshot: Json | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          model?: string | null
+          snapshot?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          model?: string | null
+          snapshot?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       descarga_ruta: {
         Row: {
           aprobado_por: string | null
