@@ -109,18 +109,19 @@ export async function runReporte(
   if (config.fuente !== 'ventas') return [];
 
   // 1. ventas filtradas
-  let ventasQ = supabase
-    .from('ventas')
-    .select('id, folio, fecha, tipo, status, condicion_pago, cliente_id, vendedor_id')
-    .eq('empresa_id', empresaId)
-    .order('fecha', { ascending: true });
-
-  if (filtros.fechaDesde) ventasQ = ventasQ.gte('fecha', filtros.fechaDesde);
-  if (filtros.fechaHasta) ventasQ = ventasQ.lte('fecha', filtros.fechaHasta);
-  if (filtros.status?.length) ventasQ = ventasQ.in('status', filtros.status as any);
-  if (filtros.tipo?.length) ventasQ = ventasQ.in('tipo', filtros.tipo as any);
-
-  const ventas = await fetchAllPages<any>(ventasQ as any);
+  const ventas = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('ventas')
+      .select('id, folio, fecha, tipo, status, condicion_pago, cliente_id, vendedor_id')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    return q;
+  });
   if (ventas.length === 0) return [];
 
   const ventaIds = (ventas as any[]).map(v => v.id as string);
@@ -140,11 +141,13 @@ export async function runReporte(
   const vendedoresMap = new Map((vendedoresRes.data || []).map((v: any) => [v.id, v]));
 
   // 3. líneas (paginadas)
-  const lineasQ = supabase
-    .from('venta_lineas')
-    .select('venta_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, iva_pct, ieps_pct, iva_monto, ieps_monto, total')
-    .in('venta_id', ventaIds);
-  const lineas = await fetchAllPages<any>(lineasQ as any);
+  const lineas = await fetchAllPages<any>((from, to) =>
+    supabase
+      .from('venta_lineas')
+      .select('venta_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, iva_pct, ieps_pct, iva_monto, ieps_monto, total')
+      .in('venta_id', ventaIds)
+      .range(from, to)
+  );
 
   // 4. productos
   const productoIds = Array.from(new Set((lineas as any[]).map(l => l.producto_id as string).filter(Boolean)));
@@ -157,11 +160,13 @@ export async function runReporte(
   const formaPagoMap = new Map<string, string>();
   const needFormaPago = config.columnas.some(c => c.key === 'forma_pago');
   if (needFormaPago) {
-    const apliQ = supabase
-      .from('cobro_aplicaciones')
-      .select('venta_id, cobros!inner(metodo_pago)')
-      .in('venta_id', ventaIds);
-    const aplicaciones = await fetchAllPages<any>(apliQ as any);
+    const aplicaciones = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('cobro_aplicaciones')
+        .select('venta_id, cobros!inner(metodo_pago)')
+        .in('venta_id', ventaIds)
+        .range(from, to)
+    );
     const tmp = new Map<string, Set<string>>();
     for (const a of aplicaciones) {
       const m = a.cobros?.metodo_pago;
