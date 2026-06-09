@@ -263,14 +263,9 @@ export default function CobranzaPage() {
                 ) : (
                   <div className="flex flex-wrap gap-1">
                     {folios.map(f => (
-                      <a
-                        key={f.id}
-                        href={`/ventas/${f.id}`}
-                        onClick={e => { e.preventDefault(); window.location.href = `/ventas/${f.id}`; }}
-                        className="text-primary hover:underline"
-                      >
+                      <Link key={f.id} to={`/ventas/${f.id}`} className="text-primary hover:underline">
                         {f.folio}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 )}
