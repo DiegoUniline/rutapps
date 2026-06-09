@@ -73,7 +73,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
             <td colSpan={totalCols} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
           </tr>
         )}
-        {items.map((row: any) => {
+        {sorted.map((row: any) => {
           const isExpanded = expandedId === row.id;
           return (
             <>
