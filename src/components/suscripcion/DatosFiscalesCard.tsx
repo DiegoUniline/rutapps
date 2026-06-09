@@ -88,6 +88,18 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
+  const isDirty = originalForm !== null && (
+    form.razon_social !== originalForm.razon_social ||
+    form.rfc !== originalForm.rfc ||
+    form.regimen_fiscal !== originalForm.regimen_fiscal ||
+    form.cp !== originalForm.cp ||
+    form.uso_cfdi !== originalForm.uso_cfdi ||
+    form.forma_pago_sat !== originalForm.forma_pago_sat ||
+    form.metodo_pago_sat !== originalForm.metodo_pago_sat ||
+    form.email_facturacion !== originalForm.email_facturacion ||
+    form.email_cc_facturacion !== originalForm.email_cc_facturacion
+  );
+
   async function handleSave() {
     if (!form.rfc.trim() || !form.razon_social.trim()) {
       toast.error('RFC y Razón Social son obligatorios');
