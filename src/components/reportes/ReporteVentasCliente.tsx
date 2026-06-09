@@ -54,17 +54,17 @@ export function ReporteVentasCliente({ data }: { data: any }) {
           <thead>
             <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
               {isVisible('#') && <th className="text-left py-2 px-3 w-8">#</th>}
-              {isVisible('nombre') && <th className="text-left py-2 px-3">Cliente</th>}
-              {isVisible('ventas') && <th className="text-right py-2 px-3">Ventas</th>}
-              {isVisible('total') && <th className="text-right py-2 px-3">Total</th>}
-              {isVisible('costo') && <th className="text-right py-2 px-3">Costo</th>}
-              {isVisible('utilidad') && <th className="text-right py-2 px-3">Utilidad</th>}
-              {isVisible('margen') && <th className="text-right py-2 px-3">Margen</th>}
-              {isVisible('pendiente') && <th className="text-right py-2 px-3">Pendiente</th>}
+              {isVisible('nombre') && <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="text-left py-2 px-3">Cliente</SortableTh>}
+              {isVisible('ventas') && <SortableTh sortKey="ventas" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Ventas</SortableTh>}
+              {isVisible('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Total</SortableTh>}
+              {isVisible('costo') && <SortableTh sortKey="costo" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Costo</SortableTh>}
+              {isVisible('utilidad') && <SortableTh sortKey="utilidad" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Utilidad</SortableTh>}
+              {isVisible('margen') && <SortableTh sortKey="margen" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Margen</SortableTh>}
+              {isVisible('pendiente') && <SortableTh sortKey="pendiente" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Pendiente</SortableTh>}
             </tr>
           </thead>
           <tbody>
-            {items.map((c, i) => {
+            {sorted.map((c, i) => {
               const margen = c.total > 0 ? ((c.utilidad ?? 0) / c.total) * 100 : 0;
               return (
                 <tr key={c.id} className="border-b border-border/50">
