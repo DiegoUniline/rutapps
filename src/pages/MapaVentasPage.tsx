@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
-import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save, MapPin } from 'lucide-react';
+import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -21,20 +21,6 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 const DEFAULT_CENTER = { lng: -102.5528, lat: 23.6345 };
 const today = new Date().toISOString().split('T')[0];
 
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = [];
-  let index = 0, lat = 0, lng = 0;
-  while (index < encoded.length) {
-    let shift = 0, result = 0, byte: number;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-    shift = 0; result = 0;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    points.push([lng / 1e5, lat / 1e5]);
-  }
-  return points;
-}
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
@@ -44,15 +30,8 @@ export default function MapaVentasPage() {
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
-  const [optimizing, setOptimizing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [routeResult, setRouteResult] = useState<{
-    orderedIds: string[];
-    polyline: string | null;
-    distance_meters: number;
-    duration: string;
-  } | null>(null);
   const mapRef = useRef<MapRef | null>(null);
+
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -120,14 +99,6 @@ export default function MapaVentasPage() {
     return result;
   }, [entregasData]);
 
-  const uniqueWaypoints = useMemo(() => {
-    return entregasConGps.map((e: any) => ({
-      id: e.id,
-      lat: e.clientes.gps_lat,
-      lng: e.clientes.gps_lng,
-    }));
-  }, [entregasConGps]);
-
   const stats = useMemo(() => {
     const all = entregasData ?? [];
     return {
@@ -154,92 +125,47 @@ export default function MapaVentasPage() {
     mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
   }, [entregasConGps, originPoint]);
 
+  // Polilínea recta uniendo los puntos en el orden ya definido por el cliente.
+  // Si hay punto de partida, arranca desde ahí. Sin llamadas a APIs externas → sin costo.
   const polylineGeoJson = useMemo(() => {
-    if (!routeResult?.polyline) return null;
-    const coords = decodePolyline(routeResult.polyline);
+    if (entregasConGps.length < 1) return null;
+    const coords: [number, number][] = [];
+    if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
+    entregasConGps.forEach((e: any) => coords.push([e._displayLng, e._displayLat]));
+    if (coords.length < 2) return null;
     return {
       type: 'Feature' as const,
       geometry: { type: 'LineString' as const, coordinates: coords },
       properties: {},
     };
-  }, [routeResult]);
+  }, [entregasConGps, originPoint]);
 
-  const orderedItems = useMemo(() => {
-    if (!routeResult) return null;
-    return routeResult.orderedIds.map(id => {
-      const entrega = entregasConGps.find((e: any) => e.id === id);
-      return entrega ? { id: entrega.id, folio: entrega.folio, nombre: entrega.clientes.nombre, direccion: entrega.clientes.direccion, lat: entrega._displayLat, lng: entrega._displayLng } : null;
-    }).filter(Boolean);
-  }, [routeResult, entregasConGps]);
+  // Distancia total en línea recta (Haversine) — referencial, sin costo
+  const totalKm = useMemo(() => {
+    if (!polylineGeoJson) return 0;
+    const coords = polylineGeoJson.geometry.coordinates as [number, number][];
+    const R = 6371;
+    let sum = 0;
+    for (let i = 1; i < coords.length; i++) {
+      const [lng1, lat1] = coords[i - 1];
+      const [lng2, lat2] = coords[i];
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLng = ((lng2 - lng1) * Math.PI) / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      sum += 2 * R * Math.asin(Math.sqrt(a));
+    }
+    return sum;
+  }, [polylineGeoJson]);
 
   const handleMapClick = useCallback((e: any) => {
     if (settingOrigin && e.lngLat) {
       setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       setSettingOrigin(false);
-      setRouteResult(null);
       toast.success('Punto de partida establecido');
     }
   }, [settingOrigin]);
 
-  const saveEntregaOrder = async (orderedIds: string[]) => {
-    setSaving(true);
-    try {
-      const updates = orderedIds.map((id: string, idx: number) =>
-        supabase.from('entregas').update({ orden_entrega: idx + 1 } as any).eq('id', id)
-      );
-      await Promise.all(updates);
-      toast.success('Orden de entregas guardado');
-    } catch (err: any) {
-      toast.error('Error al guardar orden');
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const handleOptimize = async () => {
-    if (!originPoint) { toast.error('Primero establece un punto de partida'); return; }
-    if (uniqueWaypoints.length < 2) { toast.error('Se necesitan al menos 2 entregas con GPS'); return; }
-    setOptimizing(true);
-    setRouteResult(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) { toast.error('Sesión no válida'); return; }
-
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ origin: originPoint, waypoints: uniqueWaypoints }),
-      });
-
-      const result = await res.json();
-      if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
-
-      setRouteResult({
-        orderedIds: result.optimized_order,
-        polyline: result.polyline,
-        distance_meters: result.distance_meters,
-        duration: result.duration,
-      });
-
-      await saveEntregaOrder(result.optimized_order);
-      toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
-    } catch (err: any) {
-      toast.error(err.message || 'Error al optimizar ruta');
-    } finally {
-      setOptimizing(false);
-    }
-  };
-
-  const formatDuration = (d?: string) => {
-    if (!d) return '';
-    const secs = parseInt(d.replace('s', ''));
-    if (isNaN(secs)) return d;
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    return h > 0 ? `${h}h ${m}min` : `${m} min`;
-  };
 
   const STATUS_COLORS: Record<string, string> = {
     surtido: '#3b82f6',
@@ -261,7 +187,7 @@ export default function MapaVentasPage() {
 
           <div className="flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <OdooDatePicker value={fechaEntregas} onChange={v => { setFechaEntregas(v); setRouteResult(null); }} />
+            <OdooDatePicker value={fechaEntregas} onChange={v => setFechaEntregas(v)} />
           </div>
 
           <button onClick={() => setShowFilters(!showFilters)}
@@ -281,19 +207,9 @@ export default function MapaVentasPage() {
             {settingOrigin ? 'Click en el mapa...' : originPoint ? 'Punto establecido' : 'Punto de partida'}
           </button>
           {originPoint && !settingOrigin && (
-            <button onClick={() => { setOriginPoint(null); setRouteResult(null); }}
+            <button onClick={() => setOriginPoint(null)}
               className="text-xs text-destructive hover:underline py-2">
               <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {isAdmin && originPoint && uniqueWaypoints.length >= 2 && (
-            <button onClick={handleOptimize} disabled={optimizing}
-              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all",
-                routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
-                optimizing && "opacity-70")}>
-              {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : routeResult ? <CheckCircle2 className="h-4 w-4" /> : <Route className="h-4 w-4" />}
-              {optimizing ? 'Optimizando...' : routeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
             </button>
           )}
 
@@ -306,8 +222,11 @@ export default function MapaVentasPage() {
             <div className="flex flex-col text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" />{stats.conGps} en mapa</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-muted-foreground/40" />{stats.sinGps} sin GPS</span>
-              {routeResult && (
-                <span className="text-emerald-600 font-medium">{(routeResult.distance_meters / 1000).toFixed(1)} km · {formatDuration(routeResult.duration)}</span>
+              {totalKm > 0 && (
+                <span className="text-emerald-600 font-medium flex items-center gap-1">
+                  <Route className="h-3 w-3" />
+                  {totalKm.toFixed(1)} km <span className="text-muted-foreground font-normal">(línea recta)</span>
+                </span>
               )}
             </div>
           </div>
@@ -320,7 +239,7 @@ export default function MapaVentasPage() {
               <SearchableSelect
                 options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
                 value={vendedorFilter}
-                onChange={val => { setVendedorFilter(val); setRouteResult(null); }}
+                onChange={val => setVendedorFilter(val)}
                 placeholder="Vendedor..."
               />
             </div>
@@ -341,12 +260,11 @@ export default function MapaVentasPage() {
           </div>
         )}
 
-        {!originPoint && !routeResult && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
-          </div>
-        )}
+
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          <span>El orden de visita lo define la configuración de ruta de cada cliente. Opcionalmente puedes marcar un punto de partida para ver la línea desde el almacén o tu ubicación actual.</span>
+        </div>
       </div>
 
       {/* Split: tabla izquierda + mapa derecha */}
@@ -356,12 +274,9 @@ export default function MapaVentasPage() {
           <PanelEntregas
             entregasData={entregasData ?? []}
             entregasConGps={entregasConGps}
-            orderedItems={orderedItems}
             selectedEntrega={selectedEntrega}
             setSelectedEntrega={setSelectedEntrega}
             STATUS_COLORS={STATUS_COLORS}
-            optimizing={optimizing}
-            saving={saving}
             mapRef={mapRef}
           />
         </div>
@@ -417,13 +332,10 @@ export default function MapaVentasPage() {
               </Marker>
             )}
 
-            {/* Entregas: SIEMPRE numeradas por orden de entrega */}
+            {/* Entregas: numeradas por su orden definido en la ruta del cliente */}
             {entregasConGps.map((e: any, idx: number) => {
-              const orderIdx = orderedItems
-                ? orderedItems.findIndex((o: any) => o.id === e.id)
-                : idx;
-              const numero = orderIdx >= 0 ? orderIdx + 1 : idx + 1;
-              const color = orderedItems ? '#6366f1' : (STATUS_COLORS[e.status] ?? '#714BF4');
+              const numero = idx + 1;
+              const color = STATUS_COLORS[e.status] ?? '#714BF4';
               const isSelected = selectedEntrega?.id === e.id;
               return (
                 <Marker
@@ -504,22 +416,16 @@ export default function MapaVentasPage() {
 function PanelEntregas({
   entregasData,
   entregasConGps,
-  orderedItems,
   selectedEntrega,
   setSelectedEntrega,
   STATUS_COLORS,
-  optimizing,
-  saving,
   mapRef,
 }: {
   entregasData: any[];
   entregasConGps: any[];
-  orderedItems: any[] | null;
   selectedEntrega: any | null;
   setSelectedEntrega: (e: any) => void;
   STATUS_COLORS: Record<string, string>;
-  optimizing: boolean;
-  saving: boolean;
   mapRef: React.MutableRefObject<MapRef | null>;
 }) {
   const [tab, setTab] = useState<'ruta' | 'todas' | 'sinGps'>('ruta');
@@ -528,15 +434,12 @@ function PanelEntregas({
     [entregasData]
   );
 
-  // Si no hay ruta optimizada, en la pestaña "ruta" muestra las entregas con GPS en su orden actual
+  // Las entregas ya vienen ordenadas por `orden_entrega` (definido en la ruta del cliente)
   const filaList: any[] = useMemo(() => {
     if (tab === 'sinGps') return sinGps;
     if (tab === 'todas') return entregasData;
-    if (orderedItems) {
-      return orderedItems.map((o: any) => entregasConGps.find((e: any) => e.id === o.id)).filter(Boolean);
-    }
     return entregasConGps;
-  }, [tab, orderedItems, entregasConGps, entregasData, sinGps]);
+  }, [tab, entregasConGps, entregasData, sinGps]);
 
   const handleRowClick = (e: any) => {
     setSelectedEntrega(e);
@@ -546,10 +449,11 @@ function PanelEntregas({
   };
 
   const tabs = [
-    { id: 'ruta' as const, label: orderedItems ? 'Ruta optimizada' : 'Por entregar', count: entregasConGps.length, icon: Route },
+    { id: 'ruta' as const, label: 'Por entregar', count: entregasConGps.length, icon: Route },
     { id: 'todas' as const, label: 'Todas', count: entregasData.length, icon: Truck },
     { id: 'sinGps' as const, label: 'Sin GPS', count: sinGps.length, icon: MapPin },
   ];
+
 
   return (
     <>
@@ -577,21 +481,8 @@ function PanelEntregas({
         })}
       </div>
 
-      {/* Status bar */}
-      {tab === 'ruta' && (orderedItems || optimizing || saving) && (
-        <div className="px-3 py-1.5 bg-primary/5 border-b border-border text-[11px] flex items-center justify-between shrink-0">
-          {optimizing ? (
-            <span className="flex items-center gap-1.5 text-primary font-medium"><Loader2 className="h-3 w-3 animate-spin" /> Optimizando ruta...</span>
-          ) : orderedItems ? (
-            <>
-              <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                <CheckCircle2 className="h-3 w-3" /> Ruta optimizada{saving && ' · guardando...'}
-              </span>
-              <span className="text-muted-foreground">{orderedItems.length} paradas</span>
-            </>
-          ) : null}
-        </div>
-      )}
+
+
 
       {/* Table */}
       <div className="flex-1 overflow-auto min-h-0">
