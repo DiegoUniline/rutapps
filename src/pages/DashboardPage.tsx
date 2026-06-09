@@ -819,7 +819,7 @@ export default function DashboardPage() {
       <TrialCountdownBanner />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <div>
+        <div className="shrink-0">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Dashboard
             <HelpButton title={HELP.dashboard.title} sections={HELP.dashboard.sections} />
@@ -830,26 +830,21 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Presets */}
-          <div className="flex bg-accent/50 rounded-lg p-0.5 gap-0.5">
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <div className="flex bg-accent/50 rounded-lg p-0.5 gap-0.5 shrink-0">
             {PRESETS.map((p, i) => (
               <button key={i} onClick={() => handlePreset(i)}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
                   activePreset === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}>
                 {p.label}
               </button>
             ))}
           </div>
-
-          {/* Custom dates */}
-          <OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
-          <OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
-
-          {/* Vendedor filter */}
-          <div className="min-w-[160px]">
+          <div className="shrink-0"><OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
+          <div className="shrink-0"><OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} /></div>
+          <div className="w-[180px] shrink-0">
             <SearchableSelect
               options={[{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
               value={vendedorId}
