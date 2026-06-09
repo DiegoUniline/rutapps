@@ -816,6 +816,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* === Evolución mensual con selección múltiple === */}
+      <EvolucionMensualSection evolucion={evolucion} money={money} cSym={cSym} />
+
+      {/* === Ventas por mes con crecimiento === */}
+      <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
+
+      {/* === Ventas por usuario: mes actual vs mes anterior === */}
+      <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
+
+
+
       {/* Vendedor detail table */}
       {!vendedorId && (ventasPorVendedor ?? []).length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 mt-4">
