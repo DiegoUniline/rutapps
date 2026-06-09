@@ -16,7 +16,7 @@ type RecoRow = {
   created_at: string;
 };
 
-const DAILY_LIMIT = 3;
+const MONTHLY_LIMIT = 4;
 
 // Parse markdown into ## sections → tabs
 function parseSections(md: string): { title: string; icon: string; body: string }[] {
