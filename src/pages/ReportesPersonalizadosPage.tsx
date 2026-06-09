@@ -353,6 +353,9 @@ function RunDialog({ open, onClose, config, empresaId, empresaNombre }: {
     tipo: config.filtros_default?.tipo,
   });
   const [loading, setLoading] = useState<null | 'xlsx' | 'csv' | 'pdf'>(null);
+  const fuenteMeta = getFuenteMeta(config.fuente);
+  const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
+  const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
 
   const run = async (kind: 'xlsx' | 'csv' | 'pdf') => {
     try {
