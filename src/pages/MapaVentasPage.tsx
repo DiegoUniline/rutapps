@@ -130,6 +130,56 @@ export default function MapaVentasPage() {
   }, [entregasConGps, originPoint]);
 
 
+  // Build ordered list of coordinates for ORS (origin -> entregas in client order)
+  const routeCoords = useMemo<[number, number][]>(() => {
+    const coords: [number, number][] = [];
+    if (originPoint) coords.push([originPoint.lng, originPoint.lat]);
+    entregasConGps.forEach((e: any) => {
+      coords.push([Number(e.clientes.gps_lng), Number(e.clientes.gps_lat)]);
+    });
+    return coords;
+  }, [entregasConGps, originPoint]);
+
+  // Fetch road-following polyline from ORS edge function (cached by coords signature)
+  useEffect(() => {
+    if (routeCoords.length < 2) {
+      setRouteGeometry(null);
+      setRouteInfo(null);
+      return;
+    }
+    const key = routeCoords.map(([lng, lat]) => `${lng.toFixed(5)},${lat.toFixed(5)}`).join('|');
+    const cached = routeCacheRef.current.get(key);
+    if (cached) {
+      setRouteGeometry(cached.geometry);
+      setRouteInfo({ km: cached.km, min: cached.min });
+      return;
+    }
+    let cancelled = false;
+    setLoadingRoute(true);
+    supabase.functions
+      .invoke('route-ors', { body: { coordinates: routeCoords } })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.geometry) {
+          console.error('ORS fetch error', error, data);
+          setRouteGeometry(null);
+          setRouteInfo(null);
+          return;
+        }
+        const km = (data.distanceMeters ?? 0) / 1000;
+        const min = (data.durationSeconds ?? 0) / 60;
+        routeCacheRef.current.set(key, { geometry: data.geometry, km, min });
+        setRouteGeometry(data.geometry);
+        setRouteInfo({ km, min });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRoute(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeCoords]);
+
   const handleMapClick = useCallback((e: any) => {
     if (settingOrigin && e.lngLat) {
       setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
