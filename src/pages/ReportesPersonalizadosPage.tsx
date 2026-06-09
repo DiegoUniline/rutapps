@@ -180,7 +180,10 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
   open: boolean; onClose: () => void; config: ReporteConfig;
   onChange: (c: ReporteConfig) => void; onSave: () => void; saving: boolean;
 }) {
-  const allCampos = CAMPOS_VENTAS;
+  const fuenteMeta = getFuenteMeta(config.fuente);
+  const allCampos = fuenteMeta.campos;
+  const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
+  const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
   const selectedKeys = new Set(config.columnas.map(c => c.key));
 
   const toggle = (key: string) => {
