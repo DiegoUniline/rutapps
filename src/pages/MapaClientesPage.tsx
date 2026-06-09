@@ -828,6 +828,14 @@ export default function MapaClientesPage() {
             ))}
           </div>
 
+          <button onClick={() => setShowListPanel(s => !s)}
+            className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+              showListPanel ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+            <Users className="h-3.5 w-3.5" />
+            Lista ({filtered.length})
+          </button>
+
           {/* Route controls */}
           <div className="flex items-center gap-1 ml-auto relative">
             {isMultiVendor && (
