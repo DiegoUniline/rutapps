@@ -244,12 +244,12 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
                 "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
                 "disabled:opacity-60 disabled:cursor-not-allowed"
               )}
-              title={reachedLimit ? 'Límite diario alcanzado' : 'Generar nuevo análisis'}
+              title={reachedLimit ? 'Límite mensual alcanzado' : 'Generar nuevo análisis'}
             >
               {loading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Analizando…</>
               ) : reachedLimit ? (
-                <><Clock className="h-4 w-4" /> Sin usos hoy</>
+                <><Clock className="h-4 w-4" /> Sin usos este mes</>
               ) : advice ? (
                 <><RefreshCw className="h-4 w-4" /> Actualizar análisis</>
               ) : (
