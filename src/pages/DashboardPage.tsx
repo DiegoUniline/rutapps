@@ -24,11 +24,13 @@ import {
 } from '@/hooks/useDashboardData';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  ComposedChart, Legend, ReferenceLine,
 } from 'recharts';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
+import DashboardAIAdvisor from '@/components/dashboard/DashboardAIAdvisor';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
