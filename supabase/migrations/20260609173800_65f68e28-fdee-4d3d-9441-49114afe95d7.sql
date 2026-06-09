@@ -1,0 +1,1 @@
+DELETE FROM public.dashboard_ai_recomendaciones WHERE id = 'e51a2738-4148-490c-84c6-2581eeb7117f';
