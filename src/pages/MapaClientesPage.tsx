@@ -412,37 +412,35 @@ export default function MapaClientesPage() {
     return m;
   }, [multiResults, routeVisibility]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
-
   // Solo hacer fitBounds una vez al cargar inicial o cuando cambian los FILTROS,
   // NO en cada refetch de clientes/ventas (eso reseteaba el zoom del usuario).
   const didInitialFitRef = useRef(false);
   useEffect(() => {
     didInitialFitRef.current = false;
   }, [zonaFilter, vendedorFilter, diaFilter, statusFilter]);
+
+  const fitToContent = useCallback(() => {
+    if (!mapRef.current || withGps.length === 0) return;
+    const bounds = new maplibregl.LngLatBounds();
+    withGps.forEach((c: any) => bounds.extend([Number(c.gps_lng), Number(c.gps_lat)]));
+    if (originPoint) bounds.extend([originPoint.lng, originPoint.lat]);
+    mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 15 });
+  }, [withGps, originPoint]);
+
   useEffect(() => {
     if (didInitialFitRef.current) return;
     if (mapRef.current && withGps.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
-      if (originPoint) bounds.extend(originPoint);
-      mapRef.current.fitBounds(bounds, 50);
+      fitToContent();
       didInitialFitRef.current = true;
     }
-  }, [withGps, originPoint]);
+  }, [withGps, originPoint, fitToContent]);
 
-  const handleRecenter = useCallback(() => {
-    if (mapRef.current && withGps.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
-      if (originPoint) bounds.extend(originPoint);
-      mapRef.current.fitBounds(bounds, 50);
-    }
-  }, [withGps, originPoint]);
+  const handleRecenter = useCallback(() => fitToContent(), [fitToContent]);
 
-  const polylinePoints = useMemo(() => {
+  const polylinePoints = useMemo<[number, number][] | null>(() => {
     if (!routeResult?.polyline) return null;
-    return decodePolyline(routeResult.polyline);
+    // decodePolyline returns {lat,lng}; convert to [lng,lat] for MapLibre.
+    return decodePolyline(routeResult.polyline).map(p => [p.lng, p.lat]);
   }, [routeResult]);
 
   const orderedClients = useMemo(() => {
@@ -450,15 +448,16 @@ export default function MapaClientesPage() {
     return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
   }, [routeResult, withGps]);
 
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (settingOrigin && e.latLng) {
-      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng(), label: 'Punto en mapa' });
+  const handleMapClick = useCallback((e: any) => {
+    if (settingOrigin && e.lngLat) {
+      setOriginPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng, label: 'Punto en mapa' });
       setSettingOrigin(false);
       setRouteResult(null);
       setMultiResults(null);
       toast.success('Punto de partida establecido');
     }
   }, [settingOrigin]);
+
 
   // Group clients by vendedor for multi-route mode
   const clientsByVendedor = useMemo(() => {
