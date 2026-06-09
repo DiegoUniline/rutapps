@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Eye, EyeOff, Play, Package, Users, Warehouse, Truck, BarChart3, MapPin } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { translateError } from '@/lib/errorTranslator';
+import { Seo } from '@/components/seo/Seo';
 
 const DEMO_STEPS = [
   { icon: Warehouse, label: 'Creando almacenes y zonas...' },
@@ -106,13 +107,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
+      <Seo
+        title="Iniciar sesión · Rutapp"
+        description="Accede a tu cuenta de Rutapp para gestionar ventas en ruta, inventario y cobranza desde cualquier dispositivo."
+        path="/login"
+      />
       <div className="w-full max-w-sm bg-card border border-border rounded p-6">
         <div className="text-center mb-6">
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
-          <h1 className="text-xl font-bold text-primary">Rutapp</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isForgot ? 'Recuperar contraseña' : 'Iniciar sesión'}
-          </p>
+          <h1 className="text-xl font-bold text-primary">
+            {isForgot ? 'Recuperar contraseña en Rutapp' : 'Iniciar sesión en Rutapp'}
+          </h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
@@ -127,6 +132,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

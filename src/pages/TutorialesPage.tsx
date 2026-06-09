@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PlayCircle, ExternalLink, X, Plus, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Seo } from '@/components/seo/Seo';
 
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@RutAppMx';
 const SUPER_ADMIN_EMAIL = 'diego.leon@uniline.mx';
@@ -167,8 +168,33 @@ export default function TutorialesPage() {
     });
   };
 
+  const videoJsonLd = useMemo(() => {
+    return (videos as any[]).slice(0, 25).map((v: any) => {
+      const ytId = (() => {
+        const m = (v.url || '').match(/(?:youtu\.be\/|v=|embed\/)([\w-]{6,})/);
+        return m ? m[1] : '';
+      })();
+      return {
+        '@context': 'https://schema.org',
+        '@type': 'VideoObject',
+        name: v.title,
+        description: v.description || v.title,
+        thumbnailUrl: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : undefined,
+        uploadDate: v.created_at || undefined,
+        contentUrl: v.url,
+        embedUrl: ytId ? `https://www.youtube.com/embed/${ytId}` : v.url,
+      };
+    });
+  }, [videos]);
+
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Video tutoriales · Rutapp"
+        description="Aprende a usar Rutapp paso a paso: videos sobre ventas en ruta, inventario, cobranza, facturación CFDI 4.0 y más."
+        path="/tutoriales"
+        jsonLd={videoJsonLd as any}
+      />
       {/* Top public nav */}
       <nav className="sticky top-0 inset-x-0 z-40 backdrop-blur-md bg-white/90 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-2">
@@ -268,6 +294,7 @@ export default function TutorialesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Editar video ${video.title}`}
                       className="h-7 w-7 text-muted-foreground hover:text-primary"
                       onClick={(e) => openEdit(video, e)}
                     >
@@ -276,6 +303,7 @@ export default function TutorialesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Eliminar video ${video.title}`}
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
                     >
@@ -294,7 +322,7 @@ export default function TutorialesPage() {
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold text-foreground text-sm truncate pr-4">{selected?.title}</h3>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setSelected(null)}>
+            <Button variant="ghost" size="icon" aria-label="Cerrar video" className="h-7 w-7 shrink-0" onClick={() => setSelected(null)}>
               <X className="h-4 w-4" />
             </Button>
           </div>

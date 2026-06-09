@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle, Tag, Sparkles, FileText, Check, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Seo } from '@/components/seo/Seo';
 
 interface SignupPlanRow {
   id: string;
@@ -412,13 +413,18 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-card">
+      <Seo
+        title="Crear cuenta · Rutapp"
+        description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
+        path="/signup"
+      />
       <Card className="w-full max-w-3xl shadow-xl">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
           </Link>
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
-          <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
+          <h1 className="text-2xl font-black">Crear cuenta en Rutapp</h1>
           <p className="text-sm text-muted-foreground">7 días de prueba gratis · Se requiere tarjeta para activar la cuenta</p>
 
           {/* Plan selector */}
@@ -567,6 +573,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

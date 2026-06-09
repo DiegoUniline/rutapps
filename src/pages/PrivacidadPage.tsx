@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { Seo } from '@/components/seo/Seo';
 
 export default function PrivacidadPage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <Seo
+        title="Aviso de Privacidad · Rutapp"
+        description="Aviso de privacidad de Rutapp conforme a la LFPDPPP: datos recabados, finalidades, derechos ARCO y medidas de seguridad."
+        path="/privacidad"
+      />
       <div className="max-w-3xl mx-auto">
         <Link to="/signup" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" /> Volver
