@@ -12,17 +12,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Play, FileSpreadsheet, FileText, FileDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  CAMPOS_VENTAS,
   buildExportColumns,
   exportToCSV,
   runReporte,
+  getFuenteMeta,
+  FUENTES,
   type ReporteConfig,
   type ReporteFiltros,
+  type ReporteFuente,
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-
-const STATUS_OPTS = ['borrador', 'pendiente', 'parcial', 'pagada', 'cancelada'];
-const TIPO_OPTS = ['venta', 'presale', 'remision'];
 
 export default function ReportesPersonalizadosPage() {
   const { user, empresa } = useAuth();
