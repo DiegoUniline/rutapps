@@ -293,7 +293,7 @@ export default function MapaVentasPage() {
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
           <Info className="h-3.5 w-3.5 shrink-0" />
-          <span>El orden de visita lo define la configuración de ruta de cada cliente. Puedes marcar un punto de partida para visualizar tu ubicación actual o el almacén.</span>
+          <span>El orden de visita lo define la configuración de ruta de cada cliente. La línea azul sigue las calles reales conectando los puntos en ese orden.</span>
         </div>
       </div>
 
@@ -340,6 +340,36 @@ export default function MapaVentasPage() {
             {/* Mi ubicación + vendedores en vivo */}
             <MyLocationMarkerML />
             <LiveVendedoresLayerML enabled={!!isAdmin} />
+
+            {/* Ruta siguiendo calles reales (OpenRouteService) */}
+            {routeGeometry && (
+              <Source
+                id="ors-route"
+                type="geojson"
+                data={{ type: 'Feature', properties: {}, geometry: routeGeometry }}
+              >
+                <Layer
+                  id="ors-route-casing"
+                  type="line"
+                  paint={{
+                    'line-color': '#ffffff',
+                    'line-width': 7,
+                    'line-opacity': 0.85,
+                  }}
+                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                />
+                <Layer
+                  id="ors-route-line"
+                  type="line"
+                  paint={{
+                    'line-color': '#2563eb',
+                    'line-width': 4,
+                    'line-opacity': 0.9,
+                  }}
+                  layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                />
+              </Source>
+            )}
 
 
             {/* Punto de partida */}
