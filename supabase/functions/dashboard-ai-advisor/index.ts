@@ -39,9 +39,25 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
     if (profErr || !profile?.empresa_id) return json({ error: "Perfil sin empresa" }, 403);
-    const empresaId = profile.empresa_id;
+    const realEmpresaId = profile.empresa_id;
 
-    // Count today's runs (UTC day window; close enough for a per-day quota)
+    const body = await req.json().catch(() => ({}));
+    const { snapshot, empresaNombre, empresaId: requestedEmpresaId } = body ?? {};
+    if (!snapshot) return json({ error: "snapshot required" }, 400);
+
+    // Resolve effective empresa: client may pass an override (super admin viewing another tenant).
+    // Validate the override before trusting it.
+    let empresaId = realEmpresaId;
+    if (requestedEmpresaId && requestedEmpresaId !== realEmpresaId) {
+      const { data: isSuper } = await supabaseAuth.rpc("is_super_admin", { p_user_id: userId });
+      if (isSuper) {
+        empresaId = requestedEmpresaId;
+      } else {
+        return json({ error: "No autorizado para esta empresa" }, 403);
+      }
+    }
+
+    // Count today's runs scoped to the EFFECTIVE empresa (UTC day)
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     const { count, error: cntErr } = await supabaseAuth
@@ -52,10 +68,6 @@ Deno.serve(async (req) => {
       .gte("created_at", since.toISOString());
     if (cntErr) return json({ error: cntErr.message }, 500);
     const usedToday = count ?? 0;
-
-    const body = await req.json().catch(() => ({}));
-    const { snapshot, empresaNombre } = body ?? {};
-    if (!snapshot) return json({ error: "snapshot required" }, 400);
 
     if (usedToday >= DAILY_LIMIT) {
       return json({
