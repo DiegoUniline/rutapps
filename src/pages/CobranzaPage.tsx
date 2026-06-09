@@ -24,6 +24,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { ClienteLink } from '@/components/links/EntityLinks';
+import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 
 
 
@@ -216,57 +217,71 @@ export default function CobranzaPage() {
     return '';
   }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
 
-  const renderTable = (items: any[]) => (
-    <Table className="bg-card">
-      <TableHeader>
-       <TableRow>
-          <TableHead className="text-[11px]">Fecha</TableHead>
-          <TableHead className="text-[11px]">Cliente</TableHead>
-          <TableHead className="text-[11px]">Vendedor</TableHead>
-          <TableHead className="text-[11px]">Método</TableHead>
-          <TableHead className="text-[11px]">Referencia</TableHead>
-          <TableHead className="text-[11px]">Estado</TableHead>
-          <TableHead className="text-[11px] text-right">Monto</TableHead>
-          <TableHead className="text-[11px] text-center w-12"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map(c => (
-          <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
-            <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
-            <TableCell className="font-medium text-[12px]"><ClienteLink id={(c as any).cliente_id ?? (c.clientes as any)?.id}>{(c.clientes as any)?.nombre ?? '—'}</ClienteLink></TableCell>
-            <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
-            <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
-            <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
-            <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
-            <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
-            <TableCell className="text-center">
-              <div className="flex items-center justify-center gap-0.5">
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handlePrintCobro(c)} title="Imprimir ticket">
-                  <Printer className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
+  const CobrosTable = ({ items }: { items: any[] }) => {
+    const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
+      if (k === 'fecha') return r.fecha ?? '';
+      if (k === 'cliente') return (r.clientes as any)?.nombre ?? '';
+      if (k === 'vendedor') return vendedorMap.get(r.user_id) || '';
+      if (k === 'metodo') return r.metodo_pago ?? '';
+      if (k === 'referencia') return r.referencia ?? '';
+      if (k === 'estado') return (r as any).status === 'cancelado' ? 'cancelado' : 'activo';
+      if (k === 'monto') return r.monto ?? 0;
+      return r?.[k];
+    });
+    return (
+      <Table className="bg-card">
+        <TableHeader>
+          <TableRow>
+            <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Fecha</SortableTh>
+            <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Cliente</SortableTh>
+            <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Vendedor</SortableTh>
+            <SortableTh sortKey="metodo" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Método</SortableTh>
+            <SortableTh sortKey="referencia" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Referencia</SortableTh>
+            <SortableTh sortKey="estado" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Estado</SortableTh>
+            <SortableTh sortKey="monto" sort={sort} onToggle={toggle} align="right" className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px] text-right">Monto</SortableTh>
+            <TableHead className="text-[11px] text-center w-12"></TableHead>
           </TableRow>
-        ))}
-        {items.length === 0 && (
-          <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+        </TableHeader>
+        <TableBody>
+          {sorted.map(c => (
+            <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
+              <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
+              <TableCell className="font-medium text-[12px]"><ClienteLink id={(c as any).cliente_id ?? (c.clientes as any)?.id}>{(c.clientes as any)?.nombre ?? '—'}</ClienteLink></TableCell>
+              <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
+              <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
+              <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
+              <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
+              <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
+              <TableCell className="text-center">
+                <div className="flex items-center justify-center gap-0.5">
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handlePrintCobro(c)} title="Imprimir ticket">
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
+                    <MessageCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+          {items.length === 0 && (
+            <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+          )}
+        </TableBody>
+        {items.length > 0 && (
+          <tfoot>
+            <TableRow className="bg-card border-t border-border font-semibold">
+              <TableCell colSpan={6} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+              <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
+              <TableCell />
+            </TableRow>
+          </tfoot>
         )}
-      </TableBody>
-      {items.length > 0 && (
-        <tfoot>
-          <TableRow className="bg-card border-t border-border font-semibold">
-            <TableCell colSpan={6} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
-            <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
-            <TableCell />
-          </TableRow>
-        </tfoot>
-      )}
-    </Table>
-  );
+      </Table>
+    );
+  };
+
+  const renderTable = (items: any[]) => <CobrosTable items={items} />;
 
   const renderSummary = (items: any[]) => {
     const total = items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
