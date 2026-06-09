@@ -294,6 +294,7 @@ export default function TutorialesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Editar video ${video.title}`}
                       className="h-7 w-7 text-muted-foreground hover:text-primary"
                       onClick={(e) => openEdit(video, e)}
                     >
@@ -302,6 +303,7 @@ export default function TutorialesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Eliminar video ${video.title}`}
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
                     >
@@ -320,7 +322,7 @@ export default function TutorialesPage() {
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-semibold text-foreground text-sm truncate pr-4">{selected?.title}</h3>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setSelected(null)}>
+            <Button variant="ghost" size="icon" aria-label="Cerrar video" className="h-7 w-7 shrink-0" onClick={() => setSelected(null)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
