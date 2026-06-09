@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
-import { GoogleMap, Marker, InfoWindow, Polyline, MarkerClusterer } from '@react-google-maps/api';
+import { Map as MapGL, Marker, Popup, NavigationControl, MapRef, Source, Layer } from 'react-map-gl/maplibre';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
@@ -14,15 +16,16 @@ import {
 import { cn, todayInTimezone } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
-import MyLocationMarker from '@/components/MyLocationMarker';
-import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
+import MyLocationMarkerML from '@/components/MyLocationMarkerML';
+import LiveVendedoresLayerML from '@/components/LiveVendedoresLayerML';
 import { toast } from 'sonner';
-import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
-import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
+import MultiRoutePanel, { type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
+import { MultiRouteOverlayML } from '@/components/maps/MultiRouteOverlayML';
 import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
