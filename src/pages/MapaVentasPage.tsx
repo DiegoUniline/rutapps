@@ -261,12 +261,10 @@ export default function MapaVentasPage() {
         )}
 
 
-        {!originPoint && !routeResult && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Se muestran entregas pendientes para la fecha seleccionada. Establece un punto de partida y optimiza la ruta para guardar el orden de entrega.</span>
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          <span>El orden de visita lo define la configuración de ruta de cada cliente. Opcionalmente puedes marcar un punto de partida para ver la línea desde el almacén o tu ubicación actual.</span>
+        </div>
       </div>
 
       {/* Split: tabla izquierda + mapa derecha */}
@@ -276,12 +274,9 @@ export default function MapaVentasPage() {
           <PanelEntregas
             entregasData={entregasData ?? []}
             entregasConGps={entregasConGps}
-            orderedItems={orderedItems}
             selectedEntrega={selectedEntrega}
             setSelectedEntrega={setSelectedEntrega}
             STATUS_COLORS={STATUS_COLORS}
-            optimizing={optimizing}
-            saving={saving}
             mapRef={mapRef}
           />
         </div>
@@ -337,13 +332,10 @@ export default function MapaVentasPage() {
               </Marker>
             )}
 
-            {/* Entregas: SIEMPRE numeradas por orden de entrega */}
+            {/* Entregas: numeradas por su orden definido en la ruta del cliente */}
             {entregasConGps.map((e: any, idx: number) => {
-              const orderIdx = orderedItems
-                ? orderedItems.findIndex((o: any) => o.id === e.id)
-                : idx;
-              const numero = orderIdx >= 0 ? orderIdx + 1 : idx + 1;
-              const color = orderedItems ? '#6366f1' : (STATUS_COLORS[e.status] ?? '#714BF4');
+              const numero = idx + 1;
+              const color = STATUS_COLORS[e.status] ?? '#714BF4';
               const isSelected = selectedEntrega?.id === e.id;
               return (
                 <Marker
