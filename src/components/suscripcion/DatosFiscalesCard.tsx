@@ -62,8 +62,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
       ]);
       if (!active) return;
       if (empRes.data) {
-        setForm((f) => ({
-          ...f,
+        const loaded = {
           razon_social: empRes.data.razon_social || '',
           rfc: empRes.data.rfc || '',
           regimen_fiscal: empRes.data.regimen_fiscal || '',
@@ -74,7 +73,9 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
           email_facturacion: empRes.data.email_facturacion || empRes.data.email || '',
           email_cc_facturacion: empRes.data.email_cc_facturacion || '',
           csf_url: empRes.data.csf_url || '',
-        }));
+        };
+        setForm(loaded);
+        setOriginalForm(loaded);
       }
       setUsosCfdi(usosRes.data || []);
       setFormasPago(formasRes.data || []);
