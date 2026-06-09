@@ -445,45 +445,15 @@ export default function DashboardPage() {
 
       {/* (Bloque "Clientes en riesgo" reemplazado por la banda "HOY" arriba) */}
 
-      {/* Bottom row: Top products, Top clients, Low stock */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {/* Top Products */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <SectionTitle icon={TrendingUp}>Productos más vendidos</SectionTitle>
-          <div className="space-y-2">
-            {(topProductos ?? []).slice(0, 6).map((p, i) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">{p.nombre}</div>
-                  <div className="text-[10px] text-muted-foreground">{p.qty} uds</div>
-                </div>
-                <span className="text-xs font-semibold text-foreground">{money(p.total)}</span>
-              </div>
-            ))}
-            {(topProductos ?? []).length === 0 && <p className="text-xs text-muted-foreground">Sin datos</p>}
-          </div>
-        </div>
+      {/* Bottom row: Top/Bottom products, Top/Bottom clients, Low stock */}
+      <RankingsSection
+        topProductos={topProductos ?? []}
+        topClientesAll={topClientsAll}
+        money={money}
+      />
 
-        {/* Top Clients */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          <SectionTitle icon={Users}>Mejores clientes</SectionTitle>
-          <div className="space-y-2">
-            {topClients.slice(0, 6).map((c, i) => (
-              <div key={c.id} className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                  <div className="text-[10px] text-muted-foreground">{c.count} ventas</div>
-                </div>
-                <span className="text-xs font-semibold text-foreground">{money(c.total)}</span>
-              </div>
-            ))}
-            {topClients.length === 0 && <p className="text-xs text-muted-foreground">Sin datos</p>}
-          </div>
-        </div>
-
-        {/* Low stock alerts */}
+      {/* Low stock alerts */}
+      <div className="grid grid-cols-1 mt-4">
         <div className="bg-card border border-border rounded-xl p-4">
           <SectionTitle icon={AlertTriangle}>
             {`Alertas de stock (${kpis.productosBajoMinimo})`}
