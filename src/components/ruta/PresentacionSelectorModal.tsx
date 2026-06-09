@@ -68,10 +68,16 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
   let cantidadBase = 0;
   let precioUnitario = precioPorUnidadBase;
 
-  if (mode === 'pres' && presSel) {
-    cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
-    if (presSel.precio_especial != null && factor > 0) {
-      precioUnitario = Number(presSel.precio_especial) / factor;
+  if (mode === 'pres') {
+    if (presSel) {
+      cantidadBase = pesoOvr && pesoOvr > 0 ? pesoOvr : paqNum * factor;
+      if (presSel.precio_especial != null && factor > 0) {
+        precioUnitario = Number(presSel.precio_especial) / factor;
+      }
+    } else {
+      // Unidad base (1 {unidad})
+      cantidadBase = paqNum;
+      precioUnitario = precioPorUnidadBase;
     }
   } else {
     cantidadBase = Math.max(0, Number(pesoLibre) || 0);
