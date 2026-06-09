@@ -359,7 +359,7 @@ export default function MapaVentasPage() {
             Haz click en el mapa para establecer el punto de partida
           </div>
         )}
-        <Map
+        <MapGL
           ref={mapRef}
           mapStyle={MAP_STYLE}
           initialViewState={{
@@ -456,7 +456,7 @@ export default function MapaVentasPage() {
               </div>
             </Popup>
           )}
-        </Map>
+        </MapGL>
 
         <button
           onClick={handleRecenter}
