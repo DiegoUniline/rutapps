@@ -238,6 +238,19 @@ export default function MapaVentasPage() {
 
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            {routeInfo && (
+              <div className="bg-emerald-500/10 rounded-lg px-3 py-1.5 text-center flex items-center gap-2">
+                {loadingRoute ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                ) : (
+                  <Route className="h-3.5 w-3.5 text-emerald-600" />
+                )}
+                <div>
+                  <div className="text-sm font-bold text-emerald-700 leading-tight">{routeInfo.km.toFixed(1)} km</div>
+                  <div className="text-[10px] text-emerald-600 font-medium leading-tight">~{Math.round(routeInfo.min)} min</div>
+                </div>
+              </div>
+            )}
             <div className="bg-primary/10 rounded-lg px-3 py-1.5 text-center">
               <div className="text-lg font-bold text-primary">{stats.total}</div>
               <div className="text-[10px] text-muted-foreground font-medium">Entregas</div>
