@@ -1,6 +1,6 @@
 // Lovable AI advisor for executive dashboard.
 // - Authenticates the user via JWT
-// - Enforces max 3 generations per user per day
+// - Enforces max 4 generations per user per month (~1 per week)
 // - Uses a low-cost model
 // - Persists each recommendation in dashboard_ai_recomendaciones
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -10,7 +10,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DAILY_LIMIT = 3;
+const MONTHLY_LIMIT = 4;
 const MODEL = "google/gemini-2.5-flash-lite"; // cheapest tier
 
 Deno.serve(async (req) => {
