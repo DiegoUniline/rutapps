@@ -24,11 +24,13 @@ import {
 } from '@/hooks/useDashboardData';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  ComposedChart, Legend, ReferenceLine,
 } from 'recharts';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
+import DashboardAIAdvisor from '@/components/dashboard/DashboardAIAdvisor';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -505,10 +507,59 @@ function EvolucionMensualSection({
 }
 
 // ============ Tabla: ventas por mes con crecimiento ============
-function VentasPorMesTable({ data, money }: { data: any[]; money: (n: number) => string }) {
+function VentasPorMesTable({ data, money, cSym }: { data: any[]; money: (n: number) => string; cSym: string }) {
+  const chartData = (data ?? []).map((r: any) => ({
+    label: r.label,
+    total: r.total,
+    prev: r.prev,
+    growth: r.growth ?? 0,
+    growthDisplay: r.growth === null ? null : r.growth,
+  }));
+  const promedio = chartData.length > 0 ? chartData.reduce((s, r) => s + r.total, 0) / chartData.length : 0;
+
   return (
     <div className="bg-card border border-border rounded-xl p-4 mt-4">
       <SectionTitle icon={BarChart3}>Ventas por mes — Crecimiento vs mes anterior</SectionTitle>
+
+      {chartData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Combo: barras ventas + línea crecimiento */}
+          <div className="border border-border rounded-lg p-3 bg-accent/10">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Ventas y % crecimiento</h4>
+            <ResponsiveContainer width="100%" height={240}>
+              <ComposedChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${v}%`} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 11 }}
+                  formatter={(v: any, name: string) => name === 'Crecimiento' ? [`${Number(v).toFixed(1)}%`, name] : [money(Number(v)), name]} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <ReferenceLine yAxisId="left" y={promedio} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" label={{ value: 'Promedio', position: 'insideTopRight', fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
+                <Bar yAxisId="left" dataKey="total" name="Ventas" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="growth" name="Crecimiento" stroke="hsl(var(--chart-2))" strokeWidth={2.5} dot={{ r: 4 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Barras comparativas mes actual vs mes anterior por mes */}
+          <div className="border border-border rounded-lg p-3 bg-accent/10">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Comparativo: mes vs mes anterior</h4>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 11 }} formatter={(v: number) => money(v)} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="prev" name="Mes anterior" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="total" name="Mes" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -548,10 +599,65 @@ function VentasPorMesTable({ data, money }: { data: any[]; money: (n: number) =>
 }
 
 // ============ Tabla: ventas por usuario mes actual vs anterior ============
-function UsuarioMesVsMesTable({ data, money }: { data: any[]; money: (n: number) => string }) {
+function UsuarioMesVsMesTable({ data, money, cSym }: { data: any[]; money: (n: number) => string; cSym: string }) {
+  const sorted = [...(data ?? [])].sort((a, b) => b.cur - a.cur);
+  const chartData = sorted.map(r => ({
+    nombre: r.nombre.length > 14 ? r.nombre.slice(0, 14) + '…' : r.nombre,
+    nombreFull: r.nombre,
+    'Mes anterior': r.prev,
+    'Mes actual': r.cur,
+    growth: r.growth,
+  }));
+  const growthData = sorted.map(r => ({
+    nombre: r.nombre.length > 14 ? r.nombre.slice(0, 14) + '…' : r.nombre,
+    growth: r.growth,
+  }));
+
   return (
     <div className="bg-card border border-border rounded-xl p-4 mt-4">
       <SectionTitle icon={Users}>Ventas por usuario — Mes actual vs mes anterior</SectionTitle>
+
+      {chartData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Barras agrupadas vendedor: mes vs mes anterior */}
+          <div className="border border-border rounded-lg p-3 bg-accent/10">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Por vendedor</h4>
+            <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 32)}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={100} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 11 }}
+                  formatter={(v: number) => money(v)} labelFormatter={(_, p) => p?.[0]?.payload?.nombreFull ?? ''} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="Mes anterior" fill="hsl(var(--chart-3))" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="Mes actual" fill="hsl(var(--chart-1))" radius={[0, 3, 3, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Barras de % crecimiento por vendedor */}
+          <div className="border border-border rounded-lg p-3 bg-accent/10">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">% Crecimiento por vendedor</h4>
+            <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 32)}>
+              <BarChart data={growthData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => `${v}%`} />
+                <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={100} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 11 }}
+                  formatter={(v: number) => [`${v.toFixed(1)}%`, 'Crecimiento']} />
+                <ReferenceLine x={0} stroke="hsl(var(--border))" />
+                <Bar dataKey="growth" radius={[0, 3, 3, 0]}>
+                  {growthData.map((r, i) => (
+                    <Cell key={i} fill={r.growth >= 0 ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -565,7 +671,7 @@ function UsuarioMesVsMesTable({ data, money }: { data: any[]; money: (n: number)
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map(r => (
+            {sorted.map(r => (
               <tr key={r.id} className="border-b border-border/30 hover:bg-accent/30">
                 <td className="py-2 font-medium text-foreground">{r.nombre}</td>
                 <td className="py-2 text-right text-muted-foreground tabular-nums">{money(r.prev)}</td>
@@ -763,7 +869,34 @@ export default function DashboardPage() {
       {/* === HOY · Banda ejecutiva === */}
       <HoyBand hoy={hoy} money={money} />
 
-
+      {/* === Asesor IA === */}
+      <DashboardAIAdvisor buildSnapshot={() => ({
+        periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
+        hoy: hoy ? {
+          ventasHoy: hoy.ventasTotal, ventasOps: hoy.ventasCount,
+          cobrosHoy: hoy.cobrosTotal, cobrosOps: hoy.cobrosCount,
+          visitas: hoy.visitasCount, vendedoresActivos: hoy.vendedoresActivos,
+          entregasHechas: hoy.entregasHechas, entregasTotales: hoy.entregasTotales,
+          pedidosPendientes: hoy.pedidosPendientes, gastos: hoy.gastosTotal,
+        } : null,
+        kpis: {
+          totalVentas: kpis.totalVentas, numVentas: kpis.numVentas, ticketPromedio: kpis.ticketPromedio,
+          pedidos: kpis.pedidos, ventasDirectas: kpis.ventasDirectas,
+          totalCobrado: kpis.totalCobrado, totalCartera: kpis.totalCartera, clientesMorosos: kpis.clientesMorosos,
+          totalCompras: kpis.totalCompras, saldoProveedores: kpis.saldoProveedores,
+          totalGastos: kpis.totalGastos, utilidadBruta: kpis.utilidadBruta,
+          productosBajoMinimo: kpis.productosBajoMinimo, valorInventario: kpis.valorInventario,
+        },
+        top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),
+        top5Clientes: topClientsAll.slice(0, 5).map((c: any) => ({ nombre: c.nombre, total: c.total, ventas: c.count })),
+        ventasPorVendedor: (ventasPorVendedor ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
+        ventasUltimos12Meses: (ventasPorMes ?? []).map((m: any) => ({ mes: m.label, total: m.total, growth: m.growth })),
+        mesVsMesPorVendedor: (usuarioMes ?? []).slice(0, 10).map((u: any) => ({
+          nombre: u.nombre, mesActual: u.cur, mesAnterior: u.prev, growthPct: u.growth,
+        })),
+        devoluciones: { count: devStats.count, unidades: devStats.totalUnidades, credito: devStats.totalCredito },
+        stockCritico: lowStockProducts.slice(0, 10).map((p: any) => ({ nombre: p.nombre, cantidad: Number(p.cantidad ?? 0), min: Number(p.min ?? 0) })),
+      })} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -974,8 +1107,8 @@ export default function DashboardPage() {
 
         {/* === MES VS MES === */}
         <TabsContent value="comparativo" className="mt-4 space-y-4">
-          <VentasPorMesTable data={ventasPorMes ?? []} money={money} />
-          <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} />
+          <VentasPorMesTable data={ventasPorMes ?? []} money={money} cSym={cSym} />
+          <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} cSym={cSym} />
         </TabsContent>
       </Tabs>
 
