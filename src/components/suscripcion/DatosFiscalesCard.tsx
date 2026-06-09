@@ -37,6 +37,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
   const [uploading, setUploading] = useState(false);
   const [usosCfdi, setUsosCfdi] = useState<CatRow[]>([]);
   const [formasPago, setFormasPago] = useState<CatRow[]>([]);
+  const [originalForm, setOriginalForm] = useState<typeof form | null>(null);
   const [form, setForm] = useState({
     razon_social: '',
     rfc: '',
