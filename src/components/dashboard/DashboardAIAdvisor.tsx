@@ -211,17 +211,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
 
           {advice && !loading && (
             <>
-              <article className={cn(
-                "prose prose-sm max-w-none",
-                "prose-headings:font-bold prose-headings:text-foreground prose-headings:mt-4 prose-headings:mb-2 prose-headings:text-[13px] prose-headings:uppercase prose-headings:tracking-wide",
-                "prose-h2:flex prose-h2:items-center prose-h2:gap-2 prose-h2:pb-1 prose-h2:border-b prose-h2:border-border",
-                "prose-p:text-foreground prose-p:text-xs prose-p:my-1.5 prose-p:leading-relaxed",
-                "prose-li:text-foreground prose-li:text-xs prose-li:my-0.5",
-                "prose-strong:text-foreground prose-strong:font-bold",
-                "prose-ul:my-1.5 prose-ol:my-1.5"
-              )}>
-                <ReactMarkdown>{advice}</ReactMarkdown>
-              </article>
+              <AdviceTabs content={advice} />
               {generatedAt && (
                 <p className="mt-3 pt-2 border-t border-border text-[10px] text-muted-foreground italic">
                   Última actualización: {generatedAt.toLocaleString('es-MX')} · No reemplaza el juicio profesional.
