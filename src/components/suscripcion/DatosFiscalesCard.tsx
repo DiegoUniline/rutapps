@@ -37,6 +37,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
   const [uploading, setUploading] = useState(false);
   const [usosCfdi, setUsosCfdi] = useState<CatRow[]>([]);
   const [formasPago, setFormasPago] = useState<CatRow[]>([]);
+  const [originalForm, setOriginalForm] = useState<typeof form | null>(null);
   const [form, setForm] = useState({
     razon_social: '',
     rfc: '',
@@ -61,8 +62,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
       ]);
       if (!active) return;
       if (empRes.data) {
-        setForm((f) => ({
-          ...f,
+        const loaded = {
           razon_social: empRes.data.razon_social || '',
           rfc: empRes.data.rfc || '',
           regimen_fiscal: empRes.data.regimen_fiscal || '',
@@ -73,7 +73,9 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
           email_facturacion: empRes.data.email_facturacion || empRes.data.email || '',
           email_cc_facturacion: empRes.data.email_cc_facturacion || '',
           csf_url: empRes.data.csf_url || '',
-        }));
+        };
+        setForm(loaded);
+        setOriginalForm(loaded);
       }
       setUsosCfdi(usosRes.data || []);
       setFormasPago(formasRes.data || []);
@@ -85,6 +87,18 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
   function update<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
   }
+
+  const isDirty = originalForm !== null && (
+    form.razon_social !== originalForm.razon_social ||
+    form.rfc !== originalForm.rfc ||
+    form.regimen_fiscal !== originalForm.regimen_fiscal ||
+    form.cp !== originalForm.cp ||
+    form.uso_cfdi !== originalForm.uso_cfdi ||
+    form.forma_pago_sat !== originalForm.forma_pago_sat ||
+    form.metodo_pago_sat !== originalForm.metodo_pago_sat ||
+    form.email_facturacion !== originalForm.email_facturacion ||
+    form.email_cc_facturacion !== originalForm.email_cc_facturacion
+  );
 
   async function handleSave() {
     if (!form.rfc.trim() || !form.razon_social.trim()) {
@@ -109,6 +123,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
         email_cc_facturacion: form.email_cc_facturacion.trim() || null,
       }).eq('id', empresaId);
       if (error) throw error;
+      setOriginalForm({ ...form });
       toast.success('Datos fiscales guardados');
     } catch (e: any) {
       toast.error(e.message || 'Error al guardar');
@@ -294,7 +309,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleSave} disabled={saving || !isDirty} variant={isDirty ? 'default' : 'outline'} className={isDirty ? 'bg-primary hover:bg-primary/90' : ''}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Guardar datos fiscales
           </Button>
