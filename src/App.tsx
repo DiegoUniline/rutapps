@@ -695,7 +695,16 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/finanzas/aplicar-pagos-proveedor" element={<AplicarPagosProveedorPage />} />
       <Route path="/finanzas/pagos-proveedores" element={<PagosProveedoresPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
-      <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
+      <Route path="/finanzas/comisiones" element={<ComisionesLayoutPage />}>
+        <Route index element={<ComisionesAvancePage />} />
+        <Route path="avance" element={<ComisionesAvancePage />} />
+        <Route path="esquemas" element={<ComisionesEsquemasPage />} />
+        <Route path="reglas" element={<ComisionesReglasPage />} />
+        <Route path="generadas" element={<ComisionesGeneradasPage />} />
+        <Route path="por-volumen" element={<ComisionesVolumenPage />} />
+        <Route path="por-pagar" element={<ComisionesPorPagarPage />} />
+        <Route path="recibos" element={<ComisionesRecibosPage />} />
+      </Route>
       <Route path="/reportes" element={<ReportesPage />} />
       <Route path="/reportes/personalizados" element={<ReportesPersonalizadosPage />} />
       <Route path="/control" element={<ControlPage />} />
