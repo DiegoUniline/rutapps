@@ -1,76 +1,69 @@
+## Objetivo
 
-## Alcance estricto
-Todo el trabajo se hace dentro de `src/pages/DashboardPage.tsx` y nuevos archivos auxiliares (hooks y componentes en `src/pages/dashboard/...`). No se elimina, renombra ni reordena nada existente: la fila HOY, Asesor IA, tarjetas KPI, gráficas y tabs actuales quedan intactos. Filtros globales de fecha/vendedor existentes alimentan también las secciones nuevas.
+Agregar al `/dashboard` una nueva pestaña **"Metas"** que permita configurar y monitorear metas de venta por **vendedor**, **producto** y opcionalmente **presentación**, por **mes**. Conectada al sistema (lee ventas reales para calcular avance %), con historial mes a mes, edición inline, duplicar mes anterior, y ajustes rápidos.
 
-## 1. Cambios de base de datos
-- Migración: agregar `monthly_sales_goal NUMERIC DEFAULT 0` en `empresas` (editable por admin desde Configuración existente, fuera de scope visual; el dashboard solo lee y muestra CTA si =0).
-- Nuevas RPCs en `public` (security definer, filtran por `empresa_id` del caller vía `current_setting` o param y respetan RLS):
-  - `dashboard_alertas(empresa uuid)` → conteos: clientes sobre límite de crédito, vendedores sin GPS hoy, facturas que vencen 7 días, pedidos pendientes >24h, más arrays de IDs/nombres para los modales detalle.
-  - `dashboard_equipo(empresa uuid, desde date, hasta date)` → por vendedor: venta, cobrado, cartera_vencida, visitas_realizadas, visitas_planeadas, ventas_con_pedido, margen.
-  - `dashboard_aging(empresa uuid)` → buckets 0, 1-30, 31-60, 61-90, 90+ con monto y # clientes; lista vencidos con días vencido.
-  - `dashboard_inventario_camion(empresa uuid)` → por almacén tipo ruta: valor cargado, vendido, faltante; totales de mermas/ajustes del periodo.
-- Índices auxiliares si faltan: `ventas(empresa_id, fecha)`, `visitas(empresa_id, fecha)`, `cobros(empresa_id, fecha)`, `mermas(empresa_id, fecha)`.
+No se modifica nada existente; sólo se agrega una `TabsTrigger`/`TabsContent` nueva y se crean tabla, hooks y componentes nuevos.
 
-## 2. Hooks nuevos (`src/pages/dashboard/hooks/`)
-- `useDashboardAlertas(empresaId)` → React Query, key incluye `empresa_id`.
-- `useMonthlyGoal(empresaId)` → lee `empresas.monthly_sales_goal`.
-- `useDashboardEquipo(empresaId, range, vendedorId)`.
-- `useDashboardCartera(empresaId)` y `useDashboardAgingDetalle(empresaId)`.
-- `useDashboardInventarioCamion(empresaId, range)`.
-- Reutilizan datos existentes (`useDashboardHoy`, hooks de ventas) cuando aplica para no duplicar.
+## Base de datos
 
-## 3. Componentes nuevos (`src/pages/dashboard/sections/`)
-- `AlertasBanner.tsx` — franja colapsable con chips rojo/ámbar y modal de detalle por tipo. Si `total = 0` muestra línea verde "Sin alertas activas".
-- `MetaDelMesCard.tsx` — barra de progreso, proyección de cierre, mini indicadores (margen $/%, % recuperación, flujo neto). CTA "Configurar meta" cuando no hay meta.
-- `KpiExtras.tsx` — 4 tarjetas nuevas (Efectividad, Cumplimiento ruta, Drop size, Cobertura) con mismo `KpiCard` actual; se inyectan al final de la cuadrícula existente vía un fragmento adicional.
-- `DevolucionesSubPct` — pequeño helper que añade el subtexto "% sobre venta" a la tarjeta existente (modificación mínima de una línea del subtexto, sin tocar layout).
-- `TabEquipo.tsx`, `TabCartera.tsx`, `TabInventario.tsx` — contenido de los 3 tabs nuevos.
-- `ClientesSinCompraModal.tsx`, `AlertaDetalleModal.tsx`, `CarteraExportButton.tsx` (CSV via util existente).
+Nueva tabla `metas_venta` (multi-tenant + RLS):
 
-## 4. Integración en `DashboardPage.tsx`
-- Insertar `<AlertasBanner />` entre `<HoyBand />` y el Asesor IA.
-- Insertar `<MetaDelMesCard />` justo después del Asesor IA y antes de la cuadrícula KPI existente.
-- En la cuadrícula KPI (sin reordenar las existentes), agregar 4 `<KpiCard />` nuevas al final; ajustar wrap a `xl:grid-cols-6` solo si ya está controlado por flex/grid responsivo actual (sin alterar las existentes).
-- En `<TabsList />` agregar 3 `<TabsTrigger value="equipo|cartera|inventario">` con iconos consistentes.
-- Agregar 3 `<TabsContent>` con los componentes nuevos.
-
-## 5. Lógica y reglas
-- Proyección cierre = `venta_acumulada / dias_transcurridos * dias_mes` con guard contra división por cero.
-- Semáforo equipo:
-  - verde: `%meta ≥ avance_esperado` y `cartera_vencida < 10% venta`
-  - rojo: `%meta < 70% avance_esperado` o `cartera_vencida > 25% venta`
-  - ámbar: resto.
-- DSO = `cartera_total / venta_periodo * dias_periodo` con guard.
-- Drop size = `venta_total / visitas_efectivas`.
-- Cobertura = `clientes_con_compra_en_rango / clientes_activos_totales` (un cliente "activo" = `clientes.status='activo'`).
-- Todos los números pasan por `fmtMoney`/`fmtNum`; nunca NaN/undefined; estado vacío "Sin datos en este periodo".
-
-## 6. UI/UX
-- Reusar `Card`, `KpiCard`, `Tabs`, `Skeleton`, `Progress`, `Dialog` existentes.
-- Tarjetas blancas con borde suave, gap-4/gap-6, mismo grid `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6` para KPIs (ya existente). Sin grises sólidos.
-- Skeleton loaders en cada tarjeta/tabla nueva mientras cargan.
-- Modales en `z-[60]`, `max-h-[90vh]`, centrados (regla mobile).
-
-## 7. Memoria
-- Guardar memoria `features/dashboard-extensiones` con: alertas, Meta del mes (campo `empresas.monthly_sales_goal`), KPIs extras, tabs Equipo/Cartera/Inventario.
-
-## Archivos a crear / editar
-```
-supabase migration  (monthly_sales_goal + 4 RPCs + índices)
-src/pages/dashboard/hooks/useDashboardAlertas.ts
-src/pages/dashboard/hooks/useMonthlyGoal.ts
-src/pages/dashboard/hooks/useDashboardEquipo.ts
-src/pages/dashboard/hooks/useDashboardCartera.ts
-src/pages/dashboard/hooks/useDashboardInventarioCamion.ts
-src/pages/dashboard/sections/AlertasBanner.tsx
-src/pages/dashboard/sections/MetaDelMesCard.tsx
-src/pages/dashboard/sections/KpiExtras.tsx
-src/pages/dashboard/sections/TabEquipo.tsx
-src/pages/dashboard/sections/TabCartera.tsx
-src/pages/dashboard/sections/TabInventario.tsx
-src/pages/dashboard/sections/AlertaDetalleModal.tsx
-src/pages/dashboard/sections/ClientesSinCompraModal.tsx
-src/pages/DashboardPage.tsx  (solo inserciones aditivas)
+```text
+metas_venta
+- id uuid PK
+- empresa_id uuid (FK empresas)
+- vendedor_id uuid (FK profiles) NULL = meta "global empresa"
+- producto_id uuid (FK productos) NULL = meta "todos los productos"
+- presentacion_id uuid (FK producto_presentaciones) NULL
+- periodo_year int, periodo_month int   (UNIQUE composite)
+- meta_unidades numeric default 0
+- meta_monto numeric default 0
+- notas text
+- created_by uuid, created_at, updated_at
+UNIQUE (empresa_id, vendedor_id, producto_id, presentacion_id, periodo_year, periodo_month)
 ```
 
-¿Apruebas para construirlo así?
+RLS: `empresa_id = (perfil del usuario).empresa_id`. GRANT a authenticated + service_role. Trigger `updated_at`.
+
+Índices: `(empresa_id, periodo_year, periodo_month)`, `(empresa_id, vendedor_id)`.
+
+## Hook nuevo
+
+`src/pages/dashboard/hooks/useMetasVenta.ts`
+- Query keyed por `[empresa_id, 'metas-venta', year, month]`.
+- Carga metas del mes seleccionado.
+- Mutations: `upsertMeta`, `deleteMeta`, `duplicarMesAnterior(year, month)` (copia todas las metas del mes previo al actual).
+- `useAvanceMetas(year, month)`: agrega `venta_lineas` filtradas por mes (sumando `cantidad` y `subtotal`) agrupando por `vendedor_id`, `producto_id`, `presentacion_id` para cruzar con metas y devolver `{ meta, real, pct }`.
+
+## Componentes nuevos en `src/pages/dashboard/sections/`
+
+- **`TabMetas.tsx`** — contenedor de la pestaña. Subtabs internos:
+  1. **Configuración del mes**: selector de Año/Mes, botón "Duplicar mes anterior", tabla editable (vendedor, producto, presentación opcional, meta unidades, meta monto, notas, acciones eliminar). Botón "+ Agregar meta" abre modal con `SearchableSelect` de vendedor/producto/presentación.
+  2. **Avance del mes**: tarjetas resumen (Total meta vs real, % cumplimiento empresa). Tabla por vendedor con barra de progreso, expansible a detalle por producto. Semáforo verde ≥100%, ámbar 70–99%, rojo <70%.
+  3. **Historial**: línea de tiempo / tabla por mes de los últimos 12 meses con meta total vs real total y % cumplimiento; click en un mes carga ese mes en "Configuración" para editar.
+- **`MetaFormModal.tsx`** — modal para crear/editar una meta (`z-[60]`, max-h-[90vh], centered).
+
+## Integración en `DashboardPage.tsx`
+
+- Importar `Target` (lucide) e import `TabMetas`.
+- Agregar `<TabsTrigger value="metas">Metas</TabsTrigger>` junto a las otras pestañas.
+- Agregar `<TabsContent value="metas"><TabMetas /></TabsContent>` al final, antes de `</Tabs>`.
+
+No se elimina, renombra ni se mueve nada del dashboard existente.
+
+## Reglas
+
+- Multi-tenant: todas las queries filtran por `empresa_id` y la key de React Query lo incluye.
+- Fechas/format: `fmtMoney`, `fmtNum`, DD/MM/YYYY.
+- Tabla sin grises (white/primary).
+- Modales móviles: `z-[60]`, `max-h-[90vh]`, scroll, centrados.
+- Vacíos: "Sin metas configuradas para este mes" con CTA "Duplicar mes anterior" o "Agregar primera meta".
+- Permisos: visible para todos los usuarios autenticados de la empresa; edición sólo si tiene permiso `dashboard.edit` (fallback: cualquiera puede editar metas — confirmar con el usuario si quieren restringir).
+
+## Archivos a crear/editar
+
+- Migración: tabla `metas_venta` + GRANTs + RLS + trigger.
+- `src/pages/dashboard/hooks/useMetasVenta.ts` (nuevo)
+- `src/pages/dashboard/sections/TabMetas.tsx` (nuevo)
+- `src/pages/dashboard/sections/MetaFormModal.tsx` (nuevo)
+- `src/pages/DashboardPage.tsx` (sólo agrega el trigger y contenido del tab)
