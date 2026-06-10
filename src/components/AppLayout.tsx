@@ -140,7 +140,6 @@ const navItems: NavItem[] = [
       { label: 'Pagos proveedores', path: '/finanzas/pagos-proveedores' },
       { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
-      { label: 'Comisiones', path: '/comisiones' },
     ],
   },
   {
