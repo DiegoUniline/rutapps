@@ -883,6 +883,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
       </Suspense>
+      <Suspense fallback={null}>
+        <FloatingSoporteChat />
+      </Suspense>
     </div>
   );
 }
