@@ -593,7 +593,7 @@ export default function ComisionesPage() {
                   {(recibos ?? []).map((r: any) => (
                     <tr key={r.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                       <td className="py-1.5 px-3 text-xs">{fmtDate(r.created_at)}</td>
-                      <td className="py-1.5 px-3 text-xs font-medium">{r.vendedores?.nombre ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs font-medium" title={!r.vendedor_id && r.notas ? r.notas : undefined}>{r.vendedores?.nombre ?? (r.vendedor_id ? '—' : 'Varios vendedores')}</td>
                       <td className="py-1.5 px-3 text-xs">{fmtDate(r.fecha_corte)}</td>
                       <td className="py-1.5 px-3 text-xs">{r.fecha_pago ? fmtDate(r.fecha_pago) : '—'}</td>
                       <td className="py-1.5 px-3 text-right font-mono font-bold text-odoo-teal">{fmt(r.total_comisiones)}</td>
