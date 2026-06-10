@@ -97,7 +97,6 @@ const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'O
 /** Extract date group label based on format */
 export function dateGroupLabel(fecha: string | null | undefined, format: 'fecha' | 'fecha_anio_mes' | 'fecha_anio' | 'fecha_mes'): string {
   if (!fecha) return 'Sin fecha';
-  // fecha is typically YYYY-MM-DD or date string
   const d = new Date(fecha + (fecha.length === 10 ? 'T12:00:00' : ''));
   if (isNaN(d.getTime())) return 'Sin fecha';
   const y = d.getFullYear();
@@ -112,6 +111,23 @@ export function dateGroupLabel(fecha: string | null | undefined, format: 'fecha'
   }
 }
 
+/** Sortable key for a date group (chronological order). */
+export function dateGroupSortKey(fecha: string | null | undefined, format: 'fecha' | 'fecha_anio_mes' | 'fecha_anio' | 'fecha_mes'): string {
+  if (!fecha) return '\uFFFF';
+  const d = new Date(fecha + (fecha.length === 10 ? 'T12:00:00' : ''));
+  if (isNaN(d.getTime())) return '\uFFFF';
+  const y = d.getFullYear().toString().padStart(4, '0');
+  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  switch (format) {
+    case 'fecha_anio_mes': return `${y}-${m}`;
+    case 'fecha_anio': return y;
+    case 'fecha_mes': return m;
+    case 'fecha':
+    default: return `${y}-${m}-${day}`;
+  }
+}
+
 /** Generic client-side grouping utility with optional sub-grouping */
 export interface GroupNode<T> {
   label: string;
@@ -123,21 +139,24 @@ function buildGroups<T>(
   data: T[],
   keys: string[],
   labelFn: (item: T, key: string) => string,
+  sortKeyFn?: (item: T, key: string) => string,
+  sortDir: 'asc' | 'desc' = 'asc',
 ): GroupNode<T>[] {
   if (keys.length === 0) return [{ label: '', items: data }];
   const [currentKey, ...restKeys] = keys;
-  const buckets: Record<string, T[]> = {};
+  const buckets: Record<string, { items: T[]; sortKey: string }> = {};
   for (const item of data) {
     const label = labelFn(item, currentKey);
-    if (!buckets[label]) buckets[label] = [];
-    buckets[label].push(item);
+    const sk = sortKeyFn ? sortKeyFn(item, currentKey) : label;
+    if (!buckets[label]) buckets[label] = { items: [], sortKey: sk };
+    buckets[label].items.push(item);
   }
   return Object.entries(buckets)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([label, items]) => {
+    .sort(([, a], [, b]) => sortDir === 'desc' ? b.sortKey.localeCompare(a.sortKey) : a.sortKey.localeCompare(b.sortKey))
+    .map(([label, { items }]) => {
       const node: GroupNode<T> = { label: label || 'Sin asignar', items };
       if (restKeys.length > 0) {
-        node.subGroups = buildGroups(items, restKeys, labelFn);
+        node.subGroups = buildGroups(items, restKeys, labelFn, sortKeyFn, sortDir);
       }
       return node;
     });
@@ -148,8 +167,10 @@ export function groupData<T>(
   groupBy: string,
   labelFn: (item: T, key: string) => string,
   groupByLevels?: string[],
+  sortKeyFn?: (item: T, key: string) => string,
+  sortDir: 'asc' | 'desc' = 'asc',
 ): GroupNode<T>[] {
   const keys = (groupByLevels && groupByLevels.length > 0) ? groupByLevels : (groupBy ? [groupBy] : []);
   if (keys.length === 0) return [{ label: '', items: data }];
-  return buildGroups(data, keys, labelFn);
+  return buildGroups(data, keys, labelFn, sortKeyFn, sortDir);
 }
