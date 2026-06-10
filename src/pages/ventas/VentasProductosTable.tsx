@@ -34,6 +34,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
           <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
           <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>
           <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+          <SortableTh sortKey="lista" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Lista</SortableTh>
           <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
           <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
           <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
