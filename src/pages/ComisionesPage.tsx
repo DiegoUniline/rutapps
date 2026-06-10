@@ -9,7 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
-import { Check, DollarSign, Calendar, FileText } from 'lucide-react';
+import { Check, DollarSign, Calendar, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
