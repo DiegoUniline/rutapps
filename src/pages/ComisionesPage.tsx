@@ -158,31 +158,42 @@ export default function ComisionesPage() {
   const generarMut = useMutation({
     mutationFn: async () => {
       if (!empresa?.id || !user?.id) throw new Error('Datos incompletos');
-      if (selectedSummary.length === 0) throw new Error('Selecciona al menos una comisión');
+      if (selected.size === 0) throw new Error('Selecciona al menos una comisión');
 
-      for (const g of selectedSummary) {
-        const itemIds = (pendientesPP ?? [])
-          .filter(c => selected.has(c.id) && c.vendedor_id === g.vendedor_id)
-          .map(c => c.id);
-        const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
-          empresa_id: empresa.id,
-          vendedor_id: g.vendedor_id,
-          fecha_corte: ppFechaCorte,
-          total_comisiones: g.total,
-          user_id: user.id,
-          estado: 'borrador',
-        }).select('id').single();
-        if (pagoErr) throw pagoErr;
+      const itemIds = (pendientesPP ?? []).filter(c => selected.has(c.id)).map(c => c.id);
+      const total = (pendientesPP ?? [])
+        .filter(c => selected.has(c.id))
+        .reduce((s, c) => s + (c.comision_monto ?? 0), 0);
 
-        const { error: upErr } = await supabase
-          .from('venta_comisiones')
-          .update({ pago_comision_id: pago.id })
-          .in('id', itemIds);
-        if (upErr) throw upErr;
-      }
+      // Si todas las comisiones son de un solo vendedor, guardarlo; si no, null (varios)
+      const vendedorIds = new Set(
+        (pendientesPP ?? []).filter(c => selected.has(c.id)).map(c => c.vendedor_id).filter(Boolean)
+      );
+      const vendedorId = vendedorIds.size === 1 ? Array.from(vendedorIds)[0] : null;
+
+      const notas = vendedorId
+        ? null
+        : `Recibo agrupado · ${selectedSummary.map(g => `${g.nombre} (${fmt(g.total)})`).join(' · ')}`;
+
+      const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
+        empresa_id: empresa.id,
+        vendedor_id: vendedorId,
+        fecha_corte: ppFechaCorte,
+        total_comisiones: total,
+        user_id: user.id,
+        estado: 'borrador',
+        notas,
+      }).select('id').single();
+      if (pagoErr) throw pagoErr;
+
+      const { error: upErr } = await supabase
+        .from('venta_comisiones')
+        .update({ pago_comision_id: pago.id })
+        .in('id', itemIds);
+      if (upErr) throw upErr;
     },
     onSuccess: () => {
-      toast.success('Recibos generados');
+      toast.success('Recibo generado');
       clearSel();
       qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
