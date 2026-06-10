@@ -2366,6 +2366,7 @@ export type Database = {
           logo_url: string | null
           metodo_pago_sat: string | null
           moneda: string
+          monthly_sales_goal: number
           nombre: string
           notas_ticket: string | null
           owner_user_id: string | null
@@ -2402,6 +2403,7 @@ export type Database = {
           logo_url?: string | null
           metodo_pago_sat?: string | null
           moneda?: string
+          monthly_sales_goal?: number
           nombre: string
           notas_ticket?: string | null
           owner_user_id?: string | null
@@ -2438,6 +2440,7 @@ export type Database = {
           logo_url?: string | null
           metodo_pago_sat?: string | null
           moneda?: string
+          monthly_sales_goal?: number
           nombre?: string
           notas_ticket?: string | null
           owner_user_id?: string | null
