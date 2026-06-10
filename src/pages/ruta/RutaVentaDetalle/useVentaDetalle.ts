@@ -53,7 +53,7 @@ export function useVentaDetalle() {
 
   const { data: productos } = useQuery({
     queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar',
-    queryFn: async () => { const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre'); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre'); return data ?? []; },
   });
 
   const { data: otrasPendientes } = useQuery({
