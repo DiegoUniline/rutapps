@@ -256,10 +256,22 @@ export default function ComprasSugeridasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {g.items.map(r => (
-                    <tr key={r.p.id} className="border-t border-border hover:bg-muted/20">
+                  {g.items.map(r => {
+                    const sinConfig = (Number(r.p.max) || 0) === 0;
+                    return (
+                    <tr key={r.p.id} className={`border-t border-border ${sinConfig ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-muted/20'}`}>
                       <td className="p-2 font-mono">{r.p.codigo}</td>
-                      <td className="p-2">{getNombreCompra(r.p as any)}</td>
+                      <td className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/productos/${r.p.id}`)}
+                          className="text-primary hover:underline text-left"
+                          title="Abrir ficha de producto (usa atrás para volver)"
+                        >
+                          {getNombreCompra(r.p as any)}
+                        </button>
+                        {sinConfig && <span className="ml-2 text-[10px] text-amber-700 font-medium">sin min/max</span>}
+                      </td>
                       <td className="p-2 text-right">{Number(r.p.cantidad).toFixed(0)}</td>
                       <td className="p-2 text-right">{Number(r.p.min).toFixed(0)}</td>
                       <td className="p-2 text-right">{Number(r.p.max).toFixed(0)}</td>
@@ -277,7 +289,8 @@ export default function ComprasSugeridasPage() {
                       <td className="p-2 text-right">{fmtMoney(Number(r.p.costo || 0))}</td>
                       <td className="p-2 text-right font-medium">{fmtMoney(r.sug * Number(r.p.costo || 0))}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
