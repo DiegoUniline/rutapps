@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { emptyLine, calcLineTotals, type CompraLinea } from './types';
-import { confirmDialog } from '@/lib/confirm';
+import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
 function useCompra(id?: string) {
   return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
