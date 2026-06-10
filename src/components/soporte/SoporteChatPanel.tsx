@@ -246,9 +246,42 @@ export default function SoporteChatPanel({ compact = false, onAfterNavigate }: P
     }
   };
 
+  // Custom anchor renderer: internal app paths (start with "/") use react-router navigation
+  // so the floating chat stays open while the user changes pages.
+  const renderLink = ({ href, children, ...rest }: any) => {
+    const isInternal = typeof href === "string" && href.startsWith("/") && !href.startsWith("//");
+    if (isInternal) {
+      return (
+        <a
+          href={href}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(href);
+            onAfterNavigate?.();
+          }}
+          className="text-primary font-semibold underline underline-offset-2 hover:opacity-80"
+          {...rest}
+        >
+          {children}
+        </a>
+      );
+    }
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline" {...rest}>
+        {children}
+      </a>
+    );
+  };
+
   return (
-    <div className="grid h-[640px] grid-cols-1 overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[260px_1fr]">
+    <div className={cn(
+      "grid grid-cols-1 overflow-hidden rounded-xl border bg-card shadow-sm",
+      compact ? "h-full" : "h-[640px] md:grid-cols-[260px_1fr]",
+      !compact && "md:grid-cols-[260px_1fr]",
+    )}>
       {/* Threads sidebar */}
+      {/* Threads sidebar (hidden in compact / floating mode) */}
+      {!compact && (
       <aside className="hidden flex-col border-r bg-muted/30 md:flex">
         <div className="p-3 border-b">
           <Button onClick={createThread} className="w-full" size="sm">
