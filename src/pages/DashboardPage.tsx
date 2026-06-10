@@ -1001,6 +1001,9 @@ export default function DashboardPage() {
           <TabsTrigger value="inventario-tab" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Package className="h-3.5 w-3.5 mr-2" /> Inventario
           </TabsTrigger>
+          <TabsTrigger value="metas" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Target className="h-3.5 w-3.5 mr-2" /> Metas
+          </TabsTrigger>
           <TabsTrigger value="asesor-ia" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Sparkles className="h-3.5 w-3.5 mr-2" /> Asesor IA
           </TabsTrigger>
