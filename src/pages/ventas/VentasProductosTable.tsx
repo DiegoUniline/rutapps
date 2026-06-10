@@ -17,7 +17,8 @@ export function VentasProductosTable({ items, fmt }: Props) {
     if (k === 'vendedor') return r.vendedor_nombre ?? '';
     if (k === 'codigo') return r.producto_codigo ?? '';
     if (k === 'producto') return r.producto_nombre ?? '';
-    if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (k === 'fecha') return r.fecha ? new Date(r.fecha).getTime() : 0;
+    if (k === 'lista') return r.tarifa_nombre ?? '';
     if (k === 'precio') return r.precio_unitario ?? 0;
     if (k === 'total') return r.linea_total ?? 0;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
