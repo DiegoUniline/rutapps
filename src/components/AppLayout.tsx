@@ -101,7 +101,6 @@ const navItems: NavItem[] = [
       { label: 'Conteos físicos', path: '/almacen/conteos' },
       { label: 'Mermas (admin)', path: '/almacen/mermas' },
       { label: 'Compras', path: '/almacen/compras' },
-      { label: 'Compras sugeridas', path: '/almacen/compras/sugeridas' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
