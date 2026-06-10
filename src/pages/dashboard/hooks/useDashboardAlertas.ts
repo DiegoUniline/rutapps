@@ -34,13 +34,13 @@ export function useDashboardAlertas() {
           .eq('credito', true)
           .gt('limite_credito', 0),
         fetchAllPages((from, to) =>
-          supabase
+          (supabase as any)
             .from('ventas')
             .select('cliente_id, saldo_pendiente')
             .eq('empresa_id', eId)
             .eq('condicion_pago', 'credito')
             .gt('saldo_pendiente', 0)
-            .neq('status', 'cancelado' as any)
+            .neq('status', 'cancelado')
             .range(from, to)
         ),
         supabase
