@@ -33,6 +33,7 @@ function readThreadCount(): number {
  */
 export default function FloatingSoporteChat() {
   const { pathname } = useLocation();
+  const isMobile = useIsMobile();
   const [count, setCount] = useState<number>(() =>
     typeof window === "undefined" ? 0 : readThreadCount(),
   );
@@ -57,6 +58,7 @@ export default function FloatingSoporteChat() {
 
   const isOnSoporte = useMemo(() => pathname.startsWith("/soporte"), [pathname]);
 
+  if (isMobile) return null;
   if (isOnSoporte) return null;
   if (count === 0) return null;
   if (dismissed) return null;
