@@ -91,7 +91,17 @@ export default function ListasPrecioListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
-        <button onClick={() => setShowNew(true)} className="btn-odoo-primary shrink-0">
+        <button onClick={async () => {
+          const nombre = window.prompt('Nombre de la nueva lista de precios:');
+          if (!nombre || !nombre.trim()) return;
+          try {
+            const saved: any = await saveMutation.mutateAsync({ nombre: nombre.trim(), es_principal: false });
+            toast.success('Lista creada');
+            if (saved?.tarifa_id) {
+              navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || nombre.trim())}`);
+            }
+          } catch (err: any) { toast.error(err.message); }
+        }} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nueva lista
         </button>
       </div>
