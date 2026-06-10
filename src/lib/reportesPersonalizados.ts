@@ -572,6 +572,14 @@ async function runClientes(filtros: ReporteFiltros, empresaId: string) {
       .order('nombre', { ascending: true })
       .range(from, to);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.vendedorIds?.length) q = q.in('vendedor_id', filtros.vendedorIds);
+    if (filtros.cobradorIds?.length) q = q.in('cobrador_id', filtros.cobradorIds);
+    if (filtros.zonaIds?.length) q = q.in('zona_id', filtros.zonaIds);
+    if (filtros.listaPrecioIds?.length) q = q.in('lista_precio_id', filtros.listaPrecioIds);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,rfc.ilike.%${s}%,telefono.ilike.%${s}%`);
+    }
     return q;
   });
   if (!clientes.length) return [];
