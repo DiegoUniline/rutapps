@@ -300,6 +300,7 @@ export default function ComisionesPage() {
     },
     onSuccess: () => {
       toast.success('Recibo cancelado, comisiones liberadas');
+      setCancelingRecibo(null);
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
       qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
       qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
