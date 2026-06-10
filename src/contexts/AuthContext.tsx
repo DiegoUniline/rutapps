@@ -133,8 +133,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setEmpresa(nextEmpresa);
     setRealEmpresa(nextEmpresa);
+
+    // If profile has a persisted super admin override, load that empresa as the effective one.
+    const overrideId = (nextProfile as any)?.super_admin_override_empresa_id ?? null;
+    if (overrideId && overrideId !== nextProfile?.empresa_id) {
+      setOverrideEmpresaIdRaw(overrideId);
+      try {
+        const { data } = await supabase.from('empresas')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id')
+          .eq('id', overrideId)
+          .maybeSingle();
+        if (data) {
+          setEmpresa(data as Empresa);
+          setGlobalTimezone((data as Empresa).zona_horaria);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+
+    setEmpresa(nextEmpresa);
     setGlobalTimezone(nextEmpresa?.zona_horaria);
   }, []);
 
