@@ -699,6 +699,9 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
       <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
+      <Route path="/administracion/usuarios" element={<UsuariosPage />} />
+      <Route path="/administracion/metas" element={<MetasConfigPage />} />
+      <Route path="/administracion/metas/seguimiento" element={<MetasSeguimientoPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
       <Route path="/configuracion/homologacion" element={<HomologacionCatalogoPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
