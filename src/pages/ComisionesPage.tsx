@@ -187,9 +187,9 @@ export default function ComisionesPage() {
         <ComisionesReglasTab />
       ) : (
         <>
-          {/* Filters row 1: vendedor, status, totales */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-48">
+          {/* Filtros en una sola línea */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-44">
               <SearchableSelect
                 options={vendedorOpts}
                 value={vendedorFilter}
@@ -203,7 +203,7 @@ export default function ComisionesPage() {
                   key={key}
                   onClick={() => { setStatusFilter(key); setPage(0); }}
                   className={cn(
-                    'px-3 py-1.5 text-xs transition-colors',
+                    'px-2.5 py-1.5 text-xs transition-colors',
                     statusFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
                   )}
                 >
@@ -211,25 +211,21 @@ export default function ComisionesPage() {
                 </button>
               ))}
             </div>
-            <div className="ml-auto flex items-center gap-4 text-xs">
+            <div className="h-6 w-px bg-border mx-1" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <input type="date" className="input-odoo text-xs py-1.5" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(0); }} />
+            <span className="text-xs text-muted-foreground">-</span>
+            <input type="date" className="input-odoo text-xs py-1.5" value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(0); }} />
+            <div className="flex gap-1">
+              <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
+              <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Semana</button>
+              <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Mes</button>
+              <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Ant.</button>
+            </div>
+            <div className="ml-auto flex items-center gap-3 text-xs">
               <div>Pendiente: <span className="font-mono font-semibold text-amber-600">{fmt(totalPend)}</span></div>
               <div>Pagado: <span className="font-mono font-semibold text-primary">{fmt(totalPag)}</span></div>
               <div className="text-sm">Total: <span className="font-mono font-bold text-odoo-teal">{fmt(totalMonto)}</span></div>
-            </div>
-          </div>
-
-          {/* Filters row 2: rango fechas */}
-          <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
-            <Calendar className="h-4 w-4 text-muted-foreground ml-1" />
-            <label className="text-xs text-muted-foreground">Desde</label>
-            <input type="date" className="input-odoo text-xs" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(0); }} />
-            <label className="text-xs text-muted-foreground">Hasta</label>
-            <input type="date" className="input-odoo text-xs" value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(0); }} />
-            <div className="flex gap-1 ml-2">
-              <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
-              <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Esta semana</button>
-              <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Este mes</button>
-              <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Mes pasado</button>
             </div>
           </div>
 
