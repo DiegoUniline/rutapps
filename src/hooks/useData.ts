@@ -575,7 +575,7 @@ export function useSaveListaPrecio() {
         }
         const { data, error } = await supabase.from('lista_precios')
           .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresa.id })
-          .select('id').single();
+          .select('id, tarifa_id, nombre').single();
         if (error) throw error;
         return data;
       }
