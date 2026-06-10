@@ -12,6 +12,13 @@ export interface Favorite {
   orden: number;
 }
 
+const DEFAULT_FAVORITES: Array<{ path: string; label: string; icon: string }> = [
+  { path: '/ruta', label: 'App Móvil', icon: 'Smartphone' },
+  { path: '/clientes', label: 'Clientes', icon: 'Users' },
+  { path: '/productos', label: 'Productos', icon: 'Package' },
+  { path: '/listas-precio', label: 'Listas de Precios', icon: 'Tag' },
+];
+
 export function useFavorites() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -26,7 +33,25 @@ export function useFavorites() {
         .eq('user_id', user.id)
         .order('orden', { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Favorite[];
+      let favs = (data ?? []) as Favorite[];
+
+      // Seed default favorites once per user if none exist
+      if (favs.length === 0) {
+        const seedKey = `favs_seeded_${user.id}`;
+        if (!localStorage.getItem(seedKey)) {
+          const rows = DEFAULT_FAVORITES.map((f, i) => ({
+            user_id: user.id,
+            path: f.path,
+            label: f.label,
+            icon: f.icon,
+            orden: i,
+          }));
+          const { data: inserted } = await supabase.from('user_favorites').insert(rows).select('*');
+          if (inserted) favs = inserted as Favorite[];
+          localStorage.setItem(seedKey, '1');
+        }
+      }
+      return favs;
     },
     enabled: !!user,
     staleTime: 60_000,

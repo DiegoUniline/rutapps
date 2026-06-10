@@ -40,11 +40,7 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
-  // ── Datos clave ──
-  { label: 'Clientes', icon: Users, path: '/clientes', highlight: 'violet' },
-  { label: 'Productos', icon: Package, path: '/productos', highlight: 'teal' },
-  { label: 'Listas de Precios', icon: Tag, path: '/listas-precio' },
+  // ── Ventas ──
   // ── Ventas ──
   {
     label: 'Ventas',
@@ -159,7 +155,17 @@ const navItems: NavItem[] = [
   },
   // ── Admin & Config ──
   { label: 'Control', icon: ShieldAlert, path: '/control' },
-  { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
+  {
+    label: 'Administración',
+    icon: Shield,
+    path: '/administracion',
+    highlight: 'violet',
+    children: [
+      { label: 'Configuración de metas', path: '/administracion/metas' },
+      { label: 'Seguimiento de metas', path: '/administracion/metas/seguimiento' },
+      { label: 'Usuarios y permisos', path: '/administracion/usuarios' },
+    ],
+  },
   { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
   {
     label: 'Configuración',
@@ -167,7 +173,6 @@ const navItems: NavItem[] = [
     path: '/configuracion',
     children: [
       { label: 'General', path: '/configuracion' },
-      { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
