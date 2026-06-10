@@ -236,6 +236,7 @@ export default function ComisionesPage() {
 
   // Modal de pago (crea gasto)
   const [payingRecibo, setPayingRecibo] = useState<any | null>(null);
+  const [cancelingRecibo, setCancelingRecibo] = useState<any | null>(null);
   const [payFecha, setPayFecha] = useState(todayLocal());
   const [payMetodo, setPayMetodo] = useState<string>('efectivo');
   const [payNotas, setPayNotas] = useState('');
@@ -299,6 +300,7 @@ export default function ComisionesPage() {
     },
     onSuccess: () => {
       toast.success('Recibo cancelado, comisiones liberadas');
+      setCancelingRecibo(null);
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
       qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
       qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
@@ -635,7 +637,7 @@ export default function ComisionesPage() {
                               <Check className="h-3 w-3" /> Pagar
                             </button>
                             <button
-                              onClick={() => { if (confirm('¿Cancelar recibo y liberar comisiones?')) cancelarReciboMut.mutate(r.id); }}
+                              onClick={() => setCancelingRecibo(r)}
                               disabled={cancelarReciboMut.isPending}
                               className="px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70"
                             >
@@ -689,6 +691,33 @@ export default function ComisionesPage() {
                   <button onClick={() => setPayingRecibo(null)} className="btn-odoo-secondary">Cancelar</button>
                   <button onClick={() => marcarPagadoMut.mutate()} disabled={marcarPagadoMut.isPending} className="btn-odoo-primary">
                     <Check className="h-4 w-4" /> Confirmar pago
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de cancelación */}
+          {cancelingRecibo && (
+            <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => !cancelarReciboMut.isPending && setCancelingRecibo(null)}>
+              <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={e => e.stopPropagation()}>
+                <h3 className="text-base font-semibold">Cancelar recibo</h3>
+                <div className="text-sm text-foreground">
+                  ¿Cancelar este recibo y liberar las comisiones para volver a pagarlas?
+                </div>
+                <div className="bg-muted/40 border border-border rounded p-2 text-xs space-y-1">
+                  <div><span className="text-muted-foreground">Vendedor:</span> <span className="font-medium">{cancelingRecibo.vendedores?.nombre ?? (cancelingRecibo.vendedor_id ? 'Vendedor' : 'Varios vendedores')}</span></div>
+                  <div><span className="text-muted-foreground">Corte:</span> <span className="font-medium">{fmtDate(cancelingRecibo.fecha_corte)}</span></div>
+                  <div><span className="text-muted-foreground">Total:</span> <span className="font-mono font-bold text-odoo-teal">{fmt(cancelingRecibo.total_comisiones)}</span></div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setCancelingRecibo(null)} disabled={cancelarReciboMut.isPending} className="btn-odoo-secondary">Volver</button>
+                  <button
+                    onClick={() => cancelarReciboMut.mutate(cancelingRecibo.id)}
+                    disabled={cancelarReciboMut.isPending}
+                    className="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {cancelarReciboMut.isPending ? 'Cancelando...' : 'Sí, cancelar y liberar'}
                   </button>
                 </div>
               </div>
