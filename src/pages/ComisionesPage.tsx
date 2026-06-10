@@ -519,7 +519,9 @@ export default function ComisionesPage() {
 
           {loadingPP ? <TableSkeleton /> : ppGrupos.length === 0 ? (
             <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
-              No hay comisiones pendientes hasta la fecha de corte
+              {ppSaldoFilter === 'cobradas' ? 'No hay comisiones de ventas cobradas hasta la fecha de corte'
+                : ppSaldoFilter === 'pendientes' ? 'No hay comisiones de ventas por cobrar hasta la fecha de corte'
+                : 'No hay comisiones pendientes hasta la fecha de corte'}
             </div>
           ) : (
             <div className="space-y-3">
