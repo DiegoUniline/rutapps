@@ -1,63 +1,49 @@
 ## Objetivo
 
-Permitir que cada vendedor cobre comisión bajo UNO de dos modelos:
+Que la pantalla **Pedidos pendientes** (`/demanda`) muestre TODOS los pedidos (incluyendo los `borrador`), con un botón claro para confirmar uno a uno, confirmar varios en masivo, y que al crear la entrega el pedido se confirme automáticamente. Así desaparece el caso "no me dejó procesar 1 de 9".
 
-- **Por producto** (lo actual): % por línea de venta, registrado en `venta_comisiones`.
-- **Por volumen** (nuevo): se calcula sobre el total vendido en un periodo, con tres modalidades:
-  - % fijo sobre el total
-  - Escalones (tiers): distinto % según el monto alcanzado
-  - Bono al alcanzar una meta (monto fijo o % extra)
+## Cambios
 
-Cada vendedor usa solo uno de los dos esquemas. Configurables por vendedor: el periodo (semanal / quincenal / mensual) y la base (solo cobradas / todas las ventas).
+### 1. Mostrar pedidos en `borrador`
+En `src/pages/DemandaPage.tsx`, el hook `usePedidosPendientes` cambia el filtro:
+- Antes: `.in('status', ['confirmado', 'entregado'])`
+- Después: `.in('status', ['borrador', 'confirmado', 'entregado'])`
 
-## Cambios de base de datos
+Los pedidos `borrador` aparecerán con un badge visual amarillo "Borrador" en la columna de estado.
 
-Nueva tabla `comision_esquemas` (multi-tenant, RLS por `empresa_id`):
+### 2. Botón "Confirmar" a nivel de línea
+Nueva columna **Estado / Acción** en la tabla:
+- Si el pedido está en `borrador`: botón pequeño **"Confirmar"** (verde, con ícono ✓) que cambia el status a `confirmado`.
+- Si ya está en `confirmado` o `entregado`: badge "Confirmado".
+- El botón no navega al detalle (stopPropagation) — un solo clic confirma.
 
-- `nombre` (texto)
-- `tipo`: `'producto' | 'volumen_pct' | 'volumen_tiers' | 'bono_meta'`
-- `periodo`: `'semanal' | 'quincenal' | 'mensual'`
-- `base`: `'cobradas' | 'todas'`
-- `config` (JSON): guarda el % fijo, los escalones, o `{ meta, bono, bono_pct }` según `tipo`.
-- `activo` (bool)
+### 3. Confirmación masiva
+Cuando hay pedidos seleccionados, junto al botón "Crear N entregas" aparece un segundo botón:
+- **"Confirmar N pedidos"** — solo visible si alguno de los seleccionados está en `borrador`.
+- Hace `UPDATE` en lote a `status = 'confirmado'` para los `borrador` seleccionados.
 
-En `profiles`: nueva columna `comision_esquema_id` (FK a `comision_esquemas`, nullable). Null = mantiene comportamiento actual por producto.
+### 4. Auto-confirmar al crear entrega
+Dentro de la mutación `crearEntregasMut`, antes de insertar la entrega de cada pedido:
+- Si el pedido está en `borrador`, hacer `UPDATE ventas SET status = 'confirmado' WHERE id = pedido.id`.
+- Así cualquier pedido al que se le cree entrega queda confirmado automáticamente, sin pasos extra.
 
-Trigger `venta_comisiones`: si el vendedor tiene un esquema de volumen asignado, no se insertan filas por línea (queda excluyente, evita doble pago).
+### 5. Invalidación de cachés
+Después de confirmar (individual, masivo, o vía creación de entrega) invalidar:
+- `['demanda']`
+- `['ventas']` (para que la lista de ventas refleje el cambio)
 
-## UI
+## Detalle técnico
 
-1. **Ajustes → Comisiones (nueva sección)**
-   - Lista de esquemas, botón "Nuevo esquema".
-   - Formulario según tipo: % fijo, editor de escalones (desde/hasta/%), o meta + bono.
-   - Selector de periodo y base.
-   - Asignación rápida: tabla de vendedores con dropdown "Esquema de comisión".
+Archivo único modificado: `src/pages/DemandaPage.tsx`.
 
-2. **Finanzas → Comisiones**: nueva pestaña **"Por volumen"** al lado de "Por pagar".
-   - Selector de periodo (auto-detecta según vendedor) con navegación anterior/siguiente.
-   - Tarjeta por vendedor mostrando: total vendido en el periodo (filtrado por base), comisión calculada según su esquema, y desglose (tier alcanzado o meta cumplida).
-   - Botón "Generar recibo" que crea un `pago_comisiones` con el monto calculado y marca el periodo como pagado (snapshot del cálculo).
-   - Filtro existente "cobradas / pendientes / todas" se sigue aplicando para la pestaña "Por producto"; la pestaña de volumen respeta lo configurado en el esquema.
+- Nuevo `useMutation` `confirmarPedidoMut` que recibe `ids: string[]` y hace `update({ status: 'confirmado' }).in('id', ids).eq('status', 'borrador')`.
+- El botón de fila llama `confirmarPedidoMut.mutate([pedido.id])`.
+- El botón masivo llama `confirmarPedidoMut.mutate(selectedPedidos.filter(p => p.status==='borrador').map(p=>p.id))`.
+- En `crearEntregasMut`, dentro del `for`, si `pedido.status === 'borrador'` ejecutar el update antes del insert de la entrega.
 
-3. **Etiqueta visual**: en la lista de vendedores, mostrar chip "Por producto" o "Por volumen (semanal 5%)" para que sea obvio qué esquema tiene cada uno.
+No se tocan triggers ni RLS — `ventas` ya permite update por la empresa. No se tocan otras pantallas: el flujo de Ventas/Confirmar sigue igual; esto es solo un atajo desde Demanda.
 
-## Recibos
+## Lo que NO cambia
 
-`pago_comisiones` ya existe. Se reutiliza, agregando dos columnas opcionales:
-
-- `tipo_calculo` (`'producto' | 'volumen'`)
-- `periodo_desde` / `periodo_hasta` y `detalle_calculo` (JSON con el desglose: ventas incluidas, tier aplicado, etc.) para auditoría y reimpresión del recibo.
-
-## Detalles técnicos
-
-- Esquemas son por empresa (RLS estándar con `empresa_id`).
-- El cálculo de volumen se hace **en el servidor** vía RPC `calcular_comision_volumen(vendedor_id, periodo_desde, periodo_hasta)` para evitar manipulación desde el cliente.
-- La pestaña "Por volumen" llama a la RPC y solo presenta resultados.
-- Al generar recibo de volumen: insert en `pago_comisiones` + (opcional) marca las ventas del periodo con `comision_volumen_pagada = true` para que no se vuelvan a contar.
-- Periodo "semanal" = lunes–domingo; "quincenal" = 1–15 y 16–fin de mes; "mensual" = 1–fin de mes. Todo en `zona_horaria` de la empresa.
-
-## Fuera de alcance (por ahora)
-
-- Mezclar ambos esquemas para un mismo vendedor (excluyente confirmado).
-- Esquemas por equipo / supervisor.
-- Edición retroactiva de recibos ya generados.
+- El pedido sigue saliendo de la lista solo cuando esté 100% entregado (`cantidad_entregada >= cantidad_pedida`), igual que hoy. Mientras tenga pendiente, sigue visible — para que puedas seguir creando entregas si hace falta.
+- El estado de la entrega creada sigue siendo `borrador` (lo cambia el vendedor en la app móvil al marcar "hecho").
