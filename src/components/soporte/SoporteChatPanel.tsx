@@ -416,7 +416,7 @@ export default function SoporteChatPanel({ compact = false, onAfterNavigate }: P
                       "prose-th:bg-muted/50 prose-th:font-bold prose-th:px-2 prose-th:py-1.5 prose-th:border prose-th:border-border",
                       "prose-td:px-2 prose-td:py-1.5 prose-td:border prose-td:border-border",
                     )}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: renderLink }}>{m.content}</ReactMarkdown>
                     </article>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>
