@@ -139,12 +139,43 @@ export default function DemandaPage() {
 
   const selectedPedidos = filtered.filter(p => selectedIds.has(p.id));
 
+  // Confirm pedidos (single or bulk)
+  const confirmarPedidoMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return [];
+      const { error } = await supabase
+        .from('ventas')
+        .update({ status: 'confirmado' })
+        .in('id', ids)
+        .eq('status', 'borrador');
+      if (error) throw error;
+      return ids;
+    },
+    onSuccess: (ids) => {
+      if (ids.length > 0) toast.success(`${ids.length} pedido(s) confirmado(s)`);
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   // Bulk create entregas mutation
   const crearEntregasMut = useMutation({
     mutationFn: async () => {
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
 
       const createdIds: string[] = [];
+
+      // Auto-confirm any borrador in the batch first
+      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      if (borradorIds.length > 0) {
+        const { error: cErr } = await supabase
+          .from('ventas')
+          .update({ status: 'confirmado' })
+          .in('id', borradorIds)
+          .eq('status', 'borrador');
+        if (cErr) throw cErr;
+      }
 
       for (const pedido of selectedPedidos) {
         const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
@@ -191,6 +222,7 @@ export default function DemandaPage() {
     onSuccess: (ids) => {
       toast.success(`${ids.length} entrega(s) creada(s)`);
       qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       setSelectedIds(new Set());
@@ -202,6 +234,8 @@ export default function DemandaPage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
   // Totals
   const totalPedidos = filtered.length;
