@@ -207,7 +207,8 @@ function VendedorCard({ vendedor, calc, rank, topVentas, fmt }: { vendedor: Vend
             const active = current && (current.desde === t.desde);
             return (
               <span key={i} className={cn('px-1.5 py-0.5 text-[10px] rounded border',
-                active ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border')}>
+                active ? 'bg-primary text-primary-foreground border-primary' : 'bg-white text-foreground border-border')}>
+
                 {fmt(t.desde ?? 0)}{t.hasta ? `-${fmt(Number(t.hasta))}` : '+'} · {t.pct ?? 0}%
               </span>
             );
