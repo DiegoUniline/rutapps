@@ -541,7 +541,7 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
                           onChange({ ...config, filtros_default: { ...config.filtros_default, status: Array.from(arr) } });
                         }}
                         className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                      >{s}</button>
+                      >{statusLabel(s)}</button>
                     );
                   })}
                 </div>
@@ -559,7 +559,7 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
                           onChange({ ...config, filtros_default: { ...config.filtros_default, tipo: Array.from(arr) } });
                         }}
                         className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                      >{s}</button>
+                      >{tipoLabel(s)}</button>
                     );
                   })}
                 </div>
