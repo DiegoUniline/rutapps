@@ -718,8 +718,10 @@ function desktopRoutes(isBillingOwner: boolean) {
       {/* Nested context-preserving routes for product/client detail */}
       <Route path="/:a/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/:b/productos/:id" element={<ProductoFormPage />} />
+      <Route path="/:a/:b/:c/productos/:id" element={<ProductoFormPage />} />
       <Route path="/:a/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="/:a/:b/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+      <Route path="/:a/:b/:c/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="*" element={<NotFound />} />
     </>
   );
