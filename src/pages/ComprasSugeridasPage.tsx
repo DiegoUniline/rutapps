@@ -88,10 +88,11 @@ export default function ComprasSugeridasPage() {
   const [modo, setModo] = useState<Modo>('producto');
   const [filtroProv, setFiltroProv] = useState<string>('');
   const [editado, setEditado] = useState<Record<string, number>>({});
+  const [soloSugeridos, setSoloSugeridos] = useState(true);
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
 
-  const filas = useMemo(() => {
+  const filasAll = useMemo(() => {
     if (!data) return [];
     return data.productos
       .map(p => {
@@ -100,9 +101,11 @@ export default function ComprasSugeridasPage() {
         const sug = editado[p.id] ?? sugAuto;
         return { p, ventaDiaria, sugAuto, sug };
       })
-      .filter(r => r.sug > 0)
       .filter(r => !filtroProv || r.p.proveedor_preferido_id === filtroProv);
   }, [data, modo, editado, filtroProv]);
+
+  const filas = useMemo(() => soloSugeridos ? filasAll.filter(r => r.sug > 0) : filasAll, [filasAll, soloSugeridos]);
+  const sinConfigurar = useMemo(() => filasAll.filter(r => (Number(r.p.min) || 0) === 0 && (Number(r.p.max) || 0) === 0).length, [filasAll]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, typeof filas>();
