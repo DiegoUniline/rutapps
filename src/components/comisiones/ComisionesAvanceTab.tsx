@@ -145,7 +145,7 @@ function KpiCard({ icon, label, value, sub, tone }: { icon: React.ReactNode; lab
     primary: 'bg-primary/10 text-primary',
     success: 'bg-emerald-500/10 text-emerald-600',
     warning: 'bg-amber-500/10 text-amber-600',
-    muted: 'bg-muted text-muted-foreground',
+    muted: 'bg-primary/10 text-primary',
   }[tone];
   return (
     <div className="bg-card border border-border rounded p-3 flex items-center gap-3">
