@@ -540,15 +540,19 @@ export function useVentaForm() {
     await logHistorial(form.id!, newStatus === 'confirmado' ? 'confirmada' : newStatus === 'entregado' ? 'entregada' : newStatus === 'facturado' ? 'facturada' : 'editada', { status: { anterior: prevStatus, nuevo: newStatus } });
     if (newStatus === 'confirmado' && form.vendedor_id && form.tarifa_id) {
       try {
-        const { data: tarifaLineas } = await supabase.from('tarifa_lineas').select('comision_pct, aplica_a, producto_ids, clasificacion_ids').eq('tarifa_id', form.tarifa_id);
-        if (tarifaLineas?.length) {
-          const comisionRows = lineas.filter(l => l.id && l.producto_id && l.total && l.total > 0).map(l => {
-            const match = tarifaLineas.find(tl => { if (tl.aplica_a === 'todos') return true; if (tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!)) return true; return false; });
-            const comPct = match?.comision_pct ?? 0;
-            if (comPct <= 0) return null;
-            return { empresa_id: empresa!.id, venta_id: form.id!, venta_linea_id: l.id!, vendedor_id: form.vendedor_id!, producto_id: l.producto_id!, monto_venta: l.total!, comision_pct: comPct, comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100, fecha_venta: form.fecha || todayLocal() };
-          }).filter(Boolean);
-          if (comisionRows.length > 0) await supabase.from('venta_comisiones').insert(comisionRows as any);
+        // Si el vendedor tiene esquema de comisión por volumen, NO se generan filas por línea.
+        const { data: prof } = await supabase.from('profiles').select('comision_esquema_id' as any).eq('id', form.vendedor_id).maybeSingle();
+        if (!(prof as any)?.comision_esquema_id) {
+          const { data: tarifaLineas } = await supabase.from('tarifa_lineas').select('comision_pct, aplica_a, producto_ids, clasificacion_ids').eq('tarifa_id', form.tarifa_id);
+          if (tarifaLineas?.length) {
+            const comisionRows = lineas.filter(l => l.id && l.producto_id && l.total && l.total > 0).map(l => {
+              const match = tarifaLineas.find(tl => { if (tl.aplica_a === 'todos') return true; if (tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!)) return true; return false; });
+              const comPct = match?.comision_pct ?? 0;
+              if (comPct <= 0) return null;
+              return { empresa_id: empresa!.id, venta_id: form.id!, venta_linea_id: l.id!, vendedor_id: form.vendedor_id!, producto_id: l.producto_id!, monto_venta: l.total!, comision_pct: comPct, comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100, fecha_venta: form.fecha || todayLocal() };
+            }).filter(Boolean);
+            if (comisionRows.length > 0) await supabase.from('venta_comisiones').insert(comisionRows as any);
+          }
         }
       } catch (err) { console.error('Error generating commissions', err); }
     }

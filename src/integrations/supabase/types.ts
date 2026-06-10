@@ -1599,6 +1599,53 @@ export type Database = {
           },
         ]
       }
+      comision_esquemas: {
+        Row: {
+          activo: boolean
+          base: string
+          config: Json
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+          periodo: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          base: string
+          config?: Json
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          periodo: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          base?: string
+          config?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          periodo?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comision_esquemas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compra_lineas: {
         Row: {
           cantidad: number
@@ -3650,6 +3697,7 @@ export type Database = {
       pago_comisiones: {
         Row: {
           created_at: string
+          detalle_calculo: Json | null
           empresa_id: string
           estado: string
           fecha_corte: string
@@ -3657,12 +3705,16 @@ export type Database = {
           gasto_id: string | null
           id: string
           notas: string | null
+          periodo_desde: string | null
+          periodo_hasta: string | null
+          tipo_calculo: string
           total_comisiones: number
           user_id: string
           vendedor_id: string | null
         }
         Insert: {
           created_at?: string
+          detalle_calculo?: Json | null
           empresa_id: string
           estado?: string
           fecha_corte: string
@@ -3670,12 +3722,16 @@ export type Database = {
           gasto_id?: string | null
           id?: string
           notas?: string | null
+          periodo_desde?: string | null
+          periodo_hasta?: string | null
+          tipo_calculo?: string
           total_comisiones?: number
           user_id: string
           vendedor_id?: string | null
         }
         Update: {
           created_at?: string
+          detalle_calculo?: Json | null
           empresa_id?: string
           estado?: string
           fecha_corte?: string
@@ -3683,6 +3739,9 @@ export type Database = {
           gasto_id?: string | null
           id?: string
           notas?: string | null
+          periodo_desde?: string | null
+          periodo_hasta?: string | null
+          tipo_calculo?: string
           total_comisiones?: number
           user_id?: string
           vendedor_id?: string | null
@@ -4632,6 +4691,7 @@ export type Database = {
           archivado_motivo: string | null
           archivado_por: string | null
           avatar_url: string | null
+          comision_esquema_id: string | null
           created_at: string
           empresa_id: string
           estado: string
@@ -4649,6 +4709,7 @@ export type Database = {
           archivado_motivo?: string | null
           archivado_por?: string | null
           avatar_url?: string | null
+          comision_esquema_id?: string | null
           created_at?: string
           empresa_id: string
           estado?: string
@@ -4666,6 +4727,7 @@ export type Database = {
           archivado_motivo?: string | null
           archivado_por?: string | null
           avatar_url?: string | null
+          comision_esquema_id?: string | null
           created_at?: string
           empresa_id?: string
           estado?: string
@@ -4683,6 +4745,13 @@ export type Database = {
             columns: ["almacen_id"]
             isOneToOne: false
             referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_comision_esquema_id_fkey"
+            columns: ["comision_esquema_id"]
+            isOneToOne: false
+            referencedRelation: "comision_esquemas"
             referencedColumns: ["id"]
           },
           {
@@ -6574,6 +6643,7 @@ export type Database = {
         Row: {
           almacen_id: string | null
           cliente_id: string | null
+          comision_volumen_pago_id: string | null
           concepto: string | null
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           created_at: string
@@ -6607,6 +6677,7 @@ export type Database = {
         Insert: {
           almacen_id?: string | null
           cliente_id?: string | null
+          comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
@@ -6640,6 +6711,7 @@ export type Database = {
         Update: {
           almacen_id?: string | null
           cliente_id?: string | null
+          comision_volumen_pago_id?: string | null
           concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
@@ -6683,6 +6755,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_comision_volumen_pago_id_fkey"
+            columns: ["comision_volumen_pago_id"]
+            isOneToOne: false
+            referencedRelation: "pago_comisiones"
             referencedColumns: ["id"]
           },
           {
@@ -7157,6 +7236,10 @@ export type Database = {
         Args: { p_linea_id: string }
         Returns: number
       }
+      calcular_comision_volumen: {
+        Args: { p_desde: string; p_hasta: string; p_vendedor_id: string }
+        Returns: Json
+      }
       cancelar_entregas_bulk: {
         Args: { p_entrega_ids: string[]; p_motivo?: string; p_user_id?: string }
         Returns: Json
@@ -7194,6 +7277,15 @@ export type Database = {
         Returns: Json
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
+      generar_recibo_volumen: {
+        Args: {
+          p_desde: string
+          p_fecha_corte?: string
+          p_hasta: string
+          p_vendedor_id: string
+        }
+        Returns: string
+      }
       generate_folio: {
         Args: { p_empresa_id: string; p_tipo: string }
         Returns: string
