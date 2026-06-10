@@ -189,7 +189,7 @@ export interface FuenteMeta {
 }
 
 export const FUENTES: FuenteMeta[] = [
-  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','pendiente','parcial','pagada','cancelada'], tipoOptions: ['venta','presale','remision'] },
+  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','pendiente','parcial','pagada','cancelada'], tipoOptions: ['pedido','venta_directa','saldo_inicial'] },
   { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'] },
   { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'] },
   { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'] },
