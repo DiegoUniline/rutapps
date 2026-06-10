@@ -20,7 +20,7 @@ export interface Producto {
   nombre_ticket?: string | null;
   clave_alterna?: string;
   marca_id?: string;
-  proveedor_id?: string;
+  proveedor_preferido_id?: string;
   costo: number;
   clasificacion_id?: string;
   lista_id?: string;
