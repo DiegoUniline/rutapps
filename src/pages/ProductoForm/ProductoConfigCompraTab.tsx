@@ -27,10 +27,8 @@ export function ProductoConfigCompraTab({ form, set, proveedores, createProveedo
             <ModalSelect
               value={(form as any).proveedor_preferido_id || ''}
               onChange={(v) => set('proveedor_preferido_id' as any, v || null)}
-              options={(proveedores ?? []).map(p => ({ value: p.id, label: p.nombre }))}
+              options={[{ value: '', label: '— Sin proveedor —' }, ...(proveedores ?? []).map(p => ({ value: p.id, label: p.nombre }))]}
               placeholder="Selecciona proveedor"
-              allowEmpty
-              onCreate={async (name) => { const id = await createProveedor(name); if (id) set('proveedor_preferido_id' as any, id); }}
             />
           </div>
         </div>
