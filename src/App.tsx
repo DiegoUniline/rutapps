@@ -70,6 +70,8 @@ const ReportesPersonalizadosPage = lazy(() => import("@/pages/ReportesPersonaliz
 const ConfiguracionPage = lazy(() => import("@/pages/ConfiguracionPage"));
 const SaldosInicialesPage = lazy(() => import("@/pages/SaldosInicialesPage"));
 const UsuariosPage = lazy(() => import("@/pages/UsuariosPage"));
+const MetasConfigPage = lazy(() => import("@/pages/MetasConfigPage"));
+const MetasSeguimientoPage = lazy(() => import("@/pages/MetasSeguimientoPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
