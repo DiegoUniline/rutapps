@@ -287,6 +287,7 @@ export default function ComprasSugeridasPage() {
                     <th className="text-right p-2">A pedir</th>
                     <th className="text-right p-2">Costo</th>
                     <th className="text-right p-2">Importe</th>
+                    <th className="text-left p-2">Proveedor</th>
                   </tr>
                 </thead>
                 <tbody>
