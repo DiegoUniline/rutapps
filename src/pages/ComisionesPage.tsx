@@ -12,6 +12,8 @@ import { cn, todayLocal, fmtDate } from '@/lib/utils';
 import { Check, DollarSign, Calendar, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
+import ComisionesEsquemasTab from '@/components/comisiones/ComisionesEsquemasTab';
+import ComisionesVolumenTab from '@/components/comisiones/ComisionesVolumenTab';
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +37,7 @@ function mondayOfWeek() {
   return monday.toISOString().slice(0, 10);
 }
 
-type TabKey = 'historial' | 'por_pagar' | 'recibos' | 'reglas';
+type TabKey = 'historial' | 'por_pagar' | 'por_volumen' | 'recibos' | 'esquemas' | 'reglas';
 
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
@@ -330,7 +332,9 @@ export default function ComisionesPage() {
         {([
           ['historial', 'Comisiones generadas'],
           ['por_pagar', 'Por pagar'],
+          ['por_volumen', 'Por volumen'],
           ['recibos', 'Recibos'],
+          ['esquemas', 'Esquemas'],
           ['reglas', 'Reglas de comisión'],
         ] as const).map(([key, label]) => (
           <button
@@ -349,6 +353,8 @@ export default function ComisionesPage() {
       </div>
 
       {tab === 'reglas' && <ComisionesReglasTab />}
+      {tab === 'esquemas' && <ComisionesEsquemasTab />}
+      {tab === 'por_volumen' && <ComisionesVolumenTab onAfterGenerar={() => setTab('recibos')} />}
 
       {tab === 'historial' && (
         <>
