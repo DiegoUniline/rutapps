@@ -29,6 +29,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const navigate = useNavigate();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
+  const [ventaListaNombre, setVentaListaNombre] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
