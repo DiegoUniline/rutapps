@@ -232,7 +232,14 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
   const tipoLabel = esquema?.tipo === 'bono_meta' ? 'Bono por meta'
     : esquema?.tipo === 'volumen_tiers' ? 'Volumen por escalones'
     : esquema?.tipo === 'volumen_pct' ? '% sobre volumen'
+    : porReglas ? 'Comisión por reglas de lista'
     : 'Sin esquema';
+
+  if (porReglas) {
+    pctGanado = total > 0 ? `${((comision / total) * 100).toFixed(2)}% efectivo` : null;
+    metaLabel = 'Comisión por reglas de lista de precios';
+    metaPct = 100;
+  }
 
   const barGradient = alcanzado
     ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
