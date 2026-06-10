@@ -665,6 +665,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/almacen/inventario" element={<InventarioPage />} />
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
+      <Route path="/almacen/compras/sugeridas" element={<ComprasSugeridasPage />} />
       <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
       {/* Lotes removed — no longer used */}
       <Route path="/almacen/descargas" element={<DescargasPage />} />
