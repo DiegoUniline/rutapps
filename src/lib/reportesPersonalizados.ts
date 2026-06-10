@@ -621,6 +621,10 @@ async function runEntregas(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.or(`vendedor_id.in.(${filtros.vendedorIds.join(',')}),vendedor_ruta_id.in.(${filtros.vendedorIds.join(',')})`);
+    if (filtros.almacenIds?.length) q = q.in('almacen_id', filtros.almacenIds);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!entregas.length) return [];
