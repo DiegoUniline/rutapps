@@ -488,6 +488,19 @@ export default function ComisionesPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Pagar comisiones hasta:</span>
             <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
+            <div className="h-6 w-px bg-border mx-1" />
+            <div className="flex border border-border rounded overflow-hidden">
+              {([['cobradas', 'Cobradas'], ['pendientes', 'Por cobrar'], ['todas', 'Todas']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => { setPpSaldoFilter(key); clearSel(); }}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs transition-colors',
+                    ppSaldoFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                  )}
+                >{label}</button>
+              ))}
+            </div>
             <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
             <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
             <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Contraer todo</button>
