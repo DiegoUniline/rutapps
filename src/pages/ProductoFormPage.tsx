@@ -645,12 +645,6 @@ export default function ProductoFormPage() {
                         <input type="checkbox" checked={!!form.vender_sin_stock} onChange={e => set('vender_sin_stock', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
                       </label>
                     </div>
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Manejar lotes</span>
-                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.manejar_lotes} onChange={e => set('manejar_lotes', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                      </label>
-                    </div>
                   </div>
                 </div>
               ),
