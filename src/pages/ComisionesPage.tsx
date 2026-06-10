@@ -561,6 +561,7 @@ export default function ComisionesPage() {
                           <th className="th-odoo text-left">Fecha</th>
                           <th className="th-odoo text-left">Folio</th>
                           <th className="th-odoo text-right">Venta</th>
+                          <th className="th-odoo text-right">Saldo venta</th>
                           <th className="th-odoo text-right">Comisión</th>
                         </tr>
                       </thead>
@@ -577,6 +578,13 @@ export default function ComisionesPage() {
                               ) : (i.ventas?.folio ?? '—')}
                             </td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(i.monto_venta)}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-xs">
+                              {i.ventas?.saldo_pendiente !== undefined && i.ventas?.saldo_pendiente !== null ? (
+                                <span className={i.ventas.saldo_pendiente === 0 ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                                  {fmt(i.ventas.saldo_pendiente)}
+                                </span>
+                              ) : '—'}
+                            </td>
                             <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(i.comision_monto)}</td>
                           </tr>
                         ))}
