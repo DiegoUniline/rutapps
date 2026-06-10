@@ -1658,6 +1658,7 @@ export type Database = {
           almacen_id: string | null
           condicion_pago: string
           created_at: string
+          created_by: string | null
           dias_credito: number | null
           empresa_id: string
           fecha: string
@@ -1676,6 +1677,7 @@ export type Database = {
           almacen_id?: string | null
           condicion_pago?: string
           created_at?: string
+          created_by?: string | null
           dias_credito?: number | null
           empresa_id: string
           fecha?: string
@@ -1694,6 +1696,7 @@ export type Database = {
           almacen_id?: string | null
           condicion_pago?: string
           created_at?: string
+          created_by?: string | null
           dias_credito?: number | null
           empresa_id?: string
           fecha?: string
