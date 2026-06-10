@@ -925,6 +925,11 @@ export default function DashboardPage() {
       {/* === HOY · Banda ejecutiva === */}
       <HoyBand hoy={hoy} money={money} />
 
+      {/* === Banner de alertas === */}
+      <AlertasBanner />
+
+
+
       {/* === Asesor IA === */}
       <DashboardAIAdvisor buildSnapshot={() => ({
         periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
