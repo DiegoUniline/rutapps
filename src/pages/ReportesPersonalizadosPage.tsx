@@ -466,7 +466,7 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
               <select
                 className="w-full h-10 rounded-md border bg-background px-3 text-sm"
                 value={config.fuente}
-                onChange={(e) => onChange({ ...config, fuente: e.target.value as ReporteFuente, columnas: [] })}
+                onChange={(e) => onChange({ ...config, fuente: e.target.value as ReporteFuente, columnas: [], filtros_default: {} })}
                 disabled={!!config.id}
               >
                 {FUENTES.map(f => (
