@@ -140,7 +140,6 @@ export default function ComisionesEsquemasTab() {
                 <tr className="border-b border-table-border">
                   <th className="th-odoo text-left">Nombre</th>
                   <th className="th-odoo text-left">Tipo</th>
-                  <th className="th-odoo text-left">Periodo</th>
                   <th className="th-odoo text-left">Base</th>
                   <th className="th-odoo text-left">Configuración</th>
                   <th className="th-odoo text-center">Activo</th>
@@ -152,7 +151,6 @@ export default function ComisionesEsquemasTab() {
                   <tr key={e.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                     <td className="py-1.5 px-3 text-xs font-medium">{e.nombre}</td>
                     <td className="py-1.5 px-3 text-xs">{TIPO_LABEL[e.tipo]}</td>
-                    <td className="py-1.5 px-3 text-xs">{PERIODO_LABEL[e.periodo]}</td>
                     <td className="py-1.5 px-3 text-xs">{BASE_LABEL[e.base]}</td>
                     <td className="py-1.5 px-3 text-xs text-muted-foreground">{describeConfig(e, fmt)}</td>
                     <td className="py-1.5 px-3 text-center">
@@ -206,7 +204,7 @@ export default function ComisionesEsquemasTab() {
                     >
                       <option value="">Por producto (regla actual)</option>
                       {(esquemas ?? []).filter(e => e.activo).map(e => (
-                        <option key={e.id} value={e.id}>{e.nombre} · {TIPO_LABEL[e.tipo]} · {PERIODO_LABEL[e.periodo]}</option>
+                        <option key={e.id} value={e.id}>{e.nombre} · {TIPO_LABEL[e.tipo]}</option>
                       ))}
                     </select>
                   </td>
