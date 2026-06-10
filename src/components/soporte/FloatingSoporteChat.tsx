@@ -56,13 +56,15 @@ export default function FloatingSoporteChat() {
     if (count > 0) setDismissed(false);
   }, [count]);
 
-  // Siempre visible en escritorio (incluido /soporte). Solo se oculta en móvil
-  // o cuando el usuario lo cierra explícitamente (vuelve al recargar).
-  void pathname;
+  // Visible en TODA la app administrativa (escritorio y móvil del admin).
+  // Solo se oculta en la app móvil de ruta (/ruta) o si el usuario lo cierra.
+  const isRutaApp = pathname.startsWith("/ruta");
   void count;
+  void isMobile;
 
-  if (isMobile) return null;
+  if (isRutaApp) return null;
   if (dismissed) return null;
+
 
 
   if (!open) {
