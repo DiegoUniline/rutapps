@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data, error } = await supabase.from('profiles')
-        .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password')
+        .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password, super_admin_override_empresa_id')
         .eq('user_id', u.id)
         .maybeSingle();
 
@@ -133,8 +133,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setEmpresa(nextEmpresa);
     setRealEmpresa(nextEmpresa);
+
+    // If profile has a persisted super admin override, load that empresa as the effective one.
+    const overrideId = (nextProfile as any)?.super_admin_override_empresa_id ?? null;
+    if (overrideId && overrideId !== nextProfile?.empresa_id) {
+      setOverrideEmpresaIdRaw(overrideId);
+      try {
+        const { data } = await supabase.from('empresas')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id')
+          .eq('id', overrideId)
+          .maybeSingle();
+        if (data) {
+          setEmpresa(data as Empresa);
+          setGlobalTimezone((data as Empresa).zona_horaria);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+
+    setEmpresa(nextEmpresa);
     setGlobalTimezone(nextEmpresa?.zona_horaria);
   }, []);
 
@@ -142,8 +160,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setOverrideEmpresaId = useCallback(async (id: string | null) => {
     setOverrideEmpresaIdRaw(id);
     setOverrideVendedorId(null);
+
+    // Persist override to profile so DB-level RLS scopes super admin to the chosen empresa.
+    if (user?.id) {
+      try {
+        await supabase.from('profiles')
+          .update({ super_admin_override_empresa_id: id })
+          .eq('user_id', user.id);
+      } catch { /* ignore */ }
+    }
+
     if (!id) {
-      // Restore original empresa
       setEmpresa(realEmpresa);
       setGlobalTimezone(realEmpresa?.zona_horaria);
       return;
@@ -158,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGlobalTimezone((data as Empresa).zona_horaria);
       }
     } catch { /* ignore */ }
-  }, [realEmpresa]);
+  }, [realEmpresa, user?.id]);
 
   const initialisedRef = useRef(false);
 
