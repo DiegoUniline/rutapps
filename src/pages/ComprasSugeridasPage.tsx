@@ -92,7 +92,7 @@ export default function ComprasSugeridasPage() {
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
 
-  const saveMinMax = async (productoId: string, patch: { min?: number; max?: number }) => {
+  const saveProductoPatch = async (productoId: string, patch: Record<string, any>, successMsg: string) => {
     if (!empresa?.id) return;
     setSavingMinMax(s => ({ ...s, [productoId]: true }));
     try {
@@ -101,7 +101,6 @@ export default function ComprasSugeridasPage() {
         .eq('id', productoId)
         .eq('empresa_id', empresa.id);
       if (error) throw error;
-      // Optimistic update of cached query
       qc.setQueryData(['compras-sugeridas', empresa.id, modo === 'cobertura' ? 'cob' : 'std'], (old: any) => {
         if (!old) return old;
         return {
@@ -110,14 +109,22 @@ export default function ComprasSugeridasPage() {
         };
       });
       qc.invalidateQueries({ queryKey: ['productos'] });
-      setMinMaxEdit(s => { const n = { ...s }; delete n[productoId]; return n; });
-      toast.success('Min/Max actualizado');
+      toast.success(successMsg);
     } catch (err: any) {
       toast.error(err.message || 'Error al guardar');
     } finally {
       setSavingMinMax(s => { const n = { ...s }; delete n[productoId]; return n; });
     }
   };
+
+  const saveMinMax = async (productoId: string, patch: { min?: number; max?: number }) => {
+    await saveProductoPatch(productoId, patch, 'Min/Max actualizado');
+    setMinMaxEdit(s => { const n = { ...s }; delete n[productoId]; return n; });
+  };
+
+  const saveProveedor = (productoId: string, proveedorId: string) =>
+    saveProductoPatch(productoId, { proveedor_preferido_id: proveedorId || null }, 'Proveedor asignado');
+
 
   const filasAll = useMemo(() => {
     if (!data) return [];
@@ -280,6 +287,7 @@ export default function ComprasSugeridasPage() {
                     <th className="text-right p-2">A pedir</th>
                     <th className="text-right p-2">Costo</th>
                     <th className="text-right p-2">Importe</th>
+                    <th className="text-left p-2">Proveedor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,6 +349,17 @@ export default function ComprasSugeridasPage() {
                       </td>
                       <td className="p-2 text-right">{fmtMoney(Number(r.p.costo || 0))}</td>
                       <td className="p-2 text-right font-medium">{fmtMoney(r.sug * Number(r.p.costo || 0))}</td>
+                      <td className="p-2">
+                        <select
+                          value={r.p.proveedor_preferido_id || ''}
+                          disabled={savingMinMax[r.p.id]}
+                          onChange={e => saveProveedor(r.p.id, e.target.value)}
+                          className={`border rounded px-1 py-0.5 bg-background text-[12px] max-w-[180px] ${!r.p.proveedor_preferido_id ? 'border-amber-400 text-amber-700' : 'border-input'}`}
+                        >
+                          <option value="">— Sin proveedor —</option>
+                          {proveedores?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </td>
                     </tr>
                     );
                   })}
