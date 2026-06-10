@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Bot, X, Minus, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SoporteChatPanel, {
   SOPORTE_STORAGE_KEY,
   SOPORTE_EVENT,
