@@ -26,54 +26,21 @@ export function useDashboardAlertas() {
       const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
       // 1) Clientes con crédito excedido: sumar saldo_pendiente por cliente y comparar con limite_credito
+      const sb: any = supabase;
       const [clientesRes, ventasCreditoRes, vendedoresRes, ubicRes, facturasRes, pedidosPendRes] = await Promise.all([
-        supabase
-          .from('clientes')
-          .select('id, nombre, limite_credito, credito')
-          .eq('empresa_id', eId)
-          .eq('credito', true)
-          .gt('limite_credito', 0),
+        sb.from('clientes').select('id, nombre, limite_credito, credito').eq('empresa_id', eId).eq('credito', true).gt('limite_credito', 0),
         fetchAllPages((from, to) =>
-          (supabase as any)
-            .from('ventas')
-            .select('cliente_id, saldo_pendiente')
-            .eq('empresa_id', eId)
-            .eq('condicion_pago', 'credito')
-            .gt('saldo_pendiente', 0)
-            .neq('status', 'cancelado')
-            .range(from, to)
+          sb.from('ventas').select('cliente_id, saldo_pendiente').eq('empresa_id', eId).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0).neq('status', 'cancelado').range(from, to)
         ),
-        supabase
-          .from('profiles')
-          .select('id, nombre, full_name')
-          .eq('empresa_id', eId)
-          .eq('activo', true),
-        supabase
-          .from('vendedor_ubicaciones')
-          .select('user_id, updated_at')
-          .eq('empresa_id', eId)
-          .gte('updated_at', todayIso),
-        supabase
-          .from('ventas')
-          .select('id, folio, total, saldo_pendiente, fecha_vencimiento, clientes(nombre)')
-          .eq('empresa_id', eId)
-          .eq('requiere_factura', true)
-          .gt('saldo_pendiente', 0)
-          .neq('status', 'cancelado' as any)
-          .gte('fecha_vencimiento', todayIso)
-          .lte('fecha_vencimiento', in7Iso),
-        supabase
-          .from('ventas')
-          .select('id, folio, total, created_at, clientes(nombre)')
-          .eq('empresa_id', eId)
-          .eq('tipo', 'pedido' as any)
-          .in('status', ['confirmado', 'borrador'] as any)
-          .lt('created_at', since24h),
+        sb.from('profiles').select('id, nombre, full_name').eq('empresa_id', eId).eq('activo', true),
+        sb.from('vendedor_ubicaciones').select('user_id, updated_at').eq('empresa_id', eId).gte('updated_at', todayIso),
+        sb.from('ventas').select('id, folio, total, saldo_pendiente, fecha_vencimiento, clientes(nombre)').eq('empresa_id', eId).eq('requiere_factura', true).gt('saldo_pendiente', 0).neq('status', 'cancelado').gte('fecha_vencimiento', todayIso).lte('fecha_vencimiento', in7Iso),
+        sb.from('ventas').select('id, folio, total, created_at, clientes(nombre)').eq('empresa_id', eId).eq('tipo', 'pedido').in('status', ['confirmado', 'borrador']).lt('created_at', since24h),
       ]);
 
       // Build credito excedido
       const saldoPorCliente = new Map<string, number>();
-      (ventasCreditoRes.data ?? []).forEach((v: any) => {
+      (ventasCreditoRes ?? []).forEach((v: any) => {
         if (!v.cliente_id) return;
         saldoPorCliente.set(v.cliente_id, (saldoPorCliente.get(v.cliente_id) || 0) + Number(v.saldo_pendiente || 0));
       });
