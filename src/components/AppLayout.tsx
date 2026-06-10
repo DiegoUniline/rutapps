@@ -26,6 +26,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { Search } from 'lucide-react';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
+import { toast } from 'sonner';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
