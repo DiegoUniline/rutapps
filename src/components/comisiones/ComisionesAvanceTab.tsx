@@ -67,15 +67,15 @@ export default function ComisionesAvanceTab() {
       const out: Record<string, any> = {};
       for (const v of vendedores ?? []) {
         if (!v.comision_esquema_id) {
-          // Sin esquema: solo traer total de ventas en el período
-          const { data: ventas } = await supabase.from('ventas')
-            .select('total, num_ventas:id.count()' as any)
+          const { data: ventas } = await (supabase as any).from('ventas')
+            .select('total')
             .eq('empresa_id', empresa!.id)
             .eq('vendedor_id', v.id)
             .neq('estado', 'cancelada')
             .gte('fecha', desde).lte('fecha', hasta);
-          const total = (ventas ?? []).reduce((s: number, r: any) => s + Number(r.total ?? 0), 0);
-          out[v.id] = { total_ventas: total, num_ventas: (ventas ?? []).length, comision: 0, sin_esquema: true };
+          const rows = (ventas ?? []) as Array<{ total: number | null }>;
+          const total = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
+          out[v.id] = { total_ventas: total, num_ventas: rows.length, comision: 0, sin_esquema: true };
           continue;
         }
         const { data, error } = await (supabase as any).rpc('calcular_comision_volumen', {
