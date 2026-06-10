@@ -1018,6 +1018,15 @@ export default function DashboardPage() {
           <TabsTrigger value="comparativo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <ArrowUpRight className="h-3.5 w-3.5 mr-2" /> Mes vs Mes
           </TabsTrigger>
+          <TabsTrigger value="equipo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Users className="h-3.5 w-3.5 mr-2" /> Equipo
+          </TabsTrigger>
+          <TabsTrigger value="cartera" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <CreditCard className="h-3.5 w-3.5 mr-2" /> Cartera
+          </TabsTrigger>
+          <TabsTrigger value="inventario-tab" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Package className="h-3.5 w-3.5 mr-2" /> Inventario
+          </TabsTrigger>
         </TabsList>
 
         {/* === RESUMEN === */}
