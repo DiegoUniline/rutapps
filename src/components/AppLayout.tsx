@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle,
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle, LifeBuoy,
   Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -181,6 +181,7 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
+  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
   {
     label: 'Configuración',
     icon: Settings,

@@ -23,7 +23,7 @@ import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
-import { WhatsAppFloatButton } from "@/components/WhatsAppFloatButton";
+
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -126,6 +126,7 @@ const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
 const TutorialesPage = lazy(() => import("@/pages/TutorialesPage"));
+const SoportePage = lazy(() => import("@/pages/SoportePage"));
 const PerfilPage = lazy(() => import("@/pages/PerfilPage"));
 const AplicarPagosPage = lazy(() => import("@/pages/AplicarPagosPage"));
 const AplicarPagosProveedorPage = lazy(() => import("@/pages/AplicarPagosProveedorPage"));
@@ -270,6 +271,7 @@ function AppRoutes() {
             <Route path="perfil" element={<PartnerPerfil />} />
           </Route>
           <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
           <Route path="*" element={<Navigate to="/partner" replace />} />
         </Routes>
       </Suspense>
@@ -337,6 +339,7 @@ function AppRoutes() {
           <Route path="/pagar/:token" element={<PagarPage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
           <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -709,6 +712,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/reportes/personalizados" element={<ReportesPersonalizadosPage />} />
       <Route path="/control" element={<ControlPage />} />
       <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
       <Route path="/perfil" element={<PerfilPage />} />
       <Route path="/configuracion" element={<ConfiguracionPage />} />
       <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
@@ -758,7 +762,6 @@ const App = () => (
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
-              <WhatsAppFloatButton />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
