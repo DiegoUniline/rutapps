@@ -1,0 +1,1 @@
+UPDATE public.comision_esquemas SET config = '{"pct": 5}'::jsonb WHERE id = 'e2092e6c-c1f6-45e6-9c6e-9215e5df98f4';
