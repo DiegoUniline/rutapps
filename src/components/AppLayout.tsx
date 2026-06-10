@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green',
+    label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
     children: [
       { label: 'Abrir caja (POS)', path: '/pos' },
       { label: 'Turnos', path: '/pos/admin?tab=turnos' },
