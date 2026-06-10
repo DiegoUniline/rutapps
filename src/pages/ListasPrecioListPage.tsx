@@ -263,7 +263,7 @@ export default function ListasPrecioListPage() {
                             <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-primary hover:text-primary/80 p-1.5 rounded-md hover:bg-primary/5" title="Ver precios">
                               <Eye className="h-3.5 w-3.5" />
                             </button>
-                            <button onClick={(e) => startEdit(l, e)} className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent" title="Editar nombre">
+                            <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent" title="Editar">
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button onClick={(e) => handleDelete(l.id, l.nombre, e)} className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/5" title="Eliminar">
