@@ -73,6 +73,22 @@ const navItems: NavItem[] = [
       { label: 'Ventas POS', path: '/pos/admin?tab=ventas' },
     ],
   },
+  // ── Compras ──
+  {
+    label: 'Compras',
+    icon: ShoppingBag,
+    path: '/almacen/compras',
+    highlight: 'pink',
+    children: [
+      { label: 'Órdenes de compra', path: '/almacen/compras' },
+      { label: 'Compras sugeridas', path: '/almacen/compras/sugeridas' },
+      { label: 'Proveedores', path: '/proveedores' },
+      { label: 'Productos', path: '/productos' },
+      { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
+      { label: 'Pagos a proveedores', path: '/finanzas/pagos-proveedores' },
+      { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
+    ],
+  },
   // ── Logística ──
   {
     label: 'Logística',
