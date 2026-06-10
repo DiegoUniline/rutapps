@@ -1214,6 +1214,21 @@ export default function DashboardPage() {
           <VentasPorMesTable data={ventasPorMes ?? []} money={money} cSym={cSym} />
           <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} cSym={cSym} />
         </TabsContent>
+
+        {/* === EQUIPO === */}
+        <TabsContent value="equipo" className="mt-4">
+          <TabEquipo range={dateRange} metaMes={monthlyGoal} money={money} />
+        </TabsContent>
+
+        {/* === CARTERA === */}
+        <TabsContent value="cartera" className="mt-4">
+          <TabCartera range={dateRange} ventasMes={metaMesData.ventasMes} ventas={ventas ?? []} cobros={cobros ?? []} money={money} />
+        </TabsContent>
+
+        {/* === INVENTARIO === */}
+        <TabsContent value="inventario-tab" className="mt-4">
+          <TabInventario range={dateRange} money={money} />
+        </TabsContent>
       </Tabs>
 
     </div>
