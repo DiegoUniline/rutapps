@@ -9,6 +9,7 @@ import { ProductoComisionesTab } from './ProductoComisionesTab';
 import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
 import { ProductoPresentacionesTab } from './ProductoPresentacionesTab';
 import { ProductoUnidadesStockTab } from './ProductoUnidadesStockTab';
+import { ProductoConfigCompraTab } from './ProductoConfigCompraTab';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
