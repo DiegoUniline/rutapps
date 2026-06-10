@@ -3,6 +3,7 @@ import { MessageCircle, Clock, Bot, Mail, CheckCircle2, AlertCircle } from "luci
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import SoporteChatPanel from "@/components/soporte/SoporteChatPanel";
 
 const WHATSAPP_NUMBER = "5213171045954";
 const WHATSAPP_DISPLAY = "+52 1 317 104 5954";
@@ -136,7 +137,7 @@ export default function SoportePage() {
         </Card>
       </div>
 
-      {/* IA 24/7 */}
+      {/* IA 24/7 — Chat embebido */}
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -145,34 +146,14 @@ export default function SoportePage() {
             </span>
             Asesor IA — Disponible 24/7
           </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Fuera del horario de oficina, nuestro <strong>Asesor IA</strong>{" "}
-            atiende perfecto: te ayuda con dudas del sistema, análisis de
-            ventas, cobranza, inventario y más. Está disponible los <strong>365 días del año</strong>.
+            Fuera del horario de oficina, nuestro <strong>Asesor IA</strong> atiende perfecto:
+            es experto en todos los módulos del sistema (ventas, cobranza, inventario, rutas,
+            facturación, configuración y más). Chatea directamente aquí abajo.
           </p>
-          <ul className="grid gap-2 text-sm md:grid-cols-2">
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Respuestas inmediatas sobre tu negocio
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Análisis y recomendaciones inteligentes
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Guía paso a paso del sistema
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Sin esperas, sin filas
-            </li>
-          </ul>
-          <Button asChild variant="outline" className="w-full md:w-auto">
-            <a href="/dashboard">Ir al asesor IA en el Dashboard</a>
-          </Button>
+        </CardHeader>
+        <CardContent>
+          <SoporteChatPanel />
         </CardContent>
       </Card>
 
