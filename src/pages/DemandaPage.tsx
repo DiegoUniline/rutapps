@@ -30,7 +30,7 @@ function usePedidosPendientes() {
         .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('empresa_id', empresa!.id)
         .eq('tipo', 'pedido')
-        .in('status', ['confirmado', 'entregado'])
+        .in('status', ['borrador', 'confirmado', 'entregado'])
         .order('fecha', { ascending: true });
       if (error) throw error;
 
