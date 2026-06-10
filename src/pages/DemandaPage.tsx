@@ -251,10 +251,24 @@ export default function DemandaPage() {
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
         {selectedIds.size > 0 && (
-          <Button onClick={() => setShowCrearDialog(true)} size="sm">
-            <Package className="h-3.5 w-3.5" />
-            Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
-          </Button>
+          <div className="flex items-center gap-2">
+            {borradorSelectedIds.length > 0 && (
+              <Button
+                onClick={() => confirmarPedidoMut.mutate(borradorSelectedIds)}
+                size="sm"
+                variant="outline"
+                disabled={confirmarPedidoMut.isPending}
+                className="border-green-600 text-green-700 hover:bg-green-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
+              </Button>
+            )}
+            <Button onClick={() => setShowCrearDialog(true)} size="sm">
+              <Package className="h-3.5 w-3.5" />
+              Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
+            </Button>
+          </div>
         )}
       </div>
 
