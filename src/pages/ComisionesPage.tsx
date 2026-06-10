@@ -9,7 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
-import { Check, DollarSign, Calendar, FileText } from 'lucide-react';
+import { Check, DollarSign, Calendar, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
@@ -99,6 +99,8 @@ export default function ComisionesPage() {
   // ============== POR PAGAR ==============
   const [ppFechaCorte, setPpFechaCorte] = useState(todayLocal());
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsedVendors, setCollapsedVendors] = useState<Set<string>>(new Set());
+  const toggleCollapse = (id: string) => setCollapsedVendors(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const { data: pendientesPP, isLoading: loadingPP } = useQuery({
     queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte],
@@ -477,6 +479,8 @@ export default function ComisionesPage() {
             <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
             <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
             <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
+            <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Contraer todo</button>
+            <button onClick={() => setCollapsedVendors(new Set())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Expandir todo</button>
             <div className="ml-auto flex items-center gap-3">
               <div className="text-xs">Seleccionado: <span className="font-mono font-bold text-odoo-teal">{fmt(selectedTotal)}</span> ({selected.size})</div>
               <button
@@ -508,13 +512,24 @@ export default function ComisionesPage() {
                         checked={allSel}
                         ref={el => { if (el) el.indeterminate = !allSel && someSel; }}
                         onChange={() => toggleVendor(g.items)}
+                        onClick={e => e.stopPropagation()}
                       />
-                      <div className="font-semibold text-sm">{g.nombre}</div>
-                      <div className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></div>
-                      <div className="ml-auto text-xs">
+                      <button
+                        type="button"
+                        onClick={() => toggleCollapse(g.vendedor_id)}
+                        className="flex items-center gap-2 flex-1 text-left hover:opacity-80"
+                      >
+                        {collapsedVendors.has(g.vendedor_id)
+                          ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        <span className="font-semibold text-sm">{g.nombre}</span>
+                        <span className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></span>
+                      </button>
+                      <div className="text-xs">
                         Seleccionado: <span className="font-mono font-bold text-primary">{fmt(selTotal)}</span> ({selCount})
                       </div>
                     </div>
+                    {!collapsedVendors.has(g.vendedor_id) && (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-table-border">
@@ -543,6 +558,7 @@ export default function ComisionesPage() {
                         ))}
                       </tbody>
                     </table>
+                    )}
                   </div>
                 );
               })}
