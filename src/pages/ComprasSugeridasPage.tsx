@@ -177,6 +177,7 @@ export default function ComprasSugeridasPage() {
         total: subtotal,
         saldo_pendiente: subtotal,
         notas: 'Generada desde Compras Sugeridas',
+        created_by: user?.id,
         
       } as any).select('id').single();
       if (e1) throw e1;
