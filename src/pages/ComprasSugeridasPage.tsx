@@ -88,10 +88,11 @@ export default function ComprasSugeridasPage() {
   const [modo, setModo] = useState<Modo>('producto');
   const [filtroProv, setFiltroProv] = useState<string>('');
   const [editado, setEditado] = useState<Record<string, number>>({});
+  const [soloSugeridos, setSoloSugeridos] = useState(true);
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
 
-  const filas = useMemo(() => {
+  const filasAll = useMemo(() => {
     if (!data) return [];
     return data.productos
       .map(p => {
@@ -100,9 +101,11 @@ export default function ComprasSugeridasPage() {
         const sug = editado[p.id] ?? sugAuto;
         return { p, ventaDiaria, sugAuto, sug };
       })
-      .filter(r => r.sug > 0)
       .filter(r => !filtroProv || r.p.proveedor_preferido_id === filtroProv);
   }, [data, modo, editado, filtroProv]);
+
+  const filas = useMemo(() => soloSugeridos ? filasAll.filter(r => r.sug > 0) : filasAll, [filasAll, soloSugeridos]);
+  const sinConfigurar = useMemo(() => filasAll.filter(r => (Number(r.p.min) || 0) === 0 && (Number(r.p.max) || 0) === 0).length, [filasAll]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, typeof filas>();
@@ -197,16 +200,28 @@ export default function ComprasSugeridasPage() {
             {proveedores?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
+        <label className="flex items-center gap-1.5 text-[12px] cursor-pointer">
+          <input type="checkbox" checked={soloSugeridos} onChange={e => setSoloSugeridos(e.target.checked)} />
+          Solo con sugerencia
+        </label>
         <div className="ml-auto text-[12px] text-muted-foreground">
-          {filas.length} producto(s) sugerido(s)
+          {filas.length} de {filasAll.length} producto(s)
         </div>
       </div>
+
+      {sinConfigurar > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 text-[12px] rounded p-3">
+          <strong>{sinConfigurar}</strong> producto(s) sin <em>min/max</em> configurado. Ábrelos y ve a la pestaña <strong>Config. compra</strong> para definir sus niveles, o desactiva "Solo con sugerencia" para verlos y pedir manualmente.
+        </div>
+      )}
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground text-sm">Cargando...</div>
       ) : grupos.length === 0 ? (
         <div className="text-center py-12 bg-card border border-border rounded">
-          <p className="text-sm text-muted-foreground">No hay productos que requieran compra con este criterio.</p>
+          <p className="text-sm text-muted-foreground">
+            {soloSugeridos ? 'No hay productos que requieran compra con este criterio.' : 'No hay productos comprables en esta empresa.'}
+          </p>
         </div>
       ) : (
         grupos.map(g => (
