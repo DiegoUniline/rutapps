@@ -24,11 +24,30 @@ export interface CampoDef {
   hint?: string;
 }
 
+export type EntityFilterKey =
+  | 'cliente' | 'vendedor' | 'cobrador' | 'almacen' | 'proveedor'
+  | 'zona' | 'categoria' | 'marca' | 'lista_precio'
+  | 'metodo_pago' | 'condicion_pago' | 'monto' | 'search';
+
 export interface ReporteFiltros {
   fechaDesde?: string;
   fechaHasta?: string;
   status?: string[];
   tipo?: string[];
+  clienteIds?: string[];
+  vendedorIds?: string[];
+  cobradorIds?: string[];
+  almacenIds?: string[];
+  proveedorIds?: string[];
+  zonaIds?: string[];
+  categoriaIds?: string[];
+  marcaIds?: string[];
+  listaPrecioIds?: string[];
+  metodoPago?: string[];
+  condicionPago?: string[];
+  montoMin?: number;
+  montoMax?: number;
+  search?: string;
 }
 
 export interface ReporteConfig {
