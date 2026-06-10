@@ -211,6 +211,7 @@ const SERVICIOS_ADICIONALES = [
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchParams] = useSearchParams();
+  useFacebookPixel();
 
   useEffect(() => {
     const ref = searchParams.get('ref');
