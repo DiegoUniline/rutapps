@@ -55,7 +55,7 @@ export default function SoportePage() {
         <h1 className="text-3xl font-bold tracking-tight">Soporte</h1>
         <p className="text-muted-foreground">
           Estamos para ayudarte. Contáctanos por WhatsApp en horario de oficina
-          o usa el asesor IA 24/7 desde tu computadora.
+          o usa el asesor IA 24/7.
         </p>
       </header>
 
