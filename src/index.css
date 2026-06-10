@@ -206,7 +206,19 @@ html, body {
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted));
   }
+
+  /* Global rule: any element with a gray background should use white text */
+  [class*="bg-muted"]:not([class*="bg-muted-foreground"]):not(.no-white-text),
+  [class*="bg-secondary"]:not([class*="bg-secondary-foreground"]):not(.no-white-text),
+  [class*="bg-gray-"]:not(.no-white-text),
+  [class*="bg-slate-"]:not(.no-white-text),
+  [class*="bg-zinc-"]:not(.no-white-text),
+  [class*="bg-neutral-"]:not(.no-white-text),
+  [class*="bg-stone-"]:not(.no-white-text) {
+    color: hsl(0 0% 100%);
+  }
 }
+
 
 @layer components {
   /* Status pills */
