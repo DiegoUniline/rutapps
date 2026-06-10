@@ -345,7 +345,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
             return (
               <div key={child.path} className="group relative flex items-center">
                 {isPlaceholder ? (
-                  <div className="block px-2 py-1 text-[12px] flex-1 min-w-0 truncate text-sidebar-foreground/40 italic">
+                  <div className="block px-2 py-1 text-[12px] flex-1 min-w-0 whitespace-normal break-words text-sidebar-foreground/40 italic">
                     {child.label}
                   </div>
                 ) : (
@@ -354,7 +354,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
                       to={child.path}
                       onClick={onNavigate}
                       className={cn(
-                        "block px-2 py-1 text-[12px] transition-colors flex-1 min-w-0 truncate pr-7 rounded",
+                        "block px-2 py-1 text-[12px] transition-colors flex-1 min-w-0 whitespace-normal break-words leading-snug pr-7 rounded",
                         childActive
                           ? "text-primary font-semibold"
                           : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
