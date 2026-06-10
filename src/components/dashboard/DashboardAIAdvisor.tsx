@@ -50,7 +50,7 @@ function AdviceTabs({ content }: { content: string }) {
     // Fallback: raw markdown if no sections were parsed
     return (
       <article className="prose prose-sm max-w-none prose-p:text-xs prose-li:text-xs">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </article>
     );
   }
