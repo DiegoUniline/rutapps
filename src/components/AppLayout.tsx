@@ -147,6 +147,15 @@ const navItems: NavItem[] = [
     icon: Percent,
     path: '/comisiones',
     highlight: 'amber',
+    children: [
+      { label: 'Avance', path: '/comisiones/avance' },
+      { label: 'Esquemas', path: '/comisiones/esquemas' },
+      { label: 'Reglas', path: '/comisiones/reglas' },
+      { label: 'Generadas', path: '/comisiones/generadas' },
+      { label: 'Por volumen', path: '/comisiones/por-volumen' },
+      { label: 'Por pagar', path: '/comisiones/por-pagar' },
+      { label: 'Recibos', path: '/comisiones/recibos' },
+    ],
   },
   // ── Reportes & Facturación ──
   {
