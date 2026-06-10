@@ -3654,6 +3654,7 @@ export type Database = {
           estado: string
           fecha_corte: string
           fecha_pago: string | null
+          gasto_id: string | null
           id: string
           notas: string | null
           total_comisiones: number
@@ -3666,6 +3667,7 @@ export type Database = {
           estado?: string
           fecha_corte: string
           fecha_pago?: string | null
+          gasto_id?: string | null
           id?: string
           notas?: string | null
           total_comisiones?: number
@@ -3678,6 +3680,7 @@ export type Database = {
           estado?: string
           fecha_corte?: string
           fecha_pago?: string | null
+          gasto_id?: string | null
           id?: string
           notas?: string | null
           total_comisiones?: number
@@ -3690,6 +3693,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_comisiones_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "gastos"
             referencedColumns: ["id"]
           },
           {
