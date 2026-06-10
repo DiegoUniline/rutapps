@@ -28,6 +28,8 @@ import {
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { fmtMoney } from '@/lib/currency';
 import { confirmDialog } from '@/lib/confirm';
+import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
+import { useReporteEntityLists, METODOS_PAGO, CONDICIONES_PAGO } from '@/hooks/useReporteEntityLists';
 
 const STATUS_LABELS: Record<string, string> = {
   borrador: 'Borrador', pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada',
@@ -222,15 +224,20 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   const [filtros, setFiltros] = useState<ReporteFiltros>({
     fechaDesde: firstDay.toISOString().slice(0, 10),
     fechaHasta: today,
-    status: config.filtros_default?.status,
-    tipo: config.filtros_default?.tipo,
+    ...(config.filtros_default ?? {}),
   });
   const [rows, setRows] = useState<Record<string, any>[] | null>(null);
   const [loading, setLoading] = useState<null | 'run' | 'xlsx' | 'csv' | 'pdf'>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const fuenteMeta = getFuenteMeta(config.fuente);
   const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
   const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
+  const ENTITY_FILTERS = fuenteMeta.entityFilters ?? [];
   const columns = useMemo(() => buildExportColumns(config), [config]);
+  const entityLists = useReporteEntityLists(empresaId, ENTITY_FILTERS.length > 0);
+  const lists = entityLists.data;
+  const update = (patch: Partial<ReporteFiltros>) => setFiltros(f => ({ ...f, ...patch }));
+  const hasEntity = (k: string) => ENTITY_FILTERS.includes(k as any);
 
   // Reset cuando cambia el reporte
   useEffect(() => { setRows(null); }, [config.id]);
@@ -319,7 +326,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
                           setFiltros({ ...filtros, status: Array.from(arr) });
                         }}
                         className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                      >{s}</button>
+                      >{statusLabel(s)}</button>
                     );
                   })}
                 </div>
@@ -339,10 +346,97 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
                           setFiltros({ ...filtros, tipo: Array.from(arr) });
                         }}
                         className={`text-xs px-2 py-0.5 rounded border ${active ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-                      >{s}</button>
+                      >{tipoLabel(s)}</button>
                     );
                   })}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {ENTITY_FILTERS.length > 0 && (
+          <div className="border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(s => !s)}
+              className="text-xs font-medium text-primary hover:underline mb-2"
+            >
+              {showAdvanced ? '▼ Ocultar filtros avanzados' : '▶ Mostrar filtros avanzados'}
+            </button>
+            {showAdvanced && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {hasEntity('search') && (
+                  <div>
+                    <Label className="text-xs">Búsqueda</Label>
+                    <Input
+                      value={filtros.search ?? ''}
+                      onChange={e => update({ search: e.target.value })}
+                      placeholder="Folio, nombre, RFC, notas…"
+                      className="h-9 mt-1"
+                    />
+                  </div>
+                )}
+                {hasEntity('cliente') && (
+                  <EntityMultiSelect label="Cliente" options={lists?.clientes ?? []} loading={entityLists.isLoading}
+                    value={filtros.clienteIds ?? []} onChange={v => update({ clienteIds: v })} />
+                )}
+                {hasEntity('vendedor') && (
+                  <EntityMultiSelect label="Vendedor" options={lists?.vendedores ?? []} loading={entityLists.isLoading}
+                    value={filtros.vendedorIds ?? []} onChange={v => update({ vendedorIds: v })} />
+                )}
+                {hasEntity('cobrador') && (
+                  <EntityMultiSelect label="Cobrador" options={lists?.cobradores ?? []} loading={entityLists.isLoading}
+                    value={filtros.cobradorIds ?? []} onChange={v => update({ cobradorIds: v })} />
+                )}
+                {hasEntity('almacen') && (
+                  <EntityMultiSelect label="Almacén" options={lists?.almacenes ?? []} loading={entityLists.isLoading}
+                    value={filtros.almacenIds ?? []} onChange={v => update({ almacenIds: v })} />
+                )}
+                {hasEntity('proveedor') && (
+                  <EntityMultiSelect label="Proveedor" options={lists?.proveedores ?? []} loading={entityLists.isLoading}
+                    value={filtros.proveedorIds ?? []} onChange={v => update({ proveedorIds: v })} />
+                )}
+                {hasEntity('zona') && (
+                  <EntityMultiSelect label="Zona" options={lists?.zonas ?? []} loading={entityLists.isLoading}
+                    value={filtros.zonaIds ?? []} onChange={v => update({ zonaIds: v })} />
+                )}
+                {hasEntity('categoria') && (
+                  <EntityMultiSelect label="Categoría" options={lists?.categorias ?? []} loading={entityLists.isLoading}
+                    value={filtros.categoriaIds ?? []} onChange={v => update({ categoriaIds: v })} />
+                )}
+                {hasEntity('marca') && (
+                  <EntityMultiSelect label="Marca" options={lists?.marcas ?? []} loading={entityLists.isLoading}
+                    value={filtros.marcaIds ?? []} onChange={v => update({ marcaIds: v })} />
+                )}
+                {hasEntity('lista_precio') && (
+                  <EntityMultiSelect label="Lista de Precios" options={lists?.listasPrecio ?? []} loading={entityLists.isLoading}
+                    value={filtros.listaPrecioIds ?? []} onChange={v => update({ listaPrecioIds: v })} />
+                )}
+                {hasEntity('metodo_pago') && (
+                  <EntityMultiSelect label="Método de pago" options={METODOS_PAGO}
+                    value={filtros.metodoPago ?? []} onChange={v => update({ metodoPago: v })} />
+                )}
+                {hasEntity('condicion_pago') && (
+                  <EntityMultiSelect label="Condición de pago" options={CONDICIONES_PAGO}
+                    value={filtros.condicionPago ?? []} onChange={v => update({ condicionPago: v })} />
+                )}
+                {hasEntity('monto') && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Monto mín.</Label>
+                      <Input type="number" inputMode="decimal" className="h-9 mt-1"
+                        value={filtros.montoMin ?? ''}
+                        onChange={e => update({ montoMin: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Monto máx.</Label>
+                      <Input type="number" inputMode="decimal" className="h-9 mt-1"
+                        value={filtros.montoMax ?? ''}
+                        onChange={e => update({ montoMax: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

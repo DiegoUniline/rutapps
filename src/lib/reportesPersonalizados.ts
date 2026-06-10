@@ -24,11 +24,30 @@ export interface CampoDef {
   hint?: string;
 }
 
+export type EntityFilterKey =
+  | 'cliente' | 'vendedor' | 'cobrador' | 'almacen' | 'proveedor'
+  | 'zona' | 'categoria' | 'marca' | 'lista_precio'
+  | 'metodo_pago' | 'condicion_pago' | 'monto' | 'search';
+
 export interface ReporteFiltros {
   fechaDesde?: string;
   fechaHasta?: string;
   status?: string[];
   tipo?: string[];
+  clienteIds?: string[];
+  vendedorIds?: string[];
+  cobradorIds?: string[];
+  almacenIds?: string[];
+  proveedorIds?: string[];
+  zonaIds?: string[];
+  categoriaIds?: string[];
+  marcaIds?: string[];
+  listaPrecioIds?: string[];
+  metodoPago?: string[];
+  condicionPago?: string[];
+  montoMin?: number;
+  montoMax?: number;
+  search?: string;
 }
 
 export interface ReporteConfig {
@@ -186,16 +205,18 @@ export interface FuenteMeta {
   statusOptions?: string[];
   /** Tipos válidos en filtros */
   tipoOptions?: string[];
+  /** Filtros adicionales por entidad */
+  entityFilters?: EntityFilterKey[];
 }
 
 export const FUENTES: FuenteMeta[] = [
-  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'] },
-  { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'] },
-  { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'] },
-  { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'] },
-  { key: 'clientes',   label: 'Clientes (catálogo)',   description: 'Una fila por cliente.', campos: CAMPOS_CLIENTES, statusOptions: ['activo','inactivo'] },
-  { key: 'entregas',   label: 'Entregas / Rutas',      description: 'Una fila por línea de entrega.', campos: CAMPOS_ENTREGAS, statusOptions: ['borrador','asignado','cargado','hecho','no_entregado','cancelado'] },
-  { key: 'visitas',    label: 'Visitas a clientes',    description: 'Una fila por visita registrada.', campos: CAMPOS_VISITAS },
+  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'], entityFilters: ['cliente','vendedor','categoria','marca','condicion_pago','monto','search'] },
+  { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'], entityFilters: ['cliente','cobrador','metodo_pago','monto','search'] },
+  { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'], entityFilters: ['almacen','categoria','marca','search'] },
+  { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'], entityFilters: ['proveedor','almacen','condicion_pago','monto','search'] },
+  { key: 'clientes',   label: 'Clientes (catálogo)',   description: 'Una fila por cliente.', campos: CAMPOS_CLIENTES, statusOptions: ['activo','inactivo'], entityFilters: ['vendedor','cobrador','zona','lista_precio','search'] },
+  { key: 'entregas',   label: 'Entregas / Rutas',      description: 'Una fila por línea de entrega.', campos: CAMPOS_ENTREGAS, statusOptions: ['borrador','asignado','cargado','hecho','no_entregado','cancelado'], entityFilters: ['cliente','vendedor','almacen','search'] },
+  { key: 'visitas',    label: 'Visitas a clientes',    description: 'Una fila por visita registrada.', campos: CAMPOS_VISITAS, entityFilters: ['cliente','vendedor','search'] },
 ];
 
 export function getFuenteMeta(f: ReporteFuente): FuenteMeta {
@@ -259,6 +280,19 @@ export async function runReporte(
 
 // ─── Ventas ────────────────────────────────────────────────────
 async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresaId: string) {
+  // Pre-filtro por categoría/marca: resolver lista de producto_id
+  let allowedProductoIds: string[] | null = null;
+  if (filtros.categoriaIds?.length || filtros.marcaIds?.length) {
+    const prods = await fetchAllPages<any>((from, to) => {
+      let pq = supabase.from('productos').select('id').eq('empresa_id', empresaId).range(from, to);
+      if (filtros.categoriaIds?.length) pq = pq.in('clasificacion_id', filtros.categoriaIds);
+      if (filtros.marcaIds?.length) pq = pq.in('marca_id', filtros.marcaIds);
+      return pq;
+    });
+    allowedProductoIds = prods.map(p => p.id);
+    if (!allowedProductoIds.length) return [];
+  }
+
   const ventas = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('ventas')
@@ -270,6 +304,12 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.in('vendedor_id', filtros.vendedorIds);
+    if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!ventas.length) return [];
@@ -283,13 +323,17 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     loadMap('profiles', vendedorIds, 'id, nombre'),
   ]);
 
-  const lineas = await fetchAllPages<any>((from, to) =>
+  let lineas = await fetchAllPages<any>((from, to) =>
     supabase
       .from('venta_lineas')
       .select('venta_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, iva_pct, ieps_pct, iva_monto, ieps_monto, total')
       .in('venta_id', ventaIds)
       .range(from, to)
   );
+  if (allowedProductoIds) {
+    const set = new Set(allowedProductoIds);
+    lineas = lineas.filter(l => set.has(l.producto_id));
+  }
 
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
   const productosMap = await loadMap('productos', productoIds, 'id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta');
@@ -354,6 +398,15 @@ async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.cobradorIds?.length) q = q.in('user_id', filtros.cobradorIds);
+    if (filtros.metodoPago?.length) q = q.in('metodo_pago', filtros.metodoPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('monto', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('monto', filtros.montoMax);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`referencia.ilike.%${s}%,notas.ilike.%${s}%`);
+    }
     return q;
   });
   if (!cobros.length) return [];
@@ -405,6 +458,17 @@ async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
 
 // ─── Inventario ────────────────────────────────────────────────
 async function runInventario(filtros: ReporteFiltros, empresaId: string) {
+  let allowedProductoIds: string[] | null = null;
+  if (filtros.categoriaIds?.length || filtros.marcaIds?.length) {
+    const prods = await fetchAllPages<any>((from, to) => {
+      let pq = supabase.from('productos').select('id').eq('empresa_id', empresaId).range(from, to);
+      if (filtros.categoriaIds?.length) pq = pq.in('clasificacion_id', filtros.categoriaIds);
+      if (filtros.marcaIds?.length) pq = pq.in('marca_id', filtros.marcaIds);
+      return pq;
+    });
+    allowedProductoIds = prods.map(p => p.id);
+    if (!allowedProductoIds.length) return [];
+  }
   const movs = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('movimientos_inventario')
@@ -415,6 +479,9 @@ async function runInventario(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    if (allowedProductoIds) q = q.in('producto_id', allowedProductoIds);
+    if (filtros.almacenIds?.length) q = q.or(`almacen_origen_id.in.(${filtros.almacenIds.join(',')}),almacen_destino_id.in.(${filtros.almacenIds.join(',')})`);
+    if (filtros.search?.trim()) q = q.ilike('notas', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!movs.length) return [];
@@ -453,6 +520,12 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status);
+    if (filtros.proveedorIds?.length) q = q.in('proveedor_id', filtros.proveedorIds);
+    if (filtros.almacenIds?.length) q = q.in('almacen_id', filtros.almacenIds);
+    if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!compras.length) return [];
@@ -499,6 +572,14 @@ async function runClientes(filtros: ReporteFiltros, empresaId: string) {
       .order('nombre', { ascending: true })
       .range(from, to);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.vendedorIds?.length) q = q.in('vendedor_id', filtros.vendedorIds);
+    if (filtros.cobradorIds?.length) q = q.in('cobrador_id', filtros.cobradorIds);
+    if (filtros.zonaIds?.length) q = q.in('zona_id', filtros.zonaIds);
+    if (filtros.listaPrecioIds?.length) q = q.in('lista_precio_id', filtros.listaPrecioIds);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,rfc.ilike.%${s}%,telefono.ilike.%${s}%`);
+    }
     return q;
   });
   if (!clientes.length) return [];
@@ -540,6 +621,10 @@ async function runEntregas(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.or(`vendedor_id.in.(${filtros.vendedorIds.join(',')}),vendedor_ruta_id.in.(${filtros.vendedorIds.join(',')})`);
+    if (filtros.almacenIds?.length) q = q.in('almacen_id', filtros.almacenIds);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!entregas.length) return [];
@@ -593,6 +678,12 @@ async function runVisitas(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta + 'T23:59:59');
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.in('user_id', filtros.vendedorIds);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`motivo.ilike.%${s}%,notas.ilike.%${s}%`);
+    }
     return q;
   });
   if (!visitas.length) return [];
