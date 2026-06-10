@@ -320,6 +320,9 @@ export default function SoporteChatPanel({ compact = false, onAfterNavigate }: P
           ))}
         </div>
       </aside>
+      )}
+
+
 
       {/* Chat */}
       <div className="flex flex-col min-h-0">
