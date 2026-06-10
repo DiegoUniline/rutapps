@@ -244,7 +244,7 @@ export default function ComisionesPage() {
     mutationFn: async () => {
       if (!payingRecibo || !empresa?.id || !user?.id) throw new Error('Datos incompletos');
       const r = payingRecibo;
-      const concepto = `Pago de comisiones - ${r.vendedores?.nombre ?? 'Vendedor'} (corte ${fmtDate(r.fecha_corte)})`;
+      const concepto = `Pago de comisiones - ${r.vendedores?.nombre ?? (r.vendedor_id ? 'Vendedor' : 'Varios vendedores')} (corte ${fmtDate(r.fecha_corte)})`;
       const notasGasto = [`Método: ${payMetodo}`, payNotas].filter(Boolean).join(' · ');
 
       const { data: gasto, error: gErr } = await supabase.from('gastos').insert({
