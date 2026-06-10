@@ -19,7 +19,7 @@ import { useVentasPaginated, useVentaLineasPaginated, useDeleteVenta } from '@/h
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel, dateGroupSortKey } from '@/hooks/useListPreferences';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
