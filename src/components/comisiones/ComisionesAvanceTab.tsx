@@ -266,7 +266,7 @@ function VendedorCard({ vendedor, calc, rank, topVentas, fmt }: { vendedor: Vend
             {metaPct.toFixed(0)}%
           </span>
         </div>
-        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+        <div className="h-2.5 bg-primary/10 rounded-full overflow-hidden">
           <div className={cn('h-full transition-all rounded-full', barColor)} style={{ width: `${metaPct}%` }} />
         </div>
         {esquema.tipo === 'bono_meta' && meta > 0 && (
