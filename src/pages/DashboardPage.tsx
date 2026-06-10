@@ -37,6 +37,7 @@ import KpiExtras from './dashboard/sections/KpiExtras';
 import TabEquipo from './dashboard/sections/TabEquipo';
 import TabCartera from './dashboard/sections/TabCartera';
 import TabInventario from './dashboard/sections/TabInventario';
+import TabMetas from './dashboard/sections/TabMetas';
 import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
 import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
 import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
