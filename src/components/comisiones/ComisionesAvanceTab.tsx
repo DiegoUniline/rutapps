@@ -189,7 +189,8 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
   const total = calc?.total_ventas ?? 0;
   const numV = calc?.num_ventas ?? 0;
   const comision = calc?.comision ?? 0;
-  const sinEsquema = calc?.sin_esquema || !esquema;
+  const sinEsquema = (calc?.sin_esquema || !esquema) && !calc?.por_reglas;
+  const porReglas = !!calc?.por_reglas;
 
   let meta = 0;
   let metaLabel = '—';
