@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Bot, Send, Loader2, Plus, Trash2, MessageSquare, User } from "lucide-react";
@@ -11,24 +11,37 @@ import { toast } from "sonner";
 type Msg = { role: "user" | "assistant"; content: string; ts: number };
 type Thread = { id: string; title: string; updatedAt: number; messages: Msg[] };
 
-const STORAGE_KEY = "rutapp.soporte.threads.v1";
+export const SOPORTE_STORAGE_KEY = "rutapp.soporte.threads.v1";
+export const SOPORTE_ACTIVE_KEY = "rutapp.soporte.active.v1";
+export const SOPORTE_EVENT = "rutapp:soporte-updated";
 const MAX_THREADS = 30;
+
+function notifyUpdate() {
+  try { window.dispatchEvent(new Event(SOPORTE_EVENT)); } catch {}
+}
 
 function loadThreads(): Thread[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(SOPORTE_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function saveThreads(threads: Thread[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(threads.slice(0, MAX_THREADS)));
+    localStorage.setItem(SOPORTE_STORAGE_KEY, JSON.stringify(threads.slice(0, MAX_THREADS)));
+    notifyUpdate();
   } catch {}
+}
+
+function saveActive(id: string) {
+  try { localStorage.setItem(SOPORTE_ACTIVE_KEY, id); notifyUpdate(); } catch {}
+}
+
+function loadActive(): string | null {
+  try { return localStorage.getItem(SOPORTE_ACTIVE_KEY); } catch { return null; }
 }
 
 function newId() {
@@ -50,6 +63,13 @@ const SUGGESTIONS = [
   "¿Cómo cargo productos por Excel?",
   "¿Cómo configuro permisos de un usuario?",
 ];
+
+type Props = {
+  /** When true: hides thread sidebar and renders in compact floating mode. */
+  compact?: boolean;
+  /** Called after the user clicks an internal markdown link (useful to close floating panel). */
+  onAfterNavigate?: () => void;
+};
 
 export default function SoporteChatPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
