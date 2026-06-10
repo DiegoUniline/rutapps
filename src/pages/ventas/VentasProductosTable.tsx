@@ -66,7 +66,8 @@ export function VentasProductosTable({ items, fmt }: Props) {
             </td>
             <td className="py-2 px-3 max-w-[160px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.cliente_nombre || '—'}</ClienteLink> : 'Público en general'}</td>
             <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedor_nombre ?? '—'}</td>
-            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>
+            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.fecha ? fmtDate(row.fecha) : '—'}</td>
+            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground text-xs">{row.tarifa_nombre ?? '—'}</td>
             <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{row.producto_codigo ?? ''}</td>
             <td className="py-2 px-3 max-w-[180px] truncate"><ProductoLink id={row.producto_id}>{row.producto_nombre ?? ''}</ProductoLink></td>
             <td className="py-2 px-3 text-right font-semibold tabular-nums">{row.cantidad}</td>
