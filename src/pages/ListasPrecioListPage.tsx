@@ -6,54 +6,28 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
-import { useAllListasPrecios, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
+import { useAllListasPrecios, useDeleteListaPrecio } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
   const { empresa } = useAuth();
   const { data: listas, isLoading } = useAllListasPrecios(empresa?.id);
   const qc = useQueryClient();
-  const saveMutation = useSaveListaPrecio();
   const deleteMutation = useDeleteListaPrecio();
   const isMobile = useIsMobile();
 
   const [search, setSearch] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [newNombre, setNewNombre] = useState('');
-  const [newPrincipal, setNewPrincipal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nombre: string } | null>(null);
 
   const filtered = listas?.filter(l =>
     !search || l.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
-
-  const openNew = () => {
-    setNewNombre('');
-    setNewPrincipal(false);
-    setShowNew(true);
-  };
-
-  const handleCreate = async () => {
-    if (!newNombre.trim()) { toast.error('Escribe un nombre'); return; }
-    try {
-      const saved: any = await saveMutation.mutateAsync({ nombre: newNombre.trim(), es_principal: newPrincipal });
-      toast.success('Lista creada');
-      setShowNew(false);
-      if (saved?.tarifa_id) {
-        navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || newNombre.trim())}`);
-      }
-    } catch (err: any) { toast.error(err.message); }
-  };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -69,6 +43,8 @@ export default function ListasPrecioListPage() {
   };
 
   const total = filtered.length;
+
+
 
   return (
     <div className="p-4 space-y-3 min-h-full">
