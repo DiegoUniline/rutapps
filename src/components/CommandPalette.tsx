@@ -73,7 +73,7 @@ const MENU_ITEMS: { title: string; subtitle?: string; to: string; icon: React.El
   { title: 'Saldos por cliente', subtitle: 'Finanzas', to: '/finanzas/saldos-cliente', icon: DollarSign },
   { title: 'Saldos por proveedor', subtitle: 'Finanzas', to: '/finanzas/saldos-proveedor', icon: DollarSign },
   { title: 'Gastos', subtitle: 'Finanzas', to: '/finanzas/gastos', icon: Wallet },
-  { title: 'Comisiones', subtitle: 'Finanzas', to: '/finanzas/comisiones', icon: DollarSign },
+  { title: 'Comisiones', subtitle: 'Finanzas', to: '/comisiones', icon: DollarSign },
   // Reportes & Facturación
   { title: 'Reportes', to: '/reportes', icon: BarChart3 },
   { title: 'Reporte de entregas', subtitle: 'Reportes', to: '/reportes/entregas', icon: BarChart3 },

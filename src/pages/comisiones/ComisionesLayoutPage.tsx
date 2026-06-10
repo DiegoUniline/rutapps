@@ -29,7 +29,7 @@ export default function ComisionesLayoutPage() {
         <aside className="w-56 shrink-0">
           <nav className="bg-card border border-border rounded overflow-hidden">
             {sections.map(s => {
-              const active = pathname === `/finanzas/comisiones/${s.to}` || (s.to === 'avance' && pathname === '/finanzas/comisiones');
+              const active = pathname === `/comisiones/${s.to}` || (s.to === 'avance' && pathname === '/comisiones');
               const Icon = s.icon;
               return (
                 <NavLink
