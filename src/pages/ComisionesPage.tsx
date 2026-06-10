@@ -636,7 +636,7 @@ export default function ComisionesPage() {
                               <Check className="h-3 w-3" /> Pagar
                             </button>
                             <button
-                              onClick={() => { if (confirm('¿Cancelar recibo y liberar comisiones?')) cancelarReciboMut.mutate(r.id); }}
+                              onClick={() => setCancelingRecibo(r)}
                               disabled={cancelarReciboMut.isPending}
                               className="px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70"
                             >
