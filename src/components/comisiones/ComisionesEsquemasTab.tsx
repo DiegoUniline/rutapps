@@ -272,7 +272,7 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
           <input className="input-odoo w-full" value={esquema.nombre ?? ''} onChange={e => onChange({ ...esquema, nombre: e.target.value })} placeholder="Ej: Comisión mensual estándar" />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Tipo</label>
             <select className="input-odoo w-full text-xs" value={tipo} onChange={e => onChange({ ...esquema, tipo: e.target.value as Tipo, config: {} })}>
@@ -282,19 +282,14 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Periodo</label>
-            <select className="input-odoo w-full text-xs" value={esquema.periodo} onChange={e => onChange({ ...esquema, periodo: e.target.value as Periodo })}>
-              <option value="semanal">Semanal</option>
-              <option value="quincenal">Quincenal</option>
-              <option value="mensual">Mensual</option>
-            </select>
-          </div>
-          <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Base</label>
             <select className="input-odoo w-full text-xs" value={esquema.base} onChange={e => onChange({ ...esquema, base: e.target.value as Base })}>
               <option value="cobradas">Solo cobradas</option>
               <option value="todas">Todas las ventas</option>
             </select>
+          </div>
+          <div className="col-span-2 text-[11px] text-muted-foreground">
+            El periodo ya no se fija en el esquema: en la pestaña <span className="font-medium">Por volumen</span> eliges el rango de fechas y se aplica el % sobre lo filtrado.
           </div>
         </div>
 
