@@ -678,6 +678,12 @@ async function runVisitas(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta + 'T23:59:59');
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.in('user_id', filtros.vendedorIds);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`motivo.ilike.%${s}%,notas.ilike.%${s}%`);
+    }
     return q;
   });
   if (!visitas.length) return [];
