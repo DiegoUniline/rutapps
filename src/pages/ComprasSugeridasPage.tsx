@@ -64,7 +64,7 @@ function useSugeridosData(empresaId?: string, modo: Modo = 'producto') {
         supabase.from('venta_lineas')
           .select('producto_id,cantidad,ventas!inner(fecha,status,empresa_id)')
           .eq('ventas.empresa_id', empresaId)
-          .neq('ventas.status', 'cancelada')
+          .neq('ventas.status', 'cancelado' as any)
           .gte('ventas.fecha', since)
           .range(from, to)
       );
