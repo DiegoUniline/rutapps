@@ -99,7 +99,7 @@ export function useVentaLineasPaginated(
     queryFn: async () => {
       let q = supabase
         .from('venta_lineas')
-        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre))', { count: 'exact' })
+        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))', { count: 'exact' })
         .eq('ventas.empresa_id', empresa!.id)
         .order('created_at', { ascending: false, referencedTable: undefined })
         .range((page - 1) * pageSize, page * pageSize - 1);
