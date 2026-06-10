@@ -142,8 +142,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setOverrideEmpresaId = useCallback(async (id: string | null) => {
     setOverrideEmpresaIdRaw(id);
     setOverrideVendedorId(null);
+
+    // Persist override to profile so DB-level RLS scopes super admin to the chosen empresa.
+    if (user?.id) {
+      try {
+        await supabase.from('profiles')
+          .update({ super_admin_override_empresa_id: id })
+          .eq('user_id', user.id);
+      } catch { /* ignore */ }
+    }
+
     if (!id) {
-      // Restore original empresa
       setEmpresa(realEmpresa);
       setGlobalTimezone(realEmpresa?.zona_horaria);
       return;
@@ -158,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGlobalTimezone((data as Empresa).zona_horaria);
       }
     } catch { /* ignore */ }
-  }, [realEmpresa]);
+  }, [realEmpresa, user?.id]);
 
   const initialisedRef = useRef(false);
 
