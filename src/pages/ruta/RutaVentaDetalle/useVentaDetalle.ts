@@ -100,7 +100,7 @@ export function useVentaDetalle() {
   const addProductToEdit = (p: any) => {
     const existing = editLineas.find(l => l.producto_id === p.id);
     if (existing) { setEditLineas(prev => prev.map(l => l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l)); }
-    else { setEditLineas(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1, precio_unitario: p.precio_principal ?? 0, unidad: (p.unidades as any)?.abreviatura || 'pz', tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0 }]); }
+    else { setEditLineas(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1, precio_unitario: p.precio_principal ?? 0, unidad: (p.unidades as any)?.abreviatura || 'pz', tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0 }]); }
   };
 
   const updateEditQty = (idx: number, delta: number) => { setEditLineas(prev => prev.map((l, i) => i !== idx ? l : l.cantidad + delta > 0 ? { ...l, cantidad: l.cantidad + delta } : l)); };
