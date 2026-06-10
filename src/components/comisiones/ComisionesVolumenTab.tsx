@@ -174,7 +174,7 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
                     <td className="py-1.5 px-3 text-right">
                       <button
                         disabled={comision <= 0 || generarMut.isPending}
-                        onClick={() => {
+                        onClick={async () => {
                           if (!await confirmDialog(`¿Generar recibo de ${fmt(comision)} para ${v.nombre}?\nRango: ${fmtDate(desde)} a ${fmtDate(hasta)}`)) return;
                           generarMut.mutate({ vendedor_id: v.id });
                         }}

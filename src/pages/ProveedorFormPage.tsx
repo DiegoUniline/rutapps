@@ -133,7 +133,7 @@ export default function ProveedorFormPage() {
     saveMutation.mutate();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!id || isNew) return;
     if (!await confirmDialog('¿Eliminar este proveedor?')) return;
     deleteMutation.mutate();
