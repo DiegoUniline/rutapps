@@ -161,9 +161,9 @@ const navItems: NavItem[] = [
     path: '/administracion',
     highlight: 'violet',
     children: [
-      { label: 'Configuración de metas', path: '/administracion/metas' },
-      { label: 'Seguimiento de metas', path: '/administracion/metas/seguimiento' },
-      { label: 'Usuarios y permisos', path: '/administracion/usuarios' },
+      { label: 'Metas', path: '/administracion/metas' },
+      { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
+      { label: 'Usuarios', path: '/administracion/usuarios' },
     ],
   },
   { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
