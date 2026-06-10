@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/lib/confirm';
 
 interface Proveedor {
   id?: string;
@@ -134,7 +135,7 @@ export default function ProveedorFormPage() {
 
   const handleDelete = () => {
     if (!id || isNew) return;
-    if (!confirm('¿Eliminar este proveedor?')) return;
+    if (!await confirmDialog('¿Eliminar este proveedor?')) return;
     deleteMutation.mutate();
   };
 

@@ -21,6 +21,7 @@ import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { todayLocal } from '@/lib/utils';
+import { confirmDialog } from '@/lib/confirm';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
@@ -361,7 +362,7 @@ export default function ClienteFormPage() {
 
   const handleDelete = async () => {
     if (!id || isNew) return;
-    if (!confirm('¿Eliminar este cliente?')) return;
+    if (!await confirmDialog('¿Eliminar este cliente?')) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Cliente eliminado');

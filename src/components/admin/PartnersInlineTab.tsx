@@ -156,7 +156,7 @@ export default function PartnersInlineTab() {
   };
 
   const rechazar = async (s: any) => {
-    const motivo = prompt('Motivo del rechazo (opcional):') || '';
+    const motivo = await promptDialog('Motivo del rechazo (opcional):') || '';
     const { error } = await supabase.rpc('rechazar_solicitud_partner', {
       _solicitud_id: s.id,
       _motivo: motivo || null,

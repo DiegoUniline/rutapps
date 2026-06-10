@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { confirmDialog } from '@/lib/confirm';
 
 /* ─── Types ─── */
 interface AppNotification {
@@ -377,7 +378,7 @@ export default function AdminAnunciosTab() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este anuncio?')) return;
+    if (!await confirmDialog('¿Eliminar este anuncio?')) return;
     const { error } = await supabase.from('notifications').delete().eq('id', id);
     if (error) toast.error(error.message);
     else { toast.success('Eliminado'); load(); }

@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { cn , todayLocal } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { confirmDialog } from '@/lib/confirm';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -432,7 +433,7 @@ export default function TraspasoFormPage() {
   });
 
   const handleDelete = async () => {
-    if (!id || !confirm('¿Eliminar este traspaso?')) return;
+    if (!id || !await confirmDialog('¿Eliminar este traspaso?')) return;
     await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
     await supabase.from('traspasos').delete().eq('id', id);
     toast.success('Traspaso eliminado');

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { CreditCard, Plus, Trash2, Loader2, Store, Building2, Search, CheckCircle, AlertCircle, MessageSquare, Mail, Copy, Send } from 'lucide-react';
+import { confirmDialog } from '@/lib/confirm';
 
 // ─── OpenPay helpers ───
 async function openpayAction(action: string, params: Record<string, any> = {}) {
@@ -572,7 +573,7 @@ function OpenPayPlansSection() {
   }
 
   async function handleDelete(planId: string) {
-    if (!confirm('¿Eliminar plan?')) return;
+    if (!await confirmDialog('¿Eliminar plan?')) return;
     try {
       await openpayAction('delete_plan', { plan_id: planId });
       toast.success('Plan eliminado'); load();

@@ -13,6 +13,7 @@ import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, Al
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
+import { confirmDialog } from '@/lib/confirm';
 
 const COUNTRY_CODES = [
   { code: '+52', country: 'MX', label: '🇲🇽 México (+52)', digits: 10 },
@@ -98,7 +99,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   }
 
   async function deleteEmpresa(id: string, nombre: string) {
-    if (!confirm(`¿Eliminar empresa "${nombre}" y TODOS sus datos? Esta acción es irreversible.`)) return;
+    if (!await confirmDialog(`¿Eliminar empresa "${nombre}" y TODOS sus datos? Esta acción es irreversible.`)) return;
     await supabase.from('subscriptions').delete().eq('empresa_id', id);
     const { error } = await supabase.from('empresas').delete().eq('id', id);
     if (error) toast.error('Error: ' + error.message);

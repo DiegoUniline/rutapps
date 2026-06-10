@@ -3,6 +3,7 @@ import { Camera, Loader2, Trash2, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { confirmDialog } from '@/lib/confirm';
 
 interface Props {
   /** UUID of the auth user (used as the storage folder name). */
@@ -63,7 +64,7 @@ export default function AvatarUploader({ userId, profileId, currentUrl, name, si
 
   const handleRemove = async () => {
     if (!url) return;
-    if (!confirm('¿Quitar la foto de perfil?')) return;
+    if (!await confirmDialog('¿Quitar la foto de perfil?')) return;
     setUploading(true);
     try {
       const { error } = await supabase

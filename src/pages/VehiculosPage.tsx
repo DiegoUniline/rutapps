@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Truck, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/lib/confirm';
 
 export default function VehiculosPage() {
   const { data: vehiculos = [], isLoading } = useVehiculos();
@@ -38,7 +39,7 @@ export default function VehiculosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar vehículo? No se podrá deshacer si no tiene jornadas asociadas.')) return;
+    if (!await confirmDialog('¿Eliminar vehículo? No se podrá deshacer si no tiene jornadas asociadas.')) return;
     try {
       await del.mutateAsync(id);
       toast.success('Eliminado');

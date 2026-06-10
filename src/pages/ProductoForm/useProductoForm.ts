@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { toast } from 'sonner';
 import type { Producto } from '@/types';
+import { confirmDialog } from '@/lib/confirm';
 
 async function quickCreateCatalog(
   tableName: string, nombre: string, queryKey: string,
@@ -129,7 +130,7 @@ export function useProductoForm() {
 
   const handleDelete = async () => {
     if (!id || isNew) return;
-    if (!confirm('¿Eliminar este producto?')) return;
+    if (!await confirmDialog('¿Eliminar este producto?')) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Producto eliminado');

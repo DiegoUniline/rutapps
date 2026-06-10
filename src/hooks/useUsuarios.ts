@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/lib/confirm';
 
 interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; avatar_url: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
@@ -141,7 +142,7 @@ export function useUsuarios() {
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
     if (!newUser.role_id) { toast.error('Debes seleccionar un rol'); return; }
     if (availableSlots <= 0) {
-      const ok = confirm(
+      const ok = await confirmDialog(
         `Ya alcanzaste el límite de ${maxUsuarios} usuarios de tu plan.\n\n` +
         `Puedes agregar este usuario como adicional: se cobrará automáticamente en tu próximo ciclo de facturación junto con los ${maxUsuarios} incluidos.\n\n¿Continuar?`
       );
@@ -185,7 +186,7 @@ export function useUsuarios() {
 
   const toggleEstado = useCallback(async (p: ProfileUser, email?: string) => {
     const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
-    if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || email}? No podrá acceder al sistema y no generará costo.`)) return;
+    if (newEstado === 'baja' && !await confirmDialog(`¿Dar de baja a ${p.nombre || email}? No podrá acceder al sistema y no generará costo.`)) return;
     await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
     toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
     loadUsuarios();

@@ -26,6 +26,7 @@ import {
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { es } from 'date-fns/locale';
+import { confirmDialog } from '@/lib/confirm';
 
 interface Props {
   empresaId: string;
@@ -264,7 +265,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   }
 
   async function handleForceChangeAll() {
-    if (!confirm(`¿Forzar cambio de contraseña para TODOS los usuarios de ${empresa?.nombre}?`)) return;
+    if (!await confirmDialog(`¿Forzar cambio de contraseña para TODOS los usuarios de ${empresa?.nombre}?`)) return;
     setForcingAll(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {

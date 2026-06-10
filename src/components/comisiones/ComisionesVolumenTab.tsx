@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { FileText, Calendar } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, todayLocal } from '@/lib/utils';
+import { confirmDialog } from '@/lib/confirm';
 
 interface VendedorEsquema {
   id: string;
@@ -174,7 +175,7 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
                       <button
                         disabled={comision <= 0 || generarMut.isPending}
                         onClick={() => {
-                          if (!confirm(`¿Generar recibo de ${fmt(comision)} para ${v.nombre}?\nRango: ${fmtDate(desde)} a ${fmtDate(hasta)}`)) return;
+                          if (!await confirmDialog(`¿Generar recibo de ${fmt(comision)} para ${v.nombre}?\nRango: ${fmtDate(desde)} a ${fmtDate(hasta)}`)) return;
                           generarMut.mutate({ vendedor_id: v.id });
                         }}
                         className="btn-odoo-primary text-xs disabled:opacity-50"
