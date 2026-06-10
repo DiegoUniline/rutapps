@@ -40,7 +40,7 @@ import TabInventario from './dashboard/sections/TabInventario';
 import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
 import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
 import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
-import { Target, Route, Wrench } from 'lucide-react';
+import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 
 const PRESETS = [
