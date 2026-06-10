@@ -23,7 +23,7 @@ import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
-import { WhatsAppFloatButton } from "@/components/WhatsAppFloatButton";
+
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -126,6 +126,7 @@ const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
 const TutorialesPage = lazy(() => import("@/pages/TutorialesPage"));
+const SoportePage = lazy(() => import("@/pages/SoportePage"));
 const PerfilPage = lazy(() => import("@/pages/PerfilPage"));
 const AplicarPagosPage = lazy(() => import("@/pages/AplicarPagosPage"));
 const AplicarPagosProveedorPage = lazy(() => import("@/pages/AplicarPagosProveedorPage"));
@@ -758,7 +759,6 @@ const App = () => (
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
-              <WhatsAppFloatButton />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
