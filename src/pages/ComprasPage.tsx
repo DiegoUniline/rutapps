@@ -521,6 +521,9 @@ export default function ComprasPage() {
                   totals: { total: totalCompras, saldo_pendiente: totalSaldo },
                 })}
               />
+              <button onClick={() => navigate('/almacen/compras/sugeridas')} className="btn-odoo-secondary shrink-0">
+                Sugeridas
+              </button>
               <button onClick={() => navigate('/almacen/compras/nueva')} className="btn-odoo-primary shrink-0">
                 <Plus className="h-3.5 w-3.5" /> Nueva compra
               </button>
