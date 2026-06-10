@@ -210,7 +210,7 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
         status: ['activo', 'inactivo', 'borrador'].includes(raw.status?.toLowerCase?.()) ? raw.status.toLowerCase() : 'activo',
         ...(marca_id && { marca_id }),
         ...(clasificacion_id && { clasificacion_id }),
-        ...(proveedor_id && { proveedor_id }),
+        ...(proveedor_id && { proveedor_preferido_id: proveedor_id }),
         ...(lista_id && { lista_id }),
         ...(unidad_venta_id && { unidad_venta_id }),
         ...(unidad_compra_id && { unidad_compra_id }),
