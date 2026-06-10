@@ -224,8 +224,9 @@ export default function ReportesPage() {
   const [hasta, setHasta] = useState(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [tipoFilter, setTipoFilter] = useState<'' | 'pedido' | 'venta_directa'>('');
   const { data: vendedoresList } = useVendedores();
-  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined);
+  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined, tipoFilter || undefined);
   if (error) console.error('[ReportesPage] query error:', error);
   const [tab, setTab] = useState<ReportTab>('resumen');
 
@@ -353,6 +354,21 @@ export default function ReportesPage() {
             </PopoverContent>
           </Popover>
 
+
+          {/* Tipo filter */}
+          <select
+            value={tipoFilter}
+            onChange={e => setTipoFilter(e.target.value as any)}
+            className={cn(
+              "input-odoo text-[13px] min-w-[130px]",
+              tipoFilter && "border-primary/60 bg-primary/5"
+            )}
+          >
+            <option value="">Todos los tipos</option>
+            <option value="pedido">Preventa</option>
+            <option value="venta_directa">Venta directa</option>
+          </select>
+
           {/* Status filter */}
           <Popover>
             <PopoverTrigger asChild>
@@ -410,9 +426,17 @@ export default function ReportesPage() {
       </div>
 
       {/* Active filter chips */}
-      {(selectedVendedores.length > 0 || selectedStatuses.length > 0) && (
+      {(selectedVendedores.length > 0 || selectedStatuses.length > 0 || tipoFilter) && (
         <div className="flex items-center gap-1.5 flex-wrap print:hidden">
           <span className="text-[11px] text-muted-foreground">Filtrando por:</span>
+          {tipoFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+              Tipo: {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
+              <button onClick={() => setTipoFilter('')} className="hover:text-destructive">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
           {vendedorNames.map((name, i) => (
             <span key={selectedVendedores[i]} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
               {name}

@@ -26,7 +26,7 @@ export const PRODUCTO_COLUMNS = [
 ] as const;
 
 export const VENTA_COLUMNS = [
-  'id','empresa_id','folio','fecha','subtotal','iva_total','ieps_total','total','saldo_pendiente',
+  'id','empresa_id','folio','fecha','fecha_entrega','subtotal','iva_total','ieps_total','total','saldo_pendiente',
   'descuento_porcentaje','descuento_monto','status','tipo','condicion_pago','dias_credito','notas',
   'notas_internas','cliente_id','vendedor_id','tarifa_id','almacen_id','entrega_inmediata',
   'user_id','gps_lat','gps_lng','created_at',

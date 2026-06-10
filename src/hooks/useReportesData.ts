@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 
-export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[]) {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter],
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter, tipoFilter],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
@@ -19,12 +19,14 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const ventas = await fetchAllPages<any>((from, to) => {
         let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).eq('es_saldo_inicial', false).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
+        if (tipoFilter) q = q.eq('tipo', tipoFilter);
         return q;
       });
 
       const ventaLineas = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+        let q = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
+        if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
         return q;
       });
 
