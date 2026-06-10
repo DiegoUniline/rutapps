@@ -28,6 +28,8 @@ import {
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { fmtMoney } from '@/lib/currency';
 import { confirmDialog } from '@/lib/confirm';
+import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
+import { useReporteEntityLists, METODOS_PAGO, CONDICIONES_PAGO } from '@/hooks/useReporteEntityLists';
 
 const STATUS_LABELS: Record<string, string> = {
   borrador: 'Borrador', pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada',
