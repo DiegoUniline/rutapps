@@ -545,8 +545,24 @@ export function useVentaForm() {
         if (!(prof as any)?.comision_esquema_id) {
           const { data: tarifaLineas } = await supabase.from('tarifa_lineas').select('comision_pct, aplica_a, producto_ids, clasificacion_ids').eq('tarifa_id', form.tarifa_id);
           if (tarifaLineas?.length) {
+            // Obtener clasificaciones de los productos involucrados para resolver jerarquía Producto > Categoría > Todos
+            const prodIds = [...new Set(lineas.map(l => l.producto_id).filter(Boolean))] as string[];
+            const { data: prodsData } = prodIds.length > 0
+              ? await supabase.from('productos').select('id, clasificacion_id').in('id', prodIds)
+              : { data: [] as any[] };
+            const prodCat = new Map<string, string | null>((prodsData ?? []).map((p: any) => [p.id, p.clasificacion_id ?? null]));
+
             const comisionRows = lineas.filter(l => l.id && l.producto_id && l.total && l.total > 0).map(l => {
-              const match = tarifaLineas.find(tl => { if (tl.aplica_a === 'todos') return true; if (tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!)) return true; return false; });
+              const catId = prodCat.get(l.producto_id!) ?? null;
+              // Prioridad: 1) regla por producto específico, 2) regla por categoría, 3) regla "todos"
+              const matchProducto = tarifaLineas.find(tl => tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!));
+              const matchCategoria = !matchProducto && catId
+                ? tarifaLineas.find(tl => tl.aplica_a === 'categoria' && tl.clasificacion_ids?.includes(catId))
+                : null;
+              const matchTodos = !matchProducto && !matchCategoria
+                ? tarifaLineas.find(tl => tl.aplica_a === 'todos')
+                : null;
+              const match = matchProducto || matchCategoria || matchTodos;
               const comPct = match?.comision_pct ?? 0;
               if (comPct <= 0) return null;
               return { empresa_id: empresa!.id, venta_id: form.id!, venta_linea_id: l.id!, vendedor_id: form.vendedor_id!, producto_id: l.producto_id!, monto_venta: l.total!, comision_pct: comPct, comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100, fecha_venta: form.fecha || todayLocal() };
