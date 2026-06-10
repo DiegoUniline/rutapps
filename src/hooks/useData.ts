@@ -389,23 +389,35 @@ export function useTarifasForSelect() {
 }
 
 export function useTarifaLineasForProducto(productoId?: string, clasificacionId?: string | null) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['tarifa-lineas-producto', productoId, clasificacionId],
+    queryKey: ['tarifa-lineas-producto', empresaId, productoId, clasificacionId],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const filters: string[] = ['aplica_a.eq.todos'];
       if (productoId) filters.push(`producto_ids.cs.{${productoId}}`);
       if (clasificacionId) filters.push(`clasificacion_ids.cs.{${clasificacionId}}`);
 
+      // Restrict to current empresa's tarifas (super admin RLS bypasses tenant isolation)
+      const { data: tarifasEmpresa, error: tErr } = await supabase
+        .from('tarifas')
+        .select('id')
+        .eq('empresa_id', empresaId!);
+      if (tErr) throw tErr;
+      const tarifaIds = (tarifasEmpresa ?? []).map(t => t.id);
+      if (tarifaIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from('tarifa_lineas')
         .select('*, tarifas(id, nombre, activa), lista_precios(id, nombre, es_principal)')
+        .in('tarifa_id', tarifaIds)
         .or(filters.join(','))
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data as (TarifaLinea & { tarifas: { id: string; nombre: string; activa: boolean } })[];
     },
-    enabled: !!productoId,
+    enabled: !!productoId && !!empresaId,
   });
 }
 
