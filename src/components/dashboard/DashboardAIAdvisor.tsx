@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Sparkles, Loader2, RefreshCw, AlertCircle, History, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -49,7 +50,7 @@ function AdviceTabs({ content }: { content: string }) {
     // Fallback: raw markdown if no sections were parsed
     return (
       <article className="prose prose-sm max-w-none prose-p:text-xs prose-li:text-xs">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </article>
     );
   }
@@ -80,9 +81,12 @@ function AdviceTabs({ content }: { content: string }) {
         "prose-li:text-foreground prose-li:text-xs prose-li:my-0.5",
         "prose-strong:text-foreground prose-strong:font-bold",
         "prose-ul:my-1.5 prose-ol:my-1.5",
-        "prose-table:text-xs prose-th:font-bold prose-th:text-foreground prose-td:text-foreground"
+        "prose-table:text-xs prose-table:w-full prose-table:border prose-table:border-border prose-table:rounded",
+        "prose-thead:bg-muted/60",
+        "prose-th:font-bold prose-th:text-foreground prose-th:text-left prose-th:px-2 prose-th:py-1.5 prose-th:border prose-th:border-border",
+        "prose-td:text-foreground prose-td:px-2 prose-td:py-1.5 prose-td:border prose-td:border-border prose-td:align-top"
       )}>
-        <ReactMarkdown>{sections[active].body.trim()}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{sections[active].body.trim()}</ReactMarkdown>
       </article>
     </div>
   );
