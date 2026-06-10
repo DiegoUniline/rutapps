@@ -28,12 +28,12 @@ export const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }>
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0, precio_sugerido_publico: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
-  manejar_lotes: false, factor_conversion: 1, permitir_descuento: false,
+  factor_conversion: 1, permitir_descuento: false,
   monto_maximo: 0, cantidad: 0, tiene_comision: false, tipo_comision: 'porcentaje',
   es_granel: false, unidad_granel: 'kg',
   pct_comision: 0, status: 'activo', almacenes: [], tiene_iva: false,
-  tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
-  contador_tarifas: 0, iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje',
+  tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '',
+  iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje',
   costo_incluye_impuestos: false, usa_listas_precio: false,
 };
 
