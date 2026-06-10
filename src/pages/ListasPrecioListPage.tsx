@@ -182,42 +182,6 @@ export default function ListasPrecioListPage() {
         </div>
       )}
 
-      {/* Create dialog */}
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nueva Lista de Precios</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="lp-nombre">Nombre</Label>
-              <Input
-                id="lp-nombre"
-                autoFocus
-                placeholder="Ej. Lista Mayoreo"
-                value={newNombre}
-                onChange={e => setNewNombre(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={newPrincipal}
-                onChange={e => setNewPrincipal(e.target.checked)}
-                className="rounded border-input"
-              />
-              Marcar como principal
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? 'Creando...' : 'Crear lista'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
