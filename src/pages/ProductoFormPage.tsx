@@ -49,11 +49,10 @@ const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }> = {
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
-  manejar_lotes: false, factor_conversion: 1, permitir_descuento: false,
+  factor_conversion: 1, permitir_descuento: false,
   monto_maximo: 0, cantidad: 0, tiene_comision: false, tipo_comision: 'porcentaje',
   pct_comision: 0, status: 'activo', almacenes: [], tiene_iva: false,
-  tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
-  contador_tarifas: 0,
+  tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '',
   iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje', costo_incluye_impuestos: false,
   usa_listas_precio: false,
 };
@@ -644,12 +643,6 @@ export default function ProductoFormPage() {
                       <span className="odoo-field-label">Vender sin stock</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
                         <input type="checkbox" checked={!!form.vender_sin_stock} onChange={e => set('vender_sin_stock', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                      </label>
-                    </div>
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Manejar lotes</span>
-                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.manejar_lotes} onChange={e => set('manejar_lotes', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
                       </label>
                     </div>
                   </div>

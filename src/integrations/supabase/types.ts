@@ -4270,67 +4270,6 @@ export type Database = {
           },
         ]
       }
-      producto_lotes: {
-        Row: {
-          almacen_id: string | null
-          cantidad: number
-          created_at: string
-          empresa_id: string
-          fecha_caducidad: string | null
-          fecha_produccion: string | null
-          id: string
-          lote: string
-          notas: string | null
-          producto_id: string
-        }
-        Insert: {
-          almacen_id?: string | null
-          cantidad?: number
-          created_at?: string
-          empresa_id: string
-          fecha_caducidad?: string | null
-          fecha_produccion?: string | null
-          id?: string
-          lote: string
-          notas?: string | null
-          producto_id: string
-        }
-        Update: {
-          almacen_id?: string | null
-          cantidad?: number
-          created_at?: string
-          empresa_id?: string
-          fecha_caducidad?: string | null
-          fecha_produccion?: string | null
-          id?: string
-          lote?: string
-          notas?: string | null
-          producto_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "producto_lotes_almacen_id_fkey"
-            columns: ["almacen_id"]
-            isOneToOne: false
-            referencedRelation: "almacenes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "producto_lotes_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "producto_lotes_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       producto_presentaciones: {
         Row: {
           activo: boolean
@@ -4435,39 +4374,6 @@ export type Database = {
           },
         ]
       }
-      producto_tarifas: {
-        Row: {
-          id: string
-          producto_id: string
-          tarifa_id: string
-        }
-        Insert: {
-          id?: string
-          producto_id: string
-          tarifa_id: string
-        }
-        Update: {
-          id?: string
-          producto_id?: string
-          tarifa_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "producto_tarifas_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "producto_tarifas_tarifa_id_fkey"
-            columns: ["tarifa_id"]
-            isOneToOne: false
-            referencedRelation: "tarifas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       productos: {
         Row: {
           almacenes: string[] | null
@@ -4478,8 +4384,6 @@ export type Database = {
           codigo: string
           codigo_origen: string | null
           codigo_sat: string | null
-          contador: number | null
-          contador_tarifas: number | null
           costo: number | null
           costo_incluye_impuestos: boolean
           created_at: string
@@ -4495,7 +4399,6 @@ export type Database = {
           iva_pct: number
           lead_time_dias: number
           lista_id: string | null
-          manejar_lotes: boolean | null
           marca_id: string | null
           max: number | null
           min: number | null
@@ -4540,8 +4443,6 @@ export type Database = {
           codigo: string
           codigo_origen?: string | null
           codigo_sat?: string | null
-          contador?: number | null
-          contador_tarifas?: number | null
           costo?: number | null
           costo_incluye_impuestos?: boolean
           created_at?: string
@@ -4557,7 +4458,6 @@ export type Database = {
           iva_pct?: number
           lead_time_dias?: number
           lista_id?: string | null
-          manejar_lotes?: boolean | null
           marca_id?: string | null
           max?: number | null
           min?: number | null
@@ -4602,8 +4502,6 @@ export type Database = {
           codigo?: string
           codigo_origen?: string | null
           codigo_sat?: string | null
-          contador?: number | null
-          contador_tarifas?: number | null
           costo?: number | null
           costo_incluye_impuestos?: boolean
           created_at?: string
@@ -4619,7 +4517,6 @@ export type Database = {
           iva_pct?: number
           lead_time_dias?: number
           lista_id?: string | null
-          manejar_lotes?: boolean | null
           marca_id?: string | null
           max?: number | null
           min?: number | null

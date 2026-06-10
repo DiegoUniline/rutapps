@@ -35,7 +35,7 @@ export interface Producto {
   es_combo: boolean;
   min: number;
   max: number;
-  manejar_lotes: boolean;
+  
   unidad_compra_id?: string;
   unidad_venta_id?: string;
   factor_conversion: number;
@@ -60,8 +60,6 @@ export interface Producto {
   udem_sat_id?: string;
   es_granel: boolean;
   unidad_granel: string;
-  contador: number;
-  contador_tarifas: number;
   modo_compra_sugerida?: 'maximo' | 'medio' | 'minimo' | 'cobertura';
   dias_cobertura?: number;
   lead_time_dias?: number;

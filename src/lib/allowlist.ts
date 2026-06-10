@@ -14,14 +14,14 @@ export const CLIENTE_COLUMNS = [
 
 export const PRODUCTO_COLUMNS = [
   'id','empresa_id','codigo','nombre','nombre_compra','nombre_venta','nombre_ticket',
-  'clave_alterna','descripcion','notas','costo','precio_principal',
+  'clave_alterna','notas','costo','precio_principal','precio_sugerido_publico',
   'cantidad','imagen_url','se_puede_comprar','se_puede_vender','vender_sin_stock','se_puede_inventariar',
-  'es_combo','min','max','manejar_lotes','factor_conversion','permitir_descuento','monto_maximo',
+  'es_combo','min','max','factor_conversion','permitir_descuento','monto_maximo',
   'tiene_comision','tipo_comision','pct_comision','status','almacenes','tiene_iva','tiene_ieps',
   'es_granel','unidad_granel',
-  'calculo_costo','codigo_sat','contador','contador_tarifas','iva_pct','ieps_pct','ieps_tipo',
+  'calculo_costo','codigo_sat','iva_pct','ieps_pct','ieps_tipo',
   'costo_incluye_impuestos','usa_listas_precio','usa_presentaciones','marca_id','clasificacion_id','lista_id','tarifa_id',
-  'unidad_venta_id','unidad_compra_id','unidad_sat_id','created_at',
+  'unidad_venta_id','unidad_compra_id','udem_sat_id','created_at',
   'modo_compra_sugerida','dias_cobertura','lead_time_dias','proveedor_preferido_id',
 ] as const;
 
