@@ -52,7 +52,7 @@ export function useReporteEntityLists(empresaId?: string, enabled = true) {
         fetchAllPages<any>((from, to) =>
           supabase.from('tarifas').select('id, nombre').eq('empresa_id', empresaId!).order('nombre').range(from, to)),
       ]);
-      const profOpts: MSOption[] = profiles.map(p => ({ id: p.id, label: p.nombre || p.email || '—', sub: p.email }));
+      const profOpts: MSOption[] = profiles.map(p => ({ id: p.id, label: p.nombre || '—' }));
       return {
         clientes: clientes.map(c => ({ id: c.id, label: c.nombre, sub: c.codigo ?? undefined })),
         vendedores: profOpts,
