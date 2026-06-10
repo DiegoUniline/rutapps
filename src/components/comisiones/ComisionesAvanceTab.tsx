@@ -103,11 +103,11 @@ export default function ComisionesAvanceTab() {
         <span className="text-xs text-muted-foreground">al</span>
         <input type="date" className="input-odoo text-xs py-1.5 w-36" value={hasta} onChange={e => setHasta(e.target.value)} />
         <div className="h-6 w-px bg-border mx-1" />
-        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Semana</button>
-        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Quincena</button>
-        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes actual</button>
-        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes anterior</button>
-        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Año</button>
+        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Semana</button>
+        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Quincena</button>
+        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes actual</button>
+        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes anterior</button>
+        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Año</button>
         <span className="ml-auto text-xs text-muted-foreground">{fmtDate(desde)} a {fmtDate(hasta)}</span>
       </div>
 
@@ -145,7 +145,7 @@ function KpiCard({ icon, label, value, sub, tone }: { icon: React.ReactNode; lab
     primary: 'bg-primary/10 text-primary',
     success: 'bg-emerald-500/10 text-emerald-600',
     warning: 'bg-amber-500/10 text-amber-600',
-    muted: 'bg-muted text-muted-foreground',
+    muted: 'bg-primary/10 text-primary',
   }[tone];
   return (
     <div className="bg-card border border-border rounded p-3 flex items-center gap-3">
@@ -207,7 +207,8 @@ function VendedorCard({ vendedor, calc, rank, topVentas, fmt }: { vendedor: Vend
             const active = current && (current.desde === t.desde);
             return (
               <span key={i} className={cn('px-1.5 py-0.5 text-[10px] rounded border',
-                active ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-muted-foreground border-border')}>
+                active ? 'bg-primary text-primary-foreground border-primary' : 'bg-white text-foreground border-border')}>
+
                 {fmt(t.desde ?? 0)}{t.hasta ? `-${fmt(Number(t.hasta))}` : '+'} · {t.pct ?? 0}%
               </span>
             );
@@ -265,7 +266,7 @@ function VendedorCard({ vendedor, calc, rank, topVentas, fmt }: { vendedor: Vend
             {metaPct.toFixed(0)}%
           </span>
         </div>
-        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+        <div className="h-2.5 bg-primary/10 rounded-full overflow-hidden">
           <div className={cn('h-full transition-all rounded-full', barColor)} style={{ width: `${metaPct}%` }} />
         </div>
         {esquema.tipo === 'bono_meta' && meta > 0 && (
