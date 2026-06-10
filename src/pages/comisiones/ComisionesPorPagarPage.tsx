@@ -89,7 +89,7 @@ export default function ComisionesPorPagarPage() {
       const notas = vendedorId ? null : `Recibo agrupado · ${selectedSummary.map(g => `${g.nombre} (${fmt(g.total)})`).join(' · ')}`;
       const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
         empresa_id: empresa.id, vendedor_id: vendedorId, fecha_corte: ppFechaCorte,
-        total_comisiones: total, user_id: user.id, estado: 'borrador', notas,
+        total_comisiones: total, user_id: user.id, estado: 'pendiente', notas,
       }).select('id').single();
       if (pagoErr) throw pagoErr;
       const BATCH = 100;

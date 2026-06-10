@@ -13,7 +13,7 @@ export default function ComisionesRecibosPage() {
   const { fmt } = useCurrency();
   const qc = useQueryClient();
 
-  const [recibosEstado, setRecibosEstado] = useState<'borrador' | 'pagada' | 'todos'>('borrador');
+  const [recibosEstado, setRecibosEstado] = useState<'pendiente' | 'pagada' | 'todos'>('pendiente');
 
   const { data: recibos, isLoading: loadingRecibos } = useQuery({
     queryKey: ['pago_comisiones', empresa?.id, recibosEstado],
@@ -31,7 +31,7 @@ export default function ComisionesRecibosPage() {
   });
 
   const totalBorrador = useMemo(
-    () => (recibos ?? []).filter(r => r.estado === 'borrador').reduce((s, r) => s + (r.total_comisiones ?? 0), 0),
+    () => (recibos ?? []).filter(r => r.estado === 'pendiente').reduce((s, r) => s + (r.total_comisiones ?? 0), 0),
     [recibos]
   );
 
@@ -92,7 +92,7 @@ export default function ComisionesRecibosPage() {
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex border border-border rounded overflow-hidden">
-          {([['borrador', 'Por pagar'], ['pagada', 'Pagados'], ['todos', 'Todos']] as const).map(([key, label]) => (
+          {([['pendiente', 'Por pagar'], ['pagada', 'Pagados'], ['todos', 'Todos']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setRecibosEstado(key)}
               className={cn('px-2.5 py-1.5 text-xs transition-colors', recibosEstado === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted')}>{label}</button>
           ))}
@@ -102,7 +102,7 @@ export default function ComisionesRecibosPage() {
 
       {loadingRecibos ? <TableSkeleton /> : (recibos ?? []).length === 0 ? (
         <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
-          No hay recibos {recibosEstado === 'borrador' ? 'por pagar' : recibosEstado === 'pagada' ? 'pagados' : ''}
+          No hay recibos {recibosEstado === 'pendiente' ? 'por pagar' : recibosEstado === 'pagada' ? 'pagados' : ''}
         </div>
       ) : (
         <div className="overflow-x-auto border border-border rounded">
@@ -134,7 +134,7 @@ export default function ComisionesRecibosPage() {
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-right">
-                    {r.estado === 'borrador' ? (
+                    {r.estado === 'pendiente' ? (
                       <div className="flex justify-end gap-1">
                         <button onClick={() => openPagar(r)} className="px-2 py-1 text-[11px] bg-primary text-primary-foreground rounded hover:bg-primary/90 inline-flex items-center gap-1">
                           <Check className="h-3 w-3" /> Pagar
