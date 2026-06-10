@@ -71,34 +71,51 @@ type Props = {
   onAfterNavigate?: () => void;
 };
 
-export default function SoporteChatPanel() {
+export default function SoporteChatPanel({ compact = false, onAfterNavigate }: Props = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [threads, setThreads] = useState<Thread[]>(() => {
     if (typeof window === "undefined") return [];
     const loaded = loadThreads();
     if (loaded.length === 0) {
       const t = newThread();
       saveThreads([t]);
+      saveActive(t.id);
       return [t];
     }
     return loaded;
   });
 
-  const urlThreadId = searchParams.get("c");
+  // Sync from other tabs / floating widget
+  useEffect(() => {
+    const handler = () => setThreads(loadThreads());
+    window.addEventListener(SOPORTE_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(SOPORTE_EVENT, handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+
+  const urlThreadId = compact ? null : searchParams.get("c");
+  const storedActive = useMemo(() => (typeof window !== "undefined" ? loadActive() : null), [threads.length]);
+
   const activeId = useMemo(() => {
     if (urlThreadId && threads.some((t) => t.id === urlThreadId)) return urlThreadId;
+    if (storedActive && threads.some((t) => t.id === storedActive)) return storedActive;
     return threads[0]?.id ?? "";
-  }, [urlThreadId, threads]);
+  }, [urlThreadId, storedActive, threads]);
 
-  // Ensure URL has the active id once threads are ready
+  // Ensure URL has the active id on /soporte page (non-compact)
   useEffect(() => {
-    if (activeId && urlThreadId !== activeId) {
+    if (!compact && activeId && urlThreadId !== activeId) {
       const next = new URLSearchParams(searchParams);
       next.set("c", activeId);
       setSearchParams(next, { replace: true });
     }
+    if (activeId) saveActive(activeId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
+  }, [activeId, compact]);
 
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
 
@@ -133,9 +150,15 @@ export default function SoporteChatPanel() {
   };
 
   const selectThread = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set("c", id);
-    setSearchParams(next);
+    saveActive(id);
+    if (!compact) {
+      const next = new URLSearchParams(searchParams);
+      next.set("c", id);
+      setSearchParams(next);
+    } else {
+      // Force re-render in compact mode by re-reading active key
+      setThreads((prev) => [...prev]);
+    }
   };
 
   const createThread = () => {
@@ -149,9 +172,12 @@ export default function SoporteChatPanel() {
       let next = prev.filter((t) => t.id !== id);
       if (next.length === 0) next = [newThread()];
       if (id === activeId) {
-        const url = new URLSearchParams(searchParams);
-        url.set("c", next[0].id);
-        setSearchParams(url, { replace: true });
+        saveActive(next[0].id);
+        if (!compact) {
+          const url = new URLSearchParams(searchParams);
+          url.set("c", next[0].id);
+          setSearchParams(url, { replace: true });
+        }
       }
       return next;
     });
