@@ -48,7 +48,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
         .eq('activo', true)
         .order('nombre');
       if (error) throw error;
-      return (data ?? []) as { id: string; nombre: string }[];
+      return (data ?? []) as unknown as { id: string; nombre: string }[];
     },
   });
 
@@ -64,7 +64,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
         .order('nombre')
         .limit(2000);
       if (error) throw error;
-      return (data ?? []) as { id: string; nombre: string }[];
+      return (data ?? []) as unknown as { id: string; nombre: string }[];
     },
   });
 
@@ -78,7 +78,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
         .eq('producto_id', productoId)
         .order('nombre');
       if (error) throw error;
-      return (data ?? []) as { id: string; nombre: string }[];
+      return (data ?? []) as unknown as { id: string; nombre: string }[];
     },
   });
 
