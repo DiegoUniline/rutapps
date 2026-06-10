@@ -56,12 +56,14 @@ export default function FloatingSoporteChat() {
     if (count > 0) setDismissed(false);
   }, [count]);
 
-  const isOnSoporte = useMemo(() => pathname.startsWith("/soporte"), [pathname]);
+  // Siempre visible en escritorio (incluido /soporte). Solo se oculta en móvil
+  // o cuando el usuario lo cierra explícitamente (vuelve al recargar).
+  void pathname;
+  void count;
 
   if (isMobile) return null;
-  if (isOnSoporte) return null;
-  if (count === 0) return null;
   if (dismissed) return null;
+
 
   if (!open) {
     return (
@@ -79,9 +81,11 @@ export default function FloatingSoporteChat() {
           <Bot className="h-4 w-4" />
         </span>
         <span className="text-sm font-semibold whitespace-nowrap">Asesor IA</span>
-        <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
-          {count}
-        </span>
+        {count > 0 && (
+          <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
+            {count}
+          </span>
+        )}
       </button>
     );
   }
