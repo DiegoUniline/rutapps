@@ -138,7 +138,7 @@ export default function SoportePage() {
       </div>
 
       {/* IA 24/7 — Chat embebido (solo escritorio) */}
-      <Card className="hidden md:block border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
