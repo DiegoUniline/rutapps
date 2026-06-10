@@ -224,8 +224,9 @@ export default function ReportesPage() {
   const [hasta, setHasta] = useState(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [tipoFilter, setTipoFilter] = useState<'' | 'pedido' | 'venta_directa'>('');
   const { data: vendedoresList } = useVendedores();
-  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined);
+  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined, tipoFilter || undefined);
   if (error) console.error('[ReportesPage] query error:', error);
   const [tab, setTab] = useState<ReportTab>('resumen');
 
