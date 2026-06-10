@@ -55,7 +55,7 @@ export default function SoportePage() {
         <h1 className="text-3xl font-bold tracking-tight">Soporte</h1>
         <p className="text-muted-foreground">
           Estamos para ayudarte. Contáctanos por WhatsApp en horario de oficina
-          o usa el asesor IA 24/7.
+          o usa el asesor IA 24/7 desde tu computadora.
         </p>
       </header>
 
@@ -137,8 +137,8 @@ export default function SoportePage() {
         </Card>
       </div>
 
-      {/* IA 24/7 — Chat embebido */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      {/* IA 24/7 — Chat embebido (solo escritorio) */}
+      <Card className="hidden md:block border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">

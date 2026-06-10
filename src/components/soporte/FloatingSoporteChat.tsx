@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Bot, X, Minus, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SoporteChatPanel, {
   SOPORTE_STORAGE_KEY,
   SOPORTE_EVENT,
@@ -32,6 +33,7 @@ function readThreadCount(): number {
  */
 export default function FloatingSoporteChat() {
   const { pathname } = useLocation();
+  const isMobile = useIsMobile();
   const [count, setCount] = useState<number>(() =>
     typeof window === "undefined" ? 0 : readThreadCount(),
   );
@@ -56,6 +58,7 @@ export default function FloatingSoporteChat() {
 
   const isOnSoporte = useMemo(() => pathname.startsWith("/soporte"), [pathname]);
 
+  if (isMobile) return null;
   if (isOnSoporte) return null;
   if (count === 0) return null;
   if (dismissed) return null;
