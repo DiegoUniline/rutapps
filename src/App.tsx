@@ -105,7 +105,14 @@ const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
 const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
-const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
+const ComisionesLayoutPage = lazy(() => import("@/pages/comisiones/ComisionesLayoutPage"));
+const ComisionesAvancePage = lazy(() => import("@/pages/comisiones/ComisionesAvancePage"));
+const ComisionesEsquemasPage = lazy(() => import("@/pages/comisiones/ComisionesEsquemasPage"));
+const ComisionesReglasPage = lazy(() => import("@/pages/comisiones/ComisionesReglasPage"));
+const ComisionesGeneradasPage = lazy(() => import("@/pages/comisiones/ComisionesGeneradasPage"));
+const ComisionesVolumenPage = lazy(() => import("@/pages/comisiones/ComisionesVolumenPage"));
+const ComisionesPorPagarPage = lazy(() => import("@/pages/comisiones/ComisionesPorPagarPage"));
+const ComisionesRecibosPage = lazy(() => import("@/pages/comisiones/ComisionesRecibosPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 const HomologacionCatalogoPage = lazy(() => import("@/pages/configuracion/HomologacionCatalogoPage"));
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
@@ -688,7 +695,16 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/finanzas/aplicar-pagos-proveedor" element={<AplicarPagosProveedorPage />} />
       <Route path="/finanzas/pagos-proveedores" element={<PagosProveedoresPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
-      <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
+      <Route path="/finanzas/comisiones" element={<ComisionesLayoutPage />}>
+        <Route index element={<ComisionesAvancePage />} />
+        <Route path="avance" element={<ComisionesAvancePage />} />
+        <Route path="esquemas" element={<ComisionesEsquemasPage />} />
+        <Route path="reglas" element={<ComisionesReglasPage />} />
+        <Route path="generadas" element={<ComisionesGeneradasPage />} />
+        <Route path="por-volumen" element={<ComisionesVolumenPage />} />
+        <Route path="por-pagar" element={<ComisionesPorPagarPage />} />
+        <Route path="recibos" element={<ComisionesRecibosPage />} />
+      </Route>
       <Route path="/reportes" element={<ReportesPage />} />
       <Route path="/reportes/personalizados" element={<ReportesPersonalizadosPage />} />
       <Route path="/control" element={<ControlPage />} />

@@ -1,0 +1,191 @@
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useVendedores } from '@/hooks/useClientes';
+import SearchableSelect from '@/components/SearchableSelect';
+import { TableSkeleton } from '@/components/TableSkeleton';
+import { cn, todayLocal, fmtDate } from '@/lib/utils';
+import { Calendar } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
+
+const PAGE_SIZE = 20;
+const firstOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); };
+const firstOfLastMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10); };
+const lastOfLastMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10); };
+const mondayOfWeek = () => { const d = new Date(); const day = d.getDay(); const diff = day === 0 ? -6 : 1 - day; return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff).toISOString().slice(0, 10); };
+
+export default function ComisionesGeneradasPage() {
+  const { empresa } = useAuth();
+  const { fmt } = useCurrency();
+  const { data: vendedores } = useVendedores();
+
+  const [vendedorFilter, setVendedorFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
+  const [fechaDesde, setFechaDesde] = useState(firstOfMonth());
+  const [fechaHasta, setFechaHasta] = useState(todayLocal());
+  const [page, setPage] = useState(0);
+
+  const { data: comisiones, isLoading } = useQuery({
+    queryKey: ['venta_comisiones', empresa?.id, vendedorFilter, statusFilter, fechaDesde, fechaHasta],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      let q = supabase.from('venta_comisiones')
+        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
+        .order('fecha_venta', { ascending: false });
+      if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
+      if (statusFilter === 'pendientes') q = q.eq('pagada', false);
+      if (statusFilter === 'pagadas') q = q.eq('pagada', true);
+      if (fechaDesde) q = q.gte('fecha_venta', fechaDesde);
+      if (fechaHasta) q = q.lte('fecha_venta', fechaHasta);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
+  const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+  const totalPend = useMemo(() => (comisiones ?? []).filter(c => !c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+  const totalPag = useMemo(() => (comisiones ?? []).filter(c => c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+
+  const resumenVendedor = useMemo(() => {
+    const map = new Map<string, { vendedor_id: string; nombre: string; ventas: Set<string>; vendido: number; comision: number; pendiente: number; pagada: number }>();
+    for (const c of comisiones ?? []) {
+      const id = c.vendedor_id ?? 'sin';
+      const nombre = c.vendedores?.nombre ?? 'Sin vendedor';
+      if (!map.has(id)) map.set(id, { vendedor_id: id, nombre, ventas: new Set(), vendido: 0, comision: 0, pendiente: 0, pagada: 0 });
+      const r = map.get(id)!;
+      if (c.venta_id) r.ventas.add(c.venta_id);
+      r.vendido += c.monto_venta ?? 0;
+      r.comision += c.comision_monto ?? 0;
+      if (c.pagada) r.pagada += c.comision_monto ?? 0; else r.pendiente += c.comision_monto ?? 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.comision - a.comision);
+  }, [comisiones]);
+
+  const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
+  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); setPage(0); };
+  const from = page * PAGE_SIZE + 1;
+  const to = Math.min((page + 1) * PAGE_SIZE, (comisiones ?? []).length);
+  const total = (comisiones ?? []).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="w-44">
+          <SearchableSelect options={vendedorOpts} value={vendedorFilter} onChange={v => { setVendedorFilter(v); setPage(0); }} placeholder="Vendedor" />
+        </div>
+        <div className="flex border border-border rounded overflow-hidden">
+          {([['pendientes', 'Pendientes'], ['pagadas', 'Pagadas'], ['todas', 'Todas']] as const).map(([key, label]) => (
+            <button key={key} onClick={() => { setStatusFilter(key); setPage(0); }}
+              className={cn('px-2.5 py-1.5 text-xs transition-colors', statusFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted')}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="h-6 w-px bg-border mx-1" />
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(0); }} />
+        <span className="text-xs text-muted-foreground">-</span>
+        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(0); }} />
+        <div className="flex gap-1">
+          <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
+          <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Semana</button>
+          <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Mes</button>
+          <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Ant.</button>
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-xs">
+          <div>Pendiente: <span className="font-mono font-semibold text-amber-600">{fmt(totalPend)}</span></div>
+          <div>Pagado: <span className="font-mono font-semibold text-primary">{fmt(totalPag)}</span></div>
+          <div className="text-sm">Total: <span className="font-mono font-bold text-odoo-teal">{fmt(totalMonto)}</span></div>
+        </div>
+      </div>
+
+      {!isLoading && resumenVendedor.length > 0 && (
+        <div className="border border-border rounded overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr className="border-b border-table-border">
+                <th className="th-odoo text-left">Vendedor</th>
+                <th className="th-odoo text-right"># Ventas</th>
+                <th className="th-odoo text-right">Vendido</th>
+                <th className="th-odoo text-right">Comisión total</th>
+                <th className="th-odoo text-right">Pendiente</th>
+                <th className="th-odoo text-right">Pagada</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenVendedor.map(r => (
+                <tr key={r.vendedor_id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
+                  onClick={() => { setVendedorFilter(r.vendedor_id === 'sin' ? '' : r.vendedor_id); setPage(0); }}>
+                  <td className="py-1.5 px-3 text-xs font-medium">{r.nombre}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs">{r.ventas.size}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(r.vendido)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(r.comision)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs text-amber-600">{fmt(r.pendiente)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs text-primary">{fmt(r.pagada)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isLoading ? <TableSkeleton /> : (
+        <div className="overflow-x-auto border border-border rounded">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-table-border">
+                <th className="th-odoo text-left">Fecha</th>
+                <th className="th-odoo text-left">Folio</th>
+                <th className="th-odoo text-left">Vendedor</th>
+                <th className="th-odoo text-left">Producto</th>
+                <th className="th-odoo text-right">Venta</th>
+                <th className="th-odoo text-right">% Com.</th>
+                <th className="th-odoo text-right">Comisión</th>
+                <th className="th-odoo text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((c: any) => (
+                <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                  <td className="py-1.5 px-3 text-xs">{fmtDate(c.fecha_venta)}</td>
+                  <td className="py-1.5 px-3 text-xs font-mono">
+                    {c.venta_id ? (
+                      <a href={`/ventas/${c.venta_id}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">{c.ventas?.folio ?? '—'}</a>
+                    ) : (c.ventas?.folio ?? '—')}
+                  </td>
+                  <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(c.monto_venta)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-xs">{c.comision_pct}%</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(c.comision_monto)}</td>
+                  <td className="py-1.5 px-3 text-center">
+                    {c.pagada ? (
+                      <span title={c.pago_comisiones?.fecha_corte ? `Pagada al corte ${fmtDate(c.pago_comisiones.fecha_corte)}` : 'Pagada'} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
+                    ) : c.pago_comision_id ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">En recibo</span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {paged.length === 0 && (
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">Sin comisiones en el rango seleccionado</td></tr>
+              )}
+            </tbody>
+          </table>
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-end gap-2 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">{from}-{to} de {total}</span>
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-2 py-1 bg-muted rounded disabled:opacity-50">‹</button>
+              <button onClick={() => setPage(p => p + 1)} disabled={to >= total} className="px-2 py-1 bg-muted rounded disabled:opacity-50">›</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
