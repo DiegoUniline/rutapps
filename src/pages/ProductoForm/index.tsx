@@ -51,6 +51,7 @@ export default function ProductoFormPage() {
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
           { key: 'inventario', label: 'Inventario', content: <InventarioTabContent form={h.form} set={h.set} /> },
           { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
+          { key: 'config_compra', label: 'Config. compra', content: <ProductoConfigCompraTab form={h.form} set={h.set} proveedores={h.proveedores} createProveedor={h.createProveedor} /> },
           { key: 'kardex', label: 'Kardex', content: <KardexTabWrapper productoId={h.id} isNew={h.isNew} /> },
         ]} />
       </div>
