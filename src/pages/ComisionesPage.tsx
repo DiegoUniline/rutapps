@@ -188,11 +188,16 @@ export default function ComisionesPage() {
       }).select('id').single();
       if (pagoErr) throw pagoErr;
 
-      const { error: upErr } = await supabase
-        .from('venta_comisiones')
-        .update({ pago_comision_id: pago.id })
-        .in('id', itemIds);
-      if (upErr) throw upErr;
+      // Batch update to avoid URL length limit with many IDs
+      const BATCH = 100;
+      for (let i = 0; i < itemIds.length; i += BATCH) {
+        const slice = itemIds.slice(i, i + BATCH);
+        const { error: upErr } = await supabase
+          .from('venta_comisiones')
+          .update({ pago_comision_id: pago.id })
+          .in('id', slice);
+        if (upErr) throw upErr;
+      }
     },
     onSuccess: () => {
       toast.success('Recibo generado');
