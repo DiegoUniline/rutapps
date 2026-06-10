@@ -82,7 +82,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
       {items.length > 0 && (
         <tfoot>
           <tr className="bg-card border-t border-border font-semibold text-[12px]">
-            <td colSpan={7} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
+            <td colSpan={8} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
             <td className="py-2 px-3 text-right tabular-nums">{items.reduce((s: number, r: any) => s + (r.cantidad ?? 0), 0)}</td>
             <td className="py-2 px-3 hidden md:table-cell" />
             <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, r: any) => s + (r.linea_total ?? 0), 0))}</td>
