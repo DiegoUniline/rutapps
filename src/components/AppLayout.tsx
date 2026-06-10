@@ -12,7 +12,7 @@ import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle,
-  Tag, ClipboardList, Star
+  Tag, ClipboardList, Star, ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
@@ -71,6 +71,22 @@ const navItems: NavItem[] = [
       { label: 'Retiros', path: '/pos/admin?tab=retiros' },
       { label: 'Gastos', path: '/pos/admin?tab=gastos' },
       { label: 'Ventas POS', path: '/pos/admin?tab=ventas' },
+    ],
+  },
+  // ── Compras ──
+  {
+    label: 'Compras',
+    icon: ShoppingBag,
+    path: '/almacen/compras',
+    highlight: 'pink',
+    children: [
+      { label: 'Órdenes de compra', path: '/almacen/compras' },
+      { label: 'Compras sugeridas', path: '/almacen/compras/sugeridas' },
+      { label: 'Proveedores', path: '/proveedores' },
+      { label: 'Productos', path: '/productos' },
+      { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
+      { label: 'Pagos a proveedores', path: '/finanzas/pagos-proveedores' },
+      { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
     ],
   },
   // ── Logística ──
