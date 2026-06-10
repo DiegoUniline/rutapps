@@ -92,7 +92,7 @@ export default function ComprasSugeridasPage() {
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
 
-  const saveMinMax = async (productoId: string, patch: { min?: number; max?: number }) => {
+  const saveProductoPatch = async (productoId: string, patch: Record<string, any>, successMsg: string) => {
     if (!empresa?.id) return;
     setSavingMinMax(s => ({ ...s, [productoId]: true }));
     try {
@@ -101,7 +101,6 @@ export default function ComprasSugeridasPage() {
         .eq('id', productoId)
         .eq('empresa_id', empresa.id);
       if (error) throw error;
-      // Optimistic update of cached query
       qc.setQueryData(['compras-sugeridas', empresa.id, modo === 'cobertura' ? 'cob' : 'std'], (old: any) => {
         if (!old) return old;
         return {
@@ -110,14 +109,22 @@ export default function ComprasSugeridasPage() {
         };
       });
       qc.invalidateQueries({ queryKey: ['productos'] });
-      setMinMaxEdit(s => { const n = { ...s }; delete n[productoId]; return n; });
-      toast.success('Min/Max actualizado');
+      toast.success(successMsg);
     } catch (err: any) {
       toast.error(err.message || 'Error al guardar');
     } finally {
       setSavingMinMax(s => { const n = { ...s }; delete n[productoId]; return n; });
     }
   };
+
+  const saveMinMax = async (productoId: string, patch: { min?: number; max?: number }) => {
+    await saveProductoPatch(productoId, patch, 'Min/Max actualizado');
+    setMinMaxEdit(s => { const n = { ...s }; delete n[productoId]; return n; });
+  };
+
+  const saveProveedor = (productoId: string, proveedorId: string) =>
+    saveProductoPatch(productoId, { proveedor_preferido_id: proveedorId || null }, 'Proveedor asignado');
+
 
   const filasAll = useMemo(() => {
     if (!data) return [];
