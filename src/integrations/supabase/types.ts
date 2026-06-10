@@ -4483,6 +4483,7 @@ export type Database = {
           costo: number | null
           costo_incluye_impuestos: boolean
           created_at: string
+          dias_cobertura: number
           empresa_id: string
           es_combo: boolean | null
           es_granel: boolean
@@ -4492,11 +4493,13 @@ export type Database = {
           ieps_tipo: string
           imagen_url: string | null
           iva_pct: number
+          lead_time_dias: number
           lista_id: string | null
           manejar_lotes: boolean | null
           marca_id: string | null
           max: number | null
           min: number | null
+          modo_compra_sugerida: string
           monto_maximo: number | null
           nombre: string
           nombre_compra: string | null
@@ -4508,6 +4511,7 @@ export type Database = {
           precio_principal: number | null
           precio_sugerido_publico: number
           proveedor_id: string | null
+          proveedor_preferido_id: string | null
           se_puede_comprar: boolean | null
           se_puede_inventariar: boolean | null
           se_puede_vender: boolean | null
@@ -4541,6 +4545,7 @@ export type Database = {
           costo?: number | null
           costo_incluye_impuestos?: boolean
           created_at?: string
+          dias_cobertura?: number
           empresa_id: string
           es_combo?: boolean | null
           es_granel?: boolean
@@ -4550,11 +4555,13 @@ export type Database = {
           ieps_tipo?: string
           imagen_url?: string | null
           iva_pct?: number
+          lead_time_dias?: number
           lista_id?: string | null
           manejar_lotes?: boolean | null
           marca_id?: string | null
           max?: number | null
           min?: number | null
+          modo_compra_sugerida?: string
           monto_maximo?: number | null
           nombre: string
           nombre_compra?: string | null
@@ -4566,6 +4573,7 @@ export type Database = {
           precio_principal?: number | null
           precio_sugerido_publico?: number
           proveedor_id?: string | null
+          proveedor_preferido_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
@@ -4599,6 +4607,7 @@ export type Database = {
           costo?: number | null
           costo_incluye_impuestos?: boolean
           created_at?: string
+          dias_cobertura?: number
           empresa_id?: string
           es_combo?: boolean | null
           es_granel?: boolean
@@ -4608,11 +4617,13 @@ export type Database = {
           ieps_tipo?: string
           imagen_url?: string | null
           iva_pct?: number
+          lead_time_dias?: number
           lista_id?: string | null
           manejar_lotes?: boolean | null
           marca_id?: string | null
           max?: number | null
           min?: number | null
+          modo_compra_sugerida?: string
           monto_maximo?: number | null
           nombre?: string
           nombre_compra?: string | null
@@ -4624,6 +4635,7 @@ export type Database = {
           precio_principal?: number | null
           precio_sugerido_publico?: number
           proveedor_id?: string | null
+          proveedor_preferido_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
@@ -4675,6 +4687,13 @@ export type Database = {
           {
             foreignKeyName: "productos_proveedor_id_fkey"
             columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_proveedor_preferido_id_fkey"
+            columns: ["proveedor_preferido_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
             referencedColumns: ["id"]

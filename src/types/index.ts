@@ -62,6 +62,10 @@ export interface Producto {
   unidad_granel: string;
   contador: number;
   contador_tarifas: number;
+  modo_compra_sugerida?: 'maximo' | 'medio' | 'minimo' | 'cobertura';
+  dias_cobertura?: number;
+  lead_time_dias?: number;
+  proveedor_preferido_id?: string | null;
   created_at: string;
   // joined
   marcas?: { nombre: string };
