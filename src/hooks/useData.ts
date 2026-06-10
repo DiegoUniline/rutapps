@@ -577,7 +577,7 @@ export function useSaveListaPrecio() {
           .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresa.id })
           .select('id, tarifa_id, nombre').single();
         if (error) throw error;
-        return data;
+        return { ...(data || {}), tarifa_id: tarifaId, nombre: rest.nombre };
       }
     },
     onSettled: () => {
