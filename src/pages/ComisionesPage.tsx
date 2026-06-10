@@ -484,7 +484,7 @@ export default function ComisionesPage() {
                 disabled={generarMut.isPending || selected.size === 0}
                 className="btn-odoo-primary"
               >
-                <FileText className="h-4 w-4" /> Generar recibos
+                <FileText className="h-4 w-4" /> Generar recibo
               </button>
             </div>
           </div>
