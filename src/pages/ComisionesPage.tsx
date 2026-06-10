@@ -236,6 +236,7 @@ export default function ComisionesPage() {
 
   // Modal de pago (crea gasto)
   const [payingRecibo, setPayingRecibo] = useState<any | null>(null);
+  const [cancelingRecibo, setCancelingRecibo] = useState<any | null>(null);
   const [payFecha, setPayFecha] = useState(todayLocal());
   const [payMetodo, setPayMetodo] = useState<string>('efectivo');
   const [payNotas, setPayNotas] = useState('');
