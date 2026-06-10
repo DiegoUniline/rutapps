@@ -302,8 +302,34 @@ export default function ComprasSugeridasPage() {
                         {sinConfig && <span className="ml-2 text-[10px] text-amber-700 font-medium">sin min/max</span>}
                       </td>
                       <td className="p-2 text-right">{Number(r.p.cantidad).toFixed(0)}</td>
-                      <td className="p-2 text-right">{Number(r.p.min).toFixed(0)}</td>
-                      <td className="p-2 text-right">{Number(r.p.max).toFixed(0)}</td>
+                      <td className="p-2 text-right">
+                        <input
+                          type="number"
+                          min={0}
+                          value={minMaxEdit[r.p.id]?.min ?? Number(r.p.min) ?? 0}
+                          disabled={savingMinMax[r.p.id]}
+                          onChange={e => setMinMaxEdit(s => ({ ...s, [r.p.id]: { ...s[r.p.id], min: Math.max(0, +e.target.value) } }))}
+                          onBlur={e => {
+                            const v = Math.max(0, +e.target.value);
+                            if (v !== Number(r.p.min)) saveMinMax(r.p.id, { min: v });
+                          }}
+                          className="w-16 text-right border border-input rounded px-1 py-0.5 bg-background"
+                        />
+                      </td>
+                      <td className="p-2 text-right">
+                        <input
+                          type="number"
+                          min={0}
+                          value={minMaxEdit[r.p.id]?.max ?? Number(r.p.max) ?? 0}
+                          disabled={savingMinMax[r.p.id]}
+                          onChange={e => setMinMaxEdit(s => ({ ...s, [r.p.id]: { ...s[r.p.id], max: Math.max(0, +e.target.value) } }))}
+                          onBlur={e => {
+                            const v = Math.max(0, +e.target.value);
+                            if (v !== Number(r.p.max)) saveMinMax(r.p.id, { max: v });
+                          }}
+                          className="w-16 text-right border border-input rounded px-1 py-0.5 bg-background"
+                        />
+                      </td>
                       <td className="p-2 text-right">{r.ventaDiaria.toFixed(1)}</td>
                       <td className="p-2 text-right text-muted-foreground">{r.sugAuto}</td>
                       <td className="p-2 text-right">
