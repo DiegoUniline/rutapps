@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,12 +9,32 @@ import { OdooPagination } from '@/components/OdooPagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
-import { cn , todayLocal, fmtDate } from '@/lib/utils';
-import { Check, DollarSign } from 'lucide-react';
+import { cn, todayLocal, fmtDate } from '@/lib/utils';
+import { Check, DollarSign, Calendar } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
 const PAGE_SIZE = 20;
+
+function firstOfMonth() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+}
+function firstOfLastMonth() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10);
+}
+function lastOfLastMonth() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10);
+}
+function mondayOfWeek() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  return monday.toISOString().slice(0, 10);
+}
 
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
@@ -23,6 +43,8 @@ export default function ComisionesPage() {
   const [tab, setTab] = useState<'historial' | 'reglas'>('historial');
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
+  const [fechaDesde, setFechaDesde] = useState<string>(firstOfMonth());
+  const [fechaHasta, setFechaHasta] = useState<string>(todayLocal());
   const [page, setPage] = useState(0);
 
   const [payVendedor, setPayVendedor] = useState<string>('');
@@ -32,15 +54,18 @@ export default function ComisionesPage() {
   const { data: vendedores } = useVendedores();
 
   const { data: comisiones, isLoading } = useQuery({
-    queryKey: ['venta_comisiones', vendedorFilter, statusFilter],
+    queryKey: ['venta_comisiones', empresa?.id, vendedorFilter, statusFilter, fechaDesde, fechaHasta],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('venta_comisiones')
-        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre)')
+        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte)')
         .order('fecha_venta', { ascending: false });
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       if (statusFilter === 'pendientes') q = q.eq('pagada', false);
       if (statusFilter === 'pagadas') q = q.eq('pagada', true);
+      if (fechaDesde) q = q.gte('fecha_venta', fechaDesde);
+      if (fechaHasta) q = q.lte('fecha_venta', fechaHasta);
       const { data, error } = await q;
       if (error) throw error;
       return data as any[];
@@ -100,7 +125,25 @@ export default function ComisionesPage() {
   });
 
   const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
-  const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + c.comision_monto, 0), [comisiones]);
+  const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+  const totalPend = useMemo(() => (comisiones ?? []).filter(c => !c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+  const totalPag = useMemo(() => (comisiones ?? []).filter(c => c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+
+  const resumenVendedor = useMemo(() => {
+    const map = new Map<string, { vendedor_id: string; nombre: string; ventas: Set<string>; vendido: number; comision: number; pendiente: number; pagada: number }>();
+    for (const c of comisiones ?? []) {
+      const id = c.vendedor_id ?? 'sin';
+      const nombre = c.vendedores?.nombre ?? 'Sin vendedor';
+      if (!map.has(id)) map.set(id, { vendedor_id: id, nombre, ventas: new Set(), vendido: 0, comision: 0, pendiente: 0, pagada: 0 });
+      const r = map.get(id)!;
+      if (c.venta_id) r.ventas.add(c.venta_id);
+      r.vendido += c.monto_venta ?? 0;
+      r.comision += c.comision_monto ?? 0;
+      if (c.pagada) r.pagada += c.comision_monto ?? 0;
+      else r.pendiente += c.comision_monto ?? 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.comision - a.comision);
+  }, [comisiones]);
 
   const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
   const vendedorPayOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
@@ -108,6 +151,8 @@ export default function ComisionesPage() {
   const from = page * PAGE_SIZE + 1;
   const to = Math.min((page + 1) * PAGE_SIZE, (comisiones ?? []).length);
   const total = (comisiones ?? []).length;
+
+  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); setPage(0); };
 
   return (
     <div className="p-4 space-y-3 min-h-full">
@@ -142,7 +187,7 @@ export default function ComisionesPage() {
         <ComisionesReglasTab />
       ) : (
         <>
-          {/* Filters */}
+          {/* Filters row 1: vendedor, status, totales */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="w-48">
               <SearchableSelect
@@ -153,23 +198,74 @@ export default function ComisionesPage() {
               />
             </div>
             <div className="flex border border-border rounded overflow-hidden">
-              {(['pendientes', 'pagadas', 'todas'] as const).map(s => (
+              {([['pendientes', 'Pendientes'], ['pagadas', 'Pagadas'], ['todas', 'Todas']] as const).map(([key, label]) => (
                 <button
-                  key={s}
-                  onClick={() => { setStatusFilter(s); setPage(0); }}
+                  key={key}
+                  onClick={() => { setStatusFilter(key); setPage(0); }}
                   className={cn(
-                    'px-3 py-1.5 text-xs capitalize transition-colors',
-                    statusFilter === s ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                    'px-3 py-1.5 text-xs transition-colors',
+                    statusFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
                   )}
                 >
-                  {s}
+                  {label}
                 </button>
               ))}
             </div>
-            <div className="ml-auto text-sm font-semibold text-foreground">
-              Total: <span className="text-odoo-teal font-mono">{fmt(totalMonto)}</span>
+            <div className="ml-auto flex items-center gap-4 text-xs">
+              <div>Pendiente: <span className="font-mono font-semibold text-amber-600">{fmt(totalPend)}</span></div>
+              <div>Pagado: <span className="font-mono font-semibold text-primary">{fmt(totalPag)}</span></div>
+              <div className="text-sm">Total: <span className="font-mono font-bold text-odoo-teal">{fmt(totalMonto)}</span></div>
             </div>
           </div>
+
+          {/* Filters row 2: rango fechas */}
+          <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
+            <Calendar className="h-4 w-4 text-muted-foreground ml-1" />
+            <label className="text-xs text-muted-foreground">Desde</label>
+            <input type="date" className="input-odoo text-xs" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(0); }} />
+            <label className="text-xs text-muted-foreground">Hasta</label>
+            <input type="date" className="input-odoo text-xs" value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(0); }} />
+            <div className="flex gap-1 ml-2">
+              <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
+              <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Esta semana</button>
+              <button onClick={() => setRange(firstOfMonth(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Este mes</button>
+              <button onClick={() => setRange(firstOfLastMonth(), lastOfLastMonth())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Mes pasado</button>
+            </div>
+          </div>
+
+          {/* Resumen por vendedor */}
+          {!isLoading && resumenVendedor.length > 0 && (
+            <div className="border border-border rounded overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr className="border-b border-table-border">
+                    <th className="th-odoo text-left">Vendedor</th>
+                    <th className="th-odoo text-right"># Ventas</th>
+                    <th className="th-odoo text-right">Vendido</th>
+                    <th className="th-odoo text-right">Comisión total</th>
+                    <th className="th-odoo text-right">Pendiente</th>
+                    <th className="th-odoo text-right">Pagada</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumenVendedor.map(r => (
+                    <tr
+                      key={r.vendedor_id}
+                      className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
+                      onClick={() => { setVendedorFilter(r.vendedor_id === 'sin' ? '' : r.vendedor_id); setPage(0); }}
+                    >
+                      <td className="py-1.5 px-3 text-xs font-medium">{r.nombre}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs">{r.ventas.size}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(r.vendido)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(r.comision)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs text-amber-600">{fmt(r.pendiente)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs text-primary">{fmt(r.pagada)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pay form */}
           {showPayForm && (
@@ -201,7 +297,7 @@ export default function ComisionesPage() {
                     {(pendingForPay ?? []).length} comisiones pendientes
                   </div>
                   <div className="text-lg font-bold text-odoo-teal font-mono">
-                    $ {totalPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    {fmt(totalPendiente)}
                   </div>
                 </div>
               </div>
@@ -211,7 +307,7 @@ export default function ComisionesPage() {
                   disabled={payMut.isPending || !payVendedor || totalPendiente <= 0}
                   className="btn-odoo-primary"
                 >
-                  <Check className="h-4 w-4" /> Pagar $ {totalPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <Check className="h-4 w-4" /> Pagar {fmt(totalPendiente)}
                 </button>
                 <button onClick={() => setShowPayForm(false)} className="btn-odoo-secondary">
                   Cancelar
@@ -240,7 +336,18 @@ export default function ComisionesPage() {
                   {paged.map((c: any) => (
                     <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                       <td className="py-1.5 px-3 text-xs">{fmtDate(c.fecha_venta)}</td>
-                      <td className="py-1.5 px-3 text-xs font-mono">{c.ventas?.folio ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs font-mono">
+                        {c.venta_id ? (
+                          <a
+                            href={`/ventas/${c.venta_id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {c.ventas?.folio ?? '—'}
+                          </a>
+                        ) : (c.ventas?.folio ?? '—')}
+                      </td>
                       <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
                       <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>
                       <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(c.monto_venta)}</td>
@@ -248,7 +355,12 @@ export default function ComisionesPage() {
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(c.comision_monto)}</td>
                       <td className="py-1.5 px-3 text-center">
                         {c.pagada ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
+                          <span
+                            title={c.pago_comisiones?.fecha_corte ? `Pagada al corte ${fmtDate(c.pago_comisiones.fecha_corte)}` : 'Pagada'}
+                            className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                          >
+                            Pagada
+                          </span>
                         ) : (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
                         )}
@@ -257,7 +369,7 @@ export default function ComisionesPage() {
                   ))}
                   {paged.length === 0 && (
                     <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-sm">
-                      Sin comisiones {statusFilter !== 'todas' ? statusFilter : ''}
+                      Sin comisiones en el rango seleccionado
                     </td></tr>
                   )}
                 </tbody>
