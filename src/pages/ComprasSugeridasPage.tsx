@@ -264,7 +264,7 @@ export default function ComprasSugeridasPage() {
                       <td className="p-2">
                         <button
                           type="button"
-                          onClick={() => navigate(`/productos/${r.p.id}`)}
+                          onClick={() => navigate(`/almacen/compras/sugeridas/productos/${r.p.id}`)}
                           className="text-primary hover:underline text-left"
                           title="Abrir ficha de producto (usa atrás para volver)"
                         >
