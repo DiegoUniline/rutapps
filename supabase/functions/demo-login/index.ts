@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
         iva_pct: p.iva,
         tiene_iva: p.iva > 0,
         clasificacion_id: p.clasId ?? null,
-        proveedor_id: provDefault?.id ?? null,
+        proveedor_preferido_id: provDefault?.id ?? null,
         status: "activo",
         se_puede_vender: true,
         se_puede_comprar: true,

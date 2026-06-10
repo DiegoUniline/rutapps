@@ -86,7 +86,7 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores!productos_proveedor_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)', { count: 'exact' })
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
         .order('nombre', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
@@ -123,7 +123,7 @@ export function useProductos(search?: string, statusFilter?: string) {
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase.from('productos')
-          .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores!productos_proveedor_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
+          .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre), es_granel')
           .eq('empresa_id', empresa!.id)
           .order('nombre', { ascending: true })
           .range(from, to);
@@ -368,7 +368,7 @@ export function useProductosForSelect() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('productos')
-        .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
+        .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo').order('nombre');
       return data ?? [];

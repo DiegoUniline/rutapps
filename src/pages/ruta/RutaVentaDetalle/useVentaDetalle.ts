@@ -53,7 +53,7 @@ export function useVentaDetalle() {
 
   const { data: productos } = useQuery({
     queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar',
-    queryFn: async () => { const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre'); return data ?? []; },
+    queryFn: async () => { const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre'); return data ?? []; },
   });
 
   const { data: otrasPendientes } = useQuery({
@@ -100,7 +100,7 @@ export function useVentaDetalle() {
   const addProductToEdit = (p: any) => {
     const existing = editLineas.find(l => l.producto_id === p.id);
     if (existing) { setEditLineas(prev => prev.map(l => l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l)); }
-    else { setEditLineas(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1, precio_unitario: p.precio_principal ?? 0, unidad: (p.unidades as any)?.abreviatura || 'pz', tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0 }]); }
+    else { setEditLineas(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1, precio_unitario: p.precio_principal ?? 0, unidad: (p.unidades as any)?.abreviatura || 'pz', tiene_iva: p.tiene_iva ?? false, iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0 }]); }
   };
 
   const updateEditQty = (idx: number, delta: number) => { setEditLineas(prev => prev.map((l, i) => i !== idx ? l : l.cantidad + delta > 0 ? { ...l, cantidad: l.cantidad + delta } : l)); };

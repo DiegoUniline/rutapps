@@ -4274,7 +4274,6 @@ export type Database = {
         Row: {
           activo: boolean
           codigo_barras: string | null
-          codigos_barras: string[]
           created_at: string
           empresa_id: string
           es_principal_stock: boolean
@@ -4289,7 +4288,6 @@ export type Database = {
         Insert: {
           activo?: boolean
           codigo_barras?: string | null
-          codigos_barras?: string[]
           created_at?: string
           empresa_id: string
           es_principal_stock?: boolean
@@ -4304,7 +4302,6 @@ export type Database = {
         Update: {
           activo?: boolean
           codigo_barras?: string | null
-          codigos_barras?: string[]
           created_at?: string
           empresa_id?: string
           es_principal_stock?: boolean
@@ -4413,15 +4410,12 @@ export type Database = {
           permitir_descuento: boolean | null
           precio_principal: number | null
           precio_sugerido_publico: number
-          proveedor_id: string | null
           proveedor_preferido_id: string | null
           se_puede_comprar: boolean | null
           se_puede_inventariar: boolean | null
           se_puede_vender: boolean | null
           status: Database["public"]["Enums"]["status_producto"] | null
           tarifa_id: string | null
-          tasa_ieps_id: string | null
-          tasa_iva_id: string | null
           tiene_comision: boolean | null
           tiene_ieps: boolean | null
           tiene_iva: boolean | null
@@ -4472,15 +4466,12 @@ export type Database = {
           permitir_descuento?: boolean | null
           precio_principal?: number | null
           precio_sugerido_publico?: number
-          proveedor_id?: string | null
           proveedor_preferido_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
           status?: Database["public"]["Enums"]["status_producto"] | null
           tarifa_id?: string | null
-          tasa_ieps_id?: string | null
-          tasa_iva_id?: string | null
           tiene_comision?: boolean | null
           tiene_ieps?: boolean | null
           tiene_iva?: boolean | null
@@ -4531,15 +4522,12 @@ export type Database = {
           permitir_descuento?: boolean | null
           precio_principal?: number | null
           precio_sugerido_publico?: number
-          proveedor_id?: string | null
           proveedor_preferido_id?: string | null
           se_puede_comprar?: boolean | null
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
           status?: Database["public"]["Enums"]["status_producto"] | null
           tarifa_id?: string | null
-          tasa_ieps_id?: string | null
-          tasa_iva_id?: string | null
           tiene_comision?: boolean | null
           tiene_ieps?: boolean | null
           tiene_iva?: boolean | null
@@ -4582,13 +4570,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "productos_proveedor_id_fkey"
-            columns: ["proveedor_id"]
-            isOneToOne: false
-            referencedRelation: "proveedores"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "productos_proveedor_preferido_id_fkey"
             columns: ["proveedor_preferido_id"]
             isOneToOne: false
@@ -4600,20 +4581,6 @@ export type Database = {
             columns: ["tarifa_id"]
             isOneToOne: false
             referencedRelation: "tarifas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "productos_tasa_ieps_id_fkey"
-            columns: ["tasa_ieps_id"]
-            isOneToOne: false
-            referencedRelation: "tasas_ieps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "productos_tasa_iva_id_fkey"
-            columns: ["tasa_iva_id"]
-            isOneToOne: false
-            referencedRelation: "tasas_iva"
             referencedColumns: ["id"]
           },
           {

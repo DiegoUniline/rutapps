@@ -20,7 +20,7 @@ export interface Producto {
   nombre_ticket?: string | null;
   clave_alterna?: string;
   marca_id?: string;
-  proveedor_id?: string;
+  
   costo: number;
   clasificacion_id?: string;
   lista_id?: string;
@@ -49,8 +49,6 @@ export interface Producto {
   almacenes: string[];
   tiene_iva: boolean;
   tiene_ieps: boolean;
-  tasa_iva_id?: string;
-  tasa_ieps_id?: string;
   iva_pct: number;
   ieps_pct: number;
   ieps_tipo: 'porcentaje' | 'cuota';
@@ -246,6 +244,6 @@ export interface VentaLinea {
   factura_cfdi_id?: string;
   created_at: string;
   // joined
-  productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; unidad_venta_id: string | null; codigo_sat?: string; udem_sat_id?: string };
+  productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; iva_pct?: number; ieps_pct?: number; unidad_venta_id: string | null; codigo_sat?: string; udem_sat_id?: string };
   unidades?: { nombre: string; abreviatura?: string };
 }
