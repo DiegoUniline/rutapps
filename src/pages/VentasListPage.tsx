@@ -19,7 +19,7 @@ import { useVentasPaginated, useVentaLineasPaginated, useDeleteVenta } from '@/h
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel, dateGroupSortKey } from '@/hooks/useListPreferences';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
@@ -188,8 +188,14 @@ export default function VentasListPage() {
     return '';
   };
 
-  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels), [pageData, groupBy, groupByLevels]);
-  const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels), [productRows, groupBy, groupByLevels]);
+  const groupSortKeyFn = (item: any, key: string) => {
+    if (key.startsWith('fecha')) return dateGroupSortKey(item.fecha, key as any);
+    return '';
+  };
+  const groupSortDir: 'asc' | 'desc' = (groupBy?.startsWith('fecha') || (groupByLevels?.[0]?.startsWith('fecha') ?? false)) ? 'desc' : 'asc';
+
+  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels, groupSortKeyFn, groupSortDir), [pageData, groupBy, groupByLevels, groupSortDir]);
+  const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels, groupSortKeyFn, groupSortDir), [productRows, groupBy, groupByLevels, groupSortDir]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
