@@ -99,6 +99,8 @@ export default function ComisionesPage() {
   // ============== POR PAGAR ==============
   const [ppFechaCorte, setPpFechaCorte] = useState(todayLocal());
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsedVendors, setCollapsedVendors] = useState<Set<string>>(new Set());
+  const toggleCollapse = (id: string) => setCollapsedVendors(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const { data: pendientesPP, isLoading: loadingPP } = useQuery({
     queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte],
