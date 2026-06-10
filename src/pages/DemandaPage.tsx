@@ -320,6 +320,7 @@ export default function DemandaPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
               <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
+              <TableHead className="text-[11px] text-center w-28">Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
