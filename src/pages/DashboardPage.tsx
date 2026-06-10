@@ -733,6 +733,18 @@ export default function DashboardPage() {
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
 
+  // === Datos para nuevas secciones ===
+  const { data: monthlyGoal = 0 } = useMonthlyGoal();
+  const monthRange = useMemo(() => ({ from: startOfMonthFn(new Date()), to: endOfMonthFn(new Date()) }), []);
+  const { data: ventasMesData } = useDashboardVentas(monthRange);
+  const { data: cobrosMesData } = useDashboardCobros(monthRange);
+  const { data: comprasMesData } = useDashboardCompras(monthRange);
+  const { data: gastosMesData } = useDashboardGastos(monthRange);
+  const { data: visitasPeriodo } = useDashboardVisitas(dateRange, vendedorId || undefined);
+  const { data: clientesActivos = [] } = useClientesActivos();
+  const { data: ultimaCompraMap } = useUltimaCompraPorCliente();
+  const [sinCompraOpen, setSinCompraOpen] = useState(false);
+
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
   const devStats = useMemo(() => {
