@@ -28,6 +28,19 @@ import {
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { fmtMoney } from '@/lib/currency';
 
+const STATUS_LABELS: Record<string, string> = {
+  borrador: 'Borrador', pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada',
+  cancelada: 'Cancelada', activo: 'Activo', cancelado: 'Cancelado', inactivo: 'Inactivo',
+  recibida: 'Recibida',
+};
+const TIPO_LABELS: Record<string, string> = {
+  pedido: 'Pedido', venta_directa: 'Venta directa', saldo_inicial: 'Saldo inicial',
+  entrada: 'Entrada', salida: 'Salida', ajuste: 'Ajuste', traspaso: 'Traspaso',
+  venta: 'Venta', compra: 'Compra', devolucion: 'Devolución', merma: 'Merma',
+};
+const statusLabel = (s: string) => STATUS_LABELS[s] ?? s;
+const tipoLabel = (s: string) => TIPO_LABELS[s] ?? s;
+
 export default function ReportesPersonalizadosPage() {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
