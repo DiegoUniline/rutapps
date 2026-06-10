@@ -696,6 +696,33 @@ export default function ComisionesPage() {
               </div>
             </div>
           )}
+
+          {/* Modal de cancelación */}
+          {cancelingRecibo && (
+            <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => !cancelarReciboMut.isPending && setCancelingRecibo(null)}>
+              <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={e => e.stopPropagation()}>
+                <h3 className="text-base font-semibold">Cancelar recibo</h3>
+                <div className="text-sm text-foreground">
+                  ¿Cancelar este recibo y liberar las comisiones para volver a pagarlas?
+                </div>
+                <div className="bg-muted/40 border border-border rounded p-2 text-xs space-y-1">
+                  <div><span className="text-muted-foreground">Vendedor:</span> <span className="font-medium">{cancelingRecibo.vendedores?.nombre ?? (cancelingRecibo.vendedor_id ? 'Vendedor' : 'Varios vendedores')}</span></div>
+                  <div><span className="text-muted-foreground">Corte:</span> <span className="font-medium">{fmtDate(cancelingRecibo.fecha_corte)}</span></div>
+                  <div><span className="text-muted-foreground">Total:</span> <span className="font-mono font-bold text-odoo-teal">{fmt(cancelingRecibo.total_comisiones)}</span></div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setCancelingRecibo(null)} disabled={cancelarReciboMut.isPending} className="btn-odoo-secondary">Volver</button>
+                  <button
+                    onClick={() => cancelarReciboMut.mutate(cancelingRecibo.id)}
+                    disabled={cancelarReciboMut.isPending}
+                    className="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {cancelarReciboMut.isPending ? 'Cancelando...' : 'Sí, cancelar y liberar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
