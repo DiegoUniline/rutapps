@@ -119,7 +119,7 @@ export function useCompraForm() {
   };
 
   const handleDelete = async () => {
-    if (!form.id || !await confirmDialog('¿Eliminar esta compra?')) return;
+    if (!form.id || !await confirmAsync('¿Eliminar esta compra?')) return;
     try { await supabase.from('compra_lineas').delete().eq('compra_id', form.id); const { error } = await supabase.from('compras').delete().eq('id', form.id); if (error) throw error; toast.success('Compra eliminada'); qc.invalidateQueries({ queryKey: ['compras'] }); navigate('/almacen/compras'); } catch (err: any) { toast.error(err.message); }
   };
 
