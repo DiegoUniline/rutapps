@@ -530,6 +530,8 @@ export default function ComisionesPage() {
                 const someSel = g.items.some(i => selected.has(i.id));
                 const selCount = g.items.filter(i => selected.has(i.id)).length;
                 const selTotal = g.items.filter(i => selected.has(i.id)).reduce((s, i) => s + (i.comision_monto ?? 0), 0);
+                const cobradas = g.items.filter(i => i.ventas?.saldo_pendiente === 0).length;
+                const porCobrar = g.items.filter(i => (i.ventas?.saldo_pendiente ?? 0) > 0).length;
                 return (
                   <div key={g.vendedor_id} className="border border-border rounded overflow-hidden">
                     <div className="flex items-center gap-3 bg-muted/40 px-3 py-2 border-b border-table-border">
@@ -549,7 +551,12 @@ export default function ComisionesPage() {
                           ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         <span className="font-semibold text-sm">{g.nombre}</span>
-                        <span className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></span>
+                        <span className="text-xs text-muted-foreground">
+                          {g.items.length} comisiones
+                          {cobradas > 0 && <span className="ml-1 text-green-600">· {cobradas} cobradas</span>}
+                          {porCobrar > 0 && <span className="ml-1 text-amber-600">· {porCobrar} por cobrar</span>}
+                          {' · Total: '}<span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span>
+                        </span>
                       </button>
                       <div className="text-xs">
                         Seleccionado: <span className="font-mono font-bold text-primary">{fmt(selTotal)}</span> ({selCount})
