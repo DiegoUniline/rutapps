@@ -31,6 +31,17 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 import DashboardAIAdvisor from '@/components/dashboard/DashboardAIAdvisor';
+import AlertasBanner from './dashboard/sections/AlertasBanner';
+import MetaDelMesCard from './dashboard/sections/MetaDelMesCard';
+import KpiExtras from './dashboard/sections/KpiExtras';
+import TabEquipo from './dashboard/sections/TabEquipo';
+import TabCartera from './dashboard/sections/TabCartera';
+import TabInventario from './dashboard/sections/TabInventario';
+import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
+import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
+import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
+import { Target, Route, Wrench } from 'lucide-react';
+import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
