@@ -40,7 +40,7 @@ import TabInventario from './dashboard/sections/TabInventario';
 import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
 import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
 import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
-import { Target, Route, Wrench } from 'lucide-react';
+import { Target, Route, Wrench, Sparkles } from 'lucide-react';
 import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 
 const PRESETS = [
@@ -930,34 +930,7 @@ export default function DashboardPage() {
 
 
 
-      {/* === Asesor IA === */}
-      <DashboardAIAdvisor buildSnapshot={() => ({
-        periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
-        hoy: hoy ? {
-          ventasHoy: hoy.ventasTotal, ventasOps: hoy.ventasCount,
-          cobrosHoy: hoy.cobrosTotal, cobrosOps: hoy.cobrosCount,
-          visitas: hoy.visitasCount, vendedoresActivos: hoy.vendedoresActivos,
-          entregasHechas: hoy.entregasHechas, entregasTotales: hoy.entregasTotales,
-          pedidosPendientes: hoy.pedidosPendientes, gastos: hoy.gastosTotal,
-        } : null,
-        kpis: {
-          totalVentas: kpis.totalVentas, numVentas: kpis.numVentas, ticketPromedio: kpis.ticketPromedio,
-          pedidos: kpis.pedidos, ventasDirectas: kpis.ventasDirectas,
-          totalCobrado: kpis.totalCobrado, totalCartera: kpis.totalCartera, clientesMorosos: kpis.clientesMorosos,
-          totalCompras: kpis.totalCompras, saldoProveedores: kpis.saldoProveedores,
-          totalGastos: kpis.totalGastos, utilidadBruta: kpis.utilidadBruta,
-          productosBajoMinimo: kpis.productosBajoMinimo, valorInventario: kpis.valorInventario,
-        },
-        top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),
-        top5Clientes: topClientsAll.slice(0, 5).map((c: any) => ({ nombre: c.nombre, total: c.total, ventas: c.count })),
-        ventasPorVendedor: (ventasPorVendedor ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
-        ventasUltimos12Meses: (ventasPorMes ?? []).map((m: any) => ({ mes: m.label, total: m.total, growth: m.growth })),
-        mesVsMesPorVendedor: (usuarioMes ?? []).slice(0, 10).map((u: any) => ({
-          nombre: u.nombre, mesActual: u.cur, mesAnterior: u.prev, growthPct: u.growth,
-        })),
-        devoluciones: { count: devStats.count, unidades: devStats.totalUnidades, credito: devStats.totalCredito },
-        stockCritico: lowStockProducts.slice(0, 10).map((p: any) => ({ nombre: p.nombre, cantidad: Number(p.cantidad ?? 0), min: Number(p.min ?? 0) })),
-      })} />
+
 
       {/* === Meta del mes === */}
       <MetaDelMesCard
@@ -1026,6 +999,9 @@ export default function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger value="inventario-tab" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <Package className="h-3.5 w-3.5 mr-2" /> Inventario
+          </TabsTrigger>
+          <TabsTrigger value="asesor-ia" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Sparkles className="h-3.5 w-3.5 mr-2" /> Asesor IA
           </TabsTrigger>
         </TabsList>
 
@@ -1228,6 +1204,37 @@ export default function DashboardPage() {
         {/* === INVENTARIO === */}
         <TabsContent value="inventario-tab" className="mt-4">
           <TabInventario range={dateRange} money={money} />
+        </TabsContent>
+
+        {/* === ASESOR IA === */}
+        <TabsContent value="asesor-ia" className="mt-4">
+          <DashboardAIAdvisor buildSnapshot={() => ({
+            periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
+            hoy: hoy ? {
+              ventasHoy: hoy.ventasTotal, ventasOps: hoy.ventasCount,
+              cobrosHoy: hoy.cobrosTotal, cobrosOps: hoy.cobrosCount,
+              visitas: hoy.visitasCount, vendedoresActivos: hoy.vendedoresActivos,
+              entregasHechas: hoy.entregasHechas, entregasTotales: hoy.entregasTotales,
+              pedidosPendientes: hoy.pedidosPendientes, gastos: hoy.gastosTotal,
+            } : null,
+            kpis: {
+              totalVentas: kpis.totalVentas, numVentas: kpis.numVentas, ticketPromedio: kpis.ticketPromedio,
+              pedidos: kpis.pedidos, ventasDirectas: kpis.ventasDirectas,
+              totalCobrado: kpis.totalCobrado, totalCartera: kpis.totalCartera, clientesMorosos: kpis.clientesMorosos,
+              totalCompras: kpis.totalCompras, saldoProveedores: kpis.saldoProveedores,
+              totalGastos: kpis.totalGastos, utilidadBruta: kpis.utilidadBruta,
+              productosBajoMinimo: kpis.productosBajoMinimo, valorInventario: kpis.valorInventario,
+            },
+            top5Productos: (topProductos ?? []).slice(0, 5).map((p: any) => ({ nombre: p.nombre, total: p.total, uds: p.qty })),
+            top5Clientes: topClientsAll.slice(0, 5).map((c: any) => ({ nombre: c.nombre, total: c.total, ventas: c.count })),
+            ventasPorVendedor: (ventasPorVendedor ?? []).map((v: any) => ({ nombre: v.nombre, total: v.total, ops: v.count })),
+            ventasUltimos12Meses: (ventasPorMes ?? []).map((m: any) => ({ mes: m.label, total: m.total, growth: m.growth })),
+            mesVsMesPorVendedor: (usuarioMes ?? []).slice(0, 10).map((u: any) => ({
+              nombre: u.nombre, mesActual: u.cur, mesAnterior: u.prev, growthPct: u.growth,
+            })),
+            devoluciones: { count: devStats.count, unidades: devStats.totalUnidades, credito: devStats.totalCredito },
+            stockCritico: lowStockProducts.slice(0, 10).map((p: any) => ({ nombre: p.nombre, cantidad: Number(p.cantidad ?? 0), min: Number(p.min ?? 0) })),
+          })} />
         </TabsContent>
       </Tabs>
 
