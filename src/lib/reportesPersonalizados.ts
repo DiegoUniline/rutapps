@@ -458,6 +458,17 @@ async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
 
 // ─── Inventario ────────────────────────────────────────────────
 async function runInventario(filtros: ReporteFiltros, empresaId: string) {
+  let allowedProductoIds: string[] | null = null;
+  if (filtros.categoriaIds?.length || filtros.marcaIds?.length) {
+    const prods = await fetchAllPages<any>((from, to) => {
+      let pq = supabase.from('productos').select('id').eq('empresa_id', empresaId).range(from, to);
+      if (filtros.categoriaIds?.length) pq = pq.in('clasificacion_id', filtros.categoriaIds);
+      if (filtros.marcaIds?.length) pq = pq.in('marca_id', filtros.marcaIds);
+      return pq;
+    });
+    allowedProductoIds = prods.map(p => p.id);
+    if (!allowedProductoIds.length) return [];
+  }
   const movs = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('movimientos_inventario')
@@ -468,6 +479,9 @@ async function runInventario(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    if (allowedProductoIds) q = q.in('producto_id', allowedProductoIds);
+    if (filtros.almacenIds?.length) q = q.or(`almacen_origen_id.in.(${filtros.almacenIds.join(',')}),almacen_destino_id.in.(${filtros.almacenIds.join(',')})`);
+    if (filtros.search?.trim()) q = q.ilike('notas', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!movs.length) return [];
