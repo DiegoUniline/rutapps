@@ -349,6 +349,17 @@ export default function ComprasSugeridasPage() {
                       </td>
                       <td className="p-2 text-right">{fmtMoney(Number(r.p.costo || 0))}</td>
                       <td className="p-2 text-right font-medium">{fmtMoney(r.sug * Number(r.p.costo || 0))}</td>
+                      <td className="p-2">
+                        <select
+                          value={r.p.proveedor_preferido_id || ''}
+                          disabled={savingMinMax[r.p.id]}
+                          onChange={e => saveProveedor(r.p.id, e.target.value)}
+                          className={`border rounded px-1 py-0.5 bg-background text-[12px] max-w-[180px] ${!r.p.proveedor_preferido_id ? 'border-amber-400 text-amber-700' : 'border-input'}`}
+                        >
+                          <option value="">— Sin proveedor —</option>
+                          {proveedores?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </td>
                     </tr>
                     );
                   })}
