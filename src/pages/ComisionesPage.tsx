@@ -201,7 +201,7 @@ export default function ComisionesPage() {
     queryFn: async () => {
       let q = supabase
         .from('pago_comisiones')
-        .select('id, fecha_corte, fecha_pago, total_comisiones, estado, vendedor_id, vendedores:profiles!vendedor_id(nombre), created_at')
+        .select('id, fecha_corte, fecha_pago, total_comisiones, estado, vendedor_id, gasto_id, notas, vendedores:profiles!vendedor_id(nombre), created_at')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (recibosEstado !== 'todos') q = q.eq('estado', recibosEstado);
