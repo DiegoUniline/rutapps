@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/lib/confirm';
 
 export default function PartnerCupones() {
   const { data: partner } = usePartner();
@@ -64,7 +65,7 @@ export default function PartnerCupones() {
   };
 
   const del = async (id: string) => {
-    if (!confirm('¿Eliminar cupón?')) return;
+    if (!await confirmDialog('¿Eliminar cupón?')) return;
     await supabase.from('cupones').delete().eq('id', id);
     toast.success('Eliminado');
     qc.invalidateQueries({ queryKey: ['partner-cupones'] });

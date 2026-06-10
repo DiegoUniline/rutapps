@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { usePermisos } from '@/hooks/usePermisos';
+import { confirmDialog } from '@/lib/confirm';
 
 export default function MermaMotivosPage() {
   const { isOwner, loading: permisosLoading } = usePermisos();
@@ -69,8 +70,8 @@ export default function MermaMotivosPage() {
                 <TableCell>{m.nombre}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    if (confirm(`¿Eliminar motivo "${m.nombre}"?`)) del.mutate(m.id);
+                  <Button variant="ghost" size="icon" onClick={async () => {
+                    if (await confirmDialog(`¿Eliminar motivo "${m.nombre}"?`)) del.mutate(m.id);
                   }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>

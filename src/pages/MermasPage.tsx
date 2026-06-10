@@ -19,6 +19,7 @@ import { fmtDate, fmtNum } from '@/lib/utils';
 import { fmtMoney } from '@/lib/currency';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { confirmDialog } from '@/lib/confirm';
 
 
 interface LineaForm {
@@ -194,8 +195,8 @@ export default function MermasPage() {
                 <TableCell onClick={e => e.stopPropagation()}>
                   {!m.cancelada && (
                     <Button variant="ghost" size="icon" title="Cancelar"
-                      onClick={() => {
-                        if (confirm(`¿Cancelar merma ${m.folio}? Se devolverá el stock al almacén origen.`)) {
+                      onClick={async () => {
+                        if (await confirmDialog(`¿Cancelar merma ${m.folio}? Se devolverá el stock al almacén origen.`)) {
                           cancelar.mutate(m.id);
                         }
                       }}>

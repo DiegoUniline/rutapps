@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { emptyLine, calcLineTotals, type CompraLinea } from './types';
+import { confirmDialog } from '@/lib/confirm';
 
 function useCompra(id?: string) {
   return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
@@ -118,7 +119,7 @@ export function useCompraForm() {
   };
 
   const handleDelete = async () => {
-    if (!form.id || !confirm('¿Eliminar esta compra?')) return;
+    if (!form.id || !await confirmDialog('¿Eliminar esta compra?')) return;
     try { await supabase.from('compra_lineas').delete().eq('compra_id', form.id); const { error } = await supabase.from('compras').delete().eq('id', form.id); if (error) throw error; toast.success('Compra eliminada'); qc.invalidateQueries({ queryKey: ['compras'] }); navigate('/almacen/compras'); } catch (err: any) { toast.error(err.message); }
   };
 

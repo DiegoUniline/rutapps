@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import {
+import { confirmDialog } from '@/lib/confirm';
   loadCatalog, matchAll, summary, type ExternalRow, type MatchedRow, type MatchTipo,
 } from '@/lib/catalogMatcher';
 
@@ -579,7 +580,7 @@ function EquivalenciasTab() {
                 </td>
                 <td className="px-2 py-1 text-muted-foreground">{r.notas ?? ''}</td>
                 <td className="px-2 py-1 text-right">
-                  <button onClick={() => { if (confirm('¿Eliminar equivalencia?')) del.mutate(r.id); }}
+                  <button onClick={async () => { if (await confirmDialog('¿Eliminar equivalencia?')) del.mutate(r.id); }}
                     className="text-destructive hover:bg-destructive/10 p-1 rounded">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

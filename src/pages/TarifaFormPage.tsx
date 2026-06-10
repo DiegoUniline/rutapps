@@ -17,6 +17,7 @@ import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTar
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { confirmDialog } from '@/lib/confirm';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -131,7 +132,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
   };
 
   const handleDelete = async (listaId: string) => {
-    if (!confirm('¿Eliminar esta lista y todos sus precios?')) return;
+    if (!await confirmDialog('¿Eliminar esta lista y todos sus precios?')) return;
     try { await deleteLista.mutateAsync(listaId); invalidateListas(); toast.success('Lista eliminada'); } catch (err: any) { toast.error(err.message); }
   };
 

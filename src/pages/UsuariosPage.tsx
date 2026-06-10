@@ -16,6 +16,7 @@ import EditUserModal from '@/components/usuarios/modals/EditUserModal';
 import NewUserModal from '@/components/usuarios/modals/NewUserModal';
 import PasswordModal from '@/components/usuarios/modals/PasswordModal';
 import ArchiveUserWizard from '@/components/usuarios/modals/ArchiveUserWizard';
+import { confirmDialog } from '@/lib/confirm';
 
 export default function UsuariosPage() {
   const { empresa } = useAuth();
@@ -45,7 +46,7 @@ export default function UsuariosPage() {
 
   const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
   const handleReactivate = async (p: ProfileUser) => {
-    if (!confirm(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
+    if (!await confirmDialog(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
     try {
       const { error } = await supabase.rpc('reactivar_usuario', { p_profile_id: p.id });
       if (error) throw error;

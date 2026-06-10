@@ -3,6 +3,7 @@ import { Plus, Trash2, GripVertical, Star, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePresentaciones, useSavePresentacion, useDeletePresentacion, type ProductoPresentacion } from '@/hooks/usePresentaciones';
 import { useCurrency } from '@/hooks/useCurrency';
+import { confirmDialog } from '@/lib/confirm';
 
 interface Props {
   productoId?: string;
@@ -104,7 +105,7 @@ export function ProductoPresentacionesTab({ productoId, isNew, esGranel, unidadG
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta presentación?')) return;
+    if (!await confirmDialog('¿Eliminar esta presentación?')) return;
     try { await delMut.mutateAsync(id); toast.success('Eliminada'); }
     catch (e: any) { toast.error(e.message); }
   };

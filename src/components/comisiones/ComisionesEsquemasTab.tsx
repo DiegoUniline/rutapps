@@ -6,6 +6,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { Plus, Trash2, Pencil, X } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { confirmDialog } from '@/lib/confirm';
 
 type Tipo = 'volumen_pct' | 'volumen_tiers' | 'bono_meta';
 type Periodo = 'semanal' | 'quincenal' | 'mensual';
@@ -164,7 +165,7 @@ export default function ComisionesEsquemasTab() {
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => { if (confirm('¿Eliminar este esquema?')) deleteMut.mutate(e.id); }}
+                          onClick={async () => { if (await confirmDialog('¿Eliminar este esquema?')) deleteMut.mutate(e.id); }}
                           className="p-1 hover:bg-red-50 hover:text-red-600 rounded" title="Eliminar"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

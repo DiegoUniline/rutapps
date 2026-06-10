@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Upload, FileText, Save, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/lib/confirm';
 
 interface CatRow { clave: string; descripcion: string }
 
@@ -172,7 +173,7 @@ export default function DatosFiscalesCard({ empresaId }: Props) {
 
   async function handleRemoveCSF() {
     if (!form.csf_url) return;
-    if (!confirm('¿Eliminar la CSF cargada?')) return;
+    if (!await confirmDialog('¿Eliminar la CSF cargada?')) return;
     try {
       await supabase.storage.from('csf').remove([form.csf_url]);
       await supabase.from('empresas').update({ csf_url: null }).eq('id', empresaId);

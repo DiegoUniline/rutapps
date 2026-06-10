@@ -12,6 +12,7 @@ import {
   type MetaVenta,
 } from '../hooks/useMetasVenta';
 import MetaFormModal from './MetaFormModal';
+import { confirmDialog } from '@/lib/confirm';
 
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -118,8 +119,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
   const openNew = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (m: MetaVenta) => { setEditing(m); setModalOpen(true); };
 
-  const handleDelete = (m: MetaVenta) => {
-    if (confirm('¿Eliminar esta meta?')) del.mutate(m.id);
+  const handleDelete = async (m: MetaVenta) => {
+    if (await confirmDialog('¿Eliminar esta meta?')) del.mutate(m.id);
   };
 
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];

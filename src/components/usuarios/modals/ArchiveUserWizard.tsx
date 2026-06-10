@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ProfileUser, Almacen } from '@/hooks/useUsuarios';
+import { confirmDialog } from '@/lib/confirm';
 
 interface Summary {
   profile_id: string;
@@ -69,7 +70,7 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
 
   const handleArchive = async () => {
     if (!summary?.puede_archivar) { toast.error('Aún hay pendientes que resolver'); return; }
-    if (!confirm(`¿Archivar a ${user.nombre || emailLabel}? El usuario no podrá iniciar sesión, vender ni entregar. Sí seguirá disponible para traspasos, ajustes y carga de camión sobre su almacén.`)) return;
+    if (!await confirmDialog(`¿Archivar a ${user.nombre || emailLabel}? El usuario no podrá iniciar sesión, vender ni entregar. Sí seguirá disponible para traspasos, ajustes y carga de camión sobre su almacén.`)) return;
     setArchiving(true);
     try {
       const { error } = await supabase.rpc('archivar_usuario', {

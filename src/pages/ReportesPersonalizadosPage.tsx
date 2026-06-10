@@ -27,6 +27,7 @@ import {
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { fmtMoney } from '@/lib/currency';
+import { confirmDialog } from '@/lib/confirm';
 
 const STATUS_LABELS: Record<string, string> = {
   borrador: 'Borrador', pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada',
@@ -171,8 +172,8 @@ export default function ReportesPersonalizadosPage() {
                       <Button size="sm" variant="outline" onClick={() => { setEditing({ ...r }); setEditorOpen(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        if (confirm('¿Eliminar este reporte?')) delMutation.mutate(r.id);
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id);
                       }}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
@@ -191,7 +192,7 @@ export default function ReportesPersonalizadosPage() {
               empresaId={empresaId!}
               empresaNombre={empresa?.nombre ?? ''}
               onEdit={() => { setEditing({ ...r }); setEditorOpen(true); }}
-              onDelete={() => { if (confirm('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
+              onDelete={async () => { if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
             />
           </TabsContent>
         ))}

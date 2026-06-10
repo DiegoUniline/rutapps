@@ -16,6 +16,7 @@ import { compressPhoto } from '@/lib/imageCompressor';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useQueryClient } from '@tanstack/react-query';
+import { confirmDialog } from '@/lib/confirm';
 
 /** Quick-create a catalog item (marcas, clasificaciones, unidades, listas, proveedores) */
 async function quickCreateCatalog(
@@ -175,7 +176,7 @@ export default function ProductoFormPage() {
 
   const handleDelete = async () => {
     if (!id || isNew) return;
-    if (!confirm('¿Eliminar este producto?')) return;
+    if (!await confirmDialog('¿Eliminar este producto?')) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Producto eliminado');
