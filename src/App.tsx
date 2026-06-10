@@ -271,6 +271,7 @@ function AppRoutes() {
             <Route path="perfil" element={<PartnerPerfil />} />
           </Route>
           <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
           <Route path="*" element={<Navigate to="/partner" replace />} />
         </Routes>
       </Suspense>
@@ -338,6 +339,7 @@ function AppRoutes() {
           <Route path="/pagar/:token" element={<PagarPage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
           <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -710,6 +712,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/reportes/personalizados" element={<ReportesPersonalizadosPage />} />
       <Route path="/control" element={<ControlPage />} />
       <Route path="/tutoriales" element={<TutorialesPage />} />
+          <Route path="/soporte" element={<SoportePage />} />
       <Route path="/perfil" element={<PerfilPage />} />
       <Route path="/configuracion" element={<ConfiguracionPage />} />
       <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
