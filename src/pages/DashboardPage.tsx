@@ -31,6 +31,17 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 import DashboardAIAdvisor from '@/components/dashboard/DashboardAIAdvisor';
+import AlertasBanner from './dashboard/sections/AlertasBanner';
+import MetaDelMesCard from './dashboard/sections/MetaDelMesCard';
+import KpiExtras from './dashboard/sections/KpiExtras';
+import TabEquipo from './dashboard/sections/TabEquipo';
+import TabCartera from './dashboard/sections/TabCartera';
+import TabInventario from './dashboard/sections/TabInventario';
+import ClientesSinCompraModal from './dashboard/sections/ClientesSinCompraModal';
+import { useMonthlyGoal } from './dashboard/hooks/useMonthlyGoal';
+import { useDashboardVisitas, useClientesActivos, useUltimaCompraPorCliente } from './dashboard/hooks/useDashboardExtra';
+import { Target, Route, Wrench } from 'lucide-react';
+import { startOfMonth as startOfMonthFn, endOfMonth as endOfMonthFn } from 'date-fns';
 
 const PRESETS = [
   { label: 'Hoy', range: () => ({ from: new Date(), to: new Date() }) },
@@ -722,6 +733,18 @@ export default function DashboardPage() {
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
 
+  // === Datos para nuevas secciones ===
+  const { data: monthlyGoal = 0 } = useMonthlyGoal();
+  const monthRange = useMemo(() => ({ from: startOfMonthFn(new Date()), to: endOfMonthFn(new Date()) }), []);
+  const { data: ventasMesData } = useDashboardVentas(monthRange);
+  const { data: cobrosMesData } = useDashboardCobros(monthRange);
+  const { data: comprasMesData } = useDashboardCompras(monthRange);
+  const { data: gastosMesData } = useDashboardGastos(monthRange);
+  const { data: visitasPeriodo } = useDashboardVisitas(dateRange, vendedorId || undefined);
+  const { data: clientesActivos = [] } = useClientesActivos();
+  const { data: ultimaCompraMap } = useUltimaCompraPorCliente();
+  const [sinCompraOpen, setSinCompraOpen] = useState(false);
+
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
   const devStats = useMemo(() => {
@@ -804,7 +827,45 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total);
   }, [ventas]);
 
-  // Mensual data
+  // === KPIs adicionales (periodo seleccionado) ===
+  const kpisExtra = useMemo(() => {
+    const visitas = (visitasPeriodo ?? []).length;
+    const ventasConPedido = (visitasPeriodo ?? []).filter((v: any) => !!v.venta_id).length;
+    const efectividadPct = visitas > 0 ? (ventasConPedido / visitas) * 100 : 0;
+    const visitasPlaneadas = 0; // se calcula por vendedor en TabEquipo; aquí dejamos genérico
+    const cumplimientoPct = 0;
+    const dropSize = ventasConPedido > 0 ? kpis.totalVentas / ventasConPedido : 0;
+    const desde = new Date(dateRange.from); desde.setHours(0,0,0,0);
+    const hasta = new Date(dateRange.to); hasta.setHours(23,59,59,999);
+    const clientesIdsConCompra = new Set<string>();
+    (ventas ?? []).forEach((v: any) => { if (v.cliente_id) clientesIdsConCompra.add(v.cliente_id); });
+    const totalActivos = (clientesActivos ?? []).length;
+    const cobertura = totalActivos > 0 ? (clientesIdsConCompra.size / totalActivos) * 100 : 0;
+    const hoyD = new Date(); hoyD.setHours(0,0,0,0);
+    const sinCompra30 = (clientesActivos ?? []).filter((c: any) => {
+      const last = ultimaCompraMap?.get(c.id);
+      if (!last) return true;
+      const d = new Date(last); d.setHours(0,0,0,0);
+      return Math.floor((hoyD.getTime() - d.getTime()) / 86400000) >= 30;
+    });
+    return {
+      visitas, ventasConPedido, efectividadPct, visitasPlaneadas, cumplimientoPct,
+      dropSize, cobertura, clientesConCompra: clientesIdsConCompra.size,
+      clientesActivos: totalActivos, clientesSinCompra30d: sinCompra30.length, sinCompra30,
+    };
+  }, [visitasPeriodo, ventas, clientesActivos, ultimaCompraMap, kpis.totalVentas, dateRange]);
+
+  const metaMesData = useMemo(() => {
+    const ventasMes = (ventasMesData ?? []).reduce((s, v: any) => s + Number(v.total || 0), 0);
+    const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto || 0), 0);
+    const gastosMes = (gastosMesData ?? []).reduce((s, g: any) => s + Number(g.monto || 0), 0);
+    const comprasMes = (comprasMesData ?? []).reduce((s, c: any) => s + Number(c.total || 0), 0);
+    const margenMonto = ventasMes - comprasMes;
+    return { ventasMes, cobradoMes, gastosMes, margenMonto };
+  }, [ventasMesData, cobrosMesData, gastosMesData, comprasMesData]);
+
+  const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
+
   const { data: evolucion } = useDashboardEvolucionMensual(12);
   const { data: ventasPorMes } = useDashboardVentasPorMes(12);
   const { data: usuarioMes } = useDashboardVentasUsuarioMes();
@@ -864,6 +925,11 @@ export default function DashboardPage() {
       {/* === HOY · Banda ejecutiva === */}
       <HoyBand hoy={hoy} money={money} />
 
+      {/* === Banner de alertas === */}
+      <AlertasBanner />
+
+
+
       {/* === Asesor IA === */}
       <DashboardAIAdvisor buildSnapshot={() => ({
         periodo: { desde: format(dateRange.from, 'yyyy-MM-dd'), hasta: format(dateRange.to, 'yyyy-MM-dd') },
@@ -893,16 +959,50 @@ export default function DashboardPage() {
         stockCritico: lowStockProducts.slice(0, 10).map((p: any) => ({ nombre: p.nombre, cantidad: Number(p.cantidad ?? 0), min: Number(p.min ?? 0) })),
       })} />
 
+      {/* === Meta del mes === */}
+      <MetaDelMesCard
+        ventasMes={metaMesData.ventasMes}
+        cobradoMes={metaMesData.cobradoMes}
+        gastosMes={metaMesData.gastosMes}
+        margenMonto={metaMesData.margenMonto}
+        money={money}
+      />
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
         <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
         <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" />
         <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros`} icon={Wallet} color="bg-[hsl(var(--success))]" />
         <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
         <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
         <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
-        <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
+        <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
+        <KpiExtras
+          efectividadPct={kpisExtra.efectividadPct}
+          visitas={kpisExtra.visitas}
+          ventasConPedido={kpisExtra.ventasConPedido}
+          cumplimientoPct={kpisExtra.cumplimientoPct}
+          visitasPlaneadas={kpisExtra.visitasPlaneadas}
+          dropSize={kpisExtra.dropSize}
+          cobertura={kpisExtra.cobertura}
+          clientesConCompra={kpisExtra.clientesConCompra}
+          clientesActivos={kpisExtra.clientesActivos}
+          clientesSinCompra30d={kpisExtra.clientesSinCompra30d}
+          onSinCompraClick={() => setSinCompraOpen(true)}
+          money={money}
+        />
       </div>
+
+      <ClientesSinCompraModal
+        open={sinCompraOpen}
+        onClose={() => setSinCompraOpen(false)}
+        clientes={kpisExtra.sinCompra30.map((c: any) => {
+          const last = ultimaCompraMap?.get(c.id) || null;
+          const dias = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : 9999;
+          return { id: c.id, nombre: c.nombre, vendedor_id: c.vendedor_id, ultimaCompra: last, diasSinCompra: dias };
+        })}
+      />
+
 
       <Tabs defaultValue="resumen" className="mt-5">
         <TabsList className="flex flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
@@ -917,6 +1017,15 @@ export default function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger value="comparativo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <ArrowUpRight className="h-3.5 w-3.5 mr-2" /> Mes vs Mes
+          </TabsTrigger>
+          <TabsTrigger value="equipo" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Users className="h-3.5 w-3.5 mr-2" /> Equipo
+          </TabsTrigger>
+          <TabsTrigger value="cartera" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <CreditCard className="h-3.5 w-3.5 mr-2" /> Cartera
+          </TabsTrigger>
+          <TabsTrigger value="inventario-tab" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+            <Package className="h-3.5 w-3.5 mr-2" /> Inventario
           </TabsTrigger>
         </TabsList>
 
@@ -1104,6 +1213,21 @@ export default function DashboardPage() {
         <TabsContent value="comparativo" className="mt-4 space-y-4">
           <VentasPorMesTable data={ventasPorMes ?? []} money={money} cSym={cSym} />
           <UsuarioMesVsMesTable data={usuarioMes ?? []} money={money} cSym={cSym} />
+        </TabsContent>
+
+        {/* === EQUIPO === */}
+        <TabsContent value="equipo" className="mt-4">
+          <TabEquipo range={dateRange} metaMes={monthlyGoal} money={money} />
+        </TabsContent>
+
+        {/* === CARTERA === */}
+        <TabsContent value="cartera" className="mt-4">
+          <TabCartera range={dateRange} ventasMes={metaMesData.ventasMes} ventas={ventas ?? []} cobros={cobros ?? []} money={money} />
+        </TabsContent>
+
+        {/* === INVENTARIO === */}
+        <TabsContent value="inventario-tab" className="mt-4">
+          <TabInventario range={dateRange} money={money} />
         </TabsContent>
       </Tabs>
 
