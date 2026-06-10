@@ -18,11 +18,12 @@ export function useDashboardInventarioCamion(range: DateRange) {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eId = empresa!.id;
+      const sb: any = supabase;
       const [almacenesRes, stockRes, productosRes, mermasRes] = await Promise.all([
-        supabase.from('almacenes').select('id, nombre, tipo').eq('empresa_id', eId).eq('activo', true),
-        fetchAllPages((from, to) => supabase.from('stock_almacen').select('almacen_id, producto_id, cantidad').eq('empresa_id', eId).range(from, to)),
-        supabase.from('productos').select('id, costo, precio_principal').eq('empresa_id', eId),
-        fetchAllPages((from, to) => supabase.from('mermas')
+        sb.from('almacenes').select('id, nombre, tipo').eq('empresa_id', eId).eq('activo', true),
+        fetchAllPages((from, to) => sb.from('stock_almacen').select('almacen_id, producto_id, cantidad').eq('empresa_id', eId).range(from, to)),
+        sb.from('productos').select('id, costo, precio_principal').eq('empresa_id', eId),
+        fetchAllPages((from, to) => sb.from('mermas')
           .select('id, folio, fecha, total_costo, total_venta, cancelada, merma_motivos(nombre)')
           .eq('empresa_id', eId)
           .gte('fecha', fmt(range.from)).lte('fecha', fmt(range.to))
