@@ -103,11 +103,11 @@ export default function ComisionesAvanceTab() {
         <span className="text-xs text-muted-foreground">al</span>
         <input type="date" className="input-odoo text-xs py-1.5 w-36" value={hasta} onChange={e => setHasta(e.target.value)} />
         <div className="h-6 w-px bg-border mx-1" />
-        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Semana</button>
-        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Quincena</button>
-        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes actual</button>
-        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Mes anterior</button>
-        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Año</button>
+        <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Semana</button>
+        <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Quincena</button>
+        <button onClick={() => setPreset('mes')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes actual</button>
+        <button onClick={() => setPreset('mes_ant')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Mes anterior</button>
+        <button onClick={() => setPreset('anio')} className="px-2 py-1 text-xs bg-white border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary rounded">Año</button>
         <span className="ml-auto text-xs text-muted-foreground">{fmtDate(desde)} a {fmtDate(hasta)}</span>
       </div>
 
