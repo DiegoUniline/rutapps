@@ -36,7 +36,7 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
 
       const sb: any = supabase;
       const [vendedoresRes, ventasRes, lineasRes, cobrosRes, carteraRes, visitasRes, clientesRes] = await Promise.all([
-        sb.from('profiles').select('id, nombre, ').eq('empresa_id', eId).eq('estado', 'activo'),
+        sb.from('profiles').select('id, nombre').eq('empresa_id', eId).eq('estado', 'activo'),
         fetchAllPages((from, to) => sb.from('ventas')
           .select('id, vendedor_id, total, fecha, status, saldo_pendiente, condicion_pago, fecha_vencimiento')
           .eq('empresa_id', eId).eq('es_saldo_inicial', false).neq('status', 'cancelado')

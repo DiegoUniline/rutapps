@@ -32,7 +32,7 @@ export function useDashboardAlertas() {
         fetchAllPages((from, to) =>
           sb.from('ventas').select('cliente_id, saldo_pendiente').eq('empresa_id', eId).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0).neq('status', 'cancelado').range(from, to)
         ),
-        sb.from('profiles').select('id, nombre, ').eq('empresa_id', eId).eq('estado', 'activo'),
+        sb.from('profiles').select('id, nombre').eq('empresa_id', eId).eq('estado', 'activo'),
         sb.from('vendedor_ubicaciones').select('user_id, updated_at').eq('empresa_id', eId).gte('updated_at', todayIso),
         sb.from('ventas').select('id, folio, total, saldo_pendiente, fecha_vencimiento, clientes(nombre)').eq('empresa_id', eId).eq('requiere_factura', true).gt('saldo_pendiente', 0).neq('status', 'cancelado').gte('fecha_vencimiento', todayIso).lte('fecha_vencimiento', in7Iso),
         sb.from('ventas').select('id, folio, total, created_at, clientes(nombre)').eq('empresa_id', eId).eq('tipo', 'pedido').in('status', ['confirmado', 'borrador']).lt('created_at', since24h),
