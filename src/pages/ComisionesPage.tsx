@@ -98,22 +98,26 @@ export default function ComisionesPage() {
 
   // ============== POR PAGAR ==============
   const [ppFechaCorte, setPpFechaCorte] = useState(todayLocal());
+  const [ppSaldoFilter, setPpSaldoFilter] = useState<'cobradas' | 'pendientes' | 'todas'>('cobradas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsedVendors, setCollapsedVendors] = useState<Set<string>>(new Set());
   const toggleCollapse = (id: string) => setCollapsedVendors(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const { data: pendientesPP, isLoading: loadingPP } = useQuery({
-    queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte],
+    queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte, ppSaldoFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('venta_comisiones')
-        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio), vendedores:profiles!vendedor_id(nombre)')
+        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio, saldo_pendiente), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('pagada', false)
         .is('pago_comision_id', null)
         .lte('fecha_venta', ppFechaCorte)
         .order('fecha_venta');
+      if (ppSaldoFilter === 'cobradas') q = q.eq('ventas.saldo_pendiente', 0);
+      if (ppSaldoFilter === 'pendientes') q = q.gt('ventas.saldo_pendiente', 0);
+      const { data, error } = await q;
       if (error) throw error;
       return data as any[];
     },
