@@ -113,23 +113,8 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         }).filter(Boolean);
       }
 
-      const gastosBase = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
-
       // Gastos de caja (POS): viven en caja_movimientos con tipo='gasto'.
       // Se incluyen en el reporte etiquetados como "POS" para que se vean junto a los demás.
-      const cajaGastosRaw = hasVendorFilter ? [] : await fetchAllPages<any>((from, to) =>
-        supabase.from('caja_movimientos')
-          .select('id, monto, motivo, created_at, user_id, tipo')
-          .eq('empresa_id', eid)
-          .eq('tipo', 'gasto')
-          .gte('created_at', `${desde}T00:00:00`)
-          .lte('created_at', `${hasta}T23:59:59`)
-          .range(from, to)
-      );
       const cajaGastos = cajaGastosRaw.map((m: any) => ({
         id: `caja_${m.id}`,
         monto: m.monto,
@@ -141,31 +126,9 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       }));
       const gastos = [...gastosBase, ...cajaGastos];
 
-      const clientes = await fetchAllPages<any>((from, to) =>
-        supabase.from('clientes').select('id, nombre, codigo, status').eq('empresa_id', eid).range(from, to)
-      );
-
       const productos = await fetchAllPages<any>((from, to) =>
         supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo').range(from, to)
       );
-
-      const cargas = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
-
-      const devoluciones = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
-
-      const entregas = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, tipo, entrega_inmediata, origen, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).eq('es_saldo_inicial', false).neq('origen', 'pos').in('status', ['confirmado', 'entregado']).or(`and(fecha_entrega.gte.${desde},fecha_entrega.lte.${hasta}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${desde},fecha.lte.${hasta})`).range(from, to);
-        if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
-        return q;
-      });
 
       // === RESUMEN ===
       const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
