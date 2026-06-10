@@ -149,7 +149,7 @@ export default function GastosDesktopPage() {
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>
                 <TableCell className="text-right font-bold text-destructive">{fmt(g.monto)}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => { if (await confirmDialog('¿Eliminar gasto?')) deleteGasto.mutate(g.id); }}>
+                  <Button variant="ghost" size="icon" onClick={async () => { if (await confirmDialog('¿Eliminar gasto?')) deleteGasto.mutate(g.id); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </TableCell>

@@ -192,7 +192,7 @@ export default function ReportesPersonalizadosPage() {
               empresaId={empresaId!}
               empresaNombre={empresa?.nombre ?? ''}
               onEdit={() => { setEditing({ ...r }); setEditorOpen(true); }}
-              onDelete={() => { if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
+              onDelete={async () => { if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
             />
           </TabsContent>
         ))}
