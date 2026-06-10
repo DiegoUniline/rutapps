@@ -205,16 +205,18 @@ export interface FuenteMeta {
   statusOptions?: string[];
   /** Tipos válidos en filtros */
   tipoOptions?: string[];
+  /** Filtros adicionales por entidad */
+  entityFilters?: EntityFilterKey[];
 }
 
 export const FUENTES: FuenteMeta[] = [
-  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'] },
-  { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'] },
-  { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'] },
-  { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'] },
-  { key: 'clientes',   label: 'Clientes (catálogo)',   description: 'Una fila por cliente.', campos: CAMPOS_CLIENTES, statusOptions: ['activo','inactivo'] },
-  { key: 'entregas',   label: 'Entregas / Rutas',      description: 'Una fila por línea de entrega.', campos: CAMPOS_ENTREGAS, statusOptions: ['borrador','asignado','cargado','hecho','no_entregado','cancelado'] },
-  { key: 'visitas',    label: 'Visitas a clientes',    description: 'Una fila por visita registrada.', campos: CAMPOS_VISITAS },
+  { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'], entityFilters: ['cliente','vendedor','categoria','marca','condicion_pago','monto','search'] },
+  { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'], entityFilters: ['cliente','cobrador','metodo_pago','monto','search'] },
+  { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'], entityFilters: ['almacen','categoria','marca','search'] },
+  { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'], entityFilters: ['proveedor','almacen','condicion_pago','monto','search'] },
+  { key: 'clientes',   label: 'Clientes (catálogo)',   description: 'Una fila por cliente.', campos: CAMPOS_CLIENTES, statusOptions: ['activo','inactivo'], entityFilters: ['vendedor','cobrador','zona','lista_precio','search'] },
+  { key: 'entregas',   label: 'Entregas / Rutas',      description: 'Una fila por línea de entrega.', campos: CAMPOS_ENTREGAS, statusOptions: ['borrador','asignado','cargado','hecho','no_entregado','cancelado'], entityFilters: ['cliente','vendedor','almacen','search'] },
+  { key: 'visitas',    label: 'Visitas a clientes',    description: 'Una fila por visita registrada.', campos: CAMPOS_VISITAS, entityFilters: ['cliente','vendedor','search'] },
 ];
 
 export function getFuenteMeta(f: ReporteFuente): FuenteMeta {
