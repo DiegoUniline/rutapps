@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
       { label: 'Reporte diario', path: '/ventas/reporte-diario' },
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
+      { label: 'Comisiones', path: '/finanzas/comisiones' },
     ],
   },
   {
@@ -139,7 +140,6 @@ const navItems: NavItem[] = [
       { label: 'Pagos proveedores', path: '/finanzas/pagos-proveedores' },
       { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
-      { label: 'Comisiones', path: '/finanzas/comisiones' },
     ],
   },
   // ── Reportes & Facturación ──
