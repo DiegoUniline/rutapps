@@ -4623,6 +4623,7 @@ export type Database = {
           must_change_password: boolean
           nombre: string | null
           pin_code: string | null
+          super_admin_override_empresa_id: string | null
           telefono: string | null
           user_id: string
         }
@@ -4639,6 +4640,7 @@ export type Database = {
           must_change_password?: boolean
           nombre?: string | null
           pin_code?: string | null
+          super_admin_override_empresa_id?: string | null
           telefono?: string | null
           user_id: string
         }
@@ -4655,6 +4657,7 @@ export type Database = {
           must_change_password?: boolean
           nombre?: string | null
           pin_code?: string | null
+          super_admin_override_empresa_id?: string | null
           telefono?: string | null
           user_id?: string
         }
