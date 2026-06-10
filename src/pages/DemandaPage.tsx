@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,7 @@ function usePedidosPendientes() {
         .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('empresa_id', empresa!.id)
         .eq('tipo', 'pedido')
-        .in('status', ['confirmado', 'entregado'])
+        .in('status', ['borrador', 'confirmado', 'entregado'])
         .order('fecha', { ascending: true });
       if (error) throw error;
 
@@ -139,12 +139,43 @@ export default function DemandaPage() {
 
   const selectedPedidos = filtered.filter(p => selectedIds.has(p.id));
 
+  // Confirm pedidos (single or bulk)
+  const confirmarPedidoMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return [];
+      const { error } = await supabase
+        .from('ventas')
+        .update({ status: 'confirmado' })
+        .in('id', ids)
+        .eq('status', 'borrador');
+      if (error) throw error;
+      return ids;
+    },
+    onSuccess: (ids) => {
+      if (ids.length > 0) toast.success(`${ids.length} pedido(s) confirmado(s)`);
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   // Bulk create entregas mutation
   const crearEntregasMut = useMutation({
     mutationFn: async () => {
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
 
       const createdIds: string[] = [];
+
+      // Auto-confirm any borrador in the batch first
+      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      if (borradorIds.length > 0) {
+        const { error: cErr } = await supabase
+          .from('ventas')
+          .update({ status: 'confirmado' })
+          .in('id', borradorIds)
+          .eq('status', 'borrador');
+        if (cErr) throw cErr;
+      }
 
       for (const pedido of selectedPedidos) {
         const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
@@ -191,6 +222,7 @@ export default function DemandaPage() {
     onSuccess: (ids) => {
       toast.success(`${ids.length} entrega(s) creada(s)`);
       qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       setSelectedIds(new Set());
@@ -202,6 +234,8 @@ export default function DemandaPage() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
   // Totals
   const totalPedidos = filtered.length;
@@ -217,10 +251,24 @@ export default function DemandaPage() {
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
         {selectedIds.size > 0 && (
-          <Button onClick={() => setShowCrearDialog(true)} size="sm">
-            <Package className="h-3.5 w-3.5" />
-            Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
-          </Button>
+          <div className="flex items-center gap-2">
+            {borradorSelectedIds.length > 0 && (
+              <Button
+                onClick={() => confirmarPedidoMut.mutate(borradorSelectedIds)}
+                size="sm"
+                variant="outline"
+                disabled={confirmarPedidoMut.isPending}
+                className="border-green-600 text-green-700 hover:bg-green-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
+              </Button>
+            )}
+            <Button onClick={() => setShowCrearDialog(true)} size="sm">
+              <Package className="h-3.5 w-3.5" />
+              Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -272,12 +320,13 @@ export default function DemandaPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
               <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
+              <TableHead className="text-[11px] text-center w-28">Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay pedidos pendientes de surtir
                 </TableCell>
@@ -314,6 +363,24 @@ export default function DemandaPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
+                  <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
+                    {pedido.status === 'borrador' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px] border-green-600 text-green-700 hover:bg-green-50"
+                        onClick={() => confirmarPedidoMut.mutate([pedido.id])}
+                        disabled={confirmarPedidoMut.isPending}
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Confirmar
+                      </Button>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">
+                        Confirmado
+                      </Badge>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
