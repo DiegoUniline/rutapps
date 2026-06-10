@@ -32,7 +32,9 @@ export default function ComisionesGeneradasPage() {
     queryFn: async () => {
       let q = supabase.from('venta_comisiones')
         .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
-        .order('fecha_venta', { ascending: false });
+        .eq('empresa_id', empresa!.id)
+        .order('fecha_venta', { ascending: false })
+        .limit(2000);
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       if (statusFilter === 'pendientes') q = q.eq('pagada', false);
       if (statusFilter === 'pagadas') q = q.eq('pagada', true);
