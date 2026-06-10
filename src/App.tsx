@@ -49,7 +49,7 @@ const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
 // EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
-const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
+// ReporteEntregasPage removed — reporte de entregas now lives as a tab inside /reportes
 const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
 
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
