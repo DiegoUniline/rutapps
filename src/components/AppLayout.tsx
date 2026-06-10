@@ -651,7 +651,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
-        <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
+        <header className="min-h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
           <div className="flex items-center gap-2">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
