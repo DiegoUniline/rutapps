@@ -42,7 +42,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
     enabled: !!empresa?.id && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles' as any)
         .select('id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
@@ -57,7 +57,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
     enabled: !!empresa?.id && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('productos')
+        .from('productos' as any)
         .select('id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
@@ -73,7 +73,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
     enabled: !!empresa?.id && open && !!productoId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('producto_presentaciones')
+        .from('producto_presentaciones' as any)
         .select('id, nombre')
         .eq('producto_id', productoId)
         .order('nombre');
