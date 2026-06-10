@@ -5,12 +5,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVendedores } from '@/hooks/useClientes';
-import { OdooPagination } from '@/components/OdooPagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
-import { Check, DollarSign, Calendar } from 'lucide-react';
+import { Check, DollarSign, Calendar, FileText } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
@@ -36,20 +35,20 @@ function mondayOfWeek() {
   return monday.toISOString().slice(0, 10);
 }
 
+type TabKey = 'historial' | 'por_pagar' | 'recibos' | 'reglas';
+
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'historial' | 'reglas'>('historial');
+  const [tab, setTab] = useState<TabKey>('historial');
+
+  // Historial filters
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
   const [fechaDesde, setFechaDesde] = useState<string>(firstOfMonth());
   const [fechaHasta, setFechaHasta] = useState<string>(todayLocal());
   const [page, setPage] = useState(0);
-
-  const [payVendedor, setPayVendedor] = useState<string>('');
-  const [payFechaCorte, setPayFechaCorte] = useState(todayLocal());
-  const [showPayForm, setShowPayForm] = useState(false);
 
   const { data: vendedores } = useVendedores();
 
@@ -59,7 +58,7 @@ export default function ComisionesPage() {
     queryFn: async () => {
       let q = supabase
         .from('venta_comisiones')
-        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte)')
+        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
         .order('fecha_venta', { ascending: false });
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       if (statusFilter === 'pendientes') q = q.eq('pagada', false);
@@ -70,58 +69,6 @@ export default function ComisionesPage() {
       if (error) throw error;
       return data as any[];
     },
-  });
-
-  const { data: pendingForPay } = useQuery({
-    queryKey: ['comisiones-pendientes-pago', payVendedor, payFechaCorte],
-    enabled: !!payVendedor && !!payFechaCorte,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('venta_comisiones')
-        .select('id, comision_monto, fecha_venta')
-        .eq('vendedor_id', payVendedor)
-        .eq('pagada', false)
-        .lte('fecha_venta', payFechaCorte)
-        .order('fecha_venta');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const totalPendiente = useMemo(() =>
-    (pendingForPay ?? []).reduce((s, c) => s + (c.comision_monto ?? 0), 0),
-    [pendingForPay]
-  );
-
-  const payMut = useMutation({
-    mutationFn: async () => {
-      if (!payVendedor || !empresa?.id || !user?.id) throw new Error('Datos incompletos');
-      const ids = (pendingForPay ?? []).map(c => c.id);
-      if (ids.length === 0) throw new Error('No hay comisiones pendientes');
-
-      const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
-        empresa_id: empresa.id,
-        vendedor_id: payVendedor,
-        fecha_corte: payFechaCorte,
-        total_comisiones: totalPendiente,
-        user_id: user.id,
-      }).select('id').single();
-      if (pagoErr) throw pagoErr;
-
-      const { error: upErr } = await supabase
-        .from('venta_comisiones')
-        .update({ pagada: true, pago_comision_id: pago.id })
-        .in('id', ids);
-      if (upErr) throw upErr;
-    },
-    onSuccess: () => {
-      toast.success('Comisiones pagadas');
-      qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
-      qc.invalidateQueries({ queryKey: ['comisiones-pendientes-pago'] });
-      setShowPayForm(false);
-      setPayVendedor('');
-    },
-    onError: (e: any) => toast.error(e.message),
   });
 
   const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
@@ -146,31 +93,191 @@ export default function ComisionesPage() {
   }, [comisiones]);
 
   const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
-  const vendedorPayOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
+
+  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); setPage(0); };
+
+  // ============== POR PAGAR ==============
+  const [ppFechaCorte, setPpFechaCorte] = useState(todayLocal());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const { data: pendientesPP, isLoading: loadingPP } = useQuery({
+    queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venta_comisiones')
+        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio), vendedores:profiles!vendedor_id(nombre)')
+        .eq('empresa_id', empresa!.id)
+        .eq('pagada', false)
+        .is('pago_comision_id', null)
+        .lte('fecha_venta', ppFechaCorte)
+        .order('fecha_venta');
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const ppGrupos = useMemo(() => {
+    const map = new Map<string, { vendedor_id: string; nombre: string; items: any[]; total: number }>();
+    for (const c of pendientesPP ?? []) {
+      const id = c.vendedor_id ?? 'sin';
+      if (!map.has(id)) map.set(id, { vendedor_id: id, nombre: c.vendedores?.nombre ?? 'Sin vendedor', items: [], total: 0 });
+      const g = map.get(id)!;
+      g.items.push(c);
+      g.total += c.comision_monto ?? 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }, [pendientesPP]);
+
+  const selectedSummary = useMemo(() => {
+    const map = new Map<string, { vendedor_id: string; nombre: string; count: number; total: number }>();
+    for (const c of pendientesPP ?? []) {
+      if (!selected.has(c.id)) continue;
+      const id = c.vendedor_id ?? 'sin';
+      if (!map.has(id)) map.set(id, { vendedor_id: id, nombre: c.vendedores?.nombre ?? 'Sin vendedor', count: 0, total: 0 });
+      const g = map.get(id)!;
+      g.count += 1;
+      g.total += c.comision_monto ?? 0;
+    }
+    return Array.from(map.values());
+  }, [pendientesPP, selected]);
+
+  const selectedTotal = useMemo(() => selectedSummary.reduce((s, g) => s + g.total, 0), [selectedSummary]);
+
+  const toggleOne = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleVendor = (items: any[]) => setSelected(prev => {
+    const n = new Set(prev);
+    const allSel = items.every(i => n.has(i.id));
+    if (allSel) items.forEach(i => n.delete(i.id));
+    else items.forEach(i => n.add(i.id));
+    return n;
+  });
+  const selectAll = () => setSelected(new Set((pendientesPP ?? []).map(c => c.id)));
+  const clearSel = () => setSelected(new Set());
+
+  const generarMut = useMutation({
+    mutationFn: async () => {
+      if (!empresa?.id || !user?.id) throw new Error('Datos incompletos');
+      if (selectedSummary.length === 0) throw new Error('Selecciona al menos una comisión');
+
+      for (const g of selectedSummary) {
+        const itemIds = (pendientesPP ?? [])
+          .filter(c => selected.has(c.id) && c.vendedor_id === g.vendedor_id)
+          .map(c => c.id);
+        const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
+          empresa_id: empresa.id,
+          vendedor_id: g.vendedor_id,
+          fecha_corte: ppFechaCorte,
+          total_comisiones: g.total,
+          user_id: user.id,
+          estado: 'borrador',
+        }).select('id').single();
+        if (pagoErr) throw pagoErr;
+
+        const { error: upErr } = await supabase
+          .from('venta_comisiones')
+          .update({ pago_comision_id: pago.id })
+          .in('id', itemIds);
+        if (upErr) throw upErr;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Recibos generados');
+      clearSel();
+      qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
+      qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
+      qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
+      setTab('recibos');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // ============== RECIBOS ==============
+  const [recibosEstado, setRecibosEstado] = useState<'borrador' | 'pagada' | 'todos'>('borrador');
+
+  const { data: recibos, isLoading: loadingRecibos } = useQuery({
+    queryKey: ['pago_comisiones', empresa?.id, recibosEstado],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      let q = supabase
+        .from('pago_comisiones')
+        .select('id, fecha_corte, fecha_pago, total_comisiones, estado, vendedor_id, vendedores:profiles!vendedor_id(nombre), created_at')
+        .eq('empresa_id', empresa!.id)
+        .order('created_at', { ascending: false });
+      if (recibosEstado !== 'todos') q = q.eq('estado', recibosEstado);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const totalBorrador = useMemo(
+    () => (recibos ?? []).filter(r => r.estado === 'borrador').reduce((s, r) => s + (r.total_comisiones ?? 0), 0),
+    [recibos]
+  );
+
+  const marcarPagadoMut = useMutation({
+    mutationFn: async (reciboId: string) => {
+      const today = todayLocal();
+      const { error: upRec } = await supabase
+        .from('pago_comisiones')
+        .update({ estado: 'pagada', fecha_pago: today })
+        .eq('id', reciboId);
+      if (upRec) throw upRec;
+      const { error: upCom } = await supabase
+        .from('venta_comisiones')
+        .update({ pagada: true })
+        .eq('pago_comision_id', reciboId);
+      if (upCom) throw upCom;
+    },
+    onSuccess: () => {
+      toast.success('Recibo marcado como pagado');
+      qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
+      qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const cancelarReciboMut = useMutation({
+    mutationFn: async (reciboId: string) => {
+      const { error: upCom } = await supabase
+        .from('venta_comisiones')
+        .update({ pago_comision_id: null })
+        .eq('pago_comision_id', reciboId);
+      if (upCom) throw upCom;
+      const { error: delRec } = await supabase.from('pago_comisiones').delete().eq('id', reciboId);
+      if (delRec) throw delRec;
+    },
+    onSuccess: () => {
+      toast.success('Recibo cancelado, comisiones liberadas');
+      qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
+      qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
+      qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const from = page * PAGE_SIZE + 1;
   const to = Math.min((page + 1) * PAGE_SIZE, (comisiones ?? []).length);
   const total = (comisiones ?? []).length;
 
-  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); setPage(0); };
-
   return (
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Comisiones <HelpButton title={HELP.comisiones.title} sections={HELP.comisiones.sections} /></h1>
-        {tab === 'historial' && (
-          <button onClick={() => setShowPayForm(true)} className="btn-odoo-primary">
-            <DollarSign className="h-4 w-4" /> Pagar comisiones
-          </button>
-        )}
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {([['historial', 'Comisiones generadas'], ['reglas', 'Reglas de comisión']] as const).map(([key, label]) => (
+        {([
+          ['historial', 'Comisiones generadas'],
+          ['por_pagar', 'Por pagar'],
+          ['recibos', 'Recibos'],
+          ['reglas', 'Reglas de comisión'],
+        ] as const).map(([key, label]) => (
           <button
             key={key}
-            onClick={() => setTab(key as any)}
+            onClick={() => setTab(key as TabKey)}
             className={cn(
               'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               tab === key
@@ -183,9 +290,9 @@ export default function ComisionesPage() {
         ))}
       </div>
 
-      {tab === 'reglas' ? (
-        <ComisionesReglasTab />
-      ) : (
+      {tab === 'reglas' && <ComisionesReglasTab />}
+
+      {tab === 'historial' && (
         <>
           {/* Filtros en una sola línea */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -263,56 +370,7 @@ export default function ComisionesPage() {
             </div>
           )}
 
-          {/* Pay form */}
-          {showPayForm && (
-            <div className="bg-card border border-primary/30 rounded-lg p-4 shadow-lg space-y-3">
-              <h2 className="text-base font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-primary" /> Pagar comisiones pendientes
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor</label>
-                  <SearchableSelect
-                    options={vendedorPayOpts}
-                    value={payVendedor}
-                    onChange={setPayVendedor}
-                    placeholder="Seleccionar vendedor"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Pagar hasta fecha</label>
-                  <input
-                    type="date"
-                    className="input-odoo w-full"
-                    value={payFechaCorte}
-                    onChange={e => setPayFechaCorte(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col justify-end">
-                  <div className="text-xs text-muted-foreground mb-1">
-                    {(pendingForPay ?? []).length} comisiones pendientes
-                  </div>
-                  <div className="text-lg font-bold text-odoo-teal font-mono">
-                    {fmt(totalPendiente)}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => payMut.mutate()}
-                  disabled={payMut.isPending || !payVendedor || totalPendiente <= 0}
-                  className="btn-odoo-primary"
-                >
-                  <Check className="h-4 w-4" /> Pagar {fmt(totalPendiente)}
-                </button>
-                <button onClick={() => setShowPayForm(false)} className="btn-odoo-secondary">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Table */}
+          {/* Tabla */}
           {isLoading ? <TableSkeleton /> : (
             <div className="overflow-x-auto border border-border rounded">
               <table className="w-full text-sm">
@@ -334,12 +392,7 @@ export default function ComisionesPage() {
                       <td className="py-1.5 px-3 text-xs">{fmtDate(c.fecha_venta)}</td>
                       <td className="py-1.5 px-3 text-xs font-mono">
                         {c.venta_id ? (
-                          <a
-                            href={`/ventas/${c.venta_id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline"
-                          >
+                          <a href={`/ventas/${c.venta_id}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                             {c.ventas?.folio ?? '—'}
                           </a>
                         ) : (c.ventas?.folio ?? '—')}
@@ -351,12 +404,9 @@ export default function ComisionesPage() {
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(c.comision_monto)}</td>
                       <td className="py-1.5 px-3 text-center">
                         {c.pagada ? (
-                          <span
-                            title={c.pago_comisiones?.fecha_corte ? `Pagada al corte ${fmtDate(c.pago_comisiones.fecha_corte)}` : 'Pagada'}
-                            className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary"
-                          >
-                            Pagada
-                          </span>
+                          <span title={c.pago_comisiones?.fecha_corte ? `Pagada al corte ${fmtDate(c.pago_comisiones.fecha_corte)}` : 'Pagada'} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
+                        ) : c.pago_comision_id ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">En recibo</span>
                         ) : (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
                         )}
@@ -364,26 +414,192 @@ export default function ComisionesPage() {
                     </tr>
                   ))}
                   {paged.length === 0 && (
-                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-sm">
-                      Sin comisiones en el rango seleccionado
-                    </td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">Sin comisiones en el rango seleccionado</td></tr>
                   )}
+                </tbody>
+              </table>
+              {total > PAGE_SIZE && (
+                <OdooPaginationLite from={from} to={to} total={total} page={page} pageSize={PAGE_SIZE} onPrev={() => setPage(p => Math.max(0, p - 1))} onNext={() => setPage(p => p + 1)} />
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'por_pagar' && (
+        <>
+          {/* Barra superior */}
+          <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Pagar comisiones hasta:</span>
+            <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
+            <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
+            <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-xs">Seleccionado: <span className="font-mono font-bold text-odoo-teal">{fmt(selectedTotal)}</span> ({selected.size})</div>
+              <button
+                onClick={() => generarMut.mutate()}
+                disabled={generarMut.isPending || selected.size === 0}
+                className="btn-odoo-primary"
+              >
+                <FileText className="h-4 w-4" /> Generar recibos
+              </button>
+            </div>
+          </div>
+
+          {loadingPP ? <TableSkeleton /> : ppGrupos.length === 0 ? (
+            <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+              No hay comisiones pendientes hasta la fecha de corte
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {ppGrupos.map(g => {
+                const allSel = g.items.every(i => selected.has(i.id));
+                const someSel = g.items.some(i => selected.has(i.id));
+                const selCount = g.items.filter(i => selected.has(i.id)).length;
+                const selTotal = g.items.filter(i => selected.has(i.id)).reduce((s, i) => s + (i.comision_monto ?? 0), 0);
+                return (
+                  <div key={g.vendedor_id} className="border border-border rounded overflow-hidden">
+                    <div className="flex items-center gap-3 bg-muted/40 px-3 py-2 border-b border-table-border">
+                      <input
+                        type="checkbox"
+                        checked={allSel}
+                        ref={el => { if (el) el.indeterminate = !allSel && someSel; }}
+                        onChange={() => toggleVendor(g.items)}
+                      />
+                      <div className="font-semibold text-sm">{g.nombre}</div>
+                      <div className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></div>
+                      <div className="ml-auto text-xs">
+                        Seleccionado: <span className="font-mono font-bold text-primary">{fmt(selTotal)}</span> ({selCount})
+                      </div>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-table-border">
+                          <th className="th-odoo w-8"></th>
+                          <th className="th-odoo text-left">Fecha</th>
+                          <th className="th-odoo text-left">Folio</th>
+                          <th className="th-odoo text-right">Venta</th>
+                          <th className="th-odoo text-right">Comisión</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {g.items.map(i => (
+                          <tr key={i.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                            <td className="py-1.5 px-3 text-center">
+                              <input type="checkbox" checked={selected.has(i.id)} onChange={() => toggleOne(i.id)} />
+                            </td>
+                            <td className="py-1.5 px-3 text-xs">{fmtDate(i.fecha_venta)}</td>
+                            <td className="py-1.5 px-3 text-xs font-mono">
+                              {i.venta_id ? (
+                                <a href={`/ventas/${i.venta_id}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">{i.ventas?.folio ?? '—'}</a>
+                              ) : (i.ventas?.folio ?? '—')}
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(i.monto_venta)}</td>
+                            <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(i.comision_monto)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'recibos' && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex border border-border rounded overflow-hidden">
+              {([['borrador', 'Por pagar'], ['pagada', 'Pagados'], ['todos', 'Todos']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setRecibosEstado(key)}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs transition-colors',
+                    recibosEstado === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                  )}
+                >{label}</button>
+              ))}
+            </div>
+            <div className="ml-auto text-sm">
+              Por pagar: <span className="font-mono font-bold text-amber-600">{fmt(totalBorrador)}</span>
+            </div>
+          </div>
+
+          {loadingRecibos ? <TableSkeleton /> : (recibos ?? []).length === 0 ? (
+            <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
+              No hay recibos {recibosEstado === 'borrador' ? 'por pagar' : recibosEstado === 'pagada' ? 'pagados' : ''}
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-border rounded">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-table-border">
+                    <th className="th-odoo text-left">Generado</th>
+                    <th className="th-odoo text-left">Vendedor</th>
+                    <th className="th-odoo text-left">Corte</th>
+                    <th className="th-odoo text-left">Pagado</th>
+                    <th className="th-odoo text-right">Total</th>
+                    <th className="th-odoo text-center">Estado</th>
+                    <th className="th-odoo text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(recibos ?? []).map((r: any) => (
+                    <tr key={r.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                      <td className="py-1.5 px-3 text-xs">{fmtDate(r.created_at)}</td>
+                      <td className="py-1.5 px-3 text-xs font-medium">{r.vendedores?.nombre ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs">{fmtDate(r.fecha_corte)}</td>
+                      <td className="py-1.5 px-3 text-xs">{r.fecha_pago ? fmtDate(r.fecha_pago) : '—'}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-bold text-odoo-teal">{fmt(r.total_comisiones)}</td>
+                      <td className="py-1.5 px-3 text-center">
+                        {r.estado === 'pagada' ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Por pagar</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-3 text-right">
+                        {r.estado === 'borrador' && (
+                          <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => marcarPagadoMut.mutate(r.id)}
+                              disabled={marcarPagadoMut.isPending}
+                              className="px-2 py-1 text-[11px] bg-primary text-primary-foreground rounded hover:bg-primary/90 inline-flex items-center gap-1"
+                            >
+                              <Check className="h-3 w-3" /> Marcar pagado
+                            </button>
+                            <button
+                              onClick={() => { if (confirm('¿Cancelar recibo y liberar comisiones?')) cancelarReciboMut.mutate(r.id); }}
+                              disabled={cancelarReciboMut.isPending}
+                              className="px-2 py-1 text-[11px] bg-muted text-foreground rounded hover:bg-muted/70"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
-
-          {total > PAGE_SIZE && (
-            <OdooPagination
-              from={from}
-              to={to}
-              total={total}
-              onPrev={() => setPage(p => Math.max(0, p - 1))}
-              onNext={() => setPage(p => p + 1)}
-            />
-          )}
         </>
       )}
+    </div>
+  );
+}
+
+function OdooPaginationLite({ from, to, total, onPrev, onNext, page, pageSize }: { from: number; to: number; total: number; page: number; pageSize: number; onPrev: () => void; onNext: () => void }) {
+  return (
+    <div className="flex items-center justify-end gap-2 px-3 py-2 text-xs">
+      <span className="text-muted-foreground">{from}-{to} de {total}</span>
+      <button onClick={onPrev} disabled={page === 0} className="px-2 py-1 bg-muted rounded disabled:opacity-50">‹</button>
+      <button onClick={onNext} disabled={to >= total} className="px-2 py-1 bg-muted rounded disabled:opacity-50">›</button>
     </div>
   );
 }
