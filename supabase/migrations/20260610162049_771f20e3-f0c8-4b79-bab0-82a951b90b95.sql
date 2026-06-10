@@ -1,0 +1,1 @@
+ALTER TABLE public.pago_comisiones ALTER COLUMN vendedor_id DROP NOT NULL;

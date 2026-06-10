@@ -3659,7 +3659,7 @@ export type Database = {
           notas: string | null
           total_comisiones: number
           user_id: string
-          vendedor_id: string
+          vendedor_id: string | null
         }
         Insert: {
           created_at?: string
@@ -3672,7 +3672,7 @@ export type Database = {
           notas?: string | null
           total_comisiones?: number
           user_id: string
-          vendedor_id: string
+          vendedor_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3685,7 +3685,7 @@ export type Database = {
           notas?: string | null
           total_comisiones?: number
           user_id?: string
-          vendedor_id?: string
+          vendedor_id?: string | null
         }
         Relationships: [
           {

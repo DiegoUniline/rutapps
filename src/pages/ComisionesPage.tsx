@@ -158,31 +158,42 @@ export default function ComisionesPage() {
   const generarMut = useMutation({
     mutationFn: async () => {
       if (!empresa?.id || !user?.id) throw new Error('Datos incompletos');
-      if (selectedSummary.length === 0) throw new Error('Selecciona al menos una comisión');
+      if (selected.size === 0) throw new Error('Selecciona al menos una comisión');
 
-      for (const g of selectedSummary) {
-        const itemIds = (pendientesPP ?? [])
-          .filter(c => selected.has(c.id) && c.vendedor_id === g.vendedor_id)
-          .map(c => c.id);
-        const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
-          empresa_id: empresa.id,
-          vendedor_id: g.vendedor_id,
-          fecha_corte: ppFechaCorte,
-          total_comisiones: g.total,
-          user_id: user.id,
-          estado: 'borrador',
-        }).select('id').single();
-        if (pagoErr) throw pagoErr;
+      const itemIds = (pendientesPP ?? []).filter(c => selected.has(c.id)).map(c => c.id);
+      const total = (pendientesPP ?? [])
+        .filter(c => selected.has(c.id))
+        .reduce((s, c) => s + (c.comision_monto ?? 0), 0);
 
-        const { error: upErr } = await supabase
-          .from('venta_comisiones')
-          .update({ pago_comision_id: pago.id })
-          .in('id', itemIds);
-        if (upErr) throw upErr;
-      }
+      // Si todas las comisiones son de un solo vendedor, guardarlo; si no, null (varios)
+      const vendedorIds = new Set(
+        (pendientesPP ?? []).filter(c => selected.has(c.id)).map(c => c.vendedor_id).filter(Boolean)
+      );
+      const vendedorId = vendedorIds.size === 1 ? Array.from(vendedorIds)[0] : null;
+
+      const notas = vendedorId
+        ? null
+        : `Recibo agrupado · ${selectedSummary.map(g => `${g.nombre} (${fmt(g.total)})`).join(' · ')}`;
+
+      const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
+        empresa_id: empresa.id,
+        vendedor_id: vendedorId,
+        fecha_corte: ppFechaCorte,
+        total_comisiones: total,
+        user_id: user.id,
+        estado: 'borrador',
+        notas,
+      }).select('id').single();
+      if (pagoErr) throw pagoErr;
+
+      const { error: upErr } = await supabase
+        .from('venta_comisiones')
+        .update({ pago_comision_id: pago.id })
+        .in('id', itemIds);
+      if (upErr) throw upErr;
     },
     onSuccess: () => {
-      toast.success('Recibos generados');
+      toast.success('Recibo generado');
       clearSel();
       qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
@@ -233,7 +244,7 @@ export default function ComisionesPage() {
     mutationFn: async () => {
       if (!payingRecibo || !empresa?.id || !user?.id) throw new Error('Datos incompletos');
       const r = payingRecibo;
-      const concepto = `Pago de comisiones - ${r.vendedores?.nombre ?? 'Vendedor'} (corte ${fmtDate(r.fecha_corte)})`;
+      const concepto = `Pago de comisiones - ${r.vendedores?.nombre ?? (r.vendedor_id ? 'Vendedor' : 'Varios vendedores')} (corte ${fmtDate(r.fecha_corte)})`;
       const notasGasto = [`Método: ${payMetodo}`, payNotas].filter(Boolean).join(' · ');
 
       const { data: gasto, error: gErr } = await supabase.from('gastos').insert({
@@ -473,7 +484,7 @@ export default function ComisionesPage() {
                 disabled={generarMut.isPending || selected.size === 0}
                 className="btn-odoo-primary"
               >
-                <FileText className="h-4 w-4" /> Generar recibos
+                <FileText className="h-4 w-4" /> Generar recibo
               </button>
             </div>
           </div>
@@ -582,7 +593,7 @@ export default function ComisionesPage() {
                   {(recibos ?? []).map((r: any) => (
                     <tr key={r.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                       <td className="py-1.5 px-3 text-xs">{fmtDate(r.created_at)}</td>
-                      <td className="py-1.5 px-3 text-xs font-medium">{r.vendedores?.nombre ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs font-medium" title={!r.vendedor_id && r.notas ? r.notas : undefined}>{r.vendedores?.nombre ?? (r.vendedor_id ? '—' : 'Varios vendedores')}</td>
                       <td className="py-1.5 px-3 text-xs">{fmtDate(r.fecha_corte)}</td>
                       <td className="py-1.5 px-3 text-xs">{r.fecha_pago ? fmtDate(r.fecha_pago) : '—'}</td>
                       <td className="py-1.5 px-3 text-right font-mono font-bold text-odoo-teal">{fmt(r.total_comisiones)}</td>
