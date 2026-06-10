@@ -16,13 +16,14 @@ export function useDashboardAging() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eId = empresa!.id;
-      const data = await fetchAllPages((from, to) => supabase
+      const sb: any = supabase;
+      const data = await fetchAllPages((from, to) => sb
         .from('ventas')
         .select('id, folio, cliente_id, saldo_pendiente, fecha, fecha_vencimiento, vendedor_id, clientes(nombre)')
         .eq('empresa_id', eId)
         .eq('condicion_pago', 'credito')
         .gt('saldo_pendiente', 0)
-        .neq('status', 'cancelado' as any)
+        .neq('status', 'cancelado')
         .range(from, to));
 
       // vendedor names
