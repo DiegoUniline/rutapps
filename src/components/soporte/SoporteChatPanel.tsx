@@ -292,14 +292,14 @@ export default function SoporteChatPanel() {
           )}
 
           {active?.messages.map((m, i) => {
+            const msgs = active?.messages ?? [];
+            const lastIdx = msgs.length - 1;
+            // Mark the most recent USER message so we scroll it to the top
+            // after sending (so the assistant reply starts at the top).
             const isLastUser =
               m.role === "user" &&
-              i === (active?.messages.length ?? 0) - 1 - (sending ? 0 : 0) &&
-              // only mark as last-user when it is actually the last message in the list
-              i === (active?.messages.length ?? 0) - 1 ||
-              (m.role === "user" &&
-                i === (active?.messages.length ?? 0) - 2 &&
-                active?.messages[(active?.messages.length ?? 0) - 1]?.role === "assistant");
+              (i === lastIdx ||
+                (i === lastIdx - 1 && msgs[lastIdx]?.role === "assistant"));
             return (
               <div
                 key={i}
