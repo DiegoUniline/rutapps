@@ -6,54 +6,28 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
-import { useAllListasPrecios, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
+import { useAllListasPrecios, useDeleteListaPrecio } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
   const { empresa } = useAuth();
   const { data: listas, isLoading } = useAllListasPrecios(empresa?.id);
   const qc = useQueryClient();
-  const saveMutation = useSaveListaPrecio();
   const deleteMutation = useDeleteListaPrecio();
   const isMobile = useIsMobile();
 
   const [search, setSearch] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [newNombre, setNewNombre] = useState('');
-  const [newPrincipal, setNewPrincipal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nombre: string } | null>(null);
 
   const filtered = listas?.filter(l =>
     !search || l.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
-
-  const openNew = () => {
-    setNewNombre('');
-    setNewPrincipal(false);
-    setShowNew(true);
-  };
-
-  const handleCreate = async () => {
-    if (!newNombre.trim()) { toast.error('Escribe un nombre'); return; }
-    try {
-      const saved: any = await saveMutation.mutateAsync({ nombre: newNombre.trim(), es_principal: newPrincipal });
-      toast.success('Lista creada');
-      setShowNew(false);
-      if (saved?.tarifa_id) {
-        navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || newNombre.trim())}`);
-      }
-    } catch (err: any) { toast.error(err.message); }
-  };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -70,11 +44,13 @@ export default function ListasPrecioListPage() {
 
   const total = filtered.length;
 
+
+
   return (
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
-        <button onClick={openNew} className="btn-odoo-primary shrink-0">
+        <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nueva lista
         </button>
       </div>
@@ -206,42 +182,6 @@ export default function ListasPrecioListPage() {
         </div>
       )}
 
-      {/* Create dialog */}
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nueva Lista de Precios</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="lp-nombre">Nombre</Label>
-              <Input
-                id="lp-nombre"
-                autoFocus
-                placeholder="Ej. Lista Mayoreo"
-                value={newNombre}
-                onChange={e => setNewNombre(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={newPrincipal}
-                onChange={e => setNewPrincipal(e.target.checked)}
-                className="rounded border-input"
-              />
-              Marcar como principal
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? 'Creando...' : 'Crear lista'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
