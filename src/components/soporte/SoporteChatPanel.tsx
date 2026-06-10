@@ -92,9 +92,14 @@ export default function SoporteChatPanel() {
     inputRef.current?.focus();
   }, [activeId, sending]);
 
-  // Autoscroll to bottom on new messages
+  // After sending: scroll the user's last message to the top, so the assistant's
+  // reply starts at the top of the view and the user can read from the start.
   useEffect(() => {
-    if (scrollRef.current) {
+    if (!scrollRef.current) return;
+    const lastUser = scrollRef.current.querySelector<HTMLElement>('[data-last-user="true"]');
+    if (lastUser) {
+      lastUser.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [active?.messages.length, sending]);
@@ -286,49 +291,63 @@ export default function SoporteChatPanel() {
             </div>
           )}
 
-          {active?.messages.map((m, i) => (
-            <div
-              key={i}
-              className={cn("flex gap-2.5", m.role === "user" ? "justify-end" : "justify-start")}
-            >
-              {m.role === "assistant" && (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Bot className="h-4 w-4" />
-                </div>
-              )}
+          {active?.messages.map((m, i) => {
+            const isLastUser =
+              m.role === "user" &&
+              i === (active?.messages.length ?? 0) - 1 - (sending ? 0 : 0) &&
+              // only mark as last-user when it is actually the last message in the list
+              i === (active?.messages.length ?? 0) - 1 ||
+              (m.role === "user" &&
+                i === (active?.messages.length ?? 0) - 2 &&
+                active?.messages[(active?.messages.length ?? 0) - 1]?.role === "assistant");
+            return (
               <div
+                key={i}
+                data-last-user={isLastUser ? "true" : undefined}
                 className={cn(
-                  "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm",
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground",
+                  "flex gap-2.5 scroll-mt-2",
+                  m.role === "user" ? "justify-end" : "justify-start",
                 )}
               >
-                {m.role === "assistant" ? (
-                  <article className={cn(
-                    "prose prose-sm max-w-none",
-                    "prose-p:my-1.5 prose-p:text-sm prose-p:leading-relaxed",
-                    "prose-headings:mt-3 prose-headings:mb-1.5 prose-headings:font-bold",
-                    "prose-li:my-0.5 prose-li:text-sm",
-                    "prose-strong:text-foreground prose-strong:font-bold",
-                    "prose-code:bg-background prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px]",
-                    "prose-table:text-xs prose-table:border prose-table:border-border prose-table:rounded",
-                    "prose-th:bg-background prose-th:font-bold prose-th:px-2 prose-th:py-1.5 prose-th:border prose-th:border-border",
-                    "prose-td:px-2 prose-td:py-1.5 prose-td:border prose-td:border-border",
-                  )}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                  </article>
-                ) : (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                {m.role === "assistant" && (
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    "text-sm",
+                    m.role === "user"
+                      ? "max-w-[80%] rounded-2xl px-3.5 py-2.5 bg-primary text-primary-foreground"
+                      : "max-w-[85%] text-foreground",
+                  )}
+                >
+                  {m.role === "assistant" ? (
+                    <article className={cn(
+                      "prose prose-sm max-w-none",
+                      "prose-p:my-1.5 prose-p:text-sm prose-p:leading-relaxed",
+                      "prose-headings:mt-3 prose-headings:mb-1.5 prose-headings:font-bold",
+                      "prose-li:my-0.5 prose-li:text-sm",
+                      "prose-strong:text-foreground prose-strong:font-bold",
+                      "prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px]",
+                      "prose-table:text-xs prose-table:border prose-table:border-border prose-table:rounded",
+                      "prose-th:bg-muted/50 prose-th:font-bold prose-th:px-2 prose-th:py-1.5 prose-th:border prose-th:border-border",
+                      "prose-td:px-2 prose-td:py-1.5 prose-td:border prose-td:border-border",
+                    )}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    </article>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{m.content}</p>
+                  )}
+                </div>
+                {m.role === "user" && (
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <User className="h-4 w-4" />
+                  </div>
                 )}
               </div>
-              {m.role === "user" && (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <User className="h-4 w-4" />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {sending && (
             <div className="flex gap-2.5 justify-start">
