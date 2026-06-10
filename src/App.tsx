@@ -732,7 +732,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <ErrorModalProvider>
         <TooltipProvider>
-          <Sonner />
+          <Sonner position="top-right" />
           <AuthProvider>
             <BrowserRouter>
               <AppRoutes />
