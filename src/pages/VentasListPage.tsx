@@ -188,8 +188,14 @@ export default function VentasListPage() {
     return '';
   };
 
-  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels), [pageData, groupBy, groupByLevels]);
-  const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels), [productRows, groupBy, groupByLevels]);
+  const groupSortKeyFn = (item: any, key: string) => {
+    if (key.startsWith('fecha')) return dateGroupSortKey(item.fecha, key as any);
+    return '';
+  };
+  const groupSortDir: 'asc' | 'desc' = (groupBy?.startsWith('fecha') || (groupByLevels?.[0]?.startsWith('fecha') ?? false)) ? 'desc' : 'asc';
+
+  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels, groupSortKeyFn, groupSortDir), [pageData, groupBy, groupByLevels, groupSortDir]);
+  const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels, groupSortKeyFn, groupSortDir), [productRows, groupBy, groupByLevels, groupSortDir]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
