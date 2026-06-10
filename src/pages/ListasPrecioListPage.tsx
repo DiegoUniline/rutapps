@@ -38,11 +38,14 @@ export default function ListasPrecioListPage() {
   const handleCreate = async () => {
     if (!newNombre.trim()) { toast.error('Escribe un nombre'); return; }
     try {
-      await saveMutation.mutateAsync({ nombre: newNombre.trim(), es_principal: newPrincipal });
+      const saved: any = await saveMutation.mutateAsync({ nombre: newNombre.trim(), es_principal: newPrincipal });
       toast.success('Lista creada');
       setShowNew(false);
       setNewNombre('');
       setNewPrincipal(false);
+      if (saved?.tarifa_id) {
+        navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || newNombre.trim())}`);
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -58,9 +61,13 @@ export default function ListasPrecioListPage() {
     if (!editNombre.trim()) { toast.error('Escribe un nombre'); return; }
     const original = listas?.find(l => l.id === editId);
     try {
-      await saveMutation.mutateAsync({ id: editId, tarifa_id: original?.tarifa_id, nombre: editNombre.trim(), es_principal: editPrincipal });
+      const saved: any = await saveMutation.mutateAsync({ id: editId, tarifa_id: original?.tarifa_id, nombre: editNombre.trim(), es_principal: editPrincipal });
       toast.success('Lista actualizada');
       setEditId(null);
+      const tarifaId = saved?.tarifa_id || original?.tarifa_id;
+      if (tarifaId) {
+        navigate(`/tarifas/${tarifaId}?lista=${encodeURIComponent(editNombre.trim())}`);
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
