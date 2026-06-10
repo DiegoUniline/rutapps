@@ -1205,10 +1205,8 @@ export default function DashboardPage() {
           <TabInventario range={dateRange} money={money} />
         </TabsContent>
 
-        {/* === METAS === */}
-        <TabsContent value="metas" className="mt-4">
-          <TabMetas money={money} />
-        </TabsContent>
+
+
 
         {/* === ASESOR IA === */}
         <TabsContent value="asesor-ia" className="mt-4">
