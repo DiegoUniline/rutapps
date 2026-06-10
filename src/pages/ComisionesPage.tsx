@@ -512,13 +512,24 @@ export default function ComisionesPage() {
                         checked={allSel}
                         ref={el => { if (el) el.indeterminate = !allSel && someSel; }}
                         onChange={() => toggleVendor(g.items)}
+                        onClick={e => e.stopPropagation()}
                       />
-                      <div className="font-semibold text-sm">{g.nombre}</div>
-                      <div className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></div>
-                      <div className="ml-auto text-xs">
+                      <button
+                        type="button"
+                        onClick={() => toggleCollapse(g.vendedor_id)}
+                        className="flex items-center gap-2 flex-1 text-left hover:opacity-80"
+                      >
+                        {collapsedVendors.has(g.vendedor_id)
+                          ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        <span className="font-semibold text-sm">{g.nombre}</span>
+                        <span className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></span>
+                      </button>
+                      <div className="text-xs">
                         Seleccionado: <span className="font-mono font-bold text-primary">{fmt(selTotal)}</span> ({selCount})
                       </div>
                     </div>
+                    {!collapsedVendors.has(g.vendedor_id) && (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-table-border">
@@ -547,6 +558,7 @@ export default function ComisionesPage() {
                         ))}
                       </tbody>
                     </table>
+                    )}
                   </div>
                 );
               })}
