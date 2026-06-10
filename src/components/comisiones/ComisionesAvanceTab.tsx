@@ -188,6 +188,7 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
   let metaPct = 0;
   let alcanzado = false;
   let faltante: string | null = null;
+  let pctGanado: string | null = null;
 
   if (esquema?.tipo === 'bono_meta') {
     meta = Number(esquema.config?.meta ?? 0);
@@ -195,6 +196,7 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
     alcanzado = total >= meta && meta > 0;
     metaLabel = `Meta ${fmt(meta)}`;
     faltante = alcanzado ? `Excedente ${fmt(total - meta)}` : `Faltan ${fmt(meta - total)}`;
+    pctGanado = total > 0 ? `${((comision / total) * 100).toFixed(2)}% efectivo` : null;
   } else if (esquema?.tipo === 'volumen_tiers') {
     const tiers: any[] = esquema.config?.tiers ?? [];
     const sorted = [...tiers].sort((a, b) => (a.desde ?? 0) - (b.desde ?? 0));
@@ -203,17 +205,19 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
     if (next) {
       meta = Number(next.desde ?? 0);
       metaPct = meta > 0 ? Math.min(100, (total / meta) * 100) : 0;
-      metaLabel = `Esc. ${current?.pct ?? 0}% → ${next.pct ?? 0}% en ${fmt(meta)}`;
-      faltante = `Faltan ${fmt(meta - total)}`;
+      metaLabel = `Escalón ${current?.pct ?? 0}% → ${next.pct ?? 0}% en ${fmt(meta)}`;
+      faltante = `Faltan ${fmt(meta - total)} para subir`;
     } else if (current) {
       metaPct = 100;
       alcanzado = true;
       metaLabel = `Escalón máximo ${current.pct ?? 0}%`;
     }
+    pctGanado = current ? `Ganando ${current.pct ?? 0}%` : null;
   } else if (esquema?.tipo === 'volumen_pct') {
     const pct = Number(esquema.config?.pct ?? 0);
     metaLabel = `${pct}% sobre ${esquema.base === 'cobradas' ? 'cobradas' : 'todas'}`;
-    metaPct = 100; // fijo, sin meta
+    metaPct = 100;
+    pctGanado = `${pct}% fijo`;
   }
 
   const tipoLabel = esquema?.tipo === 'bono_meta' ? 'Bono por meta'
@@ -221,7 +225,13 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
     : esquema?.tipo === 'volumen_pct' ? '% sobre volumen'
     : 'Sin esquema';
 
-  const barColor = alcanzado ? 'bg-emerald-500' : metaPct >= 75 ? 'bg-amber-500' : 'bg-primary';
+  const barGradient = alcanzado
+    ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+    : metaPct >= 75
+    ? 'bg-gradient-to-r from-amber-400 to-amber-600'
+    : metaPct >= 25
+    ? 'bg-gradient-to-r from-primary/70 to-primary'
+    : 'bg-gradient-to-r from-primary/50 to-primary/80';
 
   return (
     <tr className="border-b border-border last:border-0 hover:bg-primary/5">
@@ -238,18 +248,27 @@ function VendedorRowComp({ vendedor, calc, rank, fmt }: { vendedor: VendedorRow;
       <td className={cn('td-odoo text-right font-mono text-sm font-semibold',
         sinEsquema ? 'text-muted-foreground' : alcanzado ? 'text-emerald-600' : 'text-primary')}>
         {sinEsquema ? '—' : fmt(comision)}
+        {!sinEsquema && pctGanado && (
+          <div className="text-[10px] text-muted-foreground font-normal">{pctGanado}</div>
+        )}
       </td>
-      <td className="td-odoo">
+      <td className="td-odoo py-3">
         {sinEsquema ? (
           <span className="text-xs text-muted-foreground italic">Sin esquema asignado</span>
         ) : (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground truncate pr-2">{metaLabel}</span>
-              <span className={cn('font-mono font-semibold shrink-0', alcanzado ? 'text-emerald-600' : 'text-foreground')}>{metaPct.toFixed(0)}%</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-muted-foreground truncate">{metaLabel}</span>
+              <span className={cn(
+                'font-mono font-bold shrink-0 px-1.5 py-0.5 rounded text-[11px]',
+                alcanzado ? 'bg-emerald-100 text-emerald-700' : metaPct >= 75 ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
+              )}>{metaPct.toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
-              <div className={cn('h-full transition-all rounded-full', barColor)} style={{ width: `${metaPct}%` }} />
+            <div className="relative h-2.5 bg-primary/5 rounded-full overflow-hidden border border-primary/10">
+              <div
+                className={cn('h-full transition-all rounded-full shadow-sm', barGradient)}
+                style={{ width: `${Math.max(metaPct, 2)}%` }}
+              />
             </div>
             {faltante && <div className="text-[11px] text-muted-foreground">{faltante}</div>}
           </div>
