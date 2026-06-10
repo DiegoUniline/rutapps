@@ -172,7 +172,7 @@ export default function ReportesPersonalizadosPage() {
                       <Button size="sm" variant="outline" onClick={() => { setEditing({ ...r }); setEditorOpen(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => {
+                      <Button size="sm" variant="ghost" onClick={async () => {
                         if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id);
                       }}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />

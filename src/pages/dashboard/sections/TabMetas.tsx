@@ -119,7 +119,7 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
   const openNew = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (m: MetaVenta) => { setEditing(m); setModalOpen(true); };
 
-  const handleDelete = (m: MetaVenta) => {
+  const handleDelete = async (m: MetaVenta) => {
     if (await confirmDialog('¿Eliminar esta meta?')) del.mutate(m.id);
   };
 

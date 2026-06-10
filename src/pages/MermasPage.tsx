@@ -195,7 +195,7 @@ export default function MermasPage() {
                 <TableCell onClick={e => e.stopPropagation()}>
                   {!m.cancelada && (
                     <Button variant="ghost" size="icon" title="Cancelar"
-                      onClick={() => {
+                      onClick={async () => {
                         if (await confirmDialog(`¿Cancelar merma ${m.folio}? Se devolverá el stock al almacén origen.`)) {
                           cancelar.mutate(m.id);
                         }
