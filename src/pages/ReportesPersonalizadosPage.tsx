@@ -224,15 +224,20 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   const [filtros, setFiltros] = useState<ReporteFiltros>({
     fechaDesde: firstDay.toISOString().slice(0, 10),
     fechaHasta: today,
-    status: config.filtros_default?.status,
-    tipo: config.filtros_default?.tipo,
+    ...(config.filtros_default ?? {}),
   });
   const [rows, setRows] = useState<Record<string, any>[] | null>(null);
   const [loading, setLoading] = useState<null | 'run' | 'xlsx' | 'csv' | 'pdf'>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const fuenteMeta = getFuenteMeta(config.fuente);
   const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
   const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
+  const ENTITY_FILTERS = fuenteMeta.entityFilters ?? [];
   const columns = useMemo(() => buildExportColumns(config), [config]);
+  const entityLists = useReporteEntityLists(empresaId, ENTITY_FILTERS.length > 0);
+  const lists = entityLists.data;
+  const update = (patch: Partial<ReporteFiltros>) => setFiltros(f => ({ ...f, ...patch }));
+  const hasEntity = (k: string) => ENTITY_FILTERS.includes(k as any);
 
   // Reset cuando cambia el reporte
   useEffect(() => { setRows(null); }, [config.id]);
