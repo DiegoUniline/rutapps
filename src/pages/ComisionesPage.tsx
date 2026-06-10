@@ -479,6 +479,8 @@ export default function ComisionesPage() {
             <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
             <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
             <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
+            <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Contraer todo</button>
+            <button onClick={() => setCollapsedVendors(new Set())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Expandir todo</button>
             <div className="ml-auto flex items-center gap-3">
               <div className="text-xs">Seleccionado: <span className="font-mono font-bold text-odoo-teal">{fmt(selectedTotal)}</span> ({selected.size})</div>
               <button
