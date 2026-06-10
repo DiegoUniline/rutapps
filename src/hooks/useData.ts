@@ -555,7 +555,7 @@ export function useSaveListaPrecio() {
         if (rest.es_principal && rest.tarifa_id) {
           await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
         }
-        const { data, error } = await supabase.from('lista_precios').update(rest).eq('id', id).select('id').single();
+        const { data, error } = await supabase.from('lista_precios').update(rest).eq('id', id).select('id, tarifa_id, nombre').single();
         if (error) throw error;
         return data;
       } else {
@@ -575,7 +575,7 @@ export function useSaveListaPrecio() {
         }
         const { data, error } = await supabase.from('lista_precios')
           .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresa.id })
-          .select('id').single();
+          .select('id, tarifa_id, nombre').single();
         if (error) throw error;
         return data;
       }
