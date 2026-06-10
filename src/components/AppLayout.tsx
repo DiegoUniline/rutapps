@@ -651,7 +651,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
-        <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
+        <header className="min-h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
           <div className="flex items-center gap-2">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -745,7 +745,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <SuperAdminEmpresaSelector />
         <Breadcrumb />
-        <main className="flex-1 overflow-auto pb-16">
+        <main className="flex-1 overflow-auto" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
           {children}
         </main>
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
