@@ -30,8 +30,8 @@ export function useDashboardAging() {
       const vIds = [...new Set((data ?? []).map((v: any) => v.vendedor_id).filter(Boolean))];
       let vendMap = new Map<string, string>();
       if (vIds.length > 0) {
-        const { data: profs } = await supabase.from('profiles').select('id, nombre, full_name').in('id', vIds);
-        vendMap = new Map((profs ?? []).map((p: any) => [p.id, p.nombre || p.full_name || 'Sin nombre']));
+        const { data: profs } = await supabase.from('profiles').select('id, nombre, ').in('id', vIds);
+        vendMap = new Map((profs ?? []).map((p: any) => [p.id, p.nombre || p. || 'Sin nombre']));
       }
 
       const today = new Date(); today.setHours(0,0,0,0);
