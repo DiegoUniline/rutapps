@@ -107,9 +107,12 @@ export default function ComisionesPage() {
     queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte, ppSaldoFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
+      const ventasEmbed = ppSaldoFilter === 'todas'
+        ? 'ventas(folio, saldo_pendiente)'
+        : 'ventas!inner(folio, saldo_pendiente)';
       let q = supabase
         .from('venta_comisiones')
-        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio, saldo_pendiente), vendedores:profiles!vendedor_id(nombre)')
+        .select(`id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ${ventasEmbed}, vendedores:profiles!vendedor_id(nombre)`)
         .eq('empresa_id', empresa!.id)
         .eq('pagada', false)
         .is('pago_comision_id', null)
