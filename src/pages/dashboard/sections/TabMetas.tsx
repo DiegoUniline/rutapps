@@ -158,17 +158,23 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
       </div>
 
       {/* Subtabs */}
-      <Tabs defaultValue="config" className="w-full">
+      <Tabs defaultValue={mode === 'seguimiento' ? 'avance' : 'config'} className="w-full">
         <TabsList className="bg-accent/50 p-1 rounded-lg gap-1">
-          <TabsTrigger value="config" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
-            <Target className="h-3.5 w-3.5 mr-2" /> Configuración
-          </TabsTrigger>
-          <TabsTrigger value="avance" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
-            <TrendingUp className="h-3.5 w-3.5 mr-2" /> Avance del mes
-          </TabsTrigger>
-          <TabsTrigger value="historial" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
-            <History className="h-3.5 w-3.5 mr-2" /> Historial
-          </TabsTrigger>
+          {mode !== 'seguimiento' && (
+            <TabsTrigger value="config" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+              <Target className="h-3.5 w-3.5 mr-2" /> Configuración
+            </TabsTrigger>
+          )}
+          {mode !== 'config' && (
+            <TabsTrigger value="avance" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+              <TrendingUp className="h-3.5 w-3.5 mr-2" /> Avance del mes
+            </TabsTrigger>
+          )}
+          {mode !== 'config' && (
+            <TabsTrigger value="historial" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
+              <History className="h-3.5 w-3.5 mr-2" /> Historial
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* CONFIG */}
