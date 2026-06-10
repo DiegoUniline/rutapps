@@ -140,7 +140,6 @@ export default function ComisionesEsquemasTab() {
                 <tr className="border-b border-table-border">
                   <th className="th-odoo text-left">Nombre</th>
                   <th className="th-odoo text-left">Tipo</th>
-                  <th className="th-odoo text-left">Periodo</th>
                   <th className="th-odoo text-left">Base</th>
                   <th className="th-odoo text-left">Configuración</th>
                   <th className="th-odoo text-center">Activo</th>
@@ -152,7 +151,6 @@ export default function ComisionesEsquemasTab() {
                   <tr key={e.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                     <td className="py-1.5 px-3 text-xs font-medium">{e.nombre}</td>
                     <td className="py-1.5 px-3 text-xs">{TIPO_LABEL[e.tipo]}</td>
-                    <td className="py-1.5 px-3 text-xs">{PERIODO_LABEL[e.periodo]}</td>
                     <td className="py-1.5 px-3 text-xs">{BASE_LABEL[e.base]}</td>
                     <td className="py-1.5 px-3 text-xs text-muted-foreground">{describeConfig(e, fmt)}</td>
                     <td className="py-1.5 px-3 text-center">
@@ -206,7 +204,7 @@ export default function ComisionesEsquemasTab() {
                     >
                       <option value="">Por producto (regla actual)</option>
                       {(esquemas ?? []).filter(e => e.activo).map(e => (
-                        <option key={e.id} value={e.id}>{e.nombre} · {TIPO_LABEL[e.tipo]} · {PERIODO_LABEL[e.periodo]}</option>
+                        <option key={e.id} value={e.id}>{e.nombre} · {TIPO_LABEL[e.tipo]}</option>
                       ))}
                     </select>
                   </td>
@@ -272,7 +270,7 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
           <input className="input-odoo w-full" value={esquema.nombre ?? ''} onChange={e => onChange({ ...esquema, nombre: e.target.value })} placeholder="Ej: Comisión mensual estándar" />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Tipo</label>
             <select className="input-odoo w-full text-xs" value={tipo} onChange={e => onChange({ ...esquema, tipo: e.target.value as Tipo, config: {} })}>
@@ -282,19 +280,14 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Periodo</label>
-            <select className="input-odoo w-full text-xs" value={esquema.periodo} onChange={e => onChange({ ...esquema, periodo: e.target.value as Periodo })}>
-              <option value="semanal">Semanal</option>
-              <option value="quincenal">Quincenal</option>
-              <option value="mensual">Mensual</option>
-            </select>
-          </div>
-          <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Base</label>
             <select className="input-odoo w-full text-xs" value={esquema.base} onChange={e => onChange({ ...esquema, base: e.target.value as Base })}>
               <option value="cobradas">Solo cobradas</option>
               <option value="todas">Todas las ventas</option>
             </select>
+          </div>
+          <div className="col-span-2 text-[11px] text-muted-foreground">
+            El periodo ya no se fija en el esquema: en la pestaña <span className="font-medium">Por volumen</span> eliges el rango de fechas y se aplica el % sobre lo filtrado.
           </div>
         </div>
 
