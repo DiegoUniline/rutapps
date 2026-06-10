@@ -827,7 +827,45 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total);
   }, [ventas]);
 
-  // Mensual data
+  // === KPIs adicionales (periodo seleccionado) ===
+  const kpisExtra = useMemo(() => {
+    const visitas = (visitasPeriodo ?? []).length;
+    const ventasConPedido = (visitasPeriodo ?? []).filter((v: any) => !!v.venta_id).length;
+    const efectividadPct = visitas > 0 ? (ventasConPedido / visitas) * 100 : 0;
+    const visitasPlaneadas = 0; // se calcula por vendedor en TabEquipo; aquí dejamos genérico
+    const cumplimientoPct = 0;
+    const dropSize = ventasConPedido > 0 ? kpis.totalVentas / ventasConPedido : 0;
+    const desde = new Date(dateRange.from); desde.setHours(0,0,0,0);
+    const hasta = new Date(dateRange.to); hasta.setHours(23,59,59,999);
+    const clientesIdsConCompra = new Set<string>();
+    (ventas ?? []).forEach((v: any) => { if (v.cliente_id) clientesIdsConCompra.add(v.cliente_id); });
+    const totalActivos = (clientesActivos ?? []).length;
+    const cobertura = totalActivos > 0 ? (clientesIdsConCompra.size / totalActivos) * 100 : 0;
+    const hoyD = new Date(); hoyD.setHours(0,0,0,0);
+    const sinCompra30 = (clientesActivos ?? []).filter((c: any) => {
+      const last = ultimaCompraMap?.get(c.id);
+      if (!last) return true;
+      const d = new Date(last); d.setHours(0,0,0,0);
+      return Math.floor((hoyD.getTime() - d.getTime()) / 86400000) >= 30;
+    });
+    return {
+      visitas, ventasConPedido, efectividadPct, visitasPlaneadas, cumplimientoPct,
+      dropSize, cobertura, clientesConCompra: clientesIdsConCompra.size,
+      clientesActivos: totalActivos, clientesSinCompra30d: sinCompra30.length, sinCompra30,
+    };
+  }, [visitasPeriodo, ventas, clientesActivos, ultimaCompraMap, kpis.totalVentas, dateRange]);
+
+  const metaMesData = useMemo(() => {
+    const ventasMes = (ventasMesData ?? []).reduce((s, v: any) => s + Number(v.total || 0), 0);
+    const cobradoMes = (cobrosMesData ?? []).reduce((s, c: any) => s + Number(c.monto || 0), 0);
+    const gastosMes = (gastosMesData ?? []).reduce((s, g: any) => s + Number(g.monto || 0), 0);
+    const comprasMes = (comprasMesData ?? []).reduce((s, c: any) => s + Number(c.total || 0), 0);
+    const margenMonto = ventasMes - comprasMes;
+    return { ventasMes, cobradoMes, gastosMes, margenMonto };
+  }, [ventasMesData, cobrosMesData, gastosMesData, comprasMesData]);
+
+  const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
+
   const { data: evolucion } = useDashboardEvolucionMensual(12);
   const { data: ventasPorMes } = useDashboardVentasPorMes(12);
   const { data: usuarioMes } = useDashboardVentasUsuarioMes();
