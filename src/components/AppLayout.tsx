@@ -40,11 +40,7 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
-  // ── Datos clave ──
-  { label: 'Clientes', icon: Users, path: '/clientes', highlight: 'violet' },
-  { label: 'Productos', icon: Package, path: '/productos', highlight: 'teal' },
-  { label: 'Listas de Precios', icon: Tag, path: '/listas-precio' },
+  // ── Ventas ──
   // ── Ventas ──
   {
     label: 'Ventas',
