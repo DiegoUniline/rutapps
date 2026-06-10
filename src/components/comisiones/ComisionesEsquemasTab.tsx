@@ -305,11 +305,19 @@ function EsquemaModal({ esquema, onChange, onClose, onSave, saving }: {
               <button type="button" className="text-xs text-primary hover:underline" onClick={() => setTiers([...tiers, { desde: 0, hasta: null, pct: 0 }])}>+ Agregar</button>
             </div>
             {tiers.length === 0 && <div className="text-xs text-muted-foreground text-center py-3 border border-dashed border-border rounded">Sin escalones</div>}
+            {tiers.length > 0 && (
+              <div className="flex items-center gap-2 px-1">
+                <div className="flex-1 text-[11px] font-semibold text-muted-foreground uppercase">Desde ($)</div>
+                <div className="flex-1 text-[11px] font-semibold text-muted-foreground uppercase">Hasta ($)</div>
+                <div className="w-24 text-[11px] font-semibold text-muted-foreground uppercase">%</div>
+                <div className="w-6" />
+              </div>
+            )}
             {tiers.map((t, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="Desde" value={t.desde} onChange={e => { const c = [...tiers]; c[i] = { ...t, desde: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
-                <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="Hasta (vacío = ∞)" value={t.hasta ?? ''} onChange={e => { const c = [...tiers]; c[i] = { ...t, hasta: e.target.value === '' ? null : parseFloat(e.target.value) }; setTiers(c); }} />
-                <input type="number" step="0.01" className="input-odoo w-24 text-xs" placeholder="%" value={t.pct} onChange={e => { const c = [...tiers]; c[i] = { ...t, pct: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
+                <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="0" value={t.desde} onChange={e => { const c = [...tiers]; c[i] = { ...t, desde: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
+                <input type="number" step="0.01" className="input-odoo flex-1 text-xs" placeholder="∞" value={t.hasta ?? ''} onChange={e => { const c = [...tiers]; c[i] = { ...t, hasta: e.target.value === '' ? null : parseFloat(e.target.value) }; setTiers(c); }} />
+                <input type="number" step="0.01" className="input-odoo w-24 text-xs" placeholder="0" value={t.pct} onChange={e => { const c = [...tiers]; c[i] = { ...t, pct: parseFloat(e.target.value) || 0 }; setTiers(c); }} />
                 <button type="button" onClick={() => setTiers(tiers.filter((_, j) => j !== i))} className="p-1 hover:bg-red-50 hover:text-red-600 rounded"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             ))}
