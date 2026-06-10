@@ -363,6 +363,24 @@ export default function DemandaPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
+                  <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
+                    {pedido.status === 'borrador' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px] border-green-600 text-green-700 hover:bg-green-50"
+                        onClick={() => confirmarPedidoMut.mutate([pedido.id])}
+                        disabled={confirmarPedidoMut.isPending}
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Confirmar
+                      </Button>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">
+                        Confirmado
+                      </Badge>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
