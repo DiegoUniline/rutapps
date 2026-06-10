@@ -216,24 +216,55 @@ export default function ComisionesPage() {
     [recibos]
   );
 
+  // Modal de pago (crea gasto)
+  const [payingRecibo, setPayingRecibo] = useState<any | null>(null);
+  const [payFecha, setPayFecha] = useState(todayLocal());
+  const [payMetodo, setPayMetodo] = useState<string>('efectivo');
+  const [payNotas, setPayNotas] = useState('');
+
+  const openPagar = (r: any) => {
+    setPayingRecibo(r);
+    setPayFecha(todayLocal());
+    setPayMetodo('efectivo');
+    setPayNotas('');
+  };
+
   const marcarPagadoMut = useMutation({
-    mutationFn: async (reciboId: string) => {
-      const today = todayLocal();
+    mutationFn: async () => {
+      if (!payingRecibo || !empresa?.id || !user?.id) throw new Error('Datos incompletos');
+      const r = payingRecibo;
+      const concepto = `Pago de comisiones - ${r.vendedores?.nombre ?? 'Vendedor'} (corte ${fmtDate(r.fecha_corte)})`;
+      const notasGasto = [`Método: ${payMetodo}`, payNotas].filter(Boolean).join(' · ');
+
+      const { data: gasto, error: gErr } = await supabase.from('gastos').insert({
+        empresa_id: empresa.id,
+        vendedor_id: r.vendedor_id,
+        user_id: user.id,
+        fecha: payFecha,
+        concepto,
+        monto: r.total_comisiones,
+        notas: notasGasto || null,
+      }).select('id').single();
+      if (gErr) throw gErr;
+
       const { error: upRec } = await supabase
         .from('pago_comisiones')
-        .update({ estado: 'pagada', fecha_pago: today })
-        .eq('id', reciboId);
+        .update({ estado: 'pagada', fecha_pago: payFecha, gasto_id: gasto.id, notas: notasGasto || null })
+        .eq('id', r.id);
       if (upRec) throw upRec;
+
       const { error: upCom } = await supabase
         .from('venta_comisiones')
         .update({ pagada: true })
-        .eq('pago_comision_id', reciboId);
+        .eq('pago_comision_id', r.id);
       if (upCom) throw upCom;
     },
     onSuccess: () => {
-      toast.success('Recibo marcado como pagado');
+      toast.success('Recibo pagado y gasto registrado');
+      setPayingRecibo(null);
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
       qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
+      qc.invalidateQueries({ queryKey: ['gastos'] });
     },
     onError: (e: any) => toast.error(e.message),
   });
