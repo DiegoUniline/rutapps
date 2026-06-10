@@ -148,9 +148,9 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     path: '/reportes',
     children: [
-      { label: 'Reportes generales', path: '/reportes' },
-      { label: 'Reporte entregas', path: '/reportes/entregas' },
-      { label: 'Reportes personalizados', path: '/reportes/personalizados' },
+      { label: 'Generales', path: '/reportes' },
+      { label: 'Entregas', path: '/reportes/entregas' },
+      { label: 'Personalizados', path: '/reportes/personalizados' },
     ],
   },
   // ── Admin & Config ──
