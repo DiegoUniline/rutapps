@@ -105,7 +105,7 @@ export default function ComprasSugeridasPage() {
   }, [data, modo, editado, filtroProv]);
 
   const filas = useMemo(() => soloSugeridos ? filasAll.filter(r => r.sug > 0) : filasAll, [filasAll, soloSugeridos]);
-  const sinConfigurar = useMemo(() => filasAll.filter(r => (Number(r.p.min) || 0) === 0 && (Number(r.p.max) || 0) === 0).length, [filasAll]);
+  const sinConfigurar = useMemo(() => filasAll.filter(r => (Number(r.p.max) || 0) === 0).length, [filasAll]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, typeof filas>();
