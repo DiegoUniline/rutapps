@@ -65,33 +65,44 @@ export default function ComisionesAvanceTab() {
     enabled: !!empresa?.id && !!vendedores && vendedores.length > 0,
     queryFn: async () => {
       const out: Record<string, any> = {};
-      for (const v of vendedores ?? []) {
-        if (!v.comision_esquema_id) {
-          // Sin esquema global: usar comisiones por línea (regla de lista de precios)
-          const { data: vc, error: vcErr } = await (supabase as any).from('venta_comisiones')
-            .select('monto_venta, comision_monto, venta_id')
-            .eq('empresa_id', empresa!.id)
-            .eq('vendedor_id', v.id)
-            .gte('fecha_venta', desde).lte('fecha_venta', hasta);
-          if (vcErr) console.error('venta_comisiones', vcErr);
-          const rows = (vc ?? []) as Array<{ monto_venta: number | null; comision_monto: number | null; venta_id: string }>;
+      const vList = vendedores ?? [];
+      const sinEsquema = vList.filter(v => !v.comision_esquema_id);
+      const conEsquema = vList.filter(v => v.comision_esquema_id);
+
+      // BATCH: una sola query para todos los vendedores sin esquema
+      if (sinEsquema.length > 0) {
+        const ids = sinEsquema.map(v => v.id);
+        const { data: vc, error: vcErr } = await (supabase as any).from('venta_comisiones')
+          .select('vendedor_id, monto_venta, comision_monto, venta_id')
+          .eq('empresa_id', empresa!.id)
+          .in('vendedor_id', ids)
+          .gte('fecha_venta', desde).lte('fecha_venta', hasta);
+        if (vcErr) console.error('venta_comisiones', vcErr);
+        const byVend = new Map<string, Array<{ monto_venta: number | null; comision_monto: number | null; venta_id: string }>>();
+        for (const r of (vc ?? []) as any[]) {
+          const arr = byVend.get(r.vendedor_id) ?? [];
+          arr.push(r); byVend.set(r.vendedor_id, arr);
+        }
+        for (const v of sinEsquema) {
+          const rows = byVend.get(v.id) ?? [];
           const totalVenta = rows.reduce((s, r) => s + Number(r.monto_venta ?? 0), 0);
           const totalComision = rows.reduce((s, r) => s + Number(r.comision_monto ?? 0), 0);
           const numVentas = new Set(rows.map(r => r.venta_id)).size;
           out[v.id] = {
-            total_ventas: totalVenta,
-            num_ventas: numVentas,
-            comision: totalComision,
-            sin_esquema: true,
-            por_reglas: rows.length > 0,
+            total_ventas: totalVenta, num_ventas: numVentas, comision: totalComision,
+            sin_esquema: true, por_reglas: rows.length > 0,
           };
-          continue;
         }
-        const { data, error } = await (supabase as any).rpc('calcular_comision_volumen', {
+      }
+
+      // PARALELO: RPCs de vendedores con esquema en paralelo
+      const results = await Promise.all(conEsquema.map(v =>
+        (supabase as any).rpc('calcular_comision_volumen', {
           p_vendedor_id: v.id, p_desde: desde, p_hasta: hasta,
-        });
-        if (error) { out[v.id] = { error: error.message }; continue; }
-        out[v.id] = data;
+        }).then((r: any) => ({ id: v.id, data: r.data, error: r.error }))
+      ));
+      for (const r of results) {
+        out[r.id] = r.error ? { error: r.error.message } : r.data;
       }
       return out;
     },
