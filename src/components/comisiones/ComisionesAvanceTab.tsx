@@ -67,12 +67,13 @@ export default function ComisionesAvanceTab() {
       const out: Record<string, any> = {};
       for (const v of vendedores ?? []) {
         if (!v.comision_esquema_id) {
-          const { data: ventas } = await (supabase as any).from('ventas')
+          const { data: ventas, error: vErr } = await (supabase as any).from('ventas')
             .select('total')
             .eq('empresa_id', empresa!.id)
             .eq('vendedor_id', v.id)
-            .neq('estado', 'cancelada')
+            .neq('status', 'cancelado')
             .gte('fecha', desde).lte('fecha', hasta);
+          if (vErr) console.error('ventas sin-esquema', vErr);
           const rows = (ventas ?? []) as Array<{ total: number | null }>;
           const total = rows.reduce((s, r) => s + Number(r.total ?? 0), 0);
           out[v.id] = { total_ventas: total, num_ventas: rows.length, comision: 0, sin_esquema: true };
