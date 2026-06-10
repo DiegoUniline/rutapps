@@ -74,7 +74,7 @@ export default function ListasPrecioListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
-        <button onClick={openNew} className="btn-odoo-primary shrink-0">
+        <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nueva lista
         </button>
       </div>
