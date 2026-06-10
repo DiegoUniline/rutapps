@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 import { Seo } from '@/components/seo/Seo';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 const LANDING_JSON_LD = [
   {
