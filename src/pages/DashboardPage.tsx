@@ -923,8 +923,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* === HOY · Banda ejecutiva === */}
-      <HoyBand hoy={hoy} money={money} />
 
       {/* === Banner de alertas === */}
       <AlertasBanner />
