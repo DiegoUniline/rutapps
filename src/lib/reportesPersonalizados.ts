@@ -398,6 +398,15 @@ async function runCobranza(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.cobradorIds?.length) q = q.in('user_id', filtros.cobradorIds);
+    if (filtros.metodoPago?.length) q = q.in('metodo_pago', filtros.metodoPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('monto', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('monto', filtros.montoMax);
+    if (filtros.search?.trim()) {
+      const s = filtros.search.trim();
+      q = q.or(`referencia.ilike.%${s}%,notas.ilike.%${s}%`);
+    }
     return q;
   });
   if (!cobros.length) return [];
