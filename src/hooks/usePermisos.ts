@@ -222,7 +222,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/finanzas/saldos-proveedor': 'finanzas.saldos_proveedor',
   '/finanzas/aplicar-pagos-proveedor': 'finanzas.saldos_proveedor',
   '/finanzas/gastos': 'finanzas.gastos',
-  '/finanzas/comisiones': 'finanzas.comisiones',
+  '/finanzas/comisiones': 'ventas.comisiones',
   '/reportes': 'reportes.generales',
   '/reportes/entregas': 'reportes.entregas',
   '/facturacion-cfdi': 'facturacion.cfdi',
