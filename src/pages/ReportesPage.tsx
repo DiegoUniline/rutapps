@@ -493,7 +493,7 @@ export default function ReportesPage() {
             {tab === 'ventas_cliente' && <ReporteVentasCliente data={data} />}
             {tab === 'producto_cliente' && <ReporteProductoCliente data={data} />}
             {tab === 'vendedores' && <ReporteVendedores data={data} />}
-            {tab === 'entregas' && <ReporteEntregas data={data} />}
+            {tab === 'entregas' && <ReporteEntregas />}
             {tab === 'cargas' && <ReporteCargas data={data} />}
             {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
             {tab === 'utilidad' && <ReporteUtilidad data={data} />}
