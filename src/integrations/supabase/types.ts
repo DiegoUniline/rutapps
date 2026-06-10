@@ -3651,7 +3651,9 @@ export type Database = {
         Row: {
           created_at: string
           empresa_id: string
+          estado: string
           fecha_corte: string
+          fecha_pago: string | null
           id: string
           notas: string | null
           total_comisiones: number
@@ -3661,7 +3663,9 @@ export type Database = {
         Insert: {
           created_at?: string
           empresa_id: string
+          estado?: string
           fecha_corte: string
+          fecha_pago?: string | null
           id?: string
           notas?: string | null
           total_comisiones?: number
@@ -3671,7 +3675,9 @@ export type Database = {
         Update: {
           created_at?: string
           empresa_id?: string
+          estado?: string
           fecha_corte?: string
+          fecha_pago?: string | null
           id?: string
           notas?: string | null
           total_comisiones?: number
