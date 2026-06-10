@@ -221,7 +221,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                       {lineas.map((l: any) => {
                         const descMonto = (l.subtotal ?? 0) * ((l.descuento_pct ?? 0) / 100);
                         const lp = (l as any).lista_precios;
-                        const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? '—');
+                        const listaLabel = l.precio_manual ? 'Manual' : (lp?.nombre ?? ventaListaNombre ?? '—');
                         return (
                           <tr key={l.id} className="border-b border-border/40">
                             <td className="py-1.5"><ProductoLink id={l.producto_id}>{(l.productos as any)?.nombre ?? '—'}</ProductoLink></td>
