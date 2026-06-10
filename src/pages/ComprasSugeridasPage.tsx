@@ -88,9 +88,38 @@ export default function ComprasSugeridasPage() {
   const [modo, setModo] = useState<Modo>('producto');
   const [filtroProv, setFiltroProv] = useState<string>('');
   const [editado, setEditado] = useState<Record<string, number>>({});
+  const [minMaxEdit, setMinMaxEdit] = useState<Record<string, { min?: number; max?: number }>>({});
+  const [savingMinMax, setSavingMinMax] = useState<Record<string, boolean>>({});
   const [soloSugeridos, setSoloSugeridos] = useState(false);
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
+
+  const saveMinMax = async (productoId: string, patch: { min?: number; max?: number }) => {
+    if (!empresa?.id) return;
+    setSavingMinMax(s => ({ ...s, [productoId]: true }));
+    try {
+      const { error } = await supabase.from('productos')
+        .update(patch as any)
+        .eq('id', productoId)
+        .eq('empresa_id', empresa.id);
+      if (error) throw error;
+      // Optimistic update of cached query
+      qc.setQueryData(['compras-sugeridas', empresa.id, modo === 'cobertura' ? 'cob' : 'std'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          productos: old.productos.map((p: ProdRow) => p.id === productoId ? { ...p, ...patch } : p),
+        };
+      });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      setMinMaxEdit(s => { const n = { ...s }; delete n[productoId]; return n; });
+      toast.success('Min/Max actualizado');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al guardar');
+    } finally {
+      setSavingMinMax(s => { const n = { ...s }; delete n[productoId]; return n; });
+    }
+  };
 
   const filasAll = useMemo(() => {
     if (!data) return [];
