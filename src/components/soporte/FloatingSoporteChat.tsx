@@ -56,12 +56,14 @@ export default function FloatingSoporteChat() {
     if (count > 0) setDismissed(false);
   }, [count]);
 
-  const isOnSoporte = useMemo(() => pathname.startsWith("/soporte"), [pathname]);
+  // Siempre visible en escritorio (incluido /soporte). Solo se oculta en móvil
+  // o cuando el usuario lo cierra explícitamente (vuelve al recargar).
+  void pathname;
+  void count;
 
   if (isMobile) return null;
-  if (isOnSoporte) return null;
-  if (count === 0) return null;
   if (dismissed) return null;
+
 
   if (!open) {
     return (
