@@ -3252,6 +3252,83 @@ export type Database = {
           },
         ]
       }
+      metas_venta: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          meta_monto: number
+          meta_unidades: number
+          notas: string | null
+          periodo_month: number
+          periodo_year: number
+          presentacion_id: string | null
+          producto_id: string | null
+          updated_at: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          meta_monto?: number
+          meta_unidades?: number
+          notas?: string | null
+          periodo_month: number
+          periodo_year: number
+          presentacion_id?: string | null
+          producto_id?: string | null
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          meta_monto?: number
+          meta_unidades?: number
+          notas?: string | null
+          periodo_month?: number
+          periodo_year?: number
+          presentacion_id?: string | null
+          producto_id?: string | null
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_venta_presentacion_id_fkey"
+            columns: ["presentacion_id"]
+            isOneToOne: false
+            referencedRelation: "producto_presentaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_venta_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_venta_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimientos_inventario: {
         Row: {
           almacen_destino_id: string | null
