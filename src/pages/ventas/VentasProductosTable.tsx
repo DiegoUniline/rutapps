@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { StatusChip } from '@/components/StatusChip';
-import { cn, fmtDateTime } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { ClienteLink, ProductoLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
@@ -17,7 +17,8 @@ export function VentasProductosTable({ items, fmt }: Props) {
     if (k === 'vendedor') return r.vendedor_nombre ?? '';
     if (k === 'codigo') return r.producto_codigo ?? '';
     if (k === 'producto') return r.producto_nombre ?? '';
-    if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (k === 'fecha') return r.fecha ? new Date(r.fecha).getTime() : 0;
+    if (k === 'lista') return r.tarifa_nombre ?? '';
     if (k === 'precio') return r.precio_unitario ?? 0;
     if (k === 'total') return r.linea_total ?? 0;
     if (k === 'tipo') return TIPO_LABELS[r.tipo] || r.tipo;
@@ -33,6 +34,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
           <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</SortableTh>
           <SortableTh sortKey="vendedor" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</SortableTh>
           <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</SortableTh>
+          <SortableTh sortKey="lista" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Lista</SortableTh>
           <SortableTh sortKey="codigo" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</SortableTh>
           <SortableTh sortKey="producto" sort={sort} onToggle={toggle} className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</SortableTh>
           <SortableTh sortKey="cantidad" sort={sort} onToggle={toggle} align="right" className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Cantidad</SortableTh>
@@ -44,7 +46,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
       <tbody>
         {items.length === 0 && (
           <tr>
-            <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay líneas de producto.</td>
+            <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay líneas de producto.</td>
           </tr>
         )}
         {sorted.map((row: any, i: number) => (
@@ -64,7 +66,8 @@ export function VentasProductosTable({ items, fmt }: Props) {
             </td>
             <td className="py-2 px-3 max-w-[160px] truncate">{row.cliente_id ? <ClienteLink id={row.cliente_id}>{row.cliente_nombre || '—'}</ClienteLink> : 'Público en general'}</td>
             <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedor_nombre ?? '—'}</td>
-            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>
+            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{row.fecha ? fmtDate(row.fecha) : '—'}</td>
+            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground text-xs">{row.tarifa_nombre ?? '—'}</td>
             <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{row.producto_codigo ?? ''}</td>
             <td className="py-2 px-3 max-w-[180px] truncate"><ProductoLink id={row.producto_id}>{row.producto_nombre ?? ''}</ProductoLink></td>
             <td className="py-2 px-3 text-right font-semibold tabular-nums">{row.cantidad}</td>
@@ -79,7 +82,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
       {items.length > 0 && (
         <tfoot>
           <tr className="bg-card border-t border-border font-semibold text-[12px]">
-            <td colSpan={7} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
+            <td colSpan={8} className="py-2 px-3 text-muted-foreground">{items.length} líneas</td>
             <td className="py-2 px-3 text-right tabular-nums">{items.reduce((s: number, r: any) => s + (r.cantidad ?? 0), 0)}</td>
             <td className="py-2 px-3 hidden md:table-cell" />
             <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, r: any) => s + (r.linea_total ?? 0), 0))}</td>

@@ -99,7 +99,7 @@ export function useVentaLineasPaginated(
     queryFn: async () => {
       let q = supabase
         .from('venta_lineas')
-        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre))', { count: 'exact' })
+        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))', { count: 'exact' })
         .eq('ventas.empresa_id', empresa!.id)
         .order('created_at', { ascending: false, referencedTable: undefined })
         .range((page - 1) * pageSize, page * pageSize - 1);
@@ -161,12 +161,14 @@ export function useVentaLineasPaginated(
         producto_nombre: row.productos?.nombre ?? '',
         folio: row.ventas?.folio,
         fecha: row.ventas?.fecha,
+        created_at: row.ventas?.created_at,
         status: row.ventas?.status,
         tipo: row.ventas?.tipo,
         condicion_pago: row.ventas?.condicion_pago,
         cliente_id: row.ventas?.cliente_id,
         cliente_nombre: row.ventas?.clientes?.nombre,
         vendedor_nombre: row.ventas?.vendedores?.nombre,
+        tarifa_nombre: row.ventas?.tarifas?.nombre ?? null,
       }));
 
       return { rows, total: count ?? 0 };
