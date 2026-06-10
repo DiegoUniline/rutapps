@@ -17,9 +17,10 @@ const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
 
 interface Props {
   money: (n: number) => string;
+  mode?: 'all' | 'config' | 'seguimiento';
 }
 
-export default function TabMetas({ money }: Props) {
+export default function TabMetas({ money, mode = 'all' }: Props) {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
