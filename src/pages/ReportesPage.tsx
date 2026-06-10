@@ -426,9 +426,17 @@ export default function ReportesPage() {
       </div>
 
       {/* Active filter chips */}
-      {(selectedVendedores.length > 0 || selectedStatuses.length > 0) && (
+      {(selectedVendedores.length > 0 || selectedStatuses.length > 0 || tipoFilter) && (
         <div className="flex items-center gap-1.5 flex-wrap print:hidden">
           <span className="text-[11px] text-muted-foreground">Filtrando por:</span>
+          {tipoFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+              Tipo: {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
+              <button onClick={() => setTipoFilter('')} className="hover:text-destructive">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
           {vendedorNames.map((name, i) => (
             <span key={selectedVendedores[i]} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
               {name}
