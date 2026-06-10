@@ -98,22 +98,26 @@ export default function ComisionesPage() {
 
   // ============== POR PAGAR ==============
   const [ppFechaCorte, setPpFechaCorte] = useState(todayLocal());
+  const [ppSaldoFilter, setPpSaldoFilter] = useState<'cobradas' | 'pendientes' | 'todas'>('cobradas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsedVendors, setCollapsedVendors] = useState<Set<string>>(new Set());
   const toggleCollapse = (id: string) => setCollapsedVendors(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const { data: pendientesPP, isLoading: loadingPP } = useQuery({
-    queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte],
+    queryKey: ['comisiones-por-pagar', empresa?.id, ppFechaCorte, ppSaldoFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('venta_comisiones')
-        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio), vendedores:profiles!vendedor_id(nombre)')
+        .select('id, vendedor_id, comision_monto, monto_venta, fecha_venta, venta_id, ventas(folio, saldo_pendiente), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('pagada', false)
         .is('pago_comision_id', null)
         .lte('fecha_venta', ppFechaCorte)
         .order('fecha_venta');
+      if (ppSaldoFilter === 'cobradas') q = q.eq('ventas.saldo_pendiente', 0);
+      if (ppSaldoFilter === 'pendientes') q = q.gt('ventas.saldo_pendiente', 0);
+      const { data, error } = await q;
       if (error) throw error;
       return data as any[];
     },
@@ -484,6 +488,19 @@ export default function ComisionesPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Pagar comisiones hasta:</span>
             <input type="date" className="input-odoo text-xs py-1.5 w-36" value={ppFechaCorte} onChange={e => { setPpFechaCorte(e.target.value); clearSel(); }} />
+            <div className="h-6 w-px bg-border mx-1" />
+            <div className="flex border border-border rounded overflow-hidden">
+              {([['cobradas', 'Cobradas'], ['pendientes', 'Por cobrar'], ['todas', 'Todas']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => { setPpSaldoFilter(key); clearSel(); }}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs transition-colors',
+                    ppSaldoFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                  )}
+                >{label}</button>
+              ))}
+            </div>
             <button onClick={selectAll} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Seleccionar todo</button>
             <button onClick={clearSel} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Limpiar</button>
             <button onClick={() => setCollapsedVendors(new Set(ppGrupos.map(g => g.vendedor_id)))} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Contraer todo</button>
@@ -502,7 +519,9 @@ export default function ComisionesPage() {
 
           {loadingPP ? <TableSkeleton /> : ppGrupos.length === 0 ? (
             <div className="border border-border rounded p-8 text-center text-muted-foreground text-sm">
-              No hay comisiones pendientes hasta la fecha de corte
+              {ppSaldoFilter === 'cobradas' ? 'No hay comisiones de ventas cobradas hasta la fecha de corte'
+                : ppSaldoFilter === 'pendientes' ? 'No hay comisiones de ventas por cobrar hasta la fecha de corte'
+                : 'No hay comisiones pendientes hasta la fecha de corte'}
             </div>
           ) : (
             <div className="space-y-3">
@@ -511,6 +530,8 @@ export default function ComisionesPage() {
                 const someSel = g.items.some(i => selected.has(i.id));
                 const selCount = g.items.filter(i => selected.has(i.id)).length;
                 const selTotal = g.items.filter(i => selected.has(i.id)).reduce((s, i) => s + (i.comision_monto ?? 0), 0);
+                const cobradas = g.items.filter(i => i.ventas?.saldo_pendiente === 0).length;
+                const porCobrar = g.items.filter(i => (i.ventas?.saldo_pendiente ?? 0) > 0).length;
                 return (
                   <div key={g.vendedor_id} className="border border-border rounded overflow-hidden">
                     <div className="flex items-center gap-3 bg-muted/40 px-3 py-2 border-b border-table-border">
@@ -530,7 +551,12 @@ export default function ComisionesPage() {
                           ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         <span className="font-semibold text-sm">{g.nombre}</span>
-                        <span className="text-xs text-muted-foreground">{g.items.length} comisiones · Total: <span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span></span>
+                        <span className="text-xs text-muted-foreground">
+                          {g.items.length} comisiones
+                          {cobradas > 0 && <span className="ml-1 text-green-600">· {cobradas} cobradas</span>}
+                          {porCobrar > 0 && <span className="ml-1 text-amber-600">· {porCobrar} por cobrar</span>}
+                          {' · Total: '}<span className="font-mono font-semibold text-odoo-teal">{fmt(g.total)}</span>
+                        </span>
                       </button>
                       <div className="text-xs">
                         Seleccionado: <span className="font-mono font-bold text-primary">{fmt(selTotal)}</span> ({selCount})
@@ -544,6 +570,7 @@ export default function ComisionesPage() {
                           <th className="th-odoo text-left">Fecha</th>
                           <th className="th-odoo text-left">Folio</th>
                           <th className="th-odoo text-right">Venta</th>
+                          <th className="th-odoo text-right">Saldo venta</th>
                           <th className="th-odoo text-right">Comisión</th>
                         </tr>
                       </thead>
@@ -560,6 +587,13 @@ export default function ComisionesPage() {
                               ) : (i.ventas?.folio ?? '—')}
                             </td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(i.monto_venta)}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-xs">
+                              {i.ventas?.saldo_pendiente !== undefined && i.ventas?.saldo_pendiente !== null ? (
+                                <span className={i.ventas.saldo_pendiente === 0 ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                                  {fmt(i.ventas.saldo_pendiente)}
+                                </span>
+                              ) : '—'}
+                            </td>
                             <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(i.comision_monto)}</td>
                           </tr>
                         ))}
