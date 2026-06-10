@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Wallet, Inbox, Users, Check, X, Copy, Pencil, Eye, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import { promptDialog } from '@/lib/confirm';
 
 const REF_BASE = 'https://rutapp.mx/?ref=';
 

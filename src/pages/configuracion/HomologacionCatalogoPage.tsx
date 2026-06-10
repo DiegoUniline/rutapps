@@ -13,9 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import {
-import { confirmDialog } from '@/lib/confirm';
   loadCatalog, matchAll, summary, type ExternalRow, type MatchedRow, type MatchTipo,
 } from '@/lib/catalogMatcher';
+import { confirmDialog } from '@/lib/confirm';
 
 // ───────── Helpers ─────────
 const fmtDate = (iso: string) => {
