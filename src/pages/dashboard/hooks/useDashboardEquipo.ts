@@ -121,7 +121,7 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
 
         return {
           vendedorId: vId,
-          nombre: v.nombre || v. || 'Sin nombre',
+          nombre: v.nombre || 'Sin nombre',
           venta, margen, cobrado, carteraVencida,
           visitas, visitasPlaneadas, ventasConPedido,
           efectividadPct, cumplimientoRutaPct, metaPct,

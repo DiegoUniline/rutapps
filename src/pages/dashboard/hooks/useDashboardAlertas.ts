@@ -63,7 +63,7 @@ export function useDashboardAlertas() {
       const conGps = new Set((ubicRes.data ?? []).map((u: any) => u.user_id));
       const vendedoresSinGps: AlertaItem[] = (vendedoresRes.data ?? [])
         .filter((v: any) => !conGps.has(v.id))
-        .map((v: any) => ({ id: v.id, nombre: v.nombre || v. || 'Sin nombre' }));
+        .map((v: any) => ({ id: v.id, nombre: v.nombre || 'Sin nombre' }));
 
       // Facturas por vencer (ventas a crédito con factura en próximos 7 días)
       const facturasPorVencer: AlertaItem[] = (facturasRes.data ?? []).map((v: any) => ({
