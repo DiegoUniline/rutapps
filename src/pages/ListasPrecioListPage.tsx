@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Star, Pencil, Trash2, Check, X, Link2, Copy, Eye, ChevronRight } from 'lucide-react';
+import { Plus, Star, Pencil, Trash2, Link2, Copy, Eye, ChevronRight } from 'lucide-react';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -12,6 +12,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
@@ -26,14 +31,17 @@ export default function ListasPrecioListPage() {
   const [showNew, setShowNew] = useState(false);
   const [newNombre, setNewNombre] = useState('');
   const [newPrincipal, setNewPrincipal] = useState(false);
-
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editNombre, setEditNombre] = useState('');
-  const [editPrincipal, setEditPrincipal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nombre: string } | null>(null);
 
   const filtered = listas?.filter(l =>
     !search || l.nombre.toLowerCase().includes(search.toLowerCase())
   ) ?? [];
+
+  const openNew = () => {
+    setNewNombre('');
+    setNewPrincipal(false);
+    setShowNew(true);
+  };
 
   const handleCreate = async () => {
     if (!newNombre.trim()) { toast.error('Escribe un nombre'); return; }
@@ -41,47 +49,22 @@ export default function ListasPrecioListPage() {
       const saved: any = await saveMutation.mutateAsync({ nombre: newNombre.trim(), es_principal: newPrincipal });
       toast.success('Lista creada');
       setShowNew(false);
-      setNewNombre('');
-      setNewPrincipal(false);
       if (saved?.tarifa_id) {
         navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || newNombre.trim())}`);
       }
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const startEdit = (l: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditId(l.id);
-    setEditNombre(l.nombre);
-    setEditPrincipal(l.es_principal);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editId) return;
-    if (!editNombre.trim()) { toast.error('Escribe un nombre'); return; }
-    const original = listas?.find(l => l.id === editId);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      const saved: any = await saveMutation.mutateAsync({ id: editId, tarifa_id: original?.tarifa_id, nombre: editNombre.trim(), es_principal: editPrincipal });
-      toast.success('Lista actualizada');
-      setEditId(null);
-      const tarifaId = saved?.tarifa_id || original?.tarifa_id;
-      if (tarifaId) {
-        navigate(`/tarifas/${tarifaId}?lista=${encodeURIComponent(editNombre.trim())}`);
-      }
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const handleDelete = async (id: string, nombre: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(`¿Eliminar la lista "${nombre}"?`)) return;
-    try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       toast.success('Lista eliminada');
+      setDeleteTarget(null);
     } catch (err: any) { toast.error(err.message); }
   };
 
   const goToLista = (l: any) => {
-    if (editId === l.id) return;
     navigate(`/tarifas/${l.tarifa_id}?lista=${encodeURIComponent(l.nombre)}`);
   };
 
@@ -91,17 +74,7 @@ export default function ListasPrecioListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
-        <button onClick={async () => {
-          const nombre = window.prompt('Nombre de la nueva lista de precios:');
-          if (!nombre || !nombre.trim()) return;
-          try {
-            const saved: any = await saveMutation.mutateAsync({ nombre: nombre.trim(), es_principal: false });
-            toast.success('Lista creada');
-            if (saved?.tarifa_id) {
-              navigate(`/tarifas/${saved.tarifa_id}?lista=${encodeURIComponent(saved.nombre || nombre.trim())}`);
-            }
-          } catch (err: any) { toast.error(err.message); }
-        }} className="btn-odoo-primary shrink-0">
+        <button onClick={openNew} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nueva lista
         </button>
       </div>
@@ -113,25 +86,7 @@ export default function ListasPrecioListPage() {
       ) : isMobile ? (
         /* ─── Mobile: card layout ─── */
         <div className="space-y-2">
-          {showNew && (
-            <div className="bg-card border border-primary/30 rounded-xl p-3 space-y-2">
-              <input autoFocus type="text" className="input-odoo text-sm w-full" placeholder="Nombre de la lista"
-                value={newNombre} onChange={e => setNewNombre(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNew(false); }}
-              />
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" checked={newPrincipal} onChange={e => setNewPrincipal(e.target.checked)} className="rounded border-input" />
-                  Principal
-                </label>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowNew(false)} className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent">Cancelar</button>
-                  <button onClick={handleCreate} className="px-3 py-1.5 rounded-lg text-xs bg-primary text-primary-foreground font-semibold">Crear</button>
-                </div>
-              </div>
-            </div>
-          )}
-          {filtered.length === 0 && !showNew && (
+          {filtered.length === 0 && (
             <p className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</p>
           )}
           {filtered.map(l => (
@@ -174,123 +129,137 @@ export default function ListasPrecioListPage() {
               </tr>
             </thead>
             <tbody>
-              {showNew && (
-                <tr className="border-b border-table-border bg-primary/5">
+              {filtered.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td></tr>
+              )}
+              {filtered.map(l => (
+                <tr
+                  key={l.id}
+                  className={cn("border-b border-table-border transition-colors cursor-pointer hover:bg-table-hover")}
+                  onClick={() => goToLista(l)}
+                >
                   <td className="py-1.5 px-3">
-                    <input autoFocus type="text" className="input-odoo text-xs w-full" placeholder="Nombre de la lista"
-                      value={newNombre} onChange={e => setNewNombre(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNew(false); }}
-                    />
+                    <span className="font-medium flex items-center gap-1.5 text-foreground">
+                      {l.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                      {l.nombre}
+                    </span>
                   </td>
                   <td className="py-1.5 px-3 text-center">
-                    <input type="checkbox" checked={newPrincipal} onChange={e => setNewPrincipal(e.target.checked)} className="rounded border-input" />
+                    {l.es_principal ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 mx-auto" /> : <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="py-1.5 px-3 text-center"><span className="status-pill status-activo">Activa</span></td>
-                  <td className="py-1.5 px-3 text-center text-muted-foreground text-xs">—</td>
                   <td className="py-1.5 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={handleCreate} className="text-primary hover:text-primary/80 p-1"><Check className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
+                    {l.activa ? <span className="status-pill status-activo">Activa</span> : <span className="status-pill status-borrador">Inactiva</span>}
+                  </td>
+                  <td className="py-1.5 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        title={l.share_activo ? 'Desactivar catálogo público' : 'Activar catálogo público'}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const next = !l.share_activo;
+                          await supabase.from('lista_precios').update({ share_activo: next } as any).eq('id', l.id);
+                          toast.success(next ? 'Catálogo activado' : 'Catálogo desactivado');
+                          qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+                        }}
+                        className={cn('p-1 rounded transition-colors', l.share_activo ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                      </button>
+                      {l.share_activo && l.share_token && (
+                        <button
+                          title="Copiar link del catálogo"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = `${window.location.origin}/catalogo/${l.share_token}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success('Link copiado al portapapeles');
+                          }}
+                          className="text-muted-foreground hover:text-foreground p-1"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-1.5 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-primary hover:text-primary/80 p-1.5 rounded-md hover:bg-primary/5" title="Ver precios">
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent" title="Editar">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: l.id, nombre: l.nombre }); }}
+                        className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/5"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </td>
                 </tr>
-              )}
-              {filtered.length === 0 && !showNew && (
-                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td></tr>
-              )}
-              {filtered.map(l => {
-                const isEditing = editId === l.id;
-                return (
-                  <tr
-                    key={l.id}
-                    className={cn("border-b border-table-border transition-colors cursor-pointer", isEditing ? "bg-primary/5" : "hover:bg-table-hover")}
-                    onClick={() => goToLista(l)}
-                  >
-                    <td className="py-1.5 px-3">
-                      {isEditing ? (
-                        <input autoFocus type="text" className="input-odoo text-xs w-full" value={editNombre}
-                          onChange={e => setEditNombre(e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                          onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setEditId(null); }}
-                        />
-                      ) : (
-                        <span className="font-medium flex items-center gap-1.5 text-foreground">
-                          {l.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
-                          {l.nombre}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      {isEditing ? (
-                        <input type="checkbox" checked={editPrincipal} onChange={e => setEditPrincipal(e.target.checked)} onClick={e => e.stopPropagation()} className="rounded border-input" />
-                      ) : (
-                        l.es_principal ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 mx-auto" /> : <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      {l.activa ? <span className="status-pill status-activo">Activa</span> : <span className="status-pill status-borrador">Inactiva</span>}
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
-                        <button
-                          title={l.share_activo ? 'Desactivar catálogo público' : 'Activar catálogo público'}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const next = !l.share_activo;
-                            await supabase.from('lista_precios').update({ share_activo: next } as any).eq('id', l.id);
-                            toast.success(next ? 'Catálogo activado' : 'Catálogo desactivado');
-                            qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
-                          }}
-                          className={cn('p-1 rounded transition-colors', l.share_activo ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                        </button>
-                        {l.share_activo && l.share_token && (
-                          <button
-                            title="Copiar link del catálogo"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const url = `${window.location.origin}/catalogo/${l.share_token}`;
-                              navigator.clipboard.writeText(url);
-                              toast.success('Link copiado al portapapeles');
-                            }}
-                            className="text-muted-foreground hover:text-foreground p-1"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-                        {isEditing ? (
-                          <>
-                            <button onClick={handleSaveEdit} className="text-primary hover:text-primary/80 p-1" title="Guardar"><Check className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => setEditId(null)} className="text-muted-foreground hover:text-destructive p-1" title="Cancelar"><X className="h-3.5 w-3.5" /></button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-primary hover:text-primary/80 p-1.5 rounded-md hover:bg-primary/5" title="Ver precios">
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); goToLista(l); }} className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent" title="Editar">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={(e) => handleDelete(l.id, l.nombre, e)} className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/5" title="Eliminar">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
           {total > 0 && <OdooPagination from={1} to={total} total={total} />}
         </div>
       )}
+
+      {/* Create dialog */}
+      <Dialog open={showNew} onOpenChange={setShowNew}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nueva Lista de Precios</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="lp-nombre">Nombre</Label>
+              <Input
+                id="lp-nombre"
+                autoFocus
+                placeholder="Ej. Lista Mayoreo"
+                value={newNombre}
+                onChange={e => setNewNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newPrincipal}
+                onChange={e => setNewPrincipal(e.target.checked)}
+                className="rounded border-input"
+              />
+              Marcar como principal
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Creando...' : 'Crear lista'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar lista de precios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará la lista <strong>"{deleteTarget?.nombre}"</strong> y todos sus precios asociados. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
