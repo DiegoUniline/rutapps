@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Bot, Send, Loader2, Plus, Trash2, MessageSquare, User } from "lucide-react";
@@ -11,24 +11,37 @@ import { toast } from "sonner";
 type Msg = { role: "user" | "assistant"; content: string; ts: number };
 type Thread = { id: string; title: string; updatedAt: number; messages: Msg[] };
 
-const STORAGE_KEY = "rutapp.soporte.threads.v1";
+export const SOPORTE_STORAGE_KEY = "rutapp.soporte.threads.v1";
+export const SOPORTE_ACTIVE_KEY = "rutapp.soporte.active.v1";
+export const SOPORTE_EVENT = "rutapp:soporte-updated";
 const MAX_THREADS = 30;
+
+function notifyUpdate() {
+  try { window.dispatchEvent(new Event(SOPORTE_EVENT)); } catch {}
+}
 
 function loadThreads(): Thread[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(SOPORTE_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function saveThreads(threads: Thread[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(threads.slice(0, MAX_THREADS)));
+    localStorage.setItem(SOPORTE_STORAGE_KEY, JSON.stringify(threads.slice(0, MAX_THREADS)));
+    notifyUpdate();
   } catch {}
+}
+
+function saveActive(id: string) {
+  try { localStorage.setItem(SOPORTE_ACTIVE_KEY, id); notifyUpdate(); } catch {}
+}
+
+function loadActive(): string | null {
+  try { return localStorage.getItem(SOPORTE_ACTIVE_KEY); } catch { return null; }
 }
 
 function newId() {
@@ -51,34 +64,58 @@ const SUGGESTIONS = [
   "¿Cómo configuro permisos de un usuario?",
 ];
 
-export default function SoporteChatPanel() {
+type Props = {
+  /** When true: hides thread sidebar and renders in compact floating mode. */
+  compact?: boolean;
+  /** Called after the user clicks an internal markdown link (useful to close floating panel). */
+  onAfterNavigate?: () => void;
+};
+
+export default function SoporteChatPanel({ compact = false, onAfterNavigate }: Props = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [threads, setThreads] = useState<Thread[]>(() => {
     if (typeof window === "undefined") return [];
     const loaded = loadThreads();
     if (loaded.length === 0) {
       const t = newThread();
       saveThreads([t]);
+      saveActive(t.id);
       return [t];
     }
     return loaded;
   });
 
-  const urlThreadId = searchParams.get("c");
+  // Sync from other tabs / floating widget
+  useEffect(() => {
+    const handler = () => setThreads(loadThreads());
+    window.addEventListener(SOPORTE_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(SOPORTE_EVENT, handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+
+  const urlThreadId = compact ? null : searchParams.get("c");
+  const storedActive = useMemo(() => (typeof window !== "undefined" ? loadActive() : null), [threads.length]);
+
   const activeId = useMemo(() => {
     if (urlThreadId && threads.some((t) => t.id === urlThreadId)) return urlThreadId;
+    if (storedActive && threads.some((t) => t.id === storedActive)) return storedActive;
     return threads[0]?.id ?? "";
-  }, [urlThreadId, threads]);
+  }, [urlThreadId, storedActive, threads]);
 
-  // Ensure URL has the active id once threads are ready
+  // Ensure URL has the active id on /soporte page (non-compact)
   useEffect(() => {
-    if (activeId && urlThreadId !== activeId) {
+    if (!compact && activeId && urlThreadId !== activeId) {
       const next = new URLSearchParams(searchParams);
       next.set("c", activeId);
       setSearchParams(next, { replace: true });
     }
+    if (activeId) saveActive(activeId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
+  }, [activeId, compact]);
 
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
 
@@ -113,9 +150,15 @@ export default function SoporteChatPanel() {
   };
 
   const selectThread = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set("c", id);
-    setSearchParams(next);
+    saveActive(id);
+    if (!compact) {
+      const next = new URLSearchParams(searchParams);
+      next.set("c", id);
+      setSearchParams(next);
+    } else {
+      // Force re-render in compact mode by re-reading active key
+      setThreads((prev) => [...prev]);
+    }
   };
 
   const createThread = () => {
@@ -129,9 +172,12 @@ export default function SoporteChatPanel() {
       let next = prev.filter((t) => t.id !== id);
       if (next.length === 0) next = [newThread()];
       if (id === activeId) {
-        const url = new URLSearchParams(searchParams);
-        url.set("c", next[0].id);
-        setSearchParams(url, { replace: true });
+        saveActive(next[0].id);
+        if (!compact) {
+          const url = new URLSearchParams(searchParams);
+          url.set("c", next[0].id);
+          setSearchParams(url, { replace: true });
+        }
       }
       return next;
     });
@@ -200,9 +246,42 @@ export default function SoporteChatPanel() {
     }
   };
 
+  // Custom anchor renderer: internal app paths (start with "/") use react-router navigation
+  // so the floating chat stays open while the user changes pages.
+  const renderLink = ({ href, children, ...rest }: any) => {
+    const isInternal = typeof href === "string" && href.startsWith("/") && !href.startsWith("//");
+    if (isInternal) {
+      return (
+        <a
+          href={href}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(href);
+            onAfterNavigate?.();
+          }}
+          className="text-primary font-semibold underline underline-offset-2 hover:opacity-80"
+          {...rest}
+        >
+          {children}
+        </a>
+      );
+    }
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline" {...rest}>
+        {children}
+      </a>
+    );
+  };
+
   return (
-    <div className="grid h-[640px] grid-cols-1 overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[260px_1fr]">
+    <div className={cn(
+      "grid grid-cols-1 overflow-hidden rounded-xl border bg-card shadow-sm",
+      compact ? "h-full" : "h-[640px] md:grid-cols-[260px_1fr]",
+      !compact && "md:grid-cols-[260px_1fr]",
+    )}>
       {/* Threads sidebar */}
+      {/* Threads sidebar (hidden in compact / floating mode) */}
+      {!compact && (
       <aside className="hidden flex-col border-r bg-muted/30 md:flex">
         <div className="p-3 border-b">
           <Button onClick={createThread} className="w-full" size="sm">
@@ -241,6 +320,9 @@ export default function SoporteChatPanel() {
           ))}
         </div>
       </aside>
+      )}
+
+
 
       {/* Chat */}
       <div className="flex flex-col min-h-0">
@@ -334,7 +416,7 @@ export default function SoporteChatPanel() {
                       "prose-th:bg-muted/50 prose-th:font-bold prose-th:px-2 prose-th:py-1.5 prose-th:border prose-th:border-border",
                       "prose-td:px-2 prose-td:py-1.5 prose-td:border prose-td:border-border",
                     )}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: renderLink }}>{m.content}</ReactMarkdown>
                     </article>
                   ) : (
                     <p className="whitespace-pre-wrap">{m.content}</p>

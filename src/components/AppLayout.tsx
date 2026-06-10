@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+const FloatingSoporteChat = lazy(() => import('@/components/soporte/FloatingSoporteChat'));
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -882,6 +883,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PendingInvoiceModal />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <FloatingSoporteChat />
       </Suspense>
     </div>
   );
