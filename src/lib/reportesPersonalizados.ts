@@ -520,6 +520,12 @@ async function runCompras(filtros: ReporteFiltros, empresaId: string) {
     if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status);
+    if (filtros.proveedorIds?.length) q = q.in('proveedor_id', filtros.proveedorIds);
+    if (filtros.almacenIds?.length) q = q.in('almacen_id', filtros.almacenIds);
+    if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!compras.length) return [];
