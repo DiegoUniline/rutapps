@@ -7,22 +7,27 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PAGE_SIZE = 50;
 
 export default function ProveedoresListPage() {
   const navigate = useNavigate();
   const { hasPermiso } = usePermisos();
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   const canCreate = hasPermiso('catalogo.proveedores', 'crear');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
   const { data: proveedores, isLoading } = useQuery({
-    queryKey: ['proveedores-full', search],
+    queryKey: ['proveedores-full', empresaId, search],
+    enabled: !!empresaId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       let q = supabase.from('proveedores')
         .select('id, nombre, contacto, telefono, email, ciudad, estado, condicion_pago, status')
+        .eq('empresa_id', empresaId!)
         .order('nombre');
       if (search) q = q.or(`nombre.ilike.%${search}%,contacto.ilike.%${search}%,email.ilike.%${search}%,telefono.ilike.%${search}%`);
       const { data, error } = await q;
