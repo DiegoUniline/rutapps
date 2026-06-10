@@ -35,7 +35,7 @@ export interface Producto {
   es_combo: boolean;
   min: number;
   max: number;
-  manejar_lotes: boolean;
+  
   unidad_compra_id?: string;
   unidad_venta_id?: string;
   factor_conversion: number;
