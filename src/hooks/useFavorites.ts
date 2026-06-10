@@ -35,21 +35,23 @@ export function useFavorites() {
       if (error) throw error;
       let favs = (data ?? []) as Favorite[];
 
-      // Seed default favorites once per user if none exist
-      if (favs.length === 0) {
-        const seedKey = `favs_seeded_${user.id}`;
-        if (!localStorage.getItem(seedKey)) {
-          const rows = DEFAULT_FAVORITES.map((f, i) => ({
-            user_id: user.id,
-            path: f.path,
-            label: f.label,
-            icon: f.icon,
-            orden: i,
-          }));
-          const { data: inserted } = await supabase.from('user_favorites').insert(rows).select('*');
-          if (inserted) favs = inserted as Favorite[];
-          localStorage.setItem(seedKey, '1');
-        }
+      // Ensure default favorites are always present (pinned)
+      const existingPaths = new Set(favs.map(f => f.path));
+      const missing = DEFAULT_FAVORITES.filter(f => !existingPaths.has(f.path));
+      if (missing.length > 0) {
+        const baseOrden = favs.length;
+        const rows = missing.map((f, i) => ({
+          user_id: user.id,
+          path: f.path,
+          label: f.label,
+          icon: f.icon,
+          orden: baseOrden + i,
+        }));
+        const { data: inserted, error: insErr } = await supabase
+          .from('user_favorites')
+          .insert(rows)
+          .select('*');
+        if (!insErr && inserted) favs = [...favs, ...(inserted as Favorite[])];
       }
       return favs;
     },
