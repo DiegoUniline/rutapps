@@ -81,9 +81,11 @@ export default function FloatingSoporteChat() {
           <Bot className="h-4 w-4" />
         </span>
         <span className="text-sm font-semibold whitespace-nowrap">Asesor IA</span>
-        <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
-          {count}
-        </span>
+        {count > 0 && (
+          <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
+            {count}
+          </span>
+        )}
       </button>
     );
   }
