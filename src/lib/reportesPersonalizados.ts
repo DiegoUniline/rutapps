@@ -280,6 +280,19 @@ export async function runReporte(
 
 // ─── Ventas ────────────────────────────────────────────────────
 async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresaId: string) {
+  // Pre-filtro por categoría/marca: resolver lista de producto_id
+  let allowedProductoIds: string[] | null = null;
+  if (filtros.categoriaIds?.length || filtros.marcaIds?.length) {
+    const prods = await fetchAllPages<any>((from, to) => {
+      let pq = supabase.from('productos').select('id').eq('empresa_id', empresaId).range(from, to);
+      if (filtros.categoriaIds?.length) pq = pq.in('clasificacion_id', filtros.categoriaIds);
+      if (filtros.marcaIds?.length) pq = pq.in('marca_id', filtros.marcaIds);
+      return pq;
+    });
+    allowedProductoIds = prods.map(p => p.id);
+    if (!allowedProductoIds.length) return [];
+  }
+
   const ventas = await fetchAllPages<any>((from, to) => {
     let q = supabase
       .from('ventas')
@@ -291,6 +304,12 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
     if (filtros.status?.length) q = q.in('status', filtros.status as any);
     if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.in('vendedor_id', filtros.vendedorIds);
+    if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
     return q;
   });
   if (!ventas.length) return [];
@@ -304,13 +323,17 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     loadMap('profiles', vendedorIds, 'id, nombre'),
   ]);
 
-  const lineas = await fetchAllPages<any>((from, to) =>
+  let lineas = await fetchAllPages<any>((from, to) =>
     supabase
       .from('venta_lineas')
       .select('venta_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, iva_pct, ieps_pct, iva_monto, ieps_monto, total')
       .in('venta_id', ventaIds)
       .range(from, to)
   );
+  if (allowedProductoIds) {
+    const set = new Set(allowedProductoIds);
+    lineas = lineas.filter(l => set.has(l.producto_id));
+  }
 
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
   const productosMap = await loadMap('productos', productoIds, 'id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta');
