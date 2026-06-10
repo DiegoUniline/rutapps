@@ -49,7 +49,7 @@ const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
 // EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
-const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
+// ReporteEntregasPage removed — reporte de entregas now lives as a tab inside /reportes
 const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
 
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
@@ -646,8 +646,8 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/entregas/:id" element={<EntregaFormPage />} />
       <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-      <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
-      <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
+      <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes" replace />} />
+      <Route path="/reportes/entregas" element={<Navigate to="/reportes" replace />} />
       <Route path="/ventas/cobranza" element={<CobranzaPage />} />
       <Route path="/ventas/rutas" element={<MapaClientesPage />} />
       <Route path="/ventas/mapa-clientes" element={<MapaClientesPage />} />

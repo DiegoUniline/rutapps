@@ -1,199 +1,304 @@
-import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Package } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
+import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { FileText, CalendarIcon, Package, Truck, Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
 
-const COLUMNS: ColumnDef[] = [
-  { key: 'expand', label: 'Expandir' },
-  { key: 'nombre', label: 'Ruta / Vendedor' },
-  { key: 'entregas', label: 'Entregas' },
-  { key: 'total', label: 'Total' },
-];
+function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Date) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['reporte-entregas', empresa?.id, vendedorId, fechaDesde.toISOString(), fechaHasta.toISOString()],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const dStr = fechaDesde.toISOString().slice(0, 10);
+      const hStr = fechaHasta.toISOString().slice(0, 10);
+      let q = supabase
+        .from('ventas')
+        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
+        .eq('empresa_id', empresa!.id)
+        .in('status', ['confirmado', 'entregado', 'facturado'])
+        .or(`and(fecha_entrega.gte.${dStr},fecha_entrega.lte.${hStr}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${dStr},fecha.lte.${hStr})`)
+        .order('fecha_entrega', { ascending: true });
 
-const PROD_COLUMNS: ColumnDef[] = [
-  { key: 'ruta', label: 'Ruta' },
-  { key: 'codigo', label: 'Código' },
-  { key: 'producto', label: 'Producto' },
-  { key: 'cantidad', label: 'Cantidad' },
-  { key: 'total', label: 'Total' },
-];
+      if (vendedorId && vendedorId !== 'todos') q = q.eq('vendedor_id', vendedorId);
 
-export function ReporteEntregas({ data }: { data: any }) {
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+function useVendedoresList() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['vendedores-reporte', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
+    },
+  });
+}
+
+export function ReporteEntregas() {
   const { fmt } = useCurrency();
-  const { visible, setVisible, isVisible } = useColumnVisibility(COLUMNS);
-  const { visible: prodVisible, setVisible: setProdVisible, isVisible: isProdVisible } = useColumnVisibility(PROD_COLUMNS);
-  const [expandedRuta, setExpandedRuta] = useState<number | null>(null);
-  const rutas = data.entregasPorRuta ?? [];
+  const { empresa } = useAuth();
+  const [vendedorId, setVendedorId] = useState('todos');
+  const [fechaDesde, setFechaDesde] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d; });
+  const [fechaHasta, setFechaHasta] = useState(() => new Date());
 
-  const colCount = COLUMNS.filter(c => visible.has(c.key)).length;
-  const prodColCount = PROD_COLUMNS.filter(c => prodVisible.has(c.key)).length;
+  const { data: entregas, isLoading } = useReporteEntregas(vendedorId, fechaDesde, fechaHasta);
+  const { data: vendedores } = useVendedoresList();
 
-  // Flat table: ruta x producto
-  const rutaProductos = useMemo(() => {
-    const rows: { ruta: string; codigo: string; producto: string; cantidad: number; total: number }[] = [];
-    for (const r of rutas) {
-      const prods = Object.values(r.productos ?? {}) as any[];
-      for (const p of prods) {
-        rows.push({
-          ruta: r.nombre,
-          codigo: p.codigo ?? '',
-          producto: p.nombre ?? '',
-          cantidad: p.cantidad ?? 0,
-          total: 0, // entregas data doesn't have per-product total in this structure
-        });
-      }
-    }
-    return rows;
-  }, [rutas]);
-
-  // Compute per-product total from entregas raw data
-  const rutaProductosWithTotal = useMemo(() => {
-    const entregas = data.entregas ?? [];
-    const map: Record<string, { ruta: string; codigo: string; producto: string; cantidad: number; total: number }> = {};
+  // Product summary across all deliveries
+  const productSummary = useMemo(() => {
+    if (!entregas) return [];
+    const map = new Map<string, { codigo: string; nombre: string; cantidad: number; total: number }>();
     for (const e of entregas) {
-      const ruta = (e as any).vendedores?.nombre ?? 'Sin ruta';
       for (const l of ((e as any).venta_lineas ?? [])) {
-        const pid = l.producto_id ?? '';
-        const key = `${ruta}__${pid}`;
-        if (!map[key]) {
-          map[key] = {
-            ruta,
-            codigo: l.productos?.codigo ?? '',
-            producto: l.productos?.nombre ?? '',
-            cantidad: 0,
-            total: 0,
-          };
+        const pid = l.productos?.id ?? l.producto_id;
+        const existing = map.get(pid);
+        if (existing) {
+          existing.cantidad += l.cantidad ?? 0;
+          existing.total += (l.cantidad ?? 0) * (l.precio_unitario ?? 0);
+        } else {
+          map.set(pid, {
+            codigo: l.productos?.codigo ?? '—',
+            nombre: l.productos?.nombre ?? '—',
+            cantidad: l.cantidad ?? 0,
+            total: (l.cantidad ?? 0) * (l.precio_unitario ?? 0),
+          });
         }
-        map[key].cantidad += l.cantidad ?? 0;
-        map[key].total += l.total ?? 0;
       }
     }
-    return Object.values(map).sort((a, b) => a.ruta.localeCompare(b.ruta) || b.cantidad - a.cantidad);
-  }, [data.entregas]);
+    return Array.from(map.values()).sort((a, b) => b.cantidad - a.cantidad);
+  }, [entregas]);
 
-  const totalUnidades = rutaProductosWithTotal.reduce((s, r) => s + r.cantidad, 0);
-  const totalMonto = rutaProductosWithTotal.reduce((s, r) => s + r.total, 0);
+  // Group by route
+  const byRoute = useMemo(() => {
+    if (!entregas) return [];
+    const map = new Map<string, { vendedor: string; entregas: typeof entregas; total: number }>();
+    for (const e of entregas) {
+      const vid = (e as any).vendedor_id ?? 'sin';
+      const vn = (e as any).vendedores?.nombre ?? 'Sin asignar';
+      if (!map.has(vid)) map.set(vid, { vendedor: vn, entregas: [], total: 0 });
+      const g = map.get(vid)!;
+      g.entregas.push(e);
+      g.total += (e as any).total ?? 0;
+    }
+    return Array.from(map.values());
+  }, [entregas]);
+
+  // Group by date
+  const byDate = useMemo(() => {
+    if (!entregas) return [];
+    const map = new Map<string, { fecha: string; entregas: typeof entregas; total: number }>();
+    for (const e of entregas) {
+      const f = (e as any).fecha_entrega ?? (e as any).fecha;
+      if (!map.has(f)) map.set(f, { fecha: f, entregas: [], total: 0 });
+      const g = map.get(f)!;
+      g.entregas.push(e);
+      g.total += (e as any).total ?? 0;
+    }
+    return Array.from(map.values()).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  }, [entregas]);
+
+  const totalMonto = entregas?.reduce((s, e) => s + ((e as any).total ?? 0), 0) ?? 0;
+  const totalUnidades = productSummary.reduce((s, p) => s + p.cantidad, 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="grid grid-cols-2 gap-3 flex-1">
-          <div className="bg-card border border-border rounded-lg p-3 text-center">
-            <div className="text-[9px] text-muted-foreground uppercase font-semibold">Total entregas</div>
-            <div className="text-lg font-bold text-foreground">{data.totalEntregas}</div>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-3 text-center">
-            <div className="text-[9px] text-muted-foreground uppercase font-semibold">Rutas</div>
-            <div className="text-lg font-bold text-foreground">{rutas.length}</div>
-          </div>
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3 print:hidden">
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Ruta</label>
+          <SearchableSelect
+            options={[{ value: 'todos', label: 'Todas las rutas' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+            value={vendedorId}
+            onChange={setVendedorId}
+            placeholder="Buscar ruta..."
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Desde</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="min-w-[140px] justify-start">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                {format(fechaDesde, 'dd/MM/yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={fechaDesde} onSelect={d => d && setFechaDesde(d)} className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Hasta</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="min-w-[140px] justify-start">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                {format(fechaHasta, 'dd/MM/yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={fechaHasta} onSelect={d => d && setFechaHasta(d)} className={cn("p-3 pointer-events-auto")} />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {/* Resumen por ruta (expandible) */}
-      <div className="bg-card border border-border rounded-lg overflow-x-auto">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-          <span className="text-[11px] font-semibold text-foreground">Resumen por ruta</span>
-          <ColumnChooser columns={COLUMNS} visible={visible} onChange={setVisible} />
+      {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Entregas</p>
+          <p className="text-2xl font-bold text-foreground">{entregas?.length ?? 0}</p>
         </div>
-        <table className="w-full text-[11px]">
-          <thead>
-            <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-              {isVisible('expand') && <th className="py-2 px-3 w-8"></th>}
-              {isVisible('nombre') && <th className="text-left py-2 px-3">Ruta / Vendedor</th>}
-              {isVisible('entregas') && <th className="text-right py-2 px-3">Entregas</th>}
-              {isVisible('total') && <th className="text-right py-2 px-3">Total</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {rutas.map((r: any, i: number) => {
-              const prods = Object.values(r.productos) as any[];
-              const isOpen = expandedRuta === i;
-              return (
-                <>
-                  <tr key={i} className="border-b border-border/50 cursor-pointer hover:bg-accent/30" onClick={() => setExpandedRuta(isOpen ? null : i)}>
-                    {isVisible('expand') && <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}</td>}
-                    {isVisible('nombre') && <td className="py-2 px-3 font-medium">{r.nombre}</td>}
-                    {isVisible('entregas') && <td className="py-2 px-3 text-right">{r.entregas}</td>}
-                    {isVisible('total') && <td className="py-2 px-3 text-right font-semibold">{fmt(r.total)}</td>}
-                  </tr>
-                  {isOpen && prods.length > 0 && (
-                    <tr key={`${i}-detail`}>
-                      <td colSpan={colCount} className="p-0">
-                        <div className="px-6 py-2 border-b border-border/50">
-                          <table className="w-full text-[11px]">
-                            <thead><tr className="text-[9px] text-muted-foreground uppercase"><th className="py-1 text-left">Código</th><th className="py-1 text-left">Producto</th><th className="py-1 text-right">Cantidad</th></tr></thead>
-                            <tbody>
-                              {prods.map((p: any, j: number) => (
-                                <tr key={j} className="border-t border-border/30">
-                                  <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
-                                  <td className="py-1">{p.nombre}</td>
-                                  <td className="py-1 text-right font-semibold">{p.cantidad}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              );
-            })}
-            {rutas.length === 0 && <tr><td colSpan={colCount} className="text-center py-8 text-muted-foreground">Sin entregas en el período</td></tr>}
-          </tbody>
-        </table>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Rutas</p>
+          <p className="text-2xl font-bold text-foreground">{byRoute.length}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Unidades totales</p>
+          <p className="text-2xl font-bold text-warning">{totalUnidades}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Monto total</p>
+          <p className="text-2xl font-bold text-primary">{fmt(totalMonto)}</p>
+        </div>
       </div>
 
-      {/* Entregas por ruta por producto (tabla completa) */}
-      {rutaProductosWithTotal.length > 0 && (
-        <div className="bg-card border border-border rounded-lg overflow-x-auto">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-            <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
-              <Package className="h-3.5 w-3.5 text-primary" />
-              Entregas por ruta por producto
-            </span>
-            <ColumnChooser columns={PROD_COLUMNS} visible={prodVisible} onChange={setProdVisible} />
+      {/* Product summary */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" />
+          <span className="text-[13px] font-semibold text-foreground">Resumen por producto</span>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[11px]">Código</TableHead>
+              <TableHead className="text-[11px]">Producto</TableHead>
+              <TableHead className="text-[11px] text-right">Cantidad total</TableHead>
+              <TableHead className="text-[11px] text-right">Monto total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {productSummary.map(p => (
+              <TableRow key={p.codigo}>
+                <TableCell className="font-mono text-[11px] text-muted-foreground py-1.5">{p.codigo}</TableCell>
+                <TableCell className="text-[12px] font-medium py-1.5">{p.nombre}</TableCell>
+                <TableCell className="text-right text-[12px] font-bold py-1.5">{p.cantidad}</TableCell>
+                <TableCell className="text-right text-[12px] py-1.5">{fmt(p.total)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={2} className="text-[11px] font-semibold">Total</TableCell>
+              <TableCell className="text-right text-[12px] font-bold">{totalUnidades}</TableCell>
+              <TableCell className="text-right text-[12px] font-bold">{fmt(totalMonto)}</TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+
+      {/* By date */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
+          <CalendarIcon className="h-4 w-4 text-primary" />
+          <span className="text-[13px] font-semibold text-foreground">Detalle por fecha de entrega</span>
+        </div>
+        {byDate.map(group => (
+          <div key={group.fecha}>
+            <div className="px-4 py-1.5 bg-card/50 border-b border-border flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-foreground">{fmtDate(group.fecha)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-muted-foreground">{group.entregas.length} entregas</span>
+                <span className="text-[12px] font-bold text-foreground">{fmt(group.total)}</span>
+              </div>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[10px]">Folio</TableHead>
+                  <TableHead className="text-[10px]">Cliente</TableHead>
+                  <TableHead className="text-[10px]">Ruta</TableHead>
+                  <TableHead className="text-[10px] text-center">Status</TableHead>
+                  <TableHead className="text-[10px] text-center">Líneas</TableHead>
+                  <TableHead className="text-[10px] text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {group.entregas.map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-mono text-[11px] font-bold py-1.5">{e.folio}</TableCell>
+                    <TableCell className="text-[11px] font-medium py-1.5">{e.clientes?.nombre ?? '—'}</TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground py-1.5">{e.vendedores?.nombre ?? '—'}</TableCell>
+                    <TableCell className="text-center py-1.5">
+                      <Badge variant={e.status === 'entregado' || e.status === 'facturado' ? 'default' : 'outline'} className={cn("text-[9px]", e.status === 'entregado' || e.status === 'facturado' ? 'bg-success text-success-foreground' : 'border-warning text-warning')}>
+                        {e.status === 'confirmado' ? 'Pendiente' : e.status === 'facturado' ? 'Facturado' : 'Entregado'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-[11px] text-muted-foreground py-1.5">{e.venta_lineas?.length ?? 0}</TableCell>
+                    <TableCell className="text-right text-[11px] font-medium py-1.5">{fmt(e.total ?? 0)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                {isProdVisible('ruta') && <th className="text-left py-2 px-3">Ruta</th>}
-                {isProdVisible('codigo') && <th className="text-left py-2 px-3">Código</th>}
-                {isProdVisible('producto') && <th className="text-left py-2 px-3">Producto</th>}
-                {isProdVisible('cantidad') && <th className="text-right py-2 px-3">Cantidad</th>}
-                {isProdVisible('total') && <th className="text-right py-2 px-3">Total</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                let lastRuta = '';
-                return rutaProductosWithTotal.map((row, i) => {
-                  const showRuta = row.ruta !== lastRuta;
-                  lastRuta = row.ruta;
-                  return (
-                    <tr key={i} className={showRuta ? 'border-t border-border' : 'border-t border-border/30'}>
-                      {isProdVisible('ruta') && (
-                        <td className="py-1.5 px-3 font-medium">
-                          {showRuta ? row.ruta : ''}
-                        </td>
-                      )}
-                      {isProdVisible('codigo') && <td className="py-1.5 px-3 font-mono text-muted-foreground">{row.codigo}</td>}
-                      {isProdVisible('producto') && <td className="py-1.5 px-3">{row.producto}</td>}
-                      {isProdVisible('cantidad') && <td className="py-1.5 px-3 text-right font-semibold">{row.cantidad}</td>}
-                      {isProdVisible('total') && <td className="py-1.5 px-3 text-right">{fmt(row.total)}</td>}
-                    </tr>
-                  );
-                });
-              })()}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-border bg-muted/50 font-semibold text-[11px]">
-                <td colSpan={isProdVisible('ruta') && isProdVisible('codigo') && isProdVisible('producto') ? 3 : isProdVisible('ruta') && isProdVisible('codigo') ? 2 : isProdVisible('ruta') ? 1 : isProdVisible('codigo') && isProdVisible('producto') ? 2 : isProdVisible('codigo') ? 1 : isProdVisible('producto') ? 1 : 0} className="py-2 px-3">Total</td>
-                {isProdVisible('cantidad') && <td className="py-2 px-3 text-right">{totalUnidades}</td>}
-                {isProdVisible('total') && <td className="py-2 px-3 text-right">{fmt(totalMonto)}</td>}
-              </tr>
-            </tfoot>
-          </table>
+        ))}
+      </div>
+
+      {/* By route */}
+      {byRoute.length > 1 && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
+            <Truck className="h-4 w-4 text-primary" />
+            <span className="text-[13px] font-semibold text-foreground">Resumen por ruta</span>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[11px]">Ruta / Vendedor</TableHead>
+                <TableHead className="text-[11px] text-center">Entregas</TableHead>
+                <TableHead className="text-[11px] text-center">Pendientes</TableHead>
+                <TableHead className="text-[11px] text-center">Entregadas</TableHead>
+                <TableHead className="text-[11px] text-right">Monto total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {byRoute.map(r => (
+                <TableRow key={r.vendedor}>
+                  <TableCell className="text-[12px] font-semibold py-1.5">{r.vendedor}</TableCell>
+                  <TableCell className="text-center text-[12px] py-1.5">{r.entregas.length}</TableCell>
+                  <TableCell className="text-center text-[12px] text-warning font-bold py-1.5">{r.entregas.filter((e: any) => e.status === 'confirmado').length}</TableCell>
+                  <TableCell className="text-center text-[12px] text-success font-bold py-1.5">{r.entregas.filter((e: any) => e.status === 'entregado').length}</TableCell>
+                  <TableCell className="text-right text-[12px] font-bold py-1.5">{fmt(r.total)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {!isLoading && (entregas?.length ?? 0) === 0 && (
+        <div className="text-center text-muted-foreground py-12">
+          <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          No hay entregas en el rango seleccionado
         </div>
       )}
     </div>
