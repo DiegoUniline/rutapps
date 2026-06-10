@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner';
 import { cn , todayLocal } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
-import { confirmDialog } from '@/lib/confirm';
+import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
