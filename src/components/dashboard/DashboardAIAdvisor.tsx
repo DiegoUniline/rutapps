@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Sparkles, Loader2, RefreshCw, AlertCircle, History, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
