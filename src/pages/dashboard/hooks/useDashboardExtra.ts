@@ -12,8 +12,9 @@ export function useDashboardVisitas(range: DateRange, vendedorId?: string) {
     queryKey: ['dashboard-visitas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
+      const sb: any = supabase;
       return fetchAllPages((from, to) => {
-        let q = supabase.from('visitas')
+        let q = sb.from('visitas')
           .select('id, fecha, user_id, cliente_id, venta_id')
           .eq('empresa_id', empresa!.id)
           .gte('fecha', fmt(range.from)).lte('fecha', fmt(range.to))
@@ -31,12 +32,12 @@ export function useClientesActivos() {
     queryKey: ['dashboard-clientes-activos', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const data = await fetchAllPages((from, to) => supabase.from('clientes')
+      const sb: any = supabase;
+      return fetchAllPages((from, to) => sb.from('clientes')
         .select('id, nombre, status, vendedor_id')
         .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo' as any)
+        .eq('status', 'activo')
         .range(from, to));
-      return data;
     },
   });
 }
@@ -48,10 +49,11 @@ export function useUltimaCompraPorCliente() {
     enabled: !!empresa?.id,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const data = await fetchAllPages((from, to) => supabase.from('ventas')
+      const sb: any = supabase;
+      const data = await fetchAllPages((from, to) => sb.from('ventas')
         .select('cliente_id, fecha')
         .eq('empresa_id', empresa!.id)
-        .neq('status', 'cancelado' as any)
+        .neq('status', 'cancelado')
         .order('fecha', { ascending: false })
         .range(from, to));
       const map = new Map<string, string>();
