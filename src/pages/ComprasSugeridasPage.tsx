@@ -88,7 +88,7 @@ export default function ComprasSugeridasPage() {
   const [modo, setModo] = useState<Modo>('producto');
   const [filtroProv, setFiltroProv] = useState<string>('');
   const [editado, setEditado] = useState<Record<string, number>>({});
-  const [soloSugeridos, setSoloSugeridos] = useState(true);
+  const [soloSugeridos, setSoloSugeridos] = useState(false);
   const [generando, setGenerando] = useState(false);
   const { data, isLoading, refetch, isFetching } = useSugeridosData(empresa?.id, modo);
 
