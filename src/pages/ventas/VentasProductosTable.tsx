@@ -46,7 +46,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
       <tbody>
         {items.length === 0 && (
           <tr>
-            <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay líneas de producto.</td>
+            <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay líneas de producto.</td>
           </tr>
         )}
         {sorted.map((row: any, i: number) => (
