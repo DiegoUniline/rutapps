@@ -29,7 +29,6 @@ interface ProdRow {
 
 function calcSugerido(p: ProdRow, modoGlobal: Modo, ventaDiaria: number): number {
   const modo: string = modoGlobal === 'producto' ? (p.modo_compra_sugerida || 'maximo') : modoGlobal;
-  const stock = Number(p.cantidad) || 0;
   const min = Number(p.min) || 0;
   const max = Number(p.max) || 0;
   let target = 0;
@@ -40,8 +39,7 @@ function calcSugerido(p: ProdRow, modoGlobal: Modo, ventaDiaria: number): number
     const dias = (Number(p.dias_cobertura) || 30) + (Number(p.lead_time_dias) || 0);
     target = ventaDiaria * dias;
   }
-  const falta = Math.max(0, Math.ceil(target - stock));
-  return falta;
+  return Math.max(0, Math.ceil(target));
 }
 
 function useSugeridosData(empresaId?: string, modo: Modo = 'producto') {
