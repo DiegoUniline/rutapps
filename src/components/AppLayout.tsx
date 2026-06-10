@@ -12,7 +12,7 @@ import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle,
-  Tag, ClipboardList, Star, ShoppingBag
+  Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green',
+    label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
     children: [
       { label: 'Abrir caja (POS)', path: '/pos' },
       { label: 'Turnos', path: '/pos/admin?tab=turnos' },
@@ -140,7 +140,14 @@ const navItems: NavItem[] = [
       { label: 'Pagos proveedores', path: '/finanzas/pagos-proveedores' },
       { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
+      { label: 'Comisiones', path: '/finanzas/comisiones' },
     ],
+  },
+  {
+    label: 'Comisiones',
+    icon: Percent,
+    path: '/finanzas/comisiones',
+    highlight: 'amber',
   },
   // ── Reportes & Facturación ──
   {
