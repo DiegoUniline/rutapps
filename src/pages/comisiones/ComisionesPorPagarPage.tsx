@@ -105,7 +105,7 @@ export default function ComisionesPorPagarPage() {
       qc.invalidateQueries({ queryKey: ['comisiones-por-pagar'] });
       qc.invalidateQueries({ queryKey: ['pago_comisiones'] });
       qc.invalidateQueries({ queryKey: ['venta_comisiones'] });
-      navigate('/finanzas/comisiones/recibos');
+      navigate('/comisiones/recibos');
     },
     onError: (e: any) => toast.error(e.message),
   });
