@@ -149,27 +149,35 @@ export async function downloadAllData(
         const lastTableSync = (!forceFullSync && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
 
         const selectStr = COLUMN_SELECTS[table] || '*';
-        let query = (supabase.from as any)(table).select(selectStr);
 
-        if (TABLES_WITH_EMPRESA.has(table)) {
-          if (table === 'empresas') {
-            query = query.eq('id', empresaId);
-          } else {
-            query = query.eq('empresa_id', empresaId);
+        // Builder factory: rebuild the query each page so supabase-js doesn't
+        // reuse a consumed PostgrestFilterBuilder (which causes only the first
+        // 1000 rows to be returned).
+        const buildQuery = () => {
+          let q = (supabase.from as any)(table).select(selectStr);
+
+          if (TABLES_WITH_EMPRESA.has(table)) {
+            if (table === 'empresas') {
+              q = q.eq('id', empresaId);
+            } else {
+              q = q.eq('empresa_id', empresaId);
+            }
           }
-        }
 
-        if (RECENT_TABLES.has(table) && !lastTableSync) {
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          query = query.gte('created_at', thirtyDaysAgo.toISOString());
-        }
+          if (RECENT_TABLES.has(table) && !lastTableSync) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            q = q.gte('created_at', thirtyDaysAgo.toISOString());
+          }
 
-        // Delta sync
-        if (lastTableSync) {
-          const sinceDate = new Date(lastTableSync - 5000).toISOString();
-          query = query.gte('created_at', sinceDate);
-        }
+          // Delta sync
+          if (lastTableSync) {
+            const sinceDate = new Date(lastTableSync - 5000).toISOString();
+            q = q.gte('created_at', sinceDate);
+          }
+
+          return q;
+        };
 
         // Paginate
         let allData: any[] = [];
@@ -178,7 +186,7 @@ export async function downloadAllData(
         let hasMore = true;
 
         while (hasMore) {
-          const { data, error } = await query.range(from, from + pageSize - 1);
+          const { data, error } = await buildQuery().range(from, from + pageSize - 1);
           if (error) {
             console.error(`Error downloading ${table}:`, error);
             break;
