@@ -597,26 +597,58 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applySwUpdate = async () => {
+    const t = toast.loading('Sincronizando y limpiando caché…');
     try {
       // Unregister all service workers
       if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            try {
+              if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              await reg.unregister();
+            } catch (e) { console.warn('[sync] sw unregister error', e); }
           }
-          await reg.unregister();
-        }
+        } catch (e) { console.warn('[sync] getRegistrations error', e); }
       }
-      // Clear all caches
+      // Clear Cache Storage
       if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name).catch(() => false)));
+        } catch (e) { console.warn('[sync] caches.delete error', e); }
       }
+      // Clear React Query persist + tanstack caches in localStorage
+      try {
+        const keys = Object.keys(localStorage);
+        for (const k of keys) {
+          if (/^(REACT_QUERY|tanstack|rq-|query-)/i.test(k)) localStorage.removeItem(k);
+        }
+      } catch (e) { console.warn('[sync] localStorage clear error', e); }
+      // Clear IndexedDB databases (best-effort, supported in Chromium/Firefox)
+      try {
+        const anyIdb = (indexedDB as any);
+        if (typeof anyIdb.databases === 'function') {
+          const dbs = await anyIdb.databases();
+          await Promise.all((dbs || []).map((db: any) => db?.name && new Promise<void>((resolve) => {
+            const req = indexedDB.deleteDatabase(db.name);
+            req.onsuccess = req.onerror = req.onblocked = () => resolve();
+          })));
+        }
+      } catch (e) { console.warn('[sync] idb clear error', e); }
+
       setSwUpdateAvailable(false);
-      window.location.reload();
-    } catch {
-      window.location.reload();
+      toast.success('Caché limpiado, recargando…', { id: t });
+      setTimeout(() => {
+        // Cache-busting reload
+        const url = new URL(window.location.href);
+        url.searchParams.set('_r', Date.now().toString());
+        window.location.replace(url.toString());
+      }, 500);
+    } catch (err) {
+      console.error('[sync] applySwUpdate error', err);
+      toast.error('No se pudo limpiar todo, recargando…', { id: t });
+      setTimeout(() => window.location.reload(), 500);
     }
   };
 
