@@ -47,7 +47,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [lRes, pRes] = await Promise.all([
+      const [lRes, pRes, tRes] = await Promise.all([
         supabase
           .from('venta_lineas')
           .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, lista_precio_id, precio_manual, productos(nombre, unidad_granel), lista_precios(nombre, es_principal)')
@@ -58,16 +58,20 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia)')
           .eq('venta_id', venta.id)
           .order('created_at'),
+        venta.tarifa_id
+          ? supabase.from('tarifas').select('nombre').eq('id', venta.tarifa_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
         setPagos(pRes.data ?? []);
+        setVentaListaNombre((tRes as any)?.data?.nombre ?? null);
         setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [venta.id]);
+  }, [venta.id, venta.tarifa_id]);
 
   const clienteNombre = venta.clientes?.nombre || (venta.cliente_id ? '—' : 'Público en general');
   const eId = empresaId || venta.empresa_id;
