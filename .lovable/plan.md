@@ -1,64 +1,76 @@
-## Objetivo
 
-Hacer que `/dashboard` se sienta como un **panel ejecutivo** donde se ve toda la empresa en un solo vistazo: visitas de hoy, entregas de hoy, ventas/cobros del día, stock y cartera — sin tener que bajar a tarjetas largas. Quitar el bloque "Clientes sin visitar — Ingreso en riesgo" que no convence.
+## Alcance estricto
+Todo el trabajo se hace dentro de `src/pages/DashboardPage.tsx` y nuevos archivos auxiliares (hooks y componentes en `src/pages/dashboard/...`). No se elimina, renombra ni reordena nada existente: la fila HOY, Asesor IA, tarjetas KPI, gráficas y tabs actuales quedan intactos. Filtros globales de fecha/vendedor existentes alimentan también las secciones nuevas.
 
-## Cambios
+## 1. Cambios de base de datos
+- Migración: agregar `monthly_sales_goal NUMERIC DEFAULT 0` en `empresas` (editable por admin desde Configuración existente, fuera de scope visual; el dashboard solo lee y muestra CTA si =0).
+- Nuevas RPCs en `public` (security definer, filtran por `empresa_id` del caller vía `current_setting` o param y respetan RLS):
+  - `dashboard_alertas(empresa uuid)` → conteos: clientes sobre límite de crédito, vendedores sin GPS hoy, facturas que vencen 7 días, pedidos pendientes >24h, más arrays de IDs/nombres para los modales detalle.
+  - `dashboard_equipo(empresa uuid, desde date, hasta date)` → por vendedor: venta, cobrado, cartera_vencida, visitas_realizadas, visitas_planeadas, ventas_con_pedido, margen.
+  - `dashboard_aging(empresa uuid)` → buckets 0, 1-30, 31-60, 61-90, 90+ con monto y # clientes; lista vencidos con días vencido.
+  - `dashboard_inventario_camion(empresa uuid)` → por almacén tipo ruta: valor cargado, vendido, faltante; totales de mermas/ajustes del periodo.
+- Índices auxiliares si faltan: `ventas(empresa_id, fecha)`, `visitas(empresa_id, fecha)`, `cobros(empresa_id, fecha)`, `mermas(empresa_id, fecha)`.
 
-### 1. Nueva fila "HOY" (arriba de todo, debajo del header)
-Una banda ejecutiva con 6 mini-KPIs siempre de **hoy** (independiente del filtro de fechas), formato compacto tipo "cockpit":
+## 2. Hooks nuevos (`src/pages/dashboard/hooks/`)
+- `useDashboardAlertas(empresaId)` → React Query, key incluye `empresa_id`.
+- `useMonthlyGoal(empresaId)` → lee `empresas.monthly_sales_goal`.
+- `useDashboardEquipo(empresaId, range, vendedorId)`.
+- `useDashboardCartera(empresaId)` y `useDashboardAgingDetalle(empresaId)`.
+- `useDashboardInventarioCamion(empresaId, range)`.
+- Reutilizan datos existentes (`useDashboardHoy`, hooks de ventas) cuando aplica para no duplicar.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ HOY · martes 9 jun                                                      │
-│ ┌──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐    │
-│ │ Visitas  │ Entregas │  Ventas  │  Cobros  │ Pedidos  │  Gastos  │    │
-│ │   42     │   28/35  │  $12,400 │  $8,900  │    15    │   $450   │    │
-│ │ 8 vend.  │ 80% OK   │ 18 oper. │ 12 mov.  │ pend.    │ 3 mov.   │    │
-│ └──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘    │
-└─────────────────────────────────────────────────────────────────────────┘
+## 3. Componentes nuevos (`src/pages/dashboard/sections/`)
+- `AlertasBanner.tsx` — franja colapsable con chips rojo/ámbar y modal de detalle por tipo. Si `total = 0` muestra línea verde "Sin alertas activas".
+- `MetaDelMesCard.tsx` — barra de progreso, proyección de cierre, mini indicadores (margen $/%, % recuperación, flujo neto). CTA "Configurar meta" cuando no hay meta.
+- `KpiExtras.tsx` — 4 tarjetas nuevas (Efectividad, Cumplimiento ruta, Drop size, Cobertura) con mismo `KpiCard` actual; se inyectan al final de la cuadrícula existente vía un fragmento adicional.
+- `DevolucionesSubPct` — pequeño helper que añade el subtexto "% sobre venta" a la tarjeta existente (modificación mínima de una línea del subtexto, sin tocar layout).
+- `TabEquipo.tsx`, `TabCartera.tsx`, `TabInventario.tsx` — contenido de los 3 tabs nuevos.
+- `ClientesSinCompraModal.tsx`, `AlertaDetalleModal.tsx`, `CarteraExportButton.tsx` (CSV via util existente).
+
+## 4. Integración en `DashboardPage.tsx`
+- Insertar `<AlertasBanner />` entre `<HoyBand />` y el Asesor IA.
+- Insertar `<MetaDelMesCard />` justo después del Asesor IA y antes de la cuadrícula KPI existente.
+- En la cuadrícula KPI (sin reordenar las existentes), agregar 4 `<KpiCard />` nuevas al final; ajustar wrap a `xl:grid-cols-6` solo si ya está controlado por flex/grid responsivo actual (sin alterar las existentes).
+- En `<TabsList />` agregar 3 `<TabsTrigger value="equipo|cartera|inventario">` con iconos consistentes.
+- Agregar 3 `<TabsContent>` con los componentes nuevos.
+
+## 5. Lógica y reglas
+- Proyección cierre = `venta_acumulada / dias_transcurridos * dias_mes` con guard contra división por cero.
+- Semáforo equipo:
+  - verde: `%meta ≥ avance_esperado` y `cartera_vencida < 10% venta`
+  - rojo: `%meta < 70% avance_esperado` o `cartera_vencida > 25% venta`
+  - ámbar: resto.
+- DSO = `cartera_total / venta_periodo * dias_periodo` con guard.
+- Drop size = `venta_total / visitas_efectivas`.
+- Cobertura = `clientes_con_compra_en_rango / clientes_activos_totales` (un cliente "activo" = `clientes.status='activo'`).
+- Todos los números pasan por `fmtMoney`/`fmtNum`; nunca NaN/undefined; estado vacío "Sin datos en este periodo".
+
+## 6. UI/UX
+- Reusar `Card`, `KpiCard`, `Tabs`, `Skeleton`, `Progress`, `Dialog` existentes.
+- Tarjetas blancas con borde suave, gap-4/gap-6, mismo grid `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6` para KPIs (ya existente). Sin grises sólidos.
+- Skeleton loaders en cada tarjeta/tabla nueva mientras cargan.
+- Modales en `z-[60]`, `max-h-[90vh]`, centrados (regla mobile).
+
+## 7. Memoria
+- Guardar memoria `features/dashboard-extensiones` con: alertas, Meta del mes (campo `empresas.monthly_sales_goal`), KPIs extras, tabs Equipo/Cartera/Inventario.
+
+## Archivos a crear / editar
+```
+supabase migration  (monthly_sales_goal + 4 RPCs + índices)
+src/pages/dashboard/hooks/useDashboardAlertas.ts
+src/pages/dashboard/hooks/useMonthlyGoal.ts
+src/pages/dashboard/hooks/useDashboardEquipo.ts
+src/pages/dashboard/hooks/useDashboardCartera.ts
+src/pages/dashboard/hooks/useDashboardInventarioCamion.ts
+src/pages/dashboard/sections/AlertasBanner.tsx
+src/pages/dashboard/sections/MetaDelMesCard.tsx
+src/pages/dashboard/sections/KpiExtras.tsx
+src/pages/dashboard/sections/TabEquipo.tsx
+src/pages/dashboard/sections/TabCartera.tsx
+src/pages/dashboard/sections/TabInventario.tsx
+src/pages/dashboard/sections/AlertaDetalleModal.tsx
+src/pages/dashboard/sections/ClientesSinCompraModal.tsx
+src/pages/DashboardPage.tsx  (solo inserciones aditivas)
 ```
 
-- **Visitas hoy**: count desde `visitas` para `empresa_id` con `fecha = today`.
-- **Entregas hoy**: `x/y` donde `x` = entregas con `status='hecho'` y `y` = total programadas hoy. Subtítulo: % completado.
-- **Ventas hoy**: total `$` y conteo desde `ventas` con `fecha = today`.
-- **Cobros hoy**: total y conteo desde `cobros`.
-- **Pedidos pendientes**: ventas tipo `pedido` con saldo pendiente (sin entregar).
-- **Gastos hoy**: total y conteo.
-
-Estética ejecutiva: cards más densas, números grandes, etiqueta arriba en `uppercase tracking-wide`, indicador de color (verde/ámbar/rojo) según semáforo del KPI.
-
-### 2. Reemplazar "Clientes sin visitar — Ingreso en riesgo"
-Eliminar el bloque actual `ClientesEnRiesgoWidget` del dashboard. En su lugar, agregar un panel ejecutivo de tres columnas con **"Pulso operativo"**:
-
-- **Cumplimiento de ruta hoy**: barra de progreso de entregas hechas vs. programadas + lista compacta de top 3 vendedores con más visitas hoy.
-- **Salud financiera**: cartera vencida en `$`, días promedio, top 3 clientes morosos (1 línea cada uno).
-- **Inventario crítico**: número de productos bajo mínimo + valor del inventario + 3 alertas principales.
-
-Cada columna en card con número grande arriba, micro-lista debajo. Permite ver "todo el negocio" sin scroll.
-
-### 3. Ajustes visuales para look ejecutivo
-- KPI cards principales: cambiar el tile de icono colorido por una franja de color a la izquierda (estilo dashboard financiero), número más grande, jerarquía tipográfica más marcada.
-- Quitar el emoji "👍" en alertas de stock; usar microcopy profesional.
-- Sticky header de filtros al hacer scroll para que el rango y vendedor siempre estén a la vista.
-
-### 4. Datos / hooks nuevos
-Agregar en `src/hooks/useDashboardData.ts`:
-- `useDashboardHoy(empresaId)` — un solo hook que devuelve `{ visitas, entregasHechas, entregasTotales, ventasTotal, ventasCount, cobrosTotal, cobrosCount, pedidosPendientes, gastosTotal, gastosCount, topVendedoresHoy }` consultando en paralelo `visitas`, `entregas`, `ventas`, `cobros`, `gastos` con filtro `fecha = today` y `empresa_id`.
-- Todas las queries usan `fetchAllPages` y respetan el patrón multi-tenant (queryKey con `empresa_id`).
-
-## Detalles técnicos
-
-- Tablas usadas (ya existentes): `visitas`, `entregas`, `ventas`, `cobros`, `gastos`, `stock_almacen`, `productos`, `cartera` derivada de `ventas`.
-- Fecha "hoy" calculada con `todayInTimezone(empresa.zona_horaria)` (ya hay helper en el proyecto).
-- El bloque eliminado (`ClientesEnRiesgoWidget`) **no se borra del repo**: sigue disponible y puede seguir usándose en `SupervisorDashboardPage`. Solo se quita del `DashboardPage`.
-- Sin cambios de schema/RLS.
-
-## Fuera de alcance
-- No tocamos `SupervisorDashboardPage`.
-- No cambiamos los gráficos existentes (tendencia de ventas, pie de vendedores, devoluciones) — solo se agregan los bloques nuevos arriba y se reemplaza el bloque de "Clientes en riesgo".
-
-## Validación
-- Abrir `/dashboard`: ver la banda "HOY" con datos reales del día.
-- Cambiar el rango de fechas: la banda "HOY" no se mueve, los KPIs inferiores sí.
-- Confirmar que el bloque "Clientes sin visitar" ya no aparece.
-- Probar con vendedor filtrado y sin filtrar.
+¿Apruebas para construirlo así?
