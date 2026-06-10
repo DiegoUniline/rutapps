@@ -433,7 +433,7 @@ export default function TraspasoFormPage() {
   });
 
   const handleDelete = async () => {
-    if (!id || !await confirmDialog('¿Eliminar este traspaso?')) return;
+    if (!id || !await confirmAsync('¿Eliminar este traspaso?')) return;
     await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id);
     await supabase.from('traspasos').delete().eq('id', id);
     toast.success('Traspaso eliminado');
