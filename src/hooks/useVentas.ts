@@ -161,12 +161,14 @@ export function useVentaLineasPaginated(
         producto_nombre: row.productos?.nombre ?? '',
         folio: row.ventas?.folio,
         fecha: row.ventas?.fecha,
+        created_at: row.ventas?.created_at,
         status: row.ventas?.status,
         tipo: row.ventas?.tipo,
         condicion_pago: row.ventas?.condicion_pago,
         cliente_id: row.ventas?.cliente_id,
         cliente_nombre: row.ventas?.clientes?.nombre,
         vendedor_nombre: row.ventas?.vendedores?.nombre,
+        tarifa_nombre: row.ventas?.tarifas?.nombre ?? null,
       }));
 
       return { rows, total: count ?? 0 };
