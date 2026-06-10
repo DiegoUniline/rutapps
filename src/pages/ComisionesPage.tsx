@@ -14,6 +14,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 import ComisionesEsquemasTab from '@/components/comisiones/ComisionesEsquemasTab';
 import ComisionesVolumenTab from '@/components/comisiones/ComisionesVolumenTab';
+import ComisionesAvanceTab from '@/components/comisiones/ComisionesAvanceTab';
 
 const PAGE_SIZE = 20;
 
@@ -37,13 +38,13 @@ function mondayOfWeek() {
   return monday.toISOString().slice(0, 10);
 }
 
-type TabKey = 'historial' | 'por_pagar' | 'por_volumen' | 'recibos' | 'esquemas' | 'reglas';
+type TabKey = 'avance' | 'historial' | 'por_pagar' | 'por_volumen' | 'recibos' | 'esquemas' | 'reglas';
 
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<TabKey>('historial');
+  const [tab, setTab] = useState<TabKey>('avance');
 
   // Historial filters
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
@@ -330,6 +331,7 @@ export default function ComisionesPage() {
       {/* Tabs */}
       <div className="flex border-b border-border">
         {([
+          ['avance', 'Avance'],
           ['historial', 'Comisiones generadas'],
           ['por_pagar', 'Por pagar'],
           ['por_volumen', 'Por volumen'],
@@ -352,6 +354,7 @@ export default function ComisionesPage() {
         ))}
       </div>
 
+      {tab === 'avance' && <ComisionesAvanceTab />}
       {tab === 'reglas' && <ComisionesReglasTab />}
       {tab === 'esquemas' && <ComisionesEsquemasTab />}
       {tab === 'por_volumen' && <ComisionesVolumenTab onAfterGenerar={() => setTab('recibos')} />}
