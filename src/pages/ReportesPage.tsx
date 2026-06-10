@@ -354,6 +354,21 @@ export default function ReportesPage() {
             </PopoverContent>
           </Popover>
 
+
+          {/* Tipo filter */}
+          <select
+            value={tipoFilter}
+            onChange={e => setTipoFilter(e.target.value as any)}
+            className={cn(
+              "input-odoo text-[13px] min-w-[130px]",
+              tipoFilter && "border-primary/60 bg-primary/5"
+            )}
+          >
+            <option value="">Todos los tipos</option>
+            <option value="pedido">Preventa</option>
+            <option value="venta_directa">Venta directa</option>
+          </select>
+
           {/* Status filter */}
           <Popover>
             <PopoverTrigger asChild>
