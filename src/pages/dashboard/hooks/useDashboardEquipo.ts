@@ -34,41 +34,29 @@ export function useDashboardEquipo(range: DateRange, metaMes: number) {
       const eId = empresa!.id;
       const fromIso = fmt(range.from); const toIso = fmt(range.to);
 
+      const sb: any = supabase;
       const [vendedoresRes, ventasRes, lineasRes, cobrosRes, carteraRes, visitasRes, clientesRes] = await Promise.all([
-        supabase.from('profiles').select('id, nombre, full_name').eq('empresa_id', eId).eq('activo', true),
-        fetchAllPages((from, to) => supabase.from('ventas')
+        sb.from('profiles').select('id, nombre, full_name').eq('empresa_id', eId).eq('activo', true),
+        fetchAllPages((from, to) => sb.from('ventas')
           .select('id, vendedor_id, total, fecha, status, saldo_pendiente, condicion_pago, fecha_vencimiento')
-          .eq('empresa_id', eId)
-          .eq('es_saldo_inicial', false)
-          .neq('status', 'cancelado' as any)
-          .gte('fecha', fromIso).lte('fecha', toIso)
-          .range(from, to)),
-        fetchAllPages((from, to) => supabase.from('venta_lineas')
+          .eq('empresa_id', eId).eq('es_saldo_inicial', false).neq('status', 'cancelado')
+          .gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
+        fetchAllPages((from, to) => sb.from('venta_lineas')
           .select('venta_id, cantidad, total, productos(costo), ventas!inner(vendedor_id, empresa_id, fecha, status)')
-          .eq('ventas.empresa_id', eId)
-          .gte('ventas.fecha', fromIso).lte('ventas.fecha', toIso)
-          .neq('ventas.status', 'cancelado')
-          .range(from, to)),
-        fetchAllPages((from, to) => supabase.from('cobros')
+          .eq('ventas.empresa_id', eId).gte('ventas.fecha', fromIso).lte('ventas.fecha', toIso)
+          .neq('ventas.status', 'cancelado').range(from, to)),
+        fetchAllPages((from, to) => sb.from('cobros')
           .select('monto, fecha, user_id')
-          .eq('empresa_id', eId)
-          .neq('status', 'cancelado')
-          .gte('fecha', fromIso).lte('fecha', toIso)
-          .range(from, to)),
-        // Cartera vencida abierta a hoy
-        fetchAllPages((from, to) => supabase.from('ventas')
+          .eq('empresa_id', eId).neq('status', 'cancelado')
+          .gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
+        fetchAllPages((from, to) => sb.from('ventas')
           .select('vendedor_id, saldo_pendiente, fecha_vencimiento, fecha')
-          .eq('empresa_id', eId)
-          .eq('condicion_pago', 'credito')
-          .gt('saldo_pendiente', 0)
-          .neq('status', 'cancelado' as any)
-          .range(from, to)),
-        fetchAllPages((from, to) => supabase.from('visitas')
+          .eq('empresa_id', eId).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0)
+          .neq('status', 'cancelado').range(from, to)),
+        fetchAllPages((from, to) => sb.from('visitas')
           .select('user_id, fecha, venta_id')
-          .eq('empresa_id', eId)
-          .gte('fecha', fromIso).lte('fecha', toIso)
-          .range(from, to)),
-        supabase.from('clientes').select('vendedor_id, status, dia_visita').eq('empresa_id', eId).eq('status', 'activo' as any),
+          .eq('empresa_id', eId).gte('fecha', fromIso).lte('fecha', toIso).range(from, to)),
+        sb.from('clientes').select('vendedor_id, status, dia_visita').eq('empresa_id', eId).eq('status', 'activo'),
       ]);
 
       const vendList = (vendedoresRes.data ?? []) as any[];
