@@ -978,6 +978,8 @@ export default function PuntoVentaPage() {
               splitApplications.map(a => ({ cobro_id: cobroId, ...a }))
             );
           }
+          // Recibo automático
+          import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
         }
         totalAppliedToAccountsPOS = [...accountAppliedPOS.values()].reduce((s, v) => s + v, 0);
       }
