@@ -839,7 +839,7 @@ export function groupRows(
 ): { groups: ReporteGroup[]; totals: Record<string, number> } {
   const [baseKey, suffix] = groupBy.split('__') as [string, 'mes' | undefined];
   const col = columns.find(c => c.key === baseKey);
-  const format = col?.format;
+  const format: ExportColumn['format'] | undefined = col?.format ?? (suffix === 'mes' ? 'date' : undefined);
   const map = new Map<string, ReporteGroup>();
   const numericKeys = columns.filter(c => c.format === 'currency' || c.format === 'number').map(c => c.key);
   const totals: Record<string, number> = {};
