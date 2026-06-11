@@ -110,7 +110,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
     doc.setFont('helvetica', 'normal');
     let totalApp = 0;
     for (const a of (apps ?? []) as any[]) {
-      doc.text(a.ventas?.folio || a.venta_id.slice(0, 8), 18, y);
+      doc.text(String(a.ventas?.folio || a.venta_id.slice(0, 8)), 18, y);
       doc.text(fmt(Number(a.monto_aplicado)), W - 18, y, { align: 'right' });
       y += 6;
       totalApp += Number(a.monto_aplicado);
