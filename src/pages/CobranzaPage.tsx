@@ -468,6 +468,26 @@ export default function CobranzaPage() {
         tipo="recibo_cobro"
         referencia_id={waRefId}
       />
+
+      <CobroEditDialog open={!!editCobro} onClose={() => setEditCobro(null)} cobro={editCobro} />
+
+      <AlertDialog open={!!cancelCobro} onOpenChange={(v) => !v && setCancelCobro(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar cobro</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se cancelará el cobro por {cancelCobro ? fmtC(cancelCobro.monto) : ''} y se restaurará el saldo pendiente de la(s) venta(s) asociadas. Esta acción se puede deshacer creando un nuevo cobro.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelCobro} disabled={cancelling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
