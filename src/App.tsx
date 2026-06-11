@@ -121,6 +121,8 @@ const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage
 const CompletarRegistroPage = lazy(() => import("@/pages/CompletarRegistroPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
+const EstadoCuentaPublicoPage = lazy(() => import("@/pages/EstadoCuentaPublicoPage"));
+const UnsubscribePage = lazy(() => import("@/pages/UnsubscribePage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
