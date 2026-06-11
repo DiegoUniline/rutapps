@@ -18,7 +18,7 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
 
-type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'inteligencia';
+type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
 function useInventarioData() {
   const { empresa } = useAuth();
