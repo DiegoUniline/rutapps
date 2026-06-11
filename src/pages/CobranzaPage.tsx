@@ -103,12 +103,36 @@ export default function CobranzaPage() {
   const { empresa } = useAuth();
   const isMobile = useIsMobile();
   const { fmt: fmtC } = useCurrency();
+  const qc = useQueryClient();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [editCobro, setEditCobro] = useState<any | null>(null);
+  const [cancelCobro, setCancelCobro] = useState<any | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelCobro = async () => {
+    if (!cancelCobro) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cancelCobro.id);
+      if (error) throw error;
+      toast.success('Cobro cancelado. Saldos actualizados.');
+      qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa?.id] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      setCancelCobro(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cancelar');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
 
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
