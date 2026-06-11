@@ -313,8 +313,19 @@ export default function CobranzaPage() {
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
                     <MessageCircle className="h-4 w-4" />
                   </Button>
+                  {(c as any).status !== 'cancelado' && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" onClick={() => setEditCobro(c)} title="Editar cobro">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCancelCobro(c)} title="Cancelar cobro">
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </TableCell>
+
             </TableRow>
             );
           })}
