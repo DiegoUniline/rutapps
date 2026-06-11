@@ -31,6 +31,9 @@ export default function ComisionesLayoutPage() {
   const { empresa } = useAuth();
   const { pathname } = useLocation();
 
+  useEffect(() => { prefetchTabs(); }, []);
+
+
   const { data: porPagarCount } = useQuery({
     queryKey: ['comisiones-por-pagar-count', empresa?.id],
     enabled: !!empresa?.id,
