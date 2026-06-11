@@ -47,7 +47,7 @@ function useSalesVelocity() {
           .from('ventas')
           .select('id, fecha, status')
           .eq('empresa_id', eid)
-          .neq('status', 'cancelada')
+          .neq('status', 'cancelado')
           .gte('fecha', sinceIso)
           .range(from, to)
       );
