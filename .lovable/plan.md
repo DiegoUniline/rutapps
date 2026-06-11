@@ -1,75 +1,48 @@
-## Objetivo
+## Problema
 
-Unificar todos los PDFs del sistema (ventas, pedidos, entregas, traspasos, ajustes, compras, liquidaciones, estado de cuenta, recibos de cobro, reporte diario, auditoría) con el mismo lenguaje visual del PDF de Reportes Personalizados: estrictamente blanco y negro, 100% vectorial, Helvetica, jerarquía limpia.
+Hoy la PWA registra un Service Worker en el scope `/` (toda la web), incluyendo la landing pública (`/`, `/partners`). Eso provoca dos cosas:
 
-## Alcance confirmado
+1. El HTML usa NetworkFirst pero con fallback a caché → si la red tarda >3s, sirve la versión vieja.
+2. Los chunks JS/CSS usan `StaleWhileRevalidate` → la primera carga después de publicar SIEMPRE muestra la versión anterior; la nueva aparece hasta la segunda visita.
 
-Incluye todos los documentos operativos. **Excluye CFDI** (se queda igual por sensibilidad fiscal). Los tickets térmicos sí adoptan la tipografía y jerarquía B/N. Los chips de estado (PAGADO / CANCELADO) pasan a texto plano en negro, sin recuadros ni colores.
+Resultado: visitantes nuevos o recurrentes ven la web vieja hasta que limpian caché.
 
-## Estándar visual único
+La PWA y el modo offline son necesarios SOLO dentro de la app (vendedores en ruta, dashboard, etc.), no en las páginas públicas de marketing.
 
-Encabezado
-- Izquierda: logo opcional (máx 12 mm ≈ 40 px de alto), nombre comercial en MAYÚSCULAS bold 12 pt, debajo `RFC: ...  ·  email` en 9 pt gris #6E6E6E
-- Derecha: título del documento bold 11 pt, folio/referencia 9 pt, fecha de emisión y "Generado: DD/MM/AAAA HH:mm" 9 pt gris
-- Línea divisoria negra 2 px (0.7 mm) bajo el encabezado
+## Solución
 
-Tablas (vía `autoTable` theme `plain`)
-- Encabezados bold 10 pt sobre fondo blanco, borde inferior negro 1 px
-- Filas 9 pt, borde inferior gris claro 0.5 px, sin zebra, sin fills
-- Números a la derecha con `$#,##0.00`; cantidades sin decimales
-- Fila de totales con borde superior negro 1 px y peso bold
+Separar claramente "web pública" (siempre fresca, sin SW) de "app PWA" (offline, con SW).
 
-Estados y elementos
-- "Estado: CANCELADO" / "PAGADO" como texto bold en negro, sin chip ni color
-- Sin verdes, rojos, ni fondos coloreados en ninguna parte
-- Notas: caja simple con borde gris claro 0.3 mm, sin fill
+### Cambios
 
-Pie de página (en cada página)
-- Izquierda: `Rutapp · [nombre empresa]` 9 pt gris
-- Derecha: `Página X de Y` 9 pt gris (usando `putTotalPages`)
-- Línea superior gris claro 0.2 mm
+1. **`vite.config.ts` — VitePWA**
+   - `injectRegister: false` → Vite ya no auto-registra el SW en cada carga de `index.html`.
+   - Mantener `registerType: 'autoUpdate'`, `skipWaiting`, `clientsClaim`, `cleanupOutdatedCaches`.
+   - Añadir las rutas públicas al `navigateFallbackDenylist`: `/`, `/partners`, `/precios`, `/blog`, `/legal/*`, etc. (las que correspondan).
 
-Tipografía global: Helvetica 9–11 pt cuerpo, todo `doc.text()` (texto seleccionable), `doc.line()` y `autoTable`. Solo el logo es imagen.
+2. **Registro manual del SW dentro de la app autenticada**
+   - Crear `src/pwa/registerSW.ts` que importe `virtual:pwa-register` y exponga `registerAppSW()`.
+   - Llamarlo SOLO desde el layout de la app (p. ej. dentro de `AppLayout` / `ProtectedRoute` / `RutaLayout`), no en `main.tsx`.
+   - Así la landing pública nunca instala el SW.
 
-## Estrategia de implementación
+3. **Auto-desregistro en rutas públicas**
+   - En `LandingPage` y `PartnersLandingPage`, al montar, si hay un SW previamente instalado (usuarios antiguos), llamar `navigator.serviceWorker.getRegistrations()` → `unregister()` y `caches.keys()` → `caches.delete()`. Una sola vez por sesión.
+   - Esto limpia el caché viejo de visitantes que ya tenían el SW global instalado.
 
-Refactor centralizado: los dos módulos compartidos `src/lib/pdfBase.ts` y `src/lib/pdfStyleOdoo.ts` son los que dibujan header, tablas, totales, notas, firmas, footer y status para todos los generadores. Cambiando estos dos archivos, los 10 generadores heredan el nuevo estilo sin tocar su lógica de datos.
+4. **Endurecer cache de chunks para la app**
+   - En el bloque `runtimeCaching` cambiar JS/CSS de `StaleWhileRevalidate` a `NetworkFirst` con `networkTimeoutSeconds: 3`. Como los nombres de archivo llevan hash, esto sigue siendo rápido y garantiza que al publicar una versión nueva, la próxima carga la traiga.
 
-### Archivos a modificar
+### Resultado esperado
 
-Módulos compartidos (cambios profundos)
-- `src/lib/pdfStyleOdoo.ts` — paleta a B/N, `drawDocHeader` con divisoria negra 2 px, `drawCleanTable` sin fills/zebra con borde inferior negro en head y gris claro en body, `drawTotalsBlock` con borde superior negro 1 px y sin rojo, `drawNotes` plano sin fondo, `drawFooter` con formato `Rutapp · [empresa]` y `Página X de Y`, status chips → texto plano bold
-- `src/lib/pdfBase.ts` — mismas reglas para los documentos que lo usan (`ventaPdfFromId`, `cobroReciboPdf`, `VentaPdfHandler`)
+- **Landing pública (`/`, `/partners`)**: cada visita pide HTML, JS y CSS directo al CDN. Publicas → siguiente refresco ya muestra los cambios. Sin necesidad de borrar caché.
+- **App (`/ruta`, `/dashboard`, etc.)**: sigue funcionando como PWA con soporte offline y auto-update.
+- **Usuarios antiguos con SW viejo cacheado**: al entrar a la landing se les limpia automáticamente.
 
-Generadores (ajustes mínimos — solo donde haya colores/chips inline)
-- `src/lib/ventaPdf.ts` — quitar parámetros `statusColor: 'green' | 'red'`, pasar todo como neutral
-- `src/lib/pedidoPdf.ts`
-- `src/lib/entregaPdf.ts`
-- `src/lib/traspasoPdf.ts`
-- `src/lib/ajusteInventarioPdf.ts`
-- `src/lib/liquidacionPdf.ts`
-- `src/lib/estadoCuentaPdf.ts`
-- `src/lib/auditoriaPdf.ts`
-- `src/lib/reporteDiarioPdf.ts`
-- `src/lib/cobroReciboPdf.ts` (ticket térmico — solo aplicar tipografía/jerarquía dentro del ancho 80 mm)
+### Archivos a tocar
 
-Sin tocar
-- `src/lib/cfdiPdf.ts` (fiscal, fuera de alcance)
-- `src/lib/exportUtils.ts` (ya está con el estilo nuevo, sirve de referencia)
+- `vite.config.ts` (config VitePWA)
+- `src/pwa/registerSW.ts` (nuevo)
+- Punto de montaje de la app autenticada (probablemente `src/App.tsx` o el layout principal) para invocar `registerAppSW()`
+- `src/pages/LandingPage.tsx` y `src/pages/PartnersLandingPage.tsx` (unregister defensivo)
 
-## Memoria a actualizar
-
-Actualizar `mem://design/odoo-pdf-standard` para reflejar el nuevo estándar B/N corporativo único (header con empresa+RFC+email izquierda / título+periodo derecha, divisoria negra 2 px, tablas sin zebra, estados como texto plano, footer `Rutapp · empresa` + `Página X de Y`). Marcar CFDI como excepción.
-
-## Validación
-
-1. Generar y revisar visualmente: una venta, un pedido, una entrega, un traspaso, un recibo de cobro, un estado de cuenta y una liquidación
-2. Confirmar: divisoria negra 2 px, sin zebra, totales con borde superior negro, footer con paginación correcta, sin restos de verde/rojo
-3. Confirmar peso < 100 KB en PDFs típicos (texto vectorial, solo logo como imagen)
-4. Probar empresa con y sin logo, con y sin RFC/email
-
-## Riesgos
-
-- Documentos con muchos estilos inline (chips de color) requieren tocar el generador, no solo el módulo compartido. Mitigación: ya identificados arriba.
-- El recibo de cobro térmico tiene ancho reducido (80 mm); algunas reglas de tipografía bajan a 8 pt para caber.
-- CFDI queda fuera para no arriesgar el cumplimiento fiscal — se puede abordar en una iteración posterior si lo deseas.
+No se toca lógica de negocio ni la UI.
