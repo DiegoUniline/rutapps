@@ -179,19 +179,36 @@ export function exportToExcel(options: ExportOptions) {
 }
 
 
-// ─── PDF EXPORT ─────────────────────────────────────────────────
-// Paleta de marca Rutapp
-const BRAND_PRIMARY: [number, number, number] = [37, 99, 235];   // azul Rutapp
-const BRAND_DARK: [number, number, number] = [17, 24, 39];
-const BRAND_MUTED: [number, number, number] = [107, 114, 128];
-const ROW_ALT: [number, number, number] = [248, 250, 252];
-const BORDER: [number, number, number] = [229, 231, 235];
-const GROUP_HEADER: [number, number, number] = [238, 242, 255];
-const SUBTOTAL_BG: [number, number, number] = [243, 244, 246];
+// ─── PDF EXPORT (B/N corporativo, 100% vectorial) ───────────────
+const BW_BLACK: [number, number, number] = [26, 26, 26];
+const BW_MUTED: [number, number, number] = [110, 110, 110];
+const BW_BORDER_LIGHT: [number, number, number] = [220, 220, 220];
+
+async function loadLogoDataUrl(url: string): Promise<{ dataUrl: string; w: number; h: number } | null> {
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result as string);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 1, h: 1 });
+      img.src = dataUrl;
+    });
+    return { dataUrl, w: dims.w, h: dims.h };
+  } catch {
+    return null;
+  }
+}
 
 export async function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode, groups, groupByLabel } = options;
-  const fmt = makeFmt(currencyCode);
+  const { fileName, title, columns, data, empresa, empresaInfo, dateRange, groups } = options;
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -208,251 +225,220 @@ export async function exportToPDF(options: ExportOptions) {
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
 
-  // ─── HEADER BAND (banda primaria) ──────────────────────────────
-  doc.setFillColor(...BRAND_PRIMARY);
-  doc.rect(0, 0, pageWidth, 22, 'F');
+  const empresaNombre = (empresaInfo?.nombre || empresa || '').toUpperCase();
+  const rfc = empresaInfo?.rfc?.trim();
+  const email = empresaInfo?.email?.trim();
+  const logoUrl = empresaInfo?.logo_url?.trim();
 
-  // Brand
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Rutapp.mx', margin, 10);
-
-  // Empresa
-  if (empresa) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(219, 234, 254);
-    doc.text(empresa, margin, 16);
+  // ─── Logo opcional ──────────────────────────────────────────────
+  let logoWidthMm = 0;
+  if (logoUrl) {
+    const logo = await loadLogoDataUrl(logoUrl);
+    if (logo) {
+      const maxH = 12; // ≈ 40px
+      const ratio = logo.w / logo.h || 1;
+      const h = maxH;
+      const w = Math.min(maxH * ratio, 35);
+      try {
+        const fmt = /png/i.test(logo.dataUrl) ? 'PNG' : 'JPEG';
+        doc.addImage(logo.dataUrl, fmt, margin, 10, w, h);
+        logoWidthMm = w + 3;
+      } catch { /* ignore */ }
+    }
   }
 
-  // Título (derecha)
+  // ─── Encabezado izquierda: empresa / rfc / email ────────────────
+  const leftX = margin + logoWidthMm;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
-  doc.text(title, pageWidth - margin, 10, { align: 'right' });
+  doc.setFontSize(12);
+  doc.setTextColor(...BW_BLACK);
+  doc.text(empresaNombre || '—', leftX, 14);
 
+  const subParts: string[] = [];
+  if (rfc) subParts.push(`RFC: ${rfc}`);
+  if (email) subParts.push(email);
+  if (subParts.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...BW_MUTED);
+    doc.text(subParts.join('  ·  '), leftX, 19);
+  }
+
+  // ─── Encabezado derecha: título / periodo / generado ────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...BW_BLACK);
+  doc.text(title, pageWidth - margin, 14, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...BW_MUTED);
+  let rightY = 19;
   if (dateRange) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(219, 234, 254);
     doc.text(
-      `Periodo: ${fmtDateDDMMYYYY(dateRange.from)} — ${fmtDateDDMMYYYY(dateRange.to)}`,
-      pageWidth - margin, 16, { align: 'right' }
+      `Periodo: ${fmtDateDDMMYYYY(dateRange.from)} – ${fmtDateDDMMYYYY(dateRange.to)}`,
+      pageWidth - margin, rightY, { align: 'right' }
     );
+    rightY += 4;
+  }
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  doc.text(`Generado: ${dd}/${mm}/${yyyy} ${hh}:${mi}`, pageWidth - margin, rightY, { align: 'right' });
+
+  // Línea divisoria negra 2px (≈ 0.7mm)
+  const dividerY = 28;
+  doc.setDrawColor(...BW_BLACK);
+  doc.setLineWidth(0.7);
+  doc.line(margin, dividerY, pageWidth - margin, dividerY);
+
+  // ─── Datos: ordenar por fecha si existe la columna ──────────────
+  const fechaCol = columns.find(c => c.format === 'date' || /fecha/i.test(c.key) || /fecha/i.test(c.header));
+  let rows = [...data];
+  if (fechaCol) {
+    rows.sort((a, b) => {
+      const av = a[fechaCol.key]; const bv = b[fechaCol.key];
+      const at = av ? new Date(av).getTime() : 0;
+      const bt = bv ? new Date(bv).getTime() : 0;
+      return at - bt;
+    });
   }
 
-  let y = 28;
-
-  // Subtitle + group label line
-  const subLine: string[] = [];
-  if (subtitle) subLine.push(subtitle);
-  if (groups && groupByLabel) subLine.push(`Agrupado por: ${groupByLabel}`);
-  if (subLine.length) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...BRAND_MUTED);
-    doc.text(subLine.join('  •  '), margin, y);
-    y += 5;
+  // Si vinieron agrupados, aplanamos para respetar el spec (sin agrupación visual)
+  if (!rows.length && groups && groups.length) {
+    rows = groups.flatMap(g => g.rows);
+    if (fechaCol) {
+      rows.sort((a, b) => {
+        const at = a[fechaCol.key] ? new Date(a[fechaCol.key]).getTime() : 0;
+        const bt = b[fechaCol.key] ? new Date(b[fechaCol.key]).getTime() : 0;
+        return at - bt;
+      });
+    }
   }
 
-  // ─── TABLE BUILDING ───────────────────────────────────────────
+  // ─── Totales generales (Cantidad + currency cols) ───────────────
+  const sumKeys = columns
+    .filter(c => c.format === 'currency' || c.format === 'number' || /cantidad/i.test(c.key) || /cantidad/i.test(c.header))
+    .map(c => c.key);
+  const totalsRow: Record<string, number> = {};
+  for (const k of sumKeys) {
+    let s = 0;
+    for (const r of rows) {
+      const v = Number(r[k]);
+      if (!Number.isNaN(v) && Number.isFinite(v)) s += v;
+    }
+    totalsRow[k] = s;
+  }
+
+  const intFmt = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 });
+  const cellFmt = (val: any, format?: ExportColumn['format']) => {
+    if (val == null || val === '') return '';
+    if (format === 'date') return fmtDateDDMMYYYY(val);
+    if (format === 'currency') {
+      const n = Number(val); if (Number.isNaN(n)) return String(val);
+      return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    if (format === 'number') {
+      const n = Number(val); if (Number.isNaN(n)) return String(val);
+      // cantidades sin decimales por defecto
+      return intFmt.format(n);
+    }
+    if (format === 'percent') {
+      const n = Number(val); if (Number.isNaN(n)) return String(val);
+      return `${n.toFixed(1)}%`;
+    }
+    return String(val);
+  };
+
   const head = [columns.map(c => c.header)];
-  const body: any[][] = [];
-  // Track each body row's "kind": data | group-header | subtotal | total
-  const rowKinds: ('data' | 'group-header' | 'subtotal' | 'total')[] = [];
+  const body = rows.map(r => columns.map(c => cellFmt(r[c.key], c.format)));
 
-  const dataRow = (item: Record<string, any>) =>
-    columns.map(col => fmt(item[col.key], col.format));
-
-  if (groups && groups.length) {
-    for (const g of groups) {
-      body.push([{
-        content: `${g.label}   (${g.rows.length})`,
-        colSpan: columns.length,
-        styles: {
-          fillColor: GROUP_HEADER,
-          textColor: BRAND_PRIMARY,
-          fontStyle: 'bold' as const,
-          halign: 'left' as const,
-        },
-      }]);
-      rowKinds.push('group-header');
-      for (const r of g.rows) {
-        body.push(dataRow(r));
-        rowKinds.push('data');
-      }
-      body.push(columns.map((col, i) => {
-        if (i === 0) return `Subtotal ${g.label}`;
-        if (col.key in g.subtotals) return fmt(g.subtotals[col.key], col.format);
-        return '';
-      }));
-      rowKinds.push('subtotal');
+  const foot: any[][] = [];
+  const footRow = columns.map((c, i) => {
+    if (i === 0) return { content: 'Total general', styles: { fontStyle: 'bold' as const, halign: 'left' as const } };
+    if (c.key in totalsRow) {
+      const formatted = c.format === 'currency'
+        ? `$${totalsRow[c.key].toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : c.format === 'number' || /cantidad/i.test(c.key) || /cantidad/i.test(c.header)
+          ? intFmt.format(totalsRow[c.key])
+          : '';
+      return { content: formatted, styles: { fontStyle: 'bold' as const, halign: 'right' as const } };
     }
-  } else {
-    for (const item of data) {
-      body.push(dataRow(item));
-      rowKinds.push('data');
-    }
-  }
+    return { content: '', styles: { fontStyle: 'bold' as const } };
+  });
+  foot.push(footRow);
 
-  if (totals) {
-    body.push(columns.map((col, i) => {
-      if (col.key in totals) return fmt(totals[col.key], col.format);
-      if (i === 0) return 'TOTAL GENERAL';
-      return '';
-    }));
-    rowKinds.push('total');
-  }
-
-  const colAligns = columns.map(c => {
+  const colAligns: ('left' | 'center' | 'right')[] = columns.map(c => {
     if (c.align) return c.align;
     if (c.format === 'currency' || c.format === 'number' || c.format === 'percent') return 'right';
+    if (/cantidad/i.test(c.key) || /cantidad/i.test(c.header)) return 'right';
     return 'left';
-  }) as ('left' | 'center' | 'right')[];
+  });
 
   autoTable(doc, {
-    startY: y,
+    startY: dividerY + 4,
     head,
     body,
+    foot,
     theme: 'plain',
+    showFoot: 'lastPage',
+    showHead: 'everyPage',
     styles: {
       font: 'helvetica',
       fontSize: 9,
-      cellPadding: { top: 2.2, bottom: 2.2, left: 3, right: 3 },
-      lineColor: BORDER,
-      lineWidth: 0.1,
-      textColor: BRAND_DARK,
+      cellPadding: { top: 2.4, bottom: 2.4, left: 3, right: 3 },
+      textColor: BW_BLACK,
+      lineColor: BW_BORDER_LIGHT,
+      lineWidth: 0,
     },
     headStyles: {
-      fillColor: BRAND_PRIMARY,
-      textColor: [255, 255, 255],
+      fillColor: [255, 255, 255],
+      textColor: BW_BLACK,
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: 10,
       halign: 'left',
       cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      lineColor: BW_BLACK,
+      lineWidth: { top: 0, right: 0, bottom: 0.4, left: 0 } as any,
     },
-    bodyStyles: { textColor: BRAND_DARK },
-    alternateRowStyles: { fillColor: ROW_ALT },
+    bodyStyles: {
+      lineColor: BW_BORDER_LIGHT,
+      lineWidth: { top: 0, right: 0, bottom: 0.15, left: 0 } as any,
+    },
+    footStyles: {
+      fillColor: [255, 255, 255],
+      textColor: BW_BLACK,
+      fontStyle: 'bold',
+      lineColor: BW_BLACK,
+      lineWidth: { top: 0.4, right: 0, bottom: 0, left: 0 } as any,
+    },
     columnStyles: Object.fromEntries(
-      columns.map((col, i) => [i, { halign: colAligns[i] }])
+      columns.map((_, i) => [i, { halign: colAligns[i] }])
     ),
-    didParseCell: (data: any) => {
-      if (data.section !== 'body') return;
-      const kind = rowKinds[data.row.index];
-      if (kind === 'subtotal') {
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = SUBTOTAL_BG;
-        data.cell.styles.textColor = BRAND_DARK;
-      } else if (kind === 'total') {
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = BRAND_PRIMARY;
-        data.cell.styles.textColor = [255, 255, 255];
-      } else if (kind === 'group-header') {
-        // ya viene con estilos inline
-      }
-    },
     didDrawPage: (d: any) => {
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      // Footer line
-      doc.setDrawColor(...BORDER);
-      doc.setLineWidth(0.2);
-      doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
-      // Footer text
+      // Footer
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(...BRAND_MUTED);
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mi = String(now.getMinutes()).padStart(2, '0');
-      doc.text(
-        `Rutapp.mx  ·  Generado el ${dd}/${mm}/${now.getFullYear()} ${hh}:${mi}`,
-        margin, pageHeight - 6
-      );
-      doc.text(
-        `Página ${d.pageNumber} de ${pageCount}`,
-        pageWidth - margin, pageHeight - 6, { align: 'right' }
-      );
+      doc.setFontSize(9);
+      doc.setTextColor(...BW_MUTED);
+      const empresaFooter = empresaInfo?.nombre || empresa || '';
+      doc.text(`Rutapp · ${empresaFooter}`, margin, pageHeight - 8);
+      const pageStr = `Página ${d.pageNumber} de {totalPages}`;
+      doc.text(pageStr, pageWidth - margin, pageHeight - 8, { align: 'right' });
     },
-    margin: { left: margin, right: margin, top: 28, bottom: 16 },
+    margin: { left: margin, right: margin, top: dividerY + 4, bottom: 14 },
   });
 
-  // ─── RESUMEN GENERAL ───────────────────────────────────────────
-  if (resumenGeneral) {
-    const sym = getCurrencyConfig(currencyCode).symbol;
-    const fmtCur = (n: number) => `${sym} ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
-
-    let ry = (doc as any).lastAutoTable?.finalY ?? 180;
-    ry += 12;
-
-    if (ry > pageHeight - 80) { doc.addPage(); ry = 28; }
-
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...BRAND_DARK);
-    doc.text('Resumen General de Ventas', margin, ry);
-    ry += 6;
-
-    const totalsData = [
-      ['Total Ventas Generales', fmtCur(resumenGeneral.totalVentas)],
-      ['Total Ventas de Contado', fmtCur(resumenGeneral.totalContado)],
-      ['Total Ventas a Crédito', fmtCur(resumenGeneral.totalCredito)],
-    ];
-
-    const halfRight = pageWidth / 2 + 6;
-
-    autoTable(doc, {
-      startY: ry,
-      head: [['Concepto', 'Monto']],
-      body: totalsData,
-      theme: 'plain',
-      styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
-      headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-      columnStyles: { 1: { halign: 'right' } },
-      margin: { left: margin, right: halfRight },
-    });
-
-    ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
-    ry += 8;
-
-    if (ry > pageHeight - 60) { doc.addPage(); ry = 28; }
-
-    if (resumenGeneral.vendedores.length > 0) {
-      autoTable(doc, {
-        startY: ry,
-        head: [['Vendedor', 'Total', '% Part.']],
-        body: resumenGeneral.vendedores.map(v => [v.nombre, fmtCur(v.total), `${v.pct.toFixed(1)}%`]),
-        theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
-        headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
-        margin: { left: margin, right: halfRight },
-      });
-      ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
-      ry += 8;
-    }
-
-    if (ry > pageHeight - 60) { doc.addPage(); ry = 28; }
-
-    if (resumenGeneral.metodosPago.length > 0) {
-      autoTable(doc, {
-        startY: ry,
-        head: [['Método de Pago', 'Total', '% Part.']],
-        body: resumenGeneral.metodosPago.map(m => [metodoPagoLabels[m.metodo] ?? m.metodo, fmtCur(m.total), `${m.pct.toFixed(1)}%`]),
-        theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
-        headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
-        margin: { left: margin, right: halfRight },
-      });
-    }
+  // Reemplazar {totalPages} usando putTotalPages
+  if ((doc as any).putTotalPages) {
+    (doc as any).putTotalPages('{totalPages}');
   }
 
   doc.save(`${fileName}.pdf`);
 }
+
 
 
 
