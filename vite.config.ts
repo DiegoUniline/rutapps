@@ -47,12 +47,33 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      // El SW se registra manualmente desde src/pwa/registerSW.ts SOLO dentro
+      // de la app autenticada. La landing pública (/, /partners, etc.) nunca
+      // instala SW para que las publicaciones nuevas se vean al instante.
+      injectRegister: null,
       devOptions: { enabled: false },
       workbox: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
+        // Excluir páginas públicas para que NUNCA pasen por el SW.
+        navigateFallbackDenylist: [
+          /^\/~oauth/,
+          /^\/api/,
+          /^\/$/,
+          /^\/partners/,
+          /^\/login/,
+          /^\/signup/,
+          /^\/reset-password/,
+          /^\/terminos/,
+          /^\/privacidad/,
+          /^\/catalogo\//,
+          /^\/pagar\//,
+          /^\/cliente\//,
+          /^\/unsubscribe/,
+          /^\/tutoriales/,
+          /^\/soporte/,
+        ],
         // CRÍTICO: activa el nuevo SW inmediatamente y toma control de todas las pestañas abiertas
         skipWaiting: true,
         clientsClaim: true,
@@ -69,11 +90,14 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // JS/CSS con hash en el nombre: cache-first es seguro
+            // JS/CSS: NetworkFirst para que al publicar una versión nueva los
+            // chunks frescos se descarguen de inmediato (los nombres ya llevan
+            // hash, así que el cache local sigue siendo útil como fallback).
             urlPattern: /\.(?:js|css)$/,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'static-assets',
+              networkTimeoutSeconds: 3,
               expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
             },
           },
