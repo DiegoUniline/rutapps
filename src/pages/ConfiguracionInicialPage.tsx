@@ -1,9 +1,13 @@
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Building2, Warehouse, Tag, Package, Users, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { Building2, Warehouse, Tag, Package, Users, CheckCircle2, ArrowRight, Sparkles, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+
+const PrimerosPasosModal = lazy(() => import('@/components/onboarding/PrimerosPasosModal'));
 
 interface SetupStep {
   key: string;
@@ -112,6 +116,21 @@ export function useSetupComplete() {
 
 export default function ConfiguracionInicialPage() {
   const { data, isLoading } = useSetupData();
+  const { empresa } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Auto-open on first visit if not dismissed/completed
+  useEffect(() => {
+    if (!empresa?.id || isLoading) return;
+    const dismissed = localStorage.getItem(`primeros_pasos_dismissed_${empresa.id}`);
+    const completed = localStorage.getItem(`primeros_pasos_completed_${empresa.id}`);
+    const hasProducto = (data?.productosCount ?? 0) >= 1;
+    const hasCliente = (data?.clientesCount ?? 0) >= 1;
+    if (!dismissed && !completed && (!hasProducto || !hasCliente)) {
+      setModalOpen(true);
+    }
+  }, [empresa?.id, isLoading, data?.productosCount, data?.clientesCount]);
+
 
   if (isLoading) {
     return (
@@ -141,17 +160,28 @@ export default function ConfiguracionInicialPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
+      <Suspense fallback={null}>
+        <PrimerosPasosModal open={modalOpen} onOpenChange={setModalOpen} />
+      </Suspense>
+
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Configuración inicial
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Completa estos pasos para empezar a usar el sistema. Cada sección desaparecerá al completarse.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Configuración inicial
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Completa estos pasos para empezar a usar el sistema. Cada sección desaparecerá al completarse.
+          </p>
+        </div>
+        <Button onClick={() => setModalOpen(true)} size="sm" className="flex-shrink-0">
+          <Wand2 className="mr-2 h-4 w-4" />
+          Guía rápida con AI
+        </Button>
       </div>
+
 
       {/* Progress bar */}
       <div className="space-y-1.5">
