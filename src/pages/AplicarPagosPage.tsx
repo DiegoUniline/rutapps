@@ -14,6 +14,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
+import { enviarReciboCobro } from '@/lib/enviarReciboCobro';
 
 /* ──────────── types ──────────── */
 interface PendingSale {
