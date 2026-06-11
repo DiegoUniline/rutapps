@@ -224,8 +224,9 @@ export default function ReportesPersonalizadosPage() {
 }
 
 // ─── Runner inline (filtros + tabla + export) ──────────────────
-function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
+function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, onDelete }: {
   config: ReporteConfig; empresaId: string; empresaNombre: string;
+  empresaInfo?: { nombre: string; rfc?: string | null; email?: string | null; logo_url?: string | null };
   onEdit: () => void; onDelete: () => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
