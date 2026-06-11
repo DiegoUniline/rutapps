@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   if (cErr || !cobro) return json({ error: 'Cobro no encontrado' }, 404)
 
   const [{ data: empresa }, { data: cliente }, { data: apps }] = await Promise.all([
-    supabase.from('empresas').select('id, nombre, moneda, enviar_recibo_auto').eq('id', cobro.empresa_id).single(),
+    supabase.from('empresas').select('id, nombre, moneda, enviar_recibo_auto, logo_url, direccion, telefono, email').eq('id', cobro.empresa_id).single(),
     supabase.from('clientes').select('id, nombre, email, telefono, portal_token, recibir_notificaciones').eq('id', cobro.cliente_id).single(),
     supabase.from('cobro_aplicaciones').select('venta_id, monto_aplicado, ventas(folio)').eq('cobro_id', cobro_id),
   ])
