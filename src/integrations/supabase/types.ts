@@ -2522,6 +2522,7 @@ export type Database = {
           monthly_sales_goal: number
           nombre: string
           notas_ticket: string | null
+          onboarding_completado: boolean | null
           owner_user_id: string | null
           partner_owner_id: string | null
           pos_turnos_habilitado: boolean
@@ -2560,6 +2561,7 @@ export type Database = {
           monthly_sales_goal?: number
           nombre: string
           notas_ticket?: string | null
+          onboarding_completado?: boolean | null
           owner_user_id?: string | null
           partner_owner_id?: string | null
           pos_turnos_habilitado?: boolean
@@ -2598,6 +2600,7 @@ export type Database = {
           monthly_sales_goal?: number
           nombre?: string
           notas_ticket?: string | null
+          onboarding_completado?: boolean | null
           owner_user_id?: string | null
           partner_owner_id?: string | null
           pos_turnos_habilitado?: boolean
