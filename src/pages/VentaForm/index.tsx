@@ -142,6 +142,7 @@ export default function VentaFormPage() {
                 venta_id: cuenta.id,
                 monto_aplicado: apply,
               });
+              import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroData.id, empresa!.id));
             }
 
             accountApplied.set(cuenta.id, alreadyApplied + apply);

@@ -14,6 +14,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
+import { enviarReciboCobro } from '@/lib/enviarReciboCobro';
 
 /* ──────────── types ──────────── */
 interface PendingSale {
@@ -208,6 +209,9 @@ export default function AplicarPagosPage() {
       queryClient.invalidateQueries({ queryKey: ['clientes-con-saldo'] });
       queryClient.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
       queryClient.invalidateQueries({ queryKey: ['cobros'] });
+
+      // Enviar recibo por email + WhatsApp (fire-and-forget)
+      enviarReciboCobro(cobro.id, empresa.id);
 
       // Print ticket
       if (empresa) {

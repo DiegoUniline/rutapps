@@ -203,6 +203,11 @@ export function useVentaDetalle() {
 
       if (aplicaciones.length > 0) { const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones); if (appErr) throw appErr; }
 
+      // Recibo automático (sólo si hay conexión)
+      if (navigator.onLine) {
+        import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobro.id, empresa.id));
+      }
+
       const ventasLiquidadas = [
         ...(montoAplicarActual > 0 && roundMoney(saldoActual - montoAplicarActual) <= 0.01 ? [venta.id] : []),
         ...cuentasPendientes

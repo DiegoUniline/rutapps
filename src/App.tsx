@@ -121,6 +121,8 @@ const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage
 const CompletarRegistroPage = lazy(() => import("@/pages/CompletarRegistroPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
+const EstadoCuentaPublicoPage = lazy(() => import("@/pages/EstadoCuentaPublicoPage"));
+const UnsubscribePage = lazy(() => import("@/pages/UnsubscribePage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
@@ -337,6 +339,8 @@ function AppRoutes() {
           <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
+          <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/soporte" element={<SoportePage />} />
@@ -733,6 +737,8 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
+      <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/partner" element={<PartnerLayout />}>
         <Route index element={<PartnerDashboard />} />
         <Route path="empresas" element={<PartnerEmpresas />} />
