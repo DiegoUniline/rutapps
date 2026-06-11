@@ -588,16 +588,17 @@ function DataPreview({ columns, rows, grouping }: {
   );
 }
 
-function GroupBlock({ group, columns, fmtCell, isNumeric }: {
+function GroupBlock({ group, columns, fmtCell, isNumeric, open, onToggle }: {
   group: ReturnType<typeof groupRows>['groups'][number];
   columns: ReturnType<typeof buildExportColumns>;
   fmtCell: (v: any, f?: string) => string;
   isNumeric: (f?: string) => boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
     <>
-      <tr className="border-t bg-primary/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
+      <tr className="border-t bg-primary/5 cursor-pointer" onClick={onToggle}>
         <td colSpan={columns.length} className="px-2 py-1.5 font-semibold text-primary">
           {open ? '▾' : '▸'} {group.label} <span className="text-muted-foreground font-normal">({group.rows.length})</span>
         </td>
