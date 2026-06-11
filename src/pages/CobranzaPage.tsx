@@ -4,10 +4,14 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { Banknote, MessageCircle, Printer } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Banknote, MessageCircle, Printer, Pencil, Ban } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { CobroEditDialog } from '@/components/cobranza/CobroEditDialog';
+import { toast } from 'sonner';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MobileListCard } from '@/components/MobileListCard';
