@@ -153,12 +153,15 @@ export function useVentaForm() {
     queryKey: ['venta-pagos', form.id], enabled: !!form.id,
     queryFn: async () => {
       const { data } = await supabase.from('cobro_aplicaciones')
-        .select('id, monto_aplicado, created_at, cobro_id, cobros(fecha, metodo_pago, referencia)')
+        .select('id, monto_aplicado, created_at, cobro_id, cobros(fecha, metodo_pago, referencia, status)')
         .eq('venta_id', form.id!).order('created_at', { ascending: false });
       return data ?? [];
     },
   });
-  const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
+  const totalPagado = useMemo(
+    () => (pagosData ?? []).reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0),
+    [pagosData],
+  );
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
   // Load existing venta — only once per venta id

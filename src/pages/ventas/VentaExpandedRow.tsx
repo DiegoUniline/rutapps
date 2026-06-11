@@ -55,7 +55,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           .order('created_at'),
         supabase
           .from('cobro_aplicaciones')
-          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia)')
+          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         venta.tarifa_id
