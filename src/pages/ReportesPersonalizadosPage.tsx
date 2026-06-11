@@ -487,7 +487,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             Sin datos para los filtros seleccionados.
           </div>
         ) : (
-          <DataPreview columns={columns} rows={rows} />
+          <DataPreview columns={columns} rows={rows} grouping={grouping} />
         )}
       </Card>
     </div>
