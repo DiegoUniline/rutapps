@@ -537,9 +537,16 @@ function DataPreview({ columns, rows, grouping }: {
             ? `${grouping.groups.length.toLocaleString('es-MX')} grupos · ${rows.length.toLocaleString('es-MX')} registros`
             : `Mostrando ${shown.length.toLocaleString('es-MX')} de ${rows.length.toLocaleString('es-MX')} registros`}
         </span>
-        {!grouping && rows.length > limit && (
-          <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
-        )}
+        <div className="flex items-center gap-2">
+          {grouping && (
+            <Button size="sm" variant="ghost" onClick={() => { setAllOpen(o => !o); setOpenMap({}); }}>
+              {allOpen ? 'Contraer todo' : 'Expandir todo'}
+            </Button>
+          )}
+          {!grouping && rows.length > limit && (
+            <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
+          )}
+        </div>
       </div>
       <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-xs">
