@@ -932,39 +932,43 @@ export default function DashboardPage() {
 
 
 
-      {/* === Meta del mes === */}
-      <MetaDelMesCard
-        ventasMes={metaMesData.ventasMes}
-        cobradoMes={metaMesData.cobradoMes}
-        gastosMes={metaMesData.gastosMes}
-        margenMonto={metaMesData.margenMonto}
-        money={money}
-      />
+      {/* === Meta del mes + KPI Cards (solo visible en Resumen) === */}
+      {activeTab === 'resumen' && (
+        <>
+          <MetaDelMesCard
+            ventasMes={metaMesData.ventasMes}
+            cobradoMes={metaMesData.cobradoMes}
+            gastosMes={metaMesData.gastosMes}
+            margenMonto={metaMesData.margenMonto}
+            money={money}
+          />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
-        <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
-        <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" />
-        <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros`} icon={Wallet} color="bg-[hsl(var(--success))]" />
-        <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
-        <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
-        <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
-        <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
-        <KpiExtras
-          efectividadPct={kpisExtra.efectividadPct}
-          visitas={kpisExtra.visitas}
-          ventasConPedido={kpisExtra.ventasConPedido}
-          cumplimientoPct={kpisExtra.cumplimientoPct}
-          visitasPlaneadas={kpisExtra.visitasPlaneadas}
-          dropSize={kpisExtra.dropSize}
-          cobertura={kpisExtra.cobertura}
-          clientesConCompra={kpisExtra.clientesConCompra}
-          clientesActivos={kpisExtra.clientesActivos}
-          clientesSinCompra30d={kpisExtra.clientesSinCompra30d}
-          onSinCompraClick={() => setSinCompraOpen(true)}
-          money={money}
-        />
-      </div>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
+            <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
+            <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" />
+            <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros`} icon={Wallet} color="bg-[hsl(var(--success))]" />
+            <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
+            <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
+            <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
+            <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
+            <KpiExtras
+              efectividadPct={kpisExtra.efectividadPct}
+              visitas={kpisExtra.visitas}
+              ventasConPedido={kpisExtra.ventasConPedido}
+              cumplimientoPct={kpisExtra.cumplimientoPct}
+              visitasPlaneadas={kpisExtra.visitasPlaneadas}
+              dropSize={kpisExtra.dropSize}
+              cobertura={kpisExtra.cobertura}
+              clientesConCompra={kpisExtra.clientesConCompra}
+              clientesActivos={kpisExtra.clientesActivos}
+              clientesSinCompra30d={kpisExtra.clientesSinCompra30d}
+              onSinCompraClick={() => setSinCompraOpen(true)}
+              money={money}
+            />
+          </div>
+        </>
+      )}
 
       <ClientesSinCompraModal
         open={sinCompraOpen}
