@@ -1,0 +1,1 @@
+UPDATE public.empresas SET onboarding_completado = false WHERE nombre = 'Mi Empresa Demo';
