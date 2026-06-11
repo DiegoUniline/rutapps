@@ -679,6 +679,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/logistica" element={<Navigate to="/logistica/dashboard" replace />} />
       <Route path="/catalogos" element={<Navigate to="/proveedores" replace />} />
       <Route path="/almacen/inventario" element={<InventarioPage />} />
+      <Route path="/almacen/inteligencia" element={<InteligenciaAlmacenPage />} />
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
       <Route path="/almacen/compras/sugeridas" element={<ComprasSugeridasPage />} />
