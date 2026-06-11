@@ -290,7 +290,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, 
       const dateRange = { from: filtros.fechaDesde!, to: filtros.fechaHasta! };
       if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
       else if (kind === 'csv') exportToCSV({ fileName, columns, data, groups: groupsArg });
-      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
+      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, empresaInfo, dateRange, groups: groupsArg, groupByLabel });
     } catch (e: any) {
       toast.error(e.message ?? 'Error al exportar');
     } finally { setLoading(null); }
