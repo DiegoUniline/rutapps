@@ -17,6 +17,7 @@ import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
+import PedidosTabs from '@/components/PedidosTabs';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
@@ -278,6 +279,7 @@ export default function EntregaListPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <PedidosTabs />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Truck className="h-5 w-5" /> Entregas
