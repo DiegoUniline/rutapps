@@ -80,8 +80,7 @@ const makeFmt = (currencyCode?: string | null) => {
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
-  const fmt = makeFmt(currencyCode);
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, groups, groupByLabel } = options;
 
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
@@ -90,45 +89,45 @@ export function exportToExcel(options: ExportOptions) {
   rows.push([title]);
   if (empresa) rows.push([empresa]);
   if (subtitle) rows.push([subtitle]);
-  if (dateRange) rows.push([`Periodo: ${dateRange.from} al ${dateRange.to}`]);
+  if (dateRange) rows.push([`Periodo: ${fmtDateDDMMYYYY(dateRange.from)} al ${fmtDateDDMMYYYY(dateRange.to)}`]);
+  if (groups && groupByLabel) rows.push([`Agrupado por: ${groupByLabel}`]);
   rows.push([]); // Blank row
 
   // Column headers
   rows.push(columns.map(c => c.header));
 
-  // Data rows
-  data.forEach(item => {
-    rows.push(columns.map(col => {
-      const val = item[col.key];
-      // Keep raw numbers for Excel
-      if ((col.format === 'currency' || col.format === 'number' || col.format === 'percent') && val !== null && val !== undefined) {
-        return Number(val);
-      }
-      if (col.format === 'date' && val) {
-        const s = String(val);
-        // Detect if it has time component
-        const hasTime = /T\d{2}:\d{2}/.test(s);
-        const d = new Date(s);
-        if (isNaN(d.getTime())) return s;
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        if (hasTime) {
-          const hh = String(d.getHours()).padStart(2, '0');
-          const mi = String(d.getMinutes()).padStart(2, '0');
-          return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
-        }
-        return `${dd}/${mm}/${yyyy}`;
-      }
-      return val ?? '';
-    }));
+  const renderRow = (item: Record<string, any>) => columns.map(col => {
+    const val = item[col.key];
+    if ((col.format === 'currency' || col.format === 'number' || col.format === 'percent') && val !== null && val !== undefined && val !== '') {
+      return Number(val);
+    }
+    if (col.format === 'date' && val) return fmtDateDDMMYYYY(val);
+    return val ?? '';
   });
+
+  if (groups && groups.length) {
+    for (const g of groups) {
+      const headerRowIdx = rows.length;
+      rows.push([`▸ ${g.label}  (${g.rows.length})`]);
+      // merge header across columns
+      if (!Array.isArray((rows as any).__merges)) (rows as any).__merges = [];
+      (rows as any).__merges.push({ s: { r: headerRowIdx, c: 0 }, e: { r: headerRowIdx, c: columns.length - 1 } });
+      for (const r of g.rows) rows.push(renderRow(r));
+      rows.push(columns.map((c, i) => {
+        if (i === 0) return `Subtotal ${g.label}`;
+        if (c.key in g.subtotals) return g.subtotals[c.key];
+        return '';
+      }));
+    }
+  } else {
+    data.forEach(item => rows.push(renderRow(item)));
+  }
 
   // Totals row
   if (totals) {
-    rows.push(columns.map(col => {
+    rows.push(columns.map((col, i) => {
       if (col.key in totals) return totals[col.key];
-      if (columns.indexOf(col) === 0) return 'TOTAL';
+      if (i === 0) return 'TOTAL';
       return '';
     }));
   }
@@ -162,15 +161,15 @@ export function exportToExcel(options: ExportOptions) {
   // Column widths
   ws['!cols'] = columns.map(c => ({ wch: c.width ?? Math.max(c.header.length + 2, 12) }));
 
-  // Merge title row
-  const titleRow = 0;
-  ws['!merges'] = [
-    { s: { r: titleRow, c: 0 }, e: { r: titleRow, c: columns.length - 1 } },
-  ];
+  // Merges
+  const merges: any[] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: columns.length - 1 } }];
+  if ((rows as any).__merges) merges.push(...(rows as any).__merges);
+  ws['!merges'] = merges;
 
   XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
   XLSX.writeFile(wb, `${fileName}.xlsx`);
 }
+
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
 export async function exportToPDF(options: ExportOptions) {
