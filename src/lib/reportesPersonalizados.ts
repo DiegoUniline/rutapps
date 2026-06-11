@@ -718,32 +718,46 @@ function csvEscape(value: any): string {
   return s;
 }
 
-export function exportToCSV(opts: { fileName: string; columns: ExportColumn[]; data: Record<string, any>[] }) {
-  const { fileName, columns, data } = opts;
+export function exportToCSV(opts: { fileName: string; columns: ExportColumn[]; data: Record<string, any>[]; groups?: ReporteGroup[] }) {
+  const { fileName, columns, data, groups } = opts;
   const lines: string[] = [];
   lines.push(columns.map(c => csvEscape(c.header)).join(','));
-  for (const row of data) {
-    lines.push(columns.map(c => {
-      const v = row[c.key];
-      if (c.format === 'date' && v) {
-        const s = String(v);
-        const hasTime = /T\d{2}:\d{2}/.test(s);
-        const d = new Date(s);
-        if (!isNaN(d.getTime())) {
-          const dd = String(d.getDate()).padStart(2, '0');
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const yyyy = d.getFullYear();
-          if (hasTime) {
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mi = String(d.getMinutes()).padStart(2, '0');
-            return csvEscape(`${dd}/${mm}/${yyyy} ${hh}:${mi}`);
-          }
-          return csvEscape(`${dd}/${mm}/${yyyy}`);
+
+  const renderRow = (row: Record<string, any>) => columns.map(c => {
+    const v = row[c.key];
+    if (c.format === 'date' && v) {
+      const s = String(v);
+      const hasTime = /T\d{2}:\d{2}/.test(s);
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        if (hasTime) {
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mi = String(d.getMinutes()).padStart(2, '0');
+          return csvEscape(`${dd}/${mm}/${yyyy} ${hh}:${mi}`);
         }
+        return csvEscape(`${dd}/${mm}/${yyyy}`);
       }
-      return csvEscape(v);
-    }).join(','));
+    }
+    return csvEscape(v);
+  }).join(',');
+
+  if (groups && groups.length) {
+    for (const g of groups) {
+      lines.push(csvEscape(`# ${g.label} (${g.rows.length})`));
+      for (const row of g.rows) lines.push(renderRow(row));
+      lines.push(columns.map((c, i) => {
+        if (i === 0) return csvEscape(`Subtotal ${g.label}`);
+        if (c.key in g.subtotals) return csvEscape(g.subtotals[c.key]);
+        return '';
+      }).join(','));
+    }
+  } else {
+    for (const row of data) lines.push(renderRow(row));
   }
+
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -752,3 +766,91 @@ export function exportToCSV(opts: { fileName: string; columns: ExportColumn[]; d
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ──────────────────────────────────────────────────────────────
+// Agrupación de filas (para exportar agrupado por X)
+// ──────────────────────────────────────────────────────────────
+export interface ReporteGroup {
+  key: string;
+  label: string;
+  rows: Record<string, any>[];
+  subtotals: Record<string, number>;
+}
+
+export interface GroupByOption {
+  key: string;
+  label: string;
+}
+
+/** Devuelve las columnas que pueden usarse para agrupar. */
+export function getGroupableOptions(columns: ExportColumn[]): GroupByOption[] {
+  const opts: GroupByOption[] = [{ key: '', label: 'Sin agrupar' }];
+  for (const c of columns) {
+    // Excluir métricas continuas
+    if (c.format === 'currency' || c.format === 'percent' || c.format === 'number') continue;
+    opts.push({ key: c.key, label: c.header });
+    if (c.format === 'date') {
+      opts.push({ key: `${c.key}__mes`, label: `${c.header} (mes)` });
+    }
+  }
+  return opts;
+}
+
+const fmtGroupLabel = (val: any, format?: ExportColumn['format'], suffix?: 'mes'): string => {
+  if (val === null || val === undefined || val === '') return '(Sin valor)';
+  if (format === 'date') {
+    const d = new Date(String(val));
+    if (isNaN(d.getTime())) return String(val);
+    if (suffix === 'mes') {
+      return d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    }
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  }
+  return String(val);
+};
+
+const groupKeyOf = (val: any, format?: ExportColumn['format'], suffix?: 'mes'): string => {
+  if (val === null || val === undefined || val === '') return '__null__';
+  if (format === 'date') {
+    const d = new Date(String(val));
+    if (isNaN(d.getTime())) return String(val);
+    if (suffix === 'mes') return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return String(val);
+};
+
+/** Agrupa filas por una columna. groupBy puede ser 'campo' o 'campo__mes' para fecha mensual. */
+export function groupRows(
+  rows: Record<string, any>[],
+  columns: ExportColumn[],
+  groupBy: string
+): { groups: ReporteGroup[]; totals: Record<string, number> } {
+  const [baseKey, suffix] = groupBy.split('__') as [string, 'mes' | undefined];
+  const col = columns.find(c => c.key === baseKey);
+  const format = col?.format;
+  const map = new Map<string, ReporteGroup>();
+  const numericKeys = columns.filter(c => c.format === 'currency' || c.format === 'number').map(c => c.key);
+  const totals: Record<string, number> = {};
+
+  for (const r of rows) {
+    const k = groupKeyOf(r[baseKey], format, suffix);
+    let g = map.get(k);
+    if (!g) {
+      g = { key: k, label: fmtGroupLabel(r[baseKey], format, suffix), rows: [], subtotals: {} };
+      map.set(k, g);
+    }
+    g.rows.push(r);
+    for (const nk of numericKeys) {
+      const n = Number(r[nk]) || 0;
+      g.subtotals[nk] = (g.subtotals[nk] ?? 0) + n;
+      totals[nk] = (totals[nk] ?? 0) + n;
+    }
+  }
+
+  const groups = Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, 'es-MX'));
+  return { groups, totals };
+}
+

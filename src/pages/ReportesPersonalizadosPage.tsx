@@ -21,11 +21,14 @@ import {
   runReporte,
   getFuenteMeta,
   FUENTES,
+  groupRows,
+  getGroupableOptions,
   type ReporteConfig,
   type ReporteFiltros,
   type ReporteFuente,
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
+
 import { fmtMoney } from '@/lib/currency';
 import { confirmDialog } from '@/lib/confirm';
 import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
@@ -229,18 +232,32 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   const [rows, setRows] = useState<Record<string, any>[] | null>(null);
   const [loading, setLoading] = useState<null | 'run' | 'xlsx' | 'csv' | 'pdf'>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [groupBy, setGroupBy] = useState<string>('');
   const fuenteMeta = getFuenteMeta(config.fuente);
   const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
   const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
   const ENTITY_FILTERS = fuenteMeta.entityFilters ?? [];
   const columns = useMemo(() => buildExportColumns(config), [config]);
+  const groupOptions = useMemo(() => getGroupableOptions(columns), [columns]);
   const entityLists = useReporteEntityLists(empresaId, ENTITY_FILTERS.length > 0);
   const lists = entityLists.data;
   const update = (patch: Partial<ReporteFiltros>) => setFiltros(f => ({ ...f, ...patch }));
   const hasEntity = (k: string) => ENTITY_FILTERS.includes(k as any);
 
   // Reset cuando cambia el reporte
-  useEffect(() => { setRows(null); }, [config.id]);
+  useEffect(() => { setRows(null); setGroupBy(''); }, [config.id]);
+
+  // Etiqueta legible del groupBy seleccionado
+  const groupByLabel = useMemo(
+    () => groupOptions.find(o => o.key === groupBy)?.label,
+    [groupOptions, groupBy]
+  );
+
+  // Agrupación derivada para preview y export
+  const grouping = useMemo(() => {
+    if (!groupBy || !rows || rows.length === 0) return null;
+    return groupRows(rows, columns, groupBy);
+  }, [groupBy, rows, columns]);
 
   const ejecutar = async () => {
     try {
@@ -261,13 +278,17 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
       if (!rows) setRows(data);
       if (data.length === 0) { toast.info('Sin datos'); return; }
       const fileName = `${config.nombre.replace(/\s+/g, '_')}_${filtros.fechaDesde}_${filtros.fechaHasta}`;
-      if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange: { from: filtros.fechaDesde!, to: filtros.fechaHasta! } });
-      else if (kind === 'csv') exportToCSV({ fileName, columns, data });
-      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange: { from: filtros.fechaDesde!, to: filtros.fechaHasta! } });
+      const grouped = groupBy ? groupRows(data, columns, groupBy) : null;
+      const groupsArg = grouped?.groups;
+      const dateRange = { from: filtros.fechaDesde!, to: filtros.fechaHasta! };
+      if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
+      else if (kind === 'csv') exportToCSV({ fileName, columns, data, groups: groupsArg });
+      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
     } catch (e: any) {
       toast.error(e.message ?? 'Error al exportar');
     } finally { setLoading(null); }
   };
+
 
   return (
     <div className="space-y-3">
@@ -293,7 +314,19 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             <Label className="text-xs">Hasta</Label>
             <Input type="date" value={filtros.fechaHasta} onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })} />
           </div>
-          <div className="md:col-span-2 flex flex-wrap gap-2 justify-end">
+          <div>
+            <Label className="text-xs">Agrupar por</Label>
+            <select
+              className="h-10 w-full rounded-md border bg-background px-2 text-sm"
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+            >
+              {groupOptions.map(o => (
+                <option key={o.key || 'none'} value={o.key}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end">
             <Button onClick={ejecutar} disabled={!!loading}>
               {loading === 'run' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
               {rows ? 'Actualizar' : 'Ejecutar'}
@@ -309,6 +342,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             </Button>
           </div>
         </div>
+
 
         {(STATUS_OPTS.length > 0 || TIPO_OPTS.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -453,16 +487,19 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             Sin datos para los filtros seleccionados.
           </div>
         ) : (
-          <DataPreview columns={columns} rows={rows} />
+          <DataPreview columns={columns} rows={rows} grouping={grouping} />
         )}
       </Card>
     </div>
   );
 }
 
-function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExportColumns>; rows: Record<string, any>[] }) {
+function DataPreview({ columns, rows, grouping }: {
+  columns: ReturnType<typeof buildExportColumns>;
+  rows: Record<string, any>[];
+  grouping: ReturnType<typeof groupRows> | null;
+}) {
   const [limit, setLimit] = useState(100);
-  const shown = rows.slice(0, limit);
 
   const fmtCell = (val: any, format?: string) => {
     if (val === null || val === undefined || val === '') return '';
@@ -488,12 +525,17 @@ function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExport
   };
 
   const isNumeric = (f?: string) => f === 'currency' || f === 'number' || f === 'percent';
+  const shown = rows.slice(0, limit);
 
   return (
     <div>
       <div className="flex items-center justify-between px-3 py-2 bg-muted/30 text-xs">
-        <span>Mostrando {shown.length.toLocaleString('es-MX')} de {rows.length.toLocaleString('es-MX')} registros</span>
-        {rows.length > limit && (
+        <span>
+          {grouping
+            ? `${grouping.groups.length.toLocaleString('es-MX')} grupos · ${rows.length.toLocaleString('es-MX')} registros`
+            : `Mostrando ${shown.length.toLocaleString('es-MX')} de ${rows.length.toLocaleString('es-MX')} registros`}
+        </span>
+        {!grouping && rows.length > limit && (
           <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
         )}
       </div>
@@ -507,21 +549,68 @@ function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExport
             </tr>
           </thead>
           <tbody>
-            {shown.map((row, i) => (
-              <tr key={i} className="border-t hover:bg-muted/20">
-                {columns.map(c => (
-                  <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
-                    {fmtCell(row[c.key], c.format)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {grouping ? (
+              grouping.groups.map((g) => (
+                <GroupBlock
+                  key={g.key}
+                  group={g}
+                  columns={columns}
+                  fmtCell={fmtCell}
+                  isNumeric={isNumeric}
+                />
+              ))
+            ) : (
+              shown.map((row, i) => (
+                <tr key={i} className="border-t hover:bg-muted/20">
+                  {columns.map(c => (
+                    <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+                      {fmtCell(row[c.key], c.format)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
+function GroupBlock({ group, columns, fmtCell, isNumeric }: {
+  group: ReturnType<typeof groupRows>['groups'][number];
+  columns: ReturnType<typeof buildExportColumns>;
+  fmtCell: (v: any, f?: string) => string;
+  isNumeric: (f?: string) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <tr className="border-t bg-primary/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
+        <td colSpan={columns.length} className="px-2 py-1.5 font-semibold text-primary">
+          {open ? '▾' : '▸'} {group.label} <span className="text-muted-foreground font-normal">({group.rows.length})</span>
+        </td>
+      </tr>
+      {open && group.rows.map((row, i) => (
+        <tr key={i} className="border-t hover:bg-muted/20">
+          {columns.map(c => (
+            <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+              {fmtCell(row[c.key], c.format)}
+            </td>
+          ))}
+        </tr>
+      ))}
+      <tr className="border-t bg-muted/40">
+        {columns.map((c, i) => (
+          <td key={c.key} className={`px-2 py-1.5 font-semibold ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+            {i === 0 ? `Subtotal ${group.label}` : (c.key in group.subtotals ? fmtCell(group.subtotals[c.key], c.format) : '')}
+          </td>
+        ))}
+      </tr>
+    </>
+  );
+}
+
 
 // ─── Editor Dialog ─────────────────────────────────────────────
 function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
