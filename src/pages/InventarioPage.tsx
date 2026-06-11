@@ -341,10 +341,8 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Inteligencia view */}
-      {view === 'inteligencia' && data && (
-        <InventarioInteligenciaTab productos={data.productos as any} search={search} />
-      )}
+
+
 
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
