@@ -408,8 +408,19 @@ export default function CobranzaPage() {
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366]" onClick={e => { e.stopPropagation(); openWaCobro(c); }}>
                     <MessageCircle className="h-4 w-4" />
                   </Button>
+                  {(c as any).status !== 'cancelado' && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={e => { e.stopPropagation(); setEditCobro(c); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={e => { e.stopPropagation(); setCancelCobro(c); }}>
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               }
+
               fields={[
                 ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
                 { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
