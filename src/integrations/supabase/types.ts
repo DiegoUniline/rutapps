@@ -1273,6 +1273,8 @@ export type Database = {
           nombre: string
           notas: string | null
           orden: number | null
+          portal_token: string | null
+          recibir_notificaciones: boolean
           regimen_fiscal: string | null
           requiere_factura: boolean | null
           rfc: string | null
@@ -1316,6 +1318,8 @@ export type Database = {
           nombre: string
           notas?: string | null
           orden?: number | null
+          portal_token?: string | null
+          recibir_notificaciones?: boolean
           regimen_fiscal?: string | null
           requiere_factura?: boolean | null
           rfc?: string | null
@@ -1359,6 +1363,8 @@ export type Database = {
           nombre?: string
           notas?: string | null
           orden?: number | null
+          portal_token?: string | null
+          recibir_notificaciones?: boolean
           regimen_fiscal?: string | null
           requiere_factura?: boolean | null
           rfc?: string | null
@@ -1552,6 +1558,9 @@ export type Database = {
           metodo_pago: string
           monto: number
           notas: string | null
+          notif_email_status: string | null
+          notif_error: string | null
+          notif_wa_status: string | null
           referencia: string | null
           status: string
           user_id: string
@@ -1565,6 +1574,9 @@ export type Database = {
           metodo_pago?: string
           monto?: number
           notas?: string | null
+          notif_email_status?: string | null
+          notif_error?: string | null
+          notif_wa_status?: string | null
           referencia?: string | null
           status?: string
           user_id: string
@@ -1578,6 +1590,9 @@ export type Database = {
           metodo_pago?: string
           monto?: number
           notas?: string | null
+          notif_email_status?: string | null
+          notif_error?: string | null
+          notif_wa_status?: string | null
           referencia?: string | null
           status?: string
           user_id?: string
@@ -2395,6 +2410,93 @@ export type Database = {
           },
         ]
       }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_email_ttl_minutes: number
+          batch_size: number
+          id: number
+          retry_after_until: string | null
+          send_delay_ms: number
+          transactional_email_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       empresas: {
         Row: {
           ciudad: string | null
@@ -2408,6 +2510,7 @@ export type Database = {
           email: string
           email_cc_facturacion: string | null
           email_facturacion: string | null
+          enviar_recibo_auto: boolean
           estado: string | null
           forma_pago_sat: string | null
           id: string
@@ -2445,6 +2548,7 @@ export type Database = {
           email: string
           email_cc_facturacion?: string | null
           email_facturacion?: string | null
+          enviar_recibo_auto?: boolean
           estado?: string | null
           forma_pago_sat?: string | null
           id?: string
@@ -2482,6 +2586,7 @@ export type Database = {
           email?: string
           email_cc_facturacion?: string | null
           email_facturacion?: string | null
+          enviar_recibo_auto?: boolean
           estado?: string | null
           forma_pago_sat?: string | null
           id?: string
@@ -5570,6 +5675,30 @@ export type Database = {
         }
         Relationships: []
       }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: []
+      }
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
@@ -7268,6 +7397,10 @@ export type Database = {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      delete_email: {
+        Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
       delete_empresa_cascade: {
         Args: { p_deleted_by: string; p_empresa_id: string }
         Returns: undefined
@@ -7275,6 +7408,10 @@ export type Database = {
       delete_empresas_bulk: {
         Args: { p_deleted_by: string; p_empresa_ids: string[] }
         Returns: Json
+      }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
       generar_recibo_volumen: {
@@ -7390,6 +7527,15 @@ export type Database = {
       }
       is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
+      move_to_dlq: {
+        Args: {
+          dlq_name: string
+          message_id: number
+          payload: Json
+          source_queue: string
+        }
+        Returns: number
+      }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
@@ -7406,6 +7552,14 @@ export type Database = {
         Returns: string
       }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
+      read_email_batch: {
+        Args: { batch_size: number; queue_name: string; vt: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
       reasignar_entregas_bulk: {
         Args: {
           p_entrega_ids: string[]
