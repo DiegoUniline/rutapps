@@ -500,6 +500,8 @@ function DataPreview({ columns, rows, grouping }: {
   grouping: ReturnType<typeof groupRows> | null;
 }) {
   const [limit, setLimit] = useState(100);
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  const [allOpen, setAllOpen] = useState(true);
 
   const fmtCell = (val: any, format?: string) => {
     if (val === null || val === undefined || val === '') return '';
@@ -535,9 +537,16 @@ function DataPreview({ columns, rows, grouping }: {
             ? `${grouping.groups.length.toLocaleString('es-MX')} grupos · ${rows.length.toLocaleString('es-MX')} registros`
             : `Mostrando ${shown.length.toLocaleString('es-MX')} de ${rows.length.toLocaleString('es-MX')} registros`}
         </span>
-        {!grouping && rows.length > limit && (
-          <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
-        )}
+        <div className="flex items-center gap-2">
+          {grouping && (
+            <Button size="sm" variant="ghost" onClick={() => { setAllOpen(o => !o); setOpenMap({}); }}>
+              {allOpen ? 'Contraer todo' : 'Expandir todo'}
+            </Button>
+          )}
+          {!grouping && rows.length > limit && (
+            <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
+          )}
+        </div>
       </div>
       <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-xs">
@@ -557,6 +566,8 @@ function DataPreview({ columns, rows, grouping }: {
                   columns={columns}
                   fmtCell={fmtCell}
                   isNumeric={isNumeric}
+                  open={openMap[g.key] ?? allOpen}
+                  onToggle={() => setOpenMap(m => ({ ...m, [g.key]: !(m[g.key] ?? allOpen) }))}
                 />
               ))
             ) : (
@@ -577,16 +588,17 @@ function DataPreview({ columns, rows, grouping }: {
   );
 }
 
-function GroupBlock({ group, columns, fmtCell, isNumeric }: {
+function GroupBlock({ group, columns, fmtCell, isNumeric, open, onToggle }: {
   group: ReturnType<typeof groupRows>['groups'][number];
   columns: ReturnType<typeof buildExportColumns>;
   fmtCell: (v: any, f?: string) => string;
   isNumeric: (f?: string) => boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
     <>
-      <tr className="border-t bg-primary/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
+      <tr className="border-t bg-primary/5 cursor-pointer" onClick={onToggle}>
         <td colSpan={columns.length} className="px-2 py-1.5 font-semibold text-primary">
           {open ? '▾' : '▸'} {group.label} <span className="text-muted-foreground font-normal">({group.rows.length})</span>
         </td>

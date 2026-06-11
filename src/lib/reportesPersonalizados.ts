@@ -86,7 +86,8 @@ export const CAMPOS_VENTAS: CampoDef[] = [
   { key: 'subtotal_linea',     label: 'Subtotal línea',        format: 'currency', width: 14 },
   { key: 'total_linea',        label: 'Total línea',           format: 'currency', width: 14 },
   { key: 'descuento_pct',      label: 'Descuento %',           format: 'percent',  width: 10 },
-  { key: 'forma_pago',         label: 'Forma de Pago',         format: 'text',     width: 18 },
+  { key: 'forma_pago',         label: 'Forma de Pago',         format: 'text',     width: 14 },
+  { key: 'metodo_pago',        label: 'Método de pago',        format: 'text',     width: 18 },
   { key: 'condicion_pago',     label: 'Condición de pago',     format: 'text',     width: 12 },
   { key: 'total_venta',        label: 'Total venta',           format: 'currency', width: 14 },
   { key: 'saldo_pendiente',    label: 'Saldo pendiente venta', format: 'currency', width: 14 },
@@ -338,8 +339,8 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
   const productosMap = await loadMap('productos', productoIds, 'id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta');
 
-  const formaPagoMap = new Map<string, string>();
-  if (config.columnas.some(c => c.key === 'forma_pago')) {
+  const metodoPagoMap = new Map<string, string>();
+  if (config.columnas.some(c => c.key === 'metodo_pago' || c.key === 'forma_pago')) {
     const aplicaciones = await fetchAllPages<any>((from, to) =>
       supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago, status)').in('venta_id', ventaIds).neq('cobros.status', 'cancelado').range(from, to)
     );
@@ -350,7 +351,7 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
       set.add(METODO_LABELS[m] ?? m);
       tmp.set(a.venta_id, set);
     }
-    for (const [vid, set] of tmp) formaPagoMap.set(vid, Array.from(set).join(', '));
+    for (const [vid, set] of tmp) metodoPagoMap.set(vid, Array.from(set).join(', '));
   }
 
   const ventasMap = new Map(ventas.map(v => [v.id, v]));
@@ -377,7 +378,8 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
       subtotal_linea: Number(l.subtotal || 0),
       total_linea: Number(l.total || 0),
       descuento_pct: Number(l.descuento_pct || 0),
-      forma_pago: formaPagoMap.get(v.id) ?? (v.condicion_pago === 'contado' ? 'Contado' : 'Crédito'),
+      forma_pago: v.condicion_pago === 'contado' ? 'Contado' : v.condicion_pago === 'credito' ? 'Crédito' : 'Por definir',
+      metodo_pago: metodoPagoMap.get(v.id) ?? '',
       condicion_pago: v.condicion_pago,
       total_venta: Number(v.total || 0),
       saldo_pendiente: Number(v.saldo_pendiente || 0),
