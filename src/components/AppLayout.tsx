@@ -501,7 +501,12 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
         </Link>
       )}
       {filteredItems.map(item => (
-        <SidebarItem key={item.path} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+        <div key={item.path}>
+          {item.label === 'Configuración' && !query.trim() && (
+            <div className="my-2 border-t border-sidebar-border/40" />
+          )}
+          <SidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
+        </div>
       ))}
       {filteredItems.length === 0 && query.trim() && !collapsed && (
         <div className="px-3 py-6 text-center text-[11px] text-sidebar-foreground/40">
