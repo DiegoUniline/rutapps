@@ -175,38 +175,26 @@ const navItems: NavItem[] = [
   {
     label: 'Administración',
     icon: Shield,
-    path: '/administracion',
+    path: '/administracion/usuarios',
     highlight: 'violet',
     children: [
+      // Equipo y objetivos
+      { label: 'Usuarios', path: '/administracion/usuarios' },
       { label: 'Metas', path: '/administracion/metas' },
       { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
-      { label: 'Usuarios', path: '/administracion/usuarios' },
-    ],
-  },
-  { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
-  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
-  {
-    label: 'Configuración',
-    icon: Settings,
-    path: '/configuracion',
-    children: [
-      { label: 'General', path: '/configuracion' },
+      // Operación
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
-      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
+      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
+      // Integraciones y empresa
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-    ],
-  },
-  {
-    label: 'Facturación',
-    icon: FileText,
-    path: '/mi-suscripcion',
-    children: [
+      { label: 'General', path: '/configuracion' },
+      // Cuenta
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
-      { label: 'Facturas CFDI', path: '/facturacion-cfdi' },
-      { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
+      { label: 'Tutoriales', path: '/tutoriales' },
     ],
   },
+  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
 
 ];
 
