@@ -339,8 +339,8 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
   const productoIds = Array.from(new Set(lineas.map(l => l.producto_id).filter(Boolean)));
   const productosMap = await loadMap('productos', productoIds, 'id, codigo, clave_alterna, codigo_sat, nombre, nombre_venta');
 
-  const formaPagoMap = new Map<string, string>();
-  if (config.columnas.some(c => c.key === 'forma_pago')) {
+  const metodoPagoMap = new Map<string, string>();
+  if (config.columnas.some(c => c.key === 'metodo_pago' || c.key === 'forma_pago')) {
     const aplicaciones = await fetchAllPages<any>((from, to) =>
       supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago, status)').in('venta_id', ventaIds).neq('cobros.status', 'cancelado').range(from, to)
     );
@@ -351,7 +351,7 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
       set.add(METODO_LABELS[m] ?? m);
       tmp.set(a.venta_id, set);
     }
-    for (const [vid, set] of tmp) formaPagoMap.set(vid, Array.from(set).join(', '));
+    for (const [vid, set] of tmp) metodoPagoMap.set(vid, Array.from(set).join(', '));
   }
 
   const ventasMap = new Map(ventas.map(v => [v.id, v]));
