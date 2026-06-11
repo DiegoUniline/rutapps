@@ -232,18 +232,32 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   const [rows, setRows] = useState<Record<string, any>[] | null>(null);
   const [loading, setLoading] = useState<null | 'run' | 'xlsx' | 'csv' | 'pdf'>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [groupBy, setGroupBy] = useState<string>('');
   const fuenteMeta = getFuenteMeta(config.fuente);
   const STATUS_OPTS = fuenteMeta.statusOptions ?? [];
   const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
   const ENTITY_FILTERS = fuenteMeta.entityFilters ?? [];
   const columns = useMemo(() => buildExportColumns(config), [config]);
+  const groupOptions = useMemo(() => getGroupableOptions(columns), [columns]);
   const entityLists = useReporteEntityLists(empresaId, ENTITY_FILTERS.length > 0);
   const lists = entityLists.data;
   const update = (patch: Partial<ReporteFiltros>) => setFiltros(f => ({ ...f, ...patch }));
   const hasEntity = (k: string) => ENTITY_FILTERS.includes(k as any);
 
   // Reset cuando cambia el reporte
-  useEffect(() => { setRows(null); }, [config.id]);
+  useEffect(() => { setRows(null); setGroupBy(''); }, [config.id]);
+
+  // Etiqueta legible del groupBy seleccionado
+  const groupByLabel = useMemo(
+    () => groupOptions.find(o => o.key === groupBy)?.label,
+    [groupOptions, groupBy]
+  );
+
+  // Agrupación derivada para preview y export
+  const grouping = useMemo(() => {
+    if (!groupBy || !rows || rows.length === 0) return null;
+    return groupRows(rows, columns, groupBy);
+  }, [groupBy, rows, columns]);
 
   const ejecutar = async () => {
     try {
@@ -264,13 +278,17 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
       if (!rows) setRows(data);
       if (data.length === 0) { toast.info('Sin datos'); return; }
       const fileName = `${config.nombre.replace(/\s+/g, '_')}_${filtros.fechaDesde}_${filtros.fechaHasta}`;
-      if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange: { from: filtros.fechaDesde!, to: filtros.fechaHasta! } });
-      else if (kind === 'csv') exportToCSV({ fileName, columns, data });
-      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange: { from: filtros.fechaDesde!, to: filtros.fechaHasta! } });
+      const grouped = groupBy ? groupRows(data, columns, groupBy) : null;
+      const groupsArg = grouped?.groups;
+      const dateRange = { from: filtros.fechaDesde!, to: filtros.fechaHasta! };
+      if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
+      else if (kind === 'csv') exportToCSV({ fileName, columns, data, groups: groupsArg });
+      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
     } catch (e: any) {
       toast.error(e.message ?? 'Error al exportar');
     } finally { setLoading(null); }
   };
+
 
   return (
     <div className="space-y-3">
