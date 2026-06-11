@@ -1,9 +1,13 @@
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Building2, Warehouse, Tag, Package, Users, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { Building2, Warehouse, Tag, Package, Users, CheckCircle2, ArrowRight, Sparkles, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+
+const PrimerosPasosModal = lazy(() => import('@/components/onboarding/PrimerosPasosModal'));
 
 interface SetupStep {
   key: string;
