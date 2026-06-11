@@ -745,6 +745,7 @@ export default function DashboardPage() {
   const { data: clientesActivos = [] } = useClientesActivos();
   const { data: ultimaCompraMap } = useUltimaCompraPorCliente();
   const [sinCompraOpen, setSinCompraOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('resumen');
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
