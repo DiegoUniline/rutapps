@@ -14,6 +14,7 @@ import { usePermisos } from "@/hooks/usePermisos";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import FacturaPendienteModal from "@/components/FacturaPendienteModal";
 import { ErrorModalProvider } from "@/components/ErrorModal";
 import { Button } from "@/components/ui/button";
@@ -387,6 +388,7 @@ function AppRoutes() {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SubscriptionBanner />
+      <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-bold text-lg text-foreground">RutApp</span>
@@ -436,6 +438,7 @@ function AppRoutes() {
     return (
       <>
         <SubscriptionBanner />
+      <OnboardingGate />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
@@ -461,6 +464,7 @@ function AppRoutes() {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SubscriptionBanner />
+      <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-bold text-lg text-foreground">RutApp</span>
@@ -502,6 +506,7 @@ function AppRoutes() {
     return (
       <>
       <SubscriptionBanner />
+      <OnboardingGate />
       <Routes>
         <Route path="/ruta" element={<MobileLayout />}>
           <Route index element={<RutaClientesEntregas />} />
@@ -539,6 +544,7 @@ function AppRoutes() {
     return (
       <>
         <SubscriptionBanner />
+      <OnboardingGate />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/pos" element={<PuntoVentaPage />} />
@@ -552,6 +558,7 @@ function AppRoutes() {
   return (
     <>
       <SubscriptionBanner />
+      <OnboardingGate />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {renderAuthenticatedRoutes()}
