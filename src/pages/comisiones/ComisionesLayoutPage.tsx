@@ -1,9 +1,21 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Percent } from 'lucide-react';
+
+// Prefetch all tab chunks so switching tabs is instant (no chunk download)
+const prefetchTabs = () => {
+  import('./ComisionesAvancePage');
+  import('./ComisionesGeneradasPage');
+  import('./ComisionesVolumenPage');
+  import('./ComisionesPorPagarPage');
+  import('./ComisionesRecibosPage');
+  import('./ComisionesEsquemasPage');
+  import('./ComisionesReglasPage');
+};
 
 const TABS: { label: string; path: string; end?: boolean; badge?: boolean }[] = [
   { label: 'Avance', path: '/comisiones', end: true },
