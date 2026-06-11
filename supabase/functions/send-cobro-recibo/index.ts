@@ -80,6 +80,10 @@ Deno.serve(async (req) => {
   const templateData = {
     clienteNombre: cliente.nombre || 'Cliente',
     empresaNombre: empresa.nombre,
+    empresaLogoUrl: (empresa as any).logo_url || '',
+    empresaDireccion: (empresa as any).direccion || '',
+    empresaTelefono: (empresa as any).telefono || '',
+    empresaEmail: (empresa as any).email || '',
     monto: montoFmt,
     fecha: fechaFmt,
     metodoPago: cobro.metodo_pago || '',
@@ -88,6 +92,7 @@ Deno.serve(async (req) => {
     saldoActual: saldoFmt,
     portalUrl,
     pdfUrl: pdf_url || '',
+    folioRecibo: cobro_id.slice(0, 8).toUpperCase(),
   }
 
   // Fire both channels in parallel
