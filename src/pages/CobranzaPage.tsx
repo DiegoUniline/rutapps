@@ -214,7 +214,6 @@ export default function CobranzaPage() {
     let list = cobros ?? [];
     const statusF = filters.status;
     if (statusF && statusF.length > 0) list = list.filter(c => statusF.includes((c as any).status ?? 'activo'));
-    else list = list.filter(c => (c as any).status !== 'cancelado');
     const metodo = filters.metodo;
     if (metodo && metodo.length > 0) list = list.filter(c => metodo.includes(c.metodo_pago));
     const cliente = filters.cliente;
@@ -230,8 +229,8 @@ export default function CobranzaPage() {
     return list;
   }, [cobros, filters, search, dateFrom, dateTo]);
 
-  // KPIs use full filtered data
-  const totalCobrado = filtered.reduce((s, c) => s + (c.monto ?? 0), 0);
+  // KPIs use full filtered data (cancelled excluded from money totals)
+  const totalCobrado = filtered.reduce((s, c) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0);
 
   // Visual pagination — only affects table rendering
   const pagination = useTablePagination(filtered);
@@ -337,7 +336,7 @@ export default function CobranzaPage() {
           <tfoot>
             <TableRow className="bg-card border-t border-border font-semibold">
               <TableCell colSpan={7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
-              <TableCell className="text-right text-[12px] text-success font-bold tabular-nums">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
+              <TableCell className="text-right text-[12px] text-success font-bold tabular-nums">{fmtC(items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0))}</TableCell>
               <TableCell />
             </TableRow>
           </tfoot>
@@ -349,7 +348,7 @@ export default function CobranzaPage() {
   const renderTable = (items: any[]) => <CobrosTable items={items} />;
 
   const renderSummary = (items: any[]) => {
-    const total = items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+    const total = items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0);
     return <span className="text-[11px] font-semibold text-success">{fmtC(total)}</span>;
   };
 
