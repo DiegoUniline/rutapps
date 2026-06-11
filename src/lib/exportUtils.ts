@@ -172,8 +172,17 @@ export function exportToExcel(options: ExportOptions) {
 
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
+// Paleta de marca Rutapp
+const BRAND_PRIMARY: [number, number, number] = [37, 99, 235];   // azul Rutapp
+const BRAND_DARK: [number, number, number] = [17, 24, 39];
+const BRAND_MUTED: [number, number, number] = [107, 114, 128];
+const ROW_ALT: [number, number, number] = [248, 250, 252];
+const BORDER: [number, number, number] = [229, 231, 235];
+const GROUP_HEADER: [number, number, number] = [238, 242, 255];
+const SUBTOTAL_BG: [number, number, number] = [243, 244, 246];
+
 export async function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode, groups, groupByLabel } = options;
   const fmt = makeFmt(currencyCode);
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
@@ -182,61 +191,110 @@ export async function exportToPDF(options: ExportOptions) {
   ]);
 
   const doc = new jsPDF({
-    orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait',
+    orientation: columns.length > 6 ? 'landscape' : 'portrait',
     unit: 'mm',
     format: 'letter',
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 15;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
 
-  // Company name
-  if (empresa) {
-    doc.setFontSize(10);
-    doc.setTextColor(120, 120, 120);
-    doc.text(empresa, pageWidth / 2, y, { align: 'center' });
-    y += 6;
-  }
+  // ─── HEADER BAND (banda primaria) ──────────────────────────────
+  doc.setFillColor(...BRAND_PRIMARY);
+  doc.rect(0, 0, pageWidth, 22, 'F');
 
-  // Title
-  doc.setFontSize(16);
-  doc.setTextColor(30, 30, 50);
+  // Brand
   doc.setFont('helvetica', 'bold');
-  doc.text(title, pageWidth / 2, y, { align: 'center' });
-  y += 6;
+  doc.setFontSize(13);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Rutapp.mx', margin, 10);
 
-  // Subtitle / date range
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
-  if (subtitle) {
-    doc.text(subtitle, pageWidth / 2, y, { align: 'center' });
-    y += 5;
+  // Empresa
+  if (empresa) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(219, 234, 254);
+    doc.text(empresa, margin, 16);
   }
+
+  // Título (derecha)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.text(title, pageWidth - margin, 10, { align: 'right' });
+
   if (dateRange) {
-    doc.text(`Periodo: ${dateRange.from} al ${dateRange.to}`, pageWidth / 2, y, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(219, 234, 254);
+    doc.text(
+      `Periodo: ${fmtDateDDMMYYYY(dateRange.from)} — ${fmtDateDDMMYYYY(dateRange.to)}`,
+      pageWidth - margin, 16, { align: 'right' }
+    );
+  }
+
+  let y = 28;
+
+  // Subtitle + group label line
+  const subLine: string[] = [];
+  if (subtitle) subLine.push(subtitle);
+  if (groups && groupByLabel) subLine.push(`Agrupado por: ${groupByLabel}`);
+  if (subLine.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND_MUTED);
+    doc.text(subLine.join('  •  '), margin, y);
     y += 5;
   }
 
-  // Separator line
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.line(14, y, pageWidth - 14, y);
-  y += 4;
-
-  // Table
+  // ─── TABLE BUILDING ───────────────────────────────────────────
   const head = [columns.map(c => c.header)];
-  const body = data.map(item =>
-    columns.map(col => fmt(item[col.key], col.format))
-  );
+  const body: any[][] = [];
+  // Track each body row's "kind": data | group-header | subtotal | total
+  const rowKinds: ('data' | 'group-header' | 'subtotal' | 'total')[] = [];
 
-  // Add totals row
+  const dataRow = (item: Record<string, any>) =>
+    columns.map(col => fmt(item[col.key], col.format));
+
+  if (groups && groups.length) {
+    for (const g of groups) {
+      body.push([{
+        content: `${g.label}   (${g.rows.length})`,
+        colSpan: columns.length,
+        styles: {
+          fillColor: GROUP_HEADER,
+          textColor: BRAND_PRIMARY,
+          fontStyle: 'bold' as const,
+          halign: 'left' as const,
+        },
+      }]);
+      rowKinds.push('group-header');
+      for (const r of g.rows) {
+        body.push(dataRow(r));
+        rowKinds.push('data');
+      }
+      body.push(columns.map((col, i) => {
+        if (i === 0) return `Subtotal ${g.label}`;
+        if (col.key in g.subtotals) return fmt(g.subtotals[col.key], col.format);
+        return '';
+      }));
+      rowKinds.push('subtotal');
+    }
+  } else {
+    for (const item of data) {
+      body.push(dataRow(item));
+      rowKinds.push('data');
+    }
+  }
+
   if (totals) {
-    body.push(columns.map(col => {
+    body.push(columns.map((col, i) => {
       if (col.key in totals) return fmt(totals[col.key], col.format);
-      if (columns.indexOf(col) === 0) return 'TOTAL';
+      if (i === 0) return 'TOTAL GENERAL';
       return '';
     }));
+    rowKinds.push('total');
   }
 
   const colAligns = columns.map(c => {
@@ -249,53 +307,68 @@ export async function exportToPDF(options: ExportOptions) {
     startY: y,
     head,
     body,
+    theme: 'plain',
     styles: {
-      fontSize: 8,
-      cellPadding: 2,
-      lineColor: [220, 220, 220],
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: { top: 2.2, bottom: 2.2, left: 3, right: 3 },
+      lineColor: BORDER,
       lineWidth: 0.1,
+      textColor: BRAND_DARK,
     },
     headStyles: {
-      fillColor: [55, 65, 81],
+      fillColor: BRAND_PRIMARY,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 8,
-      halign: 'center',
+      fontSize: 9,
+      halign: 'left',
+      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
     },
-    bodyStyles: {
-      textColor: [50, 50, 50],
-    },
-    alternateRowStyles: {
-      fillColor: [248, 249, 250],
-    },
+    bodyStyles: { textColor: BRAND_DARK },
+    alternateRowStyles: { fillColor: ROW_ALT },
     columnStyles: Object.fromEntries(
       columns.map((col, i) => [i, { halign: colAligns[i] }])
     ),
-    // Bold totals row
     didParseCell: (data: any) => {
-      if (totals && data.section === 'body' && data.row.index === body.length - 1) {
+      if (data.section !== 'body') return;
+      const kind = rowKinds[data.row.index];
+      if (kind === 'subtotal') {
         data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = [235, 235, 240];
+        data.cell.styles.fillColor = SUBTOTAL_BG;
+        data.cell.styles.textColor = BRAND_DARK;
+      } else if (kind === 'total') {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = BRAND_PRIMARY;
+        data.cell.styles.textColor = [255, 255, 255];
+      } else if (kind === 'group-header') {
+        // ya viene con estilos inline
       }
     },
-    // Footer
-    didDrawPage: (data: any) => {
+    didDrawPage: (d: any) => {
       const pageCount = (doc as any).internal.getNumberOfPages();
-      doc.setFontSize(7);
-      doc.setTextColor(150);
+      // Footer line
+      doc.setDrawColor(...BORDER);
+      doc.setLineWidth(0.2);
+      doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+      // Footer text
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...BRAND_MUTED);
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mi = String(now.getMinutes()).padStart(2, '0');
       doc.text(
-        `Página ${data.pageNumber} de ${pageCount}`,
-        pageWidth - 14,
-        doc.internal.pageSize.getHeight() - 8,
-        { align: 'right' }
+        `Rutapp.mx  ·  Generado el ${dd}/${mm}/${now.getFullYear()} ${hh}:${mi}`,
+        margin, pageHeight - 6
       );
       doc.text(
-        `Generado: ${new Date().toLocaleString('es-MX')}`,
-        14,
-        doc.internal.pageSize.getHeight() - 8,
+        `Página ${d.pageNumber} de ${pageCount}`,
+        pageWidth - margin, pageHeight - 6, { align: 'right' }
       );
     },
-    margin: { left: 14, right: 14 },
+    margin: { left: margin, right: margin, top: 28, bottom: 16 },
   });
 
   // ─── RESUMEN GENERAL ───────────────────────────────────────────
@@ -304,27 +377,16 @@ export async function exportToPDF(options: ExportOptions) {
     const fmtCur = (n: number) => `${sym} ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
 
-    // Get current Y position after main table
     let ry = (doc as any).lastAutoTable?.finalY ?? 180;
     ry += 12;
 
-    // Check if we need a new page
-    if (ry > doc.internal.pageSize.getHeight() - 80) {
-      doc.addPage();
-      ry = 20;
-    }
+    if (ry > pageHeight - 80) { doc.addPage(); ry = 28; }
 
-    // Section title
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 30, 50);
-    doc.text('Resumen General de Ventas', 14, ry);
-    ry += 8;
-
-    // Totals row
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(14, ry - 2, pageWidth - 14, ry - 2);
+    doc.setTextColor(...BRAND_DARK);
+    doc.text('Resumen General de Ventas', margin, ry);
+    ry += 6;
 
     const totalsData = [
       ['Total Ventas Generales', fmtCur(resumenGeneral.totalVentas)],
@@ -332,66 +394,59 @@ export async function exportToPDF(options: ExportOptions) {
       ['Total Ventas a Crédito', fmtCur(resumenGeneral.totalCredito)],
     ];
 
+    const halfRight = pageWidth / 2 + 6;
+
     autoTable(doc, {
       startY: ry,
       head: [['Concepto', 'Monto']],
       body: totalsData,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      theme: 'plain',
+      styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
+      headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
       columnStyles: { 1: { halign: 'right' } },
-      margin: { left: 14, right: pageWidth / 2 + 10 },
-      theme: 'grid',
+      margin: { left: margin, right: halfRight },
     });
 
     ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
     ry += 8;
 
-    // Check page break
-    if (ry > doc.internal.pageSize.getHeight() - 60) {
-      doc.addPage();
-      ry = 20;
-    }
+    if (ry > pageHeight - 60) { doc.addPage(); ry = 28; }
 
-    // Vendedor breakdown
     if (resumenGeneral.vendedores.length > 0) {
       autoTable(doc, {
         startY: ry,
         head: [['Vendedor', 'Total', '% Part.']],
         body: resumenGeneral.vendedores.map(v => [v.nombre, fmtCur(v.total), `${v.pct.toFixed(1)}%`]),
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
+        headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
         columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
-        margin: { left: 14, right: pageWidth / 2 + 10 },
-        theme: 'grid',
+        margin: { left: margin, right: halfRight },
       });
-
       ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
       ry += 8;
     }
 
-    // Check page break
-    if (ry > doc.internal.pageSize.getHeight() - 60) {
-      doc.addPage();
-      ry = 20;
-    }
+    if (ry > pageHeight - 60) { doc.addPage(); ry = 28; }
 
-    // Payment method breakdown
     if (resumenGeneral.metodosPago.length > 0) {
       autoTable(doc, {
         startY: ry,
         head: [['Método de Pago', 'Total', '% Part.']],
         body: resumenGeneral.metodosPago.map(m => [metodoPagoLabels[m.metodo] ?? m.metodo, fmtCur(m.total), `${m.pct.toFixed(1)}%`]),
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 2.2, lineColor: BORDER, lineWidth: 0.1, textColor: BRAND_DARK },
+        headStyles: { fillColor: BRAND_PRIMARY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
         columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
-        margin: { left: 14, right: pageWidth / 2 + 10 },
-        theme: 'grid',
+        margin: { left: margin, right: halfRight },
       });
     }
   }
 
   doc.save(`${fileName}.pdf`);
 }
+
+
 
 // ─── Quick table export (for list pages) ────────────────────────
 export function exportTableToExcel(
