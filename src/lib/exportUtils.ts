@@ -20,6 +20,13 @@ export interface ResumenGeneralExport {
   metodosPago: { metodo: string; total: number; pct: number }[];
 }
 
+export interface ExportGroup {
+  key: string;
+  label: string;
+  rows: Record<string, any>[];
+  subtotals: Record<string, number>;
+}
+
 export interface ExportOptions {
   fileName: string;
   title: string;
@@ -32,9 +39,30 @@ export interface ExportOptions {
   resumenGeneral?: ResumenGeneralExport;
   /** Currency code of the empresa (e.g. 'MXN','USD'). Used for symbol in formatted output. */
   currencyCode?: string | null;
+  /** Si se pasa, exporta con encabezados y subtotales por grupo. */
+  groups?: ExportGroup[];
+  /** Etiqueta de la dimensión por la que se agrupó (p.ej. "Vendedor"). */
+  groupByLabel?: string;
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
+const fmtDateDDMMYYYY = (value: any): string => {
+  if (!value) return '';
+  const s = String(value);
+  const hasTime = /T\d{2}:\d{2}/.test(s);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  if (hasTime) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  }
+  return `${dd}/${mm}/${yyyy}`;
+};
+
 const makeFmt = (currencyCode?: string | null) => {
   const sym = getCurrencyConfig(currencyCode).symbol;
   return (value: any, format?: ExportColumn['format']): string => {
@@ -43,15 +71,12 @@ const makeFmt = (currencyCode?: string | null) => {
       case 'currency': return `${sym} ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       case 'number': return Number(value).toLocaleString('es-MX');
       case 'percent': return `${Number(value).toFixed(1)}%`;
-      case 'date': {
-        if (!value) return '';
-        const d = new Date(value);
-        return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
+      case 'date': return fmtDateDDMMYYYY(value);
       default: return String(value);
     }
   };
 };
+
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
