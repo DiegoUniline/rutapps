@@ -175,38 +175,26 @@ const navItems: NavItem[] = [
   {
     label: 'Administración',
     icon: Shield,
-    path: '/administracion',
+    path: '/administracion/usuarios',
     highlight: 'violet',
     children: [
+      // Equipo y objetivos
+      { label: 'Usuarios', path: '/administracion/usuarios' },
       { label: 'Metas', path: '/administracion/metas' },
       { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
-      { label: 'Usuarios', path: '/administracion/usuarios' },
-    ],
-  },
-  { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
-  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
-  {
-    label: 'Configuración',
-    icon: Settings,
-    path: '/configuracion',
-    children: [
-      { label: 'General', path: '/configuracion' },
+      // Operación
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
-      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
+      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
+      // Integraciones y empresa
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-    ],
-  },
-  {
-    label: 'Facturación',
-    icon: FileText,
-    path: '/mi-suscripcion',
-    children: [
+      { label: 'General', path: '/configuracion' },
+      // Cuenta
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
-      { label: 'Facturas CFDI', path: '/facturacion-cfdi' },
-      { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
+      { label: 'Tutoriales', path: '/tutoriales' },
     ],
   },
+  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
 
 ];
 
@@ -224,17 +212,18 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
   const isBillingOwner = isSuperAdminUser || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .flatMap(it => {
-      // Hide whole "Facturación" parent if user has no billing access
-      if (it.path === '/mi-suscripcion' && !isBillingOwner) return [];
-      // Hide legacy CFDI top-level for non-super-admin (defensive)
-      if (it.path === '/facturacion-cfdi' && !isSuperAdminUser) return [];
-      if (!it.children) return [it];
+      if (!it.children) {
+        // Hide CFDI top-level for everyone (legacy)
+        if (it.path.startsWith('/facturacion-cfdi')) return [];
+        return [it];
+      }
       const children = it.children.filter(c => {
         if (c.path === '/mi-suscripcion') return isBillingOwner;
-        if (c.path.startsWith('/facturacion-cfdi')) return isSuperAdminUser;
+        // Hide all CFDI / Catálogos SAT entries from everyone
+        if (c.path.startsWith('/facturacion-cfdi')) return false;
         return true;
       });
-      if (it.path === '/mi-suscripcion' && children.length === 0) return [];
+      if (children.length === 0) return [];
       return [{ ...it, children }];
     });
 
