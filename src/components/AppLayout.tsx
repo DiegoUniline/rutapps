@@ -41,7 +41,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
-  { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
 
   // ── Ventas ──
   {
@@ -50,6 +49,7 @@ const navItems: NavItem[] = [
     path: '/ventas',
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
+      { label: 'Supervisor', path: '/supervisor' },
       { label: 'Cobranza · CxC · Saldos', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
