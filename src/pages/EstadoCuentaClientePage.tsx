@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
+import { CobranzaTabs } from '@/components/CobranzaTabs';
 
 /* ── hooks ── */
 function useClientesSaldo() {
@@ -318,6 +319,7 @@ export default function EstadoCuentaClientePage() {
   // ── List view ──
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <CobranzaTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Users className="h-5 w-5" /> Saldos por cliente
       </h1>

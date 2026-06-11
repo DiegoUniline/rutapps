@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import SaldoInicialModal from '@/components/SaldoInicialModal';
 import SaldoInicialImportDialog from '@/components/SaldoInicialImportDialog';
+import { CobranzaTabs } from '@/components/CobranzaTabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,6 +97,7 @@ export default function CuentasCobrarPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <CobranzaTabs />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <CreditCard className="h-5 w-5" /> Cuentas por cobrar

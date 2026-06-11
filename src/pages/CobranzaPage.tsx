@@ -26,6 +26,7 @@ import { buildCobroTicketData } from '@/lib/cobroTicket';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { Link } from 'react-router-dom';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
+import { CobranzaTabs } from '@/components/CobranzaTabs';
 
 
 
@@ -315,6 +316,7 @@ export default function CobranzaPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <CobranzaTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Banknote className="h-5 w-5" /> Cobranza
         <HelpButton title={HELP.cobranza.title} sections={HELP.cobranza.sections} />
