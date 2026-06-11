@@ -584,6 +584,7 @@ export function useVentaForm() {
     if (appErr) throw appErr;
     // saldo_pendiente recalculated automatically by DB trigger trg_recalc_venta_saldo
     toast.success('Pago registrado');
+    import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobro.id, empresa.id));
     queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
     queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
   };
