@@ -196,6 +196,12 @@ export default function ReportesPersonalizadosPage() {
               config={r as ReporteConfig}
               empresaId={empresaId!}
               empresaNombre={empresa?.nombre ?? ''}
+              empresaInfo={{
+                nombre: empresa?.nombre ?? '',
+                rfc: empresa?.rfc ?? null,
+                email: empresa?.email ?? null,
+                logo_url: empresa?.logo_url ?? null,
+              }}
               onEdit={() => { setEditing({ ...r }); setEditorOpen(true); }}
               onDelete={async () => { if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
             />
@@ -218,8 +224,9 @@ export default function ReportesPersonalizadosPage() {
 }
 
 // ─── Runner inline (filtros + tabla + export) ──────────────────
-function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
+function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, onDelete }: {
   config: ReporteConfig; empresaId: string; empresaNombre: string;
+  empresaInfo?: { nombre: string; rfc?: string | null; email?: string | null; logo_url?: string | null };
   onEdit: () => void; onDelete: () => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -283,7 +290,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
       const dateRange = { from: filtros.fechaDesde!, to: filtros.fechaHasta! };
       if (kind === 'xlsx') exportToExcel({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
       else if (kind === 'csv') exportToCSV({ fileName, columns, data, groups: groupsArg });
-      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, dateRange, groups: groupsArg, groupByLabel });
+      else await exportToPDF({ fileName, title: config.nombre, columns, data, empresa: empresaNombre, empresaInfo, dateRange, groups: groupsArg, groupByLabel });
     } catch (e: any) {
       toast.error(e.message ?? 'Error al exportar');
     } finally { setLoading(null); }
