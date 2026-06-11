@@ -5,37 +5,34 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Sparkles, Package, Users, Boxes, CheckCircle2, ArrowRight,
-  Loader2, Wand2, PartyPopper,
+  Loader2, PartyPopper, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-type Step = 0 | 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
 
-interface ProductoParsed {
+interface ProductoForm {
   nombre: string;
   codigo: string;
-  precio: number;
-  unidad: string;
-  categoria_sugerida?: string;
+  precio: string;
 }
-interface ClienteParsed {
+interface ClienteForm {
   nombre: string;
-  telefono?: string;
-  direccion?: string;
-  colonia?: string;
-  contacto?: string;
+  telefono: string;
+  direccion: string;
 }
+
+const TOTAL_STEPS = 6;
 
 export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
   const { empresa, user } = useAuth();
@@ -43,158 +40,87 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(0);
 
-  // Producto
-  const [prodText, setProdText] = useState('');
-  const [prodParsed, setProdParsed] = useState<ProductoParsed | null>(null);
-  const [prodLoading, setProdLoading] = useState(false);
+  const [prod, setProd] = useState<ProductoForm>({ nombre: '', codigo: '', precio: '' });
   const [prodSaving, setProdSaving] = useState(false);
   const [prodId, setProdId] = useState<string | null>(null);
 
-  // Cliente
-  const [cliText, setCliText] = useState('');
-  const [cliParsed, setCliParsed] = useState<ClienteParsed | null>(null);
-  const [cliLoading, setCliLoading] = useState(false);
-  const [cliSaving, setCliSaving] = useState(false);
-
-  // Stock
   const [stockQty, setStockQty] = useState<string>('10');
   const [stockSaving, setStockSaving] = useState(false);
 
+  const [cli, setCli] = useState<ClienteForm>({ nombre: '', telefono: '', direccion: '' });
+  const [cliSaving, setCliSaving] = useState(false);
+
   const empresaId = empresa?.id;
 
-  const parseWithAI = async (
-    tipo: 'producto' | 'cliente',
-    texto: string,
-  ) => {
-    const { data, error } = await supabase.functions.invoke('onboarding-parse', {
-      body: { tipo, texto },
-    });
-    if (error) throw new Error(error.message);
-    if ((data as any)?.error) throw new Error((data as any).error);
-    return (data as any).data;
-  };
-
-  const handleParseProd = async () => {
-    if (!prodText.trim()) return;
-    setProdLoading(true);
-    try {
-      const d = await parseWithAI('producto', prodText);
-      setProdParsed({
-        nombre: d.nombre ?? '',
-        codigo: (d.codigo ?? '').toString().toUpperCase().slice(0, 12) || 'PROD-001',
-        precio: Number(d.precio) || 0,
-        unidad: d.unidad ?? 'Pieza',
-        categoria_sugerida: d.categoria_sugerida,
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No pude interpretar el texto');
-    } finally {
-      setProdLoading(false);
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+      setProd({ nombre: '', codigo: '', precio: '' });
+      setProdId(null);
+      setStockQty('10');
+      setCli({ nombre: '', telefono: '', direccion: '' });
     }
+  }, [open]);
+
+  const markOnboarded = async () => {
+    if (!empresaId) return;
+    await supabase.from('empresas').update({ onboarding_completado: true }).eq('id', empresaId);
+    sessionStorage.setItem(`primeros_pasos_session_dismissed_${empresaId}`, '1');
   };
 
   const handleSaveProd = async () => {
-    if (!prodParsed || !empresaId) return;
+    if (!empresaId) return;
+    const nombre = prod.nombre.trim();
+    const codigo = prod.codigo.trim().toUpperCase();
+    const precio = Number(prod.precio);
+    if (!nombre) return toast.error('Captura el nombre');
+    if (!codigo) return toast.error('Captura el código');
+    if (!precio || precio <= 0) return toast.error('Captura un precio válido');
+
     setProdSaving(true);
     try {
-      // Get default warehouse & unit
-      const [{ data: alm }, { data: uniMatch }, { data: uniFallback }] = await Promise.all([
+      const [{ data: alm }, { data: uniFallback }] = await Promise.all([
         supabase.from('almacenes').select('id').eq('empresa_id', empresaId).limit(1).maybeSingle(),
-        supabase.from('unidades').select('id').eq('empresa_id', empresaId).ilike('nombre', prodParsed.unidad).maybeSingle(),
         supabase.from('unidades').select('id').eq('empresa_id', empresaId).limit(1).maybeSingle(),
       ]);
-      const unidadId = uniMatch?.id ?? uniFallback?.id ?? null;
-      const almacenes = alm?.id ? [alm.id] : [];
-
-      const { data: prod, error } = await supabase
+      const { data, error } = await supabase
         .from('productos')
         .insert({
           empresa_id: empresaId,
-          codigo: prodParsed.codigo,
-          nombre: prodParsed.nombre,
-          precio_principal: prodParsed.precio,
-          unidad_venta_id: unidadId,
-          unidad_compra_id: unidadId,
-          almacenes,
+          codigo,
+          nombre,
+          precio_principal: precio,
+          unidad_venta_id: uniFallback?.id ?? null,
+          unidad_compra_id: uniFallback?.id ?? null,
+          almacenes: alm?.id ? [alm.id] : [],
           status: 'activo',
         })
         .select('id')
         .single();
       if (error) throw error;
-      setProdId(prod.id);
+      setProdId(data.id);
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['setup-check'] });
-      qc.invalidateQueries({ queryKey: ['setup-complete'] });
+      qc.invalidateQueries({ queryKey: ['onboarding-gate'] });
       toast.success('Producto creado');
       setStep(2);
     } catch (e: any) {
-      toast.error(e?.message?.includes('duplicate') ? 'Ya existe un producto con ese código' : (e?.message ?? 'Error al guardar'));
+      const msg = e?.message?.includes('duplicate') ? 'Ya existe un producto con ese código' : (e?.message ?? 'Error al guardar');
+      toast.error(msg);
     } finally {
       setProdSaving(false);
     }
   };
 
-  const handleParseCli = async () => {
-    if (!cliText.trim()) return;
-    setCliLoading(true);
-    try {
-      const d = await parseWithAI('cliente', cliText);
-      setCliParsed({
-        nombre: d.nombre ?? '',
-        telefono: d.telefono ?? '',
-        direccion: d.direccion ?? '',
-        colonia: d.colonia ?? '',
-        contacto: d.contacto ?? '',
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No pude interpretar el texto');
-    } finally {
-      setCliLoading(false);
-    }
-  };
-
-  const handleSaveCli = async () => {
-    if (!cliParsed || !empresaId) return;
-    setCliSaving(true);
-    try {
-      const { error } = await supabase.from('clientes').insert({
-        empresa_id: empresaId,
-        nombre: cliParsed.nombre,
-        telefono: cliParsed.telefono || null,
-        direccion: cliParsed.direccion || null,
-        colonia: cliParsed.colonia || null,
-        contacto: cliParsed.contacto || null,
-        status: 'activo',
-      });
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ['clientes'] });
-      qc.invalidateQueries({ queryKey: ['setup-check'] });
-      qc.invalidateQueries({ queryKey: ['setup-complete'] });
-      toast.success('Cliente creado');
-      setStep(3);
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Error al guardar');
-    } finally {
-      setCliSaving(false);
-    }
-  };
-
   const handleSaveStock = async () => {
-    if (!prodId || !empresaId || !user?.id) {
-      setStep(4);
-      return;
-    }
+    if (!prodId || !empresaId || !user?.id) return setStep(3);
     const qty = Number(stockQty);
-    if (!qty || qty <= 0) {
-      setStep(4);
-      return;
-    }
+    if (!qty || qty <= 0) return setStep(3);
     setStockSaving(true);
     try {
       const { data: alm } = await supabase
         .from('almacenes').select('id').eq('empresa_id', empresaId).limit(1).maybeSingle();
       if (!alm?.id) throw new Error('No hay almacén configurado');
-
       const { error } = await supabase.from('ajustes_inventario').insert({
         empresa_id: empresaId,
         producto_id: prodId,
@@ -208,8 +134,8 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ['stock_almacen'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
-      toast.success('Stock inicial registrado');
-      setStep(4);
+      toast.success('Stock registrado');
+      setStep(3);
     } catch (e: any) {
       toast.error(e?.message ?? 'Error al guardar stock');
     } finally {
@@ -217,50 +143,56 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
     }
   };
 
-  const dismiss = async () => {
-    if (empresaId) {
-      await supabase.from('empresas').update({ onboarding_completado: true }).eq('id', empresaId);
-      localStorage.setItem(`primeros_pasos_dismissed_${empresaId}`, '1');
+  const handleSaveCli = async () => {
+    if (!empresaId) return;
+    const nombre = cli.nombre.trim();
+    if (!nombre) return toast.error('Captura el nombre del cliente');
+    setCliSaving(true);
+    try {
+      const { error } = await supabase.from('clientes').insert({
+        empresa_id: empresaId,
+        nombre,
+        telefono: cli.telefono.trim() || null,
+        direccion: cli.direccion.trim() || null,
+        status: 'activo',
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['setup-check'] });
+      qc.invalidateQueries({ queryKey: ['onboarding-gate'] });
+      toast.success('Cliente creado');
+      setStep(5);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error al guardar');
+    } finally {
+      setCliSaving(false);
     }
+  };
+
+  const dismiss = async () => {
+    await markOnboarded();
     onOpenChange(false);
   };
 
   const finish = async (goto?: string) => {
-    if (empresaId) {
-      await supabase.from('empresas').update({ onboarding_completado: true }).eq('id', empresaId);
-      localStorage.setItem(`primeros_pasos_completed_${empresaId}`, '1');
-    }
+    await markOnboarded();
     onOpenChange(false);
     if (goto) navigate(goto);
   };
-
-  // reset step when reopened
-  useEffect(() => {
-    if (open) setStep(0);
-  }, [open]);
 
   const nombre = empresa?.nombre || 'tu negocio';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="p-0 gap-0 max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
-      >
-        {/* Header progress */}
+      <DialogContent className="p-0 gap-0 max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="bg-primary px-4 py-3 sm:px-6 sm:py-4 text-primary-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
             <h2 className="text-base sm:text-lg font-bold">Primeros pasos</h2>
           </div>
           <div className="flex gap-1.5 mt-3">
-            {[0, 1, 2, 3, 4].map(i => (
-              <div
-                key={i}
-                className={cn(
-                  'h-1.5 flex-1 rounded-full transition-all',
-                  i <= step ? 'bg-white' : 'bg-white/30'
-                )}
-              />
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <div key={i} className={cn('h-1.5 flex-1 rounded-full transition-all', i <= step ? 'bg-white' : 'bg-white/30')} />
             ))}
           </div>
         </div>
@@ -271,17 +203,15 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
                 <PartyPopper className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-foreground">
-                ¡Bienvenido a Rutapp!
-              </h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-foreground">¡Bienvenido a Rutapp!</h3>
               <p className="text-sm text-muted-foreground">
-                Te voy a ayudar a dejar listo <strong>{nombre}</strong> en 3 pasos súper fáciles.
-                Lo describes en tus propias palabras y yo lo armo por ti.
+                Vamos a dejar listo <strong>{nombre}</strong> en unos pasos cortos. Solo captura lo esencial y empieza a vender.
               </p>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2">
+              <div className="grid grid-cols-4 gap-2 pt-2">
                 <Mini icon={Package} label="Producto" />
-                <Mini icon={Users} label="Cliente" />
                 <Mini icon={Boxes} label="Stock" />
+                <Mini icon={Tag} label="Precios" />
+                <Mini icon={Users} label="Cliente" />
               </div>
               <div className="flex flex-col sm:flex-row gap-2 pt-3">
                 <Button onClick={() => setStep(1)} className="w-full" size="lg">
@@ -296,145 +226,95 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
 
           {step === 1 && (
             <div className="space-y-4">
-              <Header icon={Package} title="Tu primer producto" subtitle="Descríbelo como se lo dirías a un amigo" />
-              {!prodParsed ? (
-                <>
-                  <Textarea
-                    placeholder="Ej: Coca-Cola de 600ml a 18 pesos"
-                    value={prodText}
-                    onChange={e => setProdText(e.target.value)}
-                    rows={3}
-                    className="text-base"
-                  />
-                  <Button
-                    onClick={handleParseProd}
-                    disabled={!prodText.trim() || prodLoading}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {prodLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wand2 className="mr-2 h-4 w-4" /> Interpretar con AI</>}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground">Revísalo y edita si hace falta:</p>
-                  <div className="space-y-3">
-                    <Field label="Nombre">
-                      <Input value={prodParsed.nombre} onChange={e => setProdParsed({ ...prodParsed, nombre: e.target.value })} />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label="Código">
-                        <Input value={prodParsed.codigo} onChange={e => setProdParsed({ ...prodParsed, codigo: e.target.value })} />
-                      </Field>
-                      <Field label="Precio">
-                        <Input type="number" step="0.01" value={prodParsed.precio} onChange={e => setProdParsed({ ...prodParsed, precio: Number(e.target.value) })} />
-                      </Field>
-                    </div>
-                    <Field label="Unidad">
-                      <Input value={prodParsed.unidad} onChange={e => setProdParsed({ ...prodParsed, unidad: e.target.value })} />
-                    </Field>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                    <Button variant="outline" onClick={() => setProdParsed(null)} className="w-full">
-                      Reescribir
-                    </Button>
-                    <Button onClick={handleSaveProd} disabled={prodSaving} className="w-full">
-                      {prodSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar <ArrowRight className="ml-1 h-4 w-4" /></>}
-                    </Button>
-                  </div>
-                </>
-              )}
+              <Header icon={Package} title="Tu primer producto" subtitle="Captura los campos obligatorios" />
+              <Field label="Nombre *">
+                <Input value={prod.nombre} onChange={e => setProd({ ...prod, nombre: e.target.value })} placeholder="Coca-Cola 600ml" maxLength={120} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Código *">
+                  <Input value={prod.codigo} onChange={e => setProd({ ...prod, codigo: e.target.value.toUpperCase() })} placeholder="COCA-600" maxLength={20} />
+                </Field>
+                <Field label="Precio *">
+                  <Input type="number" step="0.01" min="0" value={prod.precio} onChange={e => setProd({ ...prod, precio: e.target.value })} placeholder="18.00" />
+                </Field>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <Button variant="outline" onClick={() => setStep(0)} className="w-full">Atrás</Button>
+                <Button onClick={handleSaveProd} disabled={prodSaving} className="w-full">
+                  {prodSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar <ArrowRight className="ml-1 h-4 w-4" /></>}
+                </Button>
+              </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
-              <Header icon={Users} title="Tu primer cliente" subtitle="Cuéntame de él en tus palabras" />
-              {!cliParsed ? (
-                <>
-                  <Textarea
-                    placeholder="Ej: Abarrotes Don Pepe, está en la colonia Centro, su tel es 81 1234 5678"
-                    value={cliText}
-                    onChange={e => setCliText(e.target.value)}
-                    rows={3}
-                    className="text-base"
-                  />
-                  <Button onClick={handleParseCli} disabled={!cliText.trim() || cliLoading} className="w-full" size="lg">
-                    {cliLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wand2 className="mr-2 h-4 w-4" /> Interpretar con AI</>}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground">Revísalo y edita si hace falta:</p>
-                  <div className="space-y-3">
-                    <Field label="Nombre del cliente">
-                      <Input value={cliParsed.nombre} onChange={e => setCliParsed({ ...cliParsed, nombre: e.target.value })} />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label="Teléfono">
-                        <Input value={cliParsed.telefono ?? ''} onChange={e => setCliParsed({ ...cliParsed, telefono: e.target.value })} />
-                      </Field>
-                      <Field label="Colonia">
-                        <Input value={cliParsed.colonia ?? ''} onChange={e => setCliParsed({ ...cliParsed, colonia: e.target.value })} />
-                      </Field>
-                    </div>
-                    <Field label="Dirección">
-                      <Input value={cliParsed.direccion ?? ''} onChange={e => setCliParsed({ ...cliParsed, direccion: e.target.value })} />
-                    </Field>
-                    <Field label="Contacto (opcional)">
-                      <Input value={cliParsed.contacto ?? ''} onChange={e => setCliParsed({ ...cliParsed, contacto: e.target.value })} />
-                    </Field>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                    <Button variant="outline" onClick={() => setCliParsed(null)} className="w-full">
-                      Reescribir
-                    </Button>
-                    <Button onClick={handleSaveCli} disabled={cliSaving} className="w-full">
-                      {cliSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar <ArrowRight className="ml-1 h-4 w-4" /></>}
-                    </Button>
-                  </div>
-                </>
-              )}
+              <Header icon={Boxes} title="Stock inicial" subtitle="¿Cuántas piezas tienes en almacén?" />
+              <div className="rounded-lg border border-border p-4 bg-card">
+                <p className="text-sm font-medium text-foreground">{prod.nombre}</p>
+                <p className="text-xs text-muted-foreground mb-3">{prod.codigo}</p>
+                <Field label="Cantidad disponible">
+                  <Input type="number" min="0" step="1" value={stockQty} onChange={e => setStockQty(e.target.value)} className="text-lg" />
+                </Field>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button variant="outline" onClick={() => setStep(3)} className="w-full">Sin stock por ahora</Button>
+                <Button onClick={handleSaveStock} disabled={stockSaving} className="w-full">
+                  {stockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar <ArrowRight className="ml-1 h-4 w-4" /></>}
+                </Button>
+              </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4">
-              <Header icon={Boxes} title="Stock inicial" subtitle="¿Cuántas piezas tienes en almacén?" />
-              <div className="rounded-lg border border-border p-4 bg-card">
-                <p className="text-sm font-medium text-foreground">{prodParsed?.nombre}</p>
-                <p className="text-xs text-muted-foreground mb-3">{prodParsed?.codigo}</p>
-                <Field label="Cantidad disponible">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={stockQty}
-                    onChange={e => setStockQty(e.target.value)}
-                    className="text-lg"
-                  />
-                </Field>
+              <Header icon={Tag} title="Listas de precios" subtitle="¿Manejas precios diferentes por tipo de cliente?" />
+              <div className="rounded-lg border border-border p-4 bg-card text-sm text-muted-foreground">
+                Por ejemplo: mayoreo, menudeo, distribuidor o por zona. Si tu negocio maneja un solo precio, omite este paso.
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button variant="outline" onClick={() => setStep(4)} className="w-full">
-                  Sin stock por ahora
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <Button variant="outline" onClick={() => setStep(4)} className="w-full" size="lg">
+                  No, un solo precio
                 </Button>
-                <Button onClick={handleSaveStock} disabled={stockSaving} className="w-full">
-                  {stockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar stock <ArrowRight className="ml-1 h-4 w-4" /></>}
+                <Button onClick={() => finish('/listas-precio')} className="w-full" size="lg">
+                  Sí, configurar <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Si eliges "Sí, configurar" te llevaré a Listas de Precios para crearlas.
+              </p>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <Header icon={Users} title="Tu primer cliente" subtitle="Captura los datos básicos" />
+              <Field label="Nombre *">
+                <Input value={cli.nombre} onChange={e => setCli({ ...cli, nombre: e.target.value })} placeholder="Abarrotes Don Pepe" maxLength={120} />
+              </Field>
+              <Field label="Teléfono">
+                <Input value={cli.telefono} onChange={e => setCli({ ...cli, telefono: e.target.value })} placeholder="81 1234 5678" maxLength={20} />
+              </Field>
+              <Field label="Dirección">
+                <Input value={cli.direccion} onChange={e => setCli({ ...cli, direccion: e.target.value })} placeholder="Calle y número, colonia" maxLength={200} />
+              </Field>
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <Button variant="outline" onClick={() => setStep(3)} className="w-full">Atrás</Button>
+                <Button onClick={handleSaveCli} disabled={cliSaving} className="w-full">
+                  {cliSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Guardar <ArrowRight className="ml-1 h-4 w-4" /></>}
                 </Button>
               </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="text-center space-y-4">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
                 <CheckCircle2 className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-foreground">¡Ya puedes vender! 🎉</h3>
               <p className="text-sm text-muted-foreground">
-                Tu negocio quedó listo con un producto, un cliente y stock inicial.
-                Puedes seguir agregando más cuando quieras.
+                Tu negocio quedó listo con un producto, stock y un cliente. Puedes seguir agregando más cuando quieras.
               </p>
               <div className="flex flex-col gap-2 pt-2">
                 <Button onClick={() => finish('/pos')} size="lg" className="w-full">
@@ -477,9 +357,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Mini({ icon: Icon, label }: { icon: any; label: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-2 sm:p-3 flex flex-col items-center gap-1">
-      <Icon className="h-5 w-5 text-primary" />
-      <span className="text-[11px] sm:text-xs font-medium text-foreground">{label}</span>
+    <div className="rounded-lg border border-border bg-card p-2 flex flex-col items-center gap-1">
+      <Icon className="h-4 w-4 text-primary" />
+      <span className="text-[10px] sm:text-xs font-medium text-foreground text-center">{label}</span>
     </div>
   );
 }
