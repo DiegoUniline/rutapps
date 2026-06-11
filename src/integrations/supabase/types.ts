@@ -7417,6 +7417,10 @@ export type Database = {
         Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
+      fn_recalc_venta_saldo: {
+        Args: { p_venta_id: string }
+        Returns: undefined
+      }
       generar_recibo_volumen: {
         Args: {
           p_desde: string

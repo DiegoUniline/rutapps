@@ -23,10 +23,11 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
   const { data: empresa } = await supabase.from('empresas').select('*').eq('id', eid).single();
 
   // Fetch pagos
-  const { data: pagos } = await supabase
+  const { data: pagosRaw } = await supabase
     .from('cobro_aplicaciones')
-    .select('monto_aplicado, cobros(fecha, metodo_pago, referencia)')
+    .select('monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
     .eq('venta_id', ventaId);
+  const pagos = (pagosRaw ?? []).filter((p: any) => (p.cobros?.status ?? 'activo') !== 'cancelado');
 
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
 

@@ -358,8 +358,9 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
       if (ventaIds.length) {
         const { data: apps } = await supabase
           .from('cobro_aplicaciones')
-          .select('venta_id, cobros(metodo_pago)')
-          .in('venta_id', ventaIds);
+          .select('venta_id, cobros!inner(metodo_pago, status)')
+          .in('venta_id', ventaIds)
+          .neq('cobros.status', 'cancelado');
         for (const a of (apps ?? []) as any[]) {
           const m = a.cobros?.metodo_pago;
           if (!m) continue;
@@ -541,7 +542,7 @@ function VentaExpandedRow({ ventaId, fmt }: { ventaId: string; fmt: (v: number |
           .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, total, productos(nombre, unidad_granel)')
           .eq('venta_id', ventaId).order('created_at'),
         supabase.from('cobro_aplicaciones')
-          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia)')
+          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
           .eq('venta_id', ventaId).order('created_at'),
         supabase.from('venta_historial')
           .select('id, accion, user_nombre, created_at, detalles')
@@ -676,8 +677,9 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
       if (ventaIds.length) {
         const { data: apps } = await supabase
           .from('cobro_aplicaciones')
-          .select('venta_id, cobros(metodo_pago)')
-          .in('venta_id', ventaIds);
+          .select('venta_id, cobros!inner(metodo_pago, status)')
+          .in('venta_id', ventaIds)
+          .neq('cobros.status', 'cancelado');
         for (const a of (apps ?? []) as any[]) {
           const m = a.cobros?.metodo_pago;
           if (!m) continue;

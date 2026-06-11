@@ -65,9 +65,10 @@ export function VentasTurnoModal({ open, onOpenChange }: Props) {
     queryFn: async (): Promise<CobroRow[]> => {
       const { data } = await supabase
         .from('cobros')
-        .select('id, monto, metodo_pago, created_at, cliente:clientes(nombre)')
+        .select('id, monto, metodo_pago, created_at, status, cliente:clientes(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('user_id', user!.id)
+        .neq('status', 'cancelado')
         .gte('created_at', turno!.abierto_at)
         .order('created_at', { ascending: false });
       return (data ?? []) as any;

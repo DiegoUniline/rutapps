@@ -149,6 +149,7 @@ export function useCajaTurno() {
       .select('monto, metodo_pago')
       .eq('empresa_id', empresa!.id)
       .eq('user_id', user!.id)
+      .neq('status', 'cancelado')
       .gte('created_at', t.abierto_at);
 
     let efectivo = Number(t.fondo_inicial) || 0;

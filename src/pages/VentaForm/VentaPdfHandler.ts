@@ -70,7 +70,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
         };
       }),
     })),
-    pagos: (pagosData ?? []).map((p: any) => ({
+    pagos: (pagosData ?? []).filter((p: any) => (p.cobros?.status ?? 'activo') !== 'cancelado').map((p: any) => ({
       fecha: p.cobros?.fecha ?? '', metodo_pago: p.cobros?.metodo_pago ?? '',
       monto: Number(p.monto_aplicado) || 0, referencia: p.cobros?.referencia,
     })),

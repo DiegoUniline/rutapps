@@ -341,7 +341,7 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
   const formaPagoMap = new Map<string, string>();
   if (config.columnas.some(c => c.key === 'forma_pago')) {
     const aplicaciones = await fetchAllPages<any>((from, to) =>
-      supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago)').in('venta_id', ventaIds).range(from, to)
+      supabase.from('cobro_aplicaciones').select('venta_id, cobros!inner(metodo_pago, status)').in('venta_id', ventaIds).neq('cobros.status', 'cancelado').range(from, to)
     );
     const tmp = new Map<string, Set<string>>();
     for (const a of aplicaciones) {
