@@ -53,11 +53,11 @@ export default function InteligenciaAlmacenPage() {
         <HelpButton
           title="Inteligencia de Almacén"
           sections={[
-            { title: '¿Qué es?', body: 'Análisis estadístico de tu inventario basado en el historial de ventas de los últimos 60–90 días. No usa IA — son cálculos exactos.' },
-            { title: 'Quiebre inminente', body: 'Productos con menos de 7 días de stock al ritmo actual de ventas.' },
-            { title: 'Punto de reorden', body: 'Productos por debajo de los días de cobertura deseados (configurables por producto).' },
-            { title: 'Productos muertos', body: 'Productos con stock pero sin venta en los últimos 90 días — capital atorado.' },
-            { title: 'Análisis ABC', body: 'Clasificación Pareto: A = 80% de los ingresos, B = siguiente 15%, C = el resto.' },
+            { title: '¿Qué es?', content: 'Análisis estadístico de tu inventario basado en el historial de ventas de los últimos 60–90 días. No usa IA — son cálculos exactos.' },
+            { title: 'Quiebre inminente', content: 'Productos con menos de 7 días de stock al ritmo actual de ventas.' },
+            { title: 'Punto de reorden', content: 'Productos por debajo de los días de cobertura deseados (configurables por producto).' },
+            { title: 'Productos muertos', content: 'Productos con stock pero sin venta en los últimos 90 días — capital atorado.' },
+            { title: 'Análisis ABC', content: 'Clasificación Pareto: A = 80% de los ingresos, B = siguiente 15%, C = el resto.' },
           ]}
         />
       </h1>
