@@ -260,6 +260,14 @@ function AppRoutes() {
     queryClient.invalidateQueries({ queryKey: ['factura-pendiente', profile?.empresa_id] });
   }, [user?.id, profile?.empresa_id, subscription.loading, subscription.status, queryClient]);
 
+  // Registrar el Service Worker SOLO cuando hay un usuario autenticado.
+  // Las páginas públicas (landing, /partners, etc.) nunca instalan SW para
+  // que las publicaciones nuevas se vean al instante sin limpiar caché.
+  useEffect(() => {
+    if (!user) return;
+    import('@/pwa/registerSW').then(({ registerAppSW }) => registerAppSW());
+  }, [user]);
+
   // Partner-only user (tiene partner row pero NO profile de empresa) → solo panel /partner
   const partnerQ = usePartner();
   const isPartnerOnly = !!user && !profile && !loading && !!partnerQ.data;
