@@ -21,11 +21,14 @@ import {
   runReporte,
   getFuenteMeta,
   FUENTES,
+  groupRows,
+  getGroupableOptions,
   type ReporteConfig,
   type ReporteFiltros,
   type ReporteFuente,
 } from '@/lib/reportesPersonalizados';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
+
 import { fmtMoney } from '@/lib/currency';
 import { confirmDialog } from '@/lib/confirm';
 import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
