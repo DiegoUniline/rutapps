@@ -1,5 +1,13 @@
 import { NavLink } from 'react-router-dom';
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
+
+// Prefetch sibling tab chunks so switching is instant
+const prefetchTabs = () => {
+  import('@/pages/CobranzaPage');
+  import('@/pages/CuentasCobrarPage');
+  import('@/pages/EstadoCuentaClientePage');
+};
 
 const TABS = [
   { label: 'Cobranza', path: '/ventas/cobranza' },
