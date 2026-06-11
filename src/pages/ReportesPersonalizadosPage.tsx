@@ -494,9 +494,12 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   );
 }
 
-function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExportColumns>; rows: Record<string, any>[] }) {
+function DataPreview({ columns, rows, grouping }: {
+  columns: ReturnType<typeof buildExportColumns>;
+  rows: Record<string, any>[];
+  grouping: ReturnType<typeof groupRows> | null;
+}) {
   const [limit, setLimit] = useState(100);
-  const shown = rows.slice(0, limit);
 
   const fmtCell = (val: any, format?: string) => {
     if (val === null || val === undefined || val === '') return '';
@@ -522,12 +525,17 @@ function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExport
   };
 
   const isNumeric = (f?: string) => f === 'currency' || f === 'number' || f === 'percent';
+  const shown = rows.slice(0, limit);
 
   return (
     <div>
       <div className="flex items-center justify-between px-3 py-2 bg-muted/30 text-xs">
-        <span>Mostrando {shown.length.toLocaleString('es-MX')} de {rows.length.toLocaleString('es-MX')} registros</span>
-        {rows.length > limit && (
+        <span>
+          {grouping
+            ? `${grouping.groups.length.toLocaleString('es-MX')} grupos · ${rows.length.toLocaleString('es-MX')} registros`
+            : `Mostrando ${shown.length.toLocaleString('es-MX')} de ${rows.length.toLocaleString('es-MX')} registros`}
+        </span>
+        {!grouping && rows.length > limit && (
           <Button size="sm" variant="ghost" onClick={() => setLimit(l => l + 200)}>Mostrar más</Button>
         )}
       </div>
@@ -541,21 +549,68 @@ function DataPreview({ columns, rows }: { columns: ReturnType<typeof buildExport
             </tr>
           </thead>
           <tbody>
-            {shown.map((row, i) => (
-              <tr key={i} className="border-t hover:bg-muted/20">
-                {columns.map(c => (
-                  <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
-                    {fmtCell(row[c.key], c.format)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {grouping ? (
+              grouping.groups.map((g) => (
+                <GroupBlock
+                  key={g.key}
+                  group={g}
+                  columns={columns}
+                  fmtCell={fmtCell}
+                  isNumeric={isNumeric}
+                />
+              ))
+            ) : (
+              shown.map((row, i) => (
+                <tr key={i} className="border-t hover:bg-muted/20">
+                  {columns.map(c => (
+                    <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+                      {fmtCell(row[c.key], c.format)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
+function GroupBlock({ group, columns, fmtCell, isNumeric }: {
+  group: ReturnType<typeof groupRows>['groups'][number];
+  columns: ReturnType<typeof buildExportColumns>;
+  fmtCell: (v: any, f?: string) => string;
+  isNumeric: (f?: string) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <tr className="border-t bg-primary/5 cursor-pointer" onClick={() => setOpen(o => !o)}>
+        <td colSpan={columns.length} className="px-2 py-1.5 font-semibold text-primary">
+          {open ? '▾' : '▸'} {group.label} <span className="text-muted-foreground font-normal">({group.rows.length})</span>
+        </td>
+      </tr>
+      {open && group.rows.map((row, i) => (
+        <tr key={i} className="border-t hover:bg-muted/20">
+          {columns.map(c => (
+            <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+              {fmtCell(row[c.key], c.format)}
+            </td>
+          ))}
+        </tr>
+      ))}
+      <tr className="border-t bg-muted/40">
+        {columns.map((c, i) => (
+          <td key={c.key} className={`px-2 py-1.5 font-semibold ${isNumeric(c.format) ? 'text-right tabular-nums' : ''}`}>
+            {i === 0 ? `Subtotal ${group.label}` : (c.key in group.subtotals ? fmtCell(group.subtotals[c.key], c.format) : '')}
+          </td>
+        ))}
+      </tr>
+    </>
+  );
+}
+
 
 // ─── Editor Dialog ─────────────────────────────────────────────
 function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
