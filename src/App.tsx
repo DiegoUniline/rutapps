@@ -339,6 +339,8 @@ function AppRoutes() {
           <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
+          <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
           <Route path="/soporte" element={<SoportePage />} />
