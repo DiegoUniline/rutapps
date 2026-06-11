@@ -500,6 +500,8 @@ function DataPreview({ columns, rows, grouping }: {
   grouping: ReturnType<typeof groupRows> | null;
 }) {
   const [limit, setLimit] = useState(100);
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  const [allOpen, setAllOpen] = useState(true);
 
   const fmtCell = (val: any, format?: string) => {
     if (val === null || val === undefined || val === '') return '';
