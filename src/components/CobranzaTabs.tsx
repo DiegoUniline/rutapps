@@ -1,5 +1,13 @@
 import { NavLink } from 'react-router-dom';
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
+
+// Prefetch sibling tab chunks so switching is instant
+const prefetchTabs = () => {
+  import('@/pages/CobranzaPage');
+  import('@/pages/CuentasCobrarPage');
+  import('@/pages/EstadoCuentaClientePage');
+};
 
 const TABS = [
   { label: 'Cobranza', path: '/ventas/cobranza' },
@@ -8,6 +16,8 @@ const TABS = [
 ];
 
 export function CobranzaTabs() {
+  useEffect(() => { prefetchTabs(); }, []);
+
   return (
     <div className="border-b mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
       <nav className="flex gap-1 min-w-max">
