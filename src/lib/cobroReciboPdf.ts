@@ -100,7 +100,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
 
     y += 5;
     // Tabla aplicaciones
-    doc.setFillColor(245);
+    doc.setFillColor(245, 245, 245);
     doc.rect(15, y, W - 30, 7, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
