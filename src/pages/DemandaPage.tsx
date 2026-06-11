@@ -16,6 +16,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import PedidosTabs from '@/components/PedidosTabs';
 
 // ─── Data hooks ────────────────────────────────────────────
 
