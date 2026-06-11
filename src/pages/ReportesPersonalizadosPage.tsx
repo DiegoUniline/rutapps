@@ -314,7 +314,19 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             <Label className="text-xs">Hasta</Label>
             <Input type="date" value={filtros.fechaHasta} onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })} />
           </div>
-          <div className="md:col-span-2 flex flex-wrap gap-2 justify-end">
+          <div>
+            <Label className="text-xs">Agrupar por</Label>
+            <select
+              className="h-10 w-full rounded-md border bg-background px-2 text-sm"
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+            >
+              {groupOptions.map(o => (
+                <option key={o.key || 'none'} value={o.key}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end">
             <Button onClick={ejecutar} disabled={!!loading}>
               {loading === 'run' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
               {rows ? 'Actualizar' : 'Ejecutar'}
@@ -330,6 +342,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
             </Button>
           </div>
         </div>
+
 
         {(STATUS_OPTS.length > 0 || TIPO_OPTS.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
