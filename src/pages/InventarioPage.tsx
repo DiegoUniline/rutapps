@@ -6,8 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes, Brain } from 'lucide-react';
-import InventarioInteligenciaTab from '@/pages/inventario/InventarioInteligenciaTab';
+import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
 
-type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'inteligencia';
+type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
 function useInventarioData() {
   const { empresa } = useAuth();
@@ -270,7 +269,6 @@ export default function InventarioPage() {
     { key: 'resumen', label: 'Stock Total', icon: Package },
     { key: 'almacen', label: 'Ubicaciones', icon: Warehouse },
     { key: 'rutas', label: 'Rutas activas', icon: Truck },
-    { key: 'inteligencia', label: 'Inteligencia', icon: Brain },
   ];
 
   return (
@@ -342,10 +340,8 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Inteligencia view */}
-      {view === 'inteligencia' && data && (
-        <InventarioInteligenciaTab productos={data.productos as any} search={search} />
-      )}
+
+
 
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
