@@ -17,6 +17,7 @@ import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import BulkEntregasActionsDialog, { type BulkAction } from '@/components/entregas/BulkEntregasActionsDialog';
+import PedidosTabs from '@/components/PedidosTabs';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className?: string }> = {
   borrador: { label: 'Borrador', variant: 'secondary' },
