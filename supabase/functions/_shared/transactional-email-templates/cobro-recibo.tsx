@@ -225,51 +225,52 @@ export const template = {
 
 // Styles
 const main = {
-  backgroundColor: '#ffffff',
+  backgroundColor: '#f8fafc',
   fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif',
   margin: 0,
   padding: '20px 0',
 }
-const outer = { maxWidth: '620px', margin: '0 auto', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' as const }
-const brandBar = { height: '6px', background: 'linear-gradient(90deg, hsl(221, 83%, 53%), hsl(199, 89%, 48%))' }
+const outer = { maxWidth: '620px', margin: '0 auto', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' as const, boxShadow: '0 4px 20px rgba(37,99,235,0.08)' }
+const brandBar = { height: '8px', background: 'linear-gradient(90deg, #2563eb 0%, #2563eb 70%, #f97316 100%)' }
 const container = { padding: '0' }
-const header = { padding: '32px 32px 12px', textAlign: 'center' as const }
+const header = { padding: '32px 32px 16px', textAlign: 'center' as const, backgroundColor: '#ffffff' }
 const h1 = { margin: 0, fontSize: '24px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.5px' }
-const subtitle = { margin: '12px 0 0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 600 }
+const subtitle = { margin: '14px 0 0', fontSize: '11px', color: '#f97316', textTransform: 'uppercase' as const, letterSpacing: '2.5px', fontWeight: 700 }
 const folioStyle = { margin: '6px 0 0', fontSize: '12px', color: '#94a3b8' }
 const hrTop = { borderColor: '#e2e8f0', margin: '8px 32px 0' }
 const content = { padding: '24px 32px 8px' }
 const greeting = { fontSize: '15px', color: '#0f172a', margin: '0 0 8px', fontWeight: 600 }
 const paragraph = { fontSize: '14px', color: '#334155', margin: '0 0 20px', lineHeight: '1.5' }
 const amountBox = {
-  background: '#f0f9ff',
-  border: '1px solid #bae6fd',
-  borderRadius: '10px',
-  padding: '24px',
+  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+  border: '1px solid #bfdbfe',
+  borderRadius: '12px',
+  padding: '28px',
   textAlign: 'center' as const,
   margin: '0 0 16px',
 }
-const amountLabel = { fontSize: '11px', color: '#075985', textTransform: 'uppercase' as const, letterSpacing: '2px', margin: 0, fontWeight: 600 }
-const amountValue = { fontSize: '34px', fontWeight: 700, color: '#0c4a6e', margin: '8px 0 0', letterSpacing: '-1px' }
-const amountDate = { fontSize: '12px', color: '#0369a1', margin: '4px 0 0' }
+const amountLabel = { fontSize: '11px', color: '#2563eb', textTransform: 'uppercase' as const, letterSpacing: '2.5px', margin: 0, fontWeight: 700 }
+const amountValue = { fontSize: '38px', fontWeight: 800, color: '#1e3a8a', margin: '8px 0 0', letterSpacing: '-1.5px' }
+const amountDate = { fontSize: '12px', color: '#2563eb', margin: '6px 0 0', fontWeight: 500 }
 const detailsBox = { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 18px' }
 const button = {
-  background: 'hsl(221, 83%, 53%)',
+  background: '#2563eb',
   color: '#ffffff',
-  padding: '14px 32px',
+  padding: '14px 36px',
   borderRadius: '8px',
   textDecoration: 'none',
   fontSize: '14px',
-  fontWeight: 600,
+  fontWeight: 700,
   display: 'inline-block',
+  boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
 }
-const link = { color: 'hsl(221, 83%, 53%)', textDecoration: 'underline' }
+const link = { color: '#2563eb', textDecoration: 'underline', fontWeight: 500 }
 const thanks = { fontSize: '13px', color: '#475569', textAlign: 'center' as const, margin: '24px 0 0', fontStyle: 'italic' as const }
-const companyFooter = { padding: '24px 32px 8px', textAlign: 'center' as const, borderTop: '1px solid #e2e8f0', marginTop: '16px' }
-const companyName = { fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }
-const companyLine = { fontSize: '12px', color: '#64748b', margin: '2px 0' }
-const legal = { padding: '12px 32px 16px' }
+const companyFooter = { padding: '24px 32px 8px', textAlign: 'center' as const, borderTop: '2px solid #f1f5f9', marginTop: '16px', backgroundColor: '#fafbfc' }
+const companyName = { fontSize: '15px', fontWeight: 700, color: '#1e3a8a', margin: '0 0 6px' }
+const companyLine = { fontSize: '12px', color: '#64748b', margin: '3px 0', lineHeight: '1.5' }
+const legal = { padding: '14px 32px 18px', backgroundColor: '#fafbfc' }
 const legalText = { fontSize: '11px', color: '#94a3b8', margin: '6px 0', lineHeight: '1.5', textAlign: 'center' as const }
-const poweredBy = { padding: '12px 32px 24px', textAlign: 'center' as const, borderTop: '1px solid #f1f5f9' }
-const poweredText = { fontSize: '11px', color: '#cbd5e1', margin: 0 }
-const poweredLink = { color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }
+const poweredBy = { padding: '14px 32px 22px', textAlign: 'center' as const, borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff' }
+const poweredText = { fontSize: '11px', color: '#94a3b8', margin: 0 }
+const poweredLink = { color: '#2563eb', textDecoration: 'none', fontWeight: 700 }
