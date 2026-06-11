@@ -217,15 +217,17 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
     }
   };
 
-  const dismiss = () => {
+  const dismiss = async () => {
     if (empresaId) {
+      await supabase.from('empresas').update({ onboarding_completado: true }).eq('id', empresaId);
       localStorage.setItem(`primeros_pasos_dismissed_${empresaId}`, '1');
     }
     onOpenChange(false);
   };
 
-  const finish = (goto?: string) => {
+  const finish = async (goto?: string) => {
     if (empresaId) {
+      await supabase.from('empresas').update({ onboarding_completado: true }).eq('id', empresaId);
       localStorage.setItem(`primeros_pasos_completed_${empresaId}`, '1');
     }
     onOpenChange(false);

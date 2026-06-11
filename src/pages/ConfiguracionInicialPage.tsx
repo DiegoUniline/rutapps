@@ -75,7 +75,7 @@ function useSetupData() {
     queryFn: async () => {
       const eid = empresa!.id;
       const [empresaRes, almRes, tarifaRes, prodRes, cliRes] = await Promise.all([
-        supabase.from('empresas').select('nombre, rfc, direccion, logo_url').eq('id', eid).single(),
+        supabase.from('empresas').select('nombre, rfc, direccion, logo_url, onboarding_completado').eq('id', eid).single(),
         supabase.from('almacenes').select('id', { count: 'exact', head: true }).eq('empresa_id', eid),
         supabase.from('tarifa_lineas').select('id', { count: 'exact', head: true }).eq('tarifa_id', 
           (await supabase.from('tarifas').select('id').eq('empresa_id', eid).limit(1).single()).data?.id ?? ''
@@ -85,6 +85,7 @@ function useSetupData() {
       ]);
       return {
         empresa: empresaRes.data,
+        onboardingCompletado: empresaRes.data?.onboarding_completado ?? false,
         almacenesCount: almRes.count ?? 0,
         tarifaLineasCount: tarifaRes.count ?? 0,
         productosCount: prodRes.count ?? 0,
@@ -119,17 +120,18 @@ export default function ConfiguracionInicialPage() {
   const { empresa } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Auto-open on first visit if not dismissed/completed
+  // Auto-open on first visit if onboarding not completed AND (no productos or no clientes)
   useEffect(() => {
     if (!empresa?.id || isLoading) return;
     const dismissed = localStorage.getItem(`primeros_pasos_dismissed_${empresa.id}`);
     const completed = localStorage.getItem(`primeros_pasos_completed_${empresa.id}`);
+    const onboardingDone = data?.onboardingCompletado ?? false;
     const hasProducto = (data?.productosCount ?? 0) >= 1;
     const hasCliente = (data?.clientesCount ?? 0) >= 1;
-    if (!dismissed && !completed && (!hasProducto || !hasCliente)) {
+    if (!dismissed && !completed && !onboardingDone && (!hasProducto || !hasCliente)) {
       setModalOpen(true);
     }
-  }, [empresa?.id, isLoading, data?.productosCount, data?.clientesCount]);
+  }, [empresa?.id, isLoading, data?.onboardingCompletado, data?.productosCount, data?.clientesCount]);
 
 
   if (isLoading) {
