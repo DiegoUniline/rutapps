@@ -210,6 +210,9 @@ export default function AplicarPagosPage() {
       queryClient.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
       queryClient.invalidateQueries({ queryKey: ['cobros'] });
 
+      // Enviar recibo por email + WhatsApp (fire-and-forget)
+      enviarReciboCobro(cobro.id, empresa.id);
+
       // Print ticket
       if (empresa) {
         const ticketData = buildCobroTicketData({
