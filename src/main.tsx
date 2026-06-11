@@ -17,11 +17,19 @@ startAutoBackup();
   document.documentElement.classList.toggle('dark', dark);
 })();
 
+// SW lifecycle is owned by src/pwa/registerSW.ts. It is registered ONLY from
+// inside the authenticated app shell, and unregistered automatically on public
+// pages (landing, partners, etc.) so new publishes are visible immediately
+// without users needing to clear cache.
+
 const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
-const isPreviewHost = window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
+const isPreviewHost =
+  window.location.hostname.includes("id-preview--") ||
+  window.location.hostname.includes("lovableproject.com");
 
 if (isPreviewHost || isInIframe) {
-  // Kill-switch: aggressively unregister any existing SW and clear caches
+  // Kill-switch: aggressively unregister any existing SW and clear caches in
+  // Lovable preview / iframe contexts (never register an SW here).
   (async () => {
     if (!navigator.serviceWorker) return;
     const regs = await navigator.serviceWorker.getRegistrations();
@@ -31,26 +39,9 @@ if (isPreviewHost || isInIframe) {
       const names = await caches.keys();
       await Promise.all(names.map((n) => caches.delete(n)));
     }
-    // Force reload to ensure no stale SW context remains
     window.location.reload();
   })();
-} else if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.getRegistration().then((registration) => {
-      if (!registration) return;
-      // Check for updates every 60s
-      setInterval(() => registration.update(), 60_000);
-    });
-
-    // Auto-reload cuando el nuevo SW toma control (publicación nueva)
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
-  });
-} // end else-if serviceWorker
+}
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
