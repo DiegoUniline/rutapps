@@ -47,6 +47,7 @@ export default function ComisionesLayoutPage() {
       if (error) throw error;
       return count ?? 0;
     },
+    staleTime: 60_000,
   });
 
   return (
