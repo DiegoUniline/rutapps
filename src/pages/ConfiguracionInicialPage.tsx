@@ -116,6 +116,21 @@ export function useSetupComplete() {
 
 export default function ConfiguracionInicialPage() {
   const { data, isLoading } = useSetupData();
+  const { empresa } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Auto-open on first visit if not dismissed/completed
+  useEffect(() => {
+    if (!empresa?.id || isLoading) return;
+    const dismissed = localStorage.getItem(`primeros_pasos_dismissed_${empresa.id}`);
+    const completed = localStorage.getItem(`primeros_pasos_completed_${empresa.id}`);
+    const hasProducto = (data?.productosCount ?? 0) >= 1;
+    const hasCliente = (data?.clientesCount ?? 0) >= 1;
+    if (!dismissed && !completed && (!hasProducto || !hasCliente)) {
+      setModalOpen(true);
+    }
+  }, [empresa?.id, isLoading, data?.productosCount, data?.clientesCount]);
+
 
   if (isLoading) {
     return (
