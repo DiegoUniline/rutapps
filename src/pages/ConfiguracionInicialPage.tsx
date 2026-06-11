@@ -160,17 +160,28 @@ export default function ConfiguracionInicialPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
+      <Suspense fallback={null}>
+        <PrimerosPasosModal open={modalOpen} onOpenChange={setModalOpen} />
+      </Suspense>
+
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Configuración inicial
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Completa estos pasos para empezar a usar el sistema. Cada sección desaparecerá al completarse.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Configuración inicial
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Completa estos pasos para empezar a usar el sistema. Cada sección desaparecerá al completarse.
+          </p>
+        </div>
+        <Button onClick={() => setModalOpen(true)} size="sm" className="flex-shrink-0">
+          <Wand2 className="mr-2 h-4 w-4" />
+          Guía rápida con AI
+        </Button>
       </div>
+
 
       {/* Progress bar */}
       <div className="space-y-1.5">
