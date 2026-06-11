@@ -129,6 +129,7 @@ export default function SuperAdminPage() {
             {tab === 'subscriptions' && <AdminSubscriptionsTab />}
             {tab === 'invoices' && <AdminInvoicesTab />}
             {tab === 'partners' && <PartnersInlineTab />}
+            {tab === 'control' && <ControlPage />}
             {tab === 'whatsapp' && <AdminWhatsAppTab />}
             {tab === 'notifications' && <AdminNotificationsTab />}
             {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
