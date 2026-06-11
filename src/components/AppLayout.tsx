@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  // ── Ventas ──
+
   // ── Ventas ──
   {
     label: 'Ventas',
@@ -50,28 +50,23 @@ const navItems: NavItem[] = [
     path: '/ventas',
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
-      { label: 'Cobranza', path: '/ventas/cobranza' },
-      { label: 'Cuentas por cobrar', path: '/finanzas/por-cobrar' },
-      { label: 'Saldos por cliente', path: '/finanzas/saldos-cliente' },
+      { label: 'Cobranza · CxC · Saldos', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
-      { label: 'Reporte diario', path: '/ventas/reporte-diario' },
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
       { label: 'Comisiones', path: '/comisiones' },
     ],
   },
+
+  // ── POS ──
   {
     label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
     children: [
       { label: 'Abrir caja (POS)', path: '/pos' },
-      { label: 'Turnos', path: '/pos/admin?tab=turnos' },
-      { label: 'Cortes / Arqueos', path: '/pos/admin?tab=cortes' },
-      { label: 'Depósitos', path: '/pos/admin?tab=depositos' },
-      { label: 'Retiros', path: '/pos/admin?tab=retiros' },
-      { label: 'Gastos', path: '/pos/admin?tab=gastos' },
-      { label: 'Ventas POS', path: '/pos/admin?tab=ventas' },
+      { label: 'Caja · Turnos · Cortes · Gastos', path: '/pos/admin?tab=turnos' },
     ],
   },
+
   // ── Compras ──
   {
     label: 'Compras',
@@ -81,28 +76,25 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Órdenes de compra', path: '/almacen/compras' },
       { label: 'Compras sugeridas', path: '/almacen/compras/sugeridas' },
+      { label: 'Pagos · CxP · Saldos proveedor', path: '/finanzas/por-pagar' },
       { label: 'Proveedores', path: '/proveedores' },
-      { label: 'Productos', path: '/productos' },
-      { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
-      { label: 'Pagos a proveedores', path: '/finanzas/pagos-proveedores' },
-      { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
     ],
   },
+
   // ── Logística ──
   {
     label: 'Logística',
     icon: MapPin,
     path: '/logistica',
     children: [
-      { label: 'Dashboard', path: '/logistica/dashboard' },
-      { label: 'Pedidos pendientes', path: '/logistica/pedidos' },
-      { label: 'Entregas', path: '/logistica/entregas' },
+      { label: 'Pedidos · Pendientes · Entregas', path: '/logistica/pedidos' },
       { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
-      { label: 'Reportes', path: '/logistica/reportes' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
+      { label: 'Reportes', path: '/logistica/reportes' },
     ],
   },
+
   // ── Almacén ──
   {
     label: 'Almacén',
@@ -112,26 +104,11 @@ const navItems: NavItem[] = [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
-      { label: 'Ajustes', path: '/almacen/ajustes' },
-      { label: 'Auditorías', path: '/almacen/auditorias' },
-      { label: 'Conteos físicos', path: '/almacen/conteos' },
-      { label: 'Mermas (admin)', path: '/almacen/mermas' },
+      { label: 'Control · Ajustes · Conteos · Mermas', path: '/almacen/ajustes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
-  // ── Catálogo ──
-  {
-    label: 'Catálogo',
-    icon: ClipboardList,
-    path: '/catalogos',
-    children: [
-      { label: 'Categorías', path: '/catalogos/clasificaciones' },
-      { label: 'Marcas', path: '/catalogos/marcas' },
-      { label: 'Proveedores', path: '/proveedores' },
-      { label: 'Unidades', path: '/catalogos/unidades' },
-      { label: 'Zonas', path: '/catalogos/zonas' },
-    ],
-  },
+
   // ── Finanzas ──
   {
     label: 'Finanzas',
@@ -139,28 +116,11 @@ const navItems: NavItem[] = [
     path: '/finanzas',
     children: [
       { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
-      { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
-      { label: 'Pagos proveedores', path: '/finanzas/pagos-proveedores' },
-      { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
     ],
   },
-  {
-    label: 'Comisiones',
-    icon: Percent,
-    path: '/comisiones',
-    highlight: 'amber',
-    children: [
-      { label: 'Avance', path: '/comisiones/avance' },
-      { label: 'Esquemas', path: '/comisiones/esquemas' },
-      { label: 'Reglas', path: '/comisiones/reglas' },
-      { label: 'Generadas', path: '/comisiones/generadas' },
-      { label: 'Por volumen', path: '/comisiones/por-volumen' },
-      { label: 'Por pagar', path: '/comisiones/por-pagar' },
-      { label: 'Recibos', path: '/comisiones/recibos' },
-    ],
-  },
-  // ── Reportes & Facturación ──
+
+  // ── Reportes ──
   {
     label: 'Reportes',
     icon: BarChart3,
@@ -170,7 +130,19 @@ const navItems: NavItem[] = [
       { label: 'Personalizados', path: '/reportes/personalizados' },
     ],
   },
-  // ── Admin & Config ──
+
+  // ── Configuración ──
+  {
+    label: 'Configuración',
+    icon: Settings,
+    path: '/catalogos/clasificaciones',
+    children: [
+      { label: 'Categorías', path: '/catalogos/clasificaciones' },
+      { label: 'Marcas', path: '/catalogos/marcas' },
+      { label: 'Unidades', path: '/catalogos/unidades' },
+      { label: 'Zonas', path: '/catalogos/zonas' },
+    ],
+  },
   { label: 'Control', icon: ShieldAlert, path: '/control' },
   {
     label: 'Administración',
