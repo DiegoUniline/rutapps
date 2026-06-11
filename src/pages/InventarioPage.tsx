@@ -270,7 +270,6 @@ export default function InventarioPage() {
     { key: 'resumen', label: 'Stock Total', icon: Package },
     { key: 'almacen', label: 'Ubicaciones', icon: Warehouse },
     { key: 'rutas', label: 'Rutas activas', icon: Truck },
-    { key: 'inteligencia', label: 'Inteligencia', icon: Brain },
   ];
 
   return (
