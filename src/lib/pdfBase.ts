@@ -1,24 +1,31 @@
 /**
- * Shared PDF document utilities — Clean Odoo-style professional layout
- * No colored bars, neutral palette, logo support, clean tables
+ * Shared PDF document utilities — Rutapp B/N corporate standard
+ * Strictly black & white, 100% vector, Helvetica.
  */
 import type jsPDF from 'jspdf';
 
-// ── Neutral color palette (no vivid colors) ──
+// ── B/N palette (kept under the historical PDF.* names to preserve API) ──
+const BLACK: [number, number, number] = [26, 26, 26];          // #1a1a1a
+const MUTED: [number, number, number] = [110, 110, 110];       // #6E6E6E
+const LIGHT: [number, number, number] = [180, 180, 180];       // #B4B4B4
+const BORDER: [number, number, number] = [220, 220, 220];      // #DCDCDC
+const WHITE: [number, number, number] = [255, 255, 255];
+
 export const PDF = {
-  black: [33, 37, 41] as [number, number, number],
-  dark: [52, 58, 64] as [number, number, number],
-  muted: [134, 142, 150] as [number, number, number],
-  light: [173, 181, 189] as [number, number, number],
-  border: [222, 226, 230] as [number, number, number],
-  bgAlt: [248, 249, 250] as [number, number, number],
-  white: [255, 255, 255] as [number, number, number],
-  success: [40, 167, 69] as [number, number, number],
-  danger: [220, 53, 69] as [number, number, number],
+  black: BLACK,
+  dark: BLACK,
+  muted: MUTED,
+  light: LIGHT,
+  border: BORDER,
+  bgAlt: WHITE,
+  white: WHITE,
+  // Status colors collapse to black to enforce B/N.
+  success: BLACK,
+  danger: BLACK,
 };
 
-export const ML = 14; // margin left
-export const MR = 14; // margin right
+export const ML = 14;
+export const MR = 14;
 
 export interface EmpresaInfo {
   nombre: string;
@@ -38,30 +45,28 @@ export interface EmpresaInfo {
 export const fmtCurrency = (n: number) =>
   n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Format number with currency symbol. Pass symbol from getCurrencyConfig(empresa.moneda).symbol */
 export const fmtMoney = (n: number, symbol: string = '$') =>
   `${symbol}${fmtCurrency(n)}`;
 
 export const fmtDate = (d: string) => {
   try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
+    const dt = new Date(d + 'T12:00:00');
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
   } catch { return d; }
 };
 
 export const fmtDateTime = (d: string) => {
   try {
-    return new Date(d).toLocaleString('es-MX', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+    const dt = new Date(d);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   } catch { return d; }
 };
 
 /**
- * Draw clean header: Company name left, document type + folio right
- * Optional logo image (if pre-loaded as base64)
+ * Header B/N: empresa+RFC+email izquierda, doc+ref+generado derecha,
+ * divisoria negra 2px abajo. Logo opcional máx 12mm (~40px).
  */
 export function drawHeader(
   doc: jsPDF,
@@ -74,61 +79,71 @@ export function drawHeader(
   let y = 14;
   let leftX = ML;
 
-  // Logo if available
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, 8, 20, 20);
-      leftX = ML + 24;
-    } catch { /* ignore bad image */ }
+      doc.addImage(logoBase64, 'PNG', ML, 8, 12, 12);
+      leftX = ML + 12 + 3;
+    } catch { /* ignore */ }
   }
 
-  // Company name
-  doc.setTextColor(...PDF.black);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(empresa.nombre.toUpperCase(), leftX, y);
-
-  // Company details line
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.muted);
-  const details: string[] = [];
-  if (empresa.razon_social) details.push(empresa.razon_social);
-  if (empresa.rfc) details.push(`RFC: ${empresa.rfc}`);
-  const addr = [empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado, empresa.cp].filter(Boolean).join(', ');
-  if (addr) details.push(addr);
-  if (empresa.telefono) details.push(`Tel: ${empresa.telefono}`);
-  if (empresa.email) details.push(empresa.email);
-
-  let dy = y + 5;
-  // Split details into max 2 lines
-  const line1 = details.slice(0, 3).join('  ·  ');
-  const line2 = details.slice(3).join('  ·  ');
-  if (line1) { doc.text(line1, leftX, dy); dy += 4; }
-  if (line2) { doc.text(line2, leftX, dy); dy += 4; }
-
-  // Document type + reference on right side
-  doc.setTextColor(...PDF.black);
+  // Nombre comercial — MAYÚSCULAS, 12pt bold
+  doc.setTextColor(...BLACK);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(docTitle, pageW - MR, 14, { align: 'right' });
+  doc.text((empresa.nombre || '').toUpperCase(), leftX, y);
+  y += 4.5;
+
+  // RFC · email
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.dark);
-  doc.text(docReference, pageW - MR, 20, { align: 'right' });
+  doc.setTextColor(...MUTED);
+  const ids: string[] = [];
+  if (empresa.rfc) ids.push(`RFC: ${empresa.rfc}`);
+  if (empresa.email) ids.push(empresa.email);
+  if (ids.length) { doc.text(ids.join('  ·  '), leftX, y); y += 4; }
 
-  // Separator line
-  const lineY = Math.max(dy, 26) + 2;
-  doc.setDrawColor(...PDF.border);
-  doc.setLineWidth(0.4);
+  // Dirección/tel
+  const addr = [empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado, empresa.cp].filter(Boolean).join(', ');
+  const extras: string[] = [];
+  if (addr) extras.push(addr);
+  if (empresa.telefono) extras.push(`Tel: ${empresa.telefono}`);
+  if (extras.length) {
+    const line = doc.splitTextToSize(extras.join(' · '), (pageW * 0.55) - leftX)[0];
+    doc.text(line, leftX, y);
+    y += 4;
+  }
+
+  // ── Derecha ──
+  doc.setTextColor(...BLACK);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(docTitle, pageW - MR, 14, { align: 'right' });
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...MUTED);
+  let ry = 18.5;
+  if (docReference) {
+    doc.text(docReference, pageW - MR, ry, { align: 'right' });
+    ry += 4;
+  }
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  doc.text(
+    `Generado: ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    pageW - MR, ry, { align: 'right' }
+  );
+  ry += 4;
+
+  // Divisoria negra 2px
+  const lineY = Math.max(y, ry) + 2;
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.7);
   doc.line(ML, lineY, pageW - MR, lineY);
 
   return lineY + 6;
 }
 
-/**
- * Draw a clean info section with key-value rows (no colored background)
- */
 export function drawInfoSection(
   doc: jsPDF,
   y: number,
@@ -143,20 +158,20 @@ export function drawInfoSection(
   for (let i = 0; i < maxRows; i++) {
     const ly = y + i * 5;
     if (leftRows[i]) {
-      doc.setFontSize(7.5);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...PDF.muted);
+      doc.setTextColor(...MUTED);
       doc.text(leftRows[i][0], ML, ly);
-      doc.setTextColor(...PDF.black);
+      doc.setTextColor(...BLACK);
       doc.setFont('helvetica', 'bold');
       doc.text(leftRows[i][1], ML + labelW, ly);
     }
     if (rightRows[i]) {
-      doc.setFontSize(7.5);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...PDF.muted);
+      doc.setTextColor(...MUTED);
       doc.text(rightRows[i][0], midX + 10, ly);
-      doc.setTextColor(...PDF.black);
+      doc.setTextColor(...BLACK);
       doc.setFont('helvetica', 'bold');
       doc.text(rightRows[i][1], midX + 10 + labelW, ly);
     }
@@ -166,7 +181,7 @@ export function drawInfoSection(
 }
 
 /**
- * Clean totals block aligned to right
+ * Totals block right-aligned. La fila bold lleva borde superior negro 1px.
  */
 export function drawTotals(
   doc: jsPDF,
@@ -179,107 +194,101 @@ export function drawTotals(
 
   rows.forEach((row, i) => {
     const ry = y + i * 5.5;
-    doc.setFontSize(row.bold ? 8.5 : 7.5);
-    doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
-    doc.setTextColor(...(row.bold ? PDF.black : PDF.muted));
-    doc.text(row.label, labelX, ry);
-    doc.setTextColor(...PDF.black);
-    doc.text(row.value, rightX, ry, { align: 'right' });
 
     if (row.bold) {
-      // Line above total
-      doc.setDrawColor(...PDF.border);
-      doc.setLineWidth(0.3);
+      // Línea superior negra 1px
+      doc.setDrawColor(...BLACK);
+      doc.setLineWidth(0.4);
       doc.line(labelX, ry - 3, rightX, ry - 3);
     }
+
+    doc.setFontSize(row.bold ? 10.5 : 9);
+    doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+    doc.setTextColor(...(row.bold ? BLACK : MUTED));
+    doc.text(row.label, labelX, ry);
+    doc.setTextColor(...BLACK);
+    doc.text(row.value, rightX, ry, { align: 'right' });
   });
 
   return y + rows.length * 5.5 + 4;
 }
 
-/**
- * Draw a section title — simple bold text with a thin line
- */
 export function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setTextColor(...PDF.dark);
-  doc.setFontSize(8.5);
+  doc.setTextColor(...BLACK);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, ML, y);
+  doc.text(title.toUpperCase(), ML, y);
 
-  doc.setDrawColor(...PDF.border);
+  doc.setDrawColor(...BORDER);
   doc.setLineWidth(0.2);
   doc.line(ML, y + 2, pageW - MR, y + 2);
 
   return y + 6;
 }
 
-/**
- * Clean table header styles (neutral gray)
- */
+// Tabla: encabezado sobre fondo blanco, sin bordes (los pintamos a mano si se usa).
+// Mantener API para autoTable consumers.
 export const TABLE_HEAD_STYLE = {
-  fillColor: [255, 255, 255] as [number, number, number],
-  textColor: [33, 37, 41] as [number, number, number],
-  fontSize: 7,
+  fillColor: WHITE,
+  textColor: BLACK,
+  fontSize: 10,
   fontStyle: 'bold' as const,
-  cellPadding: 2.5,
-  lineColor: [200, 200, 200] as [number, number, number],
-  lineWidth: 0.3,
+  cellPadding: 3,
+  lineColor: BLACK,
+  lineWidth: 0,
 };
 
 export const TABLE_BODY_STYLE = {
-  fillColor: [255, 255, 255] as [number, number, number],
-  fontSize: 7,
+  fillColor: WHITE,
+  fontSize: 9,
   cellPadding: 2.5,
-  textColor: [33, 37, 41] as [number, number, number],
-  lineColor: [238, 238, 238] as [number, number, number],
-  lineWidth: 0.15,
+  textColor: BLACK,
+  lineColor: BORDER,
+  lineWidth: 0,
 };
 
 export const TABLE_ALT_STYLE = {
-  fillColor: [255, 255, 255] as [number, number, number],
+  fillColor: WHITE,
 };
 
-/**
- * Footer on all pages — clean line + pagination
- */
+/** Footer Rutapp · [empresa]  |  Página X de Y */
 export function drawFooter(doc: jsPDF, footerText = 'rutapp.mx') {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const totalPages = doc.getNumberOfPages();
+
+  // Acepta tanto el formato "rutapp.mx" como un nombre de empresa para retrocompatibilidad.
+  const empresaNombre = footerText && footerText !== 'rutapp.mx' ? footerText : '';
+  const leftTxt = empresaNombre ? `Rutapp · ${empresaNombre}` : 'Rutapp';
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setDrawColor(...PDF.border);
-    doc.setLineWidth(0.3);
-    doc.line(ML, pageH - 12, pageW - MR, pageH - 12);
-    doc.setTextColor(...PDF.light);
-    doc.setFontSize(6);
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.line(ML, pageH - 13, pageW - MR, pageH - 13);
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(footerText, ML, pageH - 8);
+    doc.text(leftTxt, ML, pageH - 8);
     doc.text(`Página ${i} de ${totalPages}`, pageW - MR, pageH - 8, { align: 'right' });
   }
 }
 
-/**
- * Notes section
- */
 export function drawNotes(doc: jsPDF, y: number, notes: string, label = 'Notas'): number {
   const pageW = doc.internal.pageSize.getWidth();
   if (y > 240) { doc.addPage(); y = 14; }
-  doc.setTextColor(...PDF.muted);
-  doc.setFontSize(7);
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${label}:`, ML, y);
+  doc.text(`${label.toUpperCase()}:`, ML, y);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.dark);
+  doc.setTextColor(...BLACK);
   const split = doc.splitTextToSize(notes, pageW - ML - MR);
   doc.text(split, ML, y + 4);
-  return y + 4 + split.length * 3.2;
+  return y + 4 + split.length * 3.6;
 }
 
-/**
- * Check page break
- */
 export function checkPageBreak(doc: jsPDF, y: number, needed = 40): number {
   if (y > doc.internal.pageSize.getHeight() - needed) {
     doc.addPage();
@@ -288,9 +297,6 @@ export function checkPageBreak(doc: jsPDF, y: number, needed = 40): number {
   return y;
 }
 
-/**
- * Load logo from URL as base64 for PDF embedding
- */
 export async function loadLogoBase64(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
