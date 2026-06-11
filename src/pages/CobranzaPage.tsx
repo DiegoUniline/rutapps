@@ -4,10 +4,14 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { Banknote, MessageCircle, Printer } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Banknote, MessageCircle, Printer, Pencil, Ban } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { CobroEditDialog } from '@/components/cobranza/CobroEditDialog';
+import { toast } from 'sonner';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MobileListCard } from '@/components/MobileListCard';
@@ -99,12 +103,36 @@ export default function CobranzaPage() {
   const { empresa } = useAuth();
   const isMobile = useIsMobile();
   const { fmt: fmtC } = useCurrency();
+  const qc = useQueryClient();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [editCobro, setEditCobro] = useState<any | null>(null);
+  const [cancelCobro, setCancelCobro] = useState<any | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelCobro = async () => {
+    if (!cancelCobro) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cancelCobro.id);
+      if (error) throw error;
+      toast.success('Cobro cancelado. Saldos actualizados.');
+      qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa?.id] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      setCancelCobro(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cancelar');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
 
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -285,8 +313,19 @@ export default function CobranzaPage() {
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
                     <MessageCircle className="h-4 w-4" />
                   </Button>
+                  {(c as any).status !== 'cancelado' && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" onClick={() => setEditCobro(c)} title="Editar cobro">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCancelCobro(c)} title="Cancelar cobro">
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </TableCell>
+
             </TableRow>
             );
           })}
@@ -369,8 +408,19 @@ export default function CobranzaPage() {
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366]" onClick={e => { e.stopPropagation(); openWaCobro(c); }}>
                     <MessageCircle className="h-4 w-4" />
                   </Button>
+                  {(c as any).status !== 'cancelado' && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={e => { e.stopPropagation(); setEditCobro(c); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={e => { e.stopPropagation(); setCancelCobro(c); }}>
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               }
+
               fields={[
                 ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
                 { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
@@ -418,6 +468,26 @@ export default function CobranzaPage() {
         tipo="recibo_cobro"
         referencia_id={waRefId}
       />
+
+      <CobroEditDialog open={!!editCobro} onClose={() => setEditCobro(null)} cobro={editCobro} />
+
+      <AlertDialog open={!!cancelCobro} onOpenChange={(v) => !v && setCancelCobro(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar cobro</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se cancelará el cobro por {cancelCobro ? fmtC(cancelCobro.monto) : ''} y se restaurará el saldo pendiente de la(s) venta(s) asociadas. Esta acción se puede deshacer creando un nuevo cobro.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelCobro} disabled={cancelling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
