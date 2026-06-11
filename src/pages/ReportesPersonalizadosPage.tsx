@@ -196,6 +196,12 @@ export default function ReportesPersonalizadosPage() {
               config={r as ReporteConfig}
               empresaId={empresaId!}
               empresaNombre={empresa?.nombre ?? ''}
+              empresaInfo={{
+                nombre: empresa?.nombre ?? '',
+                rfc: empresa?.rfc ?? null,
+                email: empresa?.email ?? null,
+                logo_url: empresa?.logo_url ?? null,
+              }}
               onEdit={() => { setEditing({ ...r }); setEditorOpen(true); }}
               onDelete={async () => { if (await confirmDialog('¿Eliminar este reporte?')) delMutation.mutate(r.id); }}
             />
