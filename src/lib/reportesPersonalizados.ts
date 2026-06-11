@@ -784,17 +784,24 @@ export interface GroupByOption {
   label: string;
 }
 
-/** Devuelve las columnas que pueden usarse para agrupar. */
-export function getGroupableOptions(columns: ExportColumn[]): GroupByOption[] {
+/** Devuelve los campos que pueden usarse para agrupar (todos los del catálogo, no solo los seleccionados). */
+export function getGroupableOptions(
+  columns: ExportColumn[],
+  allCampos?: CampoDef[]
+): GroupByOption[] {
   const opts: GroupByOption[] = [{ key: '', label: 'Sin agrupar' }];
-  for (const c of columns) {
-    // Excluir métricas continuas
-    if (c.format === 'currency' || c.format === 'percent' || c.format === 'number') continue;
-    opts.push({ key: c.key, label: c.header });
-    if (c.format === 'date') {
-      opts.push({ key: `${c.key}__mes`, label: `${c.header} (mes)` });
-    }
-  }
+  const seen = new Set<string>();
+  const push = (key: string, label: string, format?: CampoDef['format']) => {
+    if (seen.has(key)) return;
+    if (format === 'currency' || format === 'percent' || format === 'number') return;
+    seen.add(key);
+    opts.push({ key, label });
+    if (format === 'date') opts.push({ key: `${key}__mes`, label: `${label} (mes)` });
+  };
+  // Primero columnas seleccionadas (con header personalizado si existe)
+  for (const c of columns) push(c.key, c.header, c.format);
+  // Luego el resto del catálogo de la fuente
+  if (allCampos) for (const c of allCampos) push(c.key, c.label, c.format);
   return opts;
 }
 
