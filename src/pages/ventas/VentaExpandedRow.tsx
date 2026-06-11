@@ -273,9 +273,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                       <tbody>
                         {pagos.map((p: any) => {
                           const cobro = p.cobros as any;
+                          const cancelado = (cobro?.status ?? 'activo') === 'cancelado';
                           return (
-                            <tr key={p.id} className="border-b border-border/40">
-                              <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}</td>
+                            <tr key={p.id} className={`border-b border-border/40 ${cancelado ? 'opacity-50 line-through' : ''}`}>
+                              <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}{cancelado && <span className="ml-1 text-[10px] text-destructive no-underline">(cancelado)</span>}</td>
                               <td className="py-1.5 text-muted-foreground">{cobro?.referencia || '—'}</td>
                               <td className="py-1.5 text-muted-foreground">{fmtDate(cobro?.fecha)}</td>
                               <td className="py-1.5 text-right font-medium tabular-nums">{fmt(p.monto_aplicado)}</td>
@@ -286,7 +287,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                       <tfoot>
                         <tr className="border-t border-border font-semibold">
                           <td colSpan={3} className="py-1.5">Total pagado</td>
-                          <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0))}</td>
+                          <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0))}</td>
                         </tr>
                       </tfoot>
                     </table>
