@@ -17,7 +17,7 @@ export function PedidosTabs() {
   useEffect(() => { prefetchTabs(); }, []);
   return (
     <div className="border-b mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
-      <nav className="flex gap-1 min-w-max">
+      <nav className="flex gap-1 min-w-max py-1.5">
         {TABS.map((t) => (
           <NavLink
             key={t.path}
@@ -25,10 +25,10 @@ export function PedidosTabs() {
             end
             className={({ isActive }) =>
               cn(
-                'px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors',
+                'px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-colors',
                 isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               )
             }
           >

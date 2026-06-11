@@ -57,7 +57,7 @@ export default function ComisionesLayoutPage() {
           <Percent className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold">Comisiones</h1>
         </div>
-        <div className="flex gap-1 overflow-x-auto border-b border-border -mx-4 px-4 md:-mx-6 md:px-6">
+        <div className="flex gap-1 overflow-x-auto border-b border-border -mx-4 px-4 md:-mx-6 md:px-6 py-1.5">
           {TABS.map(t => {
             const active = t.end ? pathname === t.path : pathname.startsWith(t.path);
             return (
@@ -66,10 +66,10 @@ export default function ComisionesLayoutPage() {
                 to={t.path}
                 end={t.end}
                 className={cn(
-                  'px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors flex items-center gap-1.5',
+                  'px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-colors flex items-center gap-1.5',
                   active
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 {t.label}
