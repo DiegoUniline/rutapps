@@ -566,6 +566,8 @@ function DataPreview({ columns, rows, grouping }: {
                   columns={columns}
                   fmtCell={fmtCell}
                   isNumeric={isNumeric}
+                  open={openMap[g.key] ?? allOpen}
+                  onToggle={() => setOpenMap(m => ({ ...m, [g.key]: !(m[g.key] ?? allOpen) }))}
                 />
               ))
             ) : (
