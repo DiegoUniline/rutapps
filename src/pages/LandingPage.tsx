@@ -218,6 +218,15 @@ export default function LandingPage() {
     if (ref) localStorage.setItem('rutapp_partner_ref', ref);
   }, [searchParams]);
 
+  // Página pública: si el visitante tiene un SW antiguo de la app instalado,
+  // desregistrarlo y limpiar sus cachés para que vea los últimos cambios sin
+  // tener que limpiar caché manualmente.
+  useEffect(() => {
+    import('@/pwa/registerSW').then(({ ensureNoSWForPublicPage }) =>
+      ensureNoSWForPublicPage()
+    );
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
       <Seo
