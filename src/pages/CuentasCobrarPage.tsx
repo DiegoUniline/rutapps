@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import SaldoInicialModal from '@/components/SaldoInicialModal';
 import SaldoInicialImportDialog from '@/components/SaldoInicialImportDialog';
+import { CobranzaTabs } from '@/components/CobranzaTabs';
 import {
   AlertDialog,
   AlertDialogAction,

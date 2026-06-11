@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
+import { CobranzaTabs } from '@/components/CobranzaTabs';
 
 /* ── hooks ── */
 function useClientesSaldo() {
