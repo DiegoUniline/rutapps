@@ -737,6 +737,8 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
       {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
+      <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/partner" element={<PartnerLayout />}>
         <Route index element={<PartnerDashboard />} />
         <Route path="empresas" element={<PartnerEmpresas />} />
