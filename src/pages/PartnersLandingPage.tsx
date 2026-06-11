@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -51,6 +51,13 @@ export default function PartnersLandingPage() {
   const [form, setForm] = useState({
     nombre: '', email: '', telefono: '', motivo: '', experiencia: '', redes: '',
   });
+
+  // Página pública: limpia SW antiguo si existe para que se vean los últimos cambios.
+  useEffect(() => {
+    import('@/pwa/registerSW').then(({ ensureNoSWForPublicPage }) =>
+      ensureNoSWForPublicPage()
+    );
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
