@@ -981,7 +981,7 @@ export default function DashboardPage() {
       />
 
 
-      <Tabs defaultValue="resumen" className="mt-5">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
         <TabsList className="flex flex-wrap h-auto w-full bg-accent/50 p-1 rounded-lg gap-1 justify-start">
           <TabsTrigger value="resumen" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-2">
             <BarChart3 className="h-3.5 w-3.5 mr-2" /> Resumen
