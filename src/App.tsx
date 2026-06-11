@@ -55,6 +55,7 @@ const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
 const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
+const InteligenciaAlmacenPage = lazy(() => import("@/pages/InteligenciaAlmacenPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
 const CompraFormPage = lazy(() => import("@/pages/CompraForm"));
