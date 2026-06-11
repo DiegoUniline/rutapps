@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   if (cErr || !cobro) return json({ error: 'Cobro no encontrado' }, 404)
 
   const [{ data: empresa }, { data: cliente }, { data: apps }] = await Promise.all([
-    supabase.from('empresas').select('id, nombre, moneda, enviar_recibo_auto').eq('id', cobro.empresa_id).single(),
+    supabase.from('empresas').select('id, nombre, moneda, enviar_recibo_auto, logo_url, direccion, telefono, email').eq('id', cobro.empresa_id).single(),
     supabase.from('clientes').select('id, nombre, email, telefono, portal_token, recibir_notificaciones').eq('id', cobro.cliente_id).single(),
     supabase.from('cobro_aplicaciones').select('venta_id, monto_aplicado, ventas(folio)').eq('cobro_id', cobro_id),
   ])
@@ -80,6 +80,10 @@ Deno.serve(async (req) => {
   const templateData = {
     clienteNombre: cliente.nombre || 'Cliente',
     empresaNombre: empresa.nombre,
+    empresaLogoUrl: (empresa as any).logo_url || '',
+    empresaDireccion: (empresa as any).direccion || '',
+    empresaTelefono: (empresa as any).telefono || '',
+    empresaEmail: (empresa as any).email || '',
     monto: montoFmt,
     fecha: fechaFmt,
     metodoPago: cobro.metodo_pago || '',
@@ -88,6 +92,7 @@ Deno.serve(async (req) => {
     saldoActual: saldoFmt,
     portalUrl,
     pdfUrl: pdf_url || '',
+    folioRecibo: cobro_id.slice(0, 8).toUpperCase(),
   }
 
   // Fire both channels in parallel
