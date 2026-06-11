@@ -238,7 +238,7 @@ function ReporteRunner({ config, empresaId, empresaNombre, onEdit, onDelete }: {
   const TIPO_OPTS = fuenteMeta.tipoOptions ?? [];
   const ENTITY_FILTERS = fuenteMeta.entityFilters ?? [];
   const columns = useMemo(() => buildExportColumns(config), [config]);
-  const groupOptions = useMemo(() => getGroupableOptions(columns), [columns]);
+  const groupOptions = useMemo(() => getGroupableOptions(columns, fuenteMeta.campos), [columns, fuenteMeta.campos]);
   const entityLists = useReporteEntityLists(empresaId, ENTITY_FILTERS.length > 0);
   const lists = entityLists.data;
   const update = (patch: Partial<ReporteFiltros>) => setFiltros(f => ({ ...f, ...patch }));
