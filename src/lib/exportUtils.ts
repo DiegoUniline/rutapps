@@ -27,6 +27,13 @@ export interface ExportGroup {
   subtotals: Record<string, number>;
 }
 
+export interface ExportEmpresaInfo {
+  nombre: string;
+  rfc?: string | null;
+  email?: string | null;
+  logo_url?: string | null;
+}
+
 export interface ExportOptions {
   fileName: string;
   title: string;
@@ -34,6 +41,7 @@ export interface ExportOptions {
   columns: ExportColumn[];
   data: Record<string, any>[];
   empresa?: string;
+  empresaInfo?: ExportEmpresaInfo;
   dateRange?: { from: string; to: string };
   totals?: Record<string, number>; // key → total value for footer row
   resumenGeneral?: ResumenGeneralExport;
