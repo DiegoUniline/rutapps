@@ -669,6 +669,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/logistica/pedidos" element={<DemandaPage />} />
       <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
       <Route path="/logistica/entregas" element={<EntregaListPage />} />
+      <Route path="/logistica/concentrado" element={<ConcentradoSurtidoPage />} />
       <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
       <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
       <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
