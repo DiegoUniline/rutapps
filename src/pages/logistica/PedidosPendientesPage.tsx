@@ -96,7 +96,7 @@ export default function PedidosPendientesPage() {
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <ClipboardList className="h-5 w-5" /> Pedidos pendientes
           </h1>
-          <p className="text-sm text-muted-foreground">Pedidos del día para asignar a camiones</p>
+          <p className="text-sm text-muted-foreground">Pedidos en el rango seleccionado para asignar a camiones</p>
         </div>
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
