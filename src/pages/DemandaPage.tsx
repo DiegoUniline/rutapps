@@ -119,8 +119,9 @@ export default function DemandaPage() {
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
-  const [vendedorFilter, setVendedorFilter] = useState<string>('');
+  const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const statusesForTab = tab === 'entregados'
     ? ['entregado']
@@ -130,7 +131,7 @@ export default function DemandaPage() {
 
   const { data: pedidos, isLoading } = usePedidosPendientes({
     desde, hasta, fechaTipo,
-    vendedorId: vendedorFilter || undefined,
+    vendedorIds: vendedorFilter.length > 0 ? vendedorFilter : undefined,
     statuses: statusesForTab,
   });
 
