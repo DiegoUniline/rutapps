@@ -593,23 +593,44 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
             ],
           }}
         >
-          {/* Route when navigating */}
-          {directions && (
+          {/* Route bicolor (traveled gris, remaining azul) — render local desde overview_path */}
+          {navigatingTo && traveledPath.length >= 2 && (
+            <Polyline
+              path={traveledPath}
+              options={{ strokeColor: '#cbd5e1', strokeWeight: 6, strokeOpacity: 0.9, zIndex: 1 }}
+            />
+          )}
+          {navigatingTo && remainingPath.length >= 2 && (
+            <Polyline
+              path={remainingPath}
+              options={{ strokeColor: '#2563eb', strokeWeight: 6, strokeOpacity: 0.95, zIndex: 2 }}
+            />
+          )}
+          {/* Fallback: si aún no hay path local, dejar el renderer dibujar */}
+          {directions && remainingPath.length < 2 && (
             <DirectionsRenderer
               directions={directions}
               options={{
                 suppressMarkers: true,
                 preserveViewport: true,
-                polylineOptions: { strokeColor: '#4285F4', strokeWeight: 5, strokeOpacity: 0.9 },
+                polylineOptions: { strokeColor: '#2563eb', strokeWeight: 5, strokeOpacity: 0.9 },
               }}
             />
           )}
 
-          {/* User location */}
-          {userLocation && (
+          {/* User location — flecha rotada al rumbo (estilo Uber) durante navegación, círculo si no */}
+          {(renderedPos || userLocation) && (
             <MarkerF
-              position={userLocation}
-              icon={{
+              position={renderedPos ?? userLocation!}
+              icon={navigatingTo ? {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 6,
+                rotation: headingDeg,
+                fillColor: '#2563eb',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+              } : {
                 path: google.maps.SymbolPath.CIRCLE,
                 scale: 8,
                 fillColor: '#4285F4',
@@ -617,8 +638,10 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                 strokeColor: '#ffffff',
                 strokeWeight: 3,
               }}
+              zIndex={9999}
             />
           )}
+
 
           {/* Stop markers */}
           {stops.map((stop, idx) => {
