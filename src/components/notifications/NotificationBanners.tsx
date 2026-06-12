@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, ExternalLink, ArrowRight, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import type { AppNotification } from '@/hooks/useNotifications';
 
 interface Props {
@@ -42,7 +43,7 @@ export default function NotificationBanners({ notifications }: Props) {
               {/* Body text */}
               <span
                 className="opacity-90 text-[13px] leading-snug [&_b]:font-semibold [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{ __html: b.body }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(b.body) }}
               />
 
               {/* Redirect links inline */}

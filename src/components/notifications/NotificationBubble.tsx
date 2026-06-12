@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, ExternalLink, ArrowRight, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import type { AppNotification } from '@/hooks/useNotifications';
 
 interface Props {
@@ -74,7 +75,7 @@ export default function NotificationBubble({ notifications }: Props) {
         {bubble.body && (
           <div
             className="px-4 pt-1 pb-3 text-xs text-muted-foreground leading-relaxed [&_b]:font-semibold [&_b]:text-foreground"
-            dangerouslySetInnerHTML={{ __html: bubble.body }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bubble.body) }}
           />
         )}
 

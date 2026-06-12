@@ -59,6 +59,17 @@ Deno.serve(async (req) => {
 
     const empresaId = callerProfile.empresa_id;
 
+    // Helper: is caller a system/admin role within their empresa, or super admin?
+    async function callerIsAdmin(): Promise<boolean> {
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (isSA) return true;
+      const { data: ur } = await adminClient
+        .from('user_roles')
+        .select('roles(es_sistema, nombre)')
+        .eq('user_id', caller.id);
+      return (ur || []).some((r: any) => r.roles?.es_sistema === true);
+    }
+
     if (action === "list-users" || action === "list-empresa-users") {
       // Super admin can query any empresa
       let targetEmpresaId = empresaId;
@@ -126,6 +137,13 @@ Deno.serve(async (req) => {
 
     if (action === "set-password") {
       const { user_id, password } = params;
+
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
 
       // Verify user belongs to same empresa
       const { data: targetProfile } = await adminClient
@@ -237,6 +255,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-user") {
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { email, password, nombre, role_id, almacen_id } = params;
 
       // Check if email already exists in auth system BEFORE attempting to create

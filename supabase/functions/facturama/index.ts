@@ -45,7 +45,13 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // Actions that don't require user auth
+    // ALL actions require an authenticated user
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) throw new Error("No autenticado");
+    const supabase = getSupabase(authHeader);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No autenticado");
+
     if (action === "verificar_conexion") {
       return await verificarConexion();
     } else if (action === "list_csds") {
@@ -53,16 +59,21 @@ serve(async (req) => {
     } else if (action === "upload_csd") {
       return await uploadCsd(body);
     } else if (action === "descargar") {
+      // Verify the cfdi belongs to caller's empresa
+      const admin = getServiceSupabase();
+      const { data: prof } = await admin.from("profiles").select("empresa_id").eq("user_id", user.id).single();
+      const { data: isSA } = await admin.rpc("is_super_admin", { p_user_id: user.id });
+      if (!isSA) {
+        const { data: cfdi } = await admin
+          .from("cfdis").select("empresa_id").eq("facturama_id", body.facturama_id).maybeSingle();
+        if (!cfdi || cfdi.empresa_id !== prof?.empresa_id) {
+          throw new Error("No autorizado");
+        }
+      }
       return await descargar(body);
     } else if (action === "suscription_plan") {
       return await getSuscriptionPlan();
     }
-
-    // Actions that require user auth
-    const authHeader = req.headers.get("Authorization") || "";
-    const supabase = getSupabase(authHeader);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("No autenticado");
 
     if (action === "timbrar") {
       return await timbrar(supabase, user.id, body);
@@ -71,6 +82,7 @@ serve(async (req) => {
     } else {
       throw new Error(`Acción no válida: ${action}`);
     }
+
   } catch (error: any) {
     console.error("Error:", error.message);
     return new Response(
