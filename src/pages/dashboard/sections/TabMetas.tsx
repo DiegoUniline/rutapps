@@ -342,8 +342,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                   <thead className="bg-accent/30">
                     <tr className="text-left">
                       <th className="px-3 py-2 font-semibold">Vendedor</th>
-                      <th className="px-3 py-2 font-semibold">Producto</th>
-                      <th className="px-3 py-2 font-semibold">Presentación</th>
+                      <th className="px-3 py-2 font-semibold">Tipo</th>
+                      <th className="px-3 py-2 font-semibold">Alcance</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Real uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta $</th>
@@ -352,18 +352,22 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {metasConAvance.map((r) => (
-                      <tr key={r.meta.id} className="border-t border-border">
-                        <td className="px-3 py-2">{nameVendedor(r.meta.vendedor_id)}</td>
-                        <td className="px-3 py-2">{nameProducto(r.meta.producto_id)}</td>
-                        <td className="px-3 py-2">{namePresentacion(r.meta.presentacion_id)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{Number(r.meta.meta_unidades).toLocaleString('es-MX')}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{r.real.unidades.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{money(Number(r.meta.meta_monto))}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(r.real.monto)}</td>
-                        <td className={cn("px-3 py-2 text-right tabular-nums font-bold", semaforo(r.pctMonto))}>{r.pctMonto.toFixed(1)}%</td>
-                      </tr>
-                    ))}
+                    {metasConAvance.map((r) => {
+                      const al = alcanceLabel(r.meta);
+                      return (
+                        <tr key={r.meta.id} className="border-t border-border">
+                          <td className="px-3 py-2">{nameVendedor(r.meta.vendedor_id)}</td>
+                          <td className="px-3 py-2"><span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">{al.tipo}</span></td>
+                          <td className="px-3 py-2">{al.valor}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{Number(r.meta.meta_unidades).toLocaleString('es-MX')}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{r.real.unidades.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{money(Number(r.meta.meta_monto))}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(r.real.monto)}</td>
+                          <td className={cn("px-3 py-2 text-right tabular-nums font-bold", semaforo(r.pctMonto))}>{r.pctMonto.toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
+
                   </tbody>
                 </table>
               </div>
