@@ -8,17 +8,18 @@ export function usePedidosPendientes(
   desde: string,
   hasta: string,
   statusFilter?: string,
-  vendedorFilter?: string,
+  vendedorFilter?: string | string[],
   clienteFilter?: string,
   fechaCampo: 'fecha' | 'fecha_entrega' = 'fecha',
 ) {
+  const vendedoresKey = Array.isArray(vendedorFilter) ? vendedorFilter.slice().sort().join(',') : vendedorFilter;
   return useQuery({
-    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedorFilter, clienteFilter, fechaCampo],
+    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedoresKey, clienteFilter, fechaCampo],
     queryFn: async () => {
       return await fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('id, folio, fecha, fecha_entrega, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
+          .select('id, folio, fecha, fecha_entrega, total, status, tipo, vendedor_id, cliente_id, notas, clientes(nombre, telefono, direccion), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad, precio_unitario, subtotal, total, producto_id, productos(codigo, nombre, unidad_granel))')
           .eq('tipo', 'pedido')
           .gte(fechaCampo, desde)
           .lte(fechaCampo, hasta)
@@ -27,7 +28,11 @@ export function usePedidosPendientes(
           .range(from, to);
 
         if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-        if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
+        if (Array.isArray(vendedorFilter)) {
+          if (vendedorFilter.length > 0) q = q.in('vendedor_id', vendedorFilter);
+        } else if (vendedorFilter) {
+          q = q.eq('vendedor_id', vendedorFilter);
+        }
         if (clienteFilter) q = q.eq('cliente_id', clienteFilter);
         return q;
       });

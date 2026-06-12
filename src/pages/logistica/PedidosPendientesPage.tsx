@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Search, Truck, X } from 'lucide-react';
+import { ClipboardList, Search, Truck, X, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { usePedidosPendientes, useAsignacionesFecha, useCargasDia, useAsignarPedidos } from '@/hooks/useLogistica';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { useClientes } from '@/hooks/useClientes';
@@ -32,13 +32,14 @@ export default function PedidosPendientesPage() {
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pendientes' | 'entregados' | 'cancelados' | 'todos'>('pendientes');
-  const [vendedorFilter, setVendedorFilter] = useState<string>('');
+  const [vendedoresSel, setVendedoresSel] = useState<string[]>([]);
   const [clienteFilter, setClienteFilter] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Pass 'todos' so hook does not filter by status; we apply tab grouping client-side
-  const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, 'todos', vendedorFilter || undefined, clienteFilter || undefined, fechaTipo);
+  const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, 'todos', vendedoresSel, clienteFilter || undefined, fechaTipo);
   const { data: asignaciones } = useAsignacionesFecha(desde, hasta);
   const { data: cargas } = useCargasDia(hasta);
   const { profiles: usuarios } = useUsuarios();
@@ -160,16 +161,41 @@ export default function PedidosPendientesPage() {
           <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
-          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los vendedores</SelectItem>
-              {(usuarios ?? []).map((u: any) => (
-                <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-[11px] text-muted-foreground">Vendedores</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 w-[200px] justify-between font-normal">
+                <span className="flex items-center gap-1.5 truncate">
+                  <Users className="h-3.5 w-3.5" />
+                  {vendedoresSel.length === 0
+                    ? 'Todos'
+                    : vendedoresSel.length === 1
+                      ? ((usuarios ?? []).find((u: any) => u.id === vendedoresSel[0])?.nombre ?? '1 vendedor')
+                      : `${vendedoresSel.length} seleccionados`}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto">
+              <div className="flex items-center justify-between px-1 pb-1.5 mb-1 border-b border-border">
+                <span className="text-[11px] font-semibold text-muted-foreground">Vendedores</span>
+                {vendedoresSel.length > 0 && (
+                  <button className="text-[11px] text-primary hover:underline" onClick={() => setVendedoresSel([])}>Limpiar</button>
+                )}
+              </div>
+              {(usuarios ?? []).map((u: any) => {
+                const checked = vendedoresSel.includes(u.id);
+                return (
+                  <label key={u.id} className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent cursor-pointer">
+                    <Checkbox checked={checked} onCheckedChange={() => {
+                      setVendedoresSel(prev => prev.includes(u.id) ? prev.filter(x => x !== u.id) : [...prev, u.id]);
+                    }} />
+                    <span className="truncate">{u.nombre}</span>
+                  </label>
+                );
+              })}
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Cliente</Label>
@@ -190,9 +216,9 @@ export default function PedidosPendientesPage() {
             <Input placeholder="Folio o cliente..." className="pl-8 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter || clienteFilter || search || tab !== 'pendientes' || desde !== today || hasta !== today || fechaTipo !== 'fecha') && (
+        {(vendedoresSel.length > 0 || clienteFilter || search || tab !== 'pendientes' || desde !== today || hasta !== today || fechaTipo !== 'fecha') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
-            setVendedorFilter(''); setClienteFilter(''); setSearch(''); setTab('pendientes');
+            setVendedoresSel([]); setClienteFilter(''); setSearch(''); setTab('pendientes');
             setDesde(today); setHasta(today); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
@@ -233,6 +259,7 @@ export default function PedidosPendientesPage() {
                 <TableHead className="w-10">
                   <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
                 </TableHead>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Folio</TableHead>
                 <TableHead>Cliente</TableHead>
@@ -245,38 +272,90 @@ export default function PedidosPendientesPage() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
               )}
               {filtered.map((p: any) => {
                 const sc = statusColors[p.status] ?? statusColors.borrador;
                 const asignado = asignadoMap[p.id];
                 const cargaAsignada = asignado ? (cargas ?? []).find((c: any) => c.id === asignado) : null;
-                const lineCount = (p.venta_lineas ?? []).length;
-                const pzas = (p.venta_lineas ?? []).reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+                const lineas = (p.venta_lineas ?? []) as any[];
+                const lineCount = lineas.length;
+                const pzas = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+                const isOpen = expanded.has(p.id);
+                const toggleRow = () => setExpanded(prev => {
+                  const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n;
+                });
                 return (
-                  <TableRow key={p.id} className="hover:bg-accent/40">
-                    <TableCell>
-                      <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(p.fecha)}</TableCell>
-                    <TableCell className="font-mono text-[13px] font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/ventas/${p.id}`)}>{p.folio ?? '—'}</TableCell>
-                    <TableCell>{(p.clientes as any)?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{(p.vendedores as any)?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{lineCount} prod · {pzas} pzas</TableCell>
-                    <TableCell className="text-right font-mono">{fmtCurrency(p.total)}</TableCell>
-                    <TableCell>
-                      {cargaAsignada ? (
-                        <Badge variant="secondary" className="text-xs">{(cargaAsignada as any).vendedores?.nombre ?? 'Asignado'}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold', sc.class)}>
-                        {sc.label}
-                      </span>
-                    </TableCell>
-                  </TableRow>
+                  <Fragment key={p.id}>
+                    <TableRow className="hover:bg-accent/40 cursor-pointer" onClick={toggleRow}>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(p.fecha)}</TableCell>
+                      <TableCell className="font-mono text-[13px] font-medium hover:text-primary" onClick={e => { e.stopPropagation(); navigate(`/ventas/${p.id}`); }}>{p.folio ?? '—'}</TableCell>
+                      <TableCell>{(p.clientes as any)?.nombre ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{(p.vendedores as any)?.nombre ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{lineCount} prod · {pzas} pzas</TableCell>
+                      <TableCell className="text-right font-mono">{fmtCurrency(p.total)}</TableCell>
+                      <TableCell>
+                        {cargaAsignada ? (
+                          <Badge variant="secondary" className="text-xs">{(cargaAsignada as any).vendedores?.nombre ?? 'Asignado'}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold', sc.class)}>
+                          {sc.label}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                    {isOpen && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={10} className="p-0">
+                          <div className="p-4 space-y-3">
+                            {(p.clientes as any)?.direccion && (
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-semibold text-foreground">Dirección:</span> {(p.clientes as any).direccion}
+                                {(p.clientes as any)?.telefono && <span className="ml-3"><span className="font-semibold text-foreground">Tel:</span> {(p.clientes as any).telefono}</span>}
+                              </div>
+                            )}
+                            {p.notas && <div className="text-xs"><span className="font-semibold">Notas:</span> {p.notas}</div>}
+                            <div className="rounded-md border border-border bg-background overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                  <tr className="text-left">
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground">Código</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground">Producto</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">Cantidad</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">P. Unit.</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineas.length === 0 && (
+                                    <tr><td colSpan={5} className="px-3 py-3 text-center text-muted-foreground text-xs">Sin productos</td></tr>
+                                  )}
+                                  {lineas.map((l: any) => (
+                                    <tr key={l.id} className="border-t border-border">
+                                      <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{l.productos?.codigo ?? '—'}</td>
+                                      <td className="px-3 py-1.5">{l.productos?.nombre ?? '—'}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{Number(l.cantidad) || 0}{l.productos?.unidad_granel ? ` ${l.productos.unidad_granel}` : ''}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{fmtCurrency(l.precio_unitario)}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{fmtCurrency(l.total ?? l.subtotal)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 );
               })}
             </TableBody>
