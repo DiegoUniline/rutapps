@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -318,9 +318,18 @@ export function usePermisos(): UsePermisosReturn {
     queryKey: ['user-permisos', user?.id],
     queryFn: () => fetchPermisos(user!.id),
     enabled: !!user?.id,
-    staleTime: 2 * 60_000,
+    staleTime: 15_000,
     gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
+
+  // Refetch when admin updates permissions (cross-tab via storage / same-tab via event)
+  useEffect(() => {
+    const handler = () => { refetch(); };
+    window.addEventListener('uniline:permisos-changed', handler);
+    return () => window.removeEventListener('uniline:permisos-changed', handler);
+  }, [refetch]);
 
   const hasRole = data?.hasRole ?? null;
   const permisos = data?.permisos ?? [];
