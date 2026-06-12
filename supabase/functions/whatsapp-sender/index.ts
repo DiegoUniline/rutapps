@@ -19,6 +19,22 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Require authenticated caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await supabaseAdmin.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerUserId = claimsData.claims.sub as string;
+
     const { action, empresa_id, phone, message, url, fileName, caption, tipo, referencia_id } =
       await req.json();
 
@@ -28,6 +44,17 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Verify caller belongs to that empresa (or is super admin)
+    const { data: callerProfile } = await supabaseAdmin
+      .from("profiles").select("empresa_id").eq("user_id", callerUserId).single();
+    const { data: isSA } = await supabaseAdmin.rpc("is_super_admin", { p_user_id: callerUserId });
+    if (!isSA && callerProfile?.empresa_id !== empresa_id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // 1. Get WhatsApp config (only need api_token now)
     const { data: config, error: cfgErr } = await supabaseAdmin
