@@ -350,6 +350,18 @@ export function usePermisos(): UsePermisosReturn {
     return hasPermiso(modulo, 'ver');
   }, [hasPermiso]);
 
+  /**
+   * Permisos móviles (solo para roles "solo vista móvil").
+   * Semántica inversa: default = true (permitido) si no hay row en role_permisos.
+   * Owners siempre true. Solo se bloquea si existe un row con permitido=false.
+   */
+  const hasPermisoMovil = useCallback((modulo: string): boolean => {
+    if (isOwner) return true;
+    if (hasRole !== true) return true;
+    const perm = permisos.find(p => p.modulo === modulo && p.accion === 'ver');
+    return perm?.permitido ?? true;
+  }, [permisos, hasRole, isOwner]);
+
   const reload = useCallback(() => {
     refetch();
     window.dispatchEvent(new Event('uniline:permisos-changed'));
