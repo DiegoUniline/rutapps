@@ -1769,20 +1769,40 @@ export default function PuntoVentaPage() {
               </div>
 
               {/* Credit details */}
-              {condicion === 'credito' && (
-                <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3 space-y-2">
+              {condicion === 'credito' && (() => {
+                const excedeCreditoPOS = totals.total > creditoDisponiblePOS;
+                return (
+                <div className={`rounded-xl border p-3 space-y-2 ${excedeCreditoPOS ? 'border-destructive/40 bg-destructive/[0.04]' : 'border-primary/20 bg-primary/[0.03]'}`}>
                   <div className="flex items-center justify-between text-[12px]">
                     <span className="text-muted-foreground">Límite de crédito</span>
                     <span className="font-semibold text-foreground">{fmtM(clienteLimiteCredito)}</span>
+                  </div>
+                  {saldoPendienteCliente > 0 && (
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="text-muted-foreground">Saldo pendiente</span>
+                      <span className="font-semibold text-foreground tabular-nums">{fmtM(saldoPendienteCliente)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-[12px] border-t border-border/40 pt-1.5">
+                    <span className="text-muted-foreground">Disponible</span>
+                    <span className={`font-bold tabular-nums ${excedeCreditoPOS ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>{fmtM(creditoDisponiblePOS)}</span>
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground">Fecha de vencimiento</label>
                     <input type="date" value={fechaVencimiento} onChange={e => setFechaVencimiento(e.target.value)}
                       className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
+                  {excedeCreditoPOS && (
+                    <p className="text-[11px] text-destructive font-semibold">⚠ El total excede el crédito disponible. No se puede registrar a crédito.</p>
+                  )}
+                  {cuentasVencidasCliente > 0 && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">⚠ El cliente tiene {cuentasVencidasCliente} cuenta{cuentasVencidasCliente !== 1 ? 's' : ''} vencida{cuentasVencidasCliente !== 1 ? 's' : ''}.</p>
+                  )}
                   <p className="text-[10px] text-muted-foreground">Se registrará a crédito — no se cobra ahora</p>
                 </div>
-              )}
+                );
+              })()}
+
 
               {/* Payment method selector — only for contado */}
               {condicion === 'contado' && (
