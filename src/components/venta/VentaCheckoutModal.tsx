@@ -166,10 +166,25 @@ export function VentaCheckoutModal({
 
           {/* Credit details */}
           {condicion === 'credito' && (
-            <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3 space-y-2">
+            <div className={cn(
+              "rounded-xl border p-3 space-y-2",
+              excedeCredito ? "border-destructive/40 bg-destructive/[0.04]" : "border-primary/20 bg-primary/[0.03]"
+            )}>
               <div className="flex items-center justify-between text-[12px]">
                 <span className="text-muted-foreground">Límite de crédito</span>
                 <span className="font-semibold text-foreground">{fmt(clienteLimiteCredito)}</span>
+              </div>
+              {saldoPendienteOtras > 0 && (
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-muted-foreground">Saldo pendiente</span>
+                  <span className="font-semibold text-foreground tabular-nums">{fmt(saldoPendienteOtras)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-[12px] border-t border-border/40 pt-1.5">
+                <span className="text-muted-foreground">Disponible</span>
+                <span className={cn("font-bold tabular-nums", excedeCredito ? "text-destructive" : "text-green-600 dark:text-green-400")}>
+                  {fmt(creditoDisponible)}
+                </span>
               </div>
               {clienteDiasCredito > 0 && (
                 <div className="flex items-center justify-between text-[12px]">
@@ -177,9 +192,22 @@ export function VentaCheckoutModal({
                   <span className="font-semibold text-foreground">{clienteDiasCredito} días</span>
                 </div>
               )}
+              {excedeCredito && (
+                <p className="text-[11px] text-destructive font-semibold flex items-start gap-1 pt-1">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                  El total excede el crédito disponible. No se puede registrar a crédito.
+                </p>
+              )}
+              {tieneVencidas && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-start gap-1 pt-1">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                  Este cliente tiene {cuentasVencidas.length} cuenta{cuentasVencidas.length !== 1 ? 's' : ''} vencida{cuentasVencidas.length !== 1 ? 's' : ''}.
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground">Se registrará a crédito — no se cobra ahora</p>
             </div>
           )}
+
 
           {/* Payment method selector — only for contado */}
           {condicion === 'contado' && (
