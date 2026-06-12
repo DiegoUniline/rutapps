@@ -167,7 +167,7 @@ export default function VentasListPage() {
    * Procesa una por una para garantizar que el trigger FOR EACH ROW se ejecute correctamente.
    */
   const cancelEntregasAndReturnStock = async (ventaIds: string[]) => {
-    const { data: entregas, error: fetchErr } = await supabase
+    const { data: entregas, error: fetchErr } = await (supabase as any)
       .from('entregas')
       .select('id, status')
       .in('venta_id', ventaIds);
