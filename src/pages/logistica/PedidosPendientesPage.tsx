@@ -1,14 +1,18 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Search, Truck } from 'lucide-react';
+import { ClipboardList, Search, Truck, X } from 'lucide-react';
 import { usePedidosPendientes, useAsignacionesFecha, useCargasDia, useAsignarPedidos } from '@/hooks/useLogistica';
+import { useUsuarios } from '@/hooks/useUsuarios';
+import { useClientes } from '@/hooks/useClientes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { fmtDate, fmtCurrency, cn, todayLocal } from '@/lib/utils';
 
@@ -22,16 +26,23 @@ const statusColors: Record<string, { label: string; class: string }> = {
 
 export default function PedidosPendientesPage() {
   const navigate = useNavigate();
-  const [fecha] = useState(() => todayLocal());
+  const today = todayLocal();
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [vendedorFilter, setVendedorFilter] = useState<string>('');
+  const [clienteFilter, setClienteFilter] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
 
-  const { data: pedidos, isLoading } = usePedidosPendientes(fecha, statusFilter);
-  const { data: asignaciones } = useAsignacionesFecha(fecha);
-  const { data: cargas } = useCargasDia(fecha);
+  const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, statusFilter, vendedorFilter || undefined, clienteFilter || undefined);
+  const { data: asignaciones } = useAsignacionesFecha(desde, hasta);
+  const { data: cargas } = useCargasDia(hasta);
+  const { data: usuarios } = useUsuarios();
+  const { data: clientes } = useClientes();
   const asignar = useAsignarPedidos();
+
 
   const asignadoMap = useMemo(() => {
     const m: Record<string, string> = {};
