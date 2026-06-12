@@ -161,18 +161,77 @@ export default function VentasListPage() {
     }
   };
 
+  /**
+   * Cancela las entregas activas (asignado/cargado/en_ruta/hecho) de las ventas dadas.
+   * Esto dispara los triggers DB que DEVUELVEN STOCK al almacén origen.
+   * Procesa una por una para garantizar que el trigger FOR EACH ROW se ejecute correctamente.
+   */
+  const cancelEntregasAndReturnStock = async (ventaIds: string[]) => {
+    const { data: entregas, error: fetchErr } = await (supabase as any)
+      .from('entregas')
+      .select('id, status')
+      .in('venta_id', ventaIds);
+    if (fetchErr) throw fetchErr;
+    const activas = (entregas ?? []).filter((e: any) => !['cancelado', 'borrador'].includes(e.status));
+    for (const e of activas) {
+      // Update individual para que los triggers de reversión de inventario corran fila por fila
+      const { error } = await supabase.from('entregas').update({ status: 'cancelado' } as any).eq('id', e.id);
+      if (error) throw new Error(`Entrega ${e.id}: ${error.message}`);
+    }
+    return activas.length;
+  };
+
   const handleBulkDelete = async () => {
     if (selectedVentas.length === 0) return;
     setBulkDeleting(true);
     let ok = 0, fail = 0;
-    for (const v of selectedVentas) {
-      try { await deleteVenta.mutateAsync(v.id); ok++; } catch { fail++; }
+    const errors: string[] = [];
+    try {
+      const ids = selectedVentas.map(v => v.id);
+      // 1) Cancelar entregas activas → triggers DB devuelven stock
+      try {
+        const restored = await cancelEntregasAndReturnStock(ids);
+        if (restored > 0) toast.info(`Stock devuelto de ${restored} entrega(s).`);
+      } catch (e: any) {
+        errors.push(`Reversión stock: ${e.message}`);
+      }
+      // 2) Borrar dependencias y luego ventas (una a una para tolerar fallos parciales)
+      for (const id of ids) {
+        try {
+          // entregas (ya canceladas) + sus líneas
+          const { data: ents } = await (supabase as any).from('entregas').select('id').eq('venta_id', id);
+          const eIds = (ents ?? []).map((e: any) => e.id);
+          if (eIds.length) {
+            await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
+            await supabase.from('entregas').delete().in('id', eIds);
+          }
+          await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
+          await supabase.from('venta_comisiones').delete().eq('venta_id', id);
+          await supabase.from('venta_historial').delete().eq('venta_id', id);
+          await supabase.from('promocion_aplicada').delete().eq('venta_id', id);
+          await supabase.from('venta_lineas').delete().eq('venta_id', id);
+          const { error: delErr } = await supabase.from('ventas').delete().eq('id', id);
+          if (delErr) throw delErr;
+          ok++;
+        } catch (e: any) {
+          fail++;
+          errors.push(`Venta ${id.slice(0, 8)}: ${e.message}`);
+        }
+      }
+    } finally {
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['entregas'] });
+      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      setBulkDeleting(false);
+      setBulkDeleteOpen(false);
+      setSelected(new Set());
     }
-    setBulkDeleting(false);
-    setBulkDeleteOpen(false);
-    setSelected(new Set());
     if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
-    if (fail > 0) toast.error(`${fail} no se pudieron eliminar`);
+    if (fail > 0) toast.error(`${fail} no se pudieron eliminar. ${errors[0] ?? ''}`);
   };
 
   const handleBulkCancel = async () => {
@@ -186,15 +245,27 @@ export default function VentasListPage() {
     setBulkCancelling(true);
     try {
       const ids = cancelables.map(v => v.id);
+      // 1) Cancelar entregas activas → triggers devuelven stock automáticamente
+      let stockRestored = 0;
+      try {
+        stockRestored = await cancelEntregasAndReturnStock(ids);
+      } catch (e: any) {
+        toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
+      }
+      // 2) Desligar pagos aplicados (los cobros quedan como saldo a favor del cliente)
+      await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
+      // 3) Marcar ventas como canceladas
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
       if (error) throw error;
-      // Unlink cobros: cancel applications so saldos restore
-      await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
-      toast.success(`${ids.length} venta(s) cancelada(s).`);
+
+      toast.success(`${ids.length} venta(s) cancelada(s)${stockRestored > 0 ? ` · stock devuelto de ${stockRestored} entrega(s)` : ''}.`);
       qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['entregas'] });
       qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
       qc.invalidateQueries({ queryKey: ['cxc'] });
       qc.invalidateQueries({ queryKey: ['saldos'] });
+      qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
       setSelected(new Set());
       setBulkCancelOpen(false);
     } catch (e: any) {
