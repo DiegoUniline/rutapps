@@ -1,74 +1,106 @@
+# Plan: Blindaje `empresa_id` en todas las consultas
 
 ## Objetivo
+Garantizar que ninguna consulta de tablas transaccionales/grandes se ejecute sin `empresa_id`, evitando fugas de datos entre empresas y consultas innecesarias.
 
-Eliminar el límite implícito de 1000 filas de Supabase en todo el sistema, aplicando paginación con `fetchAllPages` donde se necesite el dataset completo, y server-side pagination donde solo se muestra una lista. Validar móvil y escritorio.
+## Alcance auditado
+- 220 archivos con `.from(...)` en `src/`.
+- ~80 archivos sin referencia a `empresa_id` (muchos legítimos: catálogos SAT, perfiles, partners, super admin; otros sí requieren revisión).
+- 40+ archivos con `.select('*')`, varios sobre tablas grandes (ventas, entregas, productos, conteos, CFDIs, etc).
 
-## Diagnóstico
+## Estrategia (4 capas de defensa)
 
-Tras escanear el repo, los hooks/páginas que consultan tablas de gran volumen sin paginación (las que ya truncan o pueden truncar al pasar 1000 filas) son:
+### 1. Guarda obligatoria de `empresaId`
+Crear helper `src/lib/empresaGuard.ts`:
+- `assertEmpresa(empresaId)` → throw si null/undefined (uso en hooks/exports).
+- `requireEmpresa(empresaId)` → retorna `string` o `null` para `enabled` de React Query.
 
-**Críticos — cálculos/reportes incompletos hoy:**
-- `src/hooks/useVentas.ts` (lista global de ventas usada en varios resúmenes)
-- `src/hooks/useEntregas.ts` (entregas + entrega_lineas para reportes)
-- `src/hooks/useBootstrapPrefetch.ts` y `src/hooks/useOfflineData.ts` (prefetch PWA — móvil falla con catálogos grandes)
-- `src/lib/reportesPersonalizados.ts` (reportes a la medida)
-- `src/lib/catalogMatcher.ts` (homologación con catálogos > 1000)
-- `src/pages/configuracion/HomologacionCatalogoPage.tsx`
-- `src/pages/DemandaPage.tsx` (demanda / consumos históricos)
-- `src/pages/SupervisorDashboardPage.tsx`
-- `src/pages/MapaVentasPage.tsx` y `src/pages/MonitorRutasPage.tsx` (marcadores incompletos)
-- `src/pages/inventario/InventarioInteligenciaTab.tsx`
-- `src/pages/logistica/ConcentradoSurtidoPage.tsx` y `LogisticaReportesPage.tsx`
-- `src/pages/dashboard/hooks/useDashboardAlertas.ts`, `useDashboardInventarioCamion.ts`, `useDashboardExtra.ts`, `useDashboardEquipo.ts`
+Reglas:
+- Todo hook con React Query: `enabled: !!empresaId && (enabled ?? true)`.
+- Toda función imperativa (export, prefetch, edge call): `assertEmpresa(empresaId)` al inicio.
+- `queryKey` SIEMPRE incluye `empresaId` como segundo elemento (ya es regla, validar).
 
-**Medio — listas paginadas en UI pero con export/acciones masivas que sí necesitan todo:**
-- Exportar Excel/PDF desde `ProductosListPage`, `ClientesListPage`, `VentasListPage`, `CobranzaPage`, `EntregaListPage`, `CompraExpandedRow`, `ConteoFisicoPage`.
+### 2. Filtro en origen (`.eq('empresa_id', ...)`)
+Auditar y corregir por módulo:
 
-**Bajo — listas naturalmente acotadas (catálogos < 1000):** zonas, marcas, vehículos, almacenes, tarifas. No se tocan.
+**Críticos a revisar/corregir:**
+- `src/hooks/useLogistica.ts`, `useFavorites.ts`, `usePermisos.ts`, `usePartner.ts`, `useEmpresaJornadaConfig.ts`, `useDataVisibility.ts`
+- `src/pages/dashboard/hooks/useMonthlyGoal.ts`
+- `src/pages/ConteoFisicoPage.tsx`, `AuditoriaConteoPage.tsx`, `EntregaFormPage.tsx`, `ListasPrecioListPage.tsx`, `EntregasPage.tsx`
+- `src/pages/logistica/PedidosPendientesPage.tsx`
+- `src/pages/CompraForm/CompraPagosTab.tsx`, `compras/CompraExpandedRow.tsx`
+- `src/pages/traspasos/TraspasoExpandedRow.tsx`
+- `src/components/venta/VentaHistorialTab.tsx`, `VentaDevolucionesTab.tsx`
+- `src/components/conteos/ConteoDetailModal.tsx`, `ConteoKardexModal.tsx`
+- `src/components/cobranza/CobroEditDialog.tsx`
+- `src/components/reportes/ReportePromociones.tsx`, `EntityMultiSelect.tsx`
+- `src/components/comisiones/ComisionesReglasTab.tsx`
+- `src/components/facturacion/CfdiHistory.tsx`
+- `src/components/auditorias/AuditoriaMovimientosModal.tsx`
 
-## Plan de acción
+**Excluidos legítimamente (no requieren `empresa_id`):**
+- Catálogos SAT (`cat_*`, `unidades_sat`, `tasas_*`).
+- Tablas de super admin (`super_admins`, `subscription_plans`, `trial_blacklist`).
+- `profiles` filtrado por `user_id`.
+- Páginas públicas (signup, partners landing, completar registro, force change password).
 
-### 1. Endurecer `fetchAllPages`
-Archivo: `src/lib/supabasePaginate.ts`
-- Agregar `safetyCap` (default 200 000) y un `console.warn` si se alcanza, para evitar memory blow-ups.
-- Exponer variante `fetchAllPagesById(table, select, filter)` que pagine por keyset (`order('id').gt('id', lastId)`) — más eficiente para tablas grandes; usada en los hooks pesados (ventas, entregas, movimientos_inventario).
+Para cada archivo "sin empresa_id" se decide: agregar filtro o documentar la exclusión con comentario `// empresa_id N/A: razón`.
 
-### 2. Refactor de hooks críticos
-Para cada query a `ventas / venta_lineas / entregas / entrega_lineas / cobros / cobro_aplicaciones / movimientos_inventario / stock_almacen / productos / clientes / visitas / cliente_orden_ruta / compra_lineas`, sustituir el `.select(...).eq(...)` directo por `fetchAllPages((from,to) => qb.range(from,to))` o por keyset.
+### 3. Columnas explícitas (eliminar `.select('*')`)
+Reemplazar `*` por columnas necesarias en tablas grandes/anchas:
+- `productos` (54 cols), `clientes` (43), `cfdis` (37), `ventas` (32), `proveedores` (24), `venta_lineas` (24), `caja_turnos` (23), `auditorias` (16), `entregas` (19), `compras` (17).
 
-Archivos a actualizar (mismo patrón en todos):
-- `useVentas.ts`, `useEntregas.ts`, `useBootstrapPrefetch.ts`, `useOfflineData.ts`
-- `useDashboardAlertas.ts`, `useDashboardInventarioCamion.ts`, `useDashboardExtra.ts`, `useDashboardEquipo.ts`
-- `SupervisorDashboardPage.tsx`, `MapaVentasPage.tsx`, `MonitorRutasPage.tsx`
-- `inventario/InventarioInteligenciaTab.tsx`
-- `logistica/ConcentradoSurtidoPage.tsx`, `logistica/LogisticaReportesPage.tsx`
-- `DemandaPage.tsx`, `configuracion/HomologacionCatalogoPage.tsx`
-- `lib/reportesPersonalizados.ts`, `lib/catalogMatcher.ts`
+Archivos prioritarios:
+- `useVehiculos.ts`, `useUsuarios.ts`, `useRoles.ts`, `usePromociones.ts`, `usePresentaciones.ts`, `useNotifications.ts`, `useFavorites.ts`, `useCajaTurno.ts`
+- `ClienteFormPage.tsx`, `CfdiFormPage.tsx`, `EntregasPage.tsx`, `PuntoVentaPage.tsx`, `ProveedorFormPage.tsx`, `TraspasoFormPage.tsx`, `TarifaFormPage.tsx`, `AlmacenesPage.tsx`, `ReportesPersonalizadosPage.tsx`, `AuditoriaResultadosPage.tsx`, `HomologacionCatalogoPage.tsx`, `MiSuscripcionPage.tsx`
+- `lib/ventaPdfFromId.ts`
+- Componentes admin (`AdminSubscriptionsTab`, `AdminPosTab`, `AdminCuponesTab`, etc.) sólo cuando aplique al panel de empresa, no al super-admin global.
 
-### 3. Exports y acciones masivas
-En cada `ExportButton` de listas paginadas (productos, clientes, ventas, cobranza, entregas, conteos, compras), ejecutar `fetchAllPages` con los mismos filtros activos al momento del click — no exportar solo la página visible. Mostrar toast de progreso para datasets > 5 000.
+Quedan permitidos `*` en tablas pequeñas catálogo (<10 cols, <1000 filas).
 
-### 4. Mejoras de rendimiento asociadas
-- **Selects acotados:** revisar selects con `*` o joins pesados (p. ej. `venta_lineas(*, productos(*))`) y reducir a las columnas que la vista realmente usa, para que paginar todo el dataset no explote la memoria.
-- **`staleTime` razonable** en queries de catálogos grandes (60 s+) para no repaginar en cada render.
-- **`useMemo`** en agregaciones que ya recibirán arrays grandes.
-- **Índices DB:** verificar índices en columnas usadas para keyset (`empresa_id, id`, `empresa_id, fecha`). Si falta alguno, migración aparte (no incluida aquí, se evalúa después con `supabase--slow_queries`).
+### 4. Exports y Prefetch
+- **Exports Excel/PDF** (`src/components/ExportButton.tsx` y exports inline):
+  - Aplicar `empresa_id` + filtros activos.
+  - Usar `fetchAllPages` con `assertEmpresa`.
+  - Nunca exportar sin empresa activa.
+- **Prefetch PWA** (`useBootstrapPrefetch`, `useOfflineData`):
+  - Verificar `empresa_id` antes de cada `prefetchQuery`.
+  - Confirmar que cada `fetchAllPages` incluye `.eq('empresa_id', empresaId)`.
 
-### 5. Guardarraíl para el futuro
-- Añadir comentario `// FORBIDDEN: bare .select() sobre tablas transaccionales — usa fetchAllPages` en `src/lib/supabase.ts`.
-- Memory note en `mem://architecture/data-fetching-pagination` (ya existe) — actualizar con la lista de tablas que SIEMPRE requieren paginación.
+## Hardening adicional
 
-### 6. Verificación
-- Build + smoke test móvil/escritorio en: `/almacen/inventario`, `/ventas`, `/cobranza`, `/logistica/concentrado`, `/dashboard`, `/supervisor`, `/configuracion/homologacion`, `/almacen/demanda`, `/reportes`.
-- Probar export de productos y ventas con dataset grande (verificar que descarga > 1000 filas).
-- Validar prefetch PWA: cerrar sesión, ingresar como usuario móvil, ver que se cargan todos los clientes/productos.
+### Linter local
+Agregar regla custom (script Node) `scripts/audit-empresa-filter.ts` que escanea `src/` y reporta:
+- `.from('<tabla_grande>')` sin `.eq('empresa_id'` en el mismo bloque.
+- `.select('*')` en tablas listadas como anchas.
+- Hooks con `useQuery` sin `empresaId` en `queryKey`.
+
+Salida: reporte markdown en consola. Se ejecuta manualmente; opcional en CI.
+
+### Documentación
+Actualizar `mem://architecture/multi-tenant` con:
+- Lista de tablas que SIEMPRE requieren `empresa_id`.
+- Lista de excepciones documentadas.
+- Patrón obligatorio: guarda → queryKey → `.eq('empresa_id')` → `fetchAllPages` → columnas específicas.
+
+## Entregables y orden
+1. `src/lib/empresaGuard.ts` (helper).
+2. Refactor hooks críticos por lote (logística, dashboard, conteo, ventas, entregas, cobranza, facturación, reportes, homologación).
+3. Refactor `.select('*')` en tablas anchas.
+4. Refactor exports e inline downloads.
+5. Refactor prefetch PWA + offlineData.
+6. Script `scripts/audit-empresa-filter.ts` + corrida final con 0 hallazgos críticos.
+7. Actualizar memoria `multi-tenant` y `data-fetching-pagination`.
+8. Verificación: build OK + smoke tests en `/dashboard`, `/ventas`, `/cobranza`, `/almacen/inventario`, `/logistica/concentrado`, `/reportes`, `/configuracion/homologacion`, `/supervisor`, app móvil `/ruta`.
 
 ## Notas técnicas
+- No tocar RLS ni migraciones: el filtro `empresa_id` complementa RLS (defensa en profundidad).
+- No tocar `src/integrations/supabase/client.ts` (auto-gen).
+- Mantener el patrón `fetchAllPages((from,to) => qb.range(from,to))` ya estandarizado.
+- En cada `useQuery`: `queryKey: ['recurso', empresaId, ...filtros]`, `enabled: !!empresaId`.
+- Conservar accesos legítimos sin `empresa_id` (catálogos SAT, super-admin, páginas públicas) con comentario explicativo.
 
-- `fetchAllPages` mantiene firma actual; nuevos helpers son aditivos.
-- Cambios son client-side; no se modifican migraciones ni RLS.
-- No se tocan listas con paginación server-side ya correcta (`useProductosPaginated`, etc.) salvo su export.
-
-## Alcance
-
-~25 archivos editados, sin cambios de UI ni de esquema. Riesgo bajo: el patrón `fetchAllPages` ya está probado en producción (devoluciones, cargas, logística).
+## Riesgos
+- Romper hooks que asumían carga sin empresa → mitigado con `enabled` y estados de carga.
+- Falsos positivos del linter → lista blanca de tablas excluidas en el script.
+- Exports masivos con muchas filas → ya cubierto por `fetchAllPages` con `safetyCap`.
