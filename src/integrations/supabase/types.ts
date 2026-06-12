@@ -7638,6 +7638,7 @@ export type Database = {
         }
         Returns: string
       }
+      purge_old_gps_history: { Args: never; Returns: undefined }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
