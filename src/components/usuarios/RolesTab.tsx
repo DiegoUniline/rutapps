@@ -185,9 +185,9 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
 
   return (
     <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => !isSoloMovil && setOpen(!open)}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
         <div className="flex items-center gap-3">
-          {!isSoloMovil && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           <Shield className="h-4 w-4 text-primary" />
           <div>
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
@@ -204,10 +204,8 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
           </button>
         </div>
       </div>
-      {isSoloMovil && (
-        <div className="border-t border-border px-4 py-3 bg-accent/20">
-          <p className="text-xs text-muted-foreground">Este rol solo tiene acceso a la aplicación móvil de ruta. No requiere configuración de permisos de escritorio.</p>
-        </div>
+      {open && isSoloMovil && (
+        <MobilePermissionsTable permisos={permisos} disabled={disabled} onToggle={onToggleMobilePermiso} />
       )}
       {open && !isSoloMovil && (
         <div className="border-t border-border overflow-x-auto">
