@@ -507,7 +507,7 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
           {item.label === 'Configuración' && !query.trim() && (
             <div className="my-2 border-t border-sidebar-border/40" />
           )}
-          <SidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
+          <SidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} forceOpen={!!query.trim() && !!item.children} />
         </div>
       ))}
       {filteredItems.length === 0 && query.trim() && !collapsed && (
