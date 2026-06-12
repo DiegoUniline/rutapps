@@ -276,6 +276,36 @@ export default function PuntoVentaPage() {
     },
   });
 
+  // Pending ventas for the selected client — used to validate credit limit and detect overdue
+  const { data: clientePendingVentasPOS } = useQuery({
+    queryKey: ['pos-pending-ventas', empresa?.id, clienteId],
+    enabled: !!empresa?.id && !!clienteId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('ventas')
+        .select('id, fecha, saldo_pendiente, dias_credito')
+        .eq('empresa_id', empresa!.id)
+        .eq('cliente_id', clienteId!)
+        .gt('saldo_pendiente', 0)
+        .in('status', ['confirmado', 'entregado', 'facturado']);
+      return data ?? [];
+    },
+  });
+  const saldoPendienteCliente = useMemo(
+    () => (clientePendingVentasPOS ?? []).reduce((s, v: any) => s + (v.saldo_pendiente ?? 0), 0),
+    [clientePendingVentasPOS]
+  );
+  const cuentasVencidasCliente = useMemo(() => {
+    const today = Date.now();
+    return (clientePendingVentasPOS ?? []).filter((v: any) => {
+      const dc = v.dias_credito ?? 0;
+      const diasTrans = Math.floor((today - new Date(v.fecha).getTime()) / 86400000);
+      return diasTrans > dc;
+    }).length;
+  }, [clientePendingVentasPOS]);
+  const creditoDisponiblePOS = Math.max(0, (clienteLimiteCredito ?? 0) - saldoPendienteCliente);
+
+
   // Default lista de precios
   const { data: defaultListaPrecioData } = useQuery({
     queryKey: ['pos-default-lista-precio-full', empresa?.id],
