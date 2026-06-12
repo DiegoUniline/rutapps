@@ -779,6 +779,10 @@ export default function DemandaPage() {
                       <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
                     ) : pedido.fullySurtido ? (
                       <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
+                    ) : pedido.fullyGenerada ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Entrega generada</Badge>
+                    ) : pedido.totalGenerada > 0 ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">Entrega parcial</Badge>
                     ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
