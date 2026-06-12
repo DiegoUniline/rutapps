@@ -1102,12 +1102,14 @@ export default function DemandaPage() {
             </p>
             <div>
               <Label className="text-xs">Vendedor</Label>
-              <Combobox
-                options={vendedorOptions}
-                value={asignarVendedorId}
-                onChange={(v) => setAsignarVendedorId(v as string)}
-                placeholder="Seleccionar vendedor"
-              />
+              <Select value={asignarVendedorId} onValueChange={setAsignarVendedorId}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar vendedor" /></SelectTrigger>
+                <SelectContent>
+                  {vendedorOptions.map(v => (
+                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
