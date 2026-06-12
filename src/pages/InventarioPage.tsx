@@ -5,6 +5,7 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes } from 'lucide-react';
 import { Input } from '@/components/ui/input';
