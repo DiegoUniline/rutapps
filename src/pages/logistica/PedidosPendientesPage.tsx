@@ -161,16 +161,41 @@ export default function PedidosPendientesPage() {
           <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
-          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los vendedores</SelectItem>
-              {(usuarios ?? []).map((u: any) => (
-                <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-[11px] text-muted-foreground">Vendedores</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 w-[200px] justify-between font-normal">
+                <span className="flex items-center gap-1.5 truncate">
+                  <Users className="h-3.5 w-3.5" />
+                  {vendedoresSel.length === 0
+                    ? 'Todos'
+                    : vendedoresSel.length === 1
+                      ? ((usuarios ?? []).find((u: any) => u.id === vendedoresSel[0])?.nombre ?? '1 vendedor')
+                      : `${vendedoresSel.length} seleccionados`}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto">
+              <div className="flex items-center justify-between px-1 pb-1.5 mb-1 border-b border-border">
+                <span className="text-[11px] font-semibold text-muted-foreground">Vendedores</span>
+                {vendedoresSel.length > 0 && (
+                  <button className="text-[11px] text-primary hover:underline" onClick={() => setVendedoresSel([])}>Limpiar</button>
+                )}
+              </div>
+              {(usuarios ?? []).map((u: any) => {
+                const checked = vendedoresSel.includes(u.id);
+                return (
+                  <label key={u.id} className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent cursor-pointer">
+                    <Checkbox checked={checked} onCheckedChange={() => {
+                      setVendedoresSel(prev => prev.includes(u.id) ? prev.filter(x => x !== u.id) : [...prev, u.id]);
+                    }} />
+                    <span className="truncate">{u.nombre}</span>
+                  </label>
+                );
+              })}
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Cliente</Label>
