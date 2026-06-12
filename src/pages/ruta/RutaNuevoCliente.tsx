@@ -4,6 +4,8 @@ import { ArrowLeft, Save, Crosshair, Loader2, ChevronDown, ChevronUp } from 'luc
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaveCliente, useZonas, useCobradores } from '@/hooks/useClientes';
 import { useAllListasPrecios } from '@/hooks/useData';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { locationService } from '@/lib/locationService';
