@@ -663,7 +663,7 @@ export default function DemandaPage() {
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 <UserPlus className="h-3.5 w-3.5" />
-                {selectionState.enRutaSel ? 'Cambiar vendedor' : 'Asignar vendedor'}
+                {selectionState.enRutaSel ? 'Cambiar repartidor' : 'Asignar repartidor'}
               </Button>
             )}
             {selectionState.conEntregaActiva && (
