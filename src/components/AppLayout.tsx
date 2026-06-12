@@ -141,6 +141,10 @@ const navItems: NavItem[] = [
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Unidades', path: '/catalogos/unidades' },
       { label: 'Zonas', path: '/catalogos/zonas' },
+      { label: 'Vehículos', path: '/configuracion/vehiculos' },
+      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
+      { label: 'WhatsApp', path: '/configuracion/whatsapp' },
+      { label: 'General', path: '/configuracion' },
     ],
   },
   { label: 'Control', icon: ShieldAlert, path: '/control' },
@@ -155,17 +159,13 @@ const navItems: NavItem[] = [
       { label: 'Metas', path: '/administracion/metas' },
       { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
       // Operación
-      { label: 'Vehículos', path: '/configuracion/vehiculos' },
-      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
-      // Integraciones y empresa
-      { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-      { label: 'General', path: '/configuracion' },
       // Cuenta
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
       { label: 'Tutoriales', path: '/tutoriales' },
     ],
   },
+
   { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
 
 ];
