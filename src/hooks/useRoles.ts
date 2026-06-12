@@ -252,7 +252,7 @@ export function useRoles() {
     roleSoloPos, setRoleSoloPos,
     showRoleForm, rolesTab, setRolesTab,
     loadRoles, resetRoleForm, saveRoleWithSoloMovil, toggleRoleActivo,
-    togglePermiso, toggleAllGroup, toggleAllModule,
+    togglePermiso, toggleMobilePermiso, toggleAllGroup, toggleAllModule,
     openEditRole, openNewRole,
   };
 }
