@@ -73,6 +73,8 @@ const GROUP_BY_OPTIONS = [
   { value: 'vendedor', label: 'Vendedor' },
   { value: 'zona', label: 'Zona' },
   { value: 'credito', label: 'Tipo crédito' },
+  { value: 'tarifa', label: 'Lista de precios' },
+  { value: 'dia_visita', label: 'Día de visita' },
 ];
 
 function getNumericPageSize(ps: PageSizeOption): number {
