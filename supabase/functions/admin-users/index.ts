@@ -138,6 +138,13 @@ Deno.serve(async (req) => {
     if (action === "set-password") {
       const { user_id, password } = params;
 
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+
       // Verify user belongs to same empresa
       const { data: targetProfile } = await adminClient
         .from("profiles")
