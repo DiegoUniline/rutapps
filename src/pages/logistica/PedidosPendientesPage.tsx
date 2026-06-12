@@ -124,18 +124,62 @@ export default function PedidosPendientesPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 items-center">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar folio o cliente..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-wrap gap-2 items-end bg-card border border-border rounded-lg p-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Desde</Label>
+          <Input type="date" className="h-9 w-[150px]" value={desde} onChange={e => setDesde(e.target.value)} />
         </div>
-        <div className="flex gap-1">
-          {['todos', 'borrador', 'confirmado', 'entregado'].map(s => (
-            <Button key={s} variant={statusFilter === s ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter(s)}>
-              {s === 'todos' ? 'Todos' : statusColors[s]?.label ?? s}
-            </Button>
-          ))}
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Hasta</Label>
+          <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
         </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
+          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los vendedores</SelectItem>
+              {(usuarios ?? []).map((u: any) => (
+                <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Cliente</Label>
+          <Select value={clienteFilter || 'all'} onValueChange={v => setClienteFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los clientes</SelectItem>
+              {(clientes ?? []).map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+          <Label className="text-[11px] text-muted-foreground">Buscar</Label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Folio o cliente..." className="pl-8 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        {(vendedorFilter || clienteFilter || search || statusFilter !== 'todos' || desde !== today || hasta !== today) && (
+          <Button variant="ghost" size="sm" className="h-9" onClick={() => {
+            setVendedorFilter(''); setClienteFilter(''); setSearch(''); setStatusFilter('todos');
+            setDesde(today); setHasta(today);
+          }}>
+            <X className="h-3.5 w-3.5 mr-1" /> Limpiar
+          </Button>
+        )}
+      </div>
+
+      <div className="flex gap-1 flex-wrap">
+        {['todos', 'borrador', 'confirmado', 'entregado'].map(s => (
+          <Button key={s} variant={statusFilter === s ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter(s)}>
+            {s === 'todos' ? 'Todos' : statusColors[s]?.label ?? s}
+          </Button>
+        ))}
       </div>
 
       {isLoading ? <TableSkeleton /> : (
