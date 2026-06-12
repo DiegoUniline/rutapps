@@ -147,6 +147,10 @@ export default function RutaDevolucion() {
 
   const { fmt } = useCurrency();
 
+  if (!hasPermisoMovil('ruta.devoluciones')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar devoluciones." />;
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
