@@ -1,0 +1,1 @@
+update public.role_permisos set permitido = true where role_id = 'c18e565a-d3ac-41ad-87b5-a2ae6688280a' and modulo = 'ruta.cliente_credito' and accion = 'ver';

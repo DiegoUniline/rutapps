@@ -114,63 +114,55 @@ export default function RutaNuevoCliente() {
     return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite crear clientes desde la ruta." />;
   }
 
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+      <div className="px-4 pt-3 pb-2 text-[11px] font-bold tracking-wider uppercase text-primary/80">{title}</div>
+      <div className="px-4 pb-4 space-y-3">{children}</div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3"
-        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
-        <button onClick={() => navigate('/ruta')} className="h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform">
-          <ArrowLeft className="h-4.5 w-4.5 text-foreground" />
+    <div className="flex flex-col h-full bg-muted/30">
+      {/* Header simple */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-3 py-2.5 flex items-center gap-2"
+        style={{ paddingTop: 'calc(0.625rem + env(safe-area-inset-top, 0px))' }}>
+        <button onClick={() => navigate('/ruta')} className="h-9 w-9 rounded-lg hover:bg-accent flex items-center justify-center active:scale-90 transition-transform">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-foreground flex-1">Nuevo Cliente</h1>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-60"
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Guardar
-        </button>
+        <div className="flex-1">
+          <h1 className="text-base font-bold text-foreground leading-tight">Nuevo Cliente</h1>
+          <p className="text-[11px] text-muted-foreground">Completa los datos</p>
+        </div>
       </div>
 
       {/* Form body */}
-      <div className="flex-1 overflow-auto px-4 py-4 space-y-5 pb-32">
+      <div className="flex-1 overflow-auto px-3 py-3 space-y-3 pb-28">
 
-        {/* ── Información básica ── */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-foreground border-b border-border pb-1">Información básica</h2>
-
+        <Section title="Información básica">
           <MField label="Nombre" required>
             <input className={inputCls} placeholder="Nombre del cliente" value={form.nombre ?? ''} onChange={e => set('nombre', e.target.value)} autoFocus />
           </MField>
 
-          <MField label="Código">
-            <input className={cn(inputCls, "bg-card border border-border text-muted-foreground")} placeholder="Se asigna automáticamente" value={form.codigo ?? ''} readOnly />
-          </MField>
-
           <div className="grid grid-cols-2 gap-3">
             <MField label="Teléfono">
-              <input className={inputCls} type="tel" placeholder="5210dígitos" value={form.telefono ?? ''} onChange={e => {
+              <input className={inputCls} type="tel" inputMode="numeric" placeholder="10 dígitos" value={form.telefono ?? ''} onChange={e => {
                 const digits = e.target.value.replace(/\D/g, '');
                 if (digits.length === 10 && !digits.startsWith('52')) set('telefono', '52' + digits);
                 else set('telefono', e.target.value);
               }} />
             </MField>
             <MField label="Contacto">
-              <input className={inputCls} placeholder="Persona de contacto" value={form.contacto ?? ''} onChange={e => set('contacto', e.target.value)} />
+              <input className={inputCls} placeholder="Persona" value={form.contacto ?? ''} onChange={e => set('contacto', e.target.value)} />
             </MField>
           </div>
 
           <MField label="Email">
             <input className={inputCls} type="email" placeholder="email@ejemplo.com" value={form.email ?? ''} onChange={e => set('email', e.target.value)} />
           </MField>
-        </section>
+        </Section>
 
-        {/* ── Dirección y GPS ── */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-foreground border-b border-border pb-1">Dirección</h2>
-
-          <MField label="Dirección">
+        <Section title="Dirección">
+          <MField label="Calle y número">
             <input className={inputCls} placeholder="Calle y número" value={form.direccion ?? ''} onChange={e => set('direccion', e.target.value)} />
           </MField>
 
@@ -182,7 +174,7 @@ export default function RutaNuevoCliente() {
             <div className="flex gap-2">
               <input
                 className={cn(inputCls, "flex-1")}
-                placeholder="19.763610, -104.355636"
+                placeholder="lat, lng"
                 value={form.gps_lat && form.gps_lng ? `${form.gps_lat}, ${form.gps_lng}` : ''}
                 onChange={e => {
                   const parts = e.target.value.split(',').map(s => s.trim());
@@ -196,7 +188,7 @@ export default function RutaNuevoCliente() {
               <button
                 onClick={captureGps}
                 disabled={capturingGps}
-                className="h-11 px-3 rounded-lg bg-primary text-primary-foreground flex items-center gap-1.5 text-sm font-medium active:scale-95 transition-transform disabled:opacity-60 shrink-0"
+                className="h-11 px-3 rounded-lg bg-primary text-primary-foreground flex items-center gap-1.5 text-sm font-semibold active:scale-95 transition-transform disabled:opacity-60 shrink-0"
               >
                 {capturingGps ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
                 GPS
@@ -210,12 +202,9 @@ export default function RutaNuevoCliente() {
               {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
             </select>
           </MField>
-        </section>
+        </Section>
 
-        {/* ── Visitas ── */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-foreground border-b border-border pb-1">Visitas</h2>
-
+        <Section title="Visitas">
           <MField label="Frecuencia" required>
             <select className={selectCls} value={form.frecuencia ?? 'semanal'} onChange={e => set('frecuencia', e.target.value as FrecuenciaVisita)}>
               {FRECUENCIAS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -223,30 +212,30 @@ export default function RutaNuevoCliente() {
           </MField>
 
           <MField label="Días de visita" required>
-            <div className="flex flex-wrap gap-2">
-              {DIAS.map(d => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => toggleDia(d)}
-                  className={cn(
-                    "px-3 py-2 rounded-lg text-xs font-semibold border transition-colors",
-                    (form.dia_visita ?? []).includes(d)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted text-muted-foreground border-border"
-                  )}
-                >
-                  {d.slice(0, 3)}
-                </button>
-              ))}
+            <div className="grid grid-cols-7 gap-1.5">
+              {DIAS.map(d => {
+                const active = (form.dia_visita ?? []).includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleDia(d)}
+                    className={cn(
+                      "h-10 rounded-lg text-[11px] font-bold border transition-all active:scale-95",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background text-muted-foreground border-border"
+                    )}
+                  >
+                    {d.slice(0, 1)}
+                  </button>
+                );
+              })}
             </div>
           </MField>
-        </section>
+        </Section>
 
-        {/* ── Comercial ── */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-foreground border-b border-border pb-1">Comercial</h2>
-
+        <Section title="Comercial">
           <MField label="Lista de precios" required>
             <select className={selectCls} value={(form as any).lista_precio_id ?? ''} onChange={e => {
               const v = e.target.value;
@@ -269,50 +258,56 @@ export default function RutaNuevoCliente() {
           </MField>
 
           {canAsignarCredito && (
-            <>
-              <div className="flex items-center gap-3">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Crédito?</label>
-                <button
-                  type="button"
-                  onClick={() => set('credito', !form.credito)}
-                  className={cn(
-                    "h-8 w-14 rounded-full transition-colors relative",
-                    form.credito ? "bg-primary" : "bg-input"
-                  )}
-                >
+            <div className="pt-1 space-y-3">
+              <button
+                type="button"
+                onClick={() => set('credito', !form.credito)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-xl border transition-colors active:scale-[0.99]",
+                  form.credito ? "bg-primary/5 border-primary/40" : "bg-background border-border"
+                )}
+              >
+                <div className={cn(
+                  "h-7 w-12 rounded-full transition-colors relative shrink-0",
+                  form.credito ? "bg-primary" : "bg-input"
+                )}>
                   <span className={cn(
-                    "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform",
-                    form.credito ? "translate-x-7" : "translate-x-1"
+                    "absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                    form.credito ? "translate-x-6" : "translate-x-1"
                   )} />
-                </button>
-              </div>
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-semibold text-foreground">Vender a crédito</div>
+                  <div className="text-[11px] text-muted-foreground">Permite ventas con saldo pendiente</div>
+                </div>
+              </button>
 
               {form.credito && (
-                <div className="grid grid-cols-2 gap-3">
-                  <MField label="Límite crédito">
-                    <input className={inputCls} type="number" placeholder="0.00" value={form.limite_credito ?? 0} onChange={e => set('limite_credito', +e.target.value)} />
+                <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <MField label="Límite ($)">
+                    <input className={inputCls} type="number" inputMode="decimal" placeholder="0.00" value={form.limite_credito ?? 0} onChange={e => set('limite_credito', +e.target.value)} />
                   </MField>
-                  <MField label="Días crédito">
-                    <input className={inputCls} type="number" placeholder="0" value={form.dias_credito ?? 0} onChange={e => set('dias_credito', +e.target.value)} />
+                  <MField label="Días">
+                    <input className={inputCls} type="number" inputMode="numeric" placeholder="0" value={form.dias_credito ?? 0} onChange={e => set('dias_credito', +e.target.value)} />
                   </MField>
                 </div>
               )}
-            </>
+            </div>
           )}
-        </section>
+        </Section>
 
-        {/* ── Más opciones (collapsible) ── */}
+        {/* Más opciones (collapsible) */}
         <button
           type="button"
           onClick={() => setShowExtra(!showExtra)}
-          className="w-full flex items-center justify-between py-2 text-sm font-semibold text-primary"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-primary"
         >
-          Más opciones
+          {showExtra ? 'Ocultar opciones' : 'Más opciones'}
           {showExtra ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
 
         {showExtra && (
-          <section className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+          <Section title="Adicional">
             <MField label="Notas">
               <textarea
                 className="w-full min-h-[80px] px-3 py-2.5 rounded-lg border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
@@ -322,11 +317,26 @@ export default function RutaNuevoCliente() {
               />
             </MField>
 
-            <MField label="Orden">
-              <input className={inputCls} type="number" placeholder="0" value={form.orden ?? 0} onChange={e => set('orden', +e.target.value)} />
+            <MField label="Orden de visita">
+              <input className={inputCls} type="number" inputMode="numeric" placeholder="0" value={form.orden ?? 0} onChange={e => set('orden', +e.target.value)} />
             </MField>
-          </section>
+          </Section>
         )}
+      </div>
+
+      {/* Sticky bottom save bar (estilo form móvil, no detalle) */}
+      <div
+        className="sticky bottom-0 z-10 bg-background/95 backdrop-blur border-t border-border px-3 py-3"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full h-12 rounded-xl bg-primary text-primary-foreground text-base font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 shadow-md"
+        >
+          {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+          {saving ? 'Guardando...' : 'Guardar Cliente'}
+        </button>
       </div>
     </div>
   );
