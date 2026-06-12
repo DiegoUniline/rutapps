@@ -61,7 +61,7 @@ export default function NotificationModal({ notifications, views }: Props) {
             className="text-sm text-foreground/80 leading-relaxed prose prose-sm dark:prose-invert max-w-none
               [&_img]:rounded-xl [&_img]:my-3 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm
               [&_ul]:pl-4 [&_ol]:pl-4 [&_li]:text-sm [&_a]:text-primary [&_a]:underline"
-            dangerouslySetInnerHTML={{ __html: current.body }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(current.body) }}
           />
         </div>
 
