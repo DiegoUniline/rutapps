@@ -60,13 +60,42 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
       return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
     },
   });
+  const clasificacionesQ = useQuery({
+    queryKey: ['metas-tab-clasificaciones', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('clasificaciones' as any).select('id, nombre').eq('empresa_id', empresa!.id);
+      return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
+    },
+  });
+  const marcasQ = useQuery({
+    queryKey: ['metas-tab-marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('marcas' as any).select('id, nombre').eq('empresa_id', empresa!.id);
+      return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
+    },
+  });
 
   const metas = metasQ.data ?? [];
   const avance = avanceQ.data ?? [];
 
   const nameVendedor = (id: string | null) => id ? (vendedoresQ.data?.get(id) ?? '—') : 'Empresa (todos)';
-  const nameProducto = (id: string | null) => id ? (productosQ.data?.get(id) ?? '—') : 'Todos los productos';
+  const nameProducto = (id: string | null) => id ? (productosQ.data?.get(id) ?? '—') : null;
   const namePresentacion = (id: string | null) => id ? (presentacionesQ.data?.get(id) ?? '—') : '—';
+  const nameClasificacion = (id: string | null) => id ? (clasificacionesQ.data?.get(id) ?? '—') : null;
+  const nameMarca = (id: string | null) => id ? (marcasQ.data?.get(id) ?? '—') : null;
+
+  const alcanceLabel = (m: MetaVenta) => {
+    if (m.producto_id) {
+      const base = nameProducto(m.producto_id);
+      const pres = m.presentacion_id ? ` · ${namePresentacion(m.presentacion_id)}` : '';
+      return { tipo: 'Producto', valor: `${base}${pres}` };
+    }
+    if (m.clasificacion_id) return { tipo: 'Categoría', valor: nameClasificacion(m.clasificacion_id) ?? '—' };
+    if (m.marca_id) return { tipo: 'Marca', valor: nameMarca(m.marca_id) ?? '—' };
+    return { tipo: 'General', valor: 'Monto mensual' };
+  };
 
   // Cruce meta vs real por meta individual
   const metasConAvance = useMemo(() => {
@@ -77,6 +106,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
         if (m.vendedor_id && a.vendedor_id !== m.vendedor_id) continue;
         if (m.producto_id && a.producto_id !== m.producto_id) continue;
         if (m.presentacion_id && a.presentacion_id !== m.presentacion_id) continue;
+        if (m.clasificacion_id && a.clasificacion_id !== m.clasificacion_id) continue;
+        if (m.marca_id && a.marca_id !== m.marca_id) continue;
         unidades += a.unidades;
         monto += a.monto;
       }
@@ -85,6 +116,7 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
       return { meta: m, real: { unidades, monto }, pctMonto, pctUds };
     });
   }, [metas, avance]);
+
 
   const totales = useMemo(() => {
     let metaMonto = 0, realMonto = 0;
