@@ -284,6 +284,7 @@ interface PermisosData {
   permisos: Permiso[];
   /** Source of truth for "Solo vista móvil" — read directly from roles table */
   roleSoloMovil: boolean;
+  roleId: string | null;
 }
 
 async function fetchPermisos(userId: string): Promise<PermisosData> {
@@ -294,7 +295,7 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
     .maybeSingle();
 
   if (!userRole?.role_id) {
-    return { hasRole: false, permisos: [], roleSoloMovil: false };
+    return { hasRole: false, permisos: [], roleSoloMovil: false, roleId: null };
   }
 
   const roleSoloMovil = !!(userRole as any).roles?.solo_movil;
@@ -306,7 +307,7 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
       .range(from, to)
   );
 
-  return { hasRole: true, permisos: rolePermisos, roleSoloMovil };
+  return { hasRole: true, permisos: rolePermisos, roleSoloMovil, roleId: userRole.role_id };
 }
 
 export function usePermisos(): UsePermisosReturn {
@@ -322,6 +323,7 @@ export function usePermisos(): UsePermisosReturn {
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    refetchInterval: 30_000, // poll cada 30s para reflejar cambios sin recargar
   });
 
   // Refetch when admin updates permissions (cross-tab via storage / same-tab via event)
@@ -330,6 +332,22 @@ export function usePermisos(): UsePermisosReturn {
     window.addEventListener('uniline:permisos-changed', handler);
     return () => window.removeEventListener('uniline:permisos-changed', handler);
   }, [refetch]);
+
+  // Suscripción Realtime: cuando el admin cambia role_permisos del rol del usuario,
+  // se refresca al instante sin necesidad de recargar la app.
+  const roleId = data?.roleId ?? null;
+  useEffect(() => {
+    if (!roleId) return;
+    const channel = supabase
+      .channel(`role-permisos-${roleId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'role_permisos', filter: `role_id=eq.${roleId}` },
+        () => { refetch(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roleId, refetch]);
 
   const hasRole = data?.hasRole ?? null;
   const permisos = data?.permisos ?? [];
