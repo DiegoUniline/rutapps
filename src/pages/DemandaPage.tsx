@@ -127,7 +127,7 @@ export default function DemandaPage() {
   const today = todayLocal();
 
   // ── Filters ──
-  const [tab, setTab] = useState<'pendientes' | 'entregados' | 'todos'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'surtidos' | 'entregados' | 'todos'>('pendientes');
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
@@ -135,11 +135,8 @@ export default function DemandaPage() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const statusesForTab = tab === 'entregados'
-    ? ['entregado']
-    : tab === 'todos'
-      ? ['borrador', 'confirmado', 'entregado']
-      : ['borrador', 'confirmado', 'entregado']; // 'pendientes' loads all then filters client-side by !fullyDelivered
+  // Always load all relevant statuses; filter client-side per tab
+  const statusesForTab = ['borrador', 'confirmado', 'entregado'];
 
   const { data: pedidos, isLoading } = usePedidosPendientes({
     desde, hasta, fechaTipo,
