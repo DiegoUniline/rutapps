@@ -932,7 +932,7 @@ export default function DemandaPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={11} className="bg-muted/30 p-0">
+                    <TableCell colSpan={12} className="bg-muted/30 p-0">
                       <div className="px-6 py-3 space-y-3">
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
                           {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
@@ -1011,7 +1011,7 @@ export default function DemandaPage() {
                 />
               </div>
               <div>
-                <label className="label-odoo">Repartidor / Vendedor de ruta</label>
+                <label className="label-odoo">Repartidor</label>
                 <ModalSelect
                   options={vendedorOptions}
                   value={vendedorRutaId}
