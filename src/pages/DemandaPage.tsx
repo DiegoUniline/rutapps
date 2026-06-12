@@ -140,7 +140,7 @@ export default function DemandaPage() {
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
-  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[] }>(null);
+  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
 
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
