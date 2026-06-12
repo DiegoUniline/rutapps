@@ -111,36 +111,40 @@ export default function SuperAdminEmpresaSelector() {
     return c;
   }, [empresas]);
 
-  // When override is active, render a LOUD red bar so it's impossible to miss.
+  // Override active: keep a LOUD red bar (safety).
+  // Default state: a tiny, discreet pill so it doesn't show up in screen recordings.
   const wrapperClass = isOverridden
     ? 'flex items-center gap-2 px-3 py-2 bg-destructive text-destructive-foreground border-b-2 border-destructive shadow-md'
-    : 'flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20';
+    : 'flex items-center gap-1 px-2 py-0.5 opacity-40 hover:opacity-100 transition-opacity';
 
   return (
     <div className={wrapperClass}>
       {isOverridden ? (
         <AlertTriangle className="h-4 w-4 shrink-0" />
       ) : (
-        <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
       )}
-      <span className={`text-[11px] font-bold whitespace-nowrap ${isOverridden ? '' : 'text-amber-700 dark:text-amber-300'}`}>
-        {isOverridden ? '⚠ VIENDO OTRA EMPRESA:' : 'Viendo:'}
-      </span>
+      {isOverridden && (
+        <span className="text-[11px] font-bold whitespace-nowrap">
+          ⚠ VIENDO OTRA EMPRESA:
+        </span>
+      )}
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className={`h-7 rounded-md border px-2 text-xs font-semibold flex items-center gap-1.5 min-w-[180px] max-w-xs justify-between ${
+            className={
               isOverridden
-                ? 'border-destructive-foreground/40 bg-destructive-foreground/10 text-destructive-foreground hover:bg-destructive-foreground/20'
-                : 'border-amber-300 dark:border-amber-700 bg-background hover:bg-amber-50 dark:hover:bg-amber-950/30'
-            }`}
+                ? 'h-7 rounded-md border px-2 text-xs font-semibold flex items-center gap-1.5 min-w-[180px] max-w-xs justify-between border-destructive-foreground/40 bg-destructive-foreground/10 text-destructive-foreground hover:bg-destructive-foreground/20'
+                : 'h-5 rounded px-1.5 text-[10px] text-muted-foreground/70 hover:text-foreground flex items-center gap-1 max-w-[140px]'
+            }
           >
-            <span className="truncate">{currentEmpresa?.nombre || 'Selecciona empresa'}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+            <span className="truncate">{currentEmpresa?.nombre || '—'}</span>
+            <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
           </button>
         </PopoverTrigger>
+
         <PopoverContent className="w-[380px] p-0" align="start">
           {/* Search */}
           <div className="p-2 border-b">
