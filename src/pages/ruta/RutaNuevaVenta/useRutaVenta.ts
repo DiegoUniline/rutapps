@@ -55,9 +55,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [descuentoExtraValor, setDescuentoExtraValor] = useState<number>(0);
   const [descuentoExtraMotivo, setDescuentoExtraMotivo] = useState<string>('');
 
-  const { hasPermiso, isOwner } = usePermisos();
-  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
-  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver');
+  const { hasPermiso, hasPermisoMovil, isOwner } = usePermisos();
+  // Combina permiso desktop (ventas.*) con permiso mobile (ruta.*). Default mobile = true.
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermisoMovil('ruta.cambiar_precio');
+  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver') || hasPermisoMovil('ruta.aplicar_descuento');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
