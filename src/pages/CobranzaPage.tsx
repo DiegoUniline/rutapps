@@ -542,7 +542,10 @@ export default function CobranzaPage() {
             <MessageCircle className="h-4 w-4" /> WhatsApp
           </Button>
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
-            <Trash2 className="h-4 w-4" /> Cancelar
+            <Ban className="h-4 w-4" /> Cancelar
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={handleDeleteCancelledMany} title="Solo cobros cancelados — requiere PIN admin">
+            <Trash2 className="h-4 w-4" /> Eliminar
           </Button>
           <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={clearSelection}>
             <X className="h-4 w-4" />
