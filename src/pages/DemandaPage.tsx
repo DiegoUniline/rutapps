@@ -469,7 +469,15 @@ export default function DemandaPage() {
                 Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
               </Button>
             )}
-            <Button onClick={() => setShowCrearDialog(true)} size="sm">
+            <Button
+              onClick={() => setShowSurtirDialog(true)}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Surtir disponible ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
               <Package className="h-3.5 w-3.5" />
               Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
             </Button>
