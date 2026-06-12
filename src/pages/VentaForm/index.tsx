@@ -67,7 +67,7 @@ export default function VentaFormPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
+        .select('id, folio, fecha, total, saldo_pendiente, dias_credito')
         .eq('empresa_id', empresa!.id)
         .eq('cliente_id', form.cliente_id!)
         .gt('saldo_pendiente', 0)
@@ -85,9 +85,11 @@ export default function VentaFormPage() {
       fecha: v.fecha,
       total: v.total ?? 0,
       saldo_pendiente: v.saldo_pendiente ?? 0,
+      dias_credito: v.dias_credito ?? 0,
     })),
     [clientePendingVentas]
   );
+
 
   const handleCheckoutConfirm = useCallback(async (
     pagos: { metodo: string; monto: number; referencia: string }[],
