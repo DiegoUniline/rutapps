@@ -13,6 +13,15 @@ const REAL_MATRIX_MAX_STOPS = 60; // arriba de esto usamos Haversine para no dis
 type LatLng = { lat: number; lng: number };
 type Waypoint = LatLng & { id: string; colonia?: string | null };
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function pointHash(p: LatLng): string {
+  return `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
+}
+
 function haversine(a: LatLng, b: LatLng): number {
   const R = 6371000;
   const toRad = (x: number) => (x * Math.PI) / 180;
