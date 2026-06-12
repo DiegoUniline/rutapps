@@ -10,18 +10,19 @@ export function usePedidosPendientes(
   statusFilter?: string,
   vendedorFilter?: string,
   clienteFilter?: string,
+  fechaCampo: 'fecha' | 'fecha_entrega' = 'fecha',
 ) {
   return useQuery({
-    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedorFilter, clienteFilter],
+    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedorFilter, clienteFilter, fechaCampo],
     queryFn: async () => {
       return await fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('id, folio, fecha, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
+          .select('id, folio, fecha, fecha_entrega, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
           .eq('tipo', 'pedido')
-          .gte('fecha', desde)
-          .lte('fecha', hasta)
-          .order('fecha', { ascending: false })
+          .gte(fechaCampo, desde)
+          .lte(fechaCampo, hasta)
+          .order(fechaCampo, { ascending: false })
           .order('created_at', { ascending: false })
           .range(from, to);
 
