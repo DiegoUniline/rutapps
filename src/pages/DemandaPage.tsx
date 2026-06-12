@@ -1087,6 +1087,44 @@ export default function DemandaPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Asignar / Cambiar vendedor de ruta dialog */}
+      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-purple-600" />
+              {selectionState.enRutaSel ? 'Cambiar vendedor de ruta' : 'Asignar vendedor de ruta'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se asignará a las entregas activas de {selectedPedidos.length} pedido(s) seleccionado(s).
+            </p>
+            <div>
+              <Label className="text-xs">Vendedor</Label>
+              <Combobox
+                options={vendedorOptions}
+                value={asignarVendedorId}
+                onChange={(v) => setAsignarVendedorId(v as string)}
+                placeholder="Seleccionar vendedor"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={() => asignarVendedorMut.mutate()}
+              disabled={asignarVendedorMut.isPending || !asignarVendedorId}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              {asignarVendedorMut.isPending ? 'Asignando...' : 'Asignar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Result dialog: shows partial / not-surtido alerts */}
       <Dialog open={!!surtirResult} onOpenChange={(o) => !o && setSurtirResult(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
