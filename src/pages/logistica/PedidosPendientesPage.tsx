@@ -29,19 +29,22 @@ export default function PedidosPendientesPage() {
   const today = todayLocal();
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
+  const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
+  const [tab, setTab] = useState<'pendientes' | 'entregados' | 'cancelados' | 'todos'>('pendientes');
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [clienteFilter, setClienteFilter] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
 
-  const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, statusFilter, vendedorFilter || undefined, clienteFilter || undefined);
+  // Pass 'todos' so hook does not filter by status; we apply tab grouping client-side
+  const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, 'todos', vendedorFilter || undefined, clienteFilter || undefined, fechaTipo);
   const { data: asignaciones } = useAsignacionesFecha(desde, hasta);
   const { data: cargas } = useCargasDia(hasta);
   const { profiles: usuarios } = useUsuarios();
   const { data: clientes } = useClientes();
   const asignar = useAsignarPedidos();
+
 
 
   const asignadoMap = useMemo(() => {
