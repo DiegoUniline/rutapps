@@ -267,13 +267,14 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
             <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
             <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
+            <th className="th-odoo text-left hidden xl:table-cell">Lista de precios</th>
             <th className="th-odoo text-center">Status</th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+              <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
             </tr>
           )}
           {items.map((c: any) => (
@@ -299,6 +300,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.tarifas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 text-center">
                 <StatusChip status={c.status ?? 'activo'} />
               </td>
@@ -433,6 +435,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                 ...(c.contacto ? [{ label: 'Contacto', value: c.contacto }] : []),
                 ...((c as any).zonas?.nombre ? [{ label: 'Zona', value: (c as any).zonas.nombre }] : []),
                 ...((c as any).vendedores?.nombre ? [{ label: 'Vendedor', value: (c as any).vendedores.nombre }] : []),
+                ...((c as any).tarifas?.nombre ? [{ label: 'Lista de precios', value: (c as any).tarifas.nombre }] : []),
               ]}
             />
           ))}
