@@ -49,15 +49,16 @@ export function useCargaPedidos(cargaId?: string) {
   });
 }
 
-// Check which pedidos are already assigned to any carga on a date
-export function useAsignacionesFecha(fecha: string) {
+// Check which pedidos are already assigned to any carga in a date range
+export function useAsignacionesFecha(desde: string, hasta: string) {
   return useQuery({
-    queryKey: ['asignaciones-fecha', fecha],
+    queryKey: ['asignaciones-fecha', desde, hasta],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('carga_pedidos')
         .select('venta_id, carga_id, cargas!inner(fecha)')
-        .eq('cargas.fecha', fecha);
+        .gte('cargas.fecha', desde)
+        .lte('cargas.fecha', hasta);
       if (error) throw error;
       return data ?? [];
     },
