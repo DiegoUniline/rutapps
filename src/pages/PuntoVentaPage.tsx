@@ -1943,7 +1943,7 @@ export default function PuntoVentaPage() {
             <div className="px-5 pb-5 pt-2">
               <button
                 onClick={handleCobrar}
-                disabled={saving || cart.length === 0 || (condicion === 'contado' && faltante > 0 && payMode !== 'efectivo')}
+                disabled={saving || cart.length === 0 || (condicion === 'credito' && totals.total > creditoDisponiblePOS) || (condicion === 'contado' && faltante > 0 && payMode !== 'efectivo')}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="h-5 w-5" />
