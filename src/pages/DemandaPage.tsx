@@ -140,7 +140,7 @@ export default function DemandaPage() {
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
-  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[] }>(null);
+  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
 
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
@@ -324,7 +324,7 @@ export default function DemandaPage() {
         const chunkSize = 200;
         for (let i = 0; i < productoIds.length; i += chunkSize) {
           const chunk = productoIds.slice(i, i + chunkSize);
-          const { data } = await supabase.from('n_almacen' as any)
+          const { data } = await supabase.from('stock_almacen')
             .select('producto_id, cantidad')
             .eq('almacen_id', almacenId)
             .in('producto_id', chunk);
@@ -334,103 +334,120 @@ export default function DemandaPage() {
         }
       }
 
-      const fully: any[] = [], partial: any[] = [], none: any[] = [];
+      const fully: any[] = [], partial: any[] = [], none: any[] = [], errors: any[] = [];
 
       for (const pedido of selectedPedidos) {
-        const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
-        if (pendientes.length === 0) continue;
+        try {
+          const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
+          if (pendientes.length === 0) continue;
 
-        // Decide what to surtir for each line based on remaining stock
-        const planLineas = pendientes.map((l: any) => {
-          const need = Math.max(0, l.cantidad_pendiente);
-          const avail = stockMap[l.producto_id] ?? 0;
-          const give = Math.min(need, Math.max(0, avail));
-          stockMap[l.producto_id] = avail - give;
-          return { ...l, give, faltante: need - give };
-        });
+          // Decide what to surtir per line based on remaining stock
+          const planLineas = pendientes.map((l: any) => {
+            const need = Math.max(0, l.cantidad_pendiente);
+            const avail = stockMap[l.producto_id] ?? 0;
+            const give = Math.min(need, Math.max(0, avail));
+            stockMap[l.producto_id] = avail - give;
+            return { ...l, give, faltante: need - give };
+          });
 
-        const totalGive = planLineas.reduce((s, l) => s + l.give, 0);
-        const totalFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
+          const totalGive = planLineas.reduce((s, l) => s + l.give, 0);
+          const totalFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
 
-        // Skip pedidos with zero stock for everything
-        if (totalGive === 0) {
-          none.push({ pedido, faltantes: planLineas.filter(l => l.faltante > 0) });
-          continue;
-        }
+          if (totalGive === 0) {
+            none.push({ pedido, faltantes: planLineas.filter(l => l.faltante > 0) });
+            continue;
+          }
 
-        // Get orden_entrega
-        let ordenEntrega = 0;
-        if (pedido.cliente_id) {
-          const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
-          ordenEntrega = cli?.orden ?? 0;
-        }
+          // Get orden_entrega
+          let ordenEntrega = 0;
+          if (pedido.cliente_id) {
+            const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
+            ordenEntrega = cli?.orden ?? 0;
+          }
 
-        // Create entrega
-        const { data: entrega, error: eErr } = await supabase.from('entregas').insert({
-          empresa_id: empresa!.id,
-          pedido_id: pedido.id,
-          vendedor_id: pedido.vendedor_id ?? null,
-          cliente_id: pedido.cliente_id,
-          almacen_id: almacenId,
-          vendedor_ruta_id: vendedorRutaId || null,
-          status: 'borrador',
-          orden_entrega: ordenEntrega,
-        } as any).select('id, folio').single();
-        if (eErr) throw eErr;
+          // 1) Create entrega (borrador)
+          const { data: entrega, error: eErr } = await supabase.from('entregas').insert({
+            empresa_id: empresa!.id,
+            pedido_id: pedido.id,
+            vendedor_id: pedido.vendedor_id ?? null,
+            cliente_id: pedido.cliente_id,
+            almacen_id: almacenId,
+            vendedor_ruta_id: vendedorRutaId || null,
+            status: 'borrador',
+            orden_entrega: ordenEntrega,
+          } as any).select('id, folio').single();
+          if (eErr) throw eErr;
 
-        // Insert lines with cantidad_pedida = pendiente
-        const { data: createdLines, error: lErr } = await supabase.from('entrega_lineas').insert(
-          planLineas.map(l => ({
-            entrega_id: entrega.id,
-            producto_id: l.producto_id,
-            unidad_id: l.unidad_id ?? null,
-            cantidad_pedida: Math.max(0, l.cantidad_pendiente),
-            cantidad_entregada: 0,
-            hecho: false,
-            almacen_origen_id: almacenId,
-          }))
-        ).select('id, producto_id');
-        if (lErr) throw lErr;
+          // 2) Insert entrega lines
+          const { data: createdLines, error: lErr } = await supabase.from('entrega_lineas').insert(
+            planLineas.map(l => ({
+              entrega_id: entrega.id,
+              producto_id: l.producto_id,
+              unidad_id: l.unidad_id ?? null,
+              cantidad_pedida: Math.max(0, l.cantidad_pendiente),
+              cantidad_entregada: 0,
+              hecho: false,
+              almacen_origen_id: almacenId,
+            }))
+          ).select('id, producto_id');
+          if (lErr) throw lErr;
 
-        // Surtir each line that has give > 0 via RPC (atomic stock deduction)
-        const lineIdByProd: Record<string, string> = {};
-        for (const cl of (createdLines ?? []) as any[]) lineIdByProd[cl.producto_id] = cl.id;
+          // 3) Surtir each line with stock via RPC
+          const lineIdByProd: Record<string, string> = {};
+          for (const cl of (createdLines ?? []) as any[]) lineIdByProd[cl.producto_id] = cl.id;
 
-        for (const l of planLineas) {
-          if (l.give <= 0) continue;
-          const lineId = lineIdByProd[l.producto_id];
-          if (!lineId) continue;
-          const { error } = await supabase.rpc('surtir_linea_entrega', {
-            p_linea_id: lineId,
-            p_producto_id: l.producto_id,
-            p_almacen_origen_id: almacenId,
-            p_cantidad_surtida: l.give,
-            p_entrega_id: entrega.id,
-            p_empresa_id: empresa!.id,
-            p_user_id: undefined,
-          } as any);
-          if (error) throw new Error(error.message);
-        }
+          let surtidasOk = 0;
+          for (const l of planLineas) {
+            if (l.give <= 0) continue;
+            const lineId = lineIdByProd[l.producto_id];
+            if (!lineId) continue;
+            const { error } = await supabase.rpc('surtir_linea_entrega', {
+              p_linea_id: lineId,
+              p_producto_id: l.producto_id,
+              p_almacen_origen_id: almacenId,
+              p_cantidad_surtida: l.give,
+              p_entrega_id: entrega.id,
+              p_empresa_id: empresa!.id,
+              p_user_id: undefined,
+            } as any);
+            if (error) {
+              // Stock changed between read and write — re-read and skip this line
+              console.warn(`Línea ${l.producto_id} no se pudo surtir:`, error.message);
+              l.give = 0;
+              l.faltante = l.cantidad_pendiente;
+            } else {
+              surtidasOk++;
+            }
+          }
 
-        // Update entrega status: surtido if everything filled, else borrador (partial)
-        if (totalFaltante === 0) {
-          await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
-          fully.push({ pedido, entrega });
-        } else {
-          partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
+          // 4) Recompute faltantes after RPC outcomes
+          const recompFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
+
+          if (recompFaltante === 0 && surtidasOk > 0) {
+            await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
+            fully.push({ pedido, entrega });
+          } else if (surtidasOk > 0) {
+            partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
+          } else {
+            // entrega exists but nothing got surtido (race condition with stock)
+            none.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
+          }
+        } catch (err: any) {
+          console.error(`Error procesando pedido ${pedido.folio}:`, err);
+          errors.push({ pedido, message: err?.message ?? 'Error desconocido' });
         }
       }
 
-      return { fully, partial, none };
+      return { fully, partial, none, errors };
     },
     onSuccess: (res) => {
-      const total = res.fully.length + res.partial.length + res.none.length;
-      toast.success(`${res.fully.length}/${total} pedidos surtidos completos · ${res.partial.length} parcial · ${res.none.length} sin stock`);
+      const total = res.fully.length + res.partial.length + res.none.length + res.errors.length;
+      toast.success(`${res.fully.length}/${total} completos · ${res.partial.length} parcial · ${res.none.length} sin stock${res.errors.length > 0 ? ` · ${res.errors.length} con error` : ''}`);
       qc.invalidateQueries({ queryKey: ['demanda'] });
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
-      qc.invalidateQueries({ queryKey: ['n-almacen'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
       setSelectedIds(new Set());
       setShowSurtirDialog(false);
@@ -937,6 +954,21 @@ export default function DemandaPage() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {surtirResult.errors.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-red-700 mb-1">Pedidos con error</p>
+                  <div className="border border-red-200 rounded-md divide-y divide-red-100">
+                    {surtirResult.errors.map(({ pedido, message }: any) => (
+                      <div key={pedido.id} className="p-2 text-[12px] flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-primary">{pedido.folio}</span>
+                        <span className="text-muted-foreground flex-1">{pedido.clientes?.nombre}</span>
+                        <span className="text-red-700 text-[11px] truncate max-w-[260px]" title={message}>{message}</span>
                       </div>
                     ))}
                   </div>
