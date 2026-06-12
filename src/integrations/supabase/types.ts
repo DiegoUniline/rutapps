@@ -3412,10 +3412,12 @@ export type Database = {
       }
       metas_venta: {
         Row: {
+          clasificacion_id: string | null
           created_at: string
           created_by: string | null
           empresa_id: string
           id: string
+          marca_id: string | null
           meta_monto: number
           meta_unidades: number
           notas: string | null
@@ -3427,10 +3429,12 @@ export type Database = {
           vendedor_id: string | null
         }
         Insert: {
+          clasificacion_id?: string | null
           created_at?: string
           created_by?: string | null
           empresa_id: string
           id?: string
+          marca_id?: string | null
           meta_monto?: number
           meta_unidades?: number
           notas?: string | null
@@ -3442,10 +3446,12 @@ export type Database = {
           vendedor_id?: string | null
         }
         Update: {
+          clasificacion_id?: string | null
           created_at?: string
           created_by?: string | null
           empresa_id?: string
           id?: string
+          marca_id?: string | null
           meta_monto?: number
           meta_unidades?: number
           notas?: string | null
@@ -3458,10 +3464,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "metas_venta_clasificacion_id_fkey"
+            columns: ["clasificacion_id"]
+            isOneToOne: false
+            referencedRelation: "clasificaciones"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "metas_venta_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_venta_marca_id_fkey"
+            columns: ["marca_id"]
+            isOneToOne: false
+            referencedRelation: "marcas"
             referencedColumns: ["id"]
           },
           {

@@ -60,13 +60,42 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
       return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
     },
   });
+  const clasificacionesQ = useQuery({
+    queryKey: ['metas-tab-clasificaciones', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('clasificaciones' as any).select('id, nombre').eq('empresa_id', empresa!.id);
+      return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
+    },
+  });
+  const marcasQ = useQuery({
+    queryKey: ['metas-tab-marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('marcas' as any).select('id, nombre').eq('empresa_id', empresa!.id);
+      return new Map(((data ?? []) as any[]).map((r) => [r.id, r.nombre as string]));
+    },
+  });
 
   const metas = metasQ.data ?? [];
   const avance = avanceQ.data ?? [];
 
   const nameVendedor = (id: string | null) => id ? (vendedoresQ.data?.get(id) ?? '—') : 'Empresa (todos)';
-  const nameProducto = (id: string | null) => id ? (productosQ.data?.get(id) ?? '—') : 'Todos los productos';
+  const nameProducto = (id: string | null) => id ? (productosQ.data?.get(id) ?? '—') : null;
   const namePresentacion = (id: string | null) => id ? (presentacionesQ.data?.get(id) ?? '—') : '—';
+  const nameClasificacion = (id: string | null) => id ? (clasificacionesQ.data?.get(id) ?? '—') : null;
+  const nameMarca = (id: string | null) => id ? (marcasQ.data?.get(id) ?? '—') : null;
+
+  const alcanceLabel = (m: MetaVenta) => {
+    if (m.producto_id) {
+      const base = nameProducto(m.producto_id);
+      const pres = m.presentacion_id ? ` · ${namePresentacion(m.presentacion_id)}` : '';
+      return { tipo: 'Producto', valor: `${base}${pres}` };
+    }
+    if (m.clasificacion_id) return { tipo: 'Categoría', valor: nameClasificacion(m.clasificacion_id) ?? '—' };
+    if (m.marca_id) return { tipo: 'Marca', valor: nameMarca(m.marca_id) ?? '—' };
+    return { tipo: 'General', valor: 'Monto mensual' };
+  };
 
   // Cruce meta vs real por meta individual
   const metasConAvance = useMemo(() => {
@@ -77,6 +106,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
         if (m.vendedor_id && a.vendedor_id !== m.vendedor_id) continue;
         if (m.producto_id && a.producto_id !== m.producto_id) continue;
         if (m.presentacion_id && a.presentacion_id !== m.presentacion_id) continue;
+        if (m.clasificacion_id && a.clasificacion_id !== m.clasificacion_id) continue;
+        if (m.marca_id && a.marca_id !== m.marca_id) continue;
         unidades += a.unidades;
         monto += a.monto;
       }
@@ -85,6 +116,7 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
       return { meta: m, real: { unidades, monto }, pctMonto, pctUds };
     });
   }, [metas, avance]);
+
 
   const totales = useMemo(() => {
     let metaMonto = 0, realMonto = 0;
@@ -203,8 +235,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                   <thead className="bg-accent/30">
                     <tr className="text-left">
                       <th className="px-3 py-2 font-semibold">Vendedor</th>
-                      <th className="px-3 py-2 font-semibold">Producto</th>
-                      <th className="px-3 py-2 font-semibold">Presentación</th>
+                      <th className="px-3 py-2 font-semibold">Tipo</th>
+                      <th className="px-3 py-2 font-semibold">Alcance</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta monto</th>
                       <th className="px-3 py-2 font-semibold">Notas</th>
@@ -212,26 +244,30 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {metas.map((m) => (
-                      <tr key={m.id} className="border-t border-border">
-                        <td className="px-3 py-2">{nameVendedor(m.vendedor_id)}</td>
-                        <td className="px-3 py-2">{nameProducto(m.producto_id)}</td>
-                        <td className="px-3 py-2">{namePresentacion(m.presentacion_id)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{Number(m.meta_unidades).toLocaleString('es-MX')}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(Number(m.meta_monto))}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{m.notas || '—'}</td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="inline-flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(m)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(var(--destructive))]" onClick={() => handleDelete(m)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {metas.map((m) => {
+                      const al = alcanceLabel(m);
+                      return (
+                        <tr key={m.id} className="border-t border-border">
+                          <td className="px-3 py-2">{nameVendedor(m.vendedor_id)}</td>
+                          <td className="px-3 py-2"><span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">{al.tipo}</span></td>
+                          <td className="px-3 py-2">{al.valor}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{Number(m.meta_unidades).toLocaleString('es-MX')}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(Number(m.meta_monto))}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{m.notas || '—'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="inline-flex gap-1">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(m)}>
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(var(--destructive))]" onClick={() => handleDelete(m)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
                   </tbody>
                 </table>
               </div>
@@ -306,8 +342,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                   <thead className="bg-accent/30">
                     <tr className="text-left">
                       <th className="px-3 py-2 font-semibold">Vendedor</th>
-                      <th className="px-3 py-2 font-semibold">Producto</th>
-                      <th className="px-3 py-2 font-semibold">Presentación</th>
+                      <th className="px-3 py-2 font-semibold">Tipo</th>
+                      <th className="px-3 py-2 font-semibold">Alcance</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Real uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta $</th>
@@ -316,18 +352,22 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {metasConAvance.map((r) => (
-                      <tr key={r.meta.id} className="border-t border-border">
-                        <td className="px-3 py-2">{nameVendedor(r.meta.vendedor_id)}</td>
-                        <td className="px-3 py-2">{nameProducto(r.meta.producto_id)}</td>
-                        <td className="px-3 py-2">{namePresentacion(r.meta.presentacion_id)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{Number(r.meta.meta_unidades).toLocaleString('es-MX')}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{r.real.unidades.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{money(Number(r.meta.meta_monto))}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(r.real.monto)}</td>
-                        <td className={cn("px-3 py-2 text-right tabular-nums font-bold", semaforo(r.pctMonto))}>{r.pctMonto.toFixed(1)}%</td>
-                      </tr>
-                    ))}
+                    {metasConAvance.map((r) => {
+                      const al = alcanceLabel(r.meta);
+                      return (
+                        <tr key={r.meta.id} className="border-t border-border">
+                          <td className="px-3 py-2">{nameVendedor(r.meta.vendedor_id)}</td>
+                          <td className="px-3 py-2"><span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">{al.tipo}</span></td>
+                          <td className="px-3 py-2">{al.valor}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{Number(r.meta.meta_unidades).toLocaleString('es-MX')}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{r.real.unidades.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{money(Number(r.meta.meta_monto))}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(r.real.monto)}</td>
+                          <td className={cn("px-3 py-2 text-right tabular-nums font-bold", semaforo(r.pctMonto))}>{r.pctMonto.toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
+
                   </tbody>
                 </table>
               </div>

@@ -9,6 +9,8 @@ export interface MetaVenta {
   vendedor_id: string | null;
   producto_id: string | null;
   presentacion_id: string | null;
+  clasificacion_id: string | null;
+  marca_id: string | null;
   periodo_year: number;
   periodo_month: number;
   meta_unidades: number;
@@ -24,6 +26,8 @@ export interface MetaInput {
   vendedor_id: string | null;
   producto_id: string | null;
   presentacion_id: string | null;
+  clasificacion_id: string | null;
+  marca_id: string | null;
   periodo_year: number;
   periodo_month: number;
   meta_unidades: number;
@@ -35,6 +39,8 @@ export interface AvanceRow {
   vendedor_id: string | null;
   producto_id: string | null;
   presentacion_id: string | null;
+  clasificacion_id: string | null;
+  marca_id: string | null;
   unidades: number;
   monto: number;
 }
@@ -103,6 +109,8 @@ export function useUpsertMeta() {
             vendedor_id: m.vendedor_id,
             producto_id: m.producto_id,
             presentacion_id: m.presentacion_id,
+            clasificacion_id: m.clasificacion_id,
+            marca_id: m.marca_id,
             meta_unidades: m.meta_unidades,
             meta_monto: m.meta_monto,
             notas: m.notas ?? null,
@@ -144,7 +152,7 @@ export function useDuplicarMesAnterior() {
       if (prevM < 1) { prevM = 12; prevY -= 1; }
       const { data: prev, error } = await supabase
         .from('metas_venta' as any)
-        .select('vendedor_id, producto_id, presentacion_id, meta_unidades, meta_monto, notas')
+        .select('vendedor_id, producto_id, presentacion_id, clasificacion_id, marca_id, meta_unidades, meta_monto, notas')
         .eq('empresa_id', empresa!.id)
         .eq('periodo_year', prevY)
         .eq('periodo_month', prevM);
@@ -157,6 +165,8 @@ export function useDuplicarMesAnterior() {
         vendedor_id: p.vendedor_id,
         producto_id: p.producto_id,
         presentacion_id: p.presentacion_id,
+        clasificacion_id: p.clasificacion_id,
+        marca_id: p.marca_id,
         periodo_year: year,
         periodo_month: month,
         meta_unidades: p.meta_unidades,
@@ -167,7 +177,7 @@ export function useDuplicarMesAnterior() {
       const { error: insErr } = await supabase
         .from('metas_venta' as any)
         .upsert(rows as any, {
-          onConflict: 'empresa_id,vendedor_id,producto_id,presentacion_id,periodo_year,periodo_month',
+          onConflict: 'empresa_id,vendedor_id,producto_id,presentacion_id,clasificacion_id,marca_id,periodo_year,periodo_month',
           ignoreDuplicates: true,
         });
       if (insErr) throw insErr;
@@ -179,7 +189,8 @@ export function useDuplicarMesAnterior() {
   });
 }
 
-/** Avance real del mes: agrega venta_lineas de ventas (no canceladas) en el mes. */
+/** Avance real del mes: agrega venta_lineas de ventas (no canceladas) en el mes.
+ *  Enriquecido con clasificacion_id/marca_id del producto para cruzar con metas por categoría/marca. */
 export function useAvanceMetas(year: number, month: number) {
   const { empresa } = useAuth();
   return useQuery({
@@ -189,6 +200,17 @@ export function useAvanceMetas(year: number, month: number) {
       const from = `${year}-${String(month).padStart(2, '0')}-01`;
       const lastDay = new Date(year, month, 0).getDate();
       const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+      // Map producto -> { clasificacion_id, marca_id }
+      const { data: prods } = await supabase
+        .from('productos' as any)
+        .select('id, clasificacion_id, marca_id')
+        .eq('empresa_id', empresa!.id);
+      const prodMeta = new Map<string, { clasificacion_id: string | null; marca_id: string | null }>();
+      for (const p of (prods ?? []) as any[]) {
+        prodMeta.set(p.id, { clasificacion_id: p.clasificacion_id ?? null, marca_id: p.marca_id ?? null });
+      }
+
       const { data, error } = await supabase
         .from('ventas')
         .select('id, vendedor_id, status, venta_lineas(producto_id, presentacion_id, cantidad, subtotal)')
@@ -201,11 +223,16 @@ export function useAvanceMetas(year: number, month: number) {
       for (const v of (data ?? []) as any[]) {
         const lineas: any[] = v.venta_lineas ?? [];
         for (const l of lineas) {
-          const key = `${v.vendedor_id ?? 'null'}|${l.producto_id ?? 'null'}|${l.presentacion_id ?? 'null'}`;
+          const meta = l.producto_id ? prodMeta.get(l.producto_id) : null;
+          const clasif = meta?.clasificacion_id ?? null;
+          const marca = meta?.marca_id ?? null;
+          const key = `${v.vendedor_id ?? 'null'}|${l.producto_id ?? 'null'}|${l.presentacion_id ?? 'null'}|${clasif ?? 'null'}|${marca ?? 'null'}`;
           const ex = map.get(key) ?? {
             vendedor_id: v.vendedor_id ?? null,
             producto_id: l.producto_id ?? null,
             presentacion_id: l.presentacion_id ?? null,
+            clasificacion_id: clasif,
+            marca_id: marca,
             unidades: 0,
             monto: 0,
           };
