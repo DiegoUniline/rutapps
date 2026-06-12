@@ -873,8 +873,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             onClick={applySwUpdate}
             className={cn(
-              "hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-medium",
-              swUpdateAvailable && "text-primary border-primary/30 bg-primary/10 hover:bg-primary/20 animate-pulse"
+              "hidden md:flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium transition-colors shadow-sm",
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+              swUpdateAvailable && "animate-pulse shadow-primary/30 shadow-md"
             )}
             title="Sincronizar y limpiar caché"
           >
