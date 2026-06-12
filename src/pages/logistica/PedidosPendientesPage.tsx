@@ -53,18 +53,30 @@ export default function PedidosPendientesPage() {
     return m;
   }, [asignaciones]);
 
+  const counts = useMemo(() => {
+    const list = pedidos ?? [];
+    const pendientes = list.filter((p: any) => p.status === 'borrador' || p.status === 'confirmado').length;
+    const entregados = list.filter((p: any) => p.status === 'entregado').length;
+    const cancelados = list.filter((p: any) => p.status === 'cancelado').length;
+    return { todos: list.length, pendientes, entregados, cancelados };
+  }, [pedidos]);
+
   const filtered = useMemo(() => {
     if (!pedidos) return [];
     let list = pedidos;
+    if (tab === 'pendientes') list = list.filter((p: any) => p.status === 'borrador' || p.status === 'confirmado');
+    else if (tab === 'entregados') list = list.filter((p: any) => p.status === 'entregado');
+    else if (tab === 'cancelados') list = list.filter((p: any) => p.status === 'cancelado');
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter((p: any) => 
-        p.folio?.toLowerCase().includes(s) || 
+      list = list.filter((p: any) =>
+        p.folio?.toLowerCase().includes(s) ||
         (p.clientes as any)?.nombre?.toLowerCase().includes(s)
       );
     }
     return list;
-  }, [pedidos, search]);
+  }, [pedidos, search, tab]);
+
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
