@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { useUpsertMeta, type MetaInput, type MetaVenta } from '../hooks/useMetasVenta';
+import { useUpsertMeta, useCreateMetasBatch, type MetaInput, type MetaVenta } from '../hooks/useMetasVenta';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -21,21 +25,23 @@ type Tipo = 'general' | 'producto' | 'categoria' | 'marca';
 
 const TIPO_OPTS: { value: Tipo; label: string; hint: string }[] = [
   { value: 'general', label: 'General (monto)', hint: 'Meta mensual por monto, sin filtro de producto.' },
-  { value: 'producto', label: 'Producto', hint: 'Meta para un producto (y opcionalmente su presentación).' },
-  { value: 'categoria', label: 'Categoría', hint: 'Suma de ventas de todos los productos de una categoría.' },
-  { value: 'marca', label: 'Marca', hint: 'Suma de ventas de todos los productos de una marca.' },
+  { value: 'producto', label: 'Producto', hint: 'Meta para uno o varios productos.' },
+  { value: 'categoria', label: 'Categoría', hint: 'Meta para una o varias categorías.' },
+  { value: 'marca', label: 'Marca', hint: 'Meta para una o varias marcas.' },
 ];
 
 export default function MetaFormModal({ open, onClose, year, month, editing }: Props) {
   const { empresa } = useAuth();
   const upsert = useUpsertMeta();
+  const batch = useCreateMetasBatch();
+  const isEdit = !!editing?.id;
 
   const [tipo, setTipo] = useState<Tipo>('general');
   const [vendedorId, setVendedorId] = useState<string>('');
-  const [productoId, setProductoId] = useState<string>('');
+  const [productoIds, setProductoIds] = useState<string[]>([]);
   const [presentacionId, setPresentacionId] = useState<string>('');
-  const [clasificacionId, setClasificacionId] = useState<string>('');
-  const [marcaId, setMarcaId] = useState<string>('');
+  const [clasificacionIds, setClasificacionIds] = useState<string[]>([]);
+  const [marcaIds, setMarcaIds] = useState<string[]>([]);
   const [metaUnidades, setMetaUnidades] = useState<string>('0');
   const [metaMonto, setMetaMonto] = useState<string>('0');
   const [notas, setNotas] = useState<string>('');
@@ -48,10 +54,10 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
     else if (editing?.marca_id) t = 'marca';
     setTipo(t);
     setVendedorId(editing?.vendedor_id ?? '');
-    setProductoId(editing?.producto_id ?? '');
+    setProductoIds(editing?.producto_id ? [editing.producto_id] : []);
     setPresentacionId(editing?.presentacion_id ?? '');
-    setClasificacionId(editing?.clasificacion_id ?? '');
-    setMarcaId(editing?.marca_id ?? '');
+    setClasificacionIds(editing?.clasificacion_id ? [editing.clasificacion_id] : []);
+    setMarcaIds(editing?.marca_id ? [editing.marca_id] : []);
     setMetaUnidades(String(editing?.meta_unidades ?? 0));
     setMetaMonto(String(editing?.meta_monto ?? 0));
     setNotas(editing?.notas ?? '');
@@ -86,13 +92,13 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
   });
 
   const presentacionesQ = useQuery({
-    queryKey: ['metas-meta-presentaciones', empresa?.id, productoId],
-    enabled: !!empresa?.id && open && tipo === 'producto' && !!productoId,
+    queryKey: ['metas-meta-presentaciones', empresa?.id, productoIds[0]],
+    enabled: !!empresa?.id && open && tipo === 'producto' && productoIds.length === 1,
     queryFn: async () => {
       const { data } = await supabase
         .from('producto_presentaciones' as any)
         .select('id, nombre')
-        .eq('producto_id', productoId)
+        .eq('producto_id', productoIds[0])
         .order('nombre');
       return (data ?? []) as unknown as { id: string; nombre: string }[];
     },
@@ -128,58 +134,140 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
     () => [{ value: '', label: '— Todos los vendedores (empresa) —' }, ...((vendedoresQ.data ?? []).map((v) => ({ value: v.id, label: v.nombre })))],
     [vendedoresQ.data]
   );
-  const productoOptions = useMemo(
-    () => (productosQ.data ?? []).map((p) => ({ value: p.id, label: p.nombre })),
-    [productosQ.data]
-  );
+
+  const productoOptions = useMemo(() => (productosQ.data ?? []).map((p) => ({ value: p.id, label: p.nombre })), [productosQ.data]);
   const presentacionOptions = useMemo(
     () => [{ value: '', label: '— Sin presentación específica —' }, ...((presentacionesQ.data ?? []).map((p) => ({ value: p.id, label: p.nombre })))],
     [presentacionesQ.data]
   );
-  const clasificacionOptions = useMemo(
-    () => (clasificacionesQ.data ?? []).map((c) => ({ value: c.id, label: c.nombre })),
-    [clasificacionesQ.data]
-  );
-  const marcaOptions = useMemo(
-    () => (marcasQ.data ?? []).map((m) => ({ value: m.id, label: m.nombre })),
-    [marcasQ.data]
-  );
+  const clasificacionOptions = useMemo(() => (clasificacionesQ.data ?? []).map((c) => ({ value: c.id, label: c.nombre })), [clasificacionesQ.data]);
+  const marcaOptions = useMemo(() => (marcasQ.data ?? []).map((m) => ({ value: m.id, label: m.nombre })), [marcasQ.data]);
 
   const changeTipo = (t: Tipo) => {
     setTipo(t);
-    setProductoId(''); setPresentacionId(''); setClasificacionId(''); setMarcaId('');
+    setProductoIds([]); setPresentacionId(''); setClasificacionIds([]); setMarcaIds([]);
   };
 
+  const toggleInArray = (arr: string[], id: string) =>
+    arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+
   const canSave = () => {
-    if (tipo === 'producto' && !productoId) return false;
-    if (tipo === 'categoria' && !clasificacionId) return false;
-    if (tipo === 'marca' && !marcaId) return false;
+    if (tipo === 'producto' && productoIds.length === 0) return false;
+    if (tipo === 'categoria' && clasificacionIds.length === 0) return false;
+    if (tipo === 'marca' && marcaIds.length === 0) return false;
     return (Number(metaMonto) || 0) > 0 || (Number(metaUnidades) || 0) > 0;
   };
 
+  const buildRow = (overrides: Partial<MetaInput>): MetaInput => ({
+    vendedor_id: vendedorId || null,
+    producto_id: null,
+    presentacion_id: null,
+    clasificacion_id: null,
+    marca_id: null,
+    periodo_year: year,
+    periodo_month: month,
+    meta_unidades: Number(metaUnidades) || 0,
+    meta_monto: Number(metaMonto) || 0,
+    notas: notas.trim() || null,
+    ...overrides,
+  });
+
   const submit = async () => {
-    const input: MetaInput = {
-      id: editing?.id,
-      vendedor_id: vendedorId || null,
-      producto_id: tipo === 'producto' ? (productoId || null) : null,
-      presentacion_id: tipo === 'producto' && productoId ? (presentacionId || null) : null,
-      clasificacion_id: tipo === 'categoria' ? (clasificacionId || null) : null,
-      marca_id: tipo === 'marca' ? (marcaId || null) : null,
-      periodo_year: year,
-      periodo_month: month,
-      meta_unidades: Number(metaUnidades) || 0,
-      meta_monto: Number(metaMonto) || 0,
-      notas: notas.trim() || null,
-    };
-    await upsert.mutateAsync(input);
-    onClose();
+    if (isEdit) {
+      const input: MetaInput = {
+        id: editing!.id,
+        ...buildRow({
+          producto_id: tipo === 'producto' ? (productoIds[0] || null) : null,
+          presentacion_id: tipo === 'producto' && productoIds.length === 1 ? (presentacionId || null) : null,
+          clasificacion_id: tipo === 'categoria' ? (clasificacionIds[0] || null) : null,
+          marca_id: tipo === 'marca' ? (marcaIds[0] || null) : null,
+        }),
+      };
+      await upsert.mutateAsync(input);
+      onClose();
+    } else {
+      const rows: MetaInput[] = [];
+      if (tipo === 'general') {
+        rows.push(buildRow({}));
+      } else if (tipo === 'producto') {
+        for (const pid of productoIds) {
+          rows.push(buildRow({
+            producto_id: pid,
+            presentacion_id: productoIds.length === 1 ? (presentacionId || null) : null,
+          }));
+        }
+      } else if (tipo === 'categoria') {
+        for (const cid of clasificacionIds) rows.push(buildRow({ clasificacion_id: cid }));
+      } else if (tipo === 'marca') {
+        for (const mid of marcaIds) rows.push(buildRow({ marca_id: mid }));
+      }
+      if (rows.length > 0) {
+        await batch.mutateAsync(rows);
+        onClose();
+      }
+    }
+  };
+
+  const renderMultiSelect = (
+    label: string,
+    options: { value: string; label: string }[],
+    selected: string[],
+    onChange: (ids: string[]) => void
+  ) => {
+    const toggle = (id: string) => onChange(toggleInArray(selected, id));
+    const remove = (id: string) => onChange(selected.filter((x) => x !== id));
+
+    return (
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground">{label}</label>
+        {selected.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {selected.map((id) => {
+              const opt = options.find((o) => o.value === id);
+              return (
+                <Badge key={id} variant="secondary" className="text-[10px] gap-1 pr-1">
+                  {opt?.label ?? id}
+                  <button type="button" onClick={() => remove(id)} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+        <ScrollArea className="border rounded-md h-40">
+          <div className="p-2 space-y-1">
+            {options.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground p-2">Sin opciones disponibles</div>
+            ) : (
+              options.map((o) => (
+                <label
+                  key={o.value}
+                  className={cn(
+                    'flex items-center gap-2 text-xs cursor-pointer px-2 py-1.5 rounded transition',
+                    selected.includes(o.value) ? 'bg-primary/10' : 'hover:bg-accent/50'
+                  )}
+                >
+                  <Checkbox
+                    checked={selected.includes(o.value)}
+                    onCheckedChange={() => toggle(o.value)}
+                  />
+                  <span className="truncate">{o.label}</span>
+                </label>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+        <div className="text-[10px] text-muted-foreground">{selected.length} seleccionado(s)</div>
+      </div>
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="z-[60] max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Editar meta' : 'Nueva meta'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar meta' : 'Nueva meta'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-2">
@@ -192,11 +280,13 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
                   key={t.value}
                   type="button"
                   onClick={() => changeTipo(t.value)}
+                  disabled={isEdit}
                   className={cn(
                     'text-left rounded-lg border px-3 py-2 text-xs transition',
                     tipo === t.value
                       ? 'border-primary bg-primary/10 text-primary font-semibold'
-                      : 'border-border hover:bg-accent'
+                      : 'border-border hover:bg-accent',
+                    isEdit && tipo !== t.value && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   <div className="font-semibold">{t.label}</div>
@@ -213,31 +303,60 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
 
           {tipo === 'producto' && (
             <>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">Producto *</label>
-                <SearchableSelect options={productoOptions} value={productoId} onChange={(v) => { setProductoId(v); setPresentacionId(''); }} placeholder="Producto..." />
-              </div>
-              {productoId && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Presentación (opcional)</label>
-                  <SearchableSelect options={presentacionOptions} value={presentacionId} onChange={setPresentacionId} placeholder="Presentación..." />
-                </div>
+              {isEdit ? (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Producto *</label>
+                    <SearchableSelect
+                      options={productoOptions}
+                      value={productoIds[0] ?? ''}
+                      onChange={(v) => { setProductoIds(v ? [v] : []); setPresentacionId(''); }}
+                      placeholder="Producto..."
+                    />
+                  </div>
+                  {productoIds.length === 1 && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground">Presentación (opcional)</label>
+                      <SearchableSelect options={presentacionOptions} value={presentacionId} onChange={setPresentacionId} placeholder="Presentación..." />
+                    </div>
+                  )}
+                </>
+              ) : (
+                renderMultiSelect('Producto(s) *', productoOptions, productoIds, setProductoIds)
               )}
             </>
           )}
 
           {tipo === 'categoria' && (
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">Categoría *</label>
-              <SearchableSelect options={clasificacionOptions} value={clasificacionId} onChange={setClasificacionId} placeholder="Categoría..." />
-            </div>
+            isEdit ? (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Categoría *</label>
+                <SearchableSelect
+                  options={clasificacionOptions}
+                  value={clasificacionIds[0] ?? ''}
+                  onChange={(v) => setClasificacionIds(v ? [v] : [])}
+                  placeholder="Categoría..."
+                />
+              </div>
+            ) : (
+              renderMultiSelect('Categoría(s) *', clasificacionOptions, clasificacionIds, setClasificacionIds)
+            )
           )}
 
           {tipo === 'marca' && (
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">Marca *</label>
-              <SearchableSelect options={marcaOptions} value={marcaId} onChange={setMarcaId} placeholder="Marca..." />
-            </div>
+            isEdit ? (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">Marca *</label>
+                <SearchableSelect
+                  options={marcaOptions}
+                  value={marcaIds[0] ?? ''}
+                  onChange={(v) => setMarcaIds(v ? [v] : [])}
+                  placeholder="Marca..."
+                />
+              </div>
+            ) : (
+              renderMultiSelect('Marca(s) *', marcaOptions, marcaIds, setMarcaIds)
+            )
           )}
 
           <div className="grid grid-cols-2 gap-3">
@@ -263,7 +382,9 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={submit} disabled={upsert.isPending || !canSave()}>{upsert.isPending ? 'Guardando...' : 'Guardar meta'}</Button>
+          <Button onClick={submit} disabled={upsert.isPending || batch.isPending || !canSave()}>
+            {upsert.isPending || batch.isPending ? 'Guardando...' : (isEdit ? 'Guardar cambios' : 'Guardar metas')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -128,6 +128,25 @@ export function useUpsertMeta() {
   });
 }
 
+export function useCreateMetasBatch() {
+  const { empresa, user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: MetaInput[]) => {
+      const payload = rows.map((r) => ({
+        ...r,
+        empresa_id: empresa!.id,
+        created_by: user?.id ?? null,
+      }));
+      const { error } = await supabase.from('metas_venta' as any).insert(payload as any);
+      if (error) throw error;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: KEY(empresa?.id) }),
+    onSuccess: (_d, variables) => toast.success(`${variables.length} meta(s) creadas`),
+    onError: (e: any) => toast.error(e.message || 'Error al guardar metas'),
+  });
+}
+
 export function useDeleteMeta() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
