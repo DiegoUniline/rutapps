@@ -497,11 +497,16 @@ export default function DemandaPage() {
             )}
             {filtered.map(pedido => {
               const isSelected = selectedIds.has(pedido.id);
+              const isExpanded = expanded.has(pedido.id);
               return (
+                <Fragment key={pedido.id}>
                 <TableRow
-                  key={pedido.id}
-                  className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5")}
-                  onClick={() => navigate(`/logistica/pedidos/${pedido.id}`)}
+                  className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5", isExpanded && "bg-accent/30")}
+                  onClick={() => setExpanded(prev => {
+                    const next = new Set(prev);
+                    if (next.has(pedido.id)) next.delete(pedido.id); else next.add(pedido.id);
+                    return next;
+                  })}
                 >
                   <TableCell className="py-2" onClick={e => e.stopPropagation()}>
                     <Checkbox
@@ -509,7 +514,12 @@ export default function DemandaPage() {
                       onCheckedChange={() => toggleSelect(pedido.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-[11px] font-bold text-primary py-2">{pedido.folio}</TableCell>
+                  <TableCell className="font-mono text-[11px] font-bold text-primary py-2">
+                    <span className="inline-flex items-center gap-1">
+                      {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      {pedido.folio}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
@@ -545,6 +555,52 @@ export default function DemandaPage() {
                     )}
                   </TableCell>
                 </TableRow>
+                {isExpanded && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={10} className="bg-muted/30 p-0">
+                      <div className="px-6 py-3 space-y-3">
+                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
+                          {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
+                          {pedido.clientes?.telefono && <span><strong className="text-foreground">Tel:</strong> {pedido.clientes.telefono}</span>}
+                          {pedido.notas && <span><strong className="text-foreground">Notas:</strong> {pedido.notas}</span>}
+                          <button
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                            onClick={e => { e.stopPropagation(); navigate(`/logistica/pedidos/${pedido.id}`); }}
+                          >
+                            Ver detalle <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <table className="w-full text-[12px]">
+                          <thead>
+                            <tr className="text-muted-foreground border-b border-border">
+                              <th className="text-left py-1 pr-2 font-medium">Código</th>
+                              <th className="text-left py-1 pr-2 font-medium">Producto</th>
+                              <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+                              <th className="text-right py-1 pr-2 font-medium">Entregado</th>
+                              <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
+                              <th className="text-right py-1 pr-2 font-medium">Precio</th>
+                              <th className="text-right py-1 font-medium">Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(pedido.venta_lineas ?? []).map((l: any) => (
+                              <tr key={l.id} className="border-b border-border/40 last:border-0">
+                                <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
+                                <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
+                                <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
+                                <td className="py-1 pr-2 text-right">{l.cantidad_entregada}</td>
+                                <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
+                                <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
+                                <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                </Fragment>
               );
             })}
           </TableBody>
