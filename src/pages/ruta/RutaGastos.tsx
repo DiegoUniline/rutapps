@@ -11,6 +11,7 @@ import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
