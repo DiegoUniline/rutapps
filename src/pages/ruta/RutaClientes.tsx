@@ -42,6 +42,8 @@ export default function RutaClientes() {
   const isSAOverride = !!overrideEmpresaId;
   const effectiveVendedorId = isSAOverride ? overrideVendedorId : (profile?.id ?? null);
   const { clientesVisibilidad } = useDataVisibility('clientes');
+  const { hasPermisoMovil } = usePermisos();
+  const canCrearCliente = hasPermisoMovil('ruta.cliente_crear');
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
