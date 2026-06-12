@@ -259,6 +259,7 @@ export default function PedidosPendientesPage() {
                 <TableHead className="w-10">
                   <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
                 </TableHead>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Folio</TableHead>
                 <TableHead>Cliente</TableHead>
@@ -271,38 +272,90 @@ export default function PedidosPendientesPage() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
               )}
               {filtered.map((p: any) => {
                 const sc = statusColors[p.status] ?? statusColors.borrador;
                 const asignado = asignadoMap[p.id];
                 const cargaAsignada = asignado ? (cargas ?? []).find((c: any) => c.id === asignado) : null;
-                const lineCount = (p.venta_lineas ?? []).length;
-                const pzas = (p.venta_lineas ?? []).reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+                const lineas = (p.venta_lineas ?? []) as any[];
+                const lineCount = lineas.length;
+                const pzas = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+                const isOpen = expanded.has(p.id);
+                const toggleRow = () => setExpanded(prev => {
+                  const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n;
+                });
                 return (
-                  <TableRow key={p.id} className="hover:bg-accent/40">
-                    <TableCell>
-                      <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(p.fecha)}</TableCell>
-                    <TableCell className="font-mono text-[13px] font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/ventas/${p.id}`)}>{p.folio ?? '—'}</TableCell>
-                    <TableCell>{(p.clientes as any)?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{(p.vendedores as any)?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{lineCount} prod · {pzas} pzas</TableCell>
-                    <TableCell className="text-right font-mono">{fmtCurrency(p.total)}</TableCell>
-                    <TableCell>
-                      {cargaAsignada ? (
-                        <Badge variant="secondary" className="text-xs">{(cargaAsignada as any).vendedores?.nombre ?? 'Asignado'}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold', sc.class)}>
-                        {sc.label}
-                      </span>
-                    </TableCell>
-                  </TableRow>
+                  <Fragment key={p.id}>
+                    <TableRow className="hover:bg-accent/40 cursor-pointer" onClick={toggleRow}>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(p.fecha)}</TableCell>
+                      <TableCell className="font-mono text-[13px] font-medium hover:text-primary" onClick={e => { e.stopPropagation(); navigate(`/ventas/${p.id}`); }}>{p.folio ?? '—'}</TableCell>
+                      <TableCell>{(p.clientes as any)?.nombre ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{(p.vendedores as any)?.nombre ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{lineCount} prod · {pzas} pzas</TableCell>
+                      <TableCell className="text-right font-mono">{fmtCurrency(p.total)}</TableCell>
+                      <TableCell>
+                        {cargaAsignada ? (
+                          <Badge variant="secondary" className="text-xs">{(cargaAsignada as any).vendedores?.nombre ?? 'Asignado'}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold', sc.class)}>
+                          {sc.label}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                    {isOpen && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={10} className="p-0">
+                          <div className="p-4 space-y-3">
+                            {(p.clientes as any)?.direccion && (
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-semibold text-foreground">Dirección:</span> {(p.clientes as any).direccion}
+                                {(p.clientes as any)?.telefono && <span className="ml-3"><span className="font-semibold text-foreground">Tel:</span> {(p.clientes as any).telefono}</span>}
+                              </div>
+                            )}
+                            {p.notas && <div className="text-xs"><span className="font-semibold">Notas:</span> {p.notas}</div>}
+                            <div className="rounded-md border border-border bg-background overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                  <tr className="text-left">
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground">Código</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground">Producto</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">Cantidad</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">P. Unit.</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-muted-foreground text-right">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineas.length === 0 && (
+                                    <tr><td colSpan={5} className="px-3 py-3 text-center text-muted-foreground text-xs">Sin productos</td></tr>
+                                  )}
+                                  {lineas.map((l: any) => (
+                                    <tr key={l.id} className="border-t border-border">
+                                      <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{l.productos?.codigo ?? '—'}</td>
+                                      <td className="px-3 py-1.5">{l.productos?.nombre ?? '—'}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{Number(l.cantidad) || 0}{l.productos?.unidad_granel ? ` ${l.productos.unidad_granel}` : ''}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{fmtCurrency(l.precio_unitario)}</td>
+                                      <td className="px-3 py-1.5 text-right font-mono">{fmtCurrency(l.total ?? l.subtotal)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 );
               })}
             </TableBody>
