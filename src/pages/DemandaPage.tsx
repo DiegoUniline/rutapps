@@ -80,6 +80,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const generadaMap: Record<string, Record<string, number>> = {};
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
+      const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
         if (e.status === 'borrador') {
@@ -91,6 +92,9 @@ function usePedidosPendientes(filters: DemandaFilters) {
           if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
           for (const l of (e.entrega_lineas ?? [])) {
             surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
+          if (e.status === 'asignado' || e.status === 'cargado' || e.status === 'en_ruta') {
+            enRutaSet.add(e.pedido_id);
           }
           if (e.status === 'hecho') {
             if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
@@ -117,8 +121,18 @@ function usePedidosPendientes(filters: DemandaFilters) {
         const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
         const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
         const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
+        const fullyDelivered = totalDemanda > 0 && totalEntregado >= totalDemanda;
         const fullySurtido = totalDemanda > 0 && totalSurtido >= totalDemanda;
         const fullyGenerada = !fullySurtido && totalDemanda > 0 && (totalGenerada + totalSurtido) >= totalDemanda;
+        const enRuta = !fullyDelivered && enRutaSet.has(p.id);
+        // Estado derivado tipo Odoo
+        let estadoOdoo: 'pendiente_surtir' | 'en_surtido' | 'surtido_completo' | 'surtido_parcial' | 'en_ruta' | 'entregado' | null = null;
+        if (fullyDelivered) estadoOdoo = 'entregado';
+        else if (enRuta) estadoOdoo = 'en_ruta';
+        else if (fullySurtido) estadoOdoo = 'surtido_completo';
+        else if (totalSurtido > 0) estadoOdoo = 'surtido_parcial';
+        else if (totalGenerada > 0 && fullyGenerada) estadoOdoo = 'pendiente_surtir';
+        else if (totalGenerada > 0) estadoOdoo = 'en_surtido';
         return {
           ...p,
           venta_lineas: lineasConPendiente,
@@ -128,7 +142,9 @@ function usePedidosPendientes(filters: DemandaFilters) {
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
           fullyGenerada,
           fullySurtido,
-          fullyDelivered: totalDemanda > 0 && totalEntregado >= totalDemanda,
+          fullyDelivered,
+          enRuta,
+          estadoOdoo,
         };
       });
     },
