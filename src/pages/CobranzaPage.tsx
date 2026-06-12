@@ -31,6 +31,7 @@ import { ClienteLink } from '@/components/links/EntityLinks';
 import { Link } from 'react-router-dom';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 
 
@@ -113,6 +114,7 @@ export default function CobranzaPage() {
   const [editCobro, setEditCobro] = useState<any | null>(null);
   const [cancelCobro, setCancelCobro] = useState<any | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const { requestPin, PinDialog } = usePinAuth();
 
 
   const handleCancelCobro = async () => {
@@ -451,6 +453,35 @@ export default function CobranzaPage() {
     toast.info(`Se abrió WhatsApp para el primer cobro seleccionado. Enviarás ${selectedCobros.length} recibos uno por uno.`);
   };
 
+  const handleDeleteCancelledMany = () => {
+    const selectedCancelled = (cobros ?? []).filter((c: any) => selectedIds.has(c.id) && (c as any).status === 'cancelado');
+    if (selectedCancelled.length === 0) {
+      toast.error('Solo se pueden eliminar cobros cancelados. Cancela primero los seleccionados.');
+      return;
+    }
+    requestPin(
+      `Eliminar ${selectedCancelled.length} cobro(s) cancelado(s)`,
+      'Esta acción es permanente. Ingresa tu PIN de administrador para continuar.',
+      async () => {
+        try {
+          const ids = selectedCancelled.map(c => c.id);
+          // Delete applications first to avoid FK issues, then the cobros
+          await supabase.from('cobro_aplicaciones').delete().in('cobro_id', ids);
+          const { error } = await supabase.from('cobros').delete().in('id', ids);
+          if (error) throw error;
+          toast.success(`${ids.length} cobro(s) eliminado(s) permanentemente.`);
+          qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa?.id] });
+          qc.invalidateQueries({ queryKey: ['ventas'] });
+          qc.invalidateQueries({ queryKey: ['cxc'] });
+          qc.invalidateQueries({ queryKey: ['saldos'] });
+          setSelectedIds(new Set());
+        } catch (e: any) {
+          toast.error(e.message || 'Error al eliminar');
+        }
+      }
+    );
+  };
+
   const renderTable = (items: any[]) => <CobrosTable items={items} selected={selectedIds} onToggleOne={toggleSelectOne} />;
 
   const renderSummary = (items: any[]) => {
@@ -511,7 +542,10 @@ export default function CobranzaPage() {
             <MessageCircle className="h-4 w-4" /> WhatsApp
           </Button>
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
-            <Trash2 className="h-4 w-4" /> Cancelar
+            <Ban className="h-4 w-4" /> Cancelar
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={handleDeleteCancelledMany} title="Solo cobros cancelados — requiere PIN admin">
+            <Trash2 className="h-4 w-4" /> Eliminar
           </Button>
           <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={clearSelection}>
             <X className="h-4 w-4" />
@@ -636,6 +670,8 @@ export default function CobranzaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PinDialog />
     </div>
   );
 }
