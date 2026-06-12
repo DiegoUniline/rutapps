@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
