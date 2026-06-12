@@ -137,7 +137,7 @@ export function StepPago(props: Props) {
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
           <div className="flex gap-1.5">
-            {([['contado', 'Contado'], ...(clienteCredito?.credito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+            {([['contado', 'Contado'], ...(clienteCredito?.credito && canCredito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
               <button key={val} onClick={() => setCondicionPago(val as any)} className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${condicionPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>{label}</button>
             ))}
           </div>
