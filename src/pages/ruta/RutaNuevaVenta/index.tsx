@@ -14,11 +14,18 @@ import { StepProductos } from './StepProductos';
 import { StepResumen } from './StepResumen';
 import { StepPago } from './StepPago';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 export default function RutaNuevaVenta() {
+  const { hasPermisoMovil } = usePermisos();
   const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  if (!hasPermisoMovil('ruta.vender')) {
+    return <MobileNoAccess titulo="Sin permiso para vender" mensaje="Tu rol no permite crear ventas desde la ruta." />;
+  }
 
   const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
 
