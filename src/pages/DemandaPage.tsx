@@ -64,7 +64,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           const part = await fetchAllPages<any>((from, to) =>
             supabase
               .from('entregas')
-              .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+              .select('pedido_id, status, fecha, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
               .in('pedido_id', chunk)
               .range(from, to)
           );
@@ -81,8 +81,16 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
       const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
+      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null }> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
+        // Track latest active entrega meta (fecha programada + repartidor)
+        const prev = pedidoMeta[e.pedido_id];
+        if (!prev || (e.fecha && (!prev.fecha || new Date(e.fecha) > new Date(prev.fecha)))) {
+          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null };
+        } else if (!prev.vendedorRutaId && e.vendedor_ruta_id) {
+          prev.vendedorRutaId = e.vendedor_ruta_id;
+        }
         if (e.status === 'borrador') {
           if (!generadaMap[e.pedido_id]) generadaMap[e.pedido_id] = {};
           for (const l of (e.entrega_lineas ?? [])) {
@@ -145,6 +153,8 @@ function usePedidosPendientes(filters: DemandaFilters) {
           fullyDelivered,
           enRuta,
           estadoOdoo,
+          fechaProgramada: pedidoMeta[p.id]?.fecha ?? null,
+          vendedorRutaId: pedidoMeta[p.id]?.vendedorRutaId ?? null,
         };
       });
     },
@@ -819,7 +829,8 @@ export default function DemandaPage() {
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
               <TableHead className="text-[11px]">Fecha</TableHead>
-              <TableHead className="text-[11px] text-center">Cond. pago</TableHead>
+              <TableHead className="text-[11px]">Repartidor</TableHead>
+              <TableHead className="text-[11px]">Programada entrega</TableHead>
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
@@ -830,7 +841,7 @@ export default function DemandaPage() {
           <TableBody>
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay pedidos pendientes de surtir
                 </TableCell>
@@ -864,8 +875,11 @@ export default function DemandaPage() {
                   <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
-                  <TableCell className="text-center py-2">
-                    <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.vendedorRutaId ? (vendedoresList?.find(v => v.id === pedido.vendedorRutaId)?.nombre ?? '—') : <span className="text-muted-foreground/60">Sin asignar</span>}
+                  </TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : <span className="text-muted-foreground/60">—</span>}
                   </TableCell>
                   <TableCell className="text-right text-[12px] font-medium py-2">{fmt(pedido.total)}</TableCell>
                   <TableCell className="py-2">
