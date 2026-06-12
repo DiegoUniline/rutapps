@@ -621,6 +621,9 @@ export default function DemandaPage() {
     onSuccess: (n) => {
       toast.success(`Entregas canceladas en ${n} pedido(s)`);
       setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
     },
     onError: (err: any) => toast.error(err.message),
