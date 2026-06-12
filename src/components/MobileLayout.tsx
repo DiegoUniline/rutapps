@@ -46,8 +46,11 @@ export default function MobileLayout() {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
-  const { hasPermiso } = usePermisos();
+  const { hasPermiso, hasPermisoMovil } = usePermisos();
   const { requireJornada } = useEmpresaJornadaConfig();
+  const tabs = ALL_TABS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const moreItems = ALL_MORE_ITEMS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const morePaths = moreItems.map(i => i.path);
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
