@@ -925,8 +925,6 @@ export default function DashboardPage() {
       )}
 
 
-      {/* === Banner de alertas === */}
-      <AlertasBanner />
 
 
 
