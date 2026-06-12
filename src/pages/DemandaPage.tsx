@@ -894,6 +894,9 @@ export default function DemandaPage() {
                   <TableCell className="text-[12px] text-muted-foreground py-2">
                     {pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : <span className="text-muted-foreground/60">—</span>}
                   </TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.fechaEntrega ? fmtDate(pedido.fechaEntrega) : <span className="text-muted-foreground/60">—</span>}
+                  </TableCell>
                   <TableCell className="text-right text-[12px] font-medium py-2">{fmt(pedido.total)}</TableCell>
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2 justify-center">
