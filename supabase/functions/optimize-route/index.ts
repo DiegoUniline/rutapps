@@ -13,6 +13,15 @@ const REAL_MATRIX_MAX_STOPS = 60; // arriba de esto usamos Haversine para no dis
 type LatLng = { lat: number; lng: number };
 type Waypoint = LatLng & { id: string; colonia?: string | null };
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function pointHash(p: LatLng): string {
+  return `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
+}
+
 function haversine(a: LatLng, b: LatLng): number {
   const R = 6371000;
   const toRad = (x: number) => (x * Math.PI) / 180;
@@ -33,17 +42,65 @@ async function buildRealDistanceMatrix(
   googleApiKey: string,
   origin: LatLng,
   waypoints: Waypoint[],
+  supabase?: any,
+  empresaId?: string,
 ): Promise<number[][] | null> {
   const points: LatLng[] = [origin, ...waypoints];
   const n = points.length;
-  // Google computeRouteMatrix: máx 625 elementos por request (25x25). Para N<=25 cabe en 1 request.
-  // Para N mayor, hacemos en bloques.
   const matrix: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  const hashes: string[] = points.map(pointHash);
+
+  // 1) Consultar caché para todos los pares (excepto diagonal i==j que ya es 0)
+  const cacheHits = new Set<string>(); // key = `${i}-${j}`
+  if (supabase && empresaId) {
+    try {
+      const uniqHashes = Array.from(new Set(hashes));
+      const { data: cached } = await supabase
+        .from("distancia_cache")
+        .select("origen_hash,destino_hash,distancia_m")
+        .eq("empresa_id", empresaId)
+        .in("origen_hash", uniqHashes)
+        .in("destino_hash", uniqHashes);
+      if (Array.isArray(cached)) {
+        const cacheMap = new Map<string, number>();
+        for (const c of cached) cacheMap.set(`${c.origen_hash}|${c.destino_hash}`, c.distancia_m);
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+            if (i === j) continue;
+            const d = cacheMap.get(`${hashes[i]}|${hashes[j]}`);
+            if (d != null) { matrix[i][j] = d; cacheHits.add(`${i}-${j}`); }
+          }
+        }
+      }
+    } catch (e) { console.warn("distancia_cache lookup failed:", e); }
+  }
+
+  // 2) Pares faltantes
+  const missing: Array<{ i: number; j: number }> = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      if (!cacheHits.has(`${i}-${j}`)) missing.push({ i, j });
+    }
+  }
+  console.log(`distancia_cache: ${cacheHits.size} hits / ${n * (n - 1)} pares; missing=${missing.length}`);
+
   const BLOCK = 25;
+  const newRows: Array<{ empresa_id: string; origen_hash: string; destino_hash: string; distancia_m: number; duracion_s: number }> = [];
 
   try {
+    // Procesamos en bloques 25x25 igual que antes pero solo si hay misses dentro del bloque
     for (let oStart = 0; oStart < n; oStart += BLOCK) {
       for (let dStart = 0; dStart < n; dStart += BLOCK) {
+        // ¿Hay algún miss en este bloque?
+        let hasMiss = false;
+        for (let i = oStart; i < Math.min(oStart + BLOCK, n) && !hasMiss; i++) {
+          for (let j = dStart; j < Math.min(dStart + BLOCK, n); j++) {
+            if (i !== j && !cacheHits.has(`${i}-${j}`)) { hasMiss = true; break; }
+          }
+        }
+        if (!hasMiss) continue;
+
         const origins = points.slice(oStart, oStart + BLOCK);
         const destinations = points.slice(dStart, dStart + BLOCK);
         const body = {
@@ -56,7 +113,7 @@ async function buildRealDistanceMatrix(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": googleApiKey,
-            "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,condition",
+            "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,duration,condition",
           },
           body: JSON.stringify(body),
         });
@@ -73,9 +130,27 @@ async function buildRealDistanceMatrix(
           if (cell.condition !== "ROUTE_EXISTS") continue;
           const oi = oStart + (cell.originIndex ?? 0);
           const di = dStart + (cell.destinationIndex ?? 0);
-          matrix[oi][di] = cell.distanceMeters ?? 0;
+          if (oi === di) continue;
+          const dm = cell.distanceMeters ?? 0;
+          matrix[oi][di] = dm;
+          const durSec = parseInt(String(cell.duration ?? "0").replace("s", ""), 10) || 0;
+          if (supabase && empresaId) {
+            newRows.push({
+              empresa_id: empresaId,
+              origen_hash: hashes[oi],
+              destino_hash: hashes[di],
+              distancia_m: dm,
+              duracion_s: durSec,
+            });
+          }
         }
       }
+    }
+    // 3) Upsert pares nuevos en caché
+    if (supabase && empresaId && newRows.length > 0) {
+      try {
+        await supabase.from("distancia_cache").upsert(newRows, { onConflict: "empresa_id,origen_hash,destino_hash" });
+      } catch (e) { console.warn("distancia_cache upsert failed:", e); }
     }
     return matrix;
   } catch (e) {
@@ -83,6 +158,8 @@ async function buildRealDistanceMatrix(
     return null;
   }
 }
+
+
 
 /** NN sobre matriz precomputada. Índice 0 = origen. Devuelve orden de waypoints (índices base 0 sobre waypoints). */
 function nearestNeighborOrderMatrix(n: number, matrix: number[][]): number[] {
@@ -420,11 +497,9 @@ Deno.serve(async (req) => {
           orderedWp = r.waypoints;
           optMethod = "preserved";
         } else {
-          // Optimización SIEMPRE por lat/long con distancia REAL por calle (Google Routes
-          // computeRouteMatrix). Si falla o no hay API key, fallback a Haversine.
           let usedReal = false;
           if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
-            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
+            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints, supabase, profile.empresa_id);
             if (matrix) {
               const n = r.waypoints.length + 1;
               const nn = nearestNeighborOrderMatrix(n, matrix);
@@ -447,11 +522,51 @@ Deno.serve(async (req) => {
         let distanceMeters = 0;
         let duration = "0s";
 
-        if (googleApiKey) {
+        // Hash de la ruta ordenada (origen + paradas) para caché de polyline
+        const polyHashInput = JSON.stringify([
+          [r.origin.lat, r.origin.lng],
+          ...orderedWp.map(w => [w.lat, w.lng]),
+        ]);
+        const waypointsHash = await sha256Hex(polyHashInput);
+        const cacheKey = String(r.key ?? "default");
+
+        // Si preserve_order, intentar cache hit primero (evita llamar a Google)
+        if (preserveOrder) {
+          try {
+            const { data: cached } = await supabase
+              .from("ruta_polyline_cache")
+              .select("encoded_polyline,distancia_total_m,duracion_total_s")
+              .eq("vendedor_id", cacheKey)
+              .eq("waypoints_hash", waypointsHash)
+              .maybeSingle();
+            if (cached?.encoded_polyline) {
+              polyline = cached.encoded_polyline;
+              distanceMeters = cached.distancia_total_m ?? 0;
+              duration = `${cached.duracion_total_s ?? 0}s`;
+              console.log(`Route ${r.key}: polyline cache HIT`);
+            }
+          } catch (e) { console.warn("polyline cache lookup failed:", e); }
+        }
+
+        if (!polyline && googleApiKey) {
           const g = await fetchGooglePolyline(googleApiKey, r.origin, orderedWp);
           polyline = g.polyline;
           distanceMeters = g.distanceMeters;
           duration = g.duration;
+          // Upsert cache para futuras consultas
+          if (polyline) {
+            try {
+              const durSec = parseInt(String(duration).replace("s", ""), 10) || 0;
+              await supabase.from("ruta_polyline_cache").upsert({
+                empresa_id: profile.empresa_id,
+                vendedor_id: cacheKey,
+                waypoints_hash: waypointsHash,
+                encoded_polyline: polyline,
+                distancia_total_m: distanceMeters,
+                duracion_total_s: durSec,
+              }, { onConflict: "vendedor_id,waypoints_hash" });
+            } catch (e) { console.warn("polyline cache upsert failed:", e); }
+          }
         }
 
         if (distanceMeters === 0) {
@@ -463,6 +578,7 @@ Deno.serve(async (req) => {
           distanceMeters = Math.round(totalDist * 1.3);
           duration = `${Math.round(totalDist * 1.3 / 8.33)}s`;
         }
+
 
         results.push({
           key: r.key,

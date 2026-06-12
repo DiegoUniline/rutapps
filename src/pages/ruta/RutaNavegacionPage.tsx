@@ -8,7 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
-import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, DirectionsRenderer, MarkerF, Polyline } from '@react-google-maps/api';
+import { haversine as geoHaversine, bearing as geoBearing, projectToPolyline, remainingDistance, splitPolylineAt, animatePosition, type LatLng as GeoLatLng } from '@/lib/routeGeometry';
 import { Button } from '@/components/ui/button';
 import { cn, todayLocal } from '@/lib/utils';
 import MapRecenterButton from '@/components/MapRecenterButton';
@@ -124,7 +125,23 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const vendedorId = (isSuperAdmin && superVendedorId) ? superVendedorId : profile?.id;
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const lastSpokenStepRef = useRef(-1);
-  const followUserRef = useRef(true); // true = camera follows user
+  const followUserRef = useRef(true);
+
+  // ─── Uber-like live navigation refs (todo local, cero llamadas a Google por tick) ───
+  const lastRouteOriginRef = useRef<GeoLatLng | null>(null);
+  const lastRequestTimeRef = useRef<number>(0);
+  const currentRoutePathRef = useRef<GeoLatLng[] | null>(null);
+  const renderedPosRef = useRef<GeoLatLng | null>(null);
+  const animCancelRef = useRef<(() => void) | null>(null);
+  const speedHistoryRef = useRef<number[]>([]);
+  const lastTickAtRef = useRef<number>(0);
+  const lastUploadAtRef = useRef<number>(0);
+  const [renderedPos, setRenderedPos] = useState<GeoLatLng | null>(null);
+  const [headingDeg, setHeadingDeg] = useState<number>(0);
+  const [traveledPath, setTraveledPath] = useState<GeoLatLng[]>([]);
+  const [remainingPath, setRemainingPath] = useState<GeoLatLng[]>([]);
+  const [liveEtaMin, setLiveEtaMin] = useState<number | null>(null);
+  const [liveRemKm, setLiveRemKm] = useState<number | null>(null);
 
   // Watch user location
   useEffect(() => {
@@ -272,33 +289,134 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const activeStop = stops.find(s => s.id === activeStopId) ?? null;
   const navigatingStop = stops.find(s => s.id === navigatingTo) ?? null;
 
-  // Calculate directions when navigating
-  useEffect(() => {
-    if (!isLoaded || !navigatingStop || !userLocation) {
-      setDirections(null);
-      return;
-    }
+  // Helper: pide Directions a Google y refresca refs. Solo se llama: (1) al cambiar destino,
+  // (2) cuando el vendedor se desvía >150 m de la ruta vigente Y han pasado >30 s.
+  const requestDirections = useCallback((origin: GeoLatLng, destStop: Stop) => {
+    if (!isLoaded) return;
     const service = new google.maps.DirectionsService();
+    lastRequestTimeRef.current = Date.now();
+    lastRouteOriginRef.current = origin;
     service.route(
       {
-        origin: userLocation,
-        destination: { lat: navigatingStop.gps_lat, lng: navigatingStop.gps_lng },
+        origin,
+        destination: { lat: destStop.gps_lat, lng: destStop.gps_lng },
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
         if (status === 'OK' && result) {
           setDirections(result);
-          // Zoom in to user location at street level (like Google Maps nav)
-          if (mapRef.current && userLocation) {
-            mapRef.current.setCenter(userLocation);
-            mapRef.current.setZoom(17);
-          }
+          const overview = result.routes?.[0]?.overview_path ?? [];
+          const path: GeoLatLng[] = overview.map(p => ({ lat: p.lat(), lng: p.lng() }));
+          currentRoutePathRef.current = path;
+          setRemainingPath(path);
+          setTraveledPath([]);
         } else {
           setDirections(null);
+          currentRoutePathRef.current = null;
+        }
+      },
+    );
+  }, [isLoaded]);
+
+  // 1 sola petición Directions al cambiar destino. NO depende de userLocation.
+  useEffect(() => {
+    if (!isLoaded || !navigatingStop) {
+      setDirections(null);
+      currentRoutePathRef.current = null;
+      setTraveledPath([]); setRemainingPath([]);
+      setLiveEtaMin(null); setLiveRemKm(null);
+      return;
+    }
+    if (!userLocation) return;
+    requestDirections(userLocation, navigatingStop);
+    if (mapRef.current) {
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(17);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, navigatingTo]);
+
+  // Snap-to-route + animación + ETA + reroute por desvío. Cero llamadas a Google por tick.
+  useEffect(() => {
+    if (!navigatingStop || !userLocation) return;
+    const path = currentRoutePathRef.current;
+    const dest: GeoLatLng = { lat: navigatingStop.gps_lat, lng: navigatingStop.gps_lng };
+
+    // Velocidad (m/s) basada en últimas posiciones
+    const now = Date.now();
+    if (lastTickAtRef.current && renderedPosRef.current) {
+      const dt = (now - lastTickAtRef.current) / 1000;
+      if (dt > 0) {
+        const d = geoHaversine(renderedPosRef.current, userLocation);
+        const v = d / dt;
+        if (v >= 0 && v < 50) {
+          speedHistoryRef.current.push(v);
+          if (speedHistoryRef.current.length > 5) speedHistoryRef.current.shift();
         }
       }
-    );
-  }, [isLoaded, navigatingTo, userLocation?.lat, userLocation?.lng]);
+    }
+    lastTickAtRef.current = now;
+
+    let target: GeoLatLng = userLocation;
+    let distToDest = geoHaversine(userLocation, dest);
+
+    if (path && path.length >= 2) {
+      const proj = projectToPolyline(userLocation, path);
+      target = proj.snapped;
+      const { traveled, remaining } = splitPolylineAt(path, proj.segmentIndex, proj.t, proj.snapped);
+      setTraveledPath(traveled);
+      setRemainingPath(remaining);
+      const remM = remainingDistance(path, proj.segmentIndex, proj.t);
+      distToDest = remM > 0 ? remM : distToDest;
+      setLiveRemKm(remM / 1000);
+
+      const avgSpeed = speedHistoryRef.current.length
+        ? speedHistoryRef.current.reduce((a, b) => a + b, 0) / speedHistoryRef.current.length
+        : 0;
+      const effSpeed = Math.max(avgSpeed, 4.17); // piso 15 km/h
+      setLiveEtaMin(Math.max(1, Math.round(remM / effSpeed / 60)));
+
+      // Re-ruteo si desvío >150 m y >30 s desde última petición
+      if (proj.distToRoute > 150 && (now - lastRequestTimeRef.current) > 30_000) {
+        requestDirections(userLocation, navigatingStop);
+      }
+    } else {
+      setLiveRemKm(distToDest / 1000);
+    }
+
+    // Animación interpolada del marker
+    if (animCancelRef.current) animCancelRef.current();
+    const from = renderedPosRef.current ?? target;
+    if (renderedPosRef.current) {
+      setHeadingDeg(geoBearing(renderedPosRef.current, target));
+    }
+    renderedPosRef.current = target;
+    animCancelRef.current = animatePosition(from, target, 1000, (pos) => {
+      setRenderedPos(pos);
+    });
+
+    // Llegada
+    if (distToDest < 50) {
+      handleArrived(navigatingStop);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation?.lat, userLocation?.lng, navigatingTo]);
+
+  // Upload posición cada 5 s mientras navega (overlay sobre useLocationBroadcaster global)
+  useEffect(() => {
+    if (!navigatingTo || !userLocation || !user?.id || !empresa?.id) return;
+    const now = Date.now();
+    if (now - lastUploadAtRef.current < 5000) return;
+    lastUploadAtRef.current = now;
+    supabase.from('vendedor_ubicaciones' as any).upsert({
+      user_id: user.id,
+      empresa_id: empresa.id,
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  }, [navigatingTo, userLocation?.lat, userLocation?.lng, user?.id, empresa?.id]);
+
 
   // Fit map to show all markers initially
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -475,23 +593,44 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
             ],
           }}
         >
-          {/* Route when navigating */}
-          {directions && (
+          {/* Route bicolor (traveled gris, remaining azul) — render local desde overview_path */}
+          {navigatingTo && traveledPath.length >= 2 && (
+            <Polyline
+              path={traveledPath}
+              options={{ strokeColor: '#cbd5e1', strokeWeight: 6, strokeOpacity: 0.9, zIndex: 1 }}
+            />
+          )}
+          {navigatingTo && remainingPath.length >= 2 && (
+            <Polyline
+              path={remainingPath}
+              options={{ strokeColor: '#2563eb', strokeWeight: 6, strokeOpacity: 0.95, zIndex: 2 }}
+            />
+          )}
+          {/* Fallback: si aún no hay path local, dejar el renderer dibujar */}
+          {directions && remainingPath.length < 2 && (
             <DirectionsRenderer
               directions={directions}
               options={{
                 suppressMarkers: true,
                 preserveViewport: true,
-                polylineOptions: { strokeColor: '#4285F4', strokeWeight: 5, strokeOpacity: 0.9 },
+                polylineOptions: { strokeColor: '#2563eb', strokeWeight: 5, strokeOpacity: 0.9 },
               }}
             />
           )}
 
-          {/* User location */}
-          {userLocation && (
+          {/* User location — flecha rotada al rumbo (estilo Uber) durante navegación, círculo si no */}
+          {(renderedPos || userLocation) && (
             <MarkerF
-              position={userLocation}
-              icon={{
+              position={renderedPos ?? userLocation!}
+              icon={navigatingTo ? {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 6,
+                rotation: headingDeg,
+                fillColor: '#2563eb',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+              } : {
                 path: google.maps.SymbolPath.CIRCLE,
                 scale: 8,
                 fillColor: '#4285F4',
@@ -499,8 +638,10 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                 strokeColor: '#ffffff',
                 strokeWeight: 3,
               }}
+              zIndex={9999}
             />
           )}
+
 
           {/* Stop markers */}
           {stops.map((stop, idx) => {
@@ -567,21 +708,29 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
               </button>
             </div>
 
-            {/* Next step preview + ETA */}
+            {/* Next step preview + ETA en vivo (cálculo LOCAL, sin Google) */}
             <div className="mx-1 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
               {nextStep && (
                 <p className="text-[11px] text-muted-foreground flex-1 truncate">
                   Después: {stripHtml(nextStep.instructions)}
                 </p>
               )}
-              {leg && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Navigation className="h-3 w-3 text-primary" />
-                  <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
-                  <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Navigation className="h-3 w-3 text-primary" />
+                {liveEtaMin != null ? (
+                  <>
+                    <span className="text-[12px] font-semibold text-foreground">Llegas en {liveEtaMin} min</span>
+                    {liveRemKm != null && <span className="text-[11px] text-muted-foreground">· {liveRemKm.toFixed(1)} km</span>}
+                  </>
+                ) : leg ? (
+                  <>
+                    <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
+                    <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
+                  </>
+                ) : null}
+              </div>
             </div>
+
           </div>
         ) : navigatingStop ? (
           /* Navigating but no steps yet (loading) */
