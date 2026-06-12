@@ -546,6 +546,20 @@ export default function DemandaPage() {
 
           if (recompFaltante === 0 && surtidasOk > 0) {
             await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
+            // Si se seleccionó repartidor, transicionar asignado → cargado para
+            // que el trigger mueva el stock al almacén del repartidor.
+            if (repartidorAlmacenOk && vendedorRutaId) {
+              const nowIso = new Date().toISOString();
+              await supabase.from('entregas').update({
+                vendedor_ruta_id: vendedorRutaId,
+                status: 'asignado',
+                fecha_asignacion: nowIso,
+              } as any).eq('id', entrega.id);
+              await supabase.from('entregas').update({
+                status: 'cargado',
+                fecha_carga: nowIso,
+              } as any).eq('id', entrega.id);
+            }
             fully.push({ pedido, entrega });
           } else if (surtidasOk > 0) {
             partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
@@ -553,6 +567,7 @@ export default function DemandaPage() {
             // entrega exists but nothing got surtido (race condition with stock)
             none.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
           }
+
         } catch (err: any) {
           console.error(`Error procesando pedido ${pedido.folio}:`, err);
           errors.push({ pedido, message: err?.message ?? 'Error desconocido' });
