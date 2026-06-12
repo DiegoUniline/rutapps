@@ -670,6 +670,8 @@ export default function CobranzaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PinDialog />
     </div>
   );
 }
