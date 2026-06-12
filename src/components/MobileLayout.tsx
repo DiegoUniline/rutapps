@@ -27,29 +27,30 @@ const RUTAS_REQUIEREN_JORNADA = [
   '/ruta/entregas/', // confirmar/editar entregas
 ];
 
-const tabs = [
-  { label: 'Clientes', icon: Users, path: '/ruta' },
-  { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
-  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos' },
-  { label: 'Stock', icon: Package, path: '/ruta/stock' },
+const ALL_TABS = [
+  { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes' },
+  { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas_hist' },
+  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
+  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
 ];
 
-const moreItems = [
-  { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga' },
-  { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
-  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
-  { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
+const ALL_MORE_ITEMS = [
+  { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
+  { label: 'Gastos', icon: FileText, path: '/ruta/gastos', permiso: 'ruta.gastos' },
+  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
+  { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
 ];
-
-const morePaths = moreItems.map(i => i.path);
 
 export default function MobileLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
-  const { hasPermiso } = usePermisos();
+  const { hasPermiso, hasPermisoMovil } = usePermisos();
   const { requireJornada } = useEmpresaJornadaConfig();
+  const tabs = ALL_TABS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const moreItems = ALL_MORE_ITEMS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const morePaths = moreItems.map(i => i.path);
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);

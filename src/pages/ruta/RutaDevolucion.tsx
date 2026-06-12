@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCargaActiva } from '@/hooks/useCargas';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -31,6 +33,7 @@ type Step = 'tipo' | 'cliente' | 'items' | 'confirm';
 export default function RutaDevolucion() {
   const navigate = useNavigate();
   const { user, profile, empresa } = useAuth();
+  const { hasPermisoMovil } = usePermisos();
   const [tipo, setTipo] = useState<Tipo>('almacen');
   const [items, setItems] = useState<DevItem[]>([]);
   const [notas, setNotas] = useState('');
@@ -143,6 +146,10 @@ export default function RutaDevolucion() {
   };
 
   const { fmt } = useCurrency();
+
+  if (!hasPermisoMovil('ruta.devoluciones')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar devoluciones." />;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">

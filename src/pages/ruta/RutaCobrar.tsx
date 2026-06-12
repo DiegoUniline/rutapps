@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
@@ -31,6 +33,7 @@ export default function RutaCobrar() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('cliente');
@@ -202,6 +205,10 @@ export default function RutaCobrar() {
   };
 
   const { fmt } = useCurrency();
+
+  if (!hasPermisoMovil('ruta.cobrar')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar cobros." />;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">

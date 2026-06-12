@@ -5,10 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
@@ -48,6 +51,10 @@ export default function RutaGastos() {
   };
 
   const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
+
+  if (!hasPermisoMovil('ruta.gastos')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar gastos." />;
+  }
 
   return (
     <div className="flex flex-col h-full">

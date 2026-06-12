@@ -3,6 +3,7 @@ import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, Mess
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
 import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 
@@ -175,6 +176,9 @@ function TotalesCard({ venta, fmt, s, showTax, setShowTax }: { venta: any; fmt: 
 
 function BottomActions({ venta, saving, initEditar, initCobrar, handleCancelar, handleVolverBorrador, fmt, s, lineas }: Props & { s: string }) {
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const { hasPermisoMovil } = usePermisos();
+  const canCancelar = hasPermisoMovil('ruta.cancelar_venta');
+  const canCobrar = hasPermisoMovil('ruta.cobrar');
   const esEntregaInmediata = venta.tipo === 'venta_directa' && venta.entrega_inmediata;
   const totalProductos = (lineas ?? []).reduce((acc: number, l: any) => acc + (l.cantidad ?? 0), 0);
 
@@ -187,9 +191,9 @@ function BottomActions({ venta, saving, initEditar, initCobrar, handleCancelar, 
               <RotateCcw className="h-4 w-4" /> A borrador
             </button>
           )}
-          {(venta.status === 'confirmado' || venta.status === 'entregado') && <button onClick={() => setShowCancelModal(true)} disabled={saving} className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40"><X className="h-4 w-4" /> Cancelar</button>}
+          {canCancelar && (venta.status === 'confirmado' || venta.status === 'entregado') && <button onClick={() => setShowCancelModal(true)} disabled={saving} className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40"><X className="h-4 w-4" /> Cancelar</button>}
           {venta.status === 'borrador' && <button onClick={initEditar} className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5"><Pencil className="h-4 w-4" /> Editar</button>}
-          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && <button onClick={initCobrar} className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"><Banknote className="h-5 w-5" /> Cobrar {fmt(venta.saldo_pendiente ?? 0)}</button>}
+          {canCobrar && (venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && <button onClick={initCobrar} className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"><Banknote className="h-5 w-5" /> Cobrar {fmt(venta.saldo_pendiente ?? 0)}</button>}
         </div>
       </div>
 

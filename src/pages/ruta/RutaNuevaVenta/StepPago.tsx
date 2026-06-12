@@ -2,6 +2,7 @@ import React from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
 import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { usePermisos } from '@/hooks/usePermisos';
 import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea, DescuentoExtraTipo } from './types';
 import { ACCIONES } from './types';
 
@@ -74,6 +75,8 @@ function getDynamicBills(total: number): { label: string; amount: number }[] {
 export function StepPago(props: Props) {
   const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
   const { symbol: s } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
+  const canCredito = hasPermisoMovil('ruta.venta_credito');
   const descExtraAmt = totals.descuentoExtra ?? 0;
   const requiresMotivo = descExtraAmt > 0 && !descuentoExtraMotivo.trim();
 
@@ -134,7 +137,7 @@ export function StepPago(props: Props) {
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
           <div className="flex gap-1.5">
-            {([['contado', 'Contado'], ...(clienteCredito?.credito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+            {([['contado', 'Contado'], ...(clienteCredito?.credito && canCredito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
               <button key={val} onClick={() => setCondicionPago(val as any)} className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${condicionPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>{label}</button>
             ))}
           </div>

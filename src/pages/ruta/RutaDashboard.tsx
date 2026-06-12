@@ -4,12 +4,14 @@ import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPinned, RotateCc
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
 import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const today = todayLocal();
   const vendedorId = profile?.id || profile?.id;
 
@@ -80,18 +82,24 @@ export default function RutaDashboard() {
       </div>
 
       <div className="space-y-2">
-        <button onClick={() => navigate('/ruta/ventas/nueva')}
-          className="w-full bg-primary text-primary-foreground rounded-2xl py-4 text-[15px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-          <ShoppingCart className="h-5 w-5" /> Nueva venta rápida
-        </button>
-        <button onClick={() => navigate('/ruta/devolucion')}
-          className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-          <RotateCcw className="h-4 w-4 text-destructive" /> Registrar devolución
-        </button>
-        <button onClick={() => navigate('/ruta/descarga')}
-          className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-          <PackageCheck className="h-4 w-4 text-primary" /> Descargar ruta
-        </button>
+        {hasPermisoMovil('ruta.vender') && (
+          <button onClick={() => navigate('/ruta/ventas/nueva')}
+            className="w-full bg-primary text-primary-foreground rounded-2xl py-4 text-[15px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+            <ShoppingCart className="h-5 w-5" /> Nueva venta rápida
+          </button>
+        )}
+        {hasPermisoMovil('ruta.devoluciones') && (
+          <button onClick={() => navigate('/ruta/devolucion')}
+            className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+            <RotateCcw className="h-4 w-4 text-destructive" /> Registrar devolución
+          </button>
+        )}
+        {hasPermisoMovil('ruta.descarga') && (
+          <button onClick={() => navigate('/ruta/descarga')}
+            className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+            <PackageCheck className="h-4 w-4 text-primary" /> Descargar ruta
+          </button>
+        )}
       </div>
     </div>
   );
