@@ -72,32 +72,44 @@ function usePedidosPendientes(filters: DemandaFilters) {
         }
       }
 
-      // Only count entregas that are NOT cancelado
-      const deliveryMap: Record<string, Record<string, number>> = {};
+      // Two maps: surtido (from any active entrega) vs realmente entregado al cliente (status='hecho')
+      const surtidoMap: Record<string, Record<string, number>> = {};
+      const entregadoMap: Record<string, Record<string, number>> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
-        if (!deliveryMap[e.pedido_id]) deliveryMap[e.pedido_id] = {};
+        if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
         for (const l of (e.entrega_lineas ?? [])) {
-          deliveryMap[e.pedido_id][l.producto_id] = (deliveryMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+        }
+        if (e.status === 'hecho') {
+          if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
+          for (const l of (e.entrega_lineas ?? [])) {
+            entregadoMap[e.pedido_id][l.producto_id] = (entregadoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
         }
       }
 
       return pedidos.map(p => {
-        const delivered = deliveryMap[p.id] ?? {};
+        const surtido = surtidoMap[p.id] ?? {};
+        const entregado = entregadoMap[p.id] ?? {};
         const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
           ...l,
-          cantidad_entregada: delivered[l.producto_id] ?? 0,
-          cantidad_pendiente: l.cantidad - (delivered[l.producto_id] ?? 0),
+          cantidad_surtida: surtido[l.producto_id] ?? 0,
+          cantidad_entregada: entregado[l.producto_id] ?? 0,
+          cantidad_pendiente: l.cantidad - (surtido[l.producto_id] ?? 0),
         }));
         const totalPendiente = lineasConPendiente.reduce((s: number, l: any) => s + Math.max(0, l.cantidad_pendiente), 0);
+        const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
         const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
         const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
         return {
           ...p,
           venta_lineas: lineasConPendiente,
-          totalPendiente, totalEntregado, totalDemanda,
+          totalPendiente, totalSurtido, totalEntregado, totalDemanda,
+          pctSurtido: totalDemanda > 0 ? Math.round((totalSurtido / totalDemanda) * 100) : 0,
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
-          fullyDelivered: totalPendiente <= 0,
+          fullySurtido: totalPendiente <= 0,
+          fullyDelivered: totalDemanda > 0 && totalEntregado >= totalDemanda,
         };
       });
     },
@@ -115,7 +127,7 @@ export default function DemandaPage() {
   const today = todayLocal();
 
   // ── Filters ──
-  const [tab, setTab] = useState<'pendientes' | 'entregados' | 'todos'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'surtidos' | 'entregados' | 'todos'>('pendientes');
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
@@ -123,11 +135,8 @@ export default function DemandaPage() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const statusesForTab = tab === 'entregados'
-    ? ['entregado']
-    : tab === 'todos'
-      ? ['borrador', 'confirmado', 'entregado']
-      : ['borrador', 'confirmado', 'entregado']; // 'pendientes' loads all then filters client-side by !fullyDelivered
+  // Always load all relevant statuses; filter client-side per tab
+  const statusesForTab = ['borrador', 'confirmado', 'entregado'];
 
   const { data: pedidos, isLoading } = usePedidosPendientes({
     desde, hasta, fechaTipo,
@@ -168,16 +177,18 @@ export default function DemandaPage() {
   const counts = useMemo(() => {
     const list = pedidos ?? [];
     return {
-      pendientes: list.filter(p => !p.fullyDelivered).length,
-      entregados: list.filter(p => p.fullyDelivered || p.status === 'entregado').length,
+      pendientes: list.filter(p => !p.fullySurtido).length,
+      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered).length,
+      entregados: list.filter(p => p.fullyDelivered).length,
       todos: list.length,
     };
   }, [pedidos]);
 
   const filtered = useMemo(() => {
     let list = pedidos ?? [];
-    if (tab === 'pendientes') list = list.filter(p => !p.fullyDelivered);
-    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered || p.status === 'entregado');
+    if (tab === 'pendientes') list = list.filter(p => !p.fullySurtido);
+    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered);
+    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(p =>
@@ -633,6 +644,7 @@ export default function DemandaPage() {
         <nav className="flex gap-1 -mb-px">
           {([
             { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+            { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
             { key: 'entregados', label: 'Entregados', count: counts.entregados },
             { key: 'todos', label: 'Todos', count: counts.todos },
           ] as const).map(t => (
@@ -676,6 +688,7 @@ export default function DemandaPage() {
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px] text-center">Cond. pago</TableHead>
               <TableHead className="text-[11px] text-right">Total</TableHead>
+              <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
               <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
               <TableHead className="text-[11px] text-center w-28">Estado</TableHead>
@@ -684,7 +697,7 @@ export default function DemandaPage() {
           <TableBody>
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay pedidos pendientes de surtir
                 </TableCell>
@@ -725,14 +738,26 @@ export default function DemandaPage() {
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2 justify-center">
                       <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
+                        <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${pedido.pctSurtido}%` }} />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground w-8">{pedido.pctSurtido}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-green-600 rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
                       </div>
                       <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                   <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
-                    {pedido.status === 'borrador' ? (
+                    {pedido.fullyDelivered ? (
+                      <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
+                    ) : pedido.fullySurtido ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
+                    ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -744,7 +769,7 @@ export default function DemandaPage() {
                         Confirmar
                       </Button>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">
+                      <Badge variant="outline" className="text-[10px] border-primary text-primary">
                         Confirmado
                       </Badge>
                     )}
@@ -752,7 +777,7 @@ export default function DemandaPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={10} className="bg-muted/30 p-0">
+                    <TableCell colSpan={11} className="bg-muted/30 p-0">
                       <div className="px-6 py-3 space-y-3">
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
                           {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
@@ -771,6 +796,7 @@ export default function DemandaPage() {
                               <th className="text-left py-1 pr-2 font-medium">Código</th>
                               <th className="text-left py-1 pr-2 font-medium">Producto</th>
                               <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+                              <th className="text-right py-1 pr-2 font-medium">Surtido</th>
                               <th className="text-right py-1 pr-2 font-medium">Entregado</th>
                               <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
                               <th className="text-right py-1 pr-2 font-medium">Precio</th>
@@ -783,7 +809,8 @@ export default function DemandaPage() {
                                 <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
                                 <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
                                 <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
-                                <td className="py-1 pr-2 text-right">{l.cantidad_entregada}</td>
+                                <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
+                                <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
                                 <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
                                 <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
                                 <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
