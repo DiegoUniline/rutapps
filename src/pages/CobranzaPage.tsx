@@ -619,6 +619,23 @@ export default function CobranzaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={cancelManyOpen} onOpenChange={(v) => !v && setCancelManyOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar {selectedIds.size} cobro(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se cancelarán los cobros seleccionados y se restaurarán los saldos pendientes de las ventas asociadas. Esta acción se puede deshacer creando nuevos cobros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancellingMany}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelMany} disabled={cancellingMany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {cancellingMany ? 'Cancelando...' : 'Sí, cancelar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
