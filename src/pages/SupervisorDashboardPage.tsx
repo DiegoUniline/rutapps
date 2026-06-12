@@ -143,64 +143,52 @@ export default function SupervisorDashboardPage() {
 
   const { data: ventasHoy } = useQuery({
     queryKey: ['supervisor-ventas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('ventas')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('ventas')
         .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false }).range(from, to)),
   });
 
   const { data: cobrosHoy } = useQuery({
     queryKey: ['supervisor-cobros-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('cobros')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('cobros')
         .select('id, user_id, monto, metodo_pago, created_at, cliente_id, clientes(nombre)')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false }).range(from, to)),
   });
 
   const { data: gastosHoy } = useQuery({
     queryKey: ['supervisor-gastos-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('gastos')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('gastos')
         .select('id, vendedor_id, monto, concepto, created_at')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false }).range(from, to)),
   });
 
   const { data: entregasHoy } = useQuery({
     queryKey: ['supervisor-entregas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('entregas')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('entregas')
         .select('id, vendedor_id, vendedor_ruta_id, status, cliente_id, clientes(nombre), folio')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta);
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).range(from, to)),
   });
 
   const { data: visitasHoy } = useQuery({
     queryKey: ['supervisor-visitas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('visitas')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('visitas')
         .select('id, user_id, cliente_id, tipo, motivo, gps_lat, gps_lng, created_at, clientes(nombre, gps_lat, gps_lng)')
-        .eq('empresa_id', empresa!.id).gte('fecha', `${desde}T00:00:00-12:00`).lte('fecha', `${hasta}T23:59:59+12:00`).order('created_at', { ascending: false });
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', `${desde}T00:00:00-12:00`).lte('fecha', `${hasta}T23:59:59+12:00`).order('created_at', { ascending: false }).range(from, to)),
   });
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
   const { data: devolucionesHoy } = useQuery({
     queryKey: ['supervisor-devoluciones-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await (supabase as any).from('devoluciones')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      (supabase as any).from('devoluciones')
         .select('id, vendedor_id, tipo, cliente_id, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
-      return (data ?? []) as any[];
-    },
+        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false }).range(from, to)),
   });
 
   const { data: clientesAsignados } = useQuery({
@@ -223,11 +211,9 @@ export default function SupervisorDashboardPage() {
 
   const { data: cargasActivas } = useQuery({
     queryKey: ['supervisor-cargas-activas', empresa?.id], enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('cargas').select('id, vendedor_id, status, fecha')
-        .eq('empresa_id', empresa!.id).in('status', ['en_ruta', 'pendiente'] as any);
-      return (data ?? []) as any[];
-    },
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('cargas').select('id, vendedor_id, status, fecha')
+        .eq('empresa_id', empresa!.id).in('status', ['en_ruta', 'pendiente'] as any).range(from, to)),
   });
 
   // Realtime subscriptions — reemplazan los refetchInterval anteriores.

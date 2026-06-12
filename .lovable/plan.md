@@ -1,177 +1,74 @@
-# Navegación tipo Uber + caché de Google Maps
 
-Plan revisado: sin botón "Abrir en Google Maps", con experiencia in-app completa y tracking en vivo para admin. Cero llamadas a Google por tick de GPS.
+## Objetivo
 
----
+Eliminar el límite implícito de 1000 filas de Supabase en todo el sistema, aplicando paginación con `fetchAllPages` donde se necesite el dataset completo, y server-side pagination donde solo se muestra una lista. Validar móvil y escritorio.
 
-## FIX 1 — `src/pages/ruta/RutaNavegacionPage.tsx`
+## Diagnóstico
 
-### Refs nuevos
-- `lastRouteOriginRef` — origen de la última petición Directions.
-- `lastRequestTimeRef` — timestamp ms de la última petición.
-- `currentRoutePathRef` — `google.maps.LatLng[]` decodificado de la polyline vigente.
-- `snappedPosRef` — última posición snapeada (lat/lng).
-- `renderedPosRef` — posición actualmente dibujada (para animar).
-- `headingRef` — bearing actual del marker.
-- `speedHistoryRef` — últimas 5 velocidades (m/s).
-- `rafRef` — id de requestAnimationFrame.
+Tras escanear el repo, los hooks/páginas que consultan tablas de gran volumen sin paginación (las que ya truncan o pueden truncar al pasar 1000 filas) son:
 
-### Effect de Directions (línea 276)
-- Deps: `[isLoaded, navigatingTo]` (quitar `userLocation?.lat/lng`).
-- 1 sola llamada `DirectionsService.route` al cambiar destino.
-- Guardar `result`, `overview_path` en `currentRoutePathRef`, `lastRouteOriginRef = userLocation`, `lastRequestTimeRef = Date.now()`.
+**Críticos — cálculos/reportes incompletos hoy:**
+- `src/hooks/useVentas.ts` (lista global de ventas usada en varios resúmenes)
+- `src/hooks/useEntregas.ts` (entregas + entrega_lineas para reportes)
+- `src/hooks/useBootstrapPrefetch.ts` y `src/hooks/useOfflineData.ts` (prefetch PWA — móvil falla con catálogos grandes)
+- `src/lib/reportesPersonalizados.ts` (reportes a la medida)
+- `src/lib/catalogMatcher.ts` (homologación con catálogos > 1000)
+- `src/pages/configuracion/HomologacionCatalogoPage.tsx`
+- `src/pages/DemandaPage.tsx` (demanda / consumos históricos)
+- `src/pages/SupervisorDashboardPage.tsx`
+- `src/pages/MapaVentasPage.tsx` y `src/pages/MonitorRutasPage.tsx` (marcadores incompletos)
+- `src/pages/inventario/InventarioInteligenciaTab.tsx`
+- `src/pages/logistica/ConcentradoSurtidoPage.tsx` y `LogisticaReportesPage.tsx`
+- `src/pages/dashboard/hooks/useDashboardAlertas.ts`, `useDashboardInventarioCamion.ts`, `useDashboardExtra.ts`, `useDashboardEquipo.ts`
 
-### Effect de "follow & rerouting + animación" con deps `[userLocation?.lat, userLocation?.lng, navigatingTo]`
-1. **Snap-to-route**: helper `projectToPolyline(point, path)` que recorre cada segmento, proyecta el punto sobre el segmento (parámetro t∈[0,1]) y devuelve `{snapped, segmentIndex, t}`.
-2. **Bearing**: `bearing(prevSnapped, snapped)` con fórmula estándar.
-3. **Animación**: cancelar `rafRef` previo, interpolar `renderedPosRef → snapped` con `requestAnimationFrame` durante ~1 s (easing lineal), actualizando posición y `rotation` del marker.
-4. **Velocidad**: empujar a `speedHistoryRef` (máx 5). Promedio con piso 15 km/h (4.17 m/s).
-5. **Distancia/ETA en vivo**: helper `remainingDistance(path, segmentIndex, t)` = resto del segmento actual + suma Haversine del resto. ETA = dist / velocidad. Estado `liveEta`, `liveKm` actualizado cada tick.
-6. **Polyline bicolor**: dos `<Polyline>` superpuestas con paths derivados del segmento snapeado — recorrido (gris `#cbd5e1`) y restante (azul `--primary`).
-7. **Llegada**: si distancia al destino < 50 m → `setNavigatingTo(null)`, mostrar toast/banner "Llegaste", voz "Has llegado".
-8. **Re-ruteo**: si distancia mínima del usuario a la polyline > 150 m AND `Date.now()-lastRequestTimeRef > 30_000` → re-pedir Directions.
+**Medio — listas paginadas en UI pero con export/acciones masivas que sí necesitan todo:**
+- Exportar Excel/PDF desde `ProductosListPage`, `ClientesListPage`, `VentasListPage`, `CobranzaPage`, `EntregaListPage`, `CompraExpandedRow`, `ConteoFisicoPage`.
 
-### Banner fijo "Llegas en X min · Y km"
-Sobre el mapa cuando hay `navigatingTo`. Actualizado por estado React.
+**Bajo — listas naturalmente acotadas (catálogos < 1000):** zonas, marcas, vehículos, almacenes, tarifas. No se tocan.
 
-### Marker del vendedor
-`<Marker>` con `icon = { path: FORWARD_CLOSED_ARROW, rotation: headingRef.current, scale: 5, fillColor: 'hsl(var(--primary))' }`.
+## Plan de acción
 
----
+### 1. Endurecer `fetchAllPages`
+Archivo: `src/lib/supabasePaginate.ts`
+- Agregar `safetyCap` (default 200 000) y un `console.warn` si se alcanza, para evitar memory blow-ups.
+- Exponer variante `fetchAllPagesById(table, select, filter)` que pagine por keyset (`order('id').gt('id', lastId)`) — más eficiente para tablas grandes; usada en los hooks pesados (ventas, entregas, movimientos_inventario).
 
-## FIX 2 — Caché de polylines
+### 2. Refactor de hooks críticos
+Para cada query a `ventas / venta_lineas / entregas / entrega_lineas / cobros / cobro_aplicaciones / movimientos_inventario / stock_almacen / productos / clientes / visitas / cliente_orden_ruta / compra_lineas`, sustituir el `.select(...).eq(...)` directo por `fetchAllPages((from,to) => qb.range(from,to))` o por keyset.
 
-### Migración
+Archivos a actualizar (mismo patrón en todos):
+- `useVentas.ts`, `useEntregas.ts`, `useBootstrapPrefetch.ts`, `useOfflineData.ts`
+- `useDashboardAlertas.ts`, `useDashboardInventarioCamion.ts`, `useDashboardExtra.ts`, `useDashboardEquipo.ts`
+- `SupervisorDashboardPage.tsx`, `MapaVentasPage.tsx`, `MonitorRutasPage.tsx`
+- `inventario/InventarioInteligenciaTab.tsx`
+- `logistica/ConcentradoSurtidoPage.tsx`, `logistica/LogisticaReportesPage.tsx`
+- `DemandaPage.tsx`, `configuracion/HomologacionCatalogoPage.tsx`
+- `lib/reportesPersonalizados.ts`, `lib/catalogMatcher.ts`
 
-```sql
-CREATE TABLE public.ruta_polyline_cache (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id uuid NOT NULL,
-  vendedor_id uuid NOT NULL,
-  waypoints_hash text NOT NULL,
-  encoded_polyline text NOT NULL,
-  distancia_total_m integer,
-  duracion_total_s integer,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (vendedor_id, waypoints_hash)
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.ruta_polyline_cache TO authenticated;
-GRANT ALL ON public.ruta_polyline_cache TO service_role;
-ALTER TABLE public.ruta_polyline_cache ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "empresa access" ON public.ruta_polyline_cache FOR ALL TO authenticated
-  USING (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()))
-  WITH CHECK (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()));
-CREATE INDEX ON public.ruta_polyline_cache (empresa_id, vendedor_id);
-```
+### 3. Exports y acciones masivas
+En cada `ExportButton` de listas paginadas (productos, clientes, ventas, cobranza, entregas, conteos, compras), ejecutar `fetchAllPages` con los mismos filtros activos al momento del click — no exportar solo la página visible. Mostrar toast de progreso para datasets > 5 000.
 
-### `supabase/functions/optimize-route/index.ts`
-- `sha256Hex(json)` con `crypto.subtle.digest`.
-- `waypoints_hash = sha256(JSON.stringify([origin, ...orderedWp.map(w=>[w.lat,w.lng])]))`.
-- Si `preserve_order=true`: `SELECT` cache por `(vendedor_id, waypoints_hash)`. Hit → devolver cacheado sin llamar a Google.
-- Miss / `preserve_order=false`: llamar `fetchGooglePolyline` como hoy, luego `upsert` con `onConflict: 'vendedor_id,waypoints_hash'`.
-- No tocar cuota ni `optimizacion_rutas_log`.
+### 4. Mejoras de rendimiento asociadas
+- **Selects acotados:** revisar selects con `*` o joins pesados (p. ej. `venta_lineas(*, productos(*))`) y reducir a las columnas que la vista realmente usa, para que paginar todo el dataset no explote la memoria.
+- **`staleTime` razonable** en queries de catálogos grandes (60 s+) para no repaginar en cada render.
+- **`useMemo`** en agregaciones que ya recibirán arrays grandes.
+- **Índices DB:** verificar índices en columnas usadas para keyset (`empresa_id, id`, `empresa_id, fecha`). Si falta alguno, migración aparte (no incluida aquí, se evalúa después con `supabase--slow_queries`).
 
----
+### 5. Guardarraíl para el futuro
+- Añadir comentario `// FORBIDDEN: bare .select() sobre tablas transaccionales — usa fetchAllPages` en `src/lib/supabase.ts`.
+- Memory note en `mem://architecture/data-fetching-pagination` (ya existe) — actualizar con la lista de tablas que SIEMPRE requieren paginación.
 
-## FIX 3 — Caché de matriz
+### 6. Verificación
+- Build + smoke test móvil/escritorio en: `/almacen/inventario`, `/ventas`, `/cobranza`, `/logistica/concentrado`, `/dashboard`, `/supervisor`, `/configuracion/homologacion`, `/almacen/demanda`, `/reportes`.
+- Probar export de productos y ventas con dataset grande (verificar que descarga > 1000 filas).
+- Validar prefetch PWA: cerrar sesión, ingresar como usuario móvil, ver que se cargan todos los clientes/productos.
 
-### Migración
+## Notas técnicas
 
-```sql
-CREATE TABLE public.distancia_cache (
-  empresa_id uuid NOT NULL,
-  origen_hash text NOT NULL,
-  destino_hash text NOT NULL,
-  distancia_m integer NOT NULL,
-  duracion_s integer NOT NULL DEFAULT 0,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (empresa_id, origen_hash, destino_hash)
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.distancia_cache TO authenticated;
-GRANT ALL ON public.distancia_cache TO service_role;
-ALTER TABLE public.distancia_cache ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "empresa access" ON public.distancia_cache FOR ALL TO authenticated
-  USING (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()))
-  WITH CHECK (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()));
-```
+- `fetchAllPages` mantiene firma actual; nuevos helpers son aditivos.
+- Cambios son client-side; no se modifican migraciones ni RLS.
+- No se tocan listas con paginación server-side ya correcta (`useProductosPaginated`, etc.) salvo su export.
 
-### `buildRealDistanceMatrix`
-- `pointHash(p) = `${p.lat.toFixed(5)},${p.lng.toFixed(5)}``.
-- `SELECT` cache con `IN (...)` de orígenes y destinos del set. Llenar `matrix[i][j]` con hits.
-- Detectar pares faltantes. Llamar `computeRouteMatrix` por bloques de ≤25×25 solo con los faltantes.
-- `upsert` con `onConflict: 'empresa_id,origen_hash,destino_hash'`.
-- Sin API key o >60 paradas: Haversine como hoy.
+## Alcance
 
----
-
-## FIX 4 — Tracking en vivo para admin
-
-### Migración
-
-```sql
-CREATE TABLE public.vendedor_posicion (
-  vendedor_id uuid PRIMARY KEY,
-  empresa_id uuid NOT NULL,
-  lat numeric NOT NULL,
-  lng numeric NOT NULL,
-  heading numeric,
-  speed numeric,
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.vendedor_posicion TO authenticated;
-GRANT ALL ON public.vendedor_posicion TO service_role;
-ALTER TABLE public.vendedor_posicion ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "empresa access" ON public.vendedor_posicion FOR ALL TO authenticated
-  USING (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()))
-  WITH CHECK (empresa_id = (SELECT empresa_id FROM profiles WHERE user_id = auth.uid()));
-ALTER PUBLICATION supabase_realtime ADD TABLE public.vendedor_posicion;
-ALTER TABLE public.vendedor_posicion REPLICA IDENTITY FULL;
-```
-
-### Vendedor (RutaNavegacionPage)
-- Ref `lastUploadAtRef`. En cada tick GPS: si `Date.now()-lastUploadAtRef ≥ 5000`, `upsert` a `vendedor_posicion` con `{vendedor_id, empresa_id, lat, lng, heading, speed}`.
-
-### Admin (MapaClientesPage)
-- Hook nuevo `useLiveVendedorPosiciones(empresaId)`:
-  - `useEffect` con `supabase.channel('vendedor_posicion')`.
-  - `on('postgres_changes', {event:'*', schema:'public', table:'vendedor_posicion', filter:`empresa_id=eq.${empresaId}`})`.
-  - Mantener `Map<vendedor_id, posicion>` en estado.
-  - Cleanup `supabase.removeChannel`.
-- Por cada vendedor: `<Marker>` animado igual que en navegación (interpolación + rotación) usando los mismos helpers compartidos.
-- Polyline de cada vendedor obtenida de `ruta_polyline_cache` (query existente / nueva query por `vendedor_id`). Decodificar con `google.maps.geometry.encoding.decodePath` (sin llamadas a Google).
-- Pins de paradas: estado por `cliente_orden_ruta` + `entregas`/`visitas` → color gris/azul-pulsante/verde, actualizado por Realtime existente.
-
----
-
-## Helpers de geometría compartidos — `src/lib/routeGeometry.ts`
-
-Funciones puras (sin Google), implementación propia:
-- `haversine(a,b)`
-- `bearing(a,b)`
-- `projectPointToSegment(p, a, b)` → `{point, t, dist}`
-- `projectToPolyline(p, path)` → `{snapped, segmentIndex, t, distToRoute}`
-- `remainingDistance(path, segmentIndex, t)`
-- `splitPolylineAt(path, segmentIndex, t)` → `[traveled, remaining]`
-- `animatePosition(from, to, durationMs, onTick)` con `requestAnimationFrame`
-
-Usados tanto por `RutaNavegacionPage` (vendedor) como por `MapaClientesPage` (admin).
-
----
-
-## Archivos tocados
-- `supabase/migrations/<new>.sql` — 3 tablas + RLS + publicación realtime
-- `supabase/functions/optimize-route/index.ts` — hash + caché polylines + caché matriz
-- `src/lib/routeGeometry.ts` (nuevo)
-- `src/pages/ruta/RutaNavegacionPage.tsx` — refs, effect split, snap+animación, banner ETA, upload 5 s
-- `src/hooks/useLiveVendedorPosiciones.ts` (nuevo)
-- `src/pages/logistica/MapaClientesPage.tsx` (o equivalente) — markers en vivo + polylines desde caché + pins por estado
-
-## Garantía de costo
-| Evento | Llamadas Google |
-|---|---|
-| Tick GPS vendedor | 0 |
-| Tick GPS admin viendo mapa | 0 |
-| Empezar navegación a parada | 1 Directions |
-| Desvío >150 m & >30 s | 1 Directions |
-| Abrir MapaClientesPage con orden guardado | 0 |
-| Optimizar set ya cacheado | 0 |
+~25 archivos editados, sin cambios de UI ni de esquema. Riesgo bajo: el patrón `fetchAllPages` ya está probado en producción (devoluciones, cargas, logística).

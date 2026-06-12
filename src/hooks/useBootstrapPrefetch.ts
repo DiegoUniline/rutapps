@@ -27,10 +27,14 @@ export function useBootstrapPrefetch() {
         queryKey: ['productos-select'],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('productos')
-            .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
-            .eq('status', 'activo').order('nombre');
-          return data ?? [];
+          return fetchAllPages((from, to) =>
+            supabase.from('productos')
+              .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
+              .eq('empresa_id', eid)
+              .eq('status', 'activo')
+              .order('nombre')
+              .range(from, to)
+          );
         },
       }),
       qc.prefetchQuery({

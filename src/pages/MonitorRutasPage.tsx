@@ -83,12 +83,16 @@ export function MonitorContent() {
     enabled: !!empresa?.id,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, dia_visita, vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('orden', { ascending: true });
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      const data = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('clientes')
+          .select('id, codigo, nombre, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, dia_visita, vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo')
+          .order('orden', { ascending: true })
+          .range(from, to)
+      );
       return (data ?? []).filter((c: any) =>
         c.dia_visita?.some((d: string) => d.toLowerCase() === diaVisita)
       );
@@ -97,34 +101,53 @@ export function MonitorContent() {
 
   // Sales for selected date
   const { data: ventasHoy } = useQuery({
-    queryKey: ['monitor-ventas-hoy', dateStr],
+    queryKey: ['monitor-ventas-hoy', empresa?.id, dateStr],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, cliente_id, vendedor_id, total, status, tipo')
-        .eq('fecha', dateStr);
-      return data ?? [];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return fetchAllPages<any>((from, to) =>
+        supabase
+          .from('ventas')
+          .select('id, cliente_id, vendedor_id, total, status, tipo')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', dateStr)
+          .range(from, to)
+      );
     },
   });
 
   // Entregas for selected date (with client GPS)
   const { data: entregasHoy } = useQuery({
-    queryKey: ['monitor-entregas-hoy', dateStr],
+    queryKey: ['monitor-entregas-hoy', empresa?.id, dateStr],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('entregas')
-        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, orden_entrega, clientes(id, nombre, codigo, direccion, colonia, gps_lat, gps_lng, vendedor_id, vendedores:profiles!vendedor_id(nombre))')
-        .eq('fecha', dateStr);
-      return data ?? [];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return fetchAllPages<any>((from, to) =>
+        supabase
+          .from('entregas')
+          .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, orden_entrega, clientes(id, nombre, codigo, direccion, colonia, gps_lat, gps_lng, vendedor_id, vendedores:profiles!vendedor_id(nombre))')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', dateStr)
+          .range(from, to)
+      );
     },
   });
 
   // Cobros for selected date
   const { data: cobrosHoy } = useQuery({
-    queryKey: ['monitor-cobros-hoy', dateStr],
+    queryKey: ['monitor-cobros-hoy', empresa?.id, dateStr],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr).neq('status', 'cancelado');
-      return data ?? [];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return fetchAllPages<any>((from, to) =>
+        supabase
+          .from('cobros')
+          .select('id, monto')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', dateStr)
+          .neq('status', 'cancelado')
+          .range(from, to)
+      );
     },
   });
 

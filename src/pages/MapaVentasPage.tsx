@@ -58,17 +58,19 @@ export default function MapaVentasPage() {
   const { data: entregasData, isLoading: loadingEntregas } = useQuery({
     queryKey: ['mapa-entregas', empresa?.id, fechaEntregas, vendedorFilter],
     queryFn: async () => {
-      let q = supabase
-        .from('entregas')
-        .select('id, folio, fecha, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .eq('fecha', fechaEntregas)
-        .in('status', ['surtido', 'asignado', 'cargado', 'en_ruta'])
-        .order('orden_entrega', { ascending: true });
-      if (vendedorFilter) q = q.or(`vendedor_id.eq.${vendedorFilter},vendedor_ruta_id.eq.${vendedorFilter}`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as any[];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('entregas')
+          .select('id, folio, fecha, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', fechaEntregas)
+          .in('status', ['surtido', 'asignado', 'cargado', 'en_ruta'])
+          .order('orden_entrega', { ascending: true })
+          .range(from, to);
+        if (vendedorFilter) q = q.or(`vendedor_id.eq.${vendedorFilter},vendedor_ruta_id.eq.${vendedorFilter}`);
+        return q;
+      });
     },
     enabled: !!empresa?.id,
   });
