@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils';
 const TABS = [
   { label: 'Pendientes', path: '/logistica/pedidos' },
   { label: 'Entregas', path: '/logistica/entregas' },
+  { label: 'Concentrado a surtir', path: '/logistica/concentrado' },
 ];
 
 // Prefetch sibling chunks so tab switches are instant
 const prefetchTabs = () => {
   import('@/pages/DemandaPage');
   import('@/pages/EntregaListPage');
+  import('@/pages/logistica/ConcentradoSurtidoPage');
 };
 
 export function PedidosTabs() {

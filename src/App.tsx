@@ -47,6 +47,7 @@ const VentaFormPage = lazy(() => import("@/pages/VentaForm/index"));
 const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
 const PedidoPendienteDetailPage = lazy(() => import("@/pages/PedidoPendienteDetailPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
+const ConcentradoSurtidoPage = lazy(() => import("@/pages/logistica/ConcentradoSurtidoPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
 // EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
@@ -668,6 +669,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/logistica/pedidos" element={<DemandaPage />} />
       <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
       <Route path="/logistica/entregas" element={<EntregaListPage />} />
+      <Route path="/logistica/concentrado" element={<ConcentradoSurtidoPage />} />
       <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
       <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
       <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
