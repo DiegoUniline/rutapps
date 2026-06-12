@@ -212,9 +212,10 @@ export default function DemandaPage() {
   const counts = useMemo(() => {
     const list = pedidos ?? [];
     return {
-      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
-      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
-      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered).length,
+      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      en_ruta: list.filter(p => p.enRuta && !p.fullyDelivered).length,
       entregados: list.filter(p => p.fullyDelivered).length,
       todos: list.length,
     };
@@ -222,9 +223,10 @@ export default function DemandaPage() {
 
   const filtered = useMemo(() => {
     let list = pedidos ?? [];
-    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
-    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
-    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered);
+    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'en_ruta') list = list.filter(p => p.enRuta && !p.fullyDelivered);
     else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
     if (search) {
       const s = search.toLowerCase();
