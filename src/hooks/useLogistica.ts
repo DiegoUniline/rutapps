@@ -2,20 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-// Pedidos pendientes del día (tipo=pedido, status confirmado or borrador)
-export function usePedidosPendientes(fecha: string, statusFilter?: string, vendedorFilter?: string) {
+// Pedidos pendientes en rango de fechas (tipo=pedido)
+export function usePedidosPendientes(
+  desde: string,
+  hasta: string,
+  statusFilter?: string,
+  vendedorFilter?: string,
+  clienteFilter?: string,
+) {
   return useQuery({
-    queryKey: ['logistica-pedidos', fecha, statusFilter, vendedorFilter],
+    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedorFilter, clienteFilter],
     queryFn: async () => {
       let q = supabase
         .from('ventas')
         .select('id, folio, fecha, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
         .eq('tipo', 'pedido')
-        .eq('fecha', fecha)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+        .order('fecha', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
+      if (clienteFilter) q = q.eq('cliente_id', clienteFilter);
 
       const { data, error } = await q;
       if (error) throw error;
