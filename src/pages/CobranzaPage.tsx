@@ -5,7 +5,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, MessageCircle, Printer, Pencil, Ban } from 'lucide-react';
+import { Banknote, MessageCircle, Printer, Pencil, Ban, X, Trash2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -113,6 +113,7 @@ export default function CobranzaPage() {
   const [editCobro, setEditCobro] = useState<any | null>(null);
   const [cancelCobro, setCancelCobro] = useState<any | null>(null);
   const [cancelling, setCancelling] = useState(false);
+
 
   const handleCancelCobro = async () => {
     if (!cancelCobro) return;
@@ -246,7 +247,8 @@ export default function CobranzaPage() {
     return '';
   }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
 
-  const CobrosTable = ({ items }: { items: any[] }) => {
+  const CobrosTable = ({ items, selected, onToggleOne }: { items: any[]; selected?: Set<string>; onToggleOne?: (id: string) => void }) => {
+    const sel = selected ?? new Set<string>();
     const getFolios = (r: any): { id: string; folio: string }[] => {
       const apps = (r.cobro_aplicaciones ?? []) as any[];
       return apps
@@ -268,6 +270,26 @@ export default function CobranzaPage() {
       <Table className="bg-card">
         <TableHeader>
           <TableRow>
+            {onToggleOne && (
+              <TableHead className="w-10 text-center">
+                <input
+                  type="checkbox"
+                  className="rounded border-input h-4 w-4"
+                  checked={items.length > 0 && items.every(c => sel.has(c.id))}
+                  onChange={() => {
+                    const allInGroupSelected = items.every(c => sel.has(c.id));
+                    setSelectedIds(prev => {
+                      const next = new Set(prev);
+                      items.forEach(c => {
+                        if (allInGroupSelected) next.delete(c.id);
+                        else next.add(c.id);
+                      });
+                      return next;
+                    });
+                  }}
+                />
+              </TableHead>
+            )}
             <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Fecha</SortableTh>
             <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Folio</SortableTh>
             <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Cliente</SortableTh>
@@ -282,8 +304,19 @@ export default function CobranzaPage() {
         <TableBody>
           {sorted.map(c => {
             const folios = getFolios(c);
+            const isSel = sel.has(c.id);
             return (
-            <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
+            <TableRow key={c.id} className={cn((c as any).status === 'cancelado' ? 'opacity-50' : '', isSel ? 'bg-primary/5' : '')}>
+              {onToggleOne && (
+                <TableCell className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    className="rounded border-input h-4 w-4"
+                    checked={isSel}
+                    onChange={() => onToggleOne(c.id)}
+                  />
+                </TableCell>
+              )}
               <TableCell className="text-[12px] whitespace-nowrap">{fmtDate(c.fecha)}</TableCell>
               <TableCell className="text-[12px] font-mono">
                 {folios.length === 0 ? (
@@ -329,13 +362,13 @@ export default function CobranzaPage() {
             );
           })}
           {items.length === 0 && (
-            <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+            <TableRow><TableCell colSpan={onToggleOne ? 10 : 9} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
           )}
         </TableBody>
         {items.length > 0 && (
           <tfoot>
             <TableRow className="bg-card border-t border-border font-semibold">
-              <TableCell colSpan={7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+              <TableCell colSpan={onToggleOne ? 8 : 7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
               <TableCell className="text-right text-[12px] text-success font-bold tabular-nums">{fmtC(items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0))}</TableCell>
               <TableCell />
             </TableRow>
@@ -345,7 +378,80 @@ export default function CobranzaPage() {
     );
   };
 
-  const renderTable = (items: any[]) => <CobrosTable items={items} />;
+  // ─── Multi-select state ──────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [cancelManyOpen, setCancelManyOpen] = useState(false);
+  const [cancellingMany, setCancellingMany] = useState(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    const visibleIds = pagination.paginatedItems.map((c: any) => c.id);
+    const allSelected = visibleIds.every(id => selectedIds.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        visibleIds.forEach(id => next.delete(id));
+      } else {
+        visibleIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleCancelMany = async () => {
+    const ids = Array.from(selectedIds);
+    const activeIds = ids.filter(id => {
+      const c = (cobros ?? []).find((c: any) => c.id === id);
+      return c && (c as any).status !== 'cancelado';
+    });
+    if (activeIds.length === 0) { setCancelManyOpen(false); return; }
+    setCancellingMany(true);
+    try {
+      const { error } = await supabase.from('cobros').update({ status: 'cancelado' } as any).in('id', activeIds);
+      if (error) throw error;
+      toast.success(`${activeIds.length} cobro(s) cancelado(s). Saldos actualizados.`);
+      qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa?.id] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      setSelectedIds(new Set());
+      setCancelManyOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cancelar');
+    } finally {
+      setCancellingMany(false);
+    }
+  };
+
+  const handlePrintMany = () => {
+    for (const id of selectedIds) {
+      const c = (cobros ?? []).find((c: any) => c.id === id);
+      if (c) handlePrintCobro(c);
+    }
+  };
+
+  const handleWaMany = () => {
+    const selectedCobros = (cobros ?? []).filter((c: any) => selectedIds.has(c.id));
+    if (selectedCobros.length === 0) return;
+    if (selectedCobros.length === 1) {
+      openWaCobro(selectedCobros[0]);
+      return;
+    }
+    openWaCobro(selectedCobros[0]);
+    toast.info(`Se abrió WhatsApp para el primer cobro seleccionado. Enviarás ${selectedCobros.length} recibos uno por uno.`);
+  };
+
+  const renderTable = (items: any[]) => <CobrosTable items={items} selected={selectedIds} onToggleOne={toggleSelectOne} />;
 
   const renderSummary = (items: any[]) => {
     const total = items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0);
@@ -394,6 +500,25 @@ export default function CobranzaPage() {
         onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
       />
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+          <span className="text-sm font-medium text-primary">{selectedIds.size} seleccionado(s)</span>
+          <div className="flex-1" />
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-muted-foreground hover:text-foreground" onClick={handlePrintMany}>
+            <Printer className="h-4 w-4" /> Imprimir
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-[#25D366] hover:text-[#25D366]/80" onClick={handleWaMany}>
+            <MessageCircle className="h-4 w-4" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Cancelar
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={clearSelection}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {isMobile ? (
         <div className="space-y-2">
           {pagination.paginatedItems.map(c => (
@@ -401,6 +526,14 @@ export default function CobranzaPage() {
               key={c.id}
               title={(c.clientes as any)?.nombre ?? '—'}
               subtitle={fmtDate(c.fecha)}
+              leading={
+                <input
+                  type="checkbox"
+                  className="rounded border-input h-4 w-4"
+                  checked={selectedIds.has(c.id)}
+                  onChange={() => toggleSelectOne(c.id)}
+                />
+              }
               badge={
                 <div className="flex items-center gap-1">
                   <Badge variant="outline" className="text-[10px]">{c.metodo_pago}</Badge>
@@ -482,6 +615,23 @@ export default function CobranzaPage() {
             <AlertDialogCancel disabled={cancelling}>No</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelCobro} disabled={cancelling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelManyOpen} onOpenChange={(v) => !v && setCancelManyOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar {selectedIds.size} cobro(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se cancelarán los cobros seleccionados y se restaurarán los saldos pendientes de las ventas asociadas. Esta acción se puede deshacer creando nuevos cobros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancellingMany}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelMany} disabled={cancellingMany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {cancellingMany ? 'Cancelando...' : 'Sí, cancelar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
