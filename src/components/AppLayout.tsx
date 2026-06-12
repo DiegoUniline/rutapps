@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
       { label: 'Comisiones', path: '/comisiones' },
+      { label: 'Reporte diario', path: '/ventas/reporte-diario' },
     ],
   },
 
