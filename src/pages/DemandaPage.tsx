@@ -823,7 +823,6 @@ export default function DemandaPage() {
                       </Badge>
                     )}
                   </TableCell>
-                  </TableCell>
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
