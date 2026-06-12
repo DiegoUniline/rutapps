@@ -31,7 +31,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TrialCountdownBanner from '@/components/TrialCountdownBanner';
 import DashboardAIAdvisor from '@/components/dashboard/DashboardAIAdvisor';
-import AlertasBanner from './dashboard/sections/AlertasBanner';
+
 import MetaDelMesCard from './dashboard/sections/MetaDelMesCard';
 import KpiExtras from './dashboard/sections/KpiExtras';
 import TabEquipo from './dashboard/sections/TabEquipo';
@@ -925,8 +925,6 @@ export default function DashboardPage() {
       )}
 
 
-      {/* === Banner de alertas === */}
-      <AlertasBanner />
 
 
 
