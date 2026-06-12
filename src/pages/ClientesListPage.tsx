@@ -251,6 +251,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
     if (key === 'zona') return item.zonas?.nombre ?? 'Sin zona';
     if (key === 'credito') return item.credito ? 'Con crédito' : 'Sin crédito';
+    if (key === 'tarifa') return item.tarifas?.nombre ?? 'Sin lista';
+    if (key === 'dia_visita') {
+      const dv = (item.dia_visita as string[] | null | undefined) ?? [];
+      if (!dv.length) return 'Sin día';
+      return dv.map(d => DIAS_LABEL[d.toLowerCase()] ?? d).join(', ');
+    }
     return '';
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
