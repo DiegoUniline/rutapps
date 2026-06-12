@@ -242,11 +242,12 @@ function FavStar({ path, label }: { path: string; label: string }) {
   );
 }
 
-function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
+function SidebarItem({ item, collapsed, onNavigate, forceOpen }: { item: NavItem; collapsed: boolean; onNavigate?: () => void; forceOpen?: boolean }) {
   const location = useLocation();
   const basePath = item.path.split('?')[0];
   const isActive = location.pathname === basePath || location.pathname.startsWith(basePath + '/');
-  const [open, setOpen] = useState(isActive);
+  const [openState, setOpen] = useState(isActive);
+  const open = forceOpen || openState;
 
   if (!item.children) {
     const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
