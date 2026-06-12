@@ -286,3 +286,60 @@ function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onToggleP
     </>
   );
 }
+
+function MobilePermissionsTable({ permisos, disabled, onToggle }: {
+  permisos: RolePermiso[]; disabled?: boolean; onToggle: (mod: string) => void;
+}) {
+  const groups = getMobileModuloGroups();
+  return (
+    <div className="border-t border-border overflow-x-auto">
+      <div className="px-4 py-2.5 bg-primary/5 border-b border-border">
+        <p className="text-[11px] text-muted-foreground">
+          Configura qué vistas y acciones puede usar este rol dentro de la app móvil de ruta.
+          Por defecto todo está permitido; destilda para bloquear.
+        </p>
+      </div>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-accent/30">
+            <th className="text-left px-4 py-2 font-semibold text-foreground">Vista / Acción móvil</th>
+            <th className="text-center px-2 py-2 font-semibold text-foreground w-24">Permitido</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map(group => {
+            const groupMods = MODULOS_MOVIL.filter(m => m.group === group);
+            return (
+              <>
+                <tr key={`g-${group}`} className="bg-accent/50 border-t border-border">
+                  <td colSpan={2} className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
+                </tr>
+                {groupMods.map(mod => {
+                  const perm = permisos.find(p => p.modulo === mod.id && p.accion === 'ver');
+                  const checked = perm?.permitido ?? true;
+                  return (
+                    <tr key={mod.id} className="border-t border-border/30 hover:bg-accent/20">
+                      <td className="px-4 py-1.5 pl-8 text-muted-foreground">
+                        {mod.label}
+                        {mod.description && <span className="block text-[10px] text-muted-foreground/70">{mod.description}</span>}
+                      </td>
+                      <td className="text-center px-2 py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={() => onToggle(mod.id)}
+                          className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
