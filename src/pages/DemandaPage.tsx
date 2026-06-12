@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Fragment } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,7 @@ interface DemandaFilters {
   desde: string;
   hasta: string;
   fechaTipo: 'fecha' | 'fecha_entrega';
-  vendedorId?: string;
+  vendedorIds?: string[];
   statuses: string[]; // which ventas.status to load
 }
 
@@ -40,7 +41,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const pedidos = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+          .select('*, clientes(nombre, direccion, telefono), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
           .eq('empresa_id', empresa!.id)
           .eq('tipo', 'pedido')
           .in('status', filters.statuses as any)
@@ -48,7 +49,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           .lte(filters.fechaTipo, filters.hasta)
           .order(filters.fechaTipo, { ascending: true })
           .range(from, to);
-        if (filters.vendedorId) q = q.eq('vendedor_id', filters.vendedorId);
+        if (filters.vendedorIds && filters.vendedorIds.length > 0) q = q.in('vendedor_id', filters.vendedorIds);
         return q;
       });
 
@@ -118,8 +119,9 @@ export default function DemandaPage() {
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
-  const [vendedorFilter, setVendedorFilter] = useState<string>('');
+  const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const statusesForTab = tab === 'entregados'
     ? ['entregado']
@@ -129,7 +131,7 @@ export default function DemandaPage() {
 
   const { data: pedidos, isLoading } = usePedidosPendientes({
     desde, hasta, fechaTipo,
-    vendedorId: vendedorFilter || undefined,
+    vendedorIds: vendedorFilter.length > 0 ? vendedorFilter : undefined,
     statuses: statusesForTab,
   });
 
@@ -375,15 +377,44 @@ export default function DemandaPage() {
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
-          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los vendedores</SelectItem>
-              {(vendedoresList ?? []).map((v: any) => (
-                <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-9 w-[200px] justify-between font-normal">
+                <span className="truncate">
+                  {vendedorFilter.length === 0
+                    ? 'Todos los vendedores'
+                    : vendedorFilter.length === 1
+                      ? (vendedoresList ?? []).find((v: any) => v.id === vendedorFilter[0])?.nombre ?? '1 vendedor'
+                      : `${vendedorFilter.length} vendedores`}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-2 z-[60]" align="start">
+              <button
+                className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent text-muted-foreground"
+                onClick={() => setVendedorFilter([])}
+              >
+                Todos los vendedores
+              </button>
+              <div className="max-h-60 overflow-y-auto mt-1 space-y-0.5">
+                {(vendedoresList ?? []).map((v: any) => {
+                  const checked = vendedorFilter.includes(v.id);
+                  return (
+                    <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          setVendedorFilter(prev => checked ? prev.filter(id => id !== v.id) : [...prev, v.id])
+                        }
+                      />
+                      <span className="truncate">{v.nombre}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
           <Label className="text-[11px] text-muted-foreground">Buscar</Label>
@@ -392,9 +423,9 @@ export default function DemandaPage() {
             <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+        {(vendedorFilter.length > 0 || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
-            setVendedorFilter(''); setSearch(''); setTab('pendientes');
+            setVendedorFilter([]); setSearch(''); setTab('pendientes');
             setDesde(today); setHasta(today); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
@@ -466,11 +497,16 @@ export default function DemandaPage() {
             )}
             {filtered.map(pedido => {
               const isSelected = selectedIds.has(pedido.id);
+              const isExpanded = expanded.has(pedido.id);
               return (
+                <Fragment key={pedido.id}>
                 <TableRow
-                  key={pedido.id}
-                  className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5")}
-                  onClick={() => navigate(`/logistica/pedidos/${pedido.id}`)}
+                  className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5", isExpanded && "bg-accent/30")}
+                  onClick={() => setExpanded(prev => {
+                    const next = new Set(prev);
+                    if (next.has(pedido.id)) next.delete(pedido.id); else next.add(pedido.id);
+                    return next;
+                  })}
                 >
                   <TableCell className="py-2" onClick={e => e.stopPropagation()}>
                     <Checkbox
@@ -478,7 +514,12 @@ export default function DemandaPage() {
                       onCheckedChange={() => toggleSelect(pedido.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-[11px] font-bold text-primary py-2">{pedido.folio}</TableCell>
+                  <TableCell className="font-mono text-[11px] font-bold text-primary py-2">
+                    <span className="inline-flex items-center gap-1">
+                      {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      {pedido.folio}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
@@ -514,6 +555,52 @@ export default function DemandaPage() {
                     )}
                   </TableCell>
                 </TableRow>
+                {isExpanded && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={10} className="bg-muted/30 p-0">
+                      <div className="px-6 py-3 space-y-3">
+                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
+                          {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
+                          {pedido.clientes?.telefono && <span><strong className="text-foreground">Tel:</strong> {pedido.clientes.telefono}</span>}
+                          {pedido.notas && <span><strong className="text-foreground">Notas:</strong> {pedido.notas}</span>}
+                          <button
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                            onClick={e => { e.stopPropagation(); navigate(`/logistica/pedidos/${pedido.id}`); }}
+                          >
+                            Ver detalle <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <table className="w-full text-[12px]">
+                          <thead>
+                            <tr className="text-muted-foreground border-b border-border">
+                              <th className="text-left py-1 pr-2 font-medium">Código</th>
+                              <th className="text-left py-1 pr-2 font-medium">Producto</th>
+                              <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+                              <th className="text-right py-1 pr-2 font-medium">Entregado</th>
+                              <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
+                              <th className="text-right py-1 pr-2 font-medium">Precio</th>
+                              <th className="text-right py-1 font-medium">Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(pedido.venta_lineas ?? []).map((l: any) => (
+                              <tr key={l.id} className="border-b border-border/40 last:border-0">
+                                <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
+                                <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
+                                <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
+                                <td className="py-1 pr-2 text-right">{l.cantidad_entregada}</td>
+                                <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
+                                <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
+                                <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                </Fragment>
               );
             })}
           </TableBody>
