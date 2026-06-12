@@ -52,6 +52,10 @@ export default function RutaGastos() {
 
   const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
 
+  if (!hasPermisoMovil('ruta.gastos')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar gastos." />;
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
