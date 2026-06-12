@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Crosshair, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Save, Crosshair, Loader2, User, MapPin, Calendar, DollarSign, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaveCliente, useZonas, useCobradores } from '@/hooks/useClientes';
 import { useAllListasPrecios } from '@/hooks/useData';
