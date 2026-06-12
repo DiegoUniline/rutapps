@@ -444,7 +444,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                 ...(c.contacto ? [{ label: 'Contacto', value: c.contacto }] : []),
                 ...((c as any).zonas?.nombre ? [{ label: 'Zona', value: (c as any).zonas.nombre }] : []),
                 ...((c as any).vendedores?.nombre ? [{ label: 'Vendedor', value: (c as any).vendedores.nombre }] : []),
+                ...((c as any).dia_visita?.length ? [{ label: 'Días de visita', value: ((c as any).dia_visita as string[]).map(d => DIAS_LABEL[d.toLowerCase()] ?? d).join(', ') }] : []),
                 ...((c as any).tarifas?.nombre ? [{ label: 'Lista de precios', value: (c as any).tarifas.nombre }] : []),
+
               ]}
             />
           ))}
