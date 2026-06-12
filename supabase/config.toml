@@ -1,5 +1,9 @@
 project_id = "pkdwemunxxpafpmiqxiq"
 
+[functions.debug-maps-key]
+verify_jwt = false
+
+
 [functions.whatsapp-sender]
 verify_jwt = false
 
