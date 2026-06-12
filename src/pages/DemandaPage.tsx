@@ -177,16 +177,18 @@ export default function DemandaPage() {
   const counts = useMemo(() => {
     const list = pedidos ?? [];
     return {
-      pendientes: list.filter(p => !p.fullyDelivered).length,
-      entregados: list.filter(p => p.fullyDelivered || p.status === 'entregado').length,
+      pendientes: list.filter(p => !p.fullySurtido).length,
+      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered).length,
+      entregados: list.filter(p => p.fullyDelivered).length,
       todos: list.length,
     };
   }, [pedidos]);
 
   const filtered = useMemo(() => {
     let list = pedidos ?? [];
-    if (tab === 'pendientes') list = list.filter(p => !p.fullyDelivered);
-    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered || p.status === 'entregado');
+    if (tab === 'pendientes') list = list.filter(p => !p.fullySurtido);
+    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered);
+    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(p =>
