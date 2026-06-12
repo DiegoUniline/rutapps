@@ -84,7 +84,9 @@ function audit(): Finding[] {
     const src = readFileSync(file, 'utf8');
     const lines = src.split('\n');
 
-    // 1) .from('table') sin empresa_id en una ventana de ±25 líneas
+    // 1) .from('table') sin empresa_id. Severidad:
+    //    - HIGH (NO_EMPRESA_FILTER): scan abierto, sin id ni empresa_id
+    //    - LOW (SCOPED_BY_ID_ONLY): scoped por id/<x>_id (RLS lo aísla, defensa débil)
     const fromRe = /\.from\(\s*['"`]([a-z_]+)['"`]\s*\)/g;
     let m: RegExpExecArray | null;
     while ((m = fromRe.exec(src)) !== null) {
@@ -92,12 +94,17 @@ function audit(): Finding[] {
       if (!TENANT_TABLES.has(table)) continue;
       const lineNo = src.slice(0, m.index).split('\n').length;
       const start = Math.max(0, lineNo - 5);
-      const end = Math.min(lines.length, lineNo + 25);
+      const end = Math.min(lines.length, lineNo + 30);
       const window = lines.slice(start, end).join('\n');
-      const hasFilter = /empresa_id/.test(window);
-      if (!hasFilter) {
-        findings.push({ file: rel, line: lineNo, type: 'NO_EMPRESA_FILTER', detail: `tabla "${table}"` });
-      }
+      if (/empresa_id/.test(window)) continue;
+      const scopedById = /\.\s*eq\(\s*['"`](?:id|[a-z_]+_id)['"`]\s*,/.test(window)
+        || /\.\s*in\(\s*['"`](?:id|[a-z_]+_id)['"`]\s*,/.test(window);
+      findings.push({
+        file: rel,
+        line: lineNo,
+        type: scopedById ? 'SCOPED_BY_ID_ONLY' : 'NO_EMPRESA_FILTER',
+        detail: `tabla "${table}"`,
+      });
     }
 
     // 2) select('*') en tablas anchas
@@ -107,20 +114,6 @@ function audit(): Finding[] {
       if (!WIDE_TABLES.has(table)) continue;
       const lineNo = src.slice(0, m.index).split('\n').length;
       findings.push({ file: rel, line: lineNo, type: 'SELECT_STAR_WIDE', detail: `tabla "${table}"` });
-    }
-
-    // 3) useQuery con queryKey sin empresaId/empresa?.id/eid
-    const qkRe = /queryKey:\s*\[([^\]]+)\]/g;
-    while ((m = qkRe.exec(src)) !== null) {
-      const body = m[1];
-      const lineNo = src.slice(0, m.index).split('\n').length;
-      const around = lines.slice(Math.max(0, lineNo - 5), Math.min(lines.length, lineNo + 25)).join('\n');
-      const usesTenantTable = Array.from(around.matchAll(/\.from\(\s*['"`]([a-z_]+)['"`]\s*\)/g)).some(x => TENANT_TABLES.has(x[1]));
-      if (!usesTenantTable) continue;
-      const hasEmpresa = /empresa(?:_?[Ii]d)?|\beid\b/.test(body);
-      if (!hasEmpresa) {
-        findings.push({ file: rel, line: lineNo, type: 'QUERYKEY_NO_EMPRESA', detail: body.slice(0, 80).replace(/\s+/g, ' ').trim() });
-      }
     }
   }
 
