@@ -875,8 +875,11 @@ export default function DemandaPage() {
                   <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
-                  <TableCell className="text-center py-2">
-                    <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.vendedorRutaId ? (vendedoresList?.find(v => v.id === pedido.vendedorRutaId)?.nombre ?? '—') : <span className="text-muted-foreground/60">Sin asignar</span>}
+                  </TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : <span className="text-muted-foreground/60">—</span>}
                   </TableCell>
                   <TableCell className="text-right text-[12px] font-medium py-2">{fmt(pedido.total)}</TableCell>
                   <TableCell className="py-2">
