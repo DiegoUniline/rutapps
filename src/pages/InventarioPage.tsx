@@ -5,6 +5,7 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft, Download, Boxes } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -29,12 +30,15 @@ function useInventarioData() {
       const eid = empresa!.id;
 
       // Products with warehouse stock
-      const { data: productos } = await supabase
-        .from('productos')
-        .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, unidades:unidad_venta_id(abreviatura)')
-        .eq('empresa_id', eid)
-        .eq('status', 'activo')
-        .order('nombre');
+      const productos = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('productos')
+          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, unidades:unidad_venta_id(abreviatura)')
+          .eq('empresa_id', eid)
+          .eq('status', 'activo')
+          .order('nombre')
+          .range(from, to)
+      );
 
       // Almacenes
       const { data: almacenes } = await supabase
@@ -45,10 +49,13 @@ function useInventarioData() {
         .order('nombre');
 
       // Per-warehouse stock
-      const { data: stockAlmacenData } = await supabase
-        .from('stock_almacen')
-        .select('almacen_id, producto_id, cantidad')
-        .eq('empresa_id', eid);
+      const stockAlmacenData = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('stock_almacen')
+          .select('almacen_id, producto_id, cantidad')
+          .eq('empresa_id', eid)
+          .range(from, to)
+      );
 
       // Build stock_almacen map: almacen_id -> producto_id -> cantidad
       const stockAlmacenMap: Record<string, Record<string, number>> = {};
