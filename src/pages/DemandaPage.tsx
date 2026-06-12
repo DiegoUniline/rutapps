@@ -324,7 +324,7 @@ export default function DemandaPage() {
         const chunkSize = 200;
         for (let i = 0; i < productoIds.length; i += chunkSize) {
           const chunk = productoIds.slice(i, i + chunkSize);
-          const { data } = await supabase.from('n_almacen' as any)
+          const { data } = await supabase.from('stock_almacen')
             .select('producto_id, cantidad')
             .eq('almacen_id', almacenId)
             .in('producto_id', chunk);
