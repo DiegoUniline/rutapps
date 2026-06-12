@@ -80,6 +80,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const generadaMap: Record<string, Record<string, number>> = {};
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
+      const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
         if (e.status === 'borrador') {
@@ -91,6 +92,9 @@ function usePedidosPendientes(filters: DemandaFilters) {
           if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
           for (const l of (e.entrega_lineas ?? [])) {
             surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
+          if (e.status === 'asignado' || e.status === 'cargado' || e.status === 'en_ruta') {
+            enRutaSet.add(e.pedido_id);
           }
           if (e.status === 'hecho') {
             if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
@@ -117,8 +121,18 @@ function usePedidosPendientes(filters: DemandaFilters) {
         const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
         const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
         const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
+        const fullyDelivered = totalDemanda > 0 && totalEntregado >= totalDemanda;
         const fullySurtido = totalDemanda > 0 && totalSurtido >= totalDemanda;
         const fullyGenerada = !fullySurtido && totalDemanda > 0 && (totalGenerada + totalSurtido) >= totalDemanda;
+        const enRuta = !fullyDelivered && enRutaSet.has(p.id);
+        // Estado derivado tipo Odoo
+        let estadoOdoo: 'pendiente_surtir' | 'en_surtido' | 'surtido_completo' | 'surtido_parcial' | 'en_ruta' | 'entregado' | null = null;
+        if (fullyDelivered) estadoOdoo = 'entregado';
+        else if (enRuta) estadoOdoo = 'en_ruta';
+        else if (fullySurtido) estadoOdoo = 'surtido_completo';
+        else if (totalSurtido > 0) estadoOdoo = 'surtido_parcial';
+        else if (totalGenerada > 0 && fullyGenerada) estadoOdoo = 'pendiente_surtir';
+        else if (totalGenerada > 0) estadoOdoo = 'en_surtido';
         return {
           ...p,
           venta_lineas: lineasConPendiente,
@@ -128,7 +142,9 @@ function usePedidosPendientes(filters: DemandaFilters) {
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
           fullyGenerada,
           fullySurtido,
-          fullyDelivered: totalDemanda > 0 && totalEntregado >= totalDemanda,
+          fullyDelivered,
+          enRuta,
+          estadoOdoo,
         };
       });
     },
@@ -146,7 +162,7 @@ export default function DemandaPage() {
   const today = todayLocal();
 
   // ── Filters ──
-  const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'entregados' | 'todos'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'todos'>('pendientes');
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
@@ -196,9 +212,10 @@ export default function DemandaPage() {
   const counts = useMemo(() => {
     const list = pedidos ?? [];
     return {
-      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
-      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
-      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered).length,
+      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
+      en_ruta: list.filter(p => p.enRuta && !p.fullyDelivered).length,
       entregados: list.filter(p => p.fullyDelivered).length,
       todos: list.length,
     };
@@ -206,9 +223,10 @@ export default function DemandaPage() {
 
   const filtered = useMemo(() => {
     let list = pedidos ?? [];
-    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
-    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
-    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered);
+    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta);
+    else if (tab === 'en_ruta') list = list.filter(p => p.enRuta && !p.fullyDelivered);
     else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
     if (search) {
       const s = search.toLowerCase();
@@ -665,8 +683,9 @@ export default function DemandaPage() {
         <nav className="flex gap-1 -mb-px">
           {([
             { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
-            { key: 'generadas', label: 'Entrega generada', count: counts.generadas },
+            { key: 'generadas', label: 'Pendiente de surtir', count: counts.generadas },
             { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
+            { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
             { key: 'entregados', label: 'Entregados', count: counts.entregados },
             { key: 'todos', label: 'Todos', count: counts.todos },
           ] as const).map(t => (
@@ -775,14 +794,18 @@ export default function DemandaPage() {
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                   <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
-                    {pedido.fullyDelivered ? (
+                    {pedido.estadoOdoo === 'entregado' ? (
                       <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
-                    ) : pedido.fullySurtido ? (
-                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
-                    ) : pedido.fullyGenerada ? (
-                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Entrega generada</Badge>
-                    ) : pedido.totalGenerada > 0 ? (
-                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">Entrega parcial</Badge>
+                    ) : pedido.estadoOdoo === 'en_ruta' ? (
+                      <Badge className="text-[10px] bg-purple-600 text-white hover:bg-purple-600">En ruta</Badge>
+                    ) : pedido.estadoOdoo === 'surtido_completo' ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido completo</Badge>
+                    ) : pedido.estadoOdoo === 'surtido_parcial' ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">Surtido parcial</Badge>
+                    ) : pedido.estadoOdoo === 'pendiente_surtir' ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Pendiente de surtir</Badge>
+                    ) : pedido.estadoOdoo === 'en_surtido' ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">En surtido</Badge>
                     ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
