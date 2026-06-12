@@ -149,6 +149,57 @@ export default function ConcentradoSurtidoPage() {
     costoFaltante: faltantes.reduce((s, r) => s + r.faltante * r.costo, 0),
   }), [rows, faltantes, data?.ventas.length]);
 
+  // ── Export ───────────────────────────────────────────────────
+  const exportColumns: ExportColumn[] = [
+    { key: 'codigo', header: 'Código', width: 16 },
+    { key: 'nombre', header: 'Producto', width: 38 },
+    { key: 'requerido', header: 'Requerido', format: 'number', align: 'right', width: 12 },
+    { key: 'entregado', header: 'Entregado', format: 'number', align: 'right', width: 12 },
+    { key: 'pendiente', header: 'A surtir', format: 'number', align: 'right', width: 12 },
+    { key: 'stock', header: 'Stock', format: 'number', align: 'right', width: 12 },
+    { key: 'faltante', header: 'Faltante', format: 'number', align: 'right', width: 12 },
+    { key: 'costo_faltante', header: 'Costo faltante', format: 'currency', align: 'right', width: 16 },
+    { key: 'proveedor', header: 'Proveedor', width: 22 },
+  ];
+
+  const buildExportRows = () => rows.map(r => {
+    const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
+    return {
+      codigo: r.codigo,
+      nombre: r.nombre,
+      requerido: r.requerido,
+      entregado: r.entregado,
+      pendiente: r.pendiente,
+      stock: r.stock,
+      faltante: r.faltante,
+      costo_faltante: r.faltante * r.costo,
+      proveedor: prov?.nombre ?? (r.proveedor_preferido_id ? '—' : 'Sin proveedor'),
+    };
+  });
+
+  const buildExportOpts = () => ({
+    fileName: `concentrado-a-surtir_${desde}_${hasta}`,
+    title: 'Concentrado a surtir',
+    subtitle: `${rows.length} producto(s) · ${faltantes.length} con faltante`,
+    columns: exportColumns,
+    data: buildExportRows(),
+    empresa: empresa?.nombre ?? '',
+    empresaInfo: empresa ? { nombre: empresa.nombre ?? '', rfc: (empresa as any).rfc ?? null, email: (empresa as any).email ?? null, logo_url: (empresa as any).logo_url ?? null } : undefined,
+    dateRange: { from: desde, to: hasta },
+    currencyCode: (empresa as any)?.moneda ?? 'MXN',
+  });
+
+  const handleExportExcel = () => {
+    if (rows.length === 0) { toast.error('Nada que exportar'); return; }
+    try { exportToExcel(buildExportOpts()); }
+    catch (err: any) { toast.error(err?.message || 'Error al exportar Excel'); }
+  };
+  const handleExportPdf = async () => {
+    if (rows.length === 0) { toast.error('Nada que exportar'); return; }
+    try { await exportToPDF(buildExportOpts()); }
+    catch (err: any) { toast.error(err?.message || 'Error al exportar PDF'); }
+  };
+
   const generarCompras = async () => {
     if (!empresa?.id) return;
     if (faltantes.length === 0) { toast.error('No hay productos con faltante'); return; }
