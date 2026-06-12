@@ -108,7 +108,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
 // ─── Component ────────────────────────────────────────────
 
 export default function DemandaPage() {
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
