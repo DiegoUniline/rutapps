@@ -160,6 +160,7 @@ export default function RolesTab({
           onEdit={() => onEditRole(role)}
           onToggleActivo={() => onToggleActivo(role.id, role.activo !== false)}
           onTogglePermiso={(mod, acc) => onTogglePermiso(role.id, mod, acc)}
+          onToggleMobilePermiso={(mod) => onToggleMobilePermiso(role.id, mod)}
           onToggleAll={(mod) => onToggleAllModule(role.id, mod)}
           onToggleGroup={(group) => onToggleAllGroup(role.id, group)}
         />
