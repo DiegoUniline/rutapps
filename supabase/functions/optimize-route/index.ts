@@ -42,17 +42,65 @@ async function buildRealDistanceMatrix(
   googleApiKey: string,
   origin: LatLng,
   waypoints: Waypoint[],
+  supabase?: any,
+  empresaId?: string,
 ): Promise<number[][] | null> {
   const points: LatLng[] = [origin, ...waypoints];
   const n = points.length;
-  // Google computeRouteMatrix: máx 625 elementos por request (25x25). Para N<=25 cabe en 1 request.
-  // Para N mayor, hacemos en bloques.
   const matrix: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  const hashes: string[] = points.map(pointHash);
+
+  // 1) Consultar caché para todos los pares (excepto diagonal i==j que ya es 0)
+  const cacheHits = new Set<string>(); // key = `${i}-${j}`
+  if (supabase && empresaId) {
+    try {
+      const uniqHashes = Array.from(new Set(hashes));
+      const { data: cached } = await supabase
+        .from("distancia_cache")
+        .select("origen_hash,destino_hash,distancia_m")
+        .eq("empresa_id", empresaId)
+        .in("origen_hash", uniqHashes)
+        .in("destino_hash", uniqHashes);
+      if (Array.isArray(cached)) {
+        const cacheMap = new Map<string, number>();
+        for (const c of cached) cacheMap.set(`${c.origen_hash}|${c.destino_hash}`, c.distancia_m);
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+            if (i === j) continue;
+            const d = cacheMap.get(`${hashes[i]}|${hashes[j]}`);
+            if (d != null) { matrix[i][j] = d; cacheHits.add(`${i}-${j}`); }
+          }
+        }
+      }
+    } catch (e) { console.warn("distancia_cache lookup failed:", e); }
+  }
+
+  // 2) Pares faltantes
+  const missing: Array<{ i: number; j: number }> = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      if (!cacheHits.has(`${i}-${j}`)) missing.push({ i, j });
+    }
+  }
+  console.log(`distancia_cache: ${cacheHits.size} hits / ${n * (n - 1)} pares; missing=${missing.length}`);
+
   const BLOCK = 25;
+  const newRows: Array<{ empresa_id: string; origen_hash: string; destino_hash: string; distancia_m: number; duracion_s: number }> = [];
 
   try {
+    // Procesamos en bloques 25x25 igual que antes pero solo si hay misses dentro del bloque
     for (let oStart = 0; oStart < n; oStart += BLOCK) {
       for (let dStart = 0; dStart < n; dStart += BLOCK) {
+        // ¿Hay algún miss en este bloque?
+        let hasMiss = false;
+        for (let i = oStart; i < Math.min(oStart + BLOCK, n) && !hasMiss; i++) {
+          for (let j = dStart; j < Math.min(dStart + BLOCK, n); j++) {
+            if (i !== j && !cacheHits.has(`${i}-${j}`)) { hasMiss = true; break; }
+          }
+        }
+        if (!hasMiss) continue;
+
         const origins = points.slice(oStart, oStart + BLOCK);
         const destinations = points.slice(dStart, dStart + BLOCK);
         const body = {
@@ -65,7 +113,7 @@ async function buildRealDistanceMatrix(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": googleApiKey,
-            "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,condition",
+            "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,duration,condition",
           },
           body: JSON.stringify(body),
         });
@@ -82,9 +130,27 @@ async function buildRealDistanceMatrix(
           if (cell.condition !== "ROUTE_EXISTS") continue;
           const oi = oStart + (cell.originIndex ?? 0);
           const di = dStart + (cell.destinationIndex ?? 0);
-          matrix[oi][di] = cell.distanceMeters ?? 0;
+          if (oi === di) continue;
+          const dm = cell.distanceMeters ?? 0;
+          matrix[oi][di] = dm;
+          const durSec = parseInt(String(cell.duration ?? "0").replace("s", ""), 10) || 0;
+          if (supabase && empresaId) {
+            newRows.push({
+              empresa_id: empresaId,
+              origen_hash: hashes[oi],
+              destino_hash: hashes[di],
+              distancia_m: dm,
+              duracion_s: durSec,
+            });
+          }
         }
       }
+    }
+    // 3) Upsert pares nuevos en caché
+    if (supabase && empresaId && newRows.length > 0) {
+      try {
+        await supabase.from("distancia_cache").upsert(newRows, { onConflict: "empresa_id,origen_hash,destino_hash" });
+      } catch (e) { console.warn("distancia_cache upsert failed:", e); }
     }
     return matrix;
   } catch (e) {
@@ -92,6 +158,8 @@ async function buildRealDistanceMatrix(
     return null;
   }
 }
+
+
 
 /** NN sobre matriz precomputada. Índice 0 = origen. Devuelve orden de waypoints (índices base 0 sobre waypoints). */
 function nearestNeighborOrderMatrix(n: number, matrix: number[][]): number[] {
