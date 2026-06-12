@@ -5,7 +5,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, MessageCircle, Printer, Pencil, Ban } from 'lucide-react';
+import { Banknote, MessageCircle, Printer, Pencil, Ban, X, Trash2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
