@@ -75,6 +75,9 @@ export default function VentasListPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkPdfBlob, setBulkPdfBlob] = useState<Blob | null>(null);
   const [bulkPdfName, setBulkPdfName] = useState('');
+  const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
+  const [bulkCancelling, setBulkCancelling] = useState(false);
+  const { requestPin, PinDialog } = usePinAuth();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
