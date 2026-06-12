@@ -697,7 +697,7 @@ export default function DemandaPage() {
           <TableBody>
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay pedidos pendientes de surtir
                 </TableCell>
