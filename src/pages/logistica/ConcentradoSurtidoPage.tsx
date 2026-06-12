@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Package, AlertTriangle, ShoppingCart, Calendar as CalendarIcon, CheckCircle2, Loader2 } from 'lucide-react';
+import { Package, AlertTriangle, ShoppingCart, Calendar as CalendarIcon, CheckCircle2, Loader2, FileDown, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { useProveedores } from '@/hooks/useData';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
 import { todayLocal } from '@/lib/utils';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import PedidosTabs from '@/components/PedidosTabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
