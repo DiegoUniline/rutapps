@@ -111,8 +111,28 @@ export default function DemandaPage() {
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: pedidos, isLoading } = usePedidosPendientes();
+  const today = todayLocal();
+
+  // ── Filters ──
+  const [tab, setTab] = useState<'pendientes' | 'entregados' | 'todos'>('pendientes');
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
+  const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
+  const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [search, setSearch] = useState('');
+
+  const statusesForTab = tab === 'entregados'
+    ? ['entregado']
+    : tab === 'todos'
+      ? ['borrador', 'confirmado', 'entregado']
+      : ['borrador', 'confirmado', 'entregado']; // 'pendientes' loads all then filters client-side by !fullyDelivered
+
+  const { data: pedidos, isLoading } = usePedidosPendientes({
+    desde, hasta, fechaTipo,
+    vendedorId: vendedorFilter || undefined,
+    statuses: statusesForTab,
+  });
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
@@ -140,13 +160,30 @@ export default function DemandaPage() {
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOptions = (vendedoresList ?? []).map(v => ({ value: v.id, label: v.nombre }));
 
-  const filtered = useMemo(() =>
-    pedidos?.filter(p =>
-      !search || (p.clientes?.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
-    ) ?? [],
-    [pedidos, search]
-  );
+  // Counts per tab (based on currently-loaded set)
+  const counts = useMemo(() => {
+    const list = pedidos ?? [];
+    return {
+      pendientes: list.filter(p => !p.fullyDelivered).length,
+      entregados: list.filter(p => p.fullyDelivered || p.status === 'entregado').length,
+      todos: list.length,
+    };
+  }, [pedidos]);
+
+  const filtered = useMemo(() => {
+    let list = pedidos ?? [];
+    if (tab === 'pendientes') list = list.filter(p => !p.fullyDelivered);
+    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered || p.status === 'entregado');
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(p =>
+        (p.clientes?.nombre ?? '').toLowerCase().includes(s) ||
+        (p.folio ?? '').toLowerCase().includes(s)
+      );
+    }
+    return list;
+  }, [pedidos, search, tab]);
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
