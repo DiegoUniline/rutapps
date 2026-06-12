@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, ExternalLink, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import type { AppNotification, NotificationView } from '@/hooks/useNotifications';
 import { useIncrementView } from '@/hooks/useNotifications';
 
