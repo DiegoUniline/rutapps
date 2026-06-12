@@ -708,21 +708,29 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
               </button>
             </div>
 
-            {/* Next step preview + ETA */}
+            {/* Next step preview + ETA en vivo (cálculo LOCAL, sin Google) */}
             <div className="mx-1 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
               {nextStep && (
                 <p className="text-[11px] text-muted-foreground flex-1 truncate">
                   Después: {stripHtml(nextStep.instructions)}
                 </p>
               )}
-              {leg && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Navigation className="h-3 w-3 text-primary" />
-                  <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
-                  <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Navigation className="h-3 w-3 text-primary" />
+                {liveEtaMin != null ? (
+                  <>
+                    <span className="text-[12px] font-semibold text-foreground">Llegas en {liveEtaMin} min</span>
+                    {liveRemKm != null && <span className="text-[11px] text-muted-foreground">· {liveRemKm.toFixed(1)} km</span>}
+                  </>
+                ) : leg ? (
+                  <>
+                    <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
+                    <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
+                  </>
+                ) : null}
+              </div>
             </div>
+
           </div>
         ) : navigatingStop ? (
           /* Navigating but no steps yet (loading) */
