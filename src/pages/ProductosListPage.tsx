@@ -43,13 +43,14 @@ const PAGE_SIZE = 80;
 
 const STATIC_FILTER_OPTIONS = [
   {
-    key: 'status',
-    label: 'Estado',
-    options: [
-      { value: 'activo', label: 'Activo' },
-      { value: 'inactivo', label: 'Inactivo' },
-      { value: 'borrador', label: 'Borrador' },
-    ],
+    key: 'clasificacion',
+    label: 'Categoría',
+    options: [] as { value: string; label: string }[],
+  },
+  {
+    key: 'marca',
+    label: 'Marca',
+    options: [] as { value: string; label: string }[],
   },
 ];
 
