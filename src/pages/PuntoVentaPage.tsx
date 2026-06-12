@@ -232,20 +232,9 @@ export default function PuntoVentaPage() {
     },
   });
 
-  // Realtime: refresh stock & products when inventory changes
-  useEffect(() => {
-    if (!empresa?.id) return;
-    const channel = supabase
-      .channel(`pos-inventory-${empresa.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen', filter: `empresa_id=eq.${empresa.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['pos-stock-almacen', empresa.id] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos', filter: `empresa_id=eq.${empresa.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['pos-productos', empresa.id] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [empresa?.id, queryClient]);
+  // Realtime de stock_almacen y productos centralizado en useProductosRealtime (AppLayout).
+  // Esa suscripción ya invalida ['stock-almacen'] y ['productos'/'pos-productos'], cubriendo POS.
+  // Se eliminó el canal duplicado 'pos-inventory-{empresa}' para reducir egress de Realtime.
 
   // Merge: use warehouse stock when user has almacen_id with data, otherwise fall back to global product stock
   const productos = useMemo(() => {

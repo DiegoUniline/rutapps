@@ -15,16 +15,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
-  useEffect(() => {
-    if (!empresa?.id) return;
-    const channel = supabase
-      .channel('ventas-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter: `empresa_id=eq.${empresa.id}` }, () => {
-        qc.invalidateQueries({ queryKey: ['ventas'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc, empresa?.id]);
+  // Realtime de ventas centralizado en useProductosRealtime (AppLayout) -> data-ventas-{empresa}.
+  // Se eliminó el canal duplicado 'ventas-realtime' para reducir egress de Realtime.
 
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
