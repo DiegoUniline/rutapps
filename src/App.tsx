@@ -47,6 +47,7 @@ const VentaFormPage = lazy(() => import("@/pages/VentaForm/index"));
 const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
 const PedidoPendienteDetailPage = lazy(() => import("@/pages/PedidoPendienteDetailPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
+const ConcentradoSurtidoPage = lazy(() => import("@/pages/logistica/ConcentradoSurtidoPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
 // EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
