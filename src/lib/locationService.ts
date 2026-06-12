@@ -48,7 +48,7 @@ class LocationService {
         this.listeners.forEach(fn => fn(this.lastLocation!));
       },
       () => { /* silently ignore errors – location just stays cached */ },
-      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 },
+      { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
     );
   }
 
