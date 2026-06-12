@@ -51,7 +51,7 @@ export default function RolesTab({
   roleMovil, setRoleMovil, roleSoloMovil, setRoleSoloMovil,
   roleSoloPos, setRoleSoloPos,
   onNewRole, onCloseRoleForm, onSaveRole, onEditRole, onToggleActivo,
-  onTogglePermiso, onToggleAllModule, onToggleAllGroup,
+  onTogglePermiso, onToggleMobilePermiso, onToggleAllModule, onToggleAllGroup,
 }: Props) {
   const displayRoles = rolesTab === 'activos' ? roles.filter(r => r.activo !== false) : roles.filter(r => r.activo === false);
 
