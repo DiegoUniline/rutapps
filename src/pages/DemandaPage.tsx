@@ -683,8 +683,9 @@ export default function DemandaPage() {
         <nav className="flex gap-1 -mb-px">
           {([
             { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
-            { key: 'generadas', label: 'Entrega generada', count: counts.generadas },
+            { key: 'generadas', label: 'Pendiente de surtir', count: counts.generadas },
             { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
+            { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
             { key: 'entregados', label: 'Entregados', count: counts.entregados },
             { key: 'todos', label: 'Todos', count: counts.todos },
           ] as const).map(t => (
