@@ -125,7 +125,23 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const vendedorId = (isSuperAdmin && superVendedorId) ? superVendedorId : profile?.id;
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const lastSpokenStepRef = useRef(-1);
-  const followUserRef = useRef(true); // true = camera follows user
+  const followUserRef = useRef(true);
+
+  // ─── Uber-like live navigation refs (todo local, cero llamadas a Google por tick) ───
+  const lastRouteOriginRef = useRef<GeoLatLng | null>(null);
+  const lastRequestTimeRef = useRef<number>(0);
+  const currentRoutePathRef = useRef<GeoLatLng[] | null>(null);
+  const renderedPosRef = useRef<GeoLatLng | null>(null);
+  const animCancelRef = useRef<(() => void) | null>(null);
+  const speedHistoryRef = useRef<number[]>([]);
+  const lastTickAtRef = useRef<number>(0);
+  const lastUploadAtRef = useRef<number>(0);
+  const [renderedPos, setRenderedPos] = useState<GeoLatLng | null>(null);
+  const [headingDeg, setHeadingDeg] = useState<number>(0);
+  const [traveledPath, setTraveledPath] = useState<GeoLatLng[]>([]);
+  const [remainingPath, setRemainingPath] = useState<GeoLatLng[]>([]);
+  const [liveEtaMin, setLiveEtaMin] = useState<number | null>(null);
+  const [liveRemKm, setLiveRemKm] = useState<number | null>(null);
 
   // Watch user location
   useEffect(() => {
