@@ -377,15 +377,44 @@ export default function DemandaPage() {
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
-          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los vendedores</SelectItem>
-              {(vendedoresList ?? []).map((v: any) => (
-                <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-9 w-[200px] justify-between font-normal">
+                <span className="truncate">
+                  {vendedorFilter.length === 0
+                    ? 'Todos los vendedores'
+                    : vendedorFilter.length === 1
+                      ? (vendedoresList ?? []).find((v: any) => v.id === vendedorFilter[0])?.nombre ?? '1 vendedor'
+                      : `${vendedorFilter.length} vendedores`}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-2 z-[60]" align="start">
+              <button
+                className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent text-muted-foreground"
+                onClick={() => setVendedorFilter([])}
+              >
+                Todos los vendedores
+              </button>
+              <div className="max-h-60 overflow-y-auto mt-1 space-y-0.5">
+                {(vendedoresList ?? []).map((v: any) => {
+                  const checked = vendedorFilter.includes(v.id);
+                  return (
+                    <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent cursor-pointer">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          setVendedorFilter(prev => checked ? prev.filter(id => id !== v.id) : [...prev, v.id])
+                        }
+                      />
+                      <span className="truncate">{v.nombre}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
           <Label className="text-[11px] text-muted-foreground">Buscar</Label>
@@ -394,9 +423,9 @@ export default function DemandaPage() {
             <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+        {(vendedorFilter.length > 0 || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
-            setVendedorFilter(''); setSearch(''); setTab('pendientes');
+            setVendedorFilter([]); setSearch(''); setTab('pendientes');
             setDesde(today); setHasta(today); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
