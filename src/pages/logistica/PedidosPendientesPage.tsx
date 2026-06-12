@@ -216,9 +216,9 @@ export default function PedidosPendientesPage() {
             <Input placeholder="Folio o cliente..." className="pl-8 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter || clienteFilter || search || tab !== 'pendientes' || desde !== today || hasta !== today || fechaTipo !== 'fecha') && (
+        {(vendedoresSel.length > 0 || clienteFilter || search || tab !== 'pendientes' || desde !== today || hasta !== today || fechaTipo !== 'fecha') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
-            setVendedorFilter(''); setClienteFilter(''); setSearch(''); setTab('pendientes');
+            setVendedoresSel([]); setClienteFilter(''); setSearch(''); setTab('pendientes');
             setDesde(today); setHasta(today); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
