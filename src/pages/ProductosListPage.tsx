@@ -312,6 +312,25 @@ export default function ProductosListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></h1>
 
+      <div className="flex border-b border-border gap-0 overflow-x-auto -mt-1">
+        {[
+          { key: 'activo', label: 'Activos' },
+          { key: 'inactivo', label: 'Inactivos' },
+          { key: 'borrador', label: 'Borradores' },
+        ].map(tab => {
+          const activeStatus = filters.status?.[0] ?? 'activo';
+          return (
+            <button
+              key={tab.key}
+              onClick={() => { setFilter('status', [tab.key]); setPage(1); setSelected(new Set()); }}
+              className={cn("odoo-tab whitespace-nowrap", activeStatus === tab.key && "odoo-tab-active")}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search}
