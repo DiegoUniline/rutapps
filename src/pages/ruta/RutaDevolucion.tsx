@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCargaActiva } from '@/hooks/useCargas';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 
