@@ -190,6 +190,7 @@ export default function PedidosPendientesPage() {
                 <TableHead className="w-10">
                   <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
                 </TableHead>
+                <TableHead>Fecha</TableHead>
                 <TableHead>Folio</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Vendedor</TableHead>
