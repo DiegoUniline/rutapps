@@ -353,16 +353,83 @@ export default function DemandaPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-end bg-card border border-border rounded-lg p-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Filtrar por</Label>
+          <Select value={fechaTipo} onValueChange={(v: any) => setFechaTipo(v)}>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fecha">Fecha de pedido</SelectItem>
+              <SelectItem value="fecha_entrega">Fecha de entrega</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        {selectedIds.size > 0 && (
-          <p className="text-sm text-muted-foreground">{selectedIds.size} seleccionado{selectedIds.size > 1 ? 's' : ''}</p>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Desde</Label>
+          <Input type="date" className="h-9 w-[150px]" value={desde} onChange={e => setDesde(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Hasta</Label>
+          <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
+          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los vendedores</SelectItem>
+              {(vendedoresList ?? []).map((v: any) => (
+                <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+          <Label className="text-[11px] text-muted-foreground">Buscar</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        {(vendedorFilter || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+          <Button variant="ghost" size="sm" className="h-9" onClick={() => {
+            setVendedorFilter(''); setSearch(''); setTab('pendientes');
+            setDesde(today); setHasta(today); setFechaTipo('fecha');
+          }}>
+            <X className="h-3.5 w-3.5 mr-1" /> Limpiar
+          </Button>
         )}
       </div>
+
+      {/* Status tabs */}
+      <div className="border-b border-border">
+        <nav className="flex gap-1 -mb-px">
+          {([
+            { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+            { key: 'entregados', label: 'Entregados', count: counts.entregados },
+            { key: 'todos', label: 'Todos', count: counts.todos },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                tab === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              {t.label} <span className="ml-1 text-xs opacity-70">({t.count})</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {selectedIds.size > 0 && (
+        <p className="text-sm text-muted-foreground">{selectedIds.size} seleccionado{selectedIds.size > 1 ? 's' : ''}</p>
+      )}
+
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
 
