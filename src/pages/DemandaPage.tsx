@@ -408,7 +408,7 @@ export default function DemandaPage() {
               p_cantidad_surtida: l.give,
               p_entrega_id: entrega.id,
               p_empresa_id: empresa!.id,
-              p_user_id: undefined,
+              p_user_id: user?.id,
             } as any);
             if (error) {
               // Stock changed between read and write — re-read and skip this line
