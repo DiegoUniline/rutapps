@@ -190,23 +190,40 @@ export default function PedidosPendientesPage() {
             <Input placeholder="Folio o cliente..." className="pl-8 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter || clienteFilter || search || statusFilter !== 'todos' || desde !== today || hasta !== today) && (
+        {(vendedorFilter || clienteFilter || search || tab !== 'pendientes' || desde !== today || hasta !== today || fechaTipo !== 'fecha') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
-            setVendedorFilter(''); setClienteFilter(''); setSearch(''); setStatusFilter('todos');
-            setDesde(today); setHasta(today);
+            setVendedorFilter(''); setClienteFilter(''); setSearch(''); setTab('pendientes');
+            setDesde(today); setHasta(today); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
           </Button>
         )}
       </div>
 
-      <div className="flex gap-1 flex-wrap">
-        {['todos', 'borrador', 'confirmado', 'entregado'].map(s => (
-          <Button key={s} variant={statusFilter === s ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter(s)}>
-            {s === 'todos' ? 'Todos' : statusColors[s]?.label ?? s}
-          </Button>
-        ))}
+      <div className="border-b border-border">
+        <nav className="flex gap-1 -mb-px">
+          {([
+            { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+            { key: 'entregados', label: 'Entregados', count: counts.entregados },
+            { key: 'cancelados', label: 'Cancelados', count: counts.cancelados },
+            { key: 'todos', label: 'Todos', count: counts.todos },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                tab === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              {t.label} <span className="ml-1 text-xs opacity-70">({t.count})</span>
+            </button>
+          ))}
+        </nav>
       </div>
+
 
       {isLoading ? <TableSkeleton /> : (
         <div className="border border-border rounded-lg overflow-hidden">
