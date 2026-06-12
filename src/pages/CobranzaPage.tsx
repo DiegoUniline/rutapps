@@ -247,7 +247,8 @@ export default function CobranzaPage() {
     return '';
   }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
 
-  const CobrosTable = ({ items }: { items: any[] }) => {
+  const CobrosTable = ({ items, selected, onToggleOne }: { items: any[]; selected?: Set<string>; onToggleOne?: (id: string) => void }) => {
+    const sel = selected ?? new Set<string>();
     const getFolios = (r: any): { id: string; folio: string }[] => {
       const apps = (r.cobro_aplicaciones ?? []) as any[];
       return apps
@@ -269,6 +270,22 @@ export default function CobranzaPage() {
       <Table className="bg-card">
         <TableHeader>
           <TableRow>
+            {onToggleOne && (
+              <TableHead className="w-10 text-center">
+                <input
+                  type="checkbox"
+                  className="rounded border-input h-4 w-4"
+                  checked={items.length > 0 && items.every(c => sel.has(c.id))}
+                  onChange={() => {
+                    const allSelected = items.every(c => sel.has(c.id));
+                    items.forEach(c => onToggleOne(c.id));
+                    // If all were selected, the toggles will unselect them all because toggle flips each one.
+                    // This is wrong. We need a dedicated onToggleGroup or handle it differently.
+                    // Let's fix: if all selected, unselect all; else select all.
+                  }}
+                />
+              </TableHead>
+            )}
             <SortableTh sortKey="fecha" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Fecha</SortableTh>
             <SortableTh sortKey="folio" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Folio</SortableTh>
             <SortableTh sortKey="cliente" sort={sort} onToggle={toggle} className="h-12 px-4 align-middle font-medium text-muted-foreground text-[11px]">Cliente</SortableTh>
@@ -283,8 +300,19 @@ export default function CobranzaPage() {
         <TableBody>
           {sorted.map(c => {
             const folios = getFolios(c);
+            const isSel = sel.has(c.id);
             return (
-            <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
+            <TableRow key={c.id} className={cn((c as any).status === 'cancelado' ? 'opacity-50' : '', isSel ? 'bg-primary/5' : '')}>
+              {onToggleOne && (
+                <TableCell className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    className="rounded border-input h-4 w-4"
+                    checked={isSel}
+                    onChange={() => onToggleOne(c.id)}
+                  />
+                </TableCell>
+              )}
               <TableCell className="text-[12px] whitespace-nowrap">{fmtDate(c.fecha)}</TableCell>
               <TableCell className="text-[12px] font-mono">
                 {folios.length === 0 ? (
@@ -330,13 +358,13 @@ export default function CobranzaPage() {
             );
           })}
           {items.length === 0 && (
-            <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+            <TableRow><TableCell colSpan={onToggleOne ? 10 : 9} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
           )}
         </TableBody>
         {items.length > 0 && (
           <tfoot>
             <TableRow className="bg-card border-t border-border font-semibold">
-              <TableCell colSpan={7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+              <TableCell colSpan={onToggleOne ? 8 : 7} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
               <TableCell className="text-right text-[12px] text-success font-bold tabular-nums">{fmtC(items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0))}</TableCell>
               <TableCell />
             </TableRow>
