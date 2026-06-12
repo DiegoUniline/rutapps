@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 import { toast } from 'sonner';
 
 // Pedidos pendientes en rango de fechas (tipo=pedido)
@@ -12,14 +14,19 @@ export function usePedidosPendientes(
   clienteFilter?: string,
   fechaCampo: 'fecha' | 'fecha_entrega' = 'fecha',
 ) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   const vendedoresKey = Array.isArray(vendedorFilter) ? vendedorFilter.slice().sort().join(',') : vendedorFilter;
   return useQuery({
-    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedoresKey, clienteFilter, fechaCampo],
+    queryKey: ['logistica-pedidos', empresaId, desde, hasta, statusFilter, vendedoresKey, clienteFilter, fechaCampo],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
+      const eid = requireEmpresa(empresaId, 'usePedidosPendientes');
       return await fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
           .select('id, folio, fecha, fecha_entrega, total, status, tipo, vendedor_id, cliente_id, notas, clientes(nombre, telefono, direccion), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad, precio_unitario, subtotal, total, producto_id, productos(codigo, nombre, unidad_granel))')
+          .eq('empresa_id', eid)
           .eq('tipo', 'pedido')
           .gte(fechaCampo, desde)
           .lte(fechaCampo, hasta)
@@ -40,7 +47,7 @@ export function usePedidosPendientes(
   });
 }
 
-// Pedidos asignados a una carga
+// Pedidos asignados a una carga (RLS aísla por carga_id; carga_pedidos no tiene empresa_id)
 export function useCargaPedidos(cargaId?: string) {
   return useQuery({
     queryKey: ['carga-pedidos', cargaId],
@@ -56,15 +63,20 @@ export function useCargaPedidos(cargaId?: string) {
   });
 }
 
-// Check which pedidos are already assigned to any carga in a date range
+// Asignaciones en rango: scoped por cargas.empresa_id via inner join
 export function useAsignacionesFecha(desde: string, hasta: string) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['asignaciones-fecha', desde, hasta],
+    queryKey: ['asignaciones-fecha', empresaId, desde, hasta],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
+      const eid = requireEmpresa(empresaId, 'useAsignacionesFecha');
       return await fetchAllPages((from, to) =>
         supabase
           .from('carga_pedidos')
-          .select('venta_id, carga_id, cargas!inner(fecha)')
+          .select('venta_id, carga_id, cargas!inner(fecha, empresa_id)')
+          .eq('cargas.empresa_id', eid)
           .gte('cargas.fecha', desde)
           .lte('cargas.fecha', hasta)
           .range(from, to)
@@ -75,12 +87,17 @@ export function useAsignacionesFecha(desde: string, hasta: string) {
 
 // Cargas del día (camiones)
 export function useCargasDia(fecha: string) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['cargas-dia', fecha],
+    queryKey: ['cargas-dia', empresaId, fecha],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
+      const eid = requireEmpresa(empresaId, 'useCargasDia');
       const { data, error } = await supabase
         .from('cargas')
         .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, notas, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(id, producto_id, cantidad_cargada, productos(codigo, nombre))')
+        .eq('empresa_id', eid)
         .eq('fecha', fecha)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -129,26 +146,30 @@ export function useDesasignarPedido() {
 
 // Dashboard KPIs
 export function useLogisticaKpis(fecha: string) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['logistica-kpis', fecha],
+    queryKey: ['logistica-kpis', empresaId, fecha],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
-      // Pedidos del día
+      const eid = requireEmpresa(empresaId, 'useLogisticaKpis');
       const { data: pedidos } = await supabase
         .from('ventas')
         .select('id, status')
+        .eq('empresa_id', eid)
         .eq('tipo', 'pedido')
         .eq('fecha', fecha);
 
-      // Cargas del día
       const { data: cargas } = await supabase
         .from('cargas')
         .select('id, status')
+        .eq('empresa_id', eid)
         .eq('fecha', fecha);
 
-      // Asignaciones del día
       const { data: asignaciones } = await supabase
         .from('carga_pedidos')
-        .select('venta_id, cargas!inner(fecha)')
+        .select('venta_id, cargas!inner(fecha, empresa_id)')
+        .eq('cargas.empresa_id', eid)
         .eq('cargas.fecha', fecha);
 
       const totalPedidos = pedidos?.length ?? 0;
@@ -174,19 +195,22 @@ export function useLogisticaKpis(fecha: string) {
 
 // Quiebres: products where ordered qty > available stock
 export function useQuiebres(fecha: string) {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['logistica-quiebres', fecha],
+    queryKey: ['logistica-quiebres', empresaId, fecha],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
-      // Get all pedido lines for the date
+      const eid = requireEmpresa(empresaId, 'useQuiebres');
       const { data: ventaLineas } = await supabase
         .from('venta_lineas')
-        .select('producto_id, cantidad, productos(id, codigo, nombre, cantidad), ventas!inner(fecha, tipo)')
+        .select('producto_id, cantidad, productos(id, codigo, nombre, cantidad), ventas!inner(fecha, tipo, empresa_id)')
+        .eq('ventas.empresa_id', eid)
         .eq('ventas.fecha', fecha)
         .eq('ventas.tipo', 'pedido');
 
       if (!ventaLineas || ventaLineas.length === 0) return [];
 
-      // Consolidate by product
       const byProduct: Record<string, { producto_id: string; codigo: string; nombre: string; pedido_total: number; stock: number }> = {};
       for (const l of ventaLineas as any[]) {
         const pid = l.producto_id;
