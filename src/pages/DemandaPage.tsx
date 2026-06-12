@@ -72,43 +72,62 @@ function usePedidosPendientes(filters: DemandaFilters) {
         }
       }
 
-      // Two maps: surtido (from any active entrega) vs realmente entregado al cliente (status='hecho')
+      // Three maps:
+      //  - generadaMap: entrega creada pero aún NO surtida del almacén (status='borrador')
+      //  - surtidoMap: ya surtido del almacén (status surtido/asignado/cargado/en_ruta/hecho)
+      //  - entregadoMap: entregado al cliente (status='hecho')
+      const SURTIDO_STATUSES = new Set(['surtido', 'asignado', 'cargado', 'en_ruta', 'hecho']);
+      const generadaMap: Record<string, Record<string, number>> = {};
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
-        if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
-        for (const l of (e.entrega_lineas ?? [])) {
-          surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
-        }
-        if (e.status === 'hecho') {
-          if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
+        if (e.status === 'borrador') {
+          if (!generadaMap[e.pedido_id]) generadaMap[e.pedido_id] = {};
           for (const l of (e.entrega_lineas ?? [])) {
-            entregadoMap[e.pedido_id][l.producto_id] = (entregadoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+            generadaMap[e.pedido_id][l.producto_id] = (generadaMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
+        } else if (SURTIDO_STATUSES.has(e.status)) {
+          if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
+          for (const l of (e.entrega_lineas ?? [])) {
+            surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
+          if (e.status === 'hecho') {
+            if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
+            for (const l of (e.entrega_lineas ?? [])) {
+              entregadoMap[e.pedido_id][l.producto_id] = (entregadoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+            }
           }
         }
       }
 
       return pedidos.map(p => {
+        const generada = generadaMap[p.id] ?? {};
         const surtido = surtidoMap[p.id] ?? {};
         const entregado = entregadoMap[p.id] ?? {};
         const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
           ...l,
+          cantidad_generada: generada[l.producto_id] ?? 0,
           cantidad_surtida: surtido[l.producto_id] ?? 0,
           cantidad_entregada: entregado[l.producto_id] ?? 0,
-          cantidad_pendiente: l.cantidad - (surtido[l.producto_id] ?? 0),
+          cantidad_pendiente: l.cantidad - (surtido[l.producto_id] ?? 0) - (generada[l.producto_id] ?? 0),
         }));
         const totalPendiente = lineasConPendiente.reduce((s: number, l: any) => s + Math.max(0, l.cantidad_pendiente), 0);
+        const totalGenerada = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_generada, 0);
         const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
         const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
         const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
+        const fullySurtido = totalDemanda > 0 && totalSurtido >= totalDemanda;
+        const fullyGenerada = !fullySurtido && totalDemanda > 0 && (totalGenerada + totalSurtido) >= totalDemanda;
         return {
           ...p,
           venta_lineas: lineasConPendiente,
-          totalPendiente, totalSurtido, totalEntregado, totalDemanda,
+          totalPendiente, totalGenerada, totalSurtido, totalEntregado, totalDemanda,
+          pctGenerada: totalDemanda > 0 ? Math.round((totalGenerada / totalDemanda) * 100) : 0,
           pctSurtido: totalDemanda > 0 ? Math.round((totalSurtido / totalDemanda) * 100) : 0,
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
-          fullySurtido: totalPendiente <= 0,
+          fullyGenerada,
+          fullySurtido,
           fullyDelivered: totalDemanda > 0 && totalEntregado >= totalDemanda,
         };
       });
@@ -127,7 +146,7 @@ export default function DemandaPage() {
   const today = todayLocal();
 
   // ── Filters ──
-  const [tab, setTab] = useState<'pendientes' | 'surtidos' | 'entregados' | 'todos'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'entregados' | 'todos'>('pendientes');
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
@@ -177,7 +196,8 @@ export default function DemandaPage() {
   const counts = useMemo(() => {
     const list = pedidos ?? [];
     return {
-      pendientes: list.filter(p => !p.fullySurtido).length,
+      pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
+      generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered).length,
       surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered).length,
       entregados: list.filter(p => p.fullyDelivered).length,
       todos: list.length,
@@ -186,7 +206,8 @@ export default function DemandaPage() {
 
   const filtered = useMemo(() => {
     let list = pedidos ?? [];
-    if (tab === 'pendientes') list = list.filter(p => !p.fullySurtido);
+    if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
+    else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered);
     else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered);
     else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
     if (search) {
@@ -644,6 +665,7 @@ export default function DemandaPage() {
         <nav className="flex gap-1 -mb-px">
           {([
             { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+            { key: 'generadas', label: 'Entrega generada', count: counts.generadas },
             { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
             { key: 'entregados', label: 'Entregados', count: counts.entregados },
             { key: 'todos', label: 'Todos', count: counts.todos },
@@ -757,6 +779,10 @@ export default function DemandaPage() {
                       <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
                     ) : pedido.fullySurtido ? (
                       <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
+                    ) : pedido.fullyGenerada ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Entrega generada</Badge>
+                    ) : pedido.totalGenerada > 0 ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">Entrega parcial</Badge>
                     ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
@@ -796,6 +822,7 @@ export default function DemandaPage() {
                               <th className="text-left py-1 pr-2 font-medium">Código</th>
                               <th className="text-left py-1 pr-2 font-medium">Producto</th>
                               <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+                              <th className="text-right py-1 pr-2 font-medium">Generado</th>
                               <th className="text-right py-1 pr-2 font-medium">Surtido</th>
                               <th className="text-right py-1 pr-2 font-medium">Entregado</th>
                               <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
@@ -809,6 +836,7 @@ export default function DemandaPage() {
                                 <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
                                 <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
                                 <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
+                                <td className="py-1 pr-2 text-right text-blue-700">{l.cantidad_generada}</td>
                                 <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
                                 <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
                                 <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
