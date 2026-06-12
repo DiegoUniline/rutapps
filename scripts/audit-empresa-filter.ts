@@ -10,40 +10,32 @@ import { join, relative } from 'path';
 
 const ROOT = join(import.meta.dir, '..', 'src');
 
-// Tablas que SIEMPRE deben filtrarse por empresa_id
+// Tablas con columna `empresa_id` real (deben filtrarse en origen).
+// Las tablas *_lineas/*_aplicaciones NO la tienen — se aíslan vía FK al padre.
 const TENANT_TABLES = new Set([
-  'ventas','venta_lineas','venta_historial','venta_comisiones',
-  'cobros','cobro_aplicaciones','cobro_reintentos',
-  'clientes','productos','proveedores',
-  'entregas','entrega_lineas',
-  'cargas','carga_lineas','carga_pedidos',
-  'movimientos_inventario','stock_almacen','stock_camion',
-  'compras','compra_lineas','pago_compras',
-  'gastos','caja_movimientos','caja_turnos',
-  'conteos_fisicos','conteo_lineas','conteo_entradas',
-  'devoluciones','devolucion_lineas',
-  'mermas','merma_lineas','merma_motivos',
-  'traspasos','traspaso_lineas',
-  'auditorias','auditoria_lineas','auditoria_entradas','auditoria_escaneos',
-  'visitas','vendedor_ubicaciones','vendedor_ubicaciones_historial',
-  'almacenes','zonas','marcas','clasificaciones','unidades','listas',
-  'tarifas','tarifa_lineas','lista_precios','lista_precios_lineas',
-  'promociones','promocion_aplicada','cupones','cupon_usos',
-  'cliente_orden_ruta','cliente_pedido_sugerido',
-  'cfdis','cfdi_lineas','facturas',
-  'ajustes_inventario','descarga_ruta','descarga_ruta_lineas',
-  'producto_presentaciones','producto_equivalencias','producto_proveedores',
-  'comision_esquemas','pago_comisiones',
-  'metas_venta','ruta_sesiones','solicitudes_pago',
-  'whatsapp_log','whatsapp_config','whatsapp_templates',
-  'wa_campaigns','wa_campaign_sends','wa_optouts',
-  'optimizacion_rutas_log','optimizacion_recargas','ruta_polyline_cache',
-  'distancia_cache','reportes_personalizados','dashboard_ai_recomendaciones',
-  'import_jobs','import_job_lineas','partner_atribuciones',
-  'tutorial_videos','notifications','notification_views',
-  'payment_links','subscriptions','billing_notifications',
-  'roles','role_permisos',
+  'ajustes_inventario','almacenes','auditorias',
+  'caja_movimientos','caja_turnos','cargas','cfdis','clasificaciones',
+  'cliente_orden_ruta','clientes','cobradores','cobro_reintentos','cobros',
+  'comision_esquemas','compras','conteos_fisicos','cupon_usos',
+  'dashboard_ai_recomendaciones','descarga_ruta','devoluciones',
+  'distancia_cache','entregas','facturas','gastos',
+  'import_jobs','lista_precios','listas','marcas',
+  'merma_motivos','mermas','metas_venta','movimientos_inventario',
+  'optimizacion_recargas','optimizacion_rutas_log','pago_comisiones','pago_compras',
+  'payment_links','producto_equivalencias','producto_presentaciones',
+  'productos','promociones','proveedores','reportes_personalizados',
+  'roles','ruta_polyline_cache','ruta_sesiones','solicitudes_pago',
+  'stock_almacen','stock_camion','tarifas','traspasos',
+  'venta_comisiones','venta_historial','ventas','visitas',
+  'vendedor_ubicaciones','vendedor_ubicaciones_historial',
+  'cliente_pedido_sugerido','conteo_entradas',
+  // Marketing/notif por empresa
+  'wa_campaigns','wa_optouts','whatsapp_log','whatsapp_templates','whatsapp_config',
+  'notifications','notification_views','cupones',
+  'billing_notifications','billing_message_templates',
+  // Tutoriales: empresa_id puede ser NULL (globales) — auditar excepciones manualmente
 ]);
+
 
 // Tablas excluidas (catálogos SAT, sistema, super-admin, públicas)
 const EXEMPT_TABLES = new Set([
