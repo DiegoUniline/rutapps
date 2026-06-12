@@ -170,9 +170,11 @@ export default function RolesTab({
   );
 }
 
-function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleMobilePermiso, onToggleAll, onToggleGroup }: {
   role: Role; permisos: RolePermiso[]; disabled?: boolean; onEdit: () => void; onToggleActivo: () => void;
-  onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
+  onTogglePermiso: (mod: string, acc: string) => void;
+  onToggleMobilePermiso: (mod: string) => void;
+  onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
   const [open, setOpen] = useState(false);
