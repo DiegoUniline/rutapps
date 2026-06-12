@@ -5,7 +5,7 @@ import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
