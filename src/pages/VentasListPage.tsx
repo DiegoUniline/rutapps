@@ -62,6 +62,7 @@ export default function VentasListPage() {
   const canCreate = hasPermiso('ventas', 'crear');
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
