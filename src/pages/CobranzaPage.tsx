@@ -500,6 +500,25 @@ export default function CobranzaPage() {
         onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
       />
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+          <span className="text-sm font-medium text-primary">{selectedIds.size} seleccionado(s)</span>
+          <div className="flex-1" />
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-muted-foreground hover:text-foreground" onClick={handlePrintMany}>
+            <Printer className="h-4 w-4" /> Imprimir
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-[#25D366] hover:text-[#25D366]/80" onClick={handleWaMany}>
+            <MessageCircle className="h-4 w-4" /> WhatsApp
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={() => setCancelManyOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Cancelar
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground" onClick={clearSelection}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {isMobile ? (
         <div className="space-y-2">
           {pagination.paginatedItems.map(c => (
@@ -507,6 +526,14 @@ export default function CobranzaPage() {
               key={c.id}
               title={(c.clientes as any)?.nombre ?? '—'}
               subtitle={fmtDate(c.fecha)}
+              leading={
+                <input
+                  type="checkbox"
+                  className="rounded border-input h-4 w-4"
+                  checked={selectedIds.has(c.id)}
+                  onChange={() => toggleSelectOne(c.id)}
+                />
+              }
               badge={
                 <div className="flex items-center gap-1">
                   <Badge variant="outline" className="text-[10px]">{c.metodo_pago}</Badge>
