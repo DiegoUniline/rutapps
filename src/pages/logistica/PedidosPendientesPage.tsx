@@ -215,6 +215,7 @@ export default function PedidosPendientesPage() {
                     <TableCell>
                       <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(p.fecha)}</TableCell>
                     <TableCell className="font-mono text-[13px] font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/ventas/${p.id}`)}>{p.folio ?? '—'}</TableCell>
                     <TableCell>{(p.clientes as any)?.nombre ?? '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{(p.vendedores as any)?.nombre ?? '—'}</TableCell>
