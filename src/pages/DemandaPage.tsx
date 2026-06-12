@@ -738,14 +738,26 @@ export default function DemandaPage() {
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2 justify-center">
                       <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
+                        <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${pedido.pctSurtido}%` }} />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground w-8">{pedido.pctSurtido}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-green-600 rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
                       </div>
                       <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                   <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
-                    {pedido.status === 'borrador' ? (
+                    {pedido.fullyDelivered ? (
+                      <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
+                    ) : pedido.fullySurtido ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
+                    ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -757,7 +769,7 @@ export default function DemandaPage() {
                         Confirmar
                       </Button>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] border-green-600 text-green-700">
+                      <Badge variant="outline" className="text-[10px] border-primary text-primary">
                         Confirmado
                       </Badge>
                     )}
