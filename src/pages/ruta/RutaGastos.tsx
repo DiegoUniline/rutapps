@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
+import { usePermisos } from '@/hooks/usePermisos';
+import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
