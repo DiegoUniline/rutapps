@@ -595,6 +595,9 @@ export default function DemandaPage() {
       setShowAsignarDialog(false);
       setAsignarRepartidorId('');
       setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
     },
     onError: (err: any) => toast.error(err.message),
