@@ -73,6 +73,8 @@ const GROUP_BY_OPTIONS = [
   { value: 'vendedor', label: 'Vendedor' },
   { value: 'zona', label: 'Zona' },
   { value: 'credito', label: 'Tipo crédito' },
+  { value: 'tarifa', label: 'Lista de precios' },
+  { value: 'dia_visita', label: 'Día de visita' },
 ];
 
 function getNumericPageSize(ps: PageSizeOption): number {
@@ -249,6 +251,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
     if (key === 'zona') return item.zonas?.nombre ?? 'Sin zona';
     if (key === 'credito') return item.credito ? 'Con crédito' : 'Sin crédito';
+    if (key === 'tarifa') return item.tarifas?.nombre ?? 'Sin lista';
+    if (key === 'dia_visita') {
+      const dv = (item.dia_visita as string[] | null | undefined) ?? [];
+      if (!dv.length) return 'Sin día';
+      return dv.map(d => DIAS_LABEL[d.toLowerCase()] ?? d).join(', ');
+    }
     return '';
   }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
@@ -263,7 +271,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
             <th className="th-odoo text-left">Código</th>
             <th className="th-odoo text-left">Nombre</th>
             <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
-            <th className="th-odoo text-left hidden md:table-cell">Días de visita</th>
+            <th className="th-odoo text-left">Días de visita</th>
             <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
             <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
             <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
@@ -292,11 +300,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
               <td className="py-1.5 px-3 font-medium"><ClienteLink id={c.id}>{c.nombre}</ClienteLink></td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
+              <td className="py-1.5 px-3 text-muted-foreground">
                 {c.dia_visita?.length > 0
-                  ? c.dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
+                  ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
                   : '—'}
               </td>
+
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
@@ -435,7 +444,9 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
                 ...(c.contacto ? [{ label: 'Contacto', value: c.contacto }] : []),
                 ...((c as any).zonas?.nombre ? [{ label: 'Zona', value: (c as any).zonas.nombre }] : []),
                 ...((c as any).vendedores?.nombre ? [{ label: 'Vendedor', value: (c as any).vendedores.nombre }] : []),
+                ...((c as any).dia_visita?.length ? [{ label: 'Días de visita', value: ((c as any).dia_visita as string[]).map(d => DIAS_LABEL[d.toLowerCase()] ?? d).join(', ') }] : []),
                 ...((c as any).tarifas?.nombre ? [{ label: 'Lista de precios', value: (c as any).tarifas.nombre }] : []),
+
               ]}
             />
           ))}
