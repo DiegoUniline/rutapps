@@ -174,6 +174,31 @@ export default function VentasListPage() {
     if (fail > 0) toast.error(`${fail} no se pudieron eliminar`);
   };
 
+  const handleBulkCancel = async () => {
+    if (selectedVentas.length === 0) return;
+    const cancelables = selectedVentas.filter(v => (v as any).status !== 'cancelado');
+    if (cancelables.length === 0) {
+      toast.info('Las ventas seleccionadas ya están canceladas.');
+      setBulkCancelOpen(false);
+      return;
+    }
+    setBulkCancelling(true);
+    try {
+      const ids = cancelables.map(v => v.id);
+      const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
+      if (error) throw error;
+      // Unlink cobros: cancel applications so saldos restore
+      await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
+      toast.success(`${ids.length} venta(s) cancelada(s).`);
+      setSelected(new Set());
+      setBulkCancelOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cancelar');
+    } finally {
+      setBulkCancelling(false);
+    }
+  };
+
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
