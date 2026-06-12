@@ -40,6 +40,7 @@ interface Props {
   onEditRole: (role: Role) => void;
   onToggleActivo: (id: string, currentActivo: boolean) => void;
   onTogglePermiso: (roleId: string, mod: string, acc: string) => void;
+  onToggleMobilePermiso: (roleId: string, mod: string) => void;
   onToggleAllModule: (roleId: string, mod: string) => void;
   onToggleAllGroup: (roleId: string, group: string) => void;
 }
