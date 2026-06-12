@@ -64,7 +64,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           const part = await fetchAllPages<any>((from, to) =>
             supabase
               .from('entregas')
-              .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+              .select('pedido_id, status, fecha, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
               .in('pedido_id', chunk)
               .range(from, to)
           );
