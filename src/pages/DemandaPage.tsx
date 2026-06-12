@@ -72,32 +72,44 @@ function usePedidosPendientes(filters: DemandaFilters) {
         }
       }
 
-      // Only count entregas that are NOT cancelado
-      const deliveryMap: Record<string, Record<string, number>> = {};
+      // Two maps: surtido (from any active entrega) vs realmente entregado al cliente (status='hecho')
+      const surtidoMap: Record<string, Record<string, number>> = {};
+      const entregadoMap: Record<string, Record<string, number>> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
-        if (!deliveryMap[e.pedido_id]) deliveryMap[e.pedido_id] = {};
+        if (!surtidoMap[e.pedido_id]) surtidoMap[e.pedido_id] = {};
         for (const l of (e.entrega_lineas ?? [])) {
-          deliveryMap[e.pedido_id][l.producto_id] = (deliveryMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          surtidoMap[e.pedido_id][l.producto_id] = (surtidoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+        }
+        if (e.status === 'hecho') {
+          if (!entregadoMap[e.pedido_id]) entregadoMap[e.pedido_id] = {};
+          for (const l of (e.entrega_lineas ?? [])) {
+            entregadoMap[e.pedido_id][l.producto_id] = (entregadoMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+          }
         }
       }
 
       return pedidos.map(p => {
-        const delivered = deliveryMap[p.id] ?? {};
+        const surtido = surtidoMap[p.id] ?? {};
+        const entregado = entregadoMap[p.id] ?? {};
         const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
           ...l,
-          cantidad_entregada: delivered[l.producto_id] ?? 0,
-          cantidad_pendiente: l.cantidad - (delivered[l.producto_id] ?? 0),
+          cantidad_surtida: surtido[l.producto_id] ?? 0,
+          cantidad_entregada: entregado[l.producto_id] ?? 0,
+          cantidad_pendiente: l.cantidad - (surtido[l.producto_id] ?? 0),
         }));
         const totalPendiente = lineasConPendiente.reduce((s: number, l: any) => s + Math.max(0, l.cantidad_pendiente), 0);
+        const totalSurtido = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_surtida, 0);
         const totalEntregado = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad_entregada, 0);
         const totalDemanda = lineasConPendiente.reduce((s: number, l: any) => s + l.cantidad, 0);
         return {
           ...p,
           venta_lineas: lineasConPendiente,
-          totalPendiente, totalEntregado, totalDemanda,
+          totalPendiente, totalSurtido, totalEntregado, totalDemanda,
+          pctSurtido: totalDemanda > 0 ? Math.round((totalSurtido / totalDemanda) * 100) : 0,
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
-          fullyDelivered: totalPendiente <= 0,
+          fullySurtido: totalPendiente <= 0,
+          fullyDelivered: totalDemanda > 0 && totalEntregado >= totalDemanda,
         };
       });
     },
