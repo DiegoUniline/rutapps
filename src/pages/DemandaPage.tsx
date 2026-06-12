@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -540,6 +540,68 @@ export default function DemandaPage() {
 
   const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
+  // ── Contextual selection state ──
+  const selectionState = useMemo(() => {
+    const needsSurtir = selectedPedidos.some(p => p.totalPendiente > 0 || (!p.fullySurtido && !p.enRuta && !p.fullyDelivered));
+    const surtidosSinRuta = selectedPedidos.some(p => p.fullySurtido && !p.enRuta && !p.fullyDelivered);
+    const enRutaSel = selectedPedidos.some(p => p.enRuta && !p.fullyDelivered);
+    const conEntregaActiva = selectedPedidos.some(p => (p.totalGenerada + p.totalSurtido) > 0 && !p.fullyDelivered);
+    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva };
+  }, [selectedPedidos]);
+
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+  const [asignarVendedorId, setAsignarVendedorId] = useState('');
+
+  // ── Asignar / Cambiar vendedor de ruta en entregas activas ──
+  const asignarVendedorMut = useMutation({
+    mutationFn: async () => {
+      if (!asignarVendedorId) throw new Error('Selecciona un vendedor');
+      const ids = selectedPedidos
+        .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
+        .map(p => p.id);
+      if (ids.length === 0) throw new Error('No hay entregas activas para asignar');
+      const { error } = await supabase
+        .from('entregas')
+        .update({ vendedor_ruta_id: asignarVendedorId } as any)
+        .in('pedido_id', ids)
+        .not('status', 'in', '(hecho,cancelado)');
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Vendedor asignado a ${n} pedido(s)`);
+      setShowAsignarDialog(false);
+      setAsignarVendedorId('');
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ── Cancelar entregas activas (no las completadas) ──
+  const cancelarEntregasMut = useMutation({
+    mutationFn: async () => {
+      const ids = selectedPedidos
+        .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
+        .map(p => p.id);
+      if (ids.length === 0) throw new Error('No hay entregas activas que cancelar');
+      const { error } = await supabase
+        .from('entregas')
+        .update({ status: 'cancelado' } as any)
+        .in('pedido_id', ids)
+        .not('status', 'in', '(hecho,cancelado)');
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Entregas canceladas en ${n} pedido(s)`);
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+
   // Totals
   const totalPedidos = filtered.length;
   const totalLineasPendientes = filtered.reduce((s, p) => s + p.totalPendiente, 0);
@@ -555,7 +617,7 @@ export default function DemandaPage() {
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {borradorSelectedIds.length > 0 && (
               <Button
                 onClick={() => confirmarPedidoMut.mutate(borradorSelectedIds)}
@@ -568,18 +630,48 @@ export default function DemandaPage() {
                 Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
               </Button>
             )}
-            <Button
-              onClick={() => setShowSurtirDialog(true)}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              Surtir disponible ({selectedIds.size})
-            </Button>
-            <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
-              <Package className="h-3.5 w-3.5" />
-              Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
-            </Button>
+            {selectionState.needsSurtir && (
+              <>
+                <Button
+                  onClick={() => setShowSurtirDialog(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  Surtir disponible ({selectedIds.size})
+                </Button>
+                <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
+                  <Package className="h-3.5 w-3.5" />
+                  Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
+                </Button>
+              </>
+            )}
+            {(selectionState.surtidosSinRuta || selectionState.enRutaSel) && (
+              <Button
+                onClick={() => setShowAsignarDialog(true)}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                {selectionState.enRutaSel ? 'Cambiar vendedor' : 'Asignar vendedor'}
+              </Button>
+            )}
+            {selectionState.conEntregaActiva && (
+              <Button
+                onClick={() => {
+                  if (confirm('¿Cancelar las entregas activas de los pedidos seleccionados? El stock se devolverá.')) {
+                    cancelarEntregasMut.mutate();
+                  }
+                }}
+                size="sm"
+                variant="outline"
+                disabled={cancelarEntregasMut.isPending}
+                className="border-red-600 text-red-700 hover:bg-red-50"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Cancelar entrega
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -994,6 +1086,46 @@ export default function DemandaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Asignar / Cambiar vendedor de ruta dialog */}
+      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-purple-600" />
+              {selectionState.enRutaSel ? 'Cambiar vendedor de ruta' : 'Asignar vendedor de ruta'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se asignará a las entregas activas de {selectedPedidos.length} pedido(s) seleccionado(s).
+            </p>
+            <div>
+              <Label className="text-xs">Vendedor</Label>
+              <Select value={asignarVendedorId} onValueChange={setAsignarVendedorId}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar vendedor" /></SelectTrigger>
+                <SelectContent>
+                  {vendedorOptions.map(v => (
+                    <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={() => asignarVendedorMut.mutate()}
+              disabled={asignarVendedorMut.isPending || !asignarVendedorId}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              {asignarVendedorMut.isPending ? 'Asignando...' : 'Asignar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Result dialog: shows partial / not-surtido alerts */}
       <Dialog open={!!surtirResult} onOpenChange={(o) => !o && setSurtirResult(null)}>
