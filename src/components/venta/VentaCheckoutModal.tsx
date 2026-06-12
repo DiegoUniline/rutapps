@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Wallet, Banknote, CreditCard, Package, Check, X, FileText } from 'lucide-react';
+import { Wallet, Banknote, CreditCard, Package, Check, X, FileText, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { autoDistributeSurplus, type PendingAccountInput } from '@/lib/paymentDistribution';
@@ -12,6 +12,7 @@ export interface CheckoutCuentaPendiente {
   fecha: string;
   total: number;
   saldo_pendiente: number;
+  dias_credito?: number | null;
 }
 
 interface Props {
@@ -35,6 +36,7 @@ export function VentaCheckoutModal({
   open, total, clienteNombre, clienteCredito, clienteDiasCredito = 0, clienteLimiteCredito = 0,
   saving, cuentasPendientes = [], onConfirm, onClose,
 }: Props) {
+
   const { fmt } = useCurrency();
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [payMode, setPayMode] = useState<PayMode>('efectivo');
