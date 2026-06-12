@@ -33,6 +33,10 @@ type Step = 'tipo' | 'cliente' | 'items' | 'confirm';
 export default function RutaDevolucion() {
   const navigate = useNavigate();
   const { user, profile, empresa } = useAuth();
+  const { hasPermisoMovil } = usePermisos();
+  if (!hasPermisoMovil('ruta.devoluciones')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar devoluciones." />;
+  }
   const [tipo, setTipo] = useState<Tipo>('almacen');
   const [items, setItems] = useState<DevItem[]>([]);
   const [notas, setNotas] = useState('');
