@@ -821,7 +821,12 @@ export default function PuntoVentaPage() {
       setShowAbrirTurnoPrompt(true);
       return;
     }
+    if (condicion === 'credito' && totals.total > creditoDisponiblePOS) {
+      toast.error('El total excede el crédito disponible del cliente');
+      return;
+    }
     if (savingRef.current) return;
+
     savingRef.current = true;
     setSaving(true);
     try {
