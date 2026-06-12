@@ -453,6 +453,35 @@ export default function CobranzaPage() {
     toast.info(`Se abrió WhatsApp para el primer cobro seleccionado. Enviarás ${selectedCobros.length} recibos uno por uno.`);
   };
 
+  const handleDeleteCancelledMany = () => {
+    const selectedCancelled = (cobros ?? []).filter((c: any) => selectedIds.has(c.id) && (c as any).status === 'cancelado');
+    if (selectedCancelled.length === 0) {
+      toast.error('Solo se pueden eliminar cobros cancelados. Cancela primero los seleccionados.');
+      return;
+    }
+    requestPin(
+      `Eliminar ${selectedCancelled.length} cobro(s) cancelado(s)`,
+      'Esta acción es permanente. Ingresa tu PIN de administrador para continuar.',
+      async () => {
+        try {
+          const ids = selectedCancelled.map(c => c.id);
+          // Delete applications first to avoid FK issues, then the cobros
+          await supabase.from('cobro_aplicaciones').delete().in('cobro_id', ids);
+          const { error } = await supabase.from('cobros').delete().in('id', ids);
+          if (error) throw error;
+          toast.success(`${ids.length} cobro(s) eliminado(s) permanentemente.`);
+          qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa?.id] });
+          qc.invalidateQueries({ queryKey: ['ventas'] });
+          qc.invalidateQueries({ queryKey: ['cxc'] });
+          qc.invalidateQueries({ queryKey: ['saldos'] });
+          setSelectedIds(new Set());
+        } catch (e: any) {
+          toast.error(e.message || 'Error al eliminar');
+        }
+      }
+    );
+  };
+
   const renderTable = (items: any[]) => <CobrosTable items={items} selected={selectedIds} onToggleOne={toggleSelectOne} />;
 
   const renderSummary = (items: any[]) => {
