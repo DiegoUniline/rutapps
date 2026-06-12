@@ -108,7 +108,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
 // ─── Component ────────────────────────────────────────────
 
 export default function DemandaPage() {
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -365,32 +365,64 @@ export default function DemandaPage() {
             ordenEntrega = cli?.orden ?? 0;
           }
 
-          // 1) Create entrega (borrador)
-          const { data: entrega, error: eErr } = await supabase.from('entregas').insert({
-            empresa_id: empresa!.id,
-            pedido_id: pedido.id,
-            vendedor_id: pedido.vendedor_id ?? null,
-            cliente_id: pedido.cliente_id,
-            almacen_id: almacenId,
-            vendedor_ruta_id: vendedorRutaId || null,
-            status: 'borrador',
-            orden_entrega: ordenEntrega,
-          } as any).select('id, folio').single();
-          if (eErr) throw eErr;
+          // 1) Reuse existing active entrega or create a new one
+          let entrega: { id: string; folio: string } | null = null;
+          const { data: existing } = await supabase
+            .from('entregas')
+            .select('id, folio, status')
+            .eq('pedido_id', pedido.id)
+            .neq('status', 'cancelado')
+            .neq('status', 'hecho')
+            .limit(1)
+            .maybeSingle();
 
-          // 2) Insert entrega lines
-          const { data: createdLines, error: lErr } = await supabase.from('entrega_lineas').insert(
-            planLineas.map(l => ({
-              entrega_id: entrega.id,
+          if (existing) {
+            entrega = { id: existing.id, folio: existing.folio };
+            // Make sure default almacen is set on the entrega for stock deduction
+            await supabase.from('entregas').update({ almacen_id: almacenId } as any).eq('id', existing.id);
+          } else {
+            const { data: created, error: eErr } = await supabase.from('entregas').insert({
+              empresa_id: empresa!.id,
+              pedido_id: pedido.id,
+              vendedor_id: pedido.vendedor_id ?? null,
+              cliente_id: pedido.cliente_id,
+              almacen_id: almacenId,
+              vendedor_ruta_id: vendedorRutaId || null,
+              status: 'borrador',
+              orden_entrega: ordenEntrega,
+            } as any).select('id, folio').single();
+            if (eErr) throw eErr;
+            entrega = created;
+          }
+
+          // 2) Get existing lines so we don't duplicate; only insert missing ones
+          const { data: existingLines } = await supabase
+            .from('entrega_lineas')
+            .select('id, producto_id, cantidad_pedida, cantidad_entregada, hecho')
+            .eq('entrega_id', entrega!.id);
+
+          const existingByProd: Record<string, any> = {};
+          for (const el of (existingLines ?? []) as any[]) existingByProd[el.producto_id] = el;
+
+          const linesToInsert = planLineas
+            .filter(l => !existingByProd[l.producto_id])
+            .map(l => ({
+              entrega_id: entrega!.id,
               producto_id: l.producto_id,
               unidad_id: l.unidad_id ?? null,
               cantidad_pedida: Math.max(0, l.cantidad_pendiente),
               cantidad_entregada: 0,
               hecho: false,
               almacen_origen_id: almacenId,
-            }))
-          ).select('id, producto_id');
-          if (lErr) throw lErr;
+            }));
+
+          let createdLines: any[] = (existingLines ?? []).map((el: any) => ({ id: el.id, producto_id: el.producto_id }));
+          if (linesToInsert.length > 0) {
+            const { data: inserted, error: lErr } = await supabase.from('entrega_lineas').insert(linesToInsert).select('id, producto_id');
+            if (lErr) throw lErr;
+            createdLines = createdLines.concat(inserted ?? []);
+          }
+
 
           // 3) Surtir each line with stock via RPC
           const lineIdByProd: Record<string, string> = {};
@@ -408,7 +440,7 @@ export default function DemandaPage() {
               p_cantidad_surtida: l.give,
               p_entrega_id: entrega.id,
               p_empresa_id: empresa!.id,
-              p_user_id: undefined,
+              p_user_id: user?.id,
             } as any);
             if (error) {
               // Stock changed between read and write — re-read and skip this line
