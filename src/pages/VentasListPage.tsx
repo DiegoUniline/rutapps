@@ -199,7 +199,7 @@ export default function VentasListPage() {
       for (const id of ids) {
         try {
           // entregas (ya canceladas) + sus líneas
-          const { data: ents } = await supabase.from('entregas').select('id').eq('venta_id', id);
+          const { data: ents } = await (supabase as any).from('entregas').select('id').eq('venta_id', id);
           const eIds = (ents ?? []).map((e: any) => e.id);
           if (eIds.length) {
             await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
