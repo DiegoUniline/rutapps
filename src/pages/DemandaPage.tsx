@@ -843,6 +843,7 @@ export default function DemandaPage() {
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px]">Repartidor</TableHead>
               <TableHead className="text-[11px]">Programada entrega</TableHead>
+              <TableHead className="text-[11px]">Fecha entrega</TableHead>
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
