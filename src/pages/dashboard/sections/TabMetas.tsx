@@ -235,8 +235,8 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                   <thead className="bg-accent/30">
                     <tr className="text-left">
                       <th className="px-3 py-2 font-semibold">Vendedor</th>
-                      <th className="px-3 py-2 font-semibold">Producto</th>
-                      <th className="px-3 py-2 font-semibold">Presentación</th>
+                      <th className="px-3 py-2 font-semibold">Tipo</th>
+                      <th className="px-3 py-2 font-semibold">Alcance</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta uds</th>
                       <th className="px-3 py-2 font-semibold text-right">Meta monto</th>
                       <th className="px-3 py-2 font-semibold">Notas</th>
@@ -244,26 +244,30 @@ export default function TabMetas({ money, mode = 'all' }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {metas.map((m) => (
-                      <tr key={m.id} className="border-t border-border">
-                        <td className="px-3 py-2">{nameVendedor(m.vendedor_id)}</td>
-                        <td className="px-3 py-2">{nameProducto(m.producto_id)}</td>
-                        <td className="px-3 py-2">{namePresentacion(m.presentacion_id)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{Number(m.meta_unidades).toLocaleString('es-MX')}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(Number(m.meta_monto))}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{m.notas || '—'}</td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="inline-flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(m)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(var(--destructive))]" onClick={() => handleDelete(m)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {metas.map((m) => {
+                      const al = alcanceLabel(m);
+                      return (
+                        <tr key={m.id} className="border-t border-border">
+                          <td className="px-3 py-2">{nameVendedor(m.vendedor_id)}</td>
+                          <td className="px-3 py-2"><span className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">{al.tipo}</span></td>
+                          <td className="px-3 py-2">{al.valor}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{Number(m.meta_unidades).toLocaleString('es-MX')}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(Number(m.meta_monto))}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{m.notas || '—'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="inline-flex gap-1">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(m)}>
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-[hsl(var(--destructive))]" onClick={() => handleDelete(m)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
                   </tbody>
                 </table>
               </div>
