@@ -372,7 +372,7 @@ export default function DemandaPage() {
             .select('id, folio, status')
             .eq('pedido_id', pedido.id)
             .neq('status', 'cancelado')
-            .neq('status', 'entregado')
+            .neq('status', 'hecho')
             .limit(1)
             .maybeSingle();
 
