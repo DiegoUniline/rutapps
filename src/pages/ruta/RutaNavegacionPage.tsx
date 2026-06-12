@@ -289,33 +289,134 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const activeStop = stops.find(s => s.id === activeStopId) ?? null;
   const navigatingStop = stops.find(s => s.id === navigatingTo) ?? null;
 
-  // Calculate directions when navigating
-  useEffect(() => {
-    if (!isLoaded || !navigatingStop || !userLocation) {
-      setDirections(null);
-      return;
-    }
+  // Helper: pide Directions a Google y refresca refs. Solo se llama: (1) al cambiar destino,
+  // (2) cuando el vendedor se desvía >150 m de la ruta vigente Y han pasado >30 s.
+  const requestDirections = useCallback((origin: GeoLatLng, destStop: Stop) => {
+    if (!isLoaded) return;
     const service = new google.maps.DirectionsService();
+    lastRequestTimeRef.current = Date.now();
+    lastRouteOriginRef.current = origin;
     service.route(
       {
-        origin: userLocation,
-        destination: { lat: navigatingStop.gps_lat, lng: navigatingStop.gps_lng },
+        origin,
+        destination: { lat: destStop.gps_lat, lng: destStop.gps_lng },
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
         if (status === 'OK' && result) {
           setDirections(result);
-          // Zoom in to user location at street level (like Google Maps nav)
-          if (mapRef.current && userLocation) {
-            mapRef.current.setCenter(userLocation);
-            mapRef.current.setZoom(17);
-          }
+          const overview = result.routes?.[0]?.overview_path ?? [];
+          const path: GeoLatLng[] = overview.map(p => ({ lat: p.lat(), lng: p.lng() }));
+          currentRoutePathRef.current = path;
+          setRemainingPath(path);
+          setTraveledPath([]);
         } else {
           setDirections(null);
+          currentRoutePathRef.current = null;
+        }
+      },
+    );
+  }, [isLoaded]);
+
+  // 1 sola petición Directions al cambiar destino. NO depende de userLocation.
+  useEffect(() => {
+    if (!isLoaded || !navigatingStop) {
+      setDirections(null);
+      currentRoutePathRef.current = null;
+      setTraveledPath([]); setRemainingPath([]);
+      setLiveEtaMin(null); setLiveRemKm(null);
+      return;
+    }
+    if (!userLocation) return;
+    requestDirections(userLocation, navigatingStop);
+    if (mapRef.current) {
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(17);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, navigatingTo]);
+
+  // Snap-to-route + animación + ETA + reroute por desvío. Cero llamadas a Google por tick.
+  useEffect(() => {
+    if (!navigatingStop || !userLocation) return;
+    const path = currentRoutePathRef.current;
+    const dest: GeoLatLng = { lat: navigatingStop.gps_lat, lng: navigatingStop.gps_lng };
+
+    // Velocidad (m/s) basada en últimas posiciones
+    const now = Date.now();
+    if (lastTickAtRef.current && renderedPosRef.current) {
+      const dt = (now - lastTickAtRef.current) / 1000;
+      if (dt > 0) {
+        const d = geoHaversine(renderedPosRef.current, userLocation);
+        const v = d / dt;
+        if (v >= 0 && v < 50) {
+          speedHistoryRef.current.push(v);
+          if (speedHistoryRef.current.length > 5) speedHistoryRef.current.shift();
         }
       }
-    );
-  }, [isLoaded, navigatingTo, userLocation?.lat, userLocation?.lng]);
+    }
+    lastTickAtRef.current = now;
+
+    let target: GeoLatLng = userLocation;
+    let distToDest = geoHaversine(userLocation, dest);
+
+    if (path && path.length >= 2) {
+      const proj = projectToPolyline(userLocation, path);
+      target = proj.snapped;
+      const { traveled, remaining } = splitPolylineAt(path, proj.segmentIndex, proj.t, proj.snapped);
+      setTraveledPath(traveled);
+      setRemainingPath(remaining);
+      const remM = remainingDistance(path, proj.segmentIndex, proj.t);
+      distToDest = remM > 0 ? remM : distToDest;
+      setLiveRemKm(remM / 1000);
+
+      const avgSpeed = speedHistoryRef.current.length
+        ? speedHistoryRef.current.reduce((a, b) => a + b, 0) / speedHistoryRef.current.length
+        : 0;
+      const effSpeed = Math.max(avgSpeed, 4.17); // piso 15 km/h
+      setLiveEtaMin(Math.max(1, Math.round(remM / effSpeed / 60)));
+
+      // Re-ruteo si desvío >150 m y >30 s desde última petición
+      if (proj.distToRoute > 150 && (now - lastRequestTimeRef.current) > 30_000) {
+        requestDirections(userLocation, navigatingStop);
+      }
+    } else {
+      setLiveRemKm(distToDest / 1000);
+    }
+
+    // Animación interpolada del marker
+    if (animCancelRef.current) animCancelRef.current();
+    const from = renderedPosRef.current ?? target;
+    if (renderedPosRef.current) {
+      setHeadingDeg(geoBearing(renderedPosRef.current, target));
+    }
+    renderedPosRef.current = target;
+    animCancelRef.current = animatePosition(from, target, 1000, (pos) => {
+      setRenderedPos(pos);
+    });
+
+    // Llegada
+    if (distToDest < 50) {
+      handleArrived(navigatingStop);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation?.lat, userLocation?.lng, navigatingTo]);
+
+  // Upload posición cada 5 s mientras navega (overlay sobre useLocationBroadcaster global)
+  useEffect(() => {
+    if (!navigatingTo || !userLocation || !user?.id || !empresa?.id) return;
+    const now = Date.now();
+    if (now - lastUploadAtRef.current < 5000) return;
+    lastUploadAtRef.current = now;
+    supabase.from('vendedor_ubicaciones' as any).upsert({
+      user_id: user.id,
+      empresa_id: empresa.id,
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  }, [navigatingTo, userLocation?.lat, userLocation?.lng, user?.id, empresa?.id]);
+
 
   // Fit map to show all markers initially
   const onMapLoad = useCallback((map: google.maps.Map) => {
