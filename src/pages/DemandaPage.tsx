@@ -560,28 +560,28 @@ export default function DemandaPage() {
   }, [selectedPedidos]);
 
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
-  const [asignarVendedorId, setAsignarVendedorId] = useState('');
+  const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
 
-  // ── Asignar / Cambiar vendedor de ruta en entregas activas ──
-  const asignarVendedorMut = useMutation({
+  // ── Asignar / Cambiar repartidor en entregas activas ──
+  const asignarRepartidorMut = useMutation({
     mutationFn: async () => {
-      if (!asignarVendedorId) throw new Error('Selecciona un vendedor');
+      if (!asignarRepartidorId) throw new Error('Selecciona un repartidor');
       const ids = selectedPedidos
         .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
         .map(p => p.id);
       if (ids.length === 0) throw new Error('No hay entregas activas para asignar');
       const { error } = await supabase
         .from('entregas')
-        .update({ vendedor_ruta_id: asignarVendedorId } as any)
+        .update({ vendedor_ruta_id: asignarRepartidorId } as any)
         .in('pedido_id', ids)
         .not('status', 'in', '(hecho,cancelado)');
       if (error) throw error;
       return ids.length;
     },
     onSuccess: (n) => {
-      toast.success(`Vendedor asignado a ${n} pedido(s)`);
+      toast.success(`Repartidor asignado a ${n} pedido(s)`);
       setShowAsignarDialog(false);
-      setAsignarVendedorId('');
+      setAsignarRepartidorId('');
       setSelectedIds(new Set());
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
     },
