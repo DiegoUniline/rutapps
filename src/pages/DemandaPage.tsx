@@ -64,7 +64,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           const part = await fetchAllPages<any>((from, to) =>
             supabase
               .from('entregas')
-              .select('pedido_id, status, fecha, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
+            .select('pedido_id, status, fecha, fecha_entrega, vendedor_ruta_id, entrega_lineas(producto_id, cantidad_entregada)')
               .in('pedido_id', chunk)
               .range(from, to)
           );
@@ -81,15 +81,26 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
       const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
-      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null }> = {};
+      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null; fechaEntrega?: string | null }> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
-        // Track latest active entrega meta (fecha programada + repartidor)
+        // Track latest active entrega meta (fecha programada + repartidor + fecha entrega)
         const prev = pedidoMeta[e.pedido_id];
         if (!prev || (e.fecha && (!prev.fecha || new Date(e.fecha) > new Date(prev.fecha)))) {
-          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null };
+          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null, fechaEntrega: prev?.fechaEntrega ?? null };
         } else if (!prev.vendedorRutaId && e.vendedor_ruta_id) {
           prev.vendedorRutaId = e.vendedor_ruta_id;
+        }
+        // Track actual delivery date from completed entregas
+        if (e.status === 'hecho' && e.fecha_entrega) {
+          const current = pedidoMeta[e.pedido_id];
+          if (current) {
+            if (!current.fechaEntrega || new Date(e.fecha_entrega) > new Date(current.fechaEntrega)) {
+              current.fechaEntrega = e.fecha_entrega;
+            }
+          } else {
+            pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? null, fechaEntrega: e.fecha_entrega };
+          }
         }
         if (e.status === 'borrador') {
           if (!generadaMap[e.pedido_id]) generadaMap[e.pedido_id] = {};
@@ -155,6 +166,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           estadoOdoo,
           fechaProgramada: pedidoMeta[p.id]?.fecha ?? null,
           vendedorRutaId: pedidoMeta[p.id]?.vendedorRutaId ?? null,
+          fechaEntrega: pedidoMeta[p.id]?.fechaEntrega ?? null,
         };
       });
     },
@@ -831,6 +843,7 @@ export default function DemandaPage() {
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px]">Repartidor</TableHead>
               <TableHead className="text-[11px]">Programada entrega</TableHead>
+              <TableHead className="text-[11px]">Fecha entrega</TableHead>
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
@@ -841,7 +854,7 @@ export default function DemandaPage() {
           <TableBody>
             {!isLoading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay pedidos pendientes de surtir
                 </TableCell>
@@ -880,6 +893,9 @@ export default function DemandaPage() {
                   </TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">
                     {pedido.fechaProgramada ? fmtDate(pedido.fechaProgramada) : <span className="text-muted-foreground/60">—</span>}
+                  </TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">
+                    {pedido.fechaEntrega ? fmtDate(pedido.fechaEntrega) : <span className="text-muted-foreground/60">—</span>}
                   </TableCell>
                   <TableCell className="text-right text-[12px] font-medium py-2">{fmt(pedido.total)}</TableCell>
                   <TableCell className="py-2">
@@ -932,7 +948,7 @@ export default function DemandaPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={12} className="bg-muted/30 p-0">
+                    <TableCell colSpan={13} className="bg-muted/30 p-0">
                       <div className="px-6 py-3 space-y-3">
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
                           {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
