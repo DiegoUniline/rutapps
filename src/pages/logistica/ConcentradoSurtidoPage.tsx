@@ -250,6 +250,12 @@ export default function ConcentradoSurtidoPage() {
         </div>
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" onClick={() => refetch()}>Refrescar</Button>
+          <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={rows.length === 0}>
+            <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={rows.length === 0}>
+            <FileDown className="w-3.5 h-3.5" /> PDF
+          </Button>
           {faltantes.length > 0 && (
             <Button size="sm" onClick={generarCompras} disabled={generando} className="bg-primary text-primary-foreground">
               {generando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShoppingCart className="w-3.5 h-3.5" />}
