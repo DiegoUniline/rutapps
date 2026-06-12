@@ -110,6 +110,10 @@ export default function RutaNuevoCliente() {
     }
   };
 
+  if (!canCrear) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite crear clientes desde la ruta." />;
+  }
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
