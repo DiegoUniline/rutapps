@@ -27,6 +27,7 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
