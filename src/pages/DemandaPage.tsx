@@ -617,7 +617,7 @@ export default function DemandaPage() {
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {borradorSelectedIds.length > 0 && (
               <Button
                 onClick={() => confirmarPedidoMut.mutate(borradorSelectedIds)}
@@ -630,18 +630,48 @@ export default function DemandaPage() {
                 Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
               </Button>
             )}
-            <Button
-              onClick={() => setShowSurtirDialog(true)}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              Surtir disponible ({selectedIds.size})
-            </Button>
-            <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
-              <Package className="h-3.5 w-3.5" />
-              Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
-            </Button>
+            {selectionState.needsSurtir && (
+              <>
+                <Button
+                  onClick={() => setShowSurtirDialog(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  Surtir disponible ({selectedIds.size})
+                </Button>
+                <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
+                  <Package className="h-3.5 w-3.5" />
+                  Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
+                </Button>
+              </>
+            )}
+            {(selectionState.surtidosSinRuta || selectionState.enRutaSel) && (
+              <Button
+                onClick={() => setShowAsignarDialog(true)}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                {selectionState.enRutaSel ? 'Cambiar vendedor' : 'Asignar vendedor'}
+              </Button>
+            )}
+            {selectionState.conEntregaActiva && (
+              <Button
+                onClick={() => {
+                  if (confirm('¿Cancelar las entregas activas de los pedidos seleccionados? El stock se devolverá.')) {
+                    cancelarEntregasMut.mutate();
+                  }
+                }}
+                size="sm"
+                variant="outline"
+                disabled={cancelarEntregasMut.isPending}
+                className="border-red-600 text-red-700 hover:bg-red-50"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Cancelar entrega
+              </Button>
+            )}
           </div>
         )}
       </div>
