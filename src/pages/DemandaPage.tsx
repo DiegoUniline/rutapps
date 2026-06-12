@@ -1101,13 +1101,13 @@ export default function DemandaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Asignar / Cambiar vendedor de ruta dialog */}
+      {/* Asignar / Cambiar repartidor dialog */}
       <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-purple-600" />
-              {selectionState.enRutaSel ? 'Cambiar vendedor de ruta' : 'Asignar vendedor de ruta'}
+              {selectionState.enRutaSel ? 'Cambiar repartidor' : 'Asignar repartidor'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -1115,9 +1115,9 @@ export default function DemandaPage() {
               Se asignará a las entregas activas de {selectedPedidos.length} pedido(s) seleccionado(s).
             </p>
             <div>
-              <Label className="text-xs">Vendedor</Label>
-              <Select value={asignarVendedorId} onValueChange={setAsignarVendedorId}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar vendedor" /></SelectTrigger>
+              <Label className="text-xs">Repartidor</Label>
+              <Select value={asignarRepartidorId} onValueChange={setAsignarRepartidorId}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar repartidor" /></SelectTrigger>
                 <SelectContent>
                   {vendedorOptions.map(v => (
                     <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
@@ -1129,12 +1129,12 @@ export default function DemandaPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
             <Button
-              onClick={() => asignarVendedorMut.mutate()}
-              disabled={asignarVendedorMut.isPending || !asignarVendedorId}
+              onClick={() => asignarRepartidorMut.mutate()}
+              disabled={asignarRepartidorMut.isPending || !asignarRepartidorId}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              {asignarVendedorMut.isPending ? 'Asignando...' : 'Asignar'}
+              {asignarRepartidorMut.isPending ? 'Asignando...' : 'Asignar'}
             </Button>
           </DialogFooter>
         </DialogContent>
