@@ -59,6 +59,17 @@ Deno.serve(async (req) => {
 
     const empresaId = callerProfile.empresa_id;
 
+    // Helper: is caller a system/admin role within their empresa, or super admin?
+    async function callerIsAdmin(): Promise<boolean> {
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (isSA) return true;
+      const { data: ur } = await adminClient
+        .from('user_roles')
+        .select('roles(es_sistema, nombre)')
+        .eq('user_id', caller.id);
+      return (ur || []).some((r: any) => r.roles?.es_sistema === true);
+    }
+
     if (action === "list-users" || action === "list-empresa-users") {
       // Super admin can query any empresa
       let targetEmpresaId = empresaId;
