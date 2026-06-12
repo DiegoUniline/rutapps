@@ -4,8 +4,8 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
@@ -27,6 +27,7 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
@@ -61,6 +62,7 @@ export default function VentasListPage() {
   const canCreate = hasPermiso('ventas', 'crear');
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -74,6 +76,9 @@ export default function VentasListPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkPdfBlob, setBulkPdfBlob] = useState<Blob | null>(null);
   const [bulkPdfName, setBulkPdfName] = useState('');
+  const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
+  const [bulkCancelling, setBulkCancelling] = useState(false);
+  const { requestPin, PinDialog } = usePinAuth();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
@@ -168,6 +173,35 @@ export default function VentasListPage() {
     setSelected(new Set());
     if (ok > 0) toast.success(`${ok} venta${ok !== 1 ? 's' : ''} eliminada${ok !== 1 ? 's' : ''}`);
     if (fail > 0) toast.error(`${fail} no se pudieron eliminar`);
+  };
+
+  const handleBulkCancel = async () => {
+    if (selectedVentas.length === 0) return;
+    const cancelables = selectedVentas.filter(v => (v as any).status !== 'cancelado');
+    if (cancelables.length === 0) {
+      toast.info('Las ventas seleccionadas ya están canceladas.');
+      setBulkCancelOpen(false);
+      return;
+    }
+    setBulkCancelling(true);
+    try {
+      const ids = cancelables.map(v => v.id);
+      const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).in('id', ids);
+      if (error) throw error;
+      // Unlink cobros: cancel applications so saldos restore
+      await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
+      toast.success(`${ids.length} venta(s) cancelada(s).`);
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      setSelected(new Set());
+      setBulkCancelOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cancelar');
+    } finally {
+      setBulkCancelling(false);
+    }
   };
 
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
@@ -381,9 +415,33 @@ export default function VentasListPage() {
         actions={[
           { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExport },
           { label: 'Imprimir PDF', icon: Printer, onClick: handleBulkPrint, loading: bulkPrinting },
-          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => setBulkDeleteOpen(true), hidden: !canDelete },
+          { label: 'Cancelar', icon: Ban, variant: 'destructive', onClick: () => requestPin(`Cancelar ${selected.size} venta(s)`, 'Ingresa tu PIN de administrador para cancelar las ventas seleccionadas.', () => setBulkCancelOpen(true)), hidden: !canDelete },
+          { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => requestPin(`Eliminar ${selected.size} venta(s)`, 'Esta acción es permanente. Ingresa tu PIN de administrador para continuar.', () => setBulkDeleteOpen(true)), hidden: !canDelete },
         ]}
       />
+
+      <AlertDialog open={bulkCancelOpen} onOpenChange={setBulkCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar {selected.size} venta{selected.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Las ventas se marcarán como canceladas y se desligarán los pagos aplicados, restaurando los saldos de los cobros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkCancelling}>No</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkCancelling}
+              onClick={(e) => { e.preventDefault(); handleBulkCancel(); }}
+            >
+              {bulkCancelling ? 'Cancelando...' : `Sí, cancelar ${selected.size}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <PinDialog />
     </div>
   );
 }
