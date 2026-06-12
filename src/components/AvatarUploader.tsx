@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
+import { compressLogo } from '@/lib/imageCompressor';
 
 interface Props {
   /** UUID of the auth user (used as the storage folder name). */
@@ -34,12 +35,16 @@ export default function AvatarUploader({ userId, profileId, currentUrl, name, si
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      // Compress avatar (max 400px / quality 0.8) → typically <50KB
+      let toUpload = file;
+      try { toUpload = await compressLogo(file); } catch { /* fallback original */ }
+
+      const ext = toUpload.name.split('.').pop()?.toLowerCase() || 'jpg';
       // path = <userId>/avatar.<ext> → folder name matches policies
       const path = `${userId}/avatar-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from('avatars')
-        .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type });
+        .upload(path, toUpload, { cacheControl: '3600', upsert: true, contentType: toUpload.type });
       if (upErr) throw upErr;
 
       const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
