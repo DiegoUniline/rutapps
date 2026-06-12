@@ -11,6 +11,7 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const today = todayLocal();
   const vendedorId = profile?.id || profile?.id;
 
