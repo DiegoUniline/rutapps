@@ -202,7 +202,7 @@ export default function PedidosPendientesPage() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin pedidos</TableCell></TableRow>
               )}
               {filtered.map((p: any) => {
                 const sc = statusColors[p.status] ?? statusColors.borrador;
