@@ -114,6 +114,7 @@ export default function CobranzaPage() {
   const [editCobro, setEditCobro] = useState<any | null>(null);
   const [cancelCobro, setCancelCobro] = useState<any | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const { requestPin, PinDialog } = usePinAuth();
 
 
   const handleCancelCobro = async () => {
