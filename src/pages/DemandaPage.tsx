@@ -794,14 +794,18 @@ export default function DemandaPage() {
                   </TableCell>
                   <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                   <TableCell className="text-center py-2" onClick={e => e.stopPropagation()}>
-                    {pedido.fullyDelivered ? (
+                    {pedido.estadoOdoo === 'entregado' ? (
                       <Badge className="text-[10px] bg-green-600 text-white hover:bg-green-600">Entregado</Badge>
-                    ) : pedido.fullySurtido ? (
-                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido</Badge>
-                    ) : pedido.fullyGenerada ? (
-                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Entrega generada</Badge>
-                    ) : pedido.totalGenerada > 0 ? (
-                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">Entrega parcial</Badge>
+                    ) : pedido.estadoOdoo === 'en_ruta' ? (
+                      <Badge className="text-[10px] bg-purple-600 text-white hover:bg-purple-600">En ruta</Badge>
+                    ) : pedido.estadoOdoo === 'surtido_completo' ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-700">Surtido completo</Badge>
+                    ) : pedido.estadoOdoo === 'surtido_parcial' ? (
+                      <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">Surtido parcial</Badge>
+                    ) : pedido.estadoOdoo === 'pendiente_surtir' ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-600 text-blue-700">Pendiente de surtir</Badge>
+                    ) : pedido.estadoOdoo === 'en_surtido' ? (
+                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">En surtido</Badge>
                     ) : pedido.status === 'borrador' ? (
                       <Button
                         size="sm"
@@ -818,6 +822,7 @@ export default function DemandaPage() {
                         Confirmado
                       </Badge>
                     )}
+                  </TableCell>
                   </TableCell>
                 </TableRow>
                 {isExpanded && (
