@@ -128,6 +128,35 @@ export function useRoles() {
       });
   }, [savingPermisos, permisos]);
 
+  /**
+   * Toggle para permisos móviles. Semántica invertida: si no hay row, default = permitido (true).
+   * Primer toggle crea row con permitido=false (bloquea); siguiente toggle pone permitido=true.
+   */
+  const toggleMobilePermiso = useCallback((roleId: string, modulo: string) => {
+    if (savingPermisos) return;
+    const accion = 'ver';
+    const key = (p: RolePermiso) => p.role_id === roleId && p.modulo === modulo && p.accion === accion;
+    const current = permisos.find(key)?.permitido ?? true; // default permitido
+    const permitido = !current;
+
+    setPermisos(prev => {
+      const i = prev.findIndex(key);
+      if (i >= 0) return prev.map((p, idx) => idx === i ? { ...p, permitido } : p);
+      return [...prev, { id: `${roleId}:${modulo}:${accion}`, role_id: roleId, modulo, accion, permitido }];
+    });
+
+    void supabase
+      .from('role_permisos')
+      .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
+      .select('id, role_id, modulo, accion, permitido')
+      .single()
+      .then(({ data, error }) => {
+        if (error) { toast.error('Error al guardar permiso'); return; }
+        if (data) setPermisos(prev => prev.map(p => key(p) ? data : p));
+        notifyPermisosChanged();
+      });
+  }, [savingPermisos, permisos, notifyPermisosChanged]);
+
   const toggleAllGroup = useCallback(async (roleId: string, group: string, reload: () => void) => {
     if (savingPermisos) return;
     setSavingPermisos(true);
@@ -223,7 +252,7 @@ export function useRoles() {
     roleSoloPos, setRoleSoloPos,
     showRoleForm, rolesTab, setRolesTab,
     loadRoles, resetRoleForm, saveRoleWithSoloMovil, toggleRoleActivo,
-    togglePermiso, toggleAllGroup, toggleAllModule,
+    togglePermiso, toggleMobilePermiso, toggleAllGroup, toggleAllModule,
     openEditRole, openNewRole,
   };
 }

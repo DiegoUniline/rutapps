@@ -108,6 +108,7 @@ export default function UsuariosPage() {
           onEditRole={rolesHook.openEditRole}
           onToggleActivo={(id, cur) => rolesHook.toggleRoleActivo(id, cur, reload)}
           onTogglePermiso={rolesHook.togglePermiso}
+          onToggleMobilePermiso={rolesHook.toggleMobilePermiso}
           onToggleAllModule={(rid, mod) => rolesHook.toggleAllModule(rid, mod, () => rolesHook.loadRoles(empresa!.id))}
           onToggleAllGroup={(rid, grp) => rolesHook.toggleAllGroup(rid, grp, () => rolesHook.loadRoles(empresa!.id))}
         />

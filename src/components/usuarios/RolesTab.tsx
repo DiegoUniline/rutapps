@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Shield, Edit2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, X, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones } from '@/hooks/usePermisos';
+import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones, MODULOS_MOVIL, getMobileModuloGroups } from '@/hooks/usePermisos';
 import type { Role, RolePermiso } from '@/hooks/useRoles';
 
 const ACCION_LABELS: Record<string, string> = {
@@ -40,6 +40,7 @@ interface Props {
   onEditRole: (role: Role) => void;
   onToggleActivo: (id: string, currentActivo: boolean) => void;
   onTogglePermiso: (roleId: string, mod: string, acc: string) => void;
+  onToggleMobilePermiso: (roleId: string, mod: string) => void;
   onToggleAllModule: (roleId: string, mod: string) => void;
   onToggleAllGroup: (roleId: string, group: string) => void;
 }
@@ -50,7 +51,7 @@ export default function RolesTab({
   roleMovil, setRoleMovil, roleSoloMovil, setRoleSoloMovil,
   roleSoloPos, setRoleSoloPos,
   onNewRole, onCloseRoleForm, onSaveRole, onEditRole, onToggleActivo,
-  onTogglePermiso, onToggleAllModule, onToggleAllGroup,
+  onTogglePermiso, onToggleMobilePermiso, onToggleAllModule, onToggleAllGroup,
 }: Props) {
   const displayRoles = rolesTab === 'activos' ? roles.filter(r => r.activo !== false) : roles.filter(r => r.activo === false);
 
@@ -159,6 +160,7 @@ export default function RolesTab({
           onEdit={() => onEditRole(role)}
           onToggleActivo={() => onToggleActivo(role.id, role.activo !== false)}
           onTogglePermiso={(mod, acc) => onTogglePermiso(role.id, mod, acc)}
+          onToggleMobilePermiso={(mod) => onToggleMobilePermiso(role.id, mod)}
           onToggleAll={(mod) => onToggleAllModule(role.id, mod)}
           onToggleGroup={(group) => onToggleAllGroup(role.id, group)}
         />
@@ -168,9 +170,11 @@ export default function RolesTab({
   );
 }
 
-function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleMobilePermiso, onToggleAll, onToggleGroup }: {
   role: Role; permisos: RolePermiso[]; disabled?: boolean; onEdit: () => void; onToggleActivo: () => void;
-  onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
+  onTogglePermiso: (mod: string, acc: string) => void;
+  onToggleMobilePermiso: (mod: string) => void;
+  onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -181,9 +185,9 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
 
   return (
     <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => !isSoloMovil && setOpen(!open)}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
         <div className="flex items-center gap-3">
-          {!isSoloMovil && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
+          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           <Shield className="h-4 w-4 text-primary" />
           <div>
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
@@ -200,10 +204,8 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
           </button>
         </div>
       </div>
-      {isSoloMovil && (
-        <div className="border-t border-border px-4 py-3 bg-accent/20">
-          <p className="text-xs text-muted-foreground">Este rol solo tiene acceso a la aplicación móvil de ruta. No requiere configuración de permisos de escritorio.</p>
-        </div>
+      {open && isSoloMovil && (
+        <MobilePermissionsTable permisos={permisos} disabled={disabled} onToggle={onToggleMobilePermiso} />
       )}
       {open && !isSoloMovil && (
         <div className="border-t border-border overflow-x-auto">
@@ -282,5 +284,62 @@ function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onToggleP
         );
       })}
     </>
+  );
+}
+
+function MobilePermissionsTable({ permisos, disabled, onToggle }: {
+  permisos: RolePermiso[]; disabled?: boolean; onToggle: (mod: string) => void;
+}) {
+  const groups = getMobileModuloGroups();
+  return (
+    <div className="border-t border-border overflow-x-auto">
+      <div className="px-4 py-2.5 bg-primary/5 border-b border-border">
+        <p className="text-[11px] text-muted-foreground">
+          Configura qué vistas y acciones puede usar este rol dentro de la app móvil de ruta.
+          Por defecto todo está permitido; destilda para bloquear.
+        </p>
+      </div>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-accent/30">
+            <th className="text-left px-4 py-2 font-semibold text-foreground">Vista / Acción móvil</th>
+            <th className="text-center px-2 py-2 font-semibold text-foreground w-24">Permitido</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map(group => {
+            const groupMods = MODULOS_MOVIL.filter(m => m.group === group);
+            return (
+              <>
+                <tr key={`g-${group}`} className="bg-accent/50 border-t border-border">
+                  <td colSpan={2} className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
+                </tr>
+                {groupMods.map(mod => {
+                  const perm = permisos.find(p => p.modulo === mod.id && p.accion === 'ver');
+                  const checked = perm?.permitido ?? true;
+                  return (
+                    <tr key={mod.id} className="border-t border-border/30 hover:bg-accent/20">
+                      <td className="px-4 py-1.5 pl-8 text-muted-foreground">
+                        {mod.label}
+                        {mod.description && <span className="block text-[10px] text-muted-foreground/70">{mod.description}</span>}
+                      </td>
+                      <td className="text-center px-2 py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={() => onToggle(mod.id)}
+                          className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

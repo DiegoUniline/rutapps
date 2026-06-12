@@ -15,6 +15,8 @@ interface UsePermisosReturn {
   loading: boolean;
   hasPermiso: (modulo: string, accion: string) => boolean;
   hasModulo: (modulo: string) => boolean;
+  /** Permisos específicos de roles "solo vista móvil". Default true (permitido). */
+  hasPermisoMovil: (modulo: string) => boolean;
   isOwner: boolean;
   reload: () => void;
   /** First route the user can access, based on their permissions. */
@@ -235,6 +237,48 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion-inicial': '', // always accessible
 };
 
+/**
+ * Permisos específicos para roles "Solo vista móvil" (app de ruta).
+ * Acción única implícita = 'ver'. Default cuando no hay registro = permitido (true)
+ * para no romper roles existentes; el admin debe destildar para bloquear.
+ */
+export interface ModuloMovilDef { id: string; label: string; group: string; description?: string; }
+
+export const MODULOS_MOVIL: ModuloMovilDef[] = [
+  // Vistas
+  { id: 'ruta.dashboard', label: 'Dashboard de ruta', group: 'Vistas' },
+  { id: 'ruta.clientes', label: 'Lista de clientes', group: 'Vistas' },
+  { id: 'ruta.mapa', label: 'Mapa', group: 'Vistas' },
+  { id: 'ruta.stock', label: 'Stock del camión', group: 'Vistas' },
+  { id: 'ruta.descarga', label: 'Descarga / Mi carga', group: 'Vistas' },
+  { id: 'ruta.entregas', label: 'Entregas / Pedidos', group: 'Vistas' },
+  { id: 'ruta.ventas_hist', label: 'Historial de ventas', group: 'Vistas' },
+  { id: 'ruta.cobros_hist', label: 'Historial de cobros', group: 'Vistas' },
+  // Acciones de venta
+  { id: 'ruta.vender', label: 'Crear ventas', group: 'Ventas', description: 'Hacer nuevas ventas desde ruta' },
+  { id: 'ruta.venta_credito', label: 'Vender a crédito', group: 'Ventas' },
+  { id: 'ruta.cambiar_precio', label: 'Cambiar precio en línea', group: 'Ventas' },
+  { id: 'ruta.aplicar_descuento', label: 'Aplicar descuento', group: 'Ventas' },
+  { id: 'ruta.cancelar_venta', label: 'Cancelar venta', group: 'Ventas' },
+  // Cobros / devoluciones
+  { id: 'ruta.cobrar', label: 'Registrar cobros', group: 'Cobranza' },
+  { id: 'ruta.devoluciones', label: 'Hacer devoluciones', group: 'Cobranza' },
+  // Clientes
+  { id: 'ruta.cliente_crear', label: 'Crear cliente nuevo', group: 'Clientes' },
+  { id: 'ruta.cliente_editar', label: 'Editar cliente', group: 'Clientes' },
+  { id: 'ruta.cliente_credito', label: 'Asignar límite de crédito', group: 'Clientes' },
+  // Otros
+  { id: 'ruta.gastos', label: 'Registrar gastos', group: 'Otros' },
+];
+
+export function getMobileModuloGroups(): string[] {
+  const seen = new Set<string>();
+  return MODULOS_MOVIL.reduce<string[]>((acc, m) => {
+    if (!seen.has(m.group)) { seen.add(m.group); acc.push(m.group); }
+    return acc;
+  }, []);
+}
+
 interface PermisosData {
   hasRole: boolean;
   permisos: Permiso[];
@@ -308,6 +352,18 @@ export function usePermisos(): UsePermisosReturn {
     return hasPermiso(modulo, 'ver');
   }, [hasPermiso]);
 
+  /**
+   * Permisos móviles (solo para roles "solo vista móvil").
+   * Semántica inversa: default = true (permitido) si no hay row en role_permisos.
+   * Owners siempre true. Solo se bloquea si existe un row con permitido=false.
+   */
+  const hasPermisoMovil = useCallback((modulo: string): boolean => {
+    if (isOwner) return true;
+    if (hasRole !== true) return true;
+    const perm = permisos.find(p => p.modulo === modulo && p.accion === 'ver');
+    return perm?.permitido ?? true;
+  }, [permisos, hasRole, isOwner]);
+
   const reload = useCallback(() => {
     refetch();
     window.dispatchEvent(new Event('uniline:permisos-changed'));
@@ -316,5 +372,5 @@ export function usePermisos(): UsePermisosReturn {
   // Para owners, no aplica solo_movil. Para roles solo_movil, redirigir directo a /ruta.
   const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo, !isOwner && roleSoloMovil);
 
-  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload, firstAccessibleRoute };
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, hasPermisoMovil, isOwner, reload, firstAccessibleRoute };
 }
