@@ -277,11 +277,15 @@ export default function CobranzaPage() {
                   className="rounded border-input h-4 w-4"
                   checked={items.length > 0 && items.every(c => sel.has(c.id))}
                   onChange={() => {
-                    const allSelected = items.every(c => sel.has(c.id));
-                    items.forEach(c => onToggleOne(c.id));
-                    // If all were selected, the toggles will unselect them all because toggle flips each one.
-                    // This is wrong. We need a dedicated onToggleGroup or handle it differently.
-                    // Let's fix: if all selected, unselect all; else select all.
+                    const allInGroupSelected = items.every(c => sel.has(c.id));
+                    setSelectedIds(prev => {
+                      const next = new Set(prev);
+                      items.forEach(c => {
+                        if (allInGroupSelected) next.delete(c.id);
+                        else next.add(c.id);
+                      });
+                      return next;
+                    });
                   }}
                 />
               </TableHead>
