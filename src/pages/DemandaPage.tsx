@@ -959,6 +959,21 @@ export default function DemandaPage() {
                   </div>
                 </div>
               )}
+
+              {surtirResult.errors.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-red-700 mb-1">Pedidos con error</p>
+                  <div className="border border-red-200 rounded-md divide-y divide-red-100">
+                    {surtirResult.errors.map(({ pedido, message }: any) => (
+                      <div key={pedido.id} className="p-2 text-[12px] flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-primary">{pedido.folio}</span>
+                        <span className="text-muted-foreground flex-1">{pedido.clientes?.nombre}</span>
+                        <span className="text-red-700 text-[11px] truncate max-w-[260px]" title={message}>{message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
