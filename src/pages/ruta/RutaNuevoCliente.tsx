@@ -268,32 +268,36 @@ export default function RutaNuevoCliente() {
             </select>
           </MField>
 
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Crédito?</label>
-            <button
-              type="button"
-              onClick={() => set('credito', !form.credito)}
-              className={cn(
-                "h-8 w-14 rounded-full transition-colors relative",
-                form.credito ? "bg-primary" : "bg-input"
-              )}
-            >
-              <span className={cn(
-                "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform",
-                form.credito ? "translate-x-7" : "translate-x-1"
-              )} />
-            </button>
-          </div>
+          {canAsignarCredito && (
+            <>
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Crédito?</label>
+                <button
+                  type="button"
+                  onClick={() => set('credito', !form.credito)}
+                  className={cn(
+                    "h-8 w-14 rounded-full transition-colors relative",
+                    form.credito ? "bg-primary" : "bg-input"
+                  )}
+                >
+                  <span className={cn(
+                    "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform",
+                    form.credito ? "translate-x-7" : "translate-x-1"
+                  )} />
+                </button>
+              </div>
 
-          {form.credito && (
-            <div className="grid grid-cols-2 gap-3">
-              <MField label="Límite crédito">
-                <input className={inputCls} type="number" placeholder="0.00" value={form.limite_credito ?? 0} onChange={e => set('limite_credito', +e.target.value)} />
-              </MField>
-              <MField label="Días crédito">
-                <input className={inputCls} type="number" placeholder="0" value={form.dias_credito ?? 0} onChange={e => set('dias_credito', +e.target.value)} />
-              </MField>
-            </div>
+              {form.credito && (
+                <div className="grid grid-cols-2 gap-3">
+                  <MField label="Límite crédito">
+                    <input className={inputCls} type="number" placeholder="0.00" value={form.limite_credito ?? 0} onChange={e => set('limite_credito', +e.target.value)} />
+                  </MField>
+                  <MField label="Días crédito">
+                    <input className={inputCls} type="number" placeholder="0" value={form.dias_credito ?? 0} onChange={e => set('dias_credito', +e.target.value)} />
+                  </MField>
+                </div>
+              )}
+            </>
           )}
         </section>
 
