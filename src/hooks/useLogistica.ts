@@ -2,20 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-// Pedidos pendientes del día (tipo=pedido, status confirmado or borrador)
-export function usePedidosPendientes(fecha: string, statusFilter?: string, vendedorFilter?: string) {
+// Pedidos pendientes en rango de fechas (tipo=pedido)
+export function usePedidosPendientes(
+  desde: string,
+  hasta: string,
+  statusFilter?: string,
+  vendedorFilter?: string,
+  clienteFilter?: string,
+) {
   return useQuery({
-    queryKey: ['logistica-pedidos', fecha, statusFilter, vendedorFilter],
+    queryKey: ['logistica-pedidos', desde, hasta, statusFilter, vendedorFilter, clienteFilter],
     queryFn: async () => {
       let q = supabase
         .from('ventas')
         .select('id, folio, fecha, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
         .eq('tipo', 'pedido')
-        .eq('fecha', fecha)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+        .order('fecha', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
+      if (clienteFilter) q = q.eq('cliente_id', clienteFilter);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -40,15 +49,16 @@ export function useCargaPedidos(cargaId?: string) {
   });
 }
 
-// Check which pedidos are already assigned to any carga on a date
-export function useAsignacionesFecha(fecha: string) {
+// Check which pedidos are already assigned to any carga in a date range
+export function useAsignacionesFecha(desde: string, hasta: string) {
   return useQuery({
-    queryKey: ['asignaciones-fecha', fecha],
+    queryKey: ['asignaciones-fecha', desde, hasta],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('carga_pedidos')
         .select('venta_id, carga_id, cargas!inner(fecha)')
-        .eq('cargas.fecha', fecha);
+        .gte('cargas.fecha', desde)
+        .lte('cargas.fecha', hasta);
       if (error) throw error;
       return data ?? [];
     },
