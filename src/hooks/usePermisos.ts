@@ -235,6 +235,48 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion-inicial': '', // always accessible
 };
 
+/**
+ * Permisos específicos para roles "Solo vista móvil" (app de ruta).
+ * Acción única implícita = 'ver'. Default cuando no hay registro = permitido (true)
+ * para no romper roles existentes; el admin debe destildar para bloquear.
+ */
+export interface ModuloMovilDef { id: string; label: string; group: string; description?: string; }
+
+export const MODULOS_MOVIL: ModuloMovilDef[] = [
+  // Vistas
+  { id: 'ruta.dashboard', label: 'Dashboard de ruta', group: 'Vistas' },
+  { id: 'ruta.clientes', label: 'Lista de clientes', group: 'Vistas' },
+  { id: 'ruta.mapa', label: 'Mapa', group: 'Vistas' },
+  { id: 'ruta.stock', label: 'Stock del camión', group: 'Vistas' },
+  { id: 'ruta.descarga', label: 'Descarga / Mi carga', group: 'Vistas' },
+  { id: 'ruta.entregas', label: 'Entregas / Pedidos', group: 'Vistas' },
+  { id: 'ruta.ventas_hist', label: 'Historial de ventas', group: 'Vistas' },
+  { id: 'ruta.cobros_hist', label: 'Historial de cobros', group: 'Vistas' },
+  // Acciones de venta
+  { id: 'ruta.vender', label: 'Crear ventas', group: 'Ventas', description: 'Hacer nuevas ventas desde ruta' },
+  { id: 'ruta.venta_credito', label: 'Vender a crédito', group: 'Ventas' },
+  { id: 'ruta.cambiar_precio', label: 'Cambiar precio en línea', group: 'Ventas' },
+  { id: 'ruta.aplicar_descuento', label: 'Aplicar descuento', group: 'Ventas' },
+  { id: 'ruta.cancelar_venta', label: 'Cancelar venta', group: 'Ventas' },
+  // Cobros / devoluciones
+  { id: 'ruta.cobrar', label: 'Registrar cobros', group: 'Cobranza' },
+  { id: 'ruta.devoluciones', label: 'Hacer devoluciones', group: 'Cobranza' },
+  // Clientes
+  { id: 'ruta.cliente_crear', label: 'Crear cliente nuevo', group: 'Clientes' },
+  { id: 'ruta.cliente_editar', label: 'Editar cliente', group: 'Clientes' },
+  { id: 'ruta.cliente_credito', label: 'Asignar límite de crédito', group: 'Clientes' },
+  // Otros
+  { id: 'ruta.gastos', label: 'Registrar gastos', group: 'Otros' },
+];
+
+export function getMobileModuloGroups(): string[] {
+  const seen = new Set<string>();
+  return MODULOS_MOVIL.reduce<string[]>((acc, m) => {
+    if (!seen.has(m.group)) { seen.add(m.group); acc.push(m.group); }
+    return acc;
+  }, []);
+}
+
 interface PermisosData {
   hasRole: boolean;
   permisos: Permiso[];
