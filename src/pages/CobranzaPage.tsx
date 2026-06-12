@@ -374,7 +374,7 @@ export default function CobranzaPage() {
     );
   };
 
-  const renderTable = (items: any[]) => <CobrosTable items={items} />;
+  const renderTable = (items: any[]) => <CobrosTable items={items} selected={selectedIds} onToggleOne={toggleSelectOne} />;
 
   const renderSummary = (items: any[]) => {
     const total = items.reduce((s: number, c: any) => s + ((c as any).status !== 'cancelado' ? (c.monto ?? 0) : 0), 0);
