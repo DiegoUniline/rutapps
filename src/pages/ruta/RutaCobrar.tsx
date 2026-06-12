@@ -206,6 +206,10 @@ export default function RutaCobrar() {
 
   const { fmt } = useCurrency();
 
+  if (!hasPermisoMovil('ruta.cobrar')) {
+    return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar cobros." />;
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
