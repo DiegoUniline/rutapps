@@ -191,6 +191,10 @@ export default function VentasListPage() {
       // Unlink cobros: cancel applications so saldos restore
       await supabase.from('cobro_aplicaciones').delete().in('venta_id', ids);
       toast.success(`${ids.length} venta(s) cancelada(s).`);
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
       setSelected(new Set());
       setBulkCancelOpen(false);
     } catch (e: any) {
