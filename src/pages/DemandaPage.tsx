@@ -796,6 +796,7 @@ export default function DemandaPage() {
                               <th className="text-left py-1 pr-2 font-medium">Código</th>
                               <th className="text-left py-1 pr-2 font-medium">Producto</th>
                               <th className="text-right py-1 pr-2 font-medium">Cantidad</th>
+                              <th className="text-right py-1 pr-2 font-medium">Surtido</th>
                               <th className="text-right py-1 pr-2 font-medium">Entregado</th>
                               <th className="text-right py-1 pr-2 font-medium">Pendiente</th>
                               <th className="text-right py-1 pr-2 font-medium">Precio</th>
@@ -808,7 +809,8 @@ export default function DemandaPage() {
                                 <td className="py-1 pr-2 font-mono text-[11px]">{l.productos?.codigo ?? '—'}</td>
                                 <td className="py-1 pr-2">{l.productos?.nombre ?? l.descripcion ?? '—'}</td>
                                 <td className="py-1 pr-2 text-right">{l.cantidad} {l.productos?.unidades?.abreviatura ?? ''}</td>
-                                <td className="py-1 pr-2 text-right">{l.cantidad_entregada}</td>
+                                <td className="py-1 pr-2 text-right text-amber-700">{l.cantidad_surtida}</td>
+                                <td className="py-1 pr-2 text-right text-green-700">{l.cantidad_entregada}</td>
                                 <td className={cn("py-1 pr-2 text-right font-medium", l.cantidad_pendiente > 0 ? "text-foreground" : "text-muted-foreground")}>{Math.max(0, l.cantidad_pendiente)}</td>
                                 <td className="py-1 pr-2 text-right">{fmt(l.precio_unitario)}</td>
                                 <td className="py-1 text-right font-medium">{fmt(l.cantidad * l.precio_unitario)}</td>
