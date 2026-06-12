@@ -560,28 +560,28 @@ export default function DemandaPage() {
   }, [selectedPedidos]);
 
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
-  const [asignarVendedorId, setAsignarVendedorId] = useState('');
+  const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
 
-  // ── Asignar / Cambiar vendedor de ruta en entregas activas ──
-  const asignarVendedorMut = useMutation({
+  // ── Asignar / Cambiar repartidor en entregas activas ──
+  const asignarRepartidorMut = useMutation({
     mutationFn: async () => {
-      if (!asignarVendedorId) throw new Error('Selecciona un vendedor');
+      if (!asignarRepartidorId) throw new Error('Selecciona un repartidor');
       const ids = selectedPedidos
         .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
         .map(p => p.id);
       if (ids.length === 0) throw new Error('No hay entregas activas para asignar');
       const { error } = await supabase
         .from('entregas')
-        .update({ vendedor_ruta_id: asignarVendedorId } as any)
+        .update({ vendedor_ruta_id: asignarRepartidorId } as any)
         .in('pedido_id', ids)
         .not('status', 'in', '(hecho,cancelado)');
       if (error) throw error;
       return ids.length;
     },
     onSuccess: (n) => {
-      toast.success(`Vendedor asignado a ${n} pedido(s)`);
+      toast.success(`Repartidor asignado a ${n} pedido(s)`);
       setShowAsignarDialog(false);
-      setAsignarVendedorId('');
+      setAsignarRepartidorId('');
       setSelectedIds(new Set());
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
     },
@@ -663,7 +663,7 @@ export default function DemandaPage() {
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 <UserPlus className="h-3.5 w-3.5" />
-                {selectionState.enRutaSel ? 'Cambiar vendedor' : 'Asignar vendedor'}
+                {selectionState.enRutaSel ? 'Cambiar repartidor' : 'Asignar repartidor'}
               </Button>
             )}
             {selectionState.conEntregaActiva && (
@@ -932,7 +932,7 @@ export default function DemandaPage() {
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={11} className="bg-muted/30 p-0">
+                    <TableCell colSpan={12} className="bg-muted/30 p-0">
                       <div className="px-6 py-3 space-y-3">
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted-foreground">
                           {pedido.clientes?.direccion && <span><strong className="text-foreground">Dirección:</strong> {pedido.clientes.direccion}</span>}
@@ -1011,7 +1011,7 @@ export default function DemandaPage() {
                 />
               </div>
               <div>
-                <label className="label-odoo">Repartidor / Vendedor de ruta</label>
+                <label className="label-odoo">Repartidor</label>
                 <ModalSelect
                   options={vendedorOptions}
                   value={vendedorRutaId}
@@ -1101,13 +1101,13 @@ export default function DemandaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Asignar / Cambiar vendedor de ruta dialog */}
+      {/* Asignar / Cambiar repartidor dialog */}
       <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-purple-600" />
-              {selectionState.enRutaSel ? 'Cambiar vendedor de ruta' : 'Asignar vendedor de ruta'}
+              {selectionState.enRutaSel ? 'Cambiar repartidor' : 'Asignar repartidor'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -1115,9 +1115,9 @@ export default function DemandaPage() {
               Se asignará a las entregas activas de {selectedPedidos.length} pedido(s) seleccionado(s).
             </p>
             <div>
-              <Label className="text-xs">Vendedor</Label>
-              <Select value={asignarVendedorId} onValueChange={setAsignarVendedorId}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar vendedor" /></SelectTrigger>
+              <Label className="text-xs">Repartidor</Label>
+              <Select value={asignarRepartidorId} onValueChange={setAsignarRepartidorId}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar repartidor" /></SelectTrigger>
                 <SelectContent>
                   {vendedorOptions.map(v => (
                     <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
@@ -1129,12 +1129,12 @@ export default function DemandaPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
             <Button
-              onClick={() => asignarVendedorMut.mutate()}
-              disabled={asignarVendedorMut.isPending || !asignarVendedorId}
+              onClick={() => asignarRepartidorMut.mutate()}
+              disabled={asignarRepartidorMut.isPending || !asignarRepartidorId}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              {asignarVendedorMut.isPending ? 'Asignando...' : 'Asignar'}
+              {asignarRepartidorMut.isPending ? 'Asignando...' : 'Asignar'}
             </Button>
           </DialogFooter>
         </DialogContent>
