@@ -32,10 +32,11 @@ export default function PedidosPendientesPage() {
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'pendientes' | 'entregados' | 'cancelados' | 'todos'>('pendientes');
-  const [vendedorFilter, setVendedorFilter] = useState<string>('');
+  const [vendedoresSel, setVendedoresSel] = useState<string[]>([]);
   const [clienteFilter, setClienteFilter] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Pass 'todos' so hook does not filter by status; we apply tab grouping client-side
   const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, 'todos', vendedorFilter || undefined, clienteFilter || undefined, fechaTipo);
