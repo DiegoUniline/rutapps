@@ -575,23 +575,101 @@ export default function DemandaPage() {
   const [asignarRepartidorId, setAsignarRepartidorId] = useState('');
 
   // ── Asignar / Cambiar repartidor en entregas activas ──
+  // Además de fijar vendedor_ruta_id, transiciona la entrega:
+  //   surtido → asignado → cargado  (para que el trigger de BD
+  //   trg_apply_entrega_cargado_inventory mueva el stock al almacén del repartidor)
   const asignarRepartidorMut = useMutation({
     mutationFn: async () => {
       if (!asignarRepartidorId) throw new Error('Selecciona un repartidor');
-      const ids = selectedPedidos
+
+      // Validar que el repartidor tiene almacén asignado
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('almacen_id, nombre')
+        .eq('id', asignarRepartidorId)
+        .maybeSingle();
+      if (!prof?.almacen_id) {
+        throw new Error(`El repartidor ${prof?.nombre ?? ''} no tiene almacén asignado en su perfil. Configúralo antes de cargar.`);
+      }
+
+      const pedidoIds = selectedPedidos
         .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
         .map(p => p.id);
-      if (ids.length === 0) throw new Error('No hay entregas activas para asignar');
-      const { error } = await supabase
+      if (pedidoIds.length === 0) throw new Error('No hay entregas activas para asignar');
+
+      // Traer entregas activas afectadas
+      const { data: entregas, error: eErr } = await supabase
         .from('entregas')
-        .update({ vendedor_ruta_id: asignarRepartidorId } as any)
-        .in('pedido_id', ids)
+        .select('id, status, folio')
+        .in('pedido_id', pedidoIds)
         .not('status', 'in', '(hecho,cancelado)');
-      if (error) throw error;
-      return ids.length;
+      if (eErr) throw eErr;
+      if (!entregas || entregas.length === 0) throw new Error('No hay entregas activas para asignar');
+
+      const nowIso = new Date().toISOString();
+      let cargadas = 0;
+      let soloAsignadas = 0;
+      let reasignadas = 0;
+      const errores: string[] = [];
+
+      for (const ent of entregas) {
+        const st = ent.status as string;
+        try {
+          if (st === 'borrador' || st === 'pendiente') {
+            // No surtido aún: sólo asignar repartidor, no se puede cargar stock
+            await supabase.from('entregas').update({
+              vendedor_ruta_id: asignarRepartidorId,
+              status: 'asignado',
+              fecha_asignacion: nowIso,
+            } as any).eq('id', ent.id);
+            soloAsignadas++;
+          } else if (st === 'surtido') {
+            // Surtido: asignar + cargar (trigger mueve stock origen → almacén repartidor)
+            await supabase.from('entregas').update({
+              vendedor_ruta_id: asignarRepartidorId,
+              status: 'asignado',
+              fecha_asignacion: nowIso,
+            } as any).eq('id', ent.id);
+            await supabase.from('entregas').update({
+              status: 'cargado',
+              fecha_carga: nowIso,
+            } as any).eq('id', ent.id);
+            cargadas++;
+          } else if (st === 'asignado') {
+            // Ya asignado pero no cargado: cambiar repartidor y cargar
+            await supabase.from('entregas').update({
+              vendedor_ruta_id: asignarRepartidorId,
+              fecha_asignacion: nowIso,
+            } as any).eq('id', ent.id);
+            await supabase.from('entregas').update({
+              status: 'cargado',
+              fecha_carga: nowIso,
+            } as any).eq('id', ent.id);
+            cargadas++;
+          } else {
+            // cargado / en_ruta: sólo reasignar repartidor (stock ya movido)
+            await supabase.from('entregas').update({
+              vendedor_ruta_id: asignarRepartidorId,
+            } as any).eq('id', ent.id);
+            reasignadas++;
+          }
+        } catch (err: any) {
+          errores.push(`${ent.folio ?? ent.id.slice(0, 8)}: ${err?.message ?? 'error'}`);
+        }
+      }
+
+      if (errores.length > 0 && cargadas + soloAsignadas + reasignadas === 0) {
+        throw new Error(errores.join(' · '));
+      }
+      return { cargadas, soloAsignadas, reasignadas, errores };
     },
-    onSuccess: (n) => {
-      toast.success(`Repartidor asignado a ${n} pedido(s)`);
+    onSuccess: ({ cargadas, soloAsignadas, reasignadas, errores }) => {
+      const partes: string[] = [];
+      if (cargadas) partes.push(`${cargadas} cargada(s) al almacén del repartidor`);
+      if (soloAsignadas) partes.push(`${soloAsignadas} asignada(s) (pendientes de surtir)`);
+      if (reasignadas) partes.push(`${reasignadas} repartidor cambiado`);
+      toast.success(partes.join(' · ') || 'Asignación aplicada');
+      if (errores.length > 0) toast.error(`Errores: ${errores.slice(0, 3).join(' · ')}`);
       setShowAsignarDialog(false);
       setAsignarRepartidorId('');
       setSelectedIds(new Set());
@@ -599,6 +677,9 @@ export default function DemandaPage() {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
     onError: (err: any) => toast.error(err.message),
   });
