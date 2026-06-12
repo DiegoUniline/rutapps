@@ -153,6 +153,8 @@ function usePedidosPendientes(filters: DemandaFilters) {
           fullyDelivered,
           enRuta,
           estadoOdoo,
+          fechaProgramada: pedidoMeta[p.id]?.fecha ?? null,
+          vendedorRutaId: pedidoMeta[p.id]?.vendedorRutaId ?? null,
         };
       });
     },
