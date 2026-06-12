@@ -55,13 +55,14 @@ export function useAsignacionesFecha(desde: string, hasta: string) {
   return useQuery({
     queryKey: ['asignaciones-fecha', desde, hasta],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('carga_pedidos')
-        .select('venta_id, carga_id, cargas!inner(fecha)')
-        .gte('cargas.fecha', desde)
-        .lte('cargas.fecha', hasta);
-      if (error) throw error;
-      return data ?? [];
+      return await fetchAllPages((from, to) =>
+        supabase
+          .from('carga_pedidos')
+          .select('venta_id, carga_id, cargas!inner(fecha)')
+          .gte('cargas.fecha', desde)
+          .lte('cargas.fecha', hasta)
+          .range(from, to)
+      );
     },
   });
 }
