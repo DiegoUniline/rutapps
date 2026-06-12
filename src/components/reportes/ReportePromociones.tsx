@@ -1,16 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
 
 export function ReportePromociones({ desde, hasta }: { desde: string; hasta: string }) {
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
 
   const { data: promoAplicadas, isLoading } = useQuery({
-    queryKey: ['reporte-promociones', desde, hasta],
+    queryKey: ['reporte-promociones', empresaId, desde, hasta],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
+      const eid = requireEmpresa(empresaId, 'ReportePromociones');
       const { data } = await supabase
         .from('promocion_aplicada')
-        .select('*, promociones(nombre, tipo, valor), ventas(folio, fecha, total, clientes(nombre))')
+        .select('id, promocion_id, descuento_aplicado, created_at, promociones!inner(nombre, tipo, valor, empresa_id), ventas!inner(folio, fecha, total, empresa_id, clientes(nombre))')
+        .eq('ventas.empresa_id', eid)
         .gte('created_at', desde)
         .lte('created_at', hasta + 'T23:59:59')
         .order('created_at', { ascending: false });
@@ -19,11 +26,14 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
   });
 
   const { data: promociones } = useQuery({
-    queryKey: ['reporte-promo-summary', desde, hasta],
+    queryKey: ['reporte-promo-summary', empresaId, desde, hasta],
+    enabled: hasEmpresa(empresaId),
     queryFn: async () => {
+      const eid = requireEmpresa(empresaId, 'ReportePromociones.summary');
       const { data } = await supabase
         .from('promocion_aplicada')
-        .select('promocion_id, descuento_aplicado, promociones(nombre, tipo)')
+        .select('promocion_id, descuento_aplicado, promociones!inner(nombre, tipo), ventas!inner(empresa_id)')
+        .eq('ventas.empresa_id', eid)
         .gte('created_at', desde)
         .lte('created_at', hasta + 'T23:59:59');
       
@@ -44,6 +54,7 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
       return Object.values(summary).sort((a, b) => b.totalDescuento - a.totalDescuento);
     },
   });
+
 
   if (isLoading) return <p className="text-center py-8 text-muted-foreground">Cargando...</p>;
 
