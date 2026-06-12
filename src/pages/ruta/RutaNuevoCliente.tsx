@@ -56,7 +56,7 @@ export default function RutaNuevoCliente() {
     notas: '',
   });
   const [capturingGps, setCapturingGps] = useState(false);
-  const [, setShowExtra] = useState(false); void setShowExtra;
+  
   const [saving, setSaving] = useState(false);
 
   const set = (key: keyof Cliente, value: any) => setForm(prev => ({ ...prev, [key]: value }));
