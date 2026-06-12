@@ -2410,6 +2410,33 @@ export type Database = {
           },
         ]
       }
+      distancia_cache: {
+        Row: {
+          destino_hash: string
+          distancia_m: number
+          duracion_s: number
+          empresa_id: string
+          origen_hash: string
+          updated_at: string
+        }
+        Insert: {
+          destino_hash: string
+          distancia_m: number
+          duracion_s?: number
+          empresa_id: string
+          origen_hash: string
+          updated_at?: string
+        }
+        Update: {
+          destino_hash?: string
+          distancia_m?: number
+          duracion_s?: number
+          empresa_id?: string
+          origen_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -5241,6 +5268,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ruta_polyline_cache: {
+        Row: {
+          created_at: string
+          distancia_total_m: number | null
+          duracion_total_s: number | null
+          empresa_id: string
+          encoded_polyline: string
+          id: string
+          vendedor_id: string
+          waypoints_hash: string
+        }
+        Insert: {
+          created_at?: string
+          distancia_total_m?: number | null
+          duracion_total_s?: number | null
+          empresa_id: string
+          encoded_polyline: string
+          id?: string
+          vendedor_id: string
+          waypoints_hash: string
+        }
+        Update: {
+          created_at?: string
+          distancia_total_m?: number | null
+          duracion_total_s?: number | null
+          empresa_id?: string
+          encoded_polyline?: string
+          id?: string
+          vendedor_id?: string
+          waypoints_hash?: string
+        }
+        Relationships: []
       }
       ruta_sesiones: {
         Row: {
