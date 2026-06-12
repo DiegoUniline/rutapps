@@ -81,15 +81,26 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const surtidoMap: Record<string, Record<string, number>> = {};
       const entregadoMap: Record<string, Record<string, number>> = {};
       const enRutaSet = new Set<string>(); // pedidos con al menos una entrega en_ruta/asignado/cargado
-      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null }> = {};
+      const pedidoMeta: Record<string, { fecha?: string | null; vendedorRutaId?: string | null; fechaEntrega?: string | null }> = {};
       for (const e of entregasData) {
         if (!e.pedido_id || e.status === 'cancelado') continue;
-        // Track latest active entrega meta (fecha programada + repartidor)
+        // Track latest active entrega meta (fecha programada + repartidor + fecha entrega)
         const prev = pedidoMeta[e.pedido_id];
         if (!prev || (e.fecha && (!prev.fecha || new Date(e.fecha) > new Date(prev.fecha)))) {
-          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null };
+          pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? prev?.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? prev?.vendedorRutaId ?? null, fechaEntrega: prev?.fechaEntrega ?? null };
         } else if (!prev.vendedorRutaId && e.vendedor_ruta_id) {
           prev.vendedorRutaId = e.vendedor_ruta_id;
+        }
+        // Track actual delivery date from completed entregas
+        if (e.status === 'hecho' && e.fecha_entrega) {
+          const current = pedidoMeta[e.pedido_id];
+          if (current) {
+            if (!current.fechaEntrega || new Date(e.fecha_entrega) > new Date(current.fechaEntrega)) {
+              current.fechaEntrega = e.fecha_entrega;
+            }
+          } else {
+            pedidoMeta[e.pedido_id] = { fecha: e.fecha ?? null, vendedorRutaId: e.vendedor_ruta_id ?? null, fechaEntrega: e.fecha_entrega };
+          }
         }
         if (e.status === 'borrador') {
           if (!generadaMap[e.pedido_id]) generadaMap[e.pedido_id] = {};
