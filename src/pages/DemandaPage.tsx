@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Fragment } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,7 @@ interface DemandaFilters {
   desde: string;
   hasta: string;
   fechaTipo: 'fecha' | 'fecha_entrega';
-  vendedorId?: string;
+  vendedorIds?: string[];
   statuses: string[]; // which ventas.status to load
 }
 
@@ -40,7 +41,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
       const pedidos = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+          .select('*, clientes(nombre, direccion, telefono), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
           .eq('empresa_id', empresa!.id)
           .eq('tipo', 'pedido')
           .in('status', filters.statuses as any)
@@ -48,7 +49,7 @@ function usePedidosPendientes(filters: DemandaFilters) {
           .lte(filters.fechaTipo, filters.hasta)
           .order(filters.fechaTipo, { ascending: true })
           .range(from, to);
-        if (filters.vendedorId) q = q.eq('vendedor_id', filters.vendedorId);
+        if (filters.vendedorIds && filters.vendedorIds.length > 0) q = q.in('vendedor_id', filters.vendedorIds);
         return q;
       });
 
