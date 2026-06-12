@@ -137,8 +137,10 @@ export default function DemandaPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
+  const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
+  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[] }>(null);
 
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
