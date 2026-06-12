@@ -303,6 +303,142 @@ export default function DemandaPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ── Surtir masivo: auto-fulfill with available stock ──
+  const surtirMasivoMut = useMutation({
+    mutationFn: async () => {
+      if (!almacenId) throw new Error('Selecciona un almacén');
+      if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
+
+      // 1) Auto-confirm borradores
+      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      if (borradorIds.length > 0) {
+        await supabase.from('ventas').update({ status: 'confirmado' }).in('id', borradorIds).eq('status', 'borrador');
+      }
+
+      // 2) Get current stock for all needed products in this almacen
+      const productoIds = Array.from(new Set(
+        selectedPedidos.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => l.producto_id))
+      ));
+      const stockMap: Record<string, number> = {};
+      if (productoIds.length > 0) {
+        const chunkSize = 200;
+        for (let i = 0; i < productoIds.length; i += chunkSize) {
+          const chunk = productoIds.slice(i, i + chunkSize);
+          const { data } = await supabase.from('n_almacen' as any)
+            .select('producto_id, cantidad')
+            .eq('almacen_id', almacenId)
+            .in('producto_id', chunk);
+          for (const r of (data ?? []) as any[]) {
+            stockMap[r.producto_id] = (stockMap[r.producto_id] ?? 0) + Number(r.cantidad ?? 0);
+          }
+        }
+      }
+
+      const fully: any[] = [], partial: any[] = [], none: any[] = [];
+
+      for (const pedido of selectedPedidos) {
+        const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
+        if (pendientes.length === 0) continue;
+
+        // Decide what to surtir for each line based on remaining stock
+        const planLineas = pendientes.map((l: any) => {
+          const need = Math.max(0, l.cantidad_pendiente);
+          const avail = stockMap[l.producto_id] ?? 0;
+          const give = Math.min(need, Math.max(0, avail));
+          stockMap[l.producto_id] = avail - give;
+          return { ...l, give, faltante: need - give };
+        });
+
+        const totalGive = planLineas.reduce((s, l) => s + l.give, 0);
+        const totalFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
+
+        // Skip pedidos with zero stock for everything
+        if (totalGive === 0) {
+          none.push({ pedido, faltantes: planLineas.filter(l => l.faltante > 0) });
+          continue;
+        }
+
+        // Get orden_entrega
+        let ordenEntrega = 0;
+        if (pedido.cliente_id) {
+          const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
+          ordenEntrega = cli?.orden ?? 0;
+        }
+
+        // Create entrega
+        const { data: entrega, error: eErr } = await supabase.from('entregas').insert({
+          empresa_id: empresa!.id,
+          pedido_id: pedido.id,
+          vendedor_id: pedido.vendedor_id ?? null,
+          cliente_id: pedido.cliente_id,
+          almacen_id: almacenId,
+          vendedor_ruta_id: vendedorRutaId || null,
+          status: 'borrador',
+          orden_entrega: ordenEntrega,
+        } as any).select('id, folio').single();
+        if (eErr) throw eErr;
+
+        // Insert lines with cantidad_pedida = pendiente
+        const { data: createdLines, error: lErr } = await supabase.from('entrega_lineas').insert(
+          planLineas.map(l => ({
+            entrega_id: entrega.id,
+            producto_id: l.producto_id,
+            unidad_id: l.unidad_id ?? null,
+            cantidad_pedida: Math.max(0, l.cantidad_pendiente),
+            cantidad_entregada: 0,
+            hecho: false,
+            almacen_origen_id: almacenId,
+          }))
+        ).select('id, producto_id');
+        if (lErr) throw lErr;
+
+        // Surtir each line that has give > 0 via RPC (atomic stock deduction)
+        const lineIdByProd: Record<string, string> = {};
+        for (const cl of (createdLines ?? []) as any[]) lineIdByProd[cl.producto_id] = cl.id;
+
+        for (const l of planLineas) {
+          if (l.give <= 0) continue;
+          const lineId = lineIdByProd[l.producto_id];
+          if (!lineId) continue;
+          const { error } = await supabase.rpc('surtir_linea_entrega', {
+            p_linea_id: lineId,
+            p_producto_id: l.producto_id,
+            p_almacen_origen_id: almacenId,
+            p_cantidad_surtida: l.give,
+            p_entrega_id: entrega.id,
+            p_empresa_id: empresa!.id,
+            p_user_id: undefined,
+          } as any);
+          if (error) throw new Error(error.message);
+        }
+
+        // Update entrega status: surtido if everything filled, else borrador (partial)
+        if (totalFaltante === 0) {
+          await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
+          fully.push({ pedido, entrega });
+        } else {
+          partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
+        }
+      }
+
+      return { fully, partial, none };
+    },
+    onSuccess: (res) => {
+      const total = res.fully.length + res.partial.length + res.none.length;
+      toast.success(`${res.fully.length}/${total} pedidos surtidos completos · ${res.partial.length} parcial · ${res.none.length} sin stock`);
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      qc.invalidateQueries({ queryKey: ['n-almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      setSelectedIds(new Set());
+      setShowSurtirDialog(false);
+      setSurtirResult(res);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
   // Totals
