@@ -40,6 +40,9 @@ export default function RutaNuevoCliente() {
   const [searchParams] = useSearchParams();
   const vendedorIdParam = searchParams.get('vendedorId');
   const { profile, empresa } = useAuth();
+  const { hasPermisoMovil } = usePermisos();
+  const canCrear = hasPermisoMovil('ruta.cliente_crear');
+  const canAsignarCredito = hasPermisoMovil('ruta.cliente_credito');
   const saveMutation = useSaveCliente();
 
   const { data: zonas } = useZonas();
