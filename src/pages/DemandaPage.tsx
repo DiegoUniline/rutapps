@@ -381,11 +381,28 @@ export default function DemandaPage() {
       if (!almacenId) throw new Error('Selecciona un almacén');
       if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
 
+      // Si se eligió repartidor en este diálogo, validar que tenga almacén
+      // para poder transicionar a 'cargado' y disparar el trigger de BD que
+      // mueve stock origen → almacén del repartidor.
+      let repartidorAlmacenOk = false;
+      if (vendedorRutaId) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('almacen_id, nombre')
+          .eq('id', vendedorRutaId)
+          .maybeSingle();
+        if (!prof?.almacen_id) {
+          throw new Error(`El repartidor ${prof?.nombre ?? ''} no tiene almacén asignado en su perfil. Configúralo antes de cargar.`);
+        }
+        repartidorAlmacenOk = true;
+      }
+
       // 1) Auto-confirm borradores
       const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
       if (borradorIds.length > 0) {
         await supabase.from('ventas').update({ status: 'confirmado' }).in('id', borradorIds).eq('status', 'borrador');
       }
+
 
       // 2) Get current stock for all needed products in this almacen
       const productoIds = Array.from(new Set(
@@ -529,6 +546,20 @@ export default function DemandaPage() {
 
           if (recompFaltante === 0 && surtidasOk > 0) {
             await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
+            // Si se seleccionó repartidor, transicionar asignado → cargado para
+            // que el trigger mueva el stock al almacén del repartidor.
+            if (repartidorAlmacenOk && vendedorRutaId) {
+              const nowIso = new Date().toISOString();
+              await supabase.from('entregas').update({
+                vendedor_ruta_id: vendedorRutaId,
+                status: 'asignado',
+                fecha_asignacion: nowIso,
+              } as any).eq('id', entrega.id);
+              await supabase.from('entregas').update({
+                status: 'cargado',
+                fecha_carga: nowIso,
+              } as any).eq('id', entrega.id);
+            }
             fully.push({ pedido, entrega });
           } else if (surtidasOk > 0) {
             partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
@@ -536,6 +567,7 @@ export default function DemandaPage() {
             // entrega exists but nothing got surtido (race condition with stock)
             none.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
           }
+
         } catch (err: any) {
           console.error(`Error procesando pedido ${pedido.folio}:`, err);
           errors.push({ pedido, message: err?.message ?? 'Error desconocido' });
