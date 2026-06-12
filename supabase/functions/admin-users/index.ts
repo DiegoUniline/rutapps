@@ -255,6 +255,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-user") {
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { email, password, nombre, role_id, almacen_id } = params;
 
       // Check if email already exists in auth system BEFORE attempting to create
