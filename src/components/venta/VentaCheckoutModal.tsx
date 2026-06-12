@@ -85,7 +85,26 @@ export function VentaCheckoutModal({
     return unique;
   }, [total, cuentasPendientes]);
 
+  // Credit limit & overdue validation
+  const saldoPendienteOtras = useMemo(
+    () => cuentasPendientes.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0),
+    [cuentasPendientes]
+  );
+  const cuentasVencidas = useMemo(() => {
+    const today = Date.now();
+    return cuentasPendientes.filter(c => {
+      const dc = c.dias_credito ?? 0;
+      const f = new Date(c.fecha).getTime();
+      const diasTrans = Math.floor((today - f) / 86400000);
+      return diasTrans > dc;
+    });
+  }, [cuentasPendientes]);
+  const creditoDisponible = Math.max(0, (clienteLimiteCredito ?? 0) - saldoPendienteOtras);
+  const excedeCredito = condicion === 'credito' && clienteCredito && total > creditoDisponible;
+  const tieneVencidas = cuentasVencidas.length > 0;
+
   const handleConfirm = () => {
+
     if (condicion === 'credito') {
       onConfirm([], 'credito');
       return;
