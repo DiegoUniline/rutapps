@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2 } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate, todayLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
@@ -20,30 +23,52 @@ import PedidosTabs from '@/components/PedidosTabs';
 
 // ─── Data hooks ────────────────────────────────────────────
 
-function usePedidosPendientes() {
+interface DemandaFilters {
+  desde: string;
+  hasta: string;
+  fechaTipo: 'fecha' | 'fecha_entrega';
+  vendedorId?: string;
+  statuses: string[]; // which ventas.status to load
+}
+
+function usePedidosPendientes(filters: DemandaFilters) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['demanda', empresa?.id],
+    queryKey: ['demanda', empresa?.id, filters],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data: pedidos, error } = await supabase
-        .from('ventas')
-        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
-        .eq('empresa_id', empresa!.id)
-        .eq('tipo', 'pedido')
-        .in('status', ['borrador', 'confirmado', 'entregado'])
-        .order('fecha', { ascending: true });
-      if (error) throw error;
+      const pedidos = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+          .eq('empresa_id', empresa!.id)
+          .eq('tipo', 'pedido')
+          .in('status', filters.statuses as any)
+          .gte(filters.fechaTipo, filters.desde)
+          .lte(filters.fechaTipo, filters.hasta)
+          .order(filters.fechaTipo, { ascending: true })
+          .range(from, to);
+        if (filters.vendedorId) q = q.eq('vendedor_id', filters.vendedorId);
+        return q;
+      });
 
       // Get delivered quantities from entregas
-      const pedidoIds = (pedidos ?? []).map(p => p.id);
+      const pedidoIds = pedidos.map(p => p.id);
       let entregasData: any[] = [];
       if (pedidoIds.length > 0) {
-        const { data } = await supabase
-          .from('entregas')
-          .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
-          .in('pedido_id', pedidoIds);
-        entregasData = data ?? [];
+        // Chunk pedidoIds to avoid URL limits, paginate each chunk
+        const chunkSize = 200;
+        for (let i = 0; i < pedidoIds.length; i += chunkSize) {
+          const chunk = pedidoIds.slice(i, i + chunkSize);
+          const part = await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('entregas')
+              .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+              .in('pedido_id', chunk)
+              .range(from, to)
+          );
+          entregasData.push(...part);
+        }
       }
 
       // Only count entregas that are NOT cancelado
@@ -56,7 +81,7 @@ function usePedidosPendientes() {
         }
       }
 
-      return (pedidos ?? []).map(p => {
+      return pedidos.map(p => {
         const delivered = deliveryMap[p.id] ?? {};
         const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
           ...l,
@@ -73,10 +98,11 @@ function usePedidosPendientes() {
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
           fullyDelivered: totalPendiente <= 0,
         };
-      }).filter(p => !p.fullyDelivered);
+      });
     },
   });
 }
+
 
 // ─── Component ────────────────────────────────────────────
 
@@ -85,8 +111,28 @@ export default function DemandaPage() {
   const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: pedidos, isLoading } = usePedidosPendientes();
+  const today = todayLocal();
+
+  // ── Filters ──
+  const [tab, setTab] = useState<'pendientes' | 'entregados' | 'todos'>('pendientes');
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
+  const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
+  const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [search, setSearch] = useState('');
+
+  const statusesForTab = tab === 'entregados'
+    ? ['entregado']
+    : tab === 'todos'
+      ? ['borrador', 'confirmado', 'entregado']
+      : ['borrador', 'confirmado', 'entregado']; // 'pendientes' loads all then filters client-side by !fullyDelivered
+
+  const { data: pedidos, isLoading } = usePedidosPendientes({
+    desde, hasta, fechaTipo,
+    vendedorId: vendedorFilter || undefined,
+    statuses: statusesForTab,
+  });
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
@@ -114,13 +160,30 @@ export default function DemandaPage() {
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOptions = (vendedoresList ?? []).map(v => ({ value: v.id, label: v.nombre }));
 
-  const filtered = useMemo(() =>
-    pedidos?.filter(p =>
-      !search || (p.clientes?.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
-    ) ?? [],
-    [pedidos, search]
-  );
+  // Counts per tab (based on currently-loaded set)
+  const counts = useMemo(() => {
+    const list = pedidos ?? [];
+    return {
+      pendientes: list.filter(p => !p.fullyDelivered).length,
+      entregados: list.filter(p => p.fullyDelivered || p.status === 'entregado').length,
+      todos: list.length,
+    };
+  }, [pedidos]);
+
+  const filtered = useMemo(() => {
+    let list = pedidos ?? [];
+    if (tab === 'pendientes') list = list.filter(p => !p.fullyDelivered);
+    else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered || p.status === 'entregado');
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(p =>
+        (p.clientes?.nombre ?? '').toLowerCase().includes(s) ||
+        (p.folio ?? '').toLowerCase().includes(s)
+      );
+    }
+    return list;
+  }, [pedidos, search, tab]);
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -290,16 +353,83 @@ export default function DemandaPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-end bg-card border border-border rounded-lg p-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Filtrar por</Label>
+          <Select value={fechaTipo} onValueChange={(v: any) => setFechaTipo(v)}>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fecha">Fecha de pedido</SelectItem>
+              <SelectItem value="fecha_entrega">Fecha de entrega</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        {selectedIds.size > 0 && (
-          <p className="text-sm text-muted-foreground">{selectedIds.size} seleccionado{selectedIds.size > 1 ? 's' : ''}</p>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Desde</Label>
+          <Input type="date" className="h-9 w-[150px]" value={desde} onChange={e => setDesde(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Hasta</Label>
+          <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
+          <Select value={vendedorFilter || 'all'} onValueChange={v => setVendedorFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los vendedores</SelectItem>
+              {(vendedoresList ?? []).map((v: any) => (
+                <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+          <Label className="text-[11px] text-muted-foreground">Buscar</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+        {(vendedorFilter || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+          <Button variant="ghost" size="sm" className="h-9" onClick={() => {
+            setVendedorFilter(''); setSearch(''); setTab('pendientes');
+            setDesde(today); setHasta(today); setFechaTipo('fecha');
+          }}>
+            <X className="h-3.5 w-3.5 mr-1" /> Limpiar
+          </Button>
         )}
       </div>
+
+      {/* Status tabs */}
+      <div className="border-b border-border">
+        <nav className="flex gap-1 -mb-px">
+          {([
+            { key: 'pendientes', label: 'Pendientes', count: counts.pendientes },
+            { key: 'entregados', label: 'Entregados', count: counts.entregados },
+            { key: 'todos', label: 'Todos', count: counts.todos },
+          ] as const).map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                tab === t.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              {t.label} <span className="ml-1 text-xs opacity-70">({t.count})</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {selectedIds.size > 0 && (
+        <p className="text-sm text-muted-foreground">{selectedIds.size} seleccionado{selectedIds.size > 1 ? 's' : ''}</p>
+      )}
+
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
 
