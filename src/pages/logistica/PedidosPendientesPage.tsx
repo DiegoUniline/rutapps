@@ -39,7 +39,7 @@ export default function PedidosPendientesPage() {
   const { data: pedidos, isLoading } = usePedidosPendientes(desde, hasta, statusFilter, vendedorFilter || undefined, clienteFilter || undefined);
   const { data: asignaciones } = useAsignacionesFecha(desde, hasta);
   const { data: cargas } = useCargasDia(hasta);
-  const { data: usuarios } = useUsuarios();
+  const { profiles: usuarios } = useUsuarios();
   const { data: clientes } = useClientes();
   const asignar = useAsignarPedidos();
 
