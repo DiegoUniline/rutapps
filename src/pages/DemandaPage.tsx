@@ -540,6 +540,68 @@ export default function DemandaPage() {
 
   const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
+  // ── Contextual selection state ──
+  const selectionState = useMemo(() => {
+    const needsSurtir = selectedPedidos.some(p => p.totalPendiente > 0 || (!p.fullySurtido && !p.enRuta && !p.fullyDelivered));
+    const surtidosSinRuta = selectedPedidos.some(p => p.fullySurtido && !p.enRuta && !p.fullyDelivered);
+    const enRutaSel = selectedPedidos.some(p => p.enRuta && !p.fullyDelivered);
+    const conEntregaActiva = selectedPedidos.some(p => (p.totalGenerada + p.totalSurtido) > 0 && !p.fullyDelivered);
+    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva };
+  }, [selectedPedidos]);
+
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+  const [asignarVendedorId, setAsignarVendedorId] = useState('');
+
+  // ── Asignar / Cambiar vendedor de ruta en entregas activas ──
+  const asignarVendedorMut = useMutation({
+    mutationFn: async () => {
+      if (!asignarVendedorId) throw new Error('Selecciona un vendedor');
+      const ids = selectedPedidos
+        .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
+        .map(p => p.id);
+      if (ids.length === 0) throw new Error('No hay entregas activas para asignar');
+      const { error } = await supabase
+        .from('entregas')
+        .update({ vendedor_ruta_id: asignarVendedorId } as any)
+        .in('pedido_id', ids)
+        .not('status', 'in', '(hecho,cancelado)');
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Vendedor asignado a ${n} pedido(s)`);
+      setShowAsignarDialog(false);
+      setAsignarVendedorId('');
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ── Cancelar entregas activas (no las completadas) ──
+  const cancelarEntregasMut = useMutation({
+    mutationFn: async () => {
+      const ids = selectedPedidos
+        .filter(p => !p.fullyDelivered && (p.totalGenerada + p.totalSurtido) > 0)
+        .map(p => p.id);
+      if (ids.length === 0) throw new Error('No hay entregas activas que cancelar');
+      const { error } = await supabase
+        .from('entregas')
+        .update({ status: 'cancelado' } as any)
+        .in('pedido_id', ids)
+        .not('status', 'in', '(hecho,cancelado)');
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Entregas canceladas en ${n} pedido(s)`);
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ['pedidos-pendientes'] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+
   // Totals
   const totalPedidos = filtered.length;
   const totalLineasPendientes = filtered.reduce((s, p) => s + p.totalPendiente, 0);
