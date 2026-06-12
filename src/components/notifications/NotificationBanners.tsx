@@ -43,7 +43,7 @@ export default function NotificationBanners({ notifications }: Props) {
               {/* Body text */}
               <span
                 className="opacity-90 text-[13px] leading-snug [&_b]:font-semibold [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{ __html: b.body }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(b.body) }}
               />
 
               {/* Redirect links inline */}
