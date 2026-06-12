@@ -15,6 +15,8 @@ interface UsePermisosReturn {
   loading: boolean;
   hasPermiso: (modulo: string, accion: string) => boolean;
   hasModulo: (modulo: string) => boolean;
+  /** Permisos específicos de roles "solo vista móvil". Default true (permitido). */
+  hasPermisoMovil: (modulo: string) => boolean;
   isOwner: boolean;
   reload: () => void;
   /** First route the user can access, based on their permissions. */
