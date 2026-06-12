@@ -372,5 +372,5 @@ export function usePermisos(): UsePermisosReturn {
   // Para owners, no aplica solo_movil. Para roles solo_movil, redirigir directo a /ruta.
   const firstAccessibleRoute = getFirstAccessibleRoute(hasModulo, !isOwner && roleSoloMovil);
 
-  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload, firstAccessibleRoute };
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, hasPermisoMovil, isOwner, reload, firstAccessibleRoute };
 }
