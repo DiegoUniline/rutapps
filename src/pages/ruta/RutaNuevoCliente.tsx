@@ -305,12 +305,12 @@ export default function RutaNuevoCliente() {
                   )}
                 >
                   <div className={cn(
-                    "h-7 w-12 rounded-full transition-colors relative shrink-0",
-                    form.credito ? "bg-primary" : "bg-input"
+                    "h-6 w-11 rounded-full transition-colors relative shrink-0 border",
+                    form.credito ? "bg-primary border-primary" : "bg-muted border-border"
                   )}>
                     <span className={cn(
-                      "absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                      form.credito ? "translate-x-6" : "translate-x-1"
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                      form.credito ? "translate-x-[22px]" : "translate-x-0.5"
                     )} />
                   </div>
                   <div className="flex-1 text-left">
