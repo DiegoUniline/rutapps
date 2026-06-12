@@ -497,11 +497,9 @@ Deno.serve(async (req) => {
           orderedWp = r.waypoints;
           optMethod = "preserved";
         } else {
-          // Optimización SIEMPRE por lat/long con distancia REAL por calle (Google Routes
-          // computeRouteMatrix). Si falla o no hay API key, fallback a Haversine.
           let usedReal = false;
           if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
-            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
+            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints, supabase, profile.empresa_id);
             if (matrix) {
               const n = r.waypoints.length + 1;
               const nn = nearestNeighborOrderMatrix(n, matrix);
@@ -524,11 +522,51 @@ Deno.serve(async (req) => {
         let distanceMeters = 0;
         let duration = "0s";
 
-        if (googleApiKey) {
+        // Hash de la ruta ordenada (origen + paradas) para caché de polyline
+        const polyHashInput = JSON.stringify([
+          [r.origin.lat, r.origin.lng],
+          ...orderedWp.map(w => [w.lat, w.lng]),
+        ]);
+        const waypointsHash = await sha256Hex(polyHashInput);
+        const cacheKey = String(r.key ?? "default");
+
+        // Si preserve_order, intentar cache hit primero (evita llamar a Google)
+        if (preserveOrder) {
+          try {
+            const { data: cached } = await supabase
+              .from("ruta_polyline_cache")
+              .select("encoded_polyline,distancia_total_m,duracion_total_s")
+              .eq("vendedor_id", cacheKey)
+              .eq("waypoints_hash", waypointsHash)
+              .maybeSingle();
+            if (cached?.encoded_polyline) {
+              polyline = cached.encoded_polyline;
+              distanceMeters = cached.distancia_total_m ?? 0;
+              duration = `${cached.duracion_total_s ?? 0}s`;
+              console.log(`Route ${r.key}: polyline cache HIT`);
+            }
+          } catch (e) { console.warn("polyline cache lookup failed:", e); }
+        }
+
+        if (!polyline && googleApiKey) {
           const g = await fetchGooglePolyline(googleApiKey, r.origin, orderedWp);
           polyline = g.polyline;
           distanceMeters = g.distanceMeters;
           duration = g.duration;
+          // Upsert cache para futuras consultas
+          if (polyline) {
+            try {
+              const durSec = parseInt(String(duration).replace("s", ""), 10) || 0;
+              await supabase.from("ruta_polyline_cache").upsert({
+                empresa_id: profile.empresa_id,
+                vendedor_id: cacheKey,
+                waypoints_hash: waypointsHash,
+                encoded_polyline: polyline,
+                distancia_total_m: distanceMeters,
+                duracion_total_s: durSec,
+              }, { onConflict: "vendedor_id,waypoints_hash" });
+            } catch (e) { console.warn("polyline cache upsert failed:", e); }
+          }
         }
 
         if (distanceMeters === 0) {
@@ -540,6 +578,7 @@ Deno.serve(async (req) => {
           distanceMeters = Math.round(totalDist * 1.3);
           duration = `${Math.round(totalDist * 1.3 / 8.33)}s`;
         }
+
 
         results.push({
           key: r.key,
