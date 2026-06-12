@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,8 +137,10 @@ export default function DemandaPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
+  const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
+  const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[] }>(null);
 
   // Fetch almacenes + vendedores
   const { data: almacenesList } = useQuery({
@@ -301,6 +303,142 @@ export default function DemandaPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ── Surtir masivo: auto-fulfill with available stock ──
+  const surtirMasivoMut = useMutation({
+    mutationFn: async () => {
+      if (!almacenId) throw new Error('Selecciona un almacén');
+      if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
+
+      // 1) Auto-confirm borradores
+      const borradorIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
+      if (borradorIds.length > 0) {
+        await supabase.from('ventas').update({ status: 'confirmado' }).in('id', borradorIds).eq('status', 'borrador');
+      }
+
+      // 2) Get current stock for all needed products in this almacen
+      const productoIds = Array.from(new Set(
+        selectedPedidos.flatMap(p => p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).map((l: any) => l.producto_id))
+      ));
+      const stockMap: Record<string, number> = {};
+      if (productoIds.length > 0) {
+        const chunkSize = 200;
+        for (let i = 0; i < productoIds.length; i += chunkSize) {
+          const chunk = productoIds.slice(i, i + chunkSize);
+          const { data } = await supabase.from('n_almacen' as any)
+            .select('producto_id, cantidad')
+            .eq('almacen_id', almacenId)
+            .in('producto_id', chunk);
+          for (const r of (data ?? []) as any[]) {
+            stockMap[r.producto_id] = (stockMap[r.producto_id] ?? 0) + Number(r.cantidad ?? 0);
+          }
+        }
+      }
+
+      const fully: any[] = [], partial: any[] = [], none: any[] = [];
+
+      for (const pedido of selectedPedidos) {
+        const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
+        if (pendientes.length === 0) continue;
+
+        // Decide what to surtir for each line based on remaining stock
+        const planLineas = pendientes.map((l: any) => {
+          const need = Math.max(0, l.cantidad_pendiente);
+          const avail = stockMap[l.producto_id] ?? 0;
+          const give = Math.min(need, Math.max(0, avail));
+          stockMap[l.producto_id] = avail - give;
+          return { ...l, give, faltante: need - give };
+        });
+
+        const totalGive = planLineas.reduce((s, l) => s + l.give, 0);
+        const totalFaltante = planLineas.reduce((s, l) => s + l.faltante, 0);
+
+        // Skip pedidos with zero stock for everything
+        if (totalGive === 0) {
+          none.push({ pedido, faltantes: planLineas.filter(l => l.faltante > 0) });
+          continue;
+        }
+
+        // Get orden_entrega
+        let ordenEntrega = 0;
+        if (pedido.cliente_id) {
+          const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
+          ordenEntrega = cli?.orden ?? 0;
+        }
+
+        // Create entrega
+        const { data: entrega, error: eErr } = await supabase.from('entregas').insert({
+          empresa_id: empresa!.id,
+          pedido_id: pedido.id,
+          vendedor_id: pedido.vendedor_id ?? null,
+          cliente_id: pedido.cliente_id,
+          almacen_id: almacenId,
+          vendedor_ruta_id: vendedorRutaId || null,
+          status: 'borrador',
+          orden_entrega: ordenEntrega,
+        } as any).select('id, folio').single();
+        if (eErr) throw eErr;
+
+        // Insert lines with cantidad_pedida = pendiente
+        const { data: createdLines, error: lErr } = await supabase.from('entrega_lineas').insert(
+          planLineas.map(l => ({
+            entrega_id: entrega.id,
+            producto_id: l.producto_id,
+            unidad_id: l.unidad_id ?? null,
+            cantidad_pedida: Math.max(0, l.cantidad_pendiente),
+            cantidad_entregada: 0,
+            hecho: false,
+            almacen_origen_id: almacenId,
+          }))
+        ).select('id, producto_id');
+        if (lErr) throw lErr;
+
+        // Surtir each line that has give > 0 via RPC (atomic stock deduction)
+        const lineIdByProd: Record<string, string> = {};
+        for (const cl of (createdLines ?? []) as any[]) lineIdByProd[cl.producto_id] = cl.id;
+
+        for (const l of planLineas) {
+          if (l.give <= 0) continue;
+          const lineId = lineIdByProd[l.producto_id];
+          if (!lineId) continue;
+          const { error } = await supabase.rpc('surtir_linea_entrega', {
+            p_linea_id: lineId,
+            p_producto_id: l.producto_id,
+            p_almacen_origen_id: almacenId,
+            p_cantidad_surtida: l.give,
+            p_entrega_id: entrega.id,
+            p_empresa_id: empresa!.id,
+            p_user_id: undefined,
+          } as any);
+          if (error) throw new Error(error.message);
+        }
+
+        // Update entrega status: surtido if everything filled, else borrador (partial)
+        if (totalFaltante === 0) {
+          await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entrega.id);
+          fully.push({ pedido, entrega });
+        } else {
+          partial.push({ pedido, entrega, faltantes: planLineas.filter(l => l.faltante > 0) });
+        }
+      }
+
+      return { fully, partial, none };
+    },
+    onSuccess: (res) => {
+      const total = res.fully.length + res.partial.length + res.none.length;
+      toast.success(`${res.fully.length}/${total} pedidos surtidos completos · ${res.partial.length} parcial · ${res.none.length} sin stock`);
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      qc.invalidateQueries({ queryKey: ['n-almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      setSelectedIds(new Set());
+      setShowSurtirDialog(false);
+      setSurtirResult(res);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const borradorSelectedIds = selectedPedidos.filter(p => p.status === 'borrador').map(p => p.id);
 
   // Totals
@@ -331,7 +469,15 @@ export default function DemandaPage() {
                 Confirmar {borradorSelectedIds.length} pedido{borradorSelectedIds.length > 1 ? 's' : ''}
               </Button>
             )}
-            <Button onClick={() => setShowCrearDialog(true)} size="sm">
+            <Button
+              onClick={() => setShowSurtirDialog(true)}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Surtir disponible ({selectedIds.size})
+            </Button>
+            <Button onClick={() => setShowCrearDialog(true)} size="sm" variant="outline">
               <Package className="h-3.5 w-3.5" />
               Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
             </Button>
@@ -672,6 +818,134 @@ export default function DemandaPage() {
               <Truck className="h-3.5 w-3.5" />
               Crear entrega{selectedPedidos.length > 1 ? 's' : ''}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Surtir masivo dialog */}
+      <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>
+        <DialogContent className="sm:max-w-lg" onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-green-600" />
+              Surtir disponible — {selectedPedidos.length} pedido{selectedPedidos.length > 1 ? 's' : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se creará una entrega por pedido y se surtirá automáticamente <strong>solo lo que haya en stock</strong> del almacén seleccionado. Los pedidos que no se completen quedarán marcados como parciales.
+            </p>
+            <div>
+              <label className="label-odoo">Almacén origen *</label>
+              <ModalSelect
+                options={almacenOptions}
+                value={almacenId}
+                onChange={setAlmacenId}
+                placeholder="Seleccionar almacén..."
+              />
+            </div>
+            <div>
+              <label className="label-odoo">Repartidor (opcional)</label>
+              <ModalSelect
+                options={vendedorOptions}
+                value={vendedorRutaId}
+                onChange={setVendedorRutaId}
+                placeholder="Asignar después"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={() => surtirMasivoMut.mutate()}
+              disabled={surtirMasivoMut.isPending || !almacenId}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              {surtirMasivoMut.isPending ? 'Surtiendo...' : 'Surtir ahora'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Result dialog: shows partial / not-surtido alerts */}
+      <Dialog open={!!surtirResult} onOpenChange={(o) => !o && setSurtirResult(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Resultado del surtido
+            </DialogTitle>
+          </DialogHeader>
+          {surtirResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-green-50 border border-green-200 rounded-md p-3 text-center">
+                  <p className="text-2xl font-bold text-green-700">{surtirResult.fully.length}</p>
+                  <p className="text-[11px] text-green-700 uppercase">Completos</p>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-center">
+                  <p className="text-2xl font-bold text-amber-700">{surtirResult.partial.length}</p>
+                  <p className="text-[11px] text-amber-700 uppercase">Parciales</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-center">
+                  <p className="text-2xl font-bold text-red-700">{surtirResult.none.length}</p>
+                  <p className="text-[11px] text-red-700 uppercase">Sin stock</p>
+                </div>
+              </div>
+
+              {surtirResult.partial.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 mb-1">Pedidos parcialmente surtidos</p>
+                  <div className="border border-amber-200 rounded-md divide-y divide-amber-100">
+                    {surtirResult.partial.map(({ pedido, entrega, faltantes }: any) => (
+                      <div key={pedido.id} className="p-2 text-[12px]">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-primary">{pedido.folio}</span>
+                          <span className="text-muted-foreground">{pedido.clientes?.nombre}</span>
+                          <button className="text-primary hover:underline text-[11px]" onClick={() => navigate(`/logistica/entregas/${entrega.id}`)}>
+                            Ver entrega {entrega.folio} <ExternalLink className="h-3 w-3 inline" />
+                          </button>
+                        </div>
+                        <ul className="ml-3 mt-1 text-muted-foreground text-[11px] list-disc list-inside">
+                          {faltantes.map((l: any) => (
+                            <li key={l.id}>
+                              {l.productos?.codigo} · {l.productos?.nombre} — faltan <strong className="text-amber-700">{l.faltante}</strong>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {surtirResult.none.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-red-700 mb-1">Pedidos sin stock (no se surtió nada)</p>
+                  <div className="border border-red-200 rounded-md divide-y divide-red-100">
+                    {surtirResult.none.map(({ pedido, faltantes }: any) => (
+                      <div key={pedido.id} className="p-2 text-[12px]">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-primary">{pedido.folio}</span>
+                          <span className="text-muted-foreground">{pedido.clientes?.nombre}</span>
+                        </div>
+                        <ul className="ml-3 mt-1 text-muted-foreground text-[11px] list-disc list-inside">
+                          {faltantes.map((l: any) => (
+                            <li key={l.id}>
+                              {l.productos?.codigo} · {l.productos?.nombre} — faltan <strong className="text-red-700">{l.faltante}</strong>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setSurtirResult(null)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
