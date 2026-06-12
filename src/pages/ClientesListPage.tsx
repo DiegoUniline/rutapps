@@ -300,11 +300,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
               <td className="py-1.5 px-3 font-medium"><ClienteLink id={c.id}>{c.nombre}</ClienteLink></td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
+              <td className="py-1.5 px-3 text-muted-foreground">
                 {c.dia_visita?.length > 0
-                  ? c.dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
+                  ? c.dia_visita.map((d: string) => (DIAS_LABEL[d.toLowerCase()] ?? d).slice(0, 3)).join(', ')
                   : '—'}
               </td>
+
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
