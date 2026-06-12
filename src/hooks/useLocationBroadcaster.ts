@@ -15,8 +15,8 @@ import { locationService } from '@/lib/locationService';
  */
 
 const HEARTBEAT_MS = 60_000;        // intentamos cada 60s
-const MIN_DISTANCE_M = 25;          // si no se movió ≥25m, esperamos…
-const STALE_MS = 90_000;            // …pero igual avisamos cada 90s aunque esté quieto
+const MIN_DISTANCE_M = 30;          // si no se movió ≥30m, NO insertamos al historial
+const STALE_MS = 90_000;            // …pero igual refrescamos el snapshot (upsert) cada 90s
 const FIRST_PUSH_DELAY_MS = 4_000;  // pequeño delay al arrancar
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -65,19 +65,19 @@ export function useLocationBroadcaster(enabled: boolean = true) {
       const now = Date.now();
       const last = lastSentRef.current;
 
-      if (!force && last) {
-        const moved = haversineMeters(last, pos);
-        const elapsed = now - last.ts;
-        // Skip if barely moved and not stale yet
-        if (moved < MIN_DISTANCE_M && elapsed < STALE_MS) return;
-      }
+      // Calculamos movimiento para decidir si insertamos al historial
+      const moved = last ? haversineMeters(last, pos) : Infinity;
+      const elapsed = last ? now - last.ts : Infinity;
+
+      // Skip TODO si no se movió Y el snapshot sigue fresco
+      if (!force && last && moved < MIN_DISTANCE_M && elapsed < STALE_MS) return;
 
       inFlightRef.current = true;
       try {
         const battery = await getBatteryLevel();
         const nowIso = new Date().toISOString();
 
-        // 1) UPSERT posición actual (una fila por vendedor)
+        // 1) UPSERT posición actual (una fila por vendedor) - siempre que pase el filtro
         const { error } = await supabase
           .from('vendedor_ubicaciones' as any)
           .upsert({
@@ -92,18 +92,21 @@ export function useLocationBroadcaster(enabled: boolean = true) {
         if (!error) {
           lastSentRef.current = { lat: pos.lat, lng: pos.lng, ts: now };
 
-          // 2) INSERT al historial (recorrido del día) — solo si pasó el filtro
-          // de distancia/stale, así no llenamos la BD de puntos repetidos.
-          await supabase
-            .from('vendedor_ubicaciones_historial' as any)
-            .insert({
-              user_id: user.id,
-              empresa_id: empresa.id,
-              lat: pos.lat,
-              lng: pos.lng,
-              battery_level: battery,
-              recorded_at: nowIso,
-            });
+          // 2) INSERT al historial SOLO si realmente se movió ≥MIN_DISTANCE_M.
+          // Si solo fue heartbeat sin movimiento, omitimos el insert para no
+          // inflar vendedor_ubicaciones_historial con puntos repetidos.
+          if (force || moved >= MIN_DISTANCE_M) {
+            await supabase
+              .from('vendedor_ubicaciones_historial' as any)
+              .insert({
+                user_id: user.id,
+                empresa_id: empresa.id,
+                lat: pos.lat,
+                lng: pos.lng,
+                battery_level: battery,
+                recorded_at: nowIso,
+              });
+          }
         }
       } catch { /* silent */ }
       finally {
