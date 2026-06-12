@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2 } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate, todayLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
@@ -20,30 +23,52 @@ import PedidosTabs from '@/components/PedidosTabs';
 
 // ─── Data hooks ────────────────────────────────────────────
 
-function usePedidosPendientes() {
+interface DemandaFilters {
+  desde: string;
+  hasta: string;
+  fechaTipo: 'fecha' | 'fecha_entrega';
+  vendedorId?: string;
+  statuses: string[]; // which ventas.status to load
+}
+
+function usePedidosPendientes(filters: DemandaFilters) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['demanda', empresa?.id],
+    queryKey: ['demanda', empresa?.id, filters],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data: pedidos, error } = await supabase
-        .from('ventas')
-        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
-        .eq('empresa_id', empresa!.id)
-        .eq('tipo', 'pedido')
-        .in('status', ['borrador', 'confirmado', 'entregado'])
-        .order('fecha', { ascending: true });
-      if (error) throw error;
+      const pedidos = await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+          .eq('empresa_id', empresa!.id)
+          .eq('tipo', 'pedido')
+          .in('status', filters.statuses as any)
+          .gte(filters.fechaTipo, filters.desde)
+          .lte(filters.fechaTipo, filters.hasta)
+          .order(filters.fechaTipo, { ascending: true })
+          .range(from, to);
+        if (filters.vendedorId) q = q.eq('vendedor_id', filters.vendedorId);
+        return q;
+      });
 
       // Get delivered quantities from entregas
-      const pedidoIds = (pedidos ?? []).map(p => p.id);
+      const pedidoIds = pedidos.map(p => p.id);
       let entregasData: any[] = [];
       if (pedidoIds.length > 0) {
-        const { data } = await supabase
-          .from('entregas')
-          .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
-          .in('pedido_id', pedidoIds);
-        entregasData = data ?? [];
+        // Chunk pedidoIds to avoid URL limits, paginate each chunk
+        const chunkSize = 200;
+        for (let i = 0; i < pedidoIds.length; i += chunkSize) {
+          const chunk = pedidoIds.slice(i, i + chunkSize);
+          const part = await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('entregas')
+              .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+              .in('pedido_id', chunk)
+              .range(from, to)
+          );
+          entregasData.push(...part);
+        }
       }
 
       // Only count entregas that are NOT cancelado
@@ -56,7 +81,7 @@ function usePedidosPendientes() {
         }
       }
 
-      return (pedidos ?? []).map(p => {
+      return pedidos.map(p => {
         const delivered = deliveryMap[p.id] ?? {};
         const lineasConPendiente = (p.venta_lineas ?? []).map((l: any) => ({
           ...l,
@@ -73,10 +98,11 @@ function usePedidosPendientes() {
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
           fullyDelivered: totalPendiente <= 0,
         };
-      }).filter(p => !p.fullyDelivered);
+      });
     },
   });
 }
+
 
 // ─── Component ────────────────────────────────────────────
 
