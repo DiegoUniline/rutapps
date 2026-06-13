@@ -148,7 +148,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
-              Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en tiempo real. Operación móvil offline.
+              Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
             </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
               <Link to="/signup" className="px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02]"
