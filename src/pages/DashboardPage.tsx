@@ -969,6 +969,30 @@ export default function DashboardPage() {
             money={money}
           />
 
+          {/* Estado de resultados (rango seleccionado) */}
+          <div className="mt-3 bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" /> Estado de resultados
+              </h2>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Rango seleccionado</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <IsTile label="Ventas" value={money(estadoResultados.ventasNetas)} hint="Después de descuento, antes de impuestos" tone="default" />
+              <IsTile label="Descuentos" value={`- ${money(estadoResultados.descuentos)}`} hint="Aplicados en líneas" tone="warning" />
+              <IsTile label="Devoluciones" value={`- ${money(estadoResultados.devoluciones)}`} hint={`${devStats.count} registros`} tone="danger" />
+              <IsTile label="Ventas brutas" value={money(estadoResultados.ventasBrutas)} hint="Antes de descuentos y devoluciones" tone="info" />
+              <IsTile label="Costo" value={`- ${money(estadoResultados.costo)}`} hint="Costo de mercancía vendida" tone="warning" />
+              <IsTile
+                label="Utilidad bruta"
+                value={money(estadoResultados.utilidadBruta)}
+                hint={`Margen ${estadoResultados.margenPct.toFixed(1)}%`}
+                tone={estadoResultados.utilidadBruta >= 0 ? 'success' : 'danger'}
+                emphasize
+              />
+            </div>
+          </div>
+
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
             <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
