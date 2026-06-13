@@ -30,18 +30,144 @@ const LANDING_JSON_LD = [
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'MXN' } },
 ];
 
-const MODULES = [
-  { icon: ShoppingCart, t: 'Ventas', d: 'POS, preventa y pedidos' },
-  { icon: Wallet, t: 'Cobranza', d: 'FIFO y multi-folio' },
-  { icon: Package, t: 'Inventario', d: 'Multi-almacén · Kardex' },
-  { icon: Truck, t: 'Logística', d: 'Cargas y rutas GPS' },
-  { icon: CreditCard, t: 'Compras', d: 'Órdenes y proveedores' },
-  { icon: Users, t: 'Clientes', d: 'CRM con historial' },
-  { icon: LineChart, t: 'Finanzas', d: 'CxC · CxP · Gastos' },
-  { icon: Award, t: 'Comisiones', d: 'Reglas por vendedor' },
-  { icon: FileText, t: 'Reportes', d: 'Operativos y auditables' },
-  { icon: Brain, t: 'IA', d: 'Asesor inteligente' },
+const MODULES: {
+  icon: any; t: string; d: string;
+  star: { t: string; d: string };
+  features: string[];
+  why: string;
+}[] = [
+  {
+    icon: ShoppingCart, t: 'Ventas', d: 'POS, preventa y pedidos',
+    star: { t: 'Rutero de preventa', d: 'Cada vendedor abre su ruta del día y captura pedidos en segundos: producto sugerido por cliente, precios y promociones aplicadas automáticamente.' },
+    features: [
+      'POS con búsqueda por código de barras',
+      'Preventa con pedidos sugeridos por cliente',
+      'Venta directa con entrega inmediata',
+      'Promociones nxm y % acumulables',
+      'Listas de precios por cliente o zona',
+      'Crédito con validación en tiempo real',
+    ],
+    why: 'El vendedor deja de improvisar: ve qué pide normalmente cada cliente, qué dejó de comprar y a qué precio.',
+  },
+  {
+    icon: Wallet, t: 'Cobranza', d: 'FIFO y multi-folio',
+    star: { t: 'Cobro multi-folio FIFO', d: 'Un solo pago aplica automáticamente a las facturas más viejas. El recibo se imprime térmico o se manda por WhatsApp al instante.' },
+    features: [
+      'Aplicación FIFO automática',
+      'Múltiples folios en un mismo cobro',
+      'Recibos térmicos y por WhatsApp',
+      'Liquidación de ruta con efectivo esperado',
+      'Saldo anterior y nuevo en cada documento',
+      'Cancelación con desligado de aplicaciones',
+    ],
+    why: 'Cero confusión sobre qué se pagó. El cobrador no decide a mano qué aplicar.',
+  },
+  {
+    icon: Package, t: 'Inventario', d: 'Multi-almacén · Kardex',
+    star: { t: 'Kardex granular en vivo', d: 'Cada movimiento (venta, compra, traspaso, ajuste) queda registrado con folio, hora y usuario. Auditas el stock minuto a minuto.' },
+    features: [
+      'Múltiples almacenes con stock independiente',
+      'Traspasos con bloqueo de fila',
+      'Conteos físicos con reconciliación',
+      'Productos a granel (3 decimales)',
+      'Presentaciones (caja, paquete, pieza)',
+      'Permitir venta con stock negativo (opcional)',
+    ],
+    why: 'Sabes en qué almacén, en qué camión y desde cuándo está cada unidad.',
+  },
+  {
+    icon: Truck, t: 'Logística', d: 'Cargas, surtido y rutas',
+    star: { t: 'Surtido de pedidos', d: 'El bodeguero ve el concentrado del día: cuánto producto sale total, por ruta, por vendedor. Carga el camión con la cantidad exacta y descuenta del almacén automáticamente.' },
+    features: [
+      'Concentrado de surtido por día y ruta',
+      'Orden de carga con confirmación',
+      'Descarga con diferencias y motivos',
+      'Optimización de ruta con GPS (vecino + 2-opt)',
+      'Entrega con firma y foto',
+      'Liquidación inmutable al cierre de ruta',
+    ],
+    why: 'El camión sale con lo justo. Las diferencias quedan documentadas con motivo.',
+  },
+  {
+    icon: CreditCard, t: 'Compras', d: 'Órdenes y proveedores',
+    star: { t: 'Compras sugeridas con IA', d: 'El sistema analiza venta histórica, stock mínimo, días de cobertura y tiempo de entrega del proveedor. Te dice qué pedir, cuánto y a quién — listo para enviar la orden.' },
+    features: [
+      'Sugerencias de compra por IA',
+      'Órdenes a proveedores con recepción parcial',
+      'Pagos a proveedores con FIFO',
+      'Cuentas por pagar y estado de cuenta',
+      'Costos con o sin impuestos',
+      'Proveedor preferido por producto',
+    ],
+    why: 'Dejas de comprar de más o quedarte sin producto los días pico.',
+  },
+  {
+    icon: Users, t: 'Clientes', d: 'CRM con historial',
+    star: { t: 'Ficha 360° del cliente', d: 'Ves su historial de compras, saldo, última visita, ubicación GPS, productos que más pide y los que dejó de comprar. Todo en una pantalla.' },
+    features: [
+      'Alta con GPS y foto de fachada',
+      'Frecuencia y día de visita',
+      'Límite y días de crédito',
+      'Pedido sugerido por cliente',
+      'Estado de cuenta público (link)',
+      'Catálogo compartible por WhatsApp',
+    ],
+    why: 'Cada cliente es una ficha viva, no una fila en Excel.',
+  },
+  {
+    icon: LineChart, t: 'Finanzas', d: 'CxC · CxP · Gastos',
+    star: { t: 'Estado de cuenta en tiempo real', d: 'Por cliente, por proveedor, por vendedor: saldo anterior, movimientos y saldo nuevo. Auditable y exportable.' },
+    features: [
+      'Cuentas por cobrar y por pagar',
+      'Gastos con foto del ticket',
+      'Multimoneda con conversión automática',
+      'Saldos iniciales sin afectar inventario',
+      'Reportes contables exportables',
+      'Caja y turnos con corte',
+    ],
+    why: 'Sabes cuánto te deben, cuánto debes y cuánto entró hoy — sin esperar al contador.',
+  },
+  {
+    icon: Award, t: 'Comisiones', d: 'Reglas por vendedor',
+    star: { t: 'Comisiones por producto y meta', d: 'Define % por producto, por categoría o por meta cumplida. El sistema calcula la comisión por venta cobrada (no facturada).' },
+    features: [
+      'Comisión por producto o categoría',
+      'Calculada sobre venta cobrada',
+      'Metas mensuales por vendedor',
+      'Reporte de seguimiento de metas',
+      'Esquemas por equipo',
+      'Visible para el vendedor en su app',
+    ],
+    why: 'El vendedor sabe qué empujar y cuánto va a ganar en tiempo real.',
+  },
+  {
+    icon: FileText, t: 'Reportes', d: 'Operativos y auditables',
+    star: { t: 'Control y auditoría', d: 'Detecta descuentos excesivos, ventas bajo costo, anomalías de cobro y vendedores inactivos. El dueño deja de auditar a mano.' },
+    features: [
+      'Dashboard supervisor con 8 KPIs',
+      'Reporte diario consolidado',
+      'Detalle por producto y por vendedor',
+      'Control de fraude y descuentos',
+      'Exportable a Excel y PDF',
+      'Filtros avanzados multi-criterio',
+    ],
+    why: 'Auditas en segundos lo que antes tardaba días.',
+  },
+  {
+    icon: Brain, t: 'IA', d: 'Asesor inteligente',
+    star: { t: 'Asesor Rutapp IA', d: 'Analiza tu operación todos los días y te suelta acciones concretas: qué comprar, qué cliente está en riesgo, qué vendedor destaca y qué movimientos son sospechosos.' },
+    features: [
+      'Sugerencias de reposición de stock',
+      'Detección de clientes en riesgo de fuga',
+      'Identificación de vendedores destacados',
+      'Anomalías en ventas y cobros',
+      'Predicción de demanda',
+      'Resumen diario accionable',
+    ],
+    why: 'Tienes un analista trabajando 24/7 sin contratarlo.',
+  },
 ];
+
 
 const AI_CARDS = [
   { icon: Boxes, t: 'Reponer', d: 'Coca 600ml caerá a crítico en 3 días. Comprar 240.', tone: BRAND.primary },
