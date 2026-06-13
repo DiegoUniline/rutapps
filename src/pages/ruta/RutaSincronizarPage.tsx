@@ -651,3 +651,18 @@ export default function RutaSincronizarPage() {
     </div>
   );
 }
+
+function DiagRow({ label, value, ok, hint }: { label: string; value: string; ok: boolean; hint?: string }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ok ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+        <div className="min-w-0">
+          <p className="text-foreground truncate">{label}</p>
+          {hint && <p className="text-[10px] text-muted-foreground truncate">{hint}</p>}
+        </div>
+      </div>
+      <span className="font-mono text-foreground text-[12px] shrink-0 ml-2">{value}</span>
+    </div>
+  );
+}
