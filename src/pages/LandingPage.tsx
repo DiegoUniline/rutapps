@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import rutappLogo from '@/assets/rutapp-logo.jpeg.asset.json';
 import {
   ShoppingCart, Users, Package, Wallet, Truck, Check, X,
   ArrowRight, Menu, Route, CreditCard, Radio, FileText,
