@@ -20,6 +20,7 @@ import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncom
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
 import AdminWaCampaignsTab from '@/components/admin/AdminWaCampaignsTab';
 import AdminPosTab from '@/components/admin/AdminPosTab';
+import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
 import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
 
