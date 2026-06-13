@@ -28,7 +28,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const base = r2(qty * price * (1 - desc / 100));
+  const grossSubtotal = r2(qty * price);
+  const discount = r2(grossSubtotal * (desc / 100));
+  const base = r2(grossSubtotal - discount);
   const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
   const lineTotal = r2(base + ieps + iva);
@@ -163,7 +165,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         {isEmpty ? '' : (
           <div>
             <span>{fmt(lineTotal)}</span>
-            {(iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">sin imp: {fmt(base)}</span>}
+            {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {fmt(base)}</span>}
           </div>
         )}
       </td>
