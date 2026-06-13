@@ -204,22 +204,33 @@ export default function RutaDashboard() {
             { k: '7d', label: '7 días' },
             { k: '30d', label: '30 días' },
             { k: 'mes', label: 'Este mes' },
-          ] as const).map(p => (
-            <button
-              key={p.k}
-              onClick={() => {
-                const iso = (d: Date) => d.toISOString().slice(0,10);
-                const t = new Date();
-                if (p.k === 'hoy') { setFrom(today); setTo(today); }
-                else if (p.k === '7d') { const d = new Date(t); d.setDate(d.getDate()-6); setFrom(iso(d)); setTo(today); }
-                else if (p.k === '30d') { const d = new Date(t); d.setDate(d.getDate()-29); setFrom(iso(d)); setTo(today); }
-                else { const d = new Date(t.getFullYear(), t.getMonth(), 1); setFrom(iso(d)); setTo(today); }
-              }}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20"
-            >
-              {p.label}
-            </button>
-          ))}
+          ] as const).map(p => {
+            const isoLocal = (d: Date) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            };
+            const t = new Date();
+            let nFrom = today, nTo = today;
+            if (p.k === '7d') { const d = new Date(t); d.setDate(d.getDate()-6); nFrom = isoLocal(d); }
+            else if (p.k === '30d') { const d = new Date(t); d.setDate(d.getDate()-29); nFrom = isoLocal(d); }
+            else if (p.k === 'mes') { const d = new Date(t.getFullYear(), t.getMonth(), 1); nFrom = isoLocal(d); }
+            const active = from === nFrom && to === nTo;
+            return (
+              <button
+                key={p.k}
+                type="button"
+                onClick={() => { setFrom(nFrom); setTo(nTo); }}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/30"
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
