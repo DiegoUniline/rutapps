@@ -17,7 +17,7 @@ export default function RutaDashboard() {
   const vendedorId = profile?.id;
 
   // Filtros
-  const [tab, setTab] = useState<TabKey>('ventas');
+  const [tab, setTab] = useState<TabKey>('resumen');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
