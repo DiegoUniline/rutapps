@@ -364,70 +364,27 @@ Deno.serve(async (req) => {
     const empresaId = auth.empresa_id;
     const permisos = (auth.permisos || {}) as Record<string, boolean>;
 
-    const intent = parseIntent(text);
-
-    if (intent.kind === "ayuda" || intent.kind === "unknown") {
+    // Atajo: ayuda explícita
+    if (/^(ayuda|help|menu|menú|comandos|\?)\s*$/i.test(text.trim())) {
       await waSend(phone, HELP);
-      await log(empresaId, phone, text, intent.kind, "ok", "Menú enviado");
+      await log(empresaId, phone, text, "ayuda", "ok", "Menú enviado");
       return new Response("ok", { headers: corsHeaders });
     }
 
-    if (intent.kind === "reporte") {
-      if (!permisos.reportes) {
-        await waSend(phone, "🚫 Tu número no tiene permiso para *reportes*.");
-        await log(empresaId, phone, text, "reporte", "denied", "Sin permiso");
-        return new Response("ok", { headers: corsHeaders });
-      }
-      await waSend(phone, `⏳ Generando reporte ${intent.label}...`);
-      const { pdfBytes, summary } = await buildReporte(empresaId, intent.date, intent.label);
-      const path = `${empresaId}/reporte-${intent.date.toISOString().slice(0,10)}-${Date.now()}.pdf`;
-      const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, {
-        contentType: "application/pdf", upsert: true,
-      });
-      if (upErr) throw upErr;
-      const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60 * 60 * 24);
-      const url = signed?.signedUrl || "";
-      await waSendFile(phone, url, `reporte-${intent.label}.pdf`, summary);
-      await log(empresaId, phone, text, "reporte", "ok", summary, url, { label: intent.label });
-      return new Response("ok", { headers: corsHeaders });
-    }
+    // ---- Agente IA con tool calling ----
+    const result = await runAgent({
+      empresaId,
+      permisos,
+      phone,
+      userMessage: text,
+    });
 
-    if (intent.kind === "stock") {
-      if (!permisos.stock) {
-        await waSend(phone, "🚫 Tu número no tiene permiso para consultar *stock*.");
-        await log(empresaId, phone, text, "stock", "denied", "Sin permiso");
-        return new Response("ok", { headers: corsHeaders });
-      }
-      const msg = await buildStockMessage(empresaId, intent.threshold, intent.nombre);
-      await waSend(phone, msg);
-      await log(empresaId, phone, text, "stock", "ok", msg.slice(0,200));
-      return new Response("ok", { headers: corsHeaders });
+    if (result.pdfUrl) {
+      await waSendFile(phone, result.pdfUrl, result.pdfName || "reporte.pdf", result.reply);
+    } else {
+      await waSend(phone, result.reply);
     }
-
-    if (intent.kind === "cliente") {
-      if (!permisos.clientes) {
-        await waSend(phone, "🚫 Tu número no tiene permiso para consultar *clientes*.");
-        await log(empresaId, phone, text, "cliente", "denied", "Sin permiso");
-        return new Response("ok", { headers: corsHeaders });
-      }
-      const msg = await buildClienteMessage(empresaId, intent.query);
-      await waSend(phone, msg);
-      await log(empresaId, phone, text, "cliente", "ok", msg.slice(0,200));
-      return new Response("ok", { headers: corsHeaders });
-    }
-
-    if (intent.kind === "cobros") {
-      if (!permisos.cobros) {
-        await waSend(phone, "🚫 Tu número no tiene permiso para consultar *cobros*.");
-        await log(empresaId, phone, text, "cobros", "denied", "Sin permiso");
-        return new Response("ok", { headers: corsHeaders });
-      }
-      const msg = await buildCobrosMessage(empresaId, intent.date, intent.label);
-      await waSend(phone, msg);
-      await log(empresaId, phone, text, "cobros", "ok", msg.slice(0,200));
-      return new Response("ok", { headers: corsHeaders });
-    }
-
+    await log(empresaId, phone, text, result.intent, "ok", result.reply.slice(0, 200), result.pdfUrl, result.toolsUsed);
     return new Response("ok", { headers: corsHeaders });
   } catch (err) {
     console.error("wa-bot-webhook error", err);
@@ -436,3 +393,269 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ----------------- AI AGENT -----------------
+const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_MODEL = "google/gemini-3-flash-preview";
+
+function parseFecha(input: string | undefined | null): Date {
+  const now = new Date();
+  if (!input) return now;
+  const t = input.toLowerCase().trim();
+  if (t === "hoy" || t === "today") return now;
+  if (t === "ayer" || t === "yesterday") { const d = new Date(now); d.setDate(d.getDate()-1); return d; }
+  // ISO yyyy-mm-dd
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+  // dd/mm/yyyy o dd-mm
+  const m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (m) {
+    const day = +m[1], mon = +m[2]-1;
+    const yr = m[3] ? (m[3].length === 2 ? 2000+ +m[3] : +m[3]) : now.getFullYear();
+    return new Date(yr, mon, day);
+  }
+  return now;
+}
+
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "generar_reporte_pdf",
+      description: "Genera el reporte diario en PDF (ventas, cobros, gastos) para una fecha y lo devuelve como URL para enviar al cliente. Úsala cuando el usuario pida 'reporte', 'cierre del día', 'resumen del día' etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          fecha: { type: "string", description: "Fecha: 'hoy', 'ayer', o formato dd/mm/yyyy o yyyy-mm-dd" },
+        },
+        required: ["fecha"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_stock_bajo",
+      description: "Devuelve productos con inventario bajo. Si no se especifica umbral, usa el stock mínimo configurado por producto.",
+      parameters: {
+        type: "object",
+        properties: {
+          umbral: { type: "number", description: "Opcional. Umbral máximo de cantidad para considerar 'bajo'." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_producto",
+      description: "Busca productos por nombre o código y devuelve stock, precio y datos básicos.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_cliente",
+      description: "Busca un cliente por nombre o teléfono y devuelve su saldo y últimas ventas.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resumen_cobros",
+      description: "Resumen de cobros de un día por método de pago.",
+      parameters: {
+        type: "object",
+        properties: { fecha: { type: "string", description: "'hoy', 'ayer' o dd/mm/yyyy" } },
+        required: ["fecha"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resumen_ventas",
+      description: "Resumen de ventas de un día (total, número de folios, top clientes).",
+      parameters: {
+        type: "object",
+        properties: { fecha: { type: "string" } },
+        required: ["fecha"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cuentas_por_cobrar",
+      description: "Lista los clientes con mayor saldo pendiente.",
+      parameters: {
+        type: "object",
+        properties: { limite: { type: "number", description: "Máx clientes (default 10)" } },
+      },
+    },
+  },
+];
+
+async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean> }) {
+  const { empresaId, permisos } = ctx;
+  const need = (k: string) => permisos[k];
+
+  if (name === "generar_reporte_pdf") {
+    if (!need("reportes")) return { error: "Sin permiso para reportes" };
+    const date = parseFecha(args?.fecha);
+    const label = args?.fecha || "hoy";
+    const { pdfBytes, summary } = await buildReporte(empresaId, date, label);
+    const path = `${empresaId}/reporte-${date.toISOString().slice(0,10)}-${Date.now()}.pdf`;
+    const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
+    if (upErr) return { error: String(upErr) };
+    const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
+    return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary };
+  }
+
+  if (name === "consultar_stock_bajo") {
+    if (!need("stock")) return { error: "Sin permiso para stock" };
+    const msg = await buildStockMessage(empresaId, args?.umbral ?? null, null);
+    return { resultado: msg };
+  }
+
+  if (name === "buscar_producto") {
+    if (!need("stock")) return { error: "Sin permiso para productos" };
+    const { data } = await admin.from("productos")
+      .select("codigo, nombre, cantidad, stock_min, precio")
+      .eq("empresa_id", empresaId)
+      .or(`nombre.ilike.%${args.query}%,codigo.ilike.%${args.query}%`)
+      .limit(10);
+    return { productos: data || [] };
+  }
+
+  if (name === "consultar_cliente") {
+    if (!need("clientes")) return { error: "Sin permiso para clientes" };
+    const msg = await buildClienteMessage(empresaId, args.query);
+    return { resultado: msg };
+  }
+
+  if (name === "resumen_cobros") {
+    if (!need("cobros")) return { error: "Sin permiso para cobros" };
+    const date = parseFecha(args?.fecha);
+    const msg = await buildCobrosMessage(empresaId, date, args?.fecha || "hoy");
+    return { resultado: msg };
+  }
+
+  if (name === "resumen_ventas") {
+    if (!need("reportes")) return { error: "Sin permiso para ventas" };
+    const date = parseFecha(args?.fecha);
+    const { start, end } = dayRange(date);
+    const { data } = await admin.from("ventas")
+      .select("folio, total, status, clientes(nombre)")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end);
+    const v = (data||[]).filter((x:any)=>x.status!=="cancelada"&&x.status!=="cancelado");
+    const total = v.reduce((s:number,x:any)=>s+Number(x.total||0),0);
+    const top: Record<string,number> = {};
+    for (const x of v as any[]) { const c = x.clientes?.nombre || "—"; top[c]=(top[c]||0)+Number(x.total||0); }
+    const topArr = Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    return { fecha: date.toISOString().slice(0,10), folios: v.length, total_ventas: total, top_clientes: topArr.map(([n,m])=>({cliente:n,monto:m})) };
+  }
+
+  if (name === "cuentas_por_cobrar") {
+    if (!need("clientes")) return { error: "Sin permiso" };
+    const lim = args?.limite || 10;
+    const { data } = await admin.from("clientes")
+      .select("nombre, telefono, saldo")
+      .eq("empresa_id", empresaId).gt("saldo", 0)
+      .order("saldo", { ascending: false }).limit(lim);
+    return { clientes: data || [] };
+  }
+
+  return { error: "Herramienta desconocida" };
+}
+
+async function runAgent(opts: { empresaId: string; permisos: Record<string, boolean>; phone: string; userMessage: string }) {
+  if (!LOVABLE_AI_KEY) {
+    return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
+  }
+
+  // Contexto breve: últimos 6 turnos de este teléfono
+  const { data: prev } = await admin.from("wa_bot_logs")
+    .select("inbound_text, response_summary")
+    .eq("phone", opts.phone).eq("empresa_id", opts.empresaId)
+    .order("created_at", { ascending: false }).limit(6);
+  const history: any[] = [];
+  for (const row of (prev || []).reverse()) {
+    if (row.inbound_text) history.push({ role: "user", content: row.inbound_text });
+    if (row.response_summary) history.push({ role: "assistant", content: row.response_summary });
+  }
+
+  const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
+  const system = `Eres el asistente de WhatsApp de RutApp para una empresa. Respondes SIEMPRE en español, breve y claro, usando emojis y formato WhatsApp (*negritas*).
+
+REGLAS ESTRICTAS:
+- Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.
+- Si la pregunta no se puede responder con las herramientas, dilo y sugiere lo que sí puedes hacer.
+- Si el usuario pide algo fuera de permisos (${permisosTxt}), explícale amablemente que no tiene permiso y que pida a su admin.
+- Para reportes diarios usa SIEMPRE 'generar_reporte_pdf' (no resumas tú el día completo en texto).
+- Sé conciso: máximo ~15 líneas en la respuesta final.
+- Cuando una herramienta devuelva 'resultado' como string, úsalo prácticamente tal cual.
+
+Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
+
+  const messages: any[] = [
+    { role: "system", content: system },
+    ...history,
+    { role: "user", content: opts.userMessage },
+  ];
+
+  let pdfUrl: string | null = null;
+  let pdfName: string | null = null;
+  const toolsUsed: string[] = [];
+
+  for (let step = 0; step < 5; step++) {
+    const res = await fetch(AI_URL, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${LOVABLE_AI_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("AI error", res.status, t);
+      if (res.status === 429) return { reply: "⚠️ Demasiadas solicitudes. Intenta en un momento.", intent: "rate_limit", pdfUrl: null, pdfName: null, toolsUsed };
+      if (res.status === 402) return { reply: "⚠️ Sin créditos de IA. Avisa a soporte de RutApp.", intent: "no_credits", pdfUrl: null, pdfName: null, toolsUsed };
+      return { reply: "⚠️ Error del asistente. Usa *ayuda* para ver comandos disponibles.", intent: "ai_error", pdfUrl: null, pdfName: null, toolsUsed };
+    }
+    const json = await res.json();
+    const msg = json.choices?.[0]?.message;
+    if (!msg) return { reply: "⚠️ Respuesta vacía del asistente.", intent: "empty", pdfUrl: null, pdfName: null, toolsUsed };
+
+    if (msg.tool_calls && msg.tool_calls.length) {
+      messages.push(msg);
+      for (const call of msg.tool_calls) {
+        let args: any = {};
+        try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
+        toolsUsed.push(call.function.name);
+        const out = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
+        if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify(out).slice(0, 8000),
+        });
+      }
+      continue;
+    }
+
+    const reply = (msg.content || "").trim() || "✅";
+    return { reply, intent: toolsUsed[0] || "chat", pdfUrl, pdfName, toolsUsed };
+  }
+
+  return { reply: "⚠️ El asistente tardó demasiado. Intenta reformular.", intent: "loop_limit", pdfUrl, pdfName, toolsUsed };
+}
