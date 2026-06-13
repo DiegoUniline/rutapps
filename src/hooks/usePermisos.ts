@@ -234,6 +234,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion': 'configuracion.general',
   '/configuracion/usuarios': 'configuracion.usuarios',
   '/configuracion/whatsapp': 'configuracion.whatsapp',
+  '/configuracion/wa-bot': 'configuracion.wa_bot',
   '/facturacion': 'configuracion.suscripcion',
   '/mi-suscripcion': 'configuracion.suscripcion',
   '/configuracion-inicial': '', // always accessible
