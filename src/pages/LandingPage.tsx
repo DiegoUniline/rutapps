@@ -280,34 +280,34 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal variant="up" delay={60} duration={420}>
-              <h1 className="mt-4 text-[40px] md:text-[56px] font-semibold leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
+              <h1 className="mt-4 text-[32px] sm:text-[40px] md:text-[56px] font-semibold leading-[1.05] md:leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
                 Tu distribuidora,<br />
                 <span className="relative inline-block">
                   en una sola pantalla.
-                  <span className="absolute left-0 -bottom-1 h-[5px] w-full rounded-full origin-left animate-[underlineGrow_700ms_cubic-bezier(0.22,1,0.36,1)_300ms_both]"
+                  <span className="absolute left-0 -bottom-1 h-[4px] md:h-[5px] w-full rounded-full origin-left animate-[underlineGrow_700ms_cubic-bezier(0.22,1,0.36,1)_300ms_both]"
                     style={{ background: `linear-gradient(90deg, ${BRAND.primary}, ${BRAND.accent})` }} />
                 </span>
               </h1>
             </Reveal>
             <Reveal variant="up" delay={140}>
-              <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
+              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
                 Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
               </p>
             </Reveal>
             <Reveal variant="up" delay={200}>
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                <Link to="/signup" className="group px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+              <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
+                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
                   style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <a href="#modulos" className="px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                <a href="#modulos" className="w-full sm:w-auto text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Ver módulos
                 </a>
               </div>
             </Reveal>
             <Reveal variant="fade" delay={260}>
-              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]" style={{ color: BRAND.muted }}>
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] md:text-[12.5px]" style={{ color: BRAND.muted }}>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> 7 días gratis</span>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en días</span>
@@ -315,9 +315,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Bento mockups */}
-          <Reveal variant="scale" delay={120} duration={500} className="lg:col-span-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[440px]">
+          {/* Bento mockups — hidden on small phones, simplified on tablet */}
+          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
               <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
                 style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
                 <LiveDashboardMockup />
@@ -448,7 +448,7 @@ export default function LandingPage() {
           </div>
 
           {/* Phones row */}
-          <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6">
+          <div className="mt-12 md:mt-14 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-6 [&>*]:scale-[0.78] [&>*]:origin-top sm:[&>*]:scale-90 lg:[&>*]:scale-100">
             <Reveal variant="up" delay={0} duration={480} className="lg:translate-y-6"><PhoneRutero /></Reveal>
             <Reveal variant="up" delay={90} duration={480}><PhonePOS /></Reveal>
             <Reveal variant="up" delay={180} duration={480} className="lg:translate-y-6"><PhoneCobro /></Reveal>
@@ -549,31 +549,33 @@ export default function LandingPage() {
             </h2>
           </div>
           <div className="rounded-2xl bg-white border overflow-hidden" style={{ borderColor: BRAND.line }}>
-            <table className="w-full text-[13.5px]">
-              <thead>
-                <tr style={{ background: BRAND.surface }}>
-                  <th className="text-left p-3.5 font-semibold">Capacidad</th>
-                  <th className="p-3.5 text-center font-bold" style={{ color: BRAND.primary }}>Rutapp</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>Excel</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>WhatsApp</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>ERP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE.map((row) => (
-                  <tr key={row[0] as string} style={{ borderTop: `1px solid ${BRAND.line}` }}>
-                    <td className="p-3.5 font-medium">{row[0]}</td>
-                    {row.slice(1).map((v, j) => (
-                      <td key={j} className="p-3.5 text-center">
-                        {v === true ? <Check className="h-4 w-4 mx-auto" style={{ color: j === 0 ? BRAND.primary : BRAND.muted }} strokeWidth={3} />
-                          : v === false ? <X className="h-4 w-4 mx-auto" style={{ color: '#cbd5e1' }} />
-                          : <span className="text-[12px] font-medium" style={{ color: BRAND.muted }}>{v}</span>}
-                      </td>
-                    ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-[12.5px] md:text-[13.5px]">
+                <thead>
+                  <tr style={{ background: BRAND.surface }}>
+                    <th className="text-left p-2.5 md:p-3.5 font-semibold">Capacidad</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-bold" style={{ color: BRAND.primary }}>Rutapp</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>Excel</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>WhatsApp</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>ERP</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {COMPARE.map((row) => (
+                    <tr key={row[0] as string} style={{ borderTop: `1px solid ${BRAND.line}` }}>
+                      <td className="p-2.5 md:p-3.5 font-medium">{row[0]}</td>
+                      {row.slice(1).map((v, j) => (
+                        <td key={j} className="p-2.5 md:p-3.5 text-center">
+                          {v === true ? <Check className="h-4 w-4 mx-auto" style={{ color: j === 0 ? BRAND.primary : BRAND.muted }} strokeWidth={3} />
+                            : v === false ? <X className="h-4 w-4 mx-auto" style={{ color: '#cbd5e1' }} />
+                            : <span className="text-[12px] font-medium" style={{ color: BRAND.muted }}>{v}</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
