@@ -549,31 +549,33 @@ export default function LandingPage() {
             </h2>
           </div>
           <div className="rounded-2xl bg-white border overflow-hidden" style={{ borderColor: BRAND.line }}>
-            <table className="w-full text-[13.5px]">
-              <thead>
-                <tr style={{ background: BRAND.surface }}>
-                  <th className="text-left p-3.5 font-semibold">Capacidad</th>
-                  <th className="p-3.5 text-center font-bold" style={{ color: BRAND.primary }}>Rutapp</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>Excel</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>WhatsApp</th>
-                  <th className="p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>ERP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE.map((row) => (
-                  <tr key={row[0] as string} style={{ borderTop: `1px solid ${BRAND.line}` }}>
-                    <td className="p-3.5 font-medium">{row[0]}</td>
-                    {row.slice(1).map((v, j) => (
-                      <td key={j} className="p-3.5 text-center">
-                        {v === true ? <Check className="h-4 w-4 mx-auto" style={{ color: j === 0 ? BRAND.primary : BRAND.muted }} strokeWidth={3} />
-                          : v === false ? <X className="h-4 w-4 mx-auto" style={{ color: '#cbd5e1' }} />
-                          : <span className="text-[12px] font-medium" style={{ color: BRAND.muted }}>{v}</span>}
-                      </td>
-                    ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-[12.5px] md:text-[13.5px]">
+                <thead>
+                  <tr style={{ background: BRAND.surface }}>
+                    <th className="text-left p-2.5 md:p-3.5 font-semibold">Capacidad</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-bold" style={{ color: BRAND.primary }}>Rutapp</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>Excel</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>WhatsApp</th>
+                    <th className="p-2.5 md:p-3.5 text-center font-medium" style={{ color: BRAND.muted }}>ERP</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {COMPARE.map((row) => (
+                    <tr key={row[0] as string} style={{ borderTop: `1px solid ${BRAND.line}` }}>
+                      <td className="p-2.5 md:p-3.5 font-medium">{row[0]}</td>
+                      {row.slice(1).map((v, j) => (
+                        <td key={j} className="p-2.5 md:p-3.5 text-center">
+                          {v === true ? <Check className="h-4 w-4 mx-auto" style={{ color: j === 0 ? BRAND.primary : BRAND.muted }} strokeWidth={3} />
+                            : v === false ? <X className="h-4 w-4 mx-auto" style={{ color: '#cbd5e1' }} />
+                            : <span className="text-[12px] font-medium" style={{ color: BRAND.muted }}>{v}</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
