@@ -32,7 +32,6 @@ const RUTAS_REQUIEREN_JORNADA = [
 
 const ALL_TABS = [
   { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes' },
-  { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas_hist' },
   { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
   { label: 'Resumen', icon: BarChart3, path: '/ruta/dashboard', permiso: null as string | null },
 ];
@@ -40,7 +39,6 @@ const ALL_TABS = [
 const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
-  { label: 'Gastos', icon: FileText, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
 ];
