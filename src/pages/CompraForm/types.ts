@@ -3,6 +3,7 @@ export interface CompraLinea {
   compra_id?: string;
   producto_id: string;
   cantidad: number;
+  cantidad_recibida?: number;
   precio_unitario: number;
   subtotal: number;
   total: number;
