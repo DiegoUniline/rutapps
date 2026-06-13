@@ -81,3 +81,6 @@ verify_jwt = true
 
 [functions.cliente-portal]
 verify_jwt = false
+
+[functions.landing-chat]
+verify_jwt = false

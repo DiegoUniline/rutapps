@@ -13,6 +13,7 @@ import { PhoneRutero, PhonePOS, PhoneCobro, PhoneEntrega } from '@/components/la
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Reveal } from '@/components/landing/Reveal';
+import LandingChatWidget from '@/components/landing/LandingChatWidget';
 
 
 const BRAND = {
@@ -664,6 +665,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <LandingChatWidget />
     </div>
   );
 }
