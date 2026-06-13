@@ -197,7 +197,7 @@ const fmtMX = (n: number) => `$${n.toLocaleString('es-MX')}`;
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [openModule, setOpenModule] = useState<number | null>(null);
+  
   const [searchParams] = useSearchParams();
   useFacebookPixel();
 
