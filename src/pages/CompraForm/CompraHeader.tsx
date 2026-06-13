@@ -65,8 +65,6 @@ function StatusBar(p: Props) {
       {form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
       {saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
       {hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && <span className="text-xs text-amber-600 dark:text-amber-400 italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</span>}
-      {/* Helper para que recibirTodoPendiente se use cuando se confirma el diálogo (ver ConfirmDialog) */}
-      <span className="hidden" data-recibir-todo-handler ref={(el) => { if (el) (el as any)._handler = recibirTodoPendiente; }} />
     </div>
   );
 }
