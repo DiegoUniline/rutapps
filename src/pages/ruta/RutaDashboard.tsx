@@ -265,9 +265,9 @@ export default function RutaDashboard() {
           <div className="space-y-3">
             {/* KPI grid */}
             <div className="grid grid-cols-3 gap-2">
-              <KpiMini icon={Truck} label="Entregas" value={`${kpis.totalEntregas}`} color="bg-warning/10 text-warning" />
-              <KpiMini icon={Banknote} label="Cobrado" value={fmt(kpis.totalCobros)} color="bg-success/10 text-success" />
-              <KpiMini icon={Receipt} label="Gastos" value={fmt(kpis.totalGastos)} color="bg-destructive/10 text-destructive" />
+              <KpiMini icon={Truck} label="Entregas" value={`${rangoTotales.entregas}`} color="bg-warning/10 text-warning" />
+              <KpiMini icon={Banknote} label="Cobrado" value={fmt(rangoTotales.cobros)} color="bg-success/10 text-success" />
+              <KpiMini icon={Receipt} label="Gastos" value={fmt(rangoTotales.gastos)} color="bg-destructive/10 text-destructive" />
             </div>
 
             {/* Totales rango */}
