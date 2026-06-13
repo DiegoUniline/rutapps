@@ -1,7 +1,9 @@
 // PDF profesional estilo Rutapp (mismo formato que el reporte diario del sistema).
 // Usado por el bot de WhatsApp.
 import { jsPDF } from "npm:jspdf@2.5.1";
-import autoTable from "npm:jspdf-autotable@3.8.2";
+import autoTableModule from "npm:jspdf-autotable@3.8.2";
+
+const autoTable = ((autoTableModule as any).default || autoTableModule) as (doc: any, opts: any) => void;
 
 export interface EmpresaInfo {
   nombre?: string | null;
