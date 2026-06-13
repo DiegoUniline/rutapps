@@ -656,7 +656,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const folio = String(args?.folio || "").trim();
     if (!folio) return { error: "Folio requerido" };
     const { data: ventas } = await admin.from("ventas")
-      .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, total, productos(codigo, nombre)), cobro_aplicaciones(monto, cobros(fecha, metodo_pago, referencia))")
+      .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
       .eq("empresa_id", empresaId)
       .ilike("folio", `%${folio}%`)
       .order("fecha", { ascending: false })
@@ -666,8 +666,8 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const vendIds = Array.from(new Set(ventas.map((v:any) => v.vendedor_id).filter(Boolean)));
     let vendMap = new Map<string,string>();
     if (vendIds.length) {
-      const { data: profs } = await admin.from("profiles").select("id, nombre_completo, email").in("id", vendIds);
-      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre_completo || p.email || "—"]));
+      const { data: profs } = await admin.from("profiles").select("id, nombre").in("id", vendIds);
+      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre || "—"]));
     }
     return {
       ventas: ventas.map((v:any) => ({
@@ -689,13 +689,66 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
           total: Number(l.total||0),
         })),
         cobros: (v.cobro_aplicaciones||[]).map((a:any) => ({
-          monto: Number(a.monto||0),
+          monto: Number(a.monto_aplicado||0),
           fecha: a.cobros?.fecha,
           metodo: a.cobros?.metodo_pago,
           referencia: a.cobros?.referencia,
         })),
       })),
     };
+  }
+
+  if (name === "consultar_ventas_recientes") {
+    if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
+    const lim = Math.min(Number(args?.limite || 3), 10);
+    let q = admin.from("ventas")
+      .select("id, folio, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+      .eq("empresa_id", empresaId)
+      .neq("status", "cancelada")
+      .neq("status", "cancelado")
+      .order("created_at", { ascending: false })
+      .limit(lim);
+    if (args?.fecha) {
+      const date = parseFecha(args.fecha);
+      const { start, end } = dayRange(date);
+      q = q.gte("fecha", start).lte("fecha", end);
+    }
+    const { data: ventas, error } = await q;
+    if (error) return { error: error.message };
+    if (!ventas || !ventas.length) return { resultado: "📭 No encontré ventas con esos filtros." };
+    const vendIds = Array.from(new Set(ventas.map((v:any) => v.vendedor_id).filter(Boolean)));
+    let vendMap = new Map<string,string>();
+    if (vendIds.length) {
+      const { data: profs } = await admin.from("profiles").select("id, nombre").in("id", vendIds);
+      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre || "—"]));
+    }
+    const detalle = ventas.map((v:any) => ({
+      folio: v.folio,
+      fecha: v.fecha,
+      cliente: v.clientes?.nombre || "—",
+      vendedor: vendMap.get(v.vendedor_id) || "—",
+      condicion_pago: v.condicion_pago,
+      subtotal: Number(v.subtotal||0),
+      descuento_total: Number(v.descuento_total||0),
+      total: Number(v.total||0),
+      saldo_pendiente: Number(v.saldo_pendiente||0),
+      status: v.status,
+      lineas: (v.venta_lineas||[]).map((l:any) => ({
+        producto: `${l.productos?.codigo||""} ${l.productos?.nombre||"—"}`.trim(),
+        cantidad: Number(l.cantidad||0),
+        precio_unitario: Number(l.precio_unitario||0),
+        descuento_pct: Number(l.descuento_pct||0),
+        subtotal: Number(l.subtotal||0),
+        total: Number(l.total||0),
+      })),
+      cobros: (v.cobro_aplicaciones||[]).map((a:any) => ({
+        monto: Number(a.monto_aplicado||0),
+        fecha: a.cobros?.fecha,
+        metodo: a.cobros?.metodo_pago,
+        referencia: a.cobros?.referencia,
+      })),
+    }));
+    return { ventas: detalle, resultado: JSON.stringify(detalle).slice(0, 4000) };
   }
 
   return { error: "Herramienta desconocida" };
