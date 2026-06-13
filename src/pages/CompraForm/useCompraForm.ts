@@ -205,7 +205,6 @@ export function useCompraForm() {
         const validLines = lineas.filter(l => l.producto_id && (Number(l.cantidad_recibida) || 0) > 0); const today = todayLocal();
         const updates: Array<Promise<void>> = [];
         for (const l of validLines) {
-          const factor = Number(l._factor_conversion) || 1;
           const piezas = Math.max(0, Number(l.cantidad_recibida) || 0);
           if (piezas <= 0) continue;
 
