@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { todayLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw } from 'lucide-react';
+import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
