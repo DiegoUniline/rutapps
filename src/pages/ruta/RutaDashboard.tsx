@@ -16,6 +16,7 @@ export default function RutaDashboard() {
   const today = todayLocal();
   const isSAOverride = !!overrideEmpresaId;
   const vendedorId = isSAOverride ? overrideVendedorId : profile?.id;
+  const allVendedores = isSAOverride && !vendedorId;
 
   // Filtros
   const [tab, setTab] = useState<TabKey>('resumen');
@@ -23,42 +24,25 @@ export default function RutaDashboard() {
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
 
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: entregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
-  const { data: cobros } = useOfflineQuery('cobros', { empresa_id: empresa?.id, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
-  const { data: devoluciones } = useOfflineQuery('devoluciones', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
+  const { data: perfiles } = useOfflineQuery('profiles', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const vendedorUserId = vendedorId
+    ? (vendedorId === profile?.id ? user?.id : (perfiles ?? []).find((p: any) => p.id === vendedorId)?.user_id)
+    : null;
+  const vendorScopedEnabled = !!empresa?.id && (allVendedores || !!vendedorId);
+  const cobrosEnabled = !!empresa?.id && (allVendedores || !!vendedorUserId);
+
+  const { data: ventas } = useOfflineQuery('ventas', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: entregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: cobros } = useOfflineQuery('cobros', allVendedores ? { empresa_id: empresa?.id } : { empresa_id: empresa?.id, user_id: vendedorUserId }, { enabled: cobrosEnabled });
+  const { data: devoluciones } = useOfflineQuery('devoluciones', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
 
   const clienteById = useMemo(() => {
     const m = new Map<string, any>();
     (clientes ?? []).forEach((c: any) => m.set(c.id, c));
     return m;
   }, [clientes]);
-
-  // KPIs del día (hoy fijo, no afectados por filtros)
-  const ventasHoy = (ventas ?? []).filter((v: any) => v.fecha === today && v.status !== 'cancelada');
-  const entregasHoy = (entregas ?? []).filter((e: any) => (e.fecha_entrega ?? e.fecha) === today && e.status === 'entregado');
-  const cobrosHoy = (cobros ?? []).filter((c: any) => c.fecha === today);
-  const gastosHoy = (gastos ?? []).filter((g: any) => g.fecha === today);
-  const clientesVisitadosHoy = new Set([
-    ...ventasHoy.map((v: any) => v.cliente_id),
-    ...entregasHoy.map((e: any) => e.cliente_id),
-  ].filter(Boolean)).size;
-
-  const kpis = {
-    totalVentas: ventasHoy.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
-    numVentas: ventasHoy.length,
-    totalEntregas: entregasHoy.length,
-    totalCobros: cobrosHoy.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
-    numCobros: cobrosHoy.length,
-    totalGastos: gastosHoy.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
-    numGastos: gastosHoy.length,
-    clientesVisitados: clientesVisitadosHoy,
-  };
-
-  const dayName = new Date().toLocaleDateString('es-MX', { weekday: 'long' });
-  const dateStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
 
   // Filtrado de listas
   const inRange = (fecha?: string) => {
