@@ -381,7 +381,7 @@ export default function LandingPage() {
                   Empezar gratis
                 </Link>
                 <ul className="mt-5 space-y-2 flex-1">
-                  {['Acceso completo', 'App móvil offline', 'IA incluida', 'Soporte WhatsApp'].map(f => (
+                  {['Acceso completo', 'App móvil tolerante a cortes', 'IA incluida', 'Soporte WhatsApp'].map(f => (
                     <li key={f} className="flex items-center gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
                       <Check className="h-3.5 w-3.5 shrink-0" style={{ color: BRAND.primary }} strokeWidth={3} /> {f}
                     </li>
