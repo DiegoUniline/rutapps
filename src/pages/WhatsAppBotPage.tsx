@@ -143,13 +143,13 @@ export default function WhatsAppBotPage() {
             Bot de WhatsApp <Sparkles className="h-5 w-5 text-amber-500" />
           </h1>
           <p className="text-muted-foreground">
-            Módulo premium: tu equipo pide por WhatsApp el reporte del día, stock bajo, estado de cuenta y cobros — y el sistema responde con texto o PDF al instante.
+            Módulo premium: Jarvis interpreta preguntas por WhatsApp y responde solo con datos reales del sistema de la empresa: ventas, pedidos, clientes, saldos, productos, cobros y reportes PDF.
           </p>
           <ul className="text-sm text-left max-w-md mx-auto space-y-2">
-            <li>📊 <b>reporte hoy</b> / <b>reporte ayer</b> → PDF del día</li>
-            <li>📦 <b>stock bajo 10</b> → productos por debajo del umbral</li>
-            <li>👤 <b>cliente Juan</b> → saldo y últimas ventas</li>
-            <li>💰 <b>cobros hoy</b> → resumen por método de pago</li>
+            <li>📊 <b>Mándame el reporte de hoy en PDF</b></li>
+            <li>📦 <b>¿Qué productos tengo en stock?</b></li>
+            <li>👤 <b>Saldo de Juan Pérez</b></li>
+            <li>🧾 <b>¿Quién vendió la última venta?</b></li>
           </ul>
           <Button
             size="lg"
@@ -180,16 +180,16 @@ export default function WhatsAppBotPage() {
         <Badge className="bg-green-600">Contratado</Badge>
       </div>
 
-      {/* Comandos */}
+        {/* Ejemplos */}
       <Card className="p-4 space-y-2">
-        <h2 className="font-semibold">Comandos disponibles</h2>
+          <h2 className="font-semibold">Ejemplos para Jarvis</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-          <code className="bg-muted px-2 py-1 rounded">reporte hoy</code>
-          <code className="bg-muted px-2 py-1 rounded">reporte ayer</code>
-          <code className="bg-muted px-2 py-1 rounded">stock bajo 10</code>
-          <code className="bg-muted px-2 py-1 rounded">stock coca</code>
-          <code className="bg-muted px-2 py-1 rounded">cliente Juan Pérez</code>
-          <code className="bg-muted px-2 py-1 rounded">cobros hoy</code>
+            <code className="bg-muted px-2 py-1 rounded">Mándame el reporte de hoy en PDF</code>
+            <code className="bg-muted px-2 py-1 rounded">¿Qué productos tengo en stock?</code>
+            <code className="bg-muted px-2 py-1 rounded">¿Qué pedidos tengo hoy?</code>
+            <code className="bg-muted px-2 py-1 rounded">¿Quién vendió la última venta?</code>
+            <code className="bg-muted px-2 py-1 rounded">Saldo de Juan Pérez</code>
+            <code className="bg-muted px-2 py-1 rounded">¿Quién me debe más?</code>
         </div>
       </Card>
 

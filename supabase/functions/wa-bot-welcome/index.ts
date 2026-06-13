@@ -20,13 +20,14 @@ function normalizePhone(raw: string): string {
 const WELCOME = (nombre: string | null, empresa: string) =>
   `👋 ¡Hola${nombre ? ` ${nombre}` : ""}! Soy *Jarvis* 🤖, el asistente IA de *RutApp* para *${empresa}*.
 
-Estoy disponible 24/7 por WhatsApp. Solo platícame en lenguaje natural lo que necesites — *no uses comandos*.
+Estoy disponible 24/7 por WhatsApp. Solo platícame en lenguaje natural lo que necesites — respondo únicamente con *información real del sistema de tu empresa*.
 
 ✨ *Lo que puedo hacer:*
 📊 Reportes diarios en PDF (ventas, cobros, gastos)
-📦 Consultar stock e inventario
-👤 Ver saldos y movimientos de clientes
-💰 Resumen de cobros del día
+📦 Consultar productos, stock e inventario
+👤 Ver clientes, saldos y movimientos
+💰 Resumen de cobros, pagos y métodos de pago
+🧾 Ventas, pedidos y quién los vendió
 📈 Top de productos / cuentas por cobrar
 🔍 Detalle de cualquier venta por folio
 
