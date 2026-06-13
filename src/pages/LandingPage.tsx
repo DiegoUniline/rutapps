@@ -303,6 +303,7 @@ export default function LandingPage() {
         {mobileMenu && (
           <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-3">
             <a href="#realtime" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-emerald-600">● En vivo</a>
+            <a href="#ai" onClick={() => setMobileMenu(false)} className="block text-sm font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>✨ IA integrada</a>
             <a href="#features" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Funciones</a>
             <a href="#modules" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Módulos</a>
             <a href="#screenshots" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Capturas</a>
