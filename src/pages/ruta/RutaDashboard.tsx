@@ -7,7 +7,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
-type TabKey = 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
+type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function RutaDashboard() {
   const vendedorId = profile?.id;
 
   // Filtros
-  const [tab, setTab] = useState<TabKey>('ventas');
+  const [tab, setTab] = useState<TabKey>('resumen');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
@@ -102,12 +102,55 @@ export default function RutaDashboard() {
   , [devoluciones, from, to, search, clienteById]);
 
   const tabs: { key: TabKey; label: string; count: number; icon: any }[] = [
+    { key: 'resumen', label: 'Resumen', count: 0, icon: TrendingUp },
     { key: 'ventas', label: 'Ventas', count: ventasFiltradas.length, icon: ShoppingCart },
     { key: 'entregas', label: 'Entregas', count: entregasFiltradas.length, icon: Truck },
     { key: 'cobros', label: 'Cobros', count: cobrosFiltrados.length, icon: Banknote },
     { key: 'gastos', label: 'Gastos', count: gastosFiltrados.length, icon: Receipt },
     { key: 'devoluciones', label: 'Devol.', count: devolucionesFiltradas.length, icon: RotateCcw },
   ];
+
+  // Top clientes por ventas en el rango
+  const topClientes = useMemo(() => {
+    const map = new Map<string, { nombre: string; total: number; count: number }>();
+    ventasFiltradas.forEach((v: any) => {
+      if (v.status === 'cancelada') return;
+      const key = v.cliente_id ?? 'sin';
+      const nombre = clienteById.get(v.cliente_id)?.nombre ?? 'Cliente';
+      const cur = map.get(key) ?? { nombre, total: 0, count: 0 };
+      cur.total += v.total ?? 0;
+      cur.count += 1;
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [ventasFiltradas, clienteById]);
+
+  // Tendencia 7 días (ventas)
+  const trend7 = useMemo(() => {
+    const days: { d: string; label: string; total: number }[] = [];
+    const base = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(base); d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '');
+      days.push({ d: iso, label, total: 0 });
+    }
+    (ventas ?? []).forEach((v: any) => {
+      if (v.status === 'cancelada') return;
+      const day = days.find(x => x.d === (v.fecha ?? '').slice(0, 10));
+      if (day) day.total += v.total ?? 0;
+    });
+    return days;
+  }, [ventas]);
+  const trendMax = Math.max(1, ...trend7.map(t => t.total));
+
+  // Totales del rango
+  const rangoTotales = {
+    ventas: ventasFiltradas.filter((v: any) => v.status !== 'cancelada').reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
+    gastos: gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
+    entregas: entregasFiltradas.filter((e: any) => e.status === 'entregado').length,
+  };
 
   const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
 
@@ -131,12 +174,6 @@ export default function RutaDashboard() {
         <p className="text-[12px] opacity-80">{kpis.numVentas} ventas · {kpis.clientesVisitados} clientes visitados</p>
       </div>
 
-      {/* KPI grid */}
-      <div className="grid grid-cols-3 gap-2">
-        <KpiMini icon={Truck} label="Entregas" value={`${kpis.totalEntregas}`} color="bg-warning/10 text-warning" />
-        <KpiMini icon={Banknote} label="Cobrado" value={fmt(kpis.totalCobros)} color="bg-success/10 text-success" />
-        <KpiMini icon={Receipt} label="Gastos" value={fmt(kpis.totalGastos)} color="bg-destructive/10 text-destructive" />
-      </div>
 
       {/* Filtros */}
       <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
@@ -191,26 +228,104 @@ export default function RutaDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={cn(
-              "flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg transition-colors",
-              tab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
-            )}
-          >
-            <t.icon className="h-4 w-4" />
-            <span className="text-[10px] font-semibold truncate max-w-full">{t.label}</span>
-            <span className="text-[9px] opacity-70">{t.count}</span>
-          </button>
-        ))}
+      {/* Tabs - scroll horizontal */}
+      <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+        <div className="inline-flex gap-1 bg-muted/50 rounded-xl p-1 min-w-full">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "flex items-center gap-1.5 py-2 px-3 rounded-lg transition-colors whitespace-nowrap shrink-0",
+                tab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <t.icon className="h-4 w-4" />
+              <span className="text-[12px] font-semibold">{t.label}</span>
+              {t.count > 0 && <span className="text-[10px] opacity-70 bg-muted px-1.5 rounded">{t.count}</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Lista */}
+      {/* Contenido */}
       <div className="space-y-2">
+        {tab === 'resumen' && (
+          <div className="space-y-3">
+            {/* KPI grid */}
+            <div className="grid grid-cols-3 gap-2">
+              <KpiMini icon={Truck} label="Entregas" value={`${kpis.totalEntregas}`} color="bg-warning/10 text-warning" />
+              <KpiMini icon={Banknote} label="Cobrado" value={fmt(kpis.totalCobros)} color="bg-success/10 text-success" />
+              <KpiMini icon={Receipt} label="Gastos" value={fmt(kpis.totalGastos)} color="bg-destructive/10 text-destructive" />
+            </div>
+
+            {/* Totales rango */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground font-medium mb-2">Totales del rango</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Ventas</p>
+                  <p className="text-[16px] font-bold text-foreground">{fmt(rangoTotales.ventas)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Cobrado</p>
+                  <p className="text-[16px] font-bold text-success">{fmt(rangoTotales.cobros)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Entregas</p>
+                  <p className="text-[16px] font-bold text-foreground">{rangoTotales.entregas}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Gastos</p>
+                  <p className="text-[16px] font-bold text-destructive">{fmt(rangoTotales.gastos)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tendencia 7 días */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground font-medium mb-3">Ventas últimos 7 días</p>
+              <div className="flex items-end justify-between gap-1.5 h-28">
+                {trend7.map((d, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex-1 flex items-end">
+                      <div
+                        className="w-full bg-primary/80 rounded-t-md min-h-[2px] transition-all"
+                        style={{ height: `${(d.total / trendMax) * 100}%` }}
+                        title={fmt(d.total)}
+                      />
+                    </div>
+                    <span className="text-[9px] text-muted-foreground capitalize">{d.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top clientes */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground font-medium mb-2">Top clientes del rango</p>
+              {topClientes.length === 0 ? (
+                <p className="text-[12px] text-muted-foreground py-4 text-center">Sin datos</p>
+              ) : (
+                <div className="space-y-2">
+                  {topClientes.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="text-[13px] font-medium text-foreground truncate">{c.nombre}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[13px] font-bold text-foreground">{fmt(c.total)}</p>
+                        <p className="text-[9px] text-muted-foreground">{c.count} venta{c.count > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {tab === 'ventas' && (ventasFiltradas.length === 0
           ? <Empty label="Sin ventas en el rango" />
           : ventasFiltradas.map((v: any) => (
