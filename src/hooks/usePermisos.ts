@@ -162,6 +162,7 @@ export const ACCIONES_POR_MODULO: Record<string, string[]> = {
   'configuracion.general': ['ver', 'editar'],
   'configuracion.suscripcion': ['ver'],
   'configuracion.whatsapp': ['ver', 'editar'],
+  'configuracion.wa_bot': ['ver', 'editar'],
   'facturacion.catalogos': ['ver'],
 };
 
