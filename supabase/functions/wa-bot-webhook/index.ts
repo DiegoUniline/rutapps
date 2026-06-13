@@ -462,7 +462,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_stock_disponible",
-      description: "Devuelve productos reales con stock disponible (> 0). Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
+      description: "Devuelve productos reales con stock disponible (> 0) desde productos.cantidad. Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
       parameters: {
         type: "object",
         properties: {
@@ -547,13 +547,41 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_ventas_recientes",
-      description: "Consulta ventas reales recientes o de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy' o 'última venta'.",
+      description: "Consulta ventas o pedidos reales recientes/de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy', 'pedidos de hoy' o 'última venta'.",
       parameters: {
         type: "object",
         properties: {
           fecha: { type: "string", description: "Opcional: 'hoy', 'ayer', dd/mm/yyyy o yyyy-mm-dd." },
+          tipo: { type: "string", description: "Opcional: 'pedido' o 'venta_directa'." },
+          status: { type: "string", description: "Opcional: borrador, confirmado, entregado, facturado o cancelado." },
           limite: { type: "number", description: "Máximo de ventas, default 3." },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_clientes",
+      description: "Lista clientes reales de la empresa. Puede filtrar por nombre, teléfono, con saldo pendiente o por estado.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Opcional: nombre, código o teléfono." },
+          con_saldo: { type: "boolean", description: "true para solo clientes con saldo pendiente." },
+          limite: { type: "number", description: "Máximo de clientes, default 10." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_saldos",
+      description: "Resumen real de saldos/cuentas por cobrar: total pendiente y clientes con mayor saldo.",
+      parameters: {
+        type: "object",
+        properties: { limite: { type: "number", description: "Máximo clientes, default 10." } },
       },
     },
   },
