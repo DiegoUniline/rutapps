@@ -245,7 +245,8 @@ export default function LandingPage() {
               Empezar <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex md:hidden items-center gap-1.5">
+            <Link to="/login" className="px-2.5 py-1 text-xs font-medium" style={{ color: BRAND.ink2 }}>Entrar</Link>
             <Link to="/signup" className="px-2.5 py-1 text-xs font-semibold text-white rounded" style={{ background: BRAND.ink }}>Probar</Link>
             <button onClick={() => setMobileMenu(!mobileMenu)} className="p-1.5" aria-label="Menú">
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
