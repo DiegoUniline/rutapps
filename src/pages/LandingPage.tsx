@@ -298,8 +298,15 @@ export default function LandingPage() {
             </Reveal>
             <Reveal variant="up" delay={200}>
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
-                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
-                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
+                <button
+                  onClick={() => setSimulatorOpen(true)}
+                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}
+                >
+                  <Sparkles className="h-4 w-4" /> Probar venta móvil ahora
+                </button>
+                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg inline-flex items-center gap-2 border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
                 <a href="#modulos" className="w-full sm:w-auto text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
@@ -446,16 +453,6 @@ export default function LandingPage() {
             </h2>
             <p className="mt-4 text-[14.5px] md:text-[16px] leading-relaxed" style={{ color: BRAND.muted }}>
               Rutero, venta, cobro y entrega — diseñados para tocarse con el pulgar y tolerar cortes de red.
-            </p>
-            <button
-              onClick={() => setSimulatorOpen(true)}
-              className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white text-[14px] font-bold shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
-              style={{ background: BRAND.primary, boxShadow: `0 15px 35px -10px ${BRAND.primary}80` }}
-            >
-              <Sparkles className="h-4 w-4" /> Probar venta móvil ahora
-            </button>
-            <p className="mt-2 text-[11.5px]" style={{ color: BRAND.muted }}>
-              Simulador interactivo · datos ficticios · nada se guarda
             </p>
           </div>
 
