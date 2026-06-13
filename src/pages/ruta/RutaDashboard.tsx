@@ -157,12 +157,6 @@ export default function RutaDashboard() {
   return (
     <div className="p-4 space-y-4 pb-24">
       {/* Header */}
-      <div>
-        <p className="text-muted-foreground text-[13px] capitalize">{dayName}, {dateStr}</p>
-        <h1 className="text-[22px] font-bold text-foreground">
-          Hola, {profile?.nombre?.split(' ')[0] ?? 'Vendedor'} 👋
-        </h1>
-      </div>
 
       {/* KPI hero */}
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
@@ -220,7 +214,7 @@ export default function RutaDashboard() {
                 else if (p.k === '30d') { const d = new Date(t); d.setDate(d.getDate()-29); setFrom(iso(d)); setTo(today); }
                 else { const d = new Date(t.getFullYear(), t.getMonth(), 1); setFrom(iso(d)); setTo(today); }
               }}
-              className="px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground"
+              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20"
             >
               {p.label}
             </button>
