@@ -134,6 +134,7 @@ export const MODULOS: ModuloDef[] = [
   { id: 'configuracion.general', label: 'General', group: 'Configuración' },
   { id: 'configuracion.usuarios', label: 'Usuarios y permisos', group: 'Configuración' },
   { id: 'configuracion.whatsapp', label: 'WhatsApp', group: 'Configuración' },
+  { id: 'configuracion.wa_bot', label: 'Bot WhatsApp', group: 'Configuración' },
   { id: 'configuracion.suscripcion', label: 'Mi suscripción', group: 'Configuración' },
 ];
 
