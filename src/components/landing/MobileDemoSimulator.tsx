@@ -56,10 +56,10 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto" style={{ width: 'min(360px, 92vw)' }}>
       <div className="rounded-[44px] p-2 shadow-2xl"
-        style={{ background: '#0a0f1c', boxShadow: '0 40px 80px -20px rgba(0,0,0,0.5)' }}>
+        style={{ background: '#f0f2f5', boxShadow: '0 40px 80px -20px rgba(0,0,0,0.15)' }}>
         <div className="rounded-[36px] overflow-hidden relative" style={{ aspectRatio: '9/19.5', background: T.bg, color: T.text }}>
           {/* Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-b-2xl z-30" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-white/90 rounded-b-2xl z-30 shadow-sm" />
           {/* Status bar */}
           <div className="flex items-center justify-between px-6 pt-2 pb-1 text-[11px] font-semibold relative z-20" style={{ color: T.text }}>
             <span>9:41</span>
