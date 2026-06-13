@@ -29,6 +29,8 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
   const lineTotal = r2(base + ieps + iva);
+  const storedTotal = Number(l.total) || 0;
+  const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
@@ -120,7 +122,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Total</label>
-            <span className="text-sm font-semibold">{fmt(lineTotal)}</span>
+            <span className="text-sm font-semibold">{fmt(displayLineTotal)}</span>
           </div>
         </div>
       )}
