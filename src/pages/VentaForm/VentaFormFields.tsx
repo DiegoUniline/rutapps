@@ -85,14 +85,18 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
   );
 
   const extraTipo = form.descuento_extra_tipo || 'porcentaje';
+  const impliedDiscount = Math.max(0, Number(form.subtotal ?? 0) + Number(form.iva_total ?? 0) + Number(form.ieps_total ?? 0) - Number(form.total ?? 0));
+  const discountDisplay = (form.descuento_extra ?? 0) > 0
+    ? `${form.descuento_extra} ${extraTipo === 'porcentaje' ? '%' : '$'}`
+    : impliedDiscount > 0
+      ? fmt(impliedDiscount)
+      : '—';
   const renderDescuentoExtra = () => (
     <div>
       <label className="label-odoo">Descuento extra</label>
       {readOnly ? (
         <div className="text-[13px] py-1.5 px-1 text-foreground">
-          {(form.descuento_extra ?? 0) > 0
-            ? `${form.descuento_extra} ${extraTipo === 'porcentaje' ? '%' : '$'}`
-            : '—'}
+          {discountDisplay}
         </div>
       ) : (
         <div className="flex items-center gap-1">
