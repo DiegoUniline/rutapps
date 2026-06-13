@@ -298,8 +298,15 @@ export default function LandingPage() {
             </Reveal>
             <Reveal variant="up" delay={200}>
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
-                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
-                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
+                <button
+                  onClick={() => setSimulatorOpen(true)}
+                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}
+                >
+                  <Sparkles className="h-4 w-4" /> Probar venta móvil ahora
+                </button>
+                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg inline-flex items-center gap-2 border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
                 <a href="#modulos" className="w-full sm:w-auto text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
