@@ -7,6 +7,7 @@ import {
   FileText, ClipboardCheck, RefreshCw, Receipt, Bell,
   WifiOff, MessageCircle, TrendingUp, Eye, Layers,
   Tag, Building2, Calculator, ScanLine, Activity,
+  Sparkles, Brain, Lightbulb, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
