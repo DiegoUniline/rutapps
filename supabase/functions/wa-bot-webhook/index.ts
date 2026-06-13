@@ -612,14 +612,13 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   if (name === "consultar_stock_disponible") {
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const lim = Math.min(Number(args?.limite || 15), 30);
-    let q = admin.from("productos")
-      .select("codigo, nombre, cantidad, stock_min, precio")
+    let q = activeProduct(admin.from("productos")
+      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .eq("activo", true)
       .gt("cantidad", 0)
       .order("cantidad", { ascending: false })
-      .limit(lim);
-    const query = String(args?.query || "").trim();
+      .limit(lim));
+    const query = cleanLike(args?.query);
     if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`);
     const { data, error } = await q;
     if (error) return { error: error.message };
@@ -627,7 +626,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!productos.length) return { resultado: `📦 No encontré productos con stock disponible${query ? ` para "${query}"` : ""}.` };
     let resultado = `📦 *Productos con stock disponible${query ? ` (${query})` : ""}:*\n\n`;
     for (const p of productos as any[]) {
-      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)}*${p.precio != null ? ` · Precio: ${fmt(Number(p.precio || 0))}` : ""}\n`;
+      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}*${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
     }
     if (productos.length === lim) resultado += `\nMostré los primeros ${lim}. Puedes pedirme un producto por nombre o código.`;
     return { resultado, productos };
@@ -635,15 +634,16 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "buscar_producto") {
     if (!need("stock")) return { error: "Sin permiso para productos" };
-    const { data } = await admin.from("productos")
-      .select("codigo, nombre, cantidad, stock_min, precio")
+    const query = cleanLike(args?.query);
+    const { data } = await activeProduct(admin.from("productos")
+      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .or(`nombre.ilike.%${args.query}%,codigo.ilike.%${args.query}%`)
-      .limit(10);
+      .or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`)
+      .limit(10));
     const productos = data || [];
-    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args.query}".` };
+    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args?.query}".` };
     let resultado = `📦 *Productos encontrados:*\n\n`;
-    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)}* · Precio: ${fmt(Number(p.precio || 0))}\n`;
+    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}* · Mín: ${Number(p.min || 0)} · Precio: ${fmt(Number(p.precio_principal || 0))}\n`;
     return { resultado, productos };
   }
 
