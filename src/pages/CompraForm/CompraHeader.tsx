@@ -11,12 +11,14 @@ interface Props {
   totalPagado: number;
   totals: { total: number };
   saldoActual: number;
+  hayPendienteRecibir: boolean;
   confirmDialog: { open: boolean; action: string; title: string; description: string } | null;
   setConfirmDialog: (v: any) => void;
   handleSave: () => void;
   handleDelete: () => void;
   handleStatusChange: (s: string) => void;
   handleCancel: () => void;
+  recibirTodoPendiente: () => void;
   requestPin: (title: string, desc: string, cb: () => void) => void;
   onBack: () => void;
   onRegistrarPago?: () => void;
@@ -47,7 +49,8 @@ export function CompraHeader(p: Props) {
 
 function StatusBar(p: Props) {
   const { fmt } = useCurrency();
-  const { form, setConfirmDialog, saldoActual, totals } = p;
+  const { form, setConfirmDialog, saldoActual, totals, hayPendienteRecibir } = p;
+  const puedeRecibir = hayPendienteRecibir && !['borrador', 'cancelada'].includes(form.status);
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
@@ -57,20 +60,29 @@ function StatusBar(p: Props) {
         {form.status === 'cancelada' && <Ban className="h-3 w-3" />}{form.status === 'pagada' && <CheckCircle2 className="h-3 w-3" />}{form.status === 'recibida' && <PackageCheck className="h-3 w-3" />}{form.status}
       </span>
       {form.status === 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95"><CheckCircle2 className="h-4 w-4" />Confirmar</button>}
-      {form.status === 'confirmada' && <button onClick={() => setConfirmDialog({ open: true, action: 'recibida', title: 'Marcar como recibida', description: '¿Marcar como recibida? Se sumará el stock al almacén, independientemente del estado de pago.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Marcar recibida</button>}
-      {form.status === 'recibida' && saldoActual === 0 && <button onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><CheckCircle2 className="h-4 w-4" />Marcar pagada</button>}
-      {form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá stock.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
+      {puedeRecibir && <button onClick={() => setConfirmDialog({ open: true, action: 'recibir_todo', title: 'Recibir mercancía pendiente', description: 'Se sumará al almacén todo lo que aún no se ha recibido de esta compra. ¿Continuar?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Recibir todo lo pendiente</button>}
+      {form.status === 'recibida' && saldoActual === 0 && totals.total > 0 && <button onClick={() => setConfirmDialog({ open: true, action: 'pagada', title: 'Marcar como pagada', description: '¿Marcar esta compra como pagada?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"><CheckCircle2 className="h-4 w-4" />Marcar pagada</button>}
+      {form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá la mercancía recibida y se borrarán los pagos.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
       {saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
-      {form.status === 'confirmada' && saldoActual === 0 && totals.total > 0 && <span className="text-xs text-muted-foreground italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Pagada pero falta recibir mercancía</span>}
+      {hayPendienteRecibir && form.status !== 'borrador' && form.status !== 'cancelada' && <span className="text-xs text-amber-600 dark:text-amber-400 italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Hay mercancía pendiente por recibir</span>}
     </div>
   );
 }
 
-function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, handleCancel, requestPin }: Props) {
+function ConfirmDialog({ confirmDialog, setConfirmDialog, handleStatusChange, handleCancel, recibirTodoPendiente, requestPin }: Props) {
   return (
     <AlertDialog open={confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle><AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription></AlertDialogHeader>
-        <AlertDialogFooter><AlertDialogCancel>No, volver</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90")} onClick={() => { if (confirmDialog?.action === 'cancelar') { requestPin('Cancelar compra', 'Ingresa tu PIN', () => handleCancel()); } else if (confirmDialog?.action) { handleStatusChange(confirmDialog.action); } setConfirmDialog(null); }}>Sí, continuar</AlertDialogAction></AlertDialogFooter>
+        <AlertDialogFooter><AlertDialogCancel>No, volver</AlertDialogCancel><AlertDialogAction className={cn(confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90")} onClick={() => {
+          if (confirmDialog?.action === 'cancelar') {
+            requestPin('Cancelar compra', 'Ingresa tu PIN', () => handleCancel());
+          } else if (confirmDialog?.action === 'recibir_todo') {
+            recibirTodoPendiente();
+          } else if (confirmDialog?.action) {
+            handleStatusChange(confirmDialog.action);
+          }
+          setConfirmDialog(null);
+        }}>Sí, continuar</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );

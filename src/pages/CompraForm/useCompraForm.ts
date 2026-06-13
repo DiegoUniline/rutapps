@@ -125,47 +125,88 @@ export function useCompraForm() {
 
   const handleStatusChange = async (newStatus: string) => {
     if (isNew || form.status === 'cancelada' || newStatus === 'cancelada') return;
+    // 'recibida' ya no se setea desde acá: lo hace el RPC al recibir mercancía
+    if (newStatus === 'recibida') return;
     const order = ['borrador', 'confirmada', 'recibida', 'pagada'];
     const curIdx = order.indexOf(form.status); const newIdx = order.indexOf(newStatus);
-    if (newIdx <= curIdx || newIdx > curIdx + 1) return;
+    if (newIdx <= curIdx) return;
     try {
       const updates: any = { status: newStatus };
       if (newStatus === 'confirmada') updates.saldo_pendiente = Math.max(0, totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0));
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id); if (error) throw error;
-      if (newStatus === 'recibida') {
-        const validLines = lineas.filter(l => l.producto_id);
-        const almacenId = form.almacen_id;
-        for (const l of validLines) {
-          const factor = Number(l._factor_conversion) || 1;
-          const piezas = (Number(l.cantidad) || 0) * factor;
-
-          // Atomic stock addition via DB function (prevents race conditions)
-          const { error: rpcErr } = await supabase.rpc('recibir_linea_compra', {
-            p_producto_id: l.producto_id!,
-            p_piezas: piezas,
-            p_almacen_id: almacenId || null,
-            p_empresa_id: empresa!.id,
-            p_compra_id: form.id,
-            p_folio: form.folio ?? form.id.slice(0, 8),
-            p_user_id: user?.id,
-          });
-          if (rpcErr) throw new Error(rpcErr.message);
-        }
-        qc.invalidateQueries({ queryKey: ['inventario'] }); qc.invalidateQueries({ queryKey: ['productos'] }); qc.invalidateQueries({ queryKey: ['stock-almacen'] });
-      }
       setForm(f => ({ ...f, ...updates })); toast.success(`Compra ${newStatus}`); qc.invalidateQueries({ queryKey: ['compras'] }); qc.invalidateQueries({ queryKey: ['compra', form.id] });
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  // Recibe una línea (todo el pendiente). Si p_piezas viene null el RPC recibe exactamente lo que falta.
+  const recibirLineaPendiente = async (lineaId: string) => {
+    if (!form.id || !empresa?.id) return;
+    if (!form.almacen_id) { toast.error('La compra no tiene almacén destino'); return; }
+    const { error } = await supabase.rpc('recibir_compra_linea_parcial' as any, {
+      p_linea_id: lineaId,
+      p_piezas: null,
+      p_almacen_id: form.almacen_id,
+      p_empresa_id: empresa.id,
+      p_compra_id: form.id,
+      p_folio: form.folio ?? form.id.slice(0, 8),
+      p_user_id: user?.id,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Línea recibida');
+    await Promise.all([
+      qc.refetchQueries({ queryKey: ['compra', form.id] }),
+      qc.invalidateQueries({ queryKey: ['compras'] }),
+      qc.invalidateQueries({ queryKey: ['inventario'] }),
+      qc.invalidateQueries({ queryKey: ['productos'] }),
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] }),
+    ]);
+  };
+
+  const recibirTodoPendiente = async () => {
+    if (!form.id || !empresa?.id) return;
+    if (!form.almacen_id) { toast.error('La compra no tiene almacén destino'); return; }
+    const pendientes = lineas.filter(l => {
+      if (!l.id || !l.producto_id) return false;
+      const factor = Number(l._factor_conversion) || 1;
+      const totalPz = (Number(l.cantidad) || 0) * factor;
+      const recibido = Number(l.cantidad_recibida) || 0;
+      return totalPz - recibido > 0;
+    });
+    if (!pendientes.length) { toast.info('No hay mercancía pendiente por recibir'); return; }
+    try {
+      for (const l of pendientes) {
+        const { error } = await supabase.rpc('recibir_compra_linea_parcial' as any, {
+          p_linea_id: l.id!,
+          p_piezas: null,
+          p_almacen_id: form.almacen_id,
+          p_empresa_id: empresa.id,
+          p_compra_id: form.id,
+          p_folio: form.folio ?? form.id.slice(0, 8),
+          p_user_id: user?.id,
+        });
+        if (error) throw new Error(error.message);
+      }
+      toast.success('Mercancía recibida');
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ['compra', form.id] }),
+        qc.invalidateQueries({ queryKey: ['compras'] }),
+        qc.invalidateQueries({ queryKey: ['inventario'] }),
+        qc.invalidateQueries({ queryKey: ['productos'] }),
+        qc.invalidateQueries({ queryKey: ['stock-almacen'] }),
+      ]);
     } catch (err: any) { toast.error(err.message); }
   };
 
   const handleCancel = async () => {
     if (!form.id) return;
     try {
-      if (['recibida', 'pagada'].includes(form.status)) {
-        const validLines = lineas.filter(l => l.producto_id); const today = todayLocal();
+      // Revertir cualquier mercancía ya recibida, sin importar el status (puede haber recepción parcial en confirmada)
+      if (form.status !== 'cancelada') {
+        const validLines = lineas.filter(l => l.producto_id && (Number(l.cantidad_recibida) || 0) > 0); const today = todayLocal();
         const updates: Array<Promise<void>> = [];
         for (const l of validLines) {
-          const factor = Number(l._factor_conversion) || 1;
-          const piezas = (Number(l.cantidad) || 0) * factor;
+          const piezas = Math.max(0, Number(l.cantidad_recibida) || 0);
+          if (piezas <= 0) continue;
 
           // Deduct from stock_almacen (trigger auto-recalcs productos.cantidad)
           if (form.almacen_id) {
@@ -234,5 +275,6 @@ export function useCompraForm() {
     isLoading, addingPago, setAddingPago, newPago, setNewPago, confirmDialog, setConfirmDialog,
     requestPin, PinDialog, updateField, updateLinea, addLine, removeLine,
     handleSave, handleDelete, handleStatusChange, handleCancel, handleSavePago,
+    recibirLineaPendiente, recibirTodoPendiente,
   };
 }

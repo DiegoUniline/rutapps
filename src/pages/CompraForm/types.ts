@@ -3,6 +3,7 @@ export interface CompraLinea {
   compra_id?: string;
   producto_id: string;
   cantidad: number;
+  cantidad_recibida?: number;
   precio_unitario: number;
   subtotal: number;
   total: number;
@@ -18,7 +19,7 @@ export interface CompraLinea {
 }
 
 export function emptyLine(): Partial<CompraLinea> {
-  return { cantidad: 1, precio_unitario: 0, subtotal: 0, total: 0, _tiene_iva: false, _iva_pct: 16, _tiene_ieps: false, _ieps_pct: 0, _ieps_tipo: 'porcentaje', _unidad_compra: '', _factor_conversion: 1, _piezas_total: 1 };
+  return { cantidad: 1, cantidad_recibida: 0, precio_unitario: 0, subtotal: 0, total: 0, _tiene_iva: false, _iva_pct: 16, _tiene_ieps: false, _ieps_pct: 0, _ieps_tipo: 'porcentaje', _unidad_compra: '', _factor_conversion: 1, _piezas_total: 1 };
 }
 
 export function calcLineTotals(line: Partial<CompraLinea>) {
