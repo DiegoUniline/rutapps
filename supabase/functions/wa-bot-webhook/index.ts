@@ -455,6 +455,20 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "consultar_stock_disponible",
+      description: "Devuelve productos reales con stock disponible (> 0). Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Opcional: nombre o código de producto para filtrar." },
+          limite: { type: "number", description: "Máximo de productos a devolver, default 15." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "buscar_producto",
       description: "Busca productos por nombre o código y devuelve stock, precio y datos básicos.",
       parameters: {
@@ -523,6 +537,20 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "consultar_ventas_recientes",
+      description: "Consulta ventas reales recientes o de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy' o 'última venta'.",
+      parameters: {
+        type: "object",
+        properties: {
+          fecha: { type: "string", description: "Opcional: 'hoy', 'ayer', dd/mm/yyyy o yyyy-mm-dd." },
+          limite: { type: "number", description: "Máximo de ventas, default 3." },
+        },
+      },
+    },
+  },
 ];
 
 async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean> }) {
@@ -538,13 +566,37 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (upErr) return { error: String(upErr) };
     const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
-    return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary };
+    return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary, resultado: summary };
   }
 
   if (name === "consultar_stock_bajo") {
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const msg = await buildStockMessage(empresaId, args?.umbral ?? null, null);
     return { resultado: msg };
+  }
+
+  if (name === "consultar_stock_disponible") {
+    if (!need("stock")) return { error: "Sin permiso para stock" };
+    const lim = Math.min(Number(args?.limite || 15), 30);
+    let q = admin.from("productos")
+      .select("codigo, nombre, cantidad, stock_min, precio")
+      .eq("empresa_id", empresaId)
+      .eq("activo", true)
+      .gt("cantidad", 0)
+      .order("cantidad", { ascending: false })
+      .limit(lim);
+    const query = String(args?.query || "").trim();
+    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    const productos = data || [];
+    if (!productos.length) return { resultado: `📦 No encontré productos con stock disponible${query ? ` para "${query}"` : ""}.` };
+    let resultado = `📦 *Productos con stock disponible${query ? ` (${query})` : ""}:*\n\n`;
+    for (const p of productos as any[]) {
+      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)}*${p.precio != null ? ` · Precio: ${fmt(Number(p.precio || 0))}` : ""}\n`;
+    }
+    if (productos.length === lim) resultado += `\nMostré los primeros ${lim}. Puedes pedirme un producto por nombre o código.`;
+    return { resultado, productos };
   }
 
   if (name === "buscar_producto") {
@@ -554,7 +606,11 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
       .eq("empresa_id", empresaId)
       .or(`nombre.ilike.%${args.query}%,codigo.ilike.%${args.query}%`)
       .limit(10);
-    return { productos: data || [] };
+    const productos = data || [];
+    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args.query}".` };
+    let resultado = `📦 *Productos encontrados:*\n\n`;
+    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)}* · Precio: ${fmt(Number(p.precio || 0))}\n`;
+    return { resultado, productos };
   }
 
   if (name === "consultar_cliente") {
@@ -600,7 +656,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const folio = String(args?.folio || "").trim();
     if (!folio) return { error: "Folio requerido" };
     const { data: ventas } = await admin.from("ventas")
-      .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, total, productos(codigo, nombre)), cobro_aplicaciones(monto, cobros(fecha, metodo_pago, referencia))")
+      .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
       .eq("empresa_id", empresaId)
       .ilike("folio", `%${folio}%`)
       .order("fecha", { ascending: false })
@@ -610,8 +666,8 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const vendIds = Array.from(new Set(ventas.map((v:any) => v.vendedor_id).filter(Boolean)));
     let vendMap = new Map<string,string>();
     if (vendIds.length) {
-      const { data: profs } = await admin.from("profiles").select("id, nombre_completo, email").in("id", vendIds);
-      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre_completo || p.email || "—"]));
+      const { data: profs } = await admin.from("profiles").select("id, nombre").in("id", vendIds);
+      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre || "—"]));
     }
     return {
       ventas: ventas.map((v:any) => ({
@@ -633,7 +689,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
           total: Number(l.total||0),
         })),
         cobros: (v.cobro_aplicaciones||[]).map((a:any) => ({
-          monto: Number(a.monto||0),
+          monto: Number(a.monto_aplicado||0),
           fecha: a.cobros?.fecha,
           metodo: a.cobros?.metodo_pago,
           referencia: a.cobros?.referencia,
@@ -642,7 +698,93 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     };
   }
 
+  if (name === "consultar_ventas_recientes") {
+    if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
+    const lim = Math.min(Number(args?.limite || 3), 10);
+    let q = admin.from("ventas")
+      .select("id, folio, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+      .eq("empresa_id", empresaId)
+      .order("created_at", { ascending: false })
+      .limit(lim);
+    if (args?.fecha) {
+      const date = parseFecha(args.fecha);
+      const { start, end } = dayRange(date);
+      q = q.gte("fecha", start).lte("fecha", end);
+    }
+    const { data: ventas, error } = await q;
+    if (error) return { error: error.message };
+    const ventasActivas = (ventas || []).filter((v:any) => v.status !== "cancelada" && v.status !== "cancelado");
+    if (!ventasActivas.length) return { resultado: "📭 No encontré ventas con esos filtros." };
+    const vendIds = Array.from(new Set(ventasActivas.map((v:any) => v.vendedor_id).filter(Boolean)));
+    let vendMap = new Map<string,string>();
+    if (vendIds.length) {
+      const { data: profs } = await admin.from("profiles").select("id, nombre").in("id", vendIds);
+      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre || "—"]));
+    }
+    const detalle = ventasActivas.map((v:any) => ({
+      folio: v.folio,
+      fecha: v.fecha,
+      cliente: v.clientes?.nombre || "—",
+      vendedor: vendMap.get(v.vendedor_id) || "—",
+      condicion_pago: v.condicion_pago,
+      subtotal: Number(v.subtotal||0),
+      descuento_total: Number(v.descuento_total||0),
+      total: Number(v.total||0),
+      saldo_pendiente: Number(v.saldo_pendiente||0),
+      status: v.status,
+      lineas: (v.venta_lineas||[]).map((l:any) => ({
+        producto: `${l.productos?.codigo||""} ${l.productos?.nombre||"—"}`.trim(),
+        cantidad: Number(l.cantidad||0),
+        precio_unitario: Number(l.precio_unitario||0),
+        descuento_pct: Number(l.descuento_pct||0),
+        subtotal: Number(l.subtotal||0),
+        total: Number(l.total||0),
+      })),
+      cobros: (v.cobro_aplicaciones||[]).map((a:any) => ({
+        monto: Number(a.monto_aplicado||0),
+        fecha: a.cobros?.fecha,
+        metodo: a.cobros?.metodo_pago,
+        referencia: a.cobros?.referencia,
+      })),
+    }));
+    return { ventas: detalle, resultado: JSON.stringify(detalle).slice(0, 4000) };
+  }
+
   return { error: "Herramienta desconocida" };
+}
+
+function inferRequiredTool(text: string): { name: string; args: any } | null {
+  const t = text.toLowerCase();
+  const fecha = /ayer/.test(t) ? "ayer" : "hoy";
+  const num = t.match(/(\d+(?:\.\d+)?)/);
+  if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
+  if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
+  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
+  if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
+  if (/cu[aá]nto\s+vend|ventas?\s+(de\s+)?hoy|vend[ií]\s+hoy/.test(t)) return { name: "resumen_ventas", args: { fecha } };
+  if (/cobros?|cobrado|pagos?/.test(t)) return { name: "resumen_cobros", args: { fecha } };
+  if (/cuentas?\s+por\s+cobrar|saldos?\s+pendientes?/.test(t)) return { name: "cuentas_por_cobrar", args: { limite: 10 } };
+  return null;
+}
+
+function formatToolReply(name: string, out: any): string {
+  if (!out) return "⚠️ No pude consultar la información.";
+  if (out.error) return `⚠️ ${out.error}`;
+  if (out.pdfUrl) return out.summary || out.resultado || "📄 Aquí tienes el reporte PDF.";
+  if (out.resultado && !String(out.resultado).startsWith("[")) return out.resultado;
+  if (name === "resumen_ventas") {
+    const top = (out.top_clientes || []).map((x:any) => `• ${x.cliente}: ${fmt(Number(x.monto || 0))}`).join("\n");
+    return `📊 *Ventas ${out.fecha || ""}*\nTotal: *${fmt(Number(out.total_ventas || 0))}*\nFolios: *${out.folios || 0}*${top ? `\n\n*Top clientes:*\n${top}` : ""}`;
+  }
+  if ((name === "consultar_ventas_recientes" || name === "consultar_venta") && out.ventas?.length) {
+    const lines = out.ventas.slice(0, 3).map((v:any) => {
+      const cobros = (v.cobros || []).map((c:any) => `${c.metodo || "—"} ${fmt(Number(c.monto || 0))}`).join(", ") || "Sin cobros registrados";
+      return `• *${v.folio || "Venta"}*\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
+    }).join("\n");
+    return `🧾 *Ventas consultadas:*\n${lines}`;
+  }
+  return JSON.stringify(out).slice(0, 1500);
 }
 
 async function runAgent(opts: { empresaId: string; permisos: Record<string, boolean>; phone: string; userMessage: string }) {
@@ -684,10 +826,18 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
   let pdfName: string | null = null;
   const toolsUsed: string[] = [];
 
+  const requiredTool = inferRequiredTool(opts.userMessage);
+  if (requiredTool) {
+    toolsUsed.push(requiredTool.name);
+    const out = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
+    if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
+    return { reply: formatToolReply(requiredTool.name, out), intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+  }
+
   for (let step = 0; step < 5; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_AI_KEY}`, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {
@@ -719,6 +869,9 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
     }
 
     const reply = (msg.content || "").trim() || "✅";
+    if (!toolsUsed.length && /venta|vend|stock|inventario|producto|cliente|saldo|cobro|pago|reporte|pdf|gasto|vendedor/i.test(opts.userMessage)) {
+      return { reply: "⚠️ No puedo responder eso sin consultar datos reales del sistema. Pídeme por ejemplo: *reporte hoy*, *stock disponible*, *quién vendió hoy* o *cliente <nombre>*.", intent: "needs_tool", pdfUrl: null, pdfName: null, toolsUsed };
+    }
     return { reply, intent: toolsUsed[0] || "chat", pdfUrl, pdfName, toolsUsed };
   }
 
