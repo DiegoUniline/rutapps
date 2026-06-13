@@ -734,6 +734,7 @@ export default function DashboardPage() {
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
+  const { data: ventaLineasIS } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
 
   // === Datos para nuevas secciones ===
   const { data: monthlyGoal = 0 } = useMonthlyGoal();
