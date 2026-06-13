@@ -1664,6 +1664,7 @@ export type Database = {
       compra_lineas: {
         Row: {
           cantidad: number
+          cantidad_recibida: number
           compra_id: string
           created_at: string
           factor_conversion: number
@@ -1676,6 +1677,7 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
+          cantidad_recibida?: number
           compra_id: string
           created_at?: string
           factor_conversion?: number
@@ -1688,6 +1690,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          cantidad_recibida?: number
           compra_id?: string
           created_at?: string
           factor_conversion?: number
@@ -7666,6 +7669,18 @@ export type Database = {
       }
       rechazar_solicitud_partner: {
         Args: { _motivo?: string; _solicitud_id: string }
+        Returns: undefined
+      }
+      recibir_compra_linea_parcial: {
+        Args: {
+          p_almacen_id: string
+          p_compra_id: string
+          p_empresa_id: string
+          p_folio: string
+          p_linea_id: string
+          p_piezas: number
+          p_user_id: string
+        }
         Returns: undefined
       }
       recibir_linea_compra: {
