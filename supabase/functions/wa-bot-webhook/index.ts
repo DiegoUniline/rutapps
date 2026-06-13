@@ -836,9 +836,13 @@ function inferRequiredTool(text: string): { name: string; args: any } | null {
   const t = text.toLowerCase();
   const fecha = /ayer/.test(t) ? "ayer" : "hoy";
   const num = t.match(/(\d+(?:\.\d+)?)/);
+  const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b|\b\d{3,}\b/i)?.[0];
   if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
+  if (folio && /detalle|venta|pedido|folio|ticket|qui[eé]n|vendedor|vend(i[oó]|io)|pago|saldo/.test(t)) return { name: "consultar_venta", args: { folio } };
   if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
   if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual|lista|cu[aá]les|cu[aá]ntos?/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  const clienteQuery = text.replace(/^(saldo\s+de|saldo|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i, "").trim();
+  if (/^(saldo\s+de|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i.test(text.trim()) && clienteQuery.length > 1) return { name: "consultar_cliente", args: { query: clienteQuery } };
   if (/clientes?/.test(t) && /saldo|deben|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
   if (/clientes?/.test(t) && /lista|tengo|ver|cu[aá]les|buscar/.test(t)) return { name: "buscar_clientes", args: { limite: 10 } };
   if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|deben/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
