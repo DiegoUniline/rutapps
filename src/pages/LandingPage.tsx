@@ -9,6 +9,7 @@ import {
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const BRAND = {
   primary: '#0060e8',
@@ -30,18 +31,144 @@ const LANDING_JSON_LD = [
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'MXN' } },
 ];
 
-const MODULES = [
-  { icon: ShoppingCart, t: 'Ventas', d: 'POS, preventa y pedidos' },
-  { icon: Wallet, t: 'Cobranza', d: 'FIFO y multi-folio' },
-  { icon: Package, t: 'Inventario', d: 'Multi-almacén · Kardex' },
-  { icon: Truck, t: 'Logística', d: 'Cargas y rutas GPS' },
-  { icon: CreditCard, t: 'Compras', d: 'Órdenes y proveedores' },
-  { icon: Users, t: 'Clientes', d: 'CRM con historial' },
-  { icon: LineChart, t: 'Finanzas', d: 'CxC · CxP · Gastos' },
-  { icon: Award, t: 'Comisiones', d: 'Reglas por vendedor' },
-  { icon: FileText, t: 'Reportes', d: 'Operativos y auditables' },
-  { icon: Brain, t: 'IA', d: 'Asesor inteligente' },
+const MODULES: {
+  icon: any; t: string; d: string;
+  star: { t: string; d: string };
+  features: string[];
+  why: string;
+}[] = [
+  {
+    icon: ShoppingCart, t: 'Ventas', d: 'POS, preventa y pedidos',
+    star: { t: 'Rutero de preventa', d: 'Cada vendedor abre su ruta del día y captura pedidos en segundos: producto sugerido por cliente, precios y promociones aplicadas automáticamente.' },
+    features: [
+      'POS con búsqueda por código de barras',
+      'Preventa con pedidos sugeridos por cliente',
+      'Venta directa con entrega inmediata',
+      'Promociones nxm y % acumulables',
+      'Listas de precios por cliente o zona',
+      'Crédito con validación en tiempo real',
+    ],
+    why: 'El vendedor deja de improvisar: ve qué pide normalmente cada cliente, qué dejó de comprar y a qué precio.',
+  },
+  {
+    icon: Wallet, t: 'Cobranza', d: 'FIFO y multi-folio',
+    star: { t: 'Cobro multi-folio FIFO', d: 'Un solo pago aplica automáticamente a las facturas más viejas. El recibo se imprime térmico o se manda por WhatsApp al instante.' },
+    features: [
+      'Aplicación FIFO automática',
+      'Múltiples folios en un mismo cobro',
+      'Recibos térmicos y por WhatsApp',
+      'Liquidación de ruta con efectivo esperado',
+      'Saldo anterior y nuevo en cada documento',
+      'Cancelación con desligado de aplicaciones',
+    ],
+    why: 'Cero confusión sobre qué se pagó. El cobrador no decide a mano qué aplicar.',
+  },
+  {
+    icon: Package, t: 'Inventario', d: 'Multi-almacén · Kardex',
+    star: { t: 'Kardex granular en vivo', d: 'Cada movimiento (venta, compra, traspaso, ajuste) queda registrado con folio, hora y usuario. Auditas el stock minuto a minuto.' },
+    features: [
+      'Múltiples almacenes con stock independiente',
+      'Traspasos con bloqueo de fila',
+      'Conteos físicos con reconciliación',
+      'Productos a granel (3 decimales)',
+      'Presentaciones (caja, paquete, pieza)',
+      'Permitir venta con stock negativo (opcional)',
+    ],
+    why: 'Sabes en qué almacén, en qué camión y desde cuándo está cada unidad.',
+  },
+  {
+    icon: Truck, t: 'Logística', d: 'Cargas, surtido y rutas',
+    star: { t: 'Surtido de pedidos', d: 'El bodeguero ve el concentrado del día: cuánto producto sale total, por ruta, por vendedor. Carga el camión con la cantidad exacta y descuenta del almacén automáticamente.' },
+    features: [
+      'Concentrado de surtido por día y ruta',
+      'Orden de carga con confirmación',
+      'Descarga con diferencias y motivos',
+      'Optimización de ruta con GPS (vecino + 2-opt)',
+      'Entrega con firma y foto',
+      'Liquidación inmutable al cierre de ruta',
+    ],
+    why: 'El camión sale con lo justo. Las diferencias quedan documentadas con motivo.',
+  },
+  {
+    icon: CreditCard, t: 'Compras', d: 'Órdenes y proveedores',
+    star: { t: 'Compras sugeridas con IA', d: 'El sistema analiza venta histórica, stock mínimo, días de cobertura y tiempo de entrega del proveedor. Te dice qué pedir, cuánto y a quién — listo para enviar la orden.' },
+    features: [
+      'Sugerencias de compra por IA',
+      'Órdenes a proveedores con recepción parcial',
+      'Pagos a proveedores con FIFO',
+      'Cuentas por pagar y estado de cuenta',
+      'Costos con o sin impuestos',
+      'Proveedor preferido por producto',
+    ],
+    why: 'Dejas de comprar de más o quedarte sin producto los días pico.',
+  },
+  {
+    icon: Users, t: 'Clientes', d: 'CRM con historial',
+    star: { t: 'Ficha 360° del cliente', d: 'Ves su historial de compras, saldo, última visita, ubicación GPS, productos que más pide y los que dejó de comprar. Todo en una pantalla.' },
+    features: [
+      'Alta con GPS y foto de fachada',
+      'Frecuencia y día de visita',
+      'Límite y días de crédito',
+      'Pedido sugerido por cliente',
+      'Estado de cuenta público (link)',
+      'Catálogo compartible por WhatsApp',
+    ],
+    why: 'Cada cliente es una ficha viva, no una fila en Excel.',
+  },
+  {
+    icon: LineChart, t: 'Finanzas', d: 'CxC · CxP · Gastos',
+    star: { t: 'Estado de cuenta en tiempo real', d: 'Por cliente, por proveedor, por vendedor: saldo anterior, movimientos y saldo nuevo. Auditable y exportable.' },
+    features: [
+      'Cuentas por cobrar y por pagar',
+      'Gastos con foto del ticket',
+      'Multimoneda con conversión automática',
+      'Saldos iniciales sin afectar inventario',
+      'Reportes contables exportables',
+      'Caja y turnos con corte',
+    ],
+    why: 'Sabes cuánto te deben, cuánto debes y cuánto entró hoy — sin esperar al contador.',
+  },
+  {
+    icon: Award, t: 'Comisiones', d: 'Reglas por vendedor',
+    star: { t: 'Comisiones por producto y meta', d: 'Define % por producto, por categoría o por meta cumplida. El sistema calcula la comisión por venta cobrada (no facturada).' },
+    features: [
+      'Comisión por producto o categoría',
+      'Calculada sobre venta cobrada',
+      'Metas mensuales por vendedor',
+      'Reporte de seguimiento de metas',
+      'Esquemas por equipo',
+      'Visible para el vendedor en su app',
+    ],
+    why: 'El vendedor sabe qué empujar y cuánto va a ganar en tiempo real.',
+  },
+  {
+    icon: FileText, t: 'Reportes', d: 'Operativos y auditables',
+    star: { t: 'Control y auditoría', d: 'Detecta descuentos excesivos, ventas bajo costo, anomalías de cobro y vendedores inactivos. El dueño deja de auditar a mano.' },
+    features: [
+      'Dashboard supervisor con 8 KPIs',
+      'Reporte diario consolidado',
+      'Detalle por producto y por vendedor',
+      'Control de fraude y descuentos',
+      'Exportable a Excel y PDF',
+      'Filtros avanzados multi-criterio',
+    ],
+    why: 'Auditas en segundos lo que antes tardaba días.',
+  },
+  {
+    icon: Brain, t: 'IA', d: 'Asesor inteligente',
+    star: { t: 'Asesor Rutapp IA', d: 'Analiza tu operación todos los días y te suelta acciones concretas: qué comprar, qué cliente está en riesgo, qué vendedor destaca y qué movimientos son sospechosos.' },
+    features: [
+      'Sugerencias de reposición de stock',
+      'Detección de clientes en riesgo de fuga',
+      'Identificación de vendedores destacados',
+      'Anomalías en ventas y cobros',
+      'Predicción de demanda',
+      'Resumen diario accionable',
+    ],
+    why: 'Tienes un analista trabajando 24/7 sin contratarlo.',
+  },
 ];
+
 
 const AI_CARDS = [
   { icon: Boxes, t: 'Reponer', d: 'Coca 600ml caerá a crítico en 3 días. Comprar 240.', tone: BRAND.primary },
@@ -69,6 +196,7 @@ const fmtMX = (n: number) => `$${n.toLocaleString('es-MX')}`;
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [openModule, setOpenModule] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
   useFacebookPixel();
 
@@ -217,17 +345,106 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-            {MODULES.map(m => (
-              <div key={m.t} className="rounded-xl border bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5"
-                style={{ borderColor: BRAND.line }}>
+            {MODULES.map((m, i) => (
+              <button
+                key={m.t}
+                onClick={() => setOpenModule(i)}
+                className="text-left rounded-xl border bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5 group focus:outline-none focus:ring-2"
+                style={{ borderColor: BRAND.line }}
+              >
                 <m.icon className="h-4 w-4 mb-2" style={{ color: BRAND.primary }} />
                 <div className="text-[13.5px] font-semibold">{m.t}</div>
                 <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
-              </div>
+                <div className="mt-2.5 text-[11px] font-semibold inline-flex items-center gap-1 opacity-80 group-hover:opacity-100" style={{ color: BRAND.primary }}>
+                  Ver más <ArrowRight className="h-3 w-3" />
+                </div>
+              </button>
             ))}
           </div>
         </div>
+
+        {/* Module detail dialog */}
+        <Dialog open={openModule !== null} onOpenChange={(o) => !o && setOpenModule(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-white border-0">
+            {openModule !== null && (() => {
+              const m = MODULES[openModule];
+              const Icon = m.icon;
+              return (
+                <>
+                  <div className="p-6 md:p-8" style={{ background: `linear-gradient(135deg, ${BRAND.primary}, #003a99)` }}>
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl grid place-items-center bg-white/15 backdrop-blur">
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <DialogHeader>
+                          <DialogTitle className="text-white text-[22px] md:text-[26px] font-semibold tracking-tight">
+                            {m.t}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="text-[13px] text-white/80 mt-0.5">{m.d}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6 md:p-8 space-y-6">
+                    {/* Star feature */}
+                    <div className="rounded-xl p-5 border" style={{ background: BRAND.primarySoft, borderColor: BRAND.primary + '33' }}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Sparkles className="h-3.5 w-3.5" style={{ color: BRAND.accent }} />
+                        <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.accent }}>Función estrella</span>
+                      </div>
+                      <div className="text-[16px] font-semibold mb-1" style={{ color: BRAND.ink }}>{m.star.t}</div>
+                      <div className="text-[13.5px] leading-relaxed" style={{ color: BRAND.ink2 }}>{m.star.d}</div>
+                    </div>
+
+                    {/* Features list */}
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3" style={{ color: BRAND.primary }}>Lo que incluye</div>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {m.features.map(f => (
+                          <div key={f} className="flex items-start gap-2 text-[13.5px]" style={{ color: BRAND.ink2 }}>
+                            <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" strokeWidth={3} style={{ color: BRAND.primary }} />
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Why it matters */}
+                    <div className="border-t pt-5" style={{ borderColor: BRAND.line }}>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] mb-2" style={{ color: BRAND.muted }}>Por qué importa</div>
+                      <div className="text-[14px] leading-relaxed italic" style={{ color: BRAND.ink }}>"{m.why}"</div>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Link
+                        to="/signup"
+                        onClick={() => setOpenModule(null)}
+                        className="px-4 py-2.5 text-[13.5px] font-semibold text-white rounded-lg inline-flex items-center gap-1.5"
+                        style={{ background: BRAND.primary }}
+                      >
+                        Probar gratis <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        onClick={() => {
+                          const next = openModule === MODULES.length - 1 ? 0 : openModule + 1;
+                          setOpenModule(next);
+                        }}
+                        className="px-4 py-2.5 text-[13.5px] font-semibold rounded-lg border"
+                        style={{ borderColor: BRAND.line, color: BRAND.ink }}
+                      >
+                        Siguiente módulo →
+                      </button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </section>
+
 
       {/* MOBILE — compact split */}
       <section id="movil" className="px-5 py-16 md:py-20" style={{ background: BRAND.surface }}>
