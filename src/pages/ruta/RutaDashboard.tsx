@@ -157,12 +157,6 @@ export default function RutaDashboard() {
   return (
     <div className="p-4 space-y-4 pb-24">
       {/* Header */}
-      <div>
-        <p className="text-muted-foreground text-[13px] capitalize">{dayName}, {dateStr}</p>
-        <h1 className="text-[22px] font-bold text-foreground">
-          Hola, {profile?.nombre?.split(' ')[0] ?? 'Vendedor'} 👋
-        </h1>
-      </div>
 
       {/* KPI hero */}
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
