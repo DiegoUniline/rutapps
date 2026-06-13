@@ -116,6 +116,34 @@ function HoyTile({ label, value, sub, icon: Icon, tone = 'default' }: {
   );
 }
 
+function IsTile({ label, value, hint, tone = 'default', emphasize }: {
+  label: string; value: string; hint?: string;
+  tone?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+  emphasize?: boolean;
+}) {
+  const toneMap = {
+    default: 'before:bg-primary',
+    success: 'before:bg-[hsl(var(--success))]',
+    warning: 'before:bg-[hsl(var(--warning))]',
+    danger:  'before:bg-destructive',
+    info:    'before:bg-[hsl(var(--chart-2))]',
+  } as const;
+  return (
+    <div className={cn(
+      "relative bg-card border rounded-lg pl-3 pr-3 py-2.5",
+      emphasize ? "border-primary/40 shadow-sm" : "border-border",
+      "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full",
+      toneMap[tone]
+    )}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
+      <div className={cn("tabular-nums tracking-tight text-foreground leading-tight mt-0.5",
+        emphasize ? "text-2xl font-black" : "text-xl font-bold"
+      )}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{hint}</div>}
+    </div>
+  );
+}
+
 function HoyBand({ hoy, money }: { hoy: any; money: (n: number) => string }) {
   const todayLabel = (() => {
     try {
