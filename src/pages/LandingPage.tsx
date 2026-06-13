@@ -12,6 +12,7 @@ import { ModuleVisual } from '@/components/landing/ModuleVisuals';
 import { PhoneRutero, PhonePOS, PhoneCobro, PhoneEntrega } from '@/components/landing/MobileAppScreens';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { Reveal } from '@/components/landing/Reveal';
 
 
 const BRAND = {
@@ -266,53 +267,69 @@ export default function LandingPage() {
           style={{ background: `radial-gradient(60% 50% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-6">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-white"
-              style={{ borderColor: BRAND.line, color: BRAND.ink2 }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: BRAND.accent }} />
-              Nuevo · Asesor con IA
-            </div>
-            <h1 className="mt-4 text-[40px] md:text-[56px] font-semibold leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
-              Tu distribuidora,<br />
-              <span className="relative inline-block">
-                en una sola pantalla.
-                <span className="absolute left-0 -bottom-1 h-[5px] w-full rounded-full" style={{ background: `linear-gradient(90deg, ${BRAND.primary}, ${BRAND.accent})` }} />
-              </span>
-            </h1>
-            <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
-              Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <Link to="/signup" className="px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02]"
-                style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
-                Solicitar demo <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#modulos" className="px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white"
-                style={{ borderColor: BRAND.line, color: BRAND.ink }}>
-                Ver módulos
-              </a>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]" style={{ color: BRAND.muted }}>
-              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> 7 días gratis</span>
-              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
-              <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en días</span>
-            </div>
+            <Reveal variant="up" duration={350}>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-white"
+                style={{ borderColor: BRAND.line, color: BRAND.ink2 }}>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: BRAND.accent }} />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: BRAND.accent }} />
+                </span>
+                Nuevo · Asesor con IA
+              </div>
+            </Reveal>
+            <Reveal variant="up" delay={60} duration={420}>
+              <h1 className="mt-4 text-[40px] md:text-[56px] font-semibold leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
+                Tu distribuidora,<br />
+                <span className="relative inline-block">
+                  en una sola pantalla.
+                  <span className="absolute left-0 -bottom-1 h-[5px] w-full rounded-full origin-left animate-[underlineGrow_700ms_cubic-bezier(0.22,1,0.36,1)_300ms_both]"
+                    style={{ background: `linear-gradient(90deg, ${BRAND.primary}, ${BRAND.accent})` }} />
+                </span>
+              </h1>
+            </Reveal>
+            <Reveal variant="up" delay={140}>
+              <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
+                Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
+              </p>
+            </Reveal>
+            <Reveal variant="up" delay={200}>
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                <Link to="/signup" className="group px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
+                  Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+                <a href="#modulos" className="px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
+                  Ver módulos
+                </a>
+              </div>
+            </Reveal>
+            <Reveal variant="fade" delay={260}>
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]" style={{ color: BRAND.muted }}>
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> 7 días gratis</span>
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
+                <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en días</span>
+              </div>
+            </Reveal>
           </div>
 
           {/* Bento mockups */}
-          <div className="lg:col-span-6 grid grid-cols-6 grid-rows-2 gap-3 h-[440px]">
-            <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white"
-              style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
-              <LiveDashboardMockup />
+          <Reveal variant="scale" delay={120} duration={500} className="lg:col-span-6">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[440px]">
+              <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
+                style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
+                <LiveDashboardMockup />
+              </div>
+              <div className="col-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
+                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                <LiveSupervisorMap />
+              </div>
+              <div className="col-span-2 rounded-2xl border bg-white grid place-items-center overflow-hidden transition-transform duration-300 hover:-translate-y-1"
+                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                <div className="scale-75 origin-center"><LiveMobileApp /></div>
+              </div>
             </div>
-            <div className="col-span-2 rounded-2xl overflow-hidden border bg-white"
-              style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-              <LiveSupervisorMap />
-            </div>
-            <div className="col-span-2 rounded-2xl border bg-white grid place-items-center overflow-hidden"
-              style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-              <div className="scale-75 origin-center"><LiveMobileApp /></div>
-            </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -348,16 +365,17 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-            {MODULES.map((m) => (
-              <div
-                key={m.t}
-                className="rounded-xl border bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5"
-                style={{ borderColor: BRAND.line }}
-              >
-                <m.icon className="h-4 w-4 mb-2" style={{ color: BRAND.primary }} />
-                <div className="text-[13.5px] font-semibold">{m.t}</div>
-                <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
-              </div>
+            {MODULES.map((m, i) => (
+              <Reveal key={m.t} variant="up" delay={i * 35} duration={350}>
+                <div
+                  className="group rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-transparent cursor-default"
+                  style={{ borderColor: BRAND.line }}
+                >
+                  <m.icon className="h-4 w-4 mb-2 transition-transform duration-200 group-hover:scale-110" style={{ color: BRAND.primary }} />
+                  <div className="text-[13.5px] font-semibold">{m.t}</div>
+                  <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -378,7 +396,7 @@ export default function LandingPage() {
             return (
               <div key={row.name} className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
                 {/* Text side */}
-                <div>
+                <Reveal variant={flip ? 'right' : 'left'} duration={460}>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-[0.14em]"
                     style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
                     <Icon className="h-3 w-3" /> {row.kicker}
@@ -400,11 +418,11 @@ export default function LandingPage() {
                   <div className="mt-5 text-[13px] italic border-l-2 pl-3" style={{ color: BRAND.ink, borderColor: BRAND.accent }}>
                     "{m.why}"
                   </div>
-                </div>
+                </Reveal>
                 {/* Visual side */}
-                <div>
+                <Reveal variant={flip ? 'left' : 'right'} delay={80} duration={500}>
                   <ModuleVisual name={row.name} />
-                </div>
+                </Reveal>
               </div>
             );
           })}
@@ -429,10 +447,10 @@ export default function LandingPage() {
 
           {/* Phones row */}
           <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6">
-            <div className="lg:translate-y-6"><PhoneRutero /></div>
-            <div><PhonePOS /></div>
-            <div className="lg:translate-y-6"><PhoneCobro /></div>
-            <div><PhoneEntrega /></div>
+            <Reveal variant="up" delay={0} duration={480} className="lg:translate-y-6"><PhoneRutero /></Reveal>
+            <Reveal variant="up" delay={90} duration={480}><PhonePOS /></Reveal>
+            <Reveal variant="up" delay={180} duration={480} className="lg:translate-y-6"><PhoneCobro /></Reveal>
+            <Reveal variant="up" delay={270} duration={480}><PhoneEntrega /></Reveal>
           </div>
 
           {/* Feature pills */}
@@ -444,15 +462,17 @@ export default function LandingPage() {
               [Truck, 'Entrega con firma'],
               [Package, 'Stock del camión'],
               [WifiOff, 'Tolera cortes de red'],
-            ].map(([Icon, t]: any) => (
-              <div key={t} className="flex items-center gap-2.5 text-[13px] bg-white border rounded-lg px-3 py-2.5"
-                style={{ color: BRAND.ink, borderColor: BRAND.line }}>
-                <span className="h-7 w-7 rounded-md grid place-items-center shrink-0"
-                  style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
-                  <Icon className="h-3.5 w-3.5" />
-                </span>
-                <span className="font-medium">{t}</span>
-              </div>
+            ].map(([Icon, t]: any, i: number) => (
+              <Reveal key={t} variant="up" delay={i * 50} duration={350}>
+                <div className="group flex items-center gap-2.5 text-[13px] bg-white border rounded-lg px-3 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ color: BRAND.ink, borderColor: BRAND.line }}>
+                  <span className="h-7 w-7 rounded-md grid place-items-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="font-medium">{t}</span>
+                </div>
+              </Reveal>
             ))}
           </div>
 
@@ -496,20 +516,22 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {AI_CARDS.map(ex => (
-              <div key={ex.t} className="rounded-xl p-4 border backdrop-blur-sm"
-                style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-lg grid place-items-center shrink-0"
-                    style={{ background: `${ex.tone}22`, color: ex.tone }}>
-                    <ex.icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[10.5px] font-bold uppercase tracking-wider text-white/50">{ex.t}</div>
-                    <p className="text-[13.5px] text-white leading-snug mt-0.5">{ex.d}</p>
+            {AI_CARDS.map((ex, i) => (
+              <Reveal key={ex.t} variant="scale" delay={i * 70} duration={400}>
+                <div className="group rounded-xl p-4 border backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.07]"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-lg grid place-items-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      style={{ background: `${ex.tone}22`, color: ex.tone }}>
+                      <ex.icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10.5px] font-bold uppercase tracking-wider text-white/50">{ex.t}</div>
+                      <p className="text-[13.5px] text-white leading-snug mt-0.5">{ex.d}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -565,8 +587,9 @@ export default function LandingPage() {
             <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {PLANS.map(p => (
-              <div key={p.slug} className="relative rounded-2xl p-6 bg-white border flex flex-col"
+            {PLANS.map((p, i) => (
+              <Reveal key={p.slug} variant="up" delay={i * 80} duration={420}>
+                <div className="relative rounded-2xl p-6 bg-white border flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-xl h-full"
                 style={{
                   borderColor: p.popular ? BRAND.primary : BRAND.line,
                   boxShadow: p.popular ? `0 20px 50px -20px ${BRAND.primary}55` : 'none',
@@ -594,6 +617,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
               </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -601,7 +625,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="px-5 py-16 md:py-20">
-        <div className="max-w-4xl mx-auto">
+        <Reveal variant="scale" duration={500} className="max-w-4xl mx-auto block">
           <div className="relative rounded-2xl overflow-hidden p-8 md:p-12 text-center" style={{ background: BRAND.ink }}>
             <div className="absolute inset-0 opacity-50"
               style={{ background: `radial-gradient(50% 70% at 50% 0%, ${BRAND.primary}66, transparent), radial-gradient(40% 60% at 80% 100%, ${BRAND.accent}40, transparent)` }} />
@@ -621,7 +645,7 @@ export default function LandingPage() {
               <p className="mt-4 text-[12px] text-white/50">7 días gratis · sin tarjeta</p>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* FOOTER */}
