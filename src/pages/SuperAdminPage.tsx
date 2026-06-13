@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -20,13 +20,14 @@ import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncom
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
 import AdminWaCampaignsTab from '@/components/admin/AdminWaCampaignsTab';
 import AdminPosTab from '@/components/admin/AdminPosTab';
+import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
 import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'cobros'
-  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control';
+  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
 
 const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -36,6 +37,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'partners', label: 'Partners', icon: Handshake },
   { key: 'control', label: 'Control', icon: ShieldCheck },
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
   { key: 'notifications', label: 'Historial', icon: Bell },
   { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
   { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
@@ -131,6 +133,7 @@ export default function SuperAdminPage() {
             {tab === 'partners' && <PartnersInlineTab />}
             {tab === 'control' && <ControlPage />}
             {tab === 'whatsapp' && <AdminWhatsAppTab />}
+            {tab === 'wa_bot' && <AdminWaBotTab />}
             {tab === 'notifications' && <AdminNotificationsTab />}
             {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
             {tab === 'anuncios' && <AdminAnunciosTab />}

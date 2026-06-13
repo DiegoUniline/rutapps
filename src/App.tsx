@@ -78,6 +78,7 @@ const MetasSeguimientoPage = lazy(() => import("@/pages/MetasSeguimientoPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
+const WhatsAppBotPage = lazy(() => import("@/pages/WhatsAppBotPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
@@ -740,6 +741,7 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/configuracion" element={<ConfiguracionPage />} />
       <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
+      <Route path="/configuracion/wa-bot" element={<WhatsAppBotPage />} />
       <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/administracion/usuarios" element={<UsuariosPage />} />

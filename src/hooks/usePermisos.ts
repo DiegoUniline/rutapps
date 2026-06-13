@@ -134,6 +134,7 @@ export const MODULOS: ModuloDef[] = [
   { id: 'configuracion.general', label: 'General', group: 'Configuración' },
   { id: 'configuracion.usuarios', label: 'Usuarios y permisos', group: 'Configuración' },
   { id: 'configuracion.whatsapp', label: 'WhatsApp', group: 'Configuración' },
+  { id: 'configuracion.wa_bot', label: 'Bot WhatsApp', group: 'Configuración' },
   { id: 'configuracion.suscripcion', label: 'Mi suscripción', group: 'Configuración' },
 ];
 
@@ -161,6 +162,7 @@ export const ACCIONES_POR_MODULO: Record<string, string[]> = {
   'configuracion.general': ['ver', 'editar'],
   'configuracion.suscripcion': ['ver'],
   'configuracion.whatsapp': ['ver', 'editar'],
+  'configuracion.wa_bot': ['ver', 'editar'],
   'facturacion.catalogos': ['ver'],
 };
 
@@ -232,6 +234,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion': 'configuracion.general',
   '/configuracion/usuarios': 'configuracion.usuarios',
   '/configuracion/whatsapp': 'configuracion.whatsapp',
+  '/configuracion/wa-bot': 'configuracion.wa_bot',
   '/facturacion': 'configuracion.suscripcion',
   '/mi-suscripcion': 'configuracion.suscripcion',
   '/configuracion-inicial': '', // always accessible
