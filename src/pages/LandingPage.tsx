@@ -410,41 +410,64 @@ export default function LandingPage() {
       </section>
 
 
-      {/* MOBILE — compact split */}
-      <section id="movil" className="px-5 py-16 md:py-20" style={{ background: BRAND.surface }}>
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-2xl overflow-hidden border bg-white"
+      {/* MOBILE — phones showcase */}
+      <section id="movil" className="px-5 py-16 md:py-24 relative overflow-hidden" style={{ background: BRAND.surface }}>
+        <div className="absolute inset-0 pointer-events-none opacity-60"
+          style={{ background: `radial-gradient(60% 40% at 50% 0%, ${BRAND.primarySoft}, transparent)` }} />
+        <div className="max-w-7xl mx-auto relative">
+          <div className="text-center max-w-2xl mx-auto">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
+            <h2 className="mt-2 text-[28px] md:text-[44px] font-semibold tracking-tight leading-[1.05]" style={{ letterSpacing: '-0.025em' }}>
+              Tu distribuidora <span style={{ color: BRAND.primary }}>en el bolsillo de tu vendedor.</span>
+            </h2>
+            <p className="mt-4 text-[14.5px] md:text-[16px] leading-relaxed" style={{ color: BRAND.muted }}>
+              Rutero, venta, cobro y entrega — diseñados para tocarse con el pulgar y tolerar cortes de red.
+            </p>
+          </div>
+
+          {/* Phones row */}
+          <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6">
+            <div className="lg:translate-y-6"><PhoneRutero /></div>
+            <div><PhonePOS /></div>
+            <div className="lg:translate-y-6"><PhoneCobro /></div>
+            <div><PhoneEntrega /></div>
+          </div>
+
+          {/* Feature pills */}
+          <div className="mt-14 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-2.5">
+            {[
+              [Zap, 'Venta en segundos'],
+              [Wallet, 'Cobro multi-folio FIFO'],
+              [MapPin, 'GPS por cliente'],
+              [Truck, 'Entrega con firma'],
+              [Package, 'Stock del camión'],
+              [WifiOff, 'Tolera cortes de red'],
+            ].map(([Icon, t]: any) => (
+              <div key={t} className="flex items-center gap-2.5 text-[13px] bg-white border rounded-lg px-3 py-2.5"
+                style={{ color: BRAND.ink, borderColor: BRAND.line }}>
+                <span className="h-7 w-7 rounded-md grid place-items-center shrink-0"
+                  style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="font-medium">{t}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Supervisor map — bonus */}
+          <div className="mt-16 grid lg:grid-cols-5 gap-8 items-center">
+            <div className="lg:col-span-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Supervisor en vivo</span>
+              <h3 className="mt-2 text-[22px] md:text-[28px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.022em', color: BRAND.ink }}>
+                Mira a todo tu equipo en un mapa.
+              </h3>
+              <p className="mt-3 text-[14px] leading-relaxed" style={{ color: BRAND.ink2 }}>
+                Ubicación, ventas del día, batería y última visita — sin llamarles ni un solo WhatsApp.
+              </p>
+            </div>
+            <div className="lg:col-span-3 rounded-2xl overflow-hidden border bg-white"
               style={{ borderColor: BRAND.line, boxShadow: '0 25px 50px -20px rgba(10,21,48,0.2)' }}>
               <LiveSupervisorMap />
-            </div>
-            <div className="rounded-2xl border bg-white grid place-items-center overflow-hidden p-2"
-              style={{ borderColor: BRAND.line, boxShadow: '0 25px 50px -20px rgba(10,21,48,0.2)' }}>
-              <div className="scale-90"><LiveMobileApp /></div>
-            </div>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
-            <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.025em' }}>
-              Vende, cobra, entrega — <span style={{ color: BRAND.primary }}>aunque se caiga la señal.</span>
-            </h2>
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {[
-                [Zap, 'Venta en segundos'],
-                [Wallet, 'Cobro con recibo'],
-                [MapPin, 'GPS por cliente'],
-                [Truck, 'Entrega con firma'],
-                [Package, 'Stock del camión'],
-                [WifiOff, 'Aguanta cortes de red'],
-              ].map(([Icon, t]: any) => (
-                <div key={t} className="flex items-center gap-2.5 text-[13.5px]" style={{ color: BRAND.ink }}>
-                  <span className="h-7 w-7 rounded-md grid place-items-center shrink-0"
-                    style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                  {t}
-                </div>
-              ))}
             </div>
           </div>
         </div>
