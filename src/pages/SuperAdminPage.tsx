@@ -37,6 +37,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'partners', label: 'Partners', icon: Handshake },
   { key: 'control', label: 'Control', icon: ShieldCheck },
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
   { key: 'notifications', label: 'Historial', icon: Bell },
   { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
   { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
