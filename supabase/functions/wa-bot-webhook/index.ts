@@ -780,6 +780,8 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
       .eq("empresa_id", empresaId)
       .order("created_at", { ascending: false })
       .limit(lim);
+    if (args?.tipo && ["pedido", "venta_directa"].includes(String(args.tipo))) q = q.eq("tipo", args.tipo);
+    if (args?.status && ["borrador", "confirmado", "entregado", "facturado", "cancelado"].includes(String(args.status))) q = q.eq("status", args.status);
     if (args?.fecha) {
       const date = parseFecha(args.fecha);
       const { start, end } = dayRange(date);
@@ -797,6 +799,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     }
     const detalle = ventasActivas.map((v:any) => ({
       folio: v.folio,
+      tipo: v.tipo,
       fecha: v.fecha,
       cliente: v.clientes?.nombre || "—",
       vendedor: vendMap.get(v.vendedor_id) || "—",
