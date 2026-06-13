@@ -35,7 +35,7 @@ const LANDING_JSON_LD = [
     name: 'Rutapp',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, Android, iOS',
-    description: 'ERP de venta en ruta con app móvil offline, cobranza, inventario y facturación CFDI 4.0.',
+    description: 'ERP de venta en ruta con app móvil offline, cobranza, inventario, compras y logística para distribuidoras.',
     offers: {
       '@type': 'Offer',
       price: '0',
@@ -85,7 +85,7 @@ const FEATURE_GROUPS = [
       { icon: ShoppingCart, title: 'Punto de venta avanzado', desc: 'POS responsivo con búsqueda rápida, promociones nxm, descuentos y control de stock por almacén.' },
       { icon: Truck, title: 'Pedidos y entregas', desc: 'Flujo 1:N pedido → entregas. Despacha por ruta, marca entregado y descuenta inventario automático.' },
       { icon: Wallet, title: 'Cobranza inteligente', desc: 'Aplicación FIFO multi-folio, cobros parciales, liquidación de ruta con efectivo esperado vs real.' },
-      { icon: Receipt, title: 'Tickets y CFDI 4.0', desc: 'Tickets térmicos por Bluetooth, PDFs estilo Odoo y facturación SAT con Facturama integrado.' },
+      { icon: Receipt, title: 'Tickets térmicos y PDFs', desc: 'Tickets térmicos por Bluetooth y PDFs estilo Odoo profesionales para ventas, cobros, entregas y estados de cuenta.' },
     ],
   },
   {
@@ -243,7 +243,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
       <Seo
         title="Rutapp · ERP de venta en ruta con app móvil offline"
-        description="Vende, cobra, entrega y factura desde el celular. Rutas optimizadas, inventario en tiempo real y CFDI 4.0 para distribuidoras en México."
+        description="Vende, cobra, entrega y controla tu inventario desde el celular. Rutas optimizadas, app offline y asesor con IA para distribuidoras en México."
         path="/"
         jsonLd={LANDING_JSON_LD}
       />
@@ -341,7 +341,7 @@ export default function LandingPage() {
             </h1>
             <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
               Ya no es solo preventa en ruta. Es el ERP completo para distribuidoras: ventas, cobranza, inventario,
-              compras, facturación CFDI, logística y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
+              compras, logística, app móvil offline y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
               <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
