@@ -510,6 +510,7 @@ const TOOLS = [
         properties: { limite: { type: "number", description: "Máx clientes (default 10)" } },
       },
     },
+  },
   {
     type: "function",
     function: {
