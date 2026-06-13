@@ -346,107 +346,67 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-            {MODULES.map((m, i) => (
-              <button
+            {MODULES.map((m) => (
+              <div
                 key={m.t}
-                onClick={() => setOpenModule(i)}
-                className="text-left rounded-xl border bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5 group focus:outline-none focus:ring-2"
+                className="rounded-xl border bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5"
                 style={{ borderColor: BRAND.line }}
               >
                 <m.icon className="h-4 w-4 mb-2" style={{ color: BRAND.primary }} />
                 <div className="text-[13.5px] font-semibold">{m.t}</div>
                 <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
-                <div className="mt-2.5 text-[11px] font-semibold inline-flex items-center gap-1 opacity-80 group-hover:opacity-100" style={{ color: BRAND.primary }}>
-                  Ver más <ArrowRight className="h-3 w-3" />
-                </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Module detail dialog */}
-        <Dialog open={openModule !== null} onOpenChange={(o) => !o && setOpenModule(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-white border-0">
-            {openModule !== null && (() => {
-              const m = MODULES[openModule];
-              const Icon = m.icon;
-              return (
-                <>
-                  <div className="p-6 md:p-8" style={{ background: `linear-gradient(135deg, ${BRAND.primary}, #003a99)` }}>
-                    <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl grid place-items-center bg-white/15 backdrop-blur">
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <DialogHeader>
-                          <DialogTitle className="text-white text-[22px] md:text-[26px] font-semibold tracking-tight">
-                            {m.t}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="text-[13px] text-white/80 mt-0.5">{m.d}</div>
-                      </div>
-                    </div>
+        {/* ZIGZAG — los módulos más chidos, con visual real */}
+        <div className="max-w-7xl mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
+          {[
+            { name: 'Ventas', kicker: 'POS + Rutero', idx: 0 },
+            { name: 'Cobranza', kicker: 'FIFO multi-folio', idx: 1 },
+            { name: 'Logística', kicker: 'Surtido y carga', idx: 3 },
+            { name: 'Compras', kicker: 'Sugerencias con IA', idx: 4 },
+            { name: 'Reportes', kicker: 'Dashboard ejecutivo', idx: 8 },
+            { name: 'IA', kicker: 'Asesor Rutapp', idx: 9 },
+          ].map((row, i) => {
+            const m = MODULES[row.idx];
+            const Icon = m.icon;
+            const flip = i % 2 === 1;
+            return (
+              <div key={row.name} className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
+                {/* Text side */}
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-[0.14em]"
+                    style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
+                    <Icon className="h-3 w-3" /> {row.kicker}
                   </div>
-                  <div className="p-6 md:p-8 space-y-5">
-                    {/* Visual preview */}
-                    <ModuleVisual name={m.t} />
-
-                    {/* Star feature */}
-                    <div className="rounded-xl p-5 border" style={{ background: BRAND.primarySoft, borderColor: BRAND.primary + '33' }}>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Sparkles className="h-3.5 w-3.5" style={{ color: BRAND.accent }} />
-                        <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.accent }}>Función estrella</span>
+                  <h3 className="mt-3 text-[24px] md:text-[32px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.022em', color: BRAND.ink }}>
+                    {m.star.t}
+                  </h3>
+                  <p className="mt-3 text-[14.5px] leading-relaxed" style={{ color: BRAND.ink2 }}>
+                    {m.star.d}
+                  </p>
+                  <div className="mt-5 grid sm:grid-cols-2 gap-2">
+                    {m.features.slice(0, 4).map(f => (
+                      <div key={f} className="flex items-start gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
+                        <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" strokeWidth={3} style={{ color: BRAND.primary }} />
+                        <span>{f}</span>
                       </div>
-                      <div className="text-[16px] font-semibold mb-1" style={{ color: BRAND.ink }}>{m.star.t}</div>
-                      <div className="text-[13.5px] leading-relaxed" style={{ color: BRAND.ink2 }}>{m.star.d}</div>
-                    </div>
-
-                    {/* Features list */}
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3" style={{ color: BRAND.primary }}>Lo que incluye</div>
-                      <div className="grid sm:grid-cols-2 gap-2">
-                        {m.features.map(f => (
-                          <div key={f} className="flex items-start gap-2 text-[13.5px]" style={{ color: BRAND.ink2 }}>
-                            <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" strokeWidth={3} style={{ color: BRAND.primary }} />
-                            <span>{f}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Why it matters */}
-                    <div className="border-t pt-5" style={{ borderColor: BRAND.line }}>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] mb-2" style={{ color: BRAND.muted }}>Por qué importa</div>
-                      <div className="text-[14px] leading-relaxed italic" style={{ color: BRAND.ink }}>"{m.why}"</div>
-                    </div>
-
-                    {/* CTA */}
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Link
-                        to="/signup"
-                        onClick={() => setOpenModule(null)}
-                        className="px-4 py-2.5 text-[13.5px] font-semibold text-white rounded-lg inline-flex items-center gap-1.5"
-                        style={{ background: BRAND.primary }}
-                      >
-                        Probar gratis <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                      <button
-                        onClick={() => {
-                          const next = openModule === MODULES.length - 1 ? 0 : openModule + 1;
-                          setOpenModule(next);
-                        }}
-                        className="px-4 py-2.5 text-[13.5px] font-semibold rounded-lg border"
-                        style={{ borderColor: BRAND.line, color: BRAND.ink }}
-                      >
-                        Siguiente módulo →
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                </>
-              );
-            })()}
-          </DialogContent>
-        </Dialog>
+                  <div className="mt-5 text-[13px] italic border-l-2 pl-3" style={{ color: BRAND.ink, borderColor: BRAND.accent }}>
+                    "{m.why}"
+                  </div>
+                </div>
+                {/* Visual side */}
+                <div>
+                  <ModuleVisual name={row.name} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
 
