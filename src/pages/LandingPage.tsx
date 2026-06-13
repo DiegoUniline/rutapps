@@ -190,7 +190,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             ['10', 'Módulos integrados'],
-            ['100%', 'Offline-first'],
+            ['Nube', 'En tiempo real'],
             ['Tiempo real', 'GPS y stock'],
             ['Días', 'No meses'],
           ].map(([n, l]) => (
