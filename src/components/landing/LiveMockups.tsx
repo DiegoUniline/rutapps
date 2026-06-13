@@ -296,8 +296,7 @@ export function LiveDashboardMockup() {
         {/* Sidebar */}
         <aside className="w-40 p-2.5 hidden sm:block" style={{ background: DTK.bg, borderRight: `1px solid ${DTK.border}` }}>
           <div className="flex items-center gap-1.5 mb-3 px-1">
-            <div className="w-6 h-6 rounded-md grid place-items-center text-white text-[10px] font-black"
-              style={{ background: DTK.primary }}>R</div>
+            <img src={rutappLogo.url} alt="Rutapp" className="h-6 w-auto rounded-md" />
             <span className="text-[12px] font-black" style={{ color: DTK.primary }}>Rutapp</span>
           </div>
           <div className="rounded-md px-2 py-1 mb-2 text-[9px]" style={{ background: DTK.surface, color: DTK.muted }}>
