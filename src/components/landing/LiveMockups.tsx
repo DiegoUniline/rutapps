@@ -4,6 +4,7 @@ import {
   Wallet, Bell, Wifi, Signal, ChevronRight, Search, BarChart3,
   ArrowUp, Check, RefreshCw,
 } from 'lucide-react';
+import rutappLogo from '@/assets/rutapp-logo.jpeg.asset.json';
 
 /* ============================================================
    1. SUPERVISOR MAP — animated GPS tracking mockup
