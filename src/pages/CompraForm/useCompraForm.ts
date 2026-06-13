@@ -205,7 +205,8 @@ export function useCompraForm() {
         const updates: Array<Promise<void>> = [];
         for (const l of validLines) {
           const factor = Number(l._factor_conversion) || 1;
-          const piezas = (Number(l.cantidad) || 0) * factor;
+          const piezas = Math.max(0, Number(l.cantidad_recibida) || 0);
+          if (piezas <= 0) continue;
 
           // Deduct from stock_almacen (trigger auto-recalcs productos.cantidad)
           if (form.almacen_id) {
