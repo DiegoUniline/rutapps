@@ -245,7 +245,7 @@ export default function LandingPage() {
           <div>
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.025em' }}>
-              Vende, cobra, entrega — <span style={{ color: BRAND.primary }}>sin internet.</span>
+              Vende, cobra, entrega — <span style={{ color: BRAND.primary }}>aunque se caiga la señal.</span>
             </h2>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {[
