@@ -2527,6 +2527,53 @@ export type Database = {
         }
         Relationships: []
       }
+      empresa_addons: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          updated_at: string
+          wa_bot_activated_at: string | null
+          wa_bot_activated_by: string | null
+          wa_bot_enabled: boolean
+          wa_bot_monthly_price: number | null
+          wa_bot_notes: string | null
+          wa_bot_requested_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          updated_at?: string
+          wa_bot_activated_at?: string | null
+          wa_bot_activated_by?: string | null
+          wa_bot_enabled?: boolean
+          wa_bot_monthly_price?: number | null
+          wa_bot_notes?: string | null
+          wa_bot_requested_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          updated_at?: string
+          wa_bot_activated_at?: string | null
+          wa_bot_activated_by?: string | null
+          wa_bot_enabled?: boolean
+          wa_bot_monthly_price?: number | null
+          wa_bot_notes?: string | null
+          wa_bot_requested_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_addons_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           ciudad: string | null
@@ -7079,6 +7126,107 @@ export type Database = {
             columns: ["venta_id"]
             isOneToOne: false
             referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_bot_authorized_numbers: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          id: string
+          nombre: string | null
+          permisos: Json
+          phone_e164: string
+          profile_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          id?: string
+          nombre?: string | null
+          permisos?: Json
+          phone_e164: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          id?: string
+          nombre?: string | null
+          permisos?: Json
+          phone_e164?: string
+          profile_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_bot_authorized_numbers_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_bot_authorized_numbers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_bot_logs: {
+        Row: {
+          created_at: string
+          empresa_id: string | null
+          id: string
+          inbound_text: string | null
+          intent: string | null
+          outcome: string
+          params: Json | null
+          pdf_url: string | null
+          phone: string
+          response_summary: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          inbound_text?: string | null
+          intent?: string | null
+          outcome?: string
+          params?: Json | null
+          pdf_url?: string | null
+          phone: string
+          response_summary?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          inbound_text?: string | null
+          intent?: string | null
+          outcome?: string
+          params?: Json | null
+          pdf_url?: string | null
+          phone?: string
+          response_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_bot_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
