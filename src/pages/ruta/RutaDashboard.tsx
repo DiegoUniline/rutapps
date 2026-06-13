@@ -343,9 +343,9 @@ export default function RutaDashboard() {
               title={clienteById.get(v.cliente_id)?.nombre ?? 'Cliente'}
               subtitle={`${v.folio ?? ''} · ${formatDate(v.fecha)}`}
               right={fmt(v.total ?? 0)}
-              rightSub={v.status === 'cancelada' ? 'Cancelada' : (v.saldo_pendiente > 0 ? `Saldo ${fmt(v.saldo_pendiente)}` : 'Pagada')}
-              rightColor={v.status === 'cancelada' ? 'text-muted-foreground' : v.saldo_pendiente > 0 ? 'text-warning' : 'text-success'}
-              dim={v.status === 'cancelada'}
+              rightSub={isCancelado(v.status) ? 'Cancelada' : (v.saldo_pendiente > 0 ? `Saldo ${fmt(v.saldo_pendiente)}` : 'Pagada')}
+              rightColor={isCancelado(v.status) ? 'text-muted-foreground' : v.saldo_pendiente > 0 ? 'text-warning' : 'text-success'}
+              dim={isCancelado(v.status)}
             />
           )))}
 
@@ -358,7 +358,7 @@ export default function RutaDashboard() {
               title={clienteById.get(e.cliente_id)?.nombre ?? 'Cliente'}
               subtitle={`${e.folio ?? ''} · ${formatDate(e.fecha_entrega ?? e.fecha)}`}
               right={statusLabel(e.status)}
-              rightColor={e.status === 'entregado' ? 'text-success' : e.status === 'no_entregado' ? 'text-destructive' : 'text-warning'}
+              rightColor={isEntregaFinalizada(e.status) ? 'text-success' : e.status === 'no_entregado' ? 'text-destructive' : 'text-warning'}
             />
           )))}
 
