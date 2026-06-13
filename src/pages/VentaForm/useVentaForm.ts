@@ -162,7 +162,9 @@ export function useVentaForm() {
     () => (pagosData ?? []).reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0),
     [pagosData],
   );
-  const saldoPendiente = (form.total ?? 0) - totalPagado;
+  const saldoPendiente = form.saldo_pendiente != null
+    ? Number(form.saldo_pendiente) || 0
+    : (Number(form.total ?? 0) - totalPagado);
 
   // Load existing venta — only once per venta id
   useEffect(() => {
@@ -293,6 +295,24 @@ export function useVentaForm() {
       total: r2(Math.max(0, totals.total - promoEffective)),
     };
   }, [totals, promoByProduct, rawPricingMap, lineas, sinImpuestos]);
+
+  const displayTotals = useMemo(() => {
+    if (isNew || !readOnly) return finalTotals;
+    const subtotal = Number(form.subtotal) || 0;
+    const iva_total = Number(form.iva_total) || 0;
+    const ieps_total = Number(form.ieps_total) || 0;
+    const total = Number(form.total) || 0;
+    const impliedDiscount = Math.max(0, subtotal + iva_total + ieps_total - total);
+    return {
+      subtotal,
+      iva_total,
+      ieps_total,
+      total,
+      descuento_total: Math.max(Number(form.descuento_total) || 0, impliedDiscount),
+      descuento_extra_amt: Number((form as any).descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0,
+      descuento_promo: finalTotals.descuento_promo,
+    };
+  }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, isNew, readOnly]);
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
@@ -461,7 +481,7 @@ export function useVentaForm() {
         const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        const linePayload = { ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
+        const linePayload = { ...l, venta_id: ventaId, subtotal: lineSubtotal, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
@@ -597,7 +617,7 @@ export function useVentaForm() {
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
-    pagosData, totalPagado, saldoPendiente, totals: finalTotals, promoResults, tarifaRules,
+    pagosData, totalPagado, saldoPendiente, totals: displayTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
