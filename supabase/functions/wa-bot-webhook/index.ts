@@ -827,10 +827,18 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
   let pdfName: string | null = null;
   const toolsUsed: string[] = [];
 
+  const requiredTool = inferRequiredTool(opts.userMessage);
+  if (requiredTool) {
+    toolsUsed.push(requiredTool.name);
+    const out = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
+    if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
+    return { reply: formatToolReply(requiredTool.name, out), intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+  }
+
   for (let step = 0; step < 5; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_AI_KEY}`, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {
@@ -862,6 +870,9 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
     }
 
     const reply = (msg.content || "").trim() || "✅";
+    if (!toolsUsed.length && /venta|vend|stock|inventario|producto|cliente|saldo|cobro|pago|reporte|pdf|gasto|vendedor/i.test(opts.userMessage)) {
+      return { reply: "⚠️ No puedo responder eso sin consultar datos reales del sistema. Pídeme por ejemplo: *reporte hoy*, *stock disponible*, *quién vendió hoy* o *cliente <nombre>*.", intent: "needs_tool", pdfUrl: null, pdfName: null, toolsUsed };
+    }
     return { reply, intent: toolsUsed[0] || "chat", pdfUrl, pdfName, toolsUsed };
   }
 
