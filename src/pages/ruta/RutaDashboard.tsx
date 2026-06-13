@@ -11,10 +11,11 @@ type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluc
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
-  const { profile, empresa, user } = useAuth();
+  const { profile, empresa, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
   const today = todayLocal();
-  const vendedorId = profile?.id;
+  const isSAOverride = !!overrideEmpresaId;
+  const vendedorId = isSAOverride ? overrideVendedorId : profile?.id;
 
   // Filtros
   const [tab, setTab] = useState<TabKey>('resumen');
