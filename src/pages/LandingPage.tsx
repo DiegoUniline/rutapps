@@ -7,6 +7,7 @@ import {
   FileText, ClipboardCheck, RefreshCw, Receipt, Bell,
   WifiOff, MessageCircle, TrendingUp, Eye, Layers,
   Tag, Building2, Calculator, ScanLine, Activity,
+  Sparkles, Brain, Lightbulb, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
@@ -54,6 +55,17 @@ const REALTIME_BULLETS = [
 
 // ── Capacidades principales (todo lo que hace el sistema) ──
 const FEATURE_GROUPS = [
+  {
+    title: 'Inteligencia Artificial',
+    color: 'hsl(280, 70%, 55%)',
+    bg: 'hsl(280, 70%, 96%)',
+    items: [
+      { icon: Brain, title: 'Asesor IA en el dashboard', desc: 'Un analista virtual que lee tus números, detecta caídas de venta, clientes en riesgo y te dice qué hacer hoy.' },
+      { icon: Sparkles, title: 'Onboarding inteligente', desc: 'Sube tu lista de clientes o productos en cualquier formato y la IA estructura, valida y carga todo por ti.' },
+      { icon: MessageSquare, title: 'Soporte conversacional', desc: 'Chat de ayuda con IA entrenado en Rutapp. Resuelve dudas y guía a tu equipo 24/7 en español.' },
+      { icon: Lightbulb, title: 'Sugerencias de compra', desc: 'La IA cruza ventas, stock y rotación para sugerirte qué reponer, cuánto y cuándo, antes de que te falte.' },
+    ],
+  },
   {
     title: 'Operación de campo',
     color: 'hsl(230, 55%, 52%)',
@@ -250,6 +262,7 @@ export default function LandingPage() {
               </span>
               En vivo
             </a>
+            <a href="#ai" className="hover:text-gray-900 transition-colors font-semibold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>✨ IA</a>
             <a href="#features" className="hover:text-gray-900 transition-colors">Funciones</a>
             <a href="#modules" className="hover:text-gray-900 transition-colors">Módulos</a>
             <a href="#screenshots" className="hover:text-gray-900 transition-colors">Capturas</a>
@@ -290,6 +303,7 @@ export default function LandingPage() {
         {mobileMenu && (
           <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-3">
             <a href="#realtime" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-emerald-600">● En vivo</a>
+            <a href="#ai" onClick={() => setMobileMenu(false)} className="block text-sm font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>✨ IA integrada</a>
             <a href="#features" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Funciones</a>
             <a href="#modules" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Módulos</a>
             <a href="#screenshots" onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600">Capturas</a>
@@ -314,20 +328,20 @@ export default function LandingPage() {
         </div>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-6">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              Nuevo · Seguimiento en tiempo real de vendedores
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 text-white shadow-lg"
+              style={{ background: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+              <Sparkles className="h-3.5 w-3.5" />
+              Nuevo · Ahora con Inteligencia Artificial integrada
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1] mb-6">
-              Mira a tus vendedores
-              <span className="block" style={{ color: 'hsl(230, 55%, 52%)' }}>en vivo, en el mapa</span>
+              El control completo de tu negocio
+              <span className="block bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+                potenciado con IA
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-              El ERP completo para distribuidoras y venta en ruta. Seguimiento GPS al instante, app móvil offline,
-              optimización de rutas, inventario, cobranza y facturación CFDI — todo en un solo lugar.
+              Ya no es solo preventa en ruta. Es el ERP completo para distribuidoras: ventas, cobranza, inventario,
+              compras, facturación CFDI, logística y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
               <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
@@ -364,6 +378,113 @@ export default function LandingPage() {
               <div className="text-xs text-gray-500 mt-1 font-medium">{s.label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── AI HIGHLIGHT ── */}
+      <section id="ai" className="py-24 px-6 relative overflow-hidden text-white"
+        style={{ background: 'radial-gradient(circle at 20% 20%, hsl(280, 70%, 25%), hsl(230, 55%, 12%) 60%)' }}>
+        <div className="absolute inset-0 pointer-events-none opacity-30">
+          <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-3xl"
+            style={{ background: 'hsl(280, 70%, 55%)' }} />
+          <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full blur-3xl"
+            style={{ background: 'hsl(230, 55%, 52%)' }} />
+        </div>
+        <div className="max-w-7xl mx-auto relative">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-xs font-bold mb-5 border border-white/20">
+                <Sparkles className="h-3.5 w-3.5" />
+                NUEVO · INTELIGENCIA ARTIFICIAL
+              </div>
+              <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-5">
+                Un asesor con IA
+                <span className="block bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'linear-gradient(90deg, #d8b4fe, #93c5fd)' }}>
+                  trabajando 24/7 por ti
+                </span>
+              </h2>
+              <p className="text-lg text-white/70 leading-relaxed mb-8">
+                Rutapp ahora incluye un cerebro detrás de cada módulo. Analiza tus ventas, detecta riesgos,
+                sugiere acciones, te ayuda a importar datos y responde dudas de tu equipo — sin necesidad
+                de configurar nada extra ni pagar otra suscripción.
+              </p>
+              <ul className="space-y-3.5 mb-8">
+                {[
+                  { icon: Brain, text: 'Analiza tu dashboard y te dice qué está pasando hoy' },
+                  { icon: Lightbulb, text: 'Sugiere qué productos reponer antes de que se agoten' },
+                  { icon: Sparkles, text: 'Estructura e importa catálogos en cualquier formato' },
+                  { icon: MessageSquare, text: 'Chat de soporte instantáneo entrenado en Rutapp' },
+                ].map(b => (
+                  <li key={b.text} className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-white/10 border border-white/15">
+                      <b.icon className="h-4 w-4 text-purple-200" />
+                    </div>
+                    <span className="text-sm md:text-base text-white/90 pt-1.5">{b.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-bold rounded-xl transition-all hover:opacity-90 shadow-2xl text-gray-900 bg-white">
+                Probar la IA gratis <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* AI mock card */}
+            <div className="relative">
+              <div className="absolute -inset-6 rounded-3xl opacity-40 blur-3xl"
+                style={{ background: 'linear-gradient(135deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }} />
+              <div className="relative rounded-2xl bg-white/95 backdrop-blur p-5 shadow-2xl text-gray-900">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white"
+                    style={{ background: 'linear-gradient(135deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold">Asesor Rutapp IA</div>
+                    <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Analizando tu operación…
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="rounded-xl p-3 text-xs bg-purple-50 border border-purple-100">
+                    <div className="font-bold text-purple-900 mb-1 flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5" /> Insight del día
+                    </div>
+                    <div className="text-gray-700">
+                      Tus ventas en Ruta Norte cayeron <b>18%</b> esta semana. 3 clientes top no han sido visitados en 12 días.
+                    </div>
+                  </div>
+                  <div className="rounded-xl p-3 text-xs bg-amber-50 border border-amber-100">
+                    <div className="font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                      <Lightbulb className="h-3.5 w-3.5" /> Recomendación
+                    </div>
+                    <div className="text-gray-700">
+                      Reabastece <b>Coca-Cola 600ml</b> (te quedan 4 días de stock) y <b>Sabritas Originales</b> (3 días).
+                    </div>
+                  </div>
+                  <div className="rounded-xl p-3 text-xs bg-emerald-50 border border-emerald-100">
+                    <div className="font-bold text-emerald-900 mb-1 flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5" /> Importación completada
+                    </div>
+                    <div className="text-gray-700">
+                      Procesé tu Excel: <b>247 productos</b> creados, <b>12 duplicados</b> fusionados automáticamente.
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
+                  <div className="flex-1 px-3 py-2 rounded-lg bg-gray-50 text-xs text-gray-400">
+                    Pregúntale algo a la IA…
+                  </div>
+                  <button className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                    style={{ background: 'linear-gradient(135deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
