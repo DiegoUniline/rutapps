@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 import { ModuleVisual } from '@/components/landing/ModuleVisuals';
+import { PhoneRutero, PhonePOS, PhoneCobro, PhoneEntrega } from '@/components/landing/MobileAppScreens';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
