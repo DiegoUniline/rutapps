@@ -52,7 +52,7 @@ const AI_CARDS = [
 
 const COMPARE = [
   ['Tiempo real', true, false, false, 'Parcial'],
-  ['Móvil offline', true, false, false, false],
+  ['Tolerancia a cortes', true, false, false, false],
   ['GPS y ruta', true, false, false, false],
   ['Cobranza FIFO', true, false, false, true],
   ['IA integrada', true, false, false, false],
@@ -86,7 +86,7 @@ export default function LandingPage() {
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
       <Seo
         title="Rutapp · ERP para distribuidoras con IA"
-        description="Ventas, cobranza, inventario, ruta GPS e IA. Móvil offline. Todo tu negocio en una sola plataforma."
+        description="Ventas, cobranza, inventario, ruta GPS e IA en la nube. App móvil que tolera cortes de internet sin perder ventas."
         path="/"
         jsonLd={LANDING_JSON_LD}
       />
@@ -148,7 +148,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
-              Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en tiempo real. Operación móvil offline.
+              Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
             </p>
             <div className="mt-6 flex flex-wrap gap-2.5">
               <Link to="/signup" className="px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all hover:scale-[1.02]"
@@ -190,7 +190,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             ['10', 'Módulos integrados'],
-            ['100%', 'Offline-first'],
+            ['Nube', 'En tiempo real'],
             ['Tiempo real', 'GPS y stock'],
             ['Días', 'No meses'],
           ].map(([n, l]) => (
@@ -245,7 +245,7 @@ export default function LandingPage() {
           <div>
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.025em' }}>
-              Vende, cobra, entrega — <span style={{ color: BRAND.primary }}>sin internet.</span>
+              Vende, cobra, entrega — <span style={{ color: BRAND.primary }}>aunque se caiga la señal.</span>
             </h2>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {[
@@ -254,7 +254,7 @@ export default function LandingPage() {
                 [MapPin, 'GPS por cliente'],
                 [Truck, 'Entrega con firma'],
                 [Package, 'Stock del camión'],
-                [WifiOff, 'Funciona offline'],
+                [WifiOff, 'Aguanta cortes de red'],
               ].map(([Icon, t]: any) => (
                 <div key={t} className="flex items-center gap-2.5 text-[13.5px]" style={{ color: BRAND.ink }}>
                   <span className="h-7 w-7 rounded-md grid place-items-center shrink-0"
@@ -381,7 +381,7 @@ export default function LandingPage() {
                   Empezar gratis
                 </Link>
                 <ul className="mt-5 space-y-2 flex-1">
-                  {['Acceso completo', 'App móvil offline', 'IA incluida', 'Soporte WhatsApp'].map(f => (
+                  {['Acceso completo', 'App móvil tolerante a cortes', 'IA incluida', 'Soporte WhatsApp'].map(f => (
                     <li key={f} className="flex items-center gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
                       <Check className="h-3.5 w-3.5 shrink-0" style={{ color: BRAND.primary }} strokeWidth={3} /> {f}
                     </li>
