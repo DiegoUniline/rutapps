@@ -244,47 +244,80 @@ export function LiveMobileApp() {
 }
 
 /* ============================================================
-   3. DASHBOARD MOCKUP — KPI panel with animated chart
+   3. DASHBOARD MOCKUP — Real Rutapp dark theme with rich fake data
    ============================================================ */
+const DTK = {
+  bg: '#0b1322',
+  surface: '#111c33',
+  surface2: '#16243f',
+  border: 'rgba(255,255,255,0.06)',
+  text: '#e7ecf5',
+  muted: '#8a96ac',
+  primary: '#5b6cf9',
+  primarySoft: 'rgba(91,108,249,0.18)',
+};
+
 export function LiveDashboardMockup() {
+  const kpis1 = [
+    { l: 'VENTAS', v: '$184,320', s: '127 operaciones', Icon: ShoppingCart, c: '#7c8cff', tint: 'rgba(91,108,249,0.18)' },
+    { l: 'TICKET PROMEDIO', v: '$1,452', s: '108 pedidos · 19 directas', Icon: TrendingUp, c: '#34d399', tint: 'rgba(34,197,94,0.18)' },
+    { l: 'COBRADO', v: '$162,840', s: '94 cobros', Icon: Wallet, c: '#22d3ee', tint: 'rgba(34,211,238,0.18)' },
+    { l: 'CARTERA', v: '$48,210', s: '23 clientes con saldo', Icon: Users, c: '#fbbf24', tint: 'rgba(245,158,11,0.18)' },
+    { l: 'COMPRAS', v: '$92,180', s: 'Pendiente: $18,400', Icon: Package, c: '#f472b6', tint: 'rgba(236,72,153,0.18)' },
+    { l: 'UTILIDAD', v: '$42,610', s: 'Margen: 23%', Icon: ArrowUp, c: '#fb7185', tint: 'rgba(251,113,133,0.18)' },
+  ];
+  const kpis2 = [
+    { l: 'DEVOLUCIONES', v: '14 uds', s: '$1,820 · 1.1% s/venta', c: '#fb7185' },
+    { l: 'EFECTIVIDAD', v: '92%', s: '108 de 117 visitas', c: '#34d399' },
+    { l: 'CUMPLIMIENTO RUTA', v: '88%', s: '94 de 107 planeadas', c: '#22d3ee' },
+    { l: 'DROP SIZE', v: '$1,710', s: 'por punto de venta', c: '#fbbf24' },
+    { l: 'COBERTURA', v: '76%', s: '11 clientes sin compra 30+ días', c: '#f472b6' },
+  ];
   return (
-    <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
+    <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: DTK.bg, border: `1px solid ${DTK.border}` }}>
       {/* Window chrome */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+      <div className="px-3 py-2 flex items-center gap-2" style={{ background: '#070d1a', borderBottom: `1px solid ${DTK.border}` }}>
         <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#ff5f57' }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#febc2e' }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28c840' }} />
         </div>
         <div className="flex-1 mx-3">
-          <div className="bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[10px] text-gray-400 max-w-xs mx-auto">
+          <div className="rounded-md px-2 py-0.5 text-[10px] max-w-xs mx-auto text-center"
+            style={{ background: DTK.surface, color: DTK.muted, border: `1px solid ${DTK.border}` }}>
             rutapp.mx/dashboard
           </div>
         </div>
       </div>
 
       {/* App body */}
-      <div className="flex bg-gray-50" style={{ minHeight: 360 }}>
+      <div className="flex" style={{ background: DTK.bg, minHeight: 420, color: DTK.text }}>
         {/* Sidebar */}
-        <aside className="w-44 bg-white border-r border-gray-100 p-3 hidden sm:block">
-          <div className="flex items-center gap-1.5 mb-4">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-black"
-              style={{ background: 'hsl(230, 55%, 52%)' }}>R</div>
-            <span className="text-xs font-black" style={{ color: 'hsl(230, 55%, 52%)' }}>Rutapp</span>
+        <aside className="w-40 p-2.5 hidden sm:block" style={{ background: DTK.bg, borderRight: `1px solid ${DTK.border}` }}>
+          <div className="flex items-center gap-1.5 mb-3 px-1">
+            <div className="w-6 h-6 rounded-md grid place-items-center text-white text-[10px] font-black"
+              style={{ background: DTK.primary }}>R</div>
+            <span className="text-[12px] font-black" style={{ color: DTK.primary }}>Rutapp</span>
+          </div>
+          <div className="rounded-md px-2 py-1 mb-2 text-[9px]" style={{ background: DTK.surface, color: DTK.muted }}>
+            Buscar vistas…
           </div>
           <div className="space-y-0.5">
             {[
               { icon: BarChart3, label: 'Dashboard', active: true },
+              { icon: ShoppingCart, label: 'Ventas' },
               { icon: ShoppingCart, label: 'Punto de venta' },
-              { icon: MapPin, label: 'App Móvil' },
-              { icon: Users, label: 'Clientes' },
-              { icon: Package, label: 'Productos' },
-              { icon: Wallet, label: 'Cobranza' },
+              { icon: Package, label: 'Compras' },
+              { icon: MapPin, label: 'Logística' },
+              { icon: Package, label: 'Almacén' },
+              { icon: Wallet, label: 'Finanzas' },
+              { icon: BarChart3, label: 'Reportes' },
             ].map(it => (
               <div key={it.label}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[10px] font-medium ${
-                  it.active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'
-                }`}>
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[10px] font-medium"
+                style={it.active
+                  ? { background: DTK.primarySoft, color: DTK.text }
+                  : { color: DTK.muted }}>
                 <it.icon className="h-3 w-3" />
                 <span>{it.label}</span>
               </div>
@@ -293,78 +326,150 @@ export function LiveDashboardMockup() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-4 min-w-0">
+        <main className="flex-1 p-3.5 min-w-0">
           {/* Top bar */}
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-sm font-bold text-gray-900">Dashboard ejecutivo</h3>
-              <p className="text-[10px] text-gray-500">Hoy, 18 de abril 2026</p>
+            <div className="flex items-center gap-1.5 text-[10px]" style={{ color: DTK.muted }}>
+              <span className="px-1.5 py-0.5 rounded" style={{ background: DTK.surface, color: DTK.text }}>
+                Distribuidora Don Pepe
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">D</div>
+              <div className="px-2 py-1 rounded text-[9px] font-bold text-white flex items-center gap-1"
+                style={{ background: DTK.primary }}>
+                <RefreshCw className="h-2.5 w-2.5" /> Sincronizar
+              </div>
             </div>
           </div>
 
-          {/* KPI cards */}
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {[
-              { label: 'Ventas hoy', val: '$48,320', delta: '+12%', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { label: 'Cobros', val: '$32,180', delta: '+8%', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Pedidos', val: '47', delta: '+24%', color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'Utilidad', val: '$14,090', delta: '+5%', color: 'text-rose-600', bg: 'bg-rose-50' },
-            ].map(k => (
-              <div key={k.label} className={`rounded-lg p-2 ${k.bg}`}>
-                <div className="text-[8px] font-medium text-gray-600 uppercase">{k.label}</div>
-                <div className="text-sm font-black text-gray-900 mt-0.5">{k.val}</div>
-                <div className={`text-[9px] font-bold flex items-center gap-0.5 ${k.color}`}>
-                  <ArrowUp className="h-2 w-2" /> {k.delta}
+          {/* Title + date chips */}
+          <div className="flex items-end justify-between flex-wrap gap-2 mb-3">
+            <div>
+              <div className="text-[13px] font-bold flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5" /> Dashboard
+              </div>
+              <div className="text-[9px]" style={{ color: DTK.muted }}>1 jun — 30 jun 2026</div>
+            </div>
+            <div className="flex items-center gap-1">
+              {['Hoy', '7 días', '30 días', 'Este mes', 'Semana'].map(d => (
+                <div key={d} className={`px-1.5 py-0.5 rounded text-[8.5px] font-medium`}
+                  style={d === 'Este mes'
+                    ? { background: DTK.primary, color: 'white' }
+                    : { color: DTK.muted, background: DTK.surface }}>
+                  {d}
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Meta del mes banner */}
+          <div className="rounded-lg p-2.5 mb-3 flex items-center justify-between"
+            style={{ background: DTK.surface, border: `1px solid ${DTK.border}` }}>
+            <div>
+              <div className="text-[8.5px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: DTK.muted }}>
+                <span className="w-1 h-1 rounded-full" style={{ background: DTK.primary }} /> META DEL MES
+              </div>
+              <div className="text-[11px] font-bold mt-0.5">Vas 78% de tu meta — quedan 6 días</div>
+            </div>
+            <div className="flex items-center gap-3">
+              {[
+                { l: 'MARGEN', v: '23%', s: '+2.1pts', c: '#34d399' },
+                { l: 'RECUPERACIÓN', v: '94%', s: '$162k', c: '#22d3ee' },
+                { l: 'FLUJO NETO', v: '$70k', s: 'mes', c: '#fbbf24' },
+              ].map(k => (
+                <div key={k.l}>
+                  <div className="text-[7.5px]" style={{ color: DTK.muted }}>{k.l}</div>
+                  <div className="text-[11px] font-black" style={{ color: k.c }}>{k.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* KPI grid row 1 */}
+          <div className="grid grid-cols-6 gap-1.5 mb-1.5">
+            {kpis1.map(k => (
+              <div key={k.l} className="rounded-lg p-2"
+                style={{ background: DTK.surface, border: `1px solid ${DTK.border}` }}>
+                <div className="flex items-start justify-between mb-1">
+                  <div className="text-[7.5px] font-bold uppercase tracking-wider" style={{ color: DTK.muted }}>{k.l}</div>
+                  <div className="w-5 h-5 rounded-md grid place-items-center"
+                    style={{ background: k.tint, color: k.c }}>
+                    <k.Icon className="h-2.5 w-2.5" />
+                  </div>
+                </div>
+                <div className="text-[11px] font-black">{k.v}</div>
+                <div className="text-[7.5px]" style={{ color: DTK.muted }}>{k.s}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* KPI grid row 2 */}
+          <div className="grid grid-cols-5 gap-1.5 mb-3">
+            {kpis2.map(k => (
+              <div key={k.l} className="rounded-lg p-2"
+                style={{ background: DTK.surface, border: `1px solid ${DTK.border}` }}>
+                <div className="text-[7.5px] font-bold uppercase tracking-wider mb-0.5" style={{ color: DTK.muted }}>{k.l}</div>
+                <div className="text-[12px] font-black" style={{ color: k.c }}>{k.v}</div>
+                <div className="text-[7.5px]" style={{ color: DTK.muted }}>{k.s}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex items-center gap-3 mb-2 text-[9.5px]" style={{ borderBottom: `1px solid ${DTK.border}` }}>
+            {['Resumen', 'Productos y Clientes', 'Evolución mensual', 'Equipo', 'Cartera', 'Asesor IA'].map((t, i) => (
+              <div key={t} className="pb-1.5"
+                style={i === 0
+                  ? { color: DTK.text, fontWeight: 700, borderBottom: `2px solid ${DTK.primary}`, marginBottom: -1 }
+                  : { color: DTK.muted }}>
+                {t}
               </div>
             ))}
           </div>
 
           {/* Chart + ranking */}
           <div className="grid grid-cols-3 gap-2">
-            {/* Bar chart */}
-            <div className="col-span-2 bg-white rounded-lg border border-gray-100 p-3">
-              <div className="text-[10px] font-bold text-gray-700 mb-2">Ventas últimos 7 días</div>
+            <div className="col-span-2 rounded-lg p-2.5" style={{ background: DTK.surface, border: `1px solid ${DTK.border}` }}>
+              <div className="text-[10px] font-bold mb-2">Tendencia de ventas</div>
               <svg viewBox="0 0 280 100" className="w-full h-24">
                 <defs>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(230, 55%, 60%)" />
-                    <stop offset="100%" stopColor="hsl(230, 55%, 85%)" />
+                  <linearGradient id="barGradDk" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7c8cff" />
+                    <stop offset="100%" stopColor="#5b6cf9" stopOpacity="0.3" />
                   </linearGradient>
                 </defs>
-                {[60, 45, 78, 52, 90, 68, 95].map((h, i) => (
-                  <g key={i}>
-                    <rect x={i * 40 + 8} y={100 - h} width="22" height={h} rx="2" fill="url(#barGrad)">
-                      <animate attributeName="height" from="0" to={h} dur="0.8s" fill="freeze" />
-                      <animate attributeName="y" from="100" to={100 - h} dur="0.8s" fill="freeze" />
-                    </rect>
-                  </g>
+                {[55, 68, 42, 78, 52, 90, 72, 95, 64, 88, 76, 92].map((h, i) => (
+                  <rect key={i} x={i * 23 + 4} y={100 - h} width="16" height={h} rx="2" fill="url(#barGradDk)">
+                    <animate attributeName="height" from="0" to={h} dur="0.9s" fill="freeze" />
+                    <animate attributeName="y" from="100" to={100 - h} dur="0.9s" fill="freeze" />
+                  </rect>
                 ))}
               </svg>
-              <div className="flex justify-between text-[8px] text-gray-400 mt-1 px-1">
-                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => <span key={d}>{d}</span>)}
+              <div className="flex justify-between text-[7.5px] mt-1 px-1" style={{ color: DTK.muted }}>
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D', 'L', 'M', 'M', 'J', 'V'].map((d, i) => <span key={i}>{d}</span>)}
               </div>
             </div>
 
-            {/* Top vendedores */}
-            <div className="bg-white rounded-lg border border-gray-100 p-3">
-              <div className="text-[10px] font-bold text-gray-700 mb-2">Top vendedores</div>
+            <div className="rounded-lg p-2.5" style={{ background: DTK.surface, border: `1px solid ${DTK.border}` }}>
+              <div className="text-[10px] font-bold mb-2">Ventas por vendedor</div>
               <div className="space-y-1.5">
                 {[
-                  { n: 'Juan L.', v: '$11.2k', c: 'bg-amber-500' },
-                  { n: 'Carlos R.', v: '$8.4k', c: 'bg-indigo-500' },
-                  { n: 'Ana M.', v: '$6.2k', c: 'bg-emerald-500' },
+                  { n: 'Juan López', v: '$48.2k', pct: 95, c: '#fbbf24' },
+                  { n: 'Carlos Ruiz', v: '$42.4k', pct: 84, c: '#5b6cf9' },
+                  { n: 'Ana Martínez', v: '$36.1k', pct: 72, c: '#34d399' },
+                  { n: 'María Soto', v: '$28.6k', pct: 57, c: '#f472b6' },
                 ].map((v, i) => (
-                  <div key={v.n} className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold text-gray-400 w-3">{i + 1}</span>
-                    <div className={`w-4 h-4 rounded-full ${v.c} text-white flex items-center justify-center text-[8px] font-bold`}>
-                      {v.n[0]}
+                  <div key={v.n}>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[8px] font-bold w-2.5" style={{ color: DTK.muted }}>{i + 1}</span>
+                      <div className="w-4 h-4 rounded-full text-white grid place-items-center text-[7.5px] font-bold"
+                        style={{ background: v.c }}>{v.n[0]}</div>
+                      <span className="text-[8.5px] flex-1 truncate">{v.n}</span>
+                      <span className="text-[8.5px] font-bold">{v.v}</span>
                     </div>
-                    <span className="text-[9px] text-gray-700 flex-1 truncate">{v.n}</span>
-                    <span className="text-[9px] font-bold text-gray-900">{v.v}</span>
+                    <div className="h-1 rounded-full overflow-hidden ml-6" style={{ background: DTK.surface2 }}>
+                      <div className="h-full rounded-full" style={{ width: `${v.pct}%`, background: v.c }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -375,3 +480,4 @@ export function LiveDashboardMockup() {
     </div>
   );
 }
+
