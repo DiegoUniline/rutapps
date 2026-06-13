@@ -902,20 +902,26 @@ export default function DashboardPage() {
   const estadoResultados = useMemo(() => {
     const lineas = (ventaLineasIS?.lineas ?? []) as any[];
     const costMap = ventaLineasIS?.costMap ?? new Map<string, number>();
+    const ventasMap = new Map<string, any>();
     let ventasNetas = 0;     // subtotal después de descuento, antes de impuestos
-    let ventasBrutas = 0;    // precio_unitario * cantidad (antes de descuento)
+    let ventasBrutas = 0;    // subtotal de la venta antes de descuentos
+    let descuentos = 0;
     let costo = 0;
     for (const l of lineas) {
       const cant = Number(l.cantidad) || 0;
-      const pu = Number(l.precio_unitario) || 0;
-      const sub = Number(l.subtotal) || 0;
-      ventasBrutas += pu * cant;
-      ventasNetas += sub;
+      const venta = l.ventas;
+      if (venta?.id && !ventasMap.has(venta.id)) ventasMap.set(venta.id, venta);
       const cu = costMap.get(l.producto_id) || 0;
       const factor = Number(l.presentacion_factor) || 1;
       costo += cu * factor * cant;
     }
-    const descuentos = Math.max(0, ventasBrutas - ventasNetas);
+    ventasMap.forEach((v: any) => {
+      const bruto = Number(v.subtotal) || 0;
+      const descuento = Number(v.descuento_total) || Math.max(0, bruto - (Number(v.total) || 0) + (Number(v.iva_total) || 0) + (Number(v.ieps_total) || 0));
+      ventasBrutas += bruto;
+      descuentos += descuento;
+      ventasNetas += Math.max(0, bruto - descuento);
+    });
     const devoluciones = devStats.totalCredito || 0;
     const ventasNetasFinal = ventasNetas - devoluciones;
     const utilidadBruta = ventasNetasFinal - costo;
