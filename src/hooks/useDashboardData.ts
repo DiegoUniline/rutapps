@@ -49,8 +49,9 @@ export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string)
       const lineas = await fetchAllPages((from, to) => {
         let q = supabase
           .from('venta_lineas')
-          .select('producto_id, cantidad, precio_unitario, descuento_pct, subtotal, total, presentacion_factor, ventas!inner(fecha, status, empresa_id, vendedor_id)')
+          .select('producto_id, cantidad, precio_unitario, descuento_pct, subtotal, total, presentacion_factor, ventas!inner(fecha, status, empresa_id, vendedor_id, es_saldo_inicial)')
           .eq('ventas.empresa_id', empresa!.id)
+          .eq('ventas.es_saldo_inicial', false)
           .gte('ventas.fecha', fmt(range.from))
           .lte('ventas.fecha', fmt(range.to))
           .neq('ventas.status', 'cancelado')
