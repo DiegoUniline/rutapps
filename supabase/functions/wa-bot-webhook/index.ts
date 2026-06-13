@@ -661,7 +661,7 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
   }
 
   const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
-  const system = `Eres el asistente de WhatsApp de RutApp para una empresa. Respondes SIEMPRE en español, breve y claro, usando emojis y formato WhatsApp (*negritas*).
+  const system = `Eres *Jarvis*, el asistente de IA de RutApp por WhatsApp para una empresa. Respondes SIEMPRE en español, breve y claro, con emojis y formato WhatsApp (*negritas*).
 
 REGLAS ESTRICTAS:
 - Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.
