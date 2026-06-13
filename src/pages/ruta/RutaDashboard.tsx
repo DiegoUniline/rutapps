@@ -154,37 +154,57 @@ export default function RutaDashboard() {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <label className="flex-1 flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-2">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2 py-2 min-w-0">
             <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Desde</span>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="flex-1 bg-transparent text-[12px] focus:outline-none min-w-0" />
+            <span className="text-[10px] text-muted-foreground shrink-0">Desde</span>
+            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="flex-1 bg-transparent text-[11px] focus:outline-none min-w-0 w-full" />
           </label>
-          <label className="flex-1 flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-2">
+          <label className="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2 py-2 min-w-0">
             <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Hasta</span>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} className="flex-1 bg-transparent text-[12px] focus:outline-none min-w-0" />
+            <span className="text-[10px] text-muted-foreground shrink-0">Hasta</span>
+            <input type="date" value={to} onChange={e => setTo(e.target.value)} className="flex-1 bg-transparent text-[11px] focus:outline-none min-w-0 w-full" />
           </label>
-          <button onClick={resetFilters} className="px-3 py-2 rounded-xl bg-muted text-[12px] font-medium text-muted-foreground hover:text-foreground">
-            Hoy
-          </button>
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {([
+            { k: 'hoy', label: 'Hoy' },
+            { k: '7d', label: '7 días' },
+            { k: '30d', label: '30 días' },
+            { k: 'mes', label: 'Este mes' },
+          ] as const).map(p => (
+            <button
+              key={p.k}
+              onClick={() => {
+                const iso = (d: Date) => d.toISOString().slice(0,10);
+                const t = new Date();
+                if (p.k === 'hoy') { setFrom(today); setTo(today); }
+                else if (p.k === '7d') { const d = new Date(t); d.setDate(d.getDate()-6); setFrom(iso(d)); setTo(today); }
+                else if (p.k === '30d') { const d = new Date(t); d.setDate(d.getDate()-29); setFrom(iso(d)); setTo(today); }
+                else { const d = new Date(t.getFullYear(), t.getMonth(), 1); setFrom(iso(d)); setTo(today); }
+              }}
+              className="px-2.5 py-1 rounded-lg bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground"
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted/50 rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "flex-1 min-w-[72px] flex flex-col items-center gap-0.5 py-2 rounded-lg transition-colors",
+              "flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg transition-colors",
               tab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
             )}
           >
             <t.icon className="h-4 w-4" />
-            <span className="text-[11px] font-semibold">{t.label}</span>
-            <span className="text-[10px] opacity-70">{t.count}</span>
+            <span className="text-[10px] font-semibold truncate max-w-full">{t.label}</span>
+            <span className="text-[9px] opacity-70">{t.count}</span>
           </button>
         ))}
       </div>
