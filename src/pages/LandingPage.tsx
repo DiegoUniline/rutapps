@@ -387,7 +387,10 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="p-6 md:p-8 space-y-6">
+                  <div className="p-6 md:p-8 space-y-5">
+                    {/* Visual preview */}
+                    <ModuleVisual name={m.t} />
+
                     {/* Star feature */}
                     <div className="rounded-xl p-5 border" style={{ background: BRAND.primarySoft, borderColor: BRAND.primary + '33' }}>
                       <div className="flex items-center gap-2 mb-1.5">
