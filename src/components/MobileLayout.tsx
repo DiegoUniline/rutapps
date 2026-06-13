@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3 } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -33,11 +33,12 @@ const RUTAS_REQUIEREN_JORNADA = [
 const ALL_TABS = [
   { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas_hist' },
-  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
+  { label: 'Resumen', icon: BarChart3, path: '/ruta/dashboard', permiso: null as string | null },
 ];
 
 const ALL_MORE_ITEMS = [
+  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
