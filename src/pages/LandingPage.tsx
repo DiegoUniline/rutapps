@@ -52,7 +52,7 @@ const AI_CARDS = [
 
 const COMPARE = [
   ['Tiempo real', true, false, false, 'Parcial'],
-  ['Móvil offline', true, false, false, false],
+  ['Tolerancia a cortes', true, false, false, false],
   ['GPS y ruta', true, false, false, false],
   ['Cobranza FIFO', true, false, false, true],
   ['IA integrada', true, false, false, false],
