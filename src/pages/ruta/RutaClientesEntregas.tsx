@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, Truck, Navigation } from 'lucide-react';
+import { Users, Truck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import RutaClientes from './RutaClientes';
 import RutaEntregas from './RutaEntregas';
-import RutaNavegacionPage from './RutaNavegacionPage';
+import RutaCxC from './RutaCxC';
 import RutaSesionBanner from '@/components/ruta/RutaSesionBanner';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 import { usePermisos } from '@/hooks/usePermisos';
 
-type Tab = 'clientes' | 'entregas' | 'navegacion';
+type Tab = 'clientes' | 'entregas' | 'cxc';
 
 export default function RutaClientesEntregas() {
   const { hasPermisoMovil } = usePermisos();
@@ -17,17 +17,17 @@ export default function RutaClientesEntregas() {
 
   const canClientes = hasPermisoMovil('ruta.clientes');
   const canEntregas = hasPermisoMovil('ruta.entregas');
-  const canMapa = hasPermisoMovil('ruta.mapa');
+  const canCobros = hasPermisoMovil('ruta.cobros');
 
   const visibleTabs = useMemo(() => {
     const arr: { key: Tab; label: string; icon: typeof Users }[] = [];
     if (canClientes) arr.push({ key: 'clientes', label: 'Clientes', icon: Users });
     if (canEntregas) arr.push({ key: 'entregas', label: 'Entregas', icon: Truck });
-    if (canMapa) arr.push({ key: 'navegacion', label: 'Navegación', icon: Navigation });
+    if (canCobros) arr.push({ key: 'cxc', label: 'CxC', icon: Wallet });
     return arr;
-  }, [canClientes, canEntregas, canMapa]);
+  }, [canClientes, canEntregas, canCobros]);
 
-  const [tab, setTab] = useState<Tab>(canClientes ? 'clientes' : (canEntregas ? 'entregas' : 'navegacion'));
+  const [tab, setTab] = useState<Tab>(canClientes ? 'clientes' : (canEntregas ? 'entregas' : 'cxc'));
 
   // If permissions change and the current tab gets removed, jump to the first visible one.
   useEffect(() => {
@@ -35,15 +35,6 @@ export default function RutaClientesEntregas() {
       setTab(visibleTabs[0].key);
     }
   }, [visibleTabs, tab]);
-
-  // Navegación full-screen
-  if (tab === 'navegacion' && canMapa) {
-    return (
-      <div className="fixed inset-0 z-[60] bg-background">
-        <RutaNavegacionPage embedded onBack={() => setTab(canClientes ? 'clientes' : (canEntregas ? 'entregas' : 'navegacion'))} />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -75,6 +66,7 @@ export default function RutaClientesEntregas() {
       <div className="flex-1 overflow-auto">
         {tab === 'clientes' && canClientes && <RutaClientes />}
         {tab === 'entregas' && canEntregas && <RutaEntregas />}
+        {tab === 'cxc' && canCobros && <RutaCxC />}
       </div>
     </div>
   );
