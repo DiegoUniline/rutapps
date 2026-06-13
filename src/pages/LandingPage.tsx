@@ -35,7 +35,7 @@ const LANDING_JSON_LD = [
     name: 'Rutapp',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, Android, iOS',
-    description: 'ERP de venta en ruta con app móvil offline, cobranza, inventario y facturación CFDI 4.0.',
+    description: 'ERP de venta en ruta con app móvil offline, cobranza, inventario, compras y logística para distribuidoras.',
     offers: {
       '@type': 'Offer',
       price: '0',
