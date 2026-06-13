@@ -262,6 +262,18 @@ export default function RutaDashboard() {
               rightColor="text-destructive"
             />
           )))}
+
+        {tab === 'devoluciones' && (devolucionesFiltradas.length === 0
+          ? <Empty label="Sin devoluciones en el rango" />
+          : devolucionesFiltradas.map((d: any) => (
+            <Row
+              key={d.id}
+              title={clienteById.get(d.cliente_id)?.nombre ?? 'Cliente'}
+              subtitle={`${formatDate(d.fecha)}${d.tipo ? ' · ' + d.tipo : ''}${d.notas ? ' · ' + d.notas : ''}`}
+              right={d.tipo ?? 'Devolución'}
+              rightColor="text-destructive"
+            />
+          )))}
       </div>
     </div>
   );
