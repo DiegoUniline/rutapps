@@ -20,6 +20,7 @@ import {
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
   useDashboardDevoluciones, useDashboardHoy,
   useDashboardEvolucionMensual, useDashboardVentasPorMes, useDashboardVentasUsuarioMes,
+  useDashboardVentaLineasIS,
   type DateRange
 } from '@/hooks/useDashboardData';
 import {
@@ -111,6 +112,34 @@ function HoyTile({ label, value, sub, icon: Icon, tone = 'default' }: {
       </div>
       <div className="text-xl md:text-2xl font-black tabular-nums tracking-tight text-foreground leading-tight mt-0.5">{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
+    </div>
+  );
+}
+
+function IsTile({ label, value, hint, tone = 'default', emphasize }: {
+  label: string; value: string; hint?: string;
+  tone?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+  emphasize?: boolean;
+}) {
+  const toneMap = {
+    default: 'before:bg-primary',
+    success: 'before:bg-[hsl(var(--success))]',
+    warning: 'before:bg-[hsl(var(--warning))]',
+    danger:  'before:bg-destructive',
+    info:    'before:bg-[hsl(var(--chart-2))]',
+  } as const;
+  return (
+    <div className={cn(
+      "relative bg-card border rounded-lg pl-3 pr-3 py-2.5",
+      emphasize ? "border-primary/40 shadow-sm" : "border-border",
+      "before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full",
+      toneMap[tone]
+    )}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
+      <div className={cn("tabular-nums tracking-tight text-foreground leading-tight mt-0.5",
+        emphasize ? "text-2xl font-black" : "text-xl font-bold"
+      )}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{hint}</div>}
     </div>
   );
 }
@@ -733,6 +762,7 @@ export default function DashboardPage() {
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
+  const { data: ventaLineasIS } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
 
   // === Datos para nuevas secciones ===
   const { data: monthlyGoal = 0 } = useMonthlyGoal();
@@ -868,6 +898,32 @@ export default function DashboardPage() {
 
   const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
 
+  // === Estado de resultados (rango seleccionado) ===
+  const estadoResultados = useMemo(() => {
+    const lineas = (ventaLineasIS?.lineas ?? []) as any[];
+    const costMap = ventaLineasIS?.costMap ?? new Map<string, number>();
+    let ventasNetas = 0;     // subtotal después de descuento, antes de impuestos
+    let ventasBrutas = 0;    // precio_unitario * cantidad (antes de descuento)
+    let costo = 0;
+    for (const l of lineas) {
+      const cant = Number(l.cantidad) || 0;
+      const pu = Number(l.precio_unitario) || 0;
+      const sub = Number(l.subtotal) || 0;
+      ventasBrutas += pu * cant;
+      ventasNetas += sub;
+      const cu = costMap.get(l.producto_id) || 0;
+      const factor = Number(l.presentacion_factor) || 1;
+      costo += cu * factor * cant;
+    }
+    const descuentos = Math.max(0, ventasBrutas - ventasNetas);
+    const devoluciones = devStats.totalCredito || 0;
+    const ventasNetasFinal = ventasNetas - devoluciones;
+    const utilidadBruta = ventasNetasFinal - costo;
+    const margenPct = ventasNetasFinal > 0 ? (utilidadBruta / ventasNetasFinal) * 100 : 0;
+    return { ventasNetas, ventasBrutas, descuentos, devoluciones, costo, utilidadBruta, margenPct, ventasNetasFinal };
+  }, [ventaLineasIS, devStats.totalCredito]);
+
+
   const { data: evolucion } = useDashboardEvolucionMensual(12);
   const { data: ventasPorMes } = useDashboardVentasPorMes(12);
   const { data: usuarioMes } = useDashboardVentasUsuarioMes();
@@ -940,6 +996,30 @@ export default function DashboardPage() {
             margenMonto={metaMesData.margenMonto}
             money={money}
           />
+
+          {/* Estado de resultados (rango seleccionado) */}
+          <div className="mt-3 bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" /> Estado de resultados
+              </h2>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Rango seleccionado</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <IsTile label="Ventas" value={money(estadoResultados.ventasNetas)} hint="Después de descuento, antes de impuestos" tone="default" />
+              <IsTile label="Descuentos" value={`- ${money(estadoResultados.descuentos)}`} hint="Aplicados en líneas" tone="warning" />
+              <IsTile label="Devoluciones" value={`- ${money(estadoResultados.devoluciones)}`} hint={`${devStats.count} registros`} tone="danger" />
+              <IsTile label="Ventas brutas" value={money(estadoResultados.ventasBrutas)} hint="Antes de descuentos y devoluciones" tone="info" />
+              <IsTile label="Costo" value={`- ${money(estadoResultados.costo)}`} hint="Costo de mercancía vendida" tone="warning" />
+              <IsTile
+                label="Utilidad bruta"
+                value={money(estadoResultados.utilidadBruta)}
+                hint={`Margen ${estadoResultados.margenPct.toFixed(1)}%`}
+                tone={estadoResultados.utilidadBruta >= 0 ? 'success' : 'danger'}
+                emphasize
+              />
+            </div>
+          </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">

@@ -35,6 +35,42 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
   });
 }
 
+/**
+ * Lines of sales in range, including discount & cost info to build an
+ * income-statement style breakdown (Ventas, Descuentos, Devoluciones,
+ * Ventas Brutas, Costo, Utilidad Bruta).
+ */
+export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-venta-lineas-is', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const lineas = await fetchAllPages((from, to) => {
+        let q = supabase
+          .from('venta_lineas')
+          .select('producto_id, cantidad, precio_unitario, descuento_pct, subtotal, total, presentacion_factor, ventas!inner(fecha, status, empresa_id, vendedor_id)')
+          .eq('ventas.empresa_id', empresa!.id)
+          .gte('ventas.fecha', fmt(range.from))
+          .lte('ventas.fecha', fmt(range.to))
+          .neq('ventas.status', 'cancelado')
+          .range(from, to);
+        if (vendedorId) q = q.eq('ventas.vendedor_id', vendedorId);
+        return q;
+      });
+      // Fetch costos for involved productos
+      const ids = Array.from(new Set(lineas.map((l: any) => l.producto_id).filter(Boolean)));
+      const costMap = new Map<string, number>();
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ids.slice(i, i + 500);
+        const { data: prods } = await supabase.from('productos').select('id, costo').in('id', batch);
+        (prods ?? []).forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0));
+      }
+      return { lineas, costMap };
+    },
+  });
+}
+
 export function useDashboardCobros(range: DateRange, vendedorId?: string) {
   const { empresa } = useAuth();
   return useQuery({
