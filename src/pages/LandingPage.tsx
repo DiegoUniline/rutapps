@@ -254,7 +254,7 @@ export default function LandingPage() {
                 [MapPin, 'GPS por cliente'],
                 [Truck, 'Entrega con firma'],
                 [Package, 'Stock del camión'],
-                [WifiOff, 'Funciona offline'],
+                [WifiOff, 'Aguanta cortes de red'],
               ].map(([Icon, t]: any) => (
                 <div key={t} className="flex items-center gap-2.5 text-[13.5px]" style={{ color: BRAND.ink }}>
                   <span className="h-7 w-7 rounded-md grid place-items-center shrink-0"
