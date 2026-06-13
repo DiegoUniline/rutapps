@@ -292,6 +292,46 @@ export default function RutaDashboard() {
               <KpiMini icon={Receipt} label="Gastos" value={fmt(rangoTotales.gastos)} color="bg-destructive/10 text-destructive" />
             </div>
 
+            {/* Utilidad */}
+            <div className={cn(
+              "rounded-2xl p-4 border",
+              utilidadNeta >= 0 ? "bg-success/5 border-success/30" : "bg-destructive/5 border-destructive/30"
+            )}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className={cn(
+                  "w-7 h-7 rounded-lg flex items-center justify-center",
+                  utilidadNeta >= 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                )}>
+                  <PiggyBank className="h-4 w-4" />
+                </div>
+                <p className="text-[11px] text-muted-foreground font-medium">Utilidad del rango</p>
+              </div>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <p className={cn("text-[22px] font-bold leading-tight", utilidadNeta >= 0 ? "text-success" : "text-destructive")}>{fmt(utilidadNeta)}</p>
+                  <p className="text-[10px] text-muted-foreground">Margen {margenPct.toFixed(1)}%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground">Utilidad bruta</p>
+                  <p className="text-[13px] font-semibold text-foreground">{fmt(utilidadBruta)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
+                <div>
+                  <p className="text-[9px] text-muted-foreground">Ventas</p>
+                  <p className="text-[12px] font-bold text-foreground">{fmt(totalVentasRango)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-muted-foreground">Costo</p>
+                  <p className="text-[12px] font-bold text-warning">{fmt(costoVentasRango)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-muted-foreground">Gastos</p>
+                  <p className="text-[12px] font-bold text-destructive">{fmt(totalGastosRango)}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Totales rango */}
             <div className="bg-card border border-border rounded-2xl p-4">
               <p className="text-[11px] text-muted-foreground font-medium mb-2">Totales del rango</p>
