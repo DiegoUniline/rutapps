@@ -26,16 +26,21 @@ export const PRODUCTO_COLUMNS = [
 ] as const;
 
 export const VENTA_COLUMNS = [
-  'id','empresa_id','folio','fecha','fecha_entrega','subtotal','iva_total','ieps_total','total','saldo_pendiente',
-  'descuento_porcentaje','descuento_monto','status','tipo','condicion_pago','dias_credito','notas',
-  'notas_internas','cliente_id','vendedor_id','tarifa_id','almacen_id','entrega_inmediata',
-  'user_id','gps_lat','gps_lng','created_at',
+  'id','empresa_id','folio','fecha','fecha_entrega','fecha_vencimiento',
+  'subtotal','descuento_total','iva_total','ieps_total','total','saldo_pendiente',
+  'descuento_extra','descuento_extra_tipo','descuento_extra_motivo',
+  'status','tipo','condicion_pago','notas','concepto','origen',
+  'cliente_id','vendedor_id','tarifa_id','almacen_id','entrega_inmediata',
+  'pedido_origen_id','requiere_factura','es_saldo_inicial',
+  'turno_id','comision_volumen_pago_id','created_at',
 ] as const;
 
 export const VENTA_LINEA_COLUMNS = [
-  'id','venta_id','producto_id','cantidad','precio_unitario','descuento_porcentaje','descuento_monto',
-  'subtotal','iva_monto','ieps_monto','total','notas','facturado','unidad_id','created_at',
-  'lista_precio_id','precio_manual',
+  'id','venta_id','producto_id','descripcion','cantidad','unidad_id',
+  'precio_unitario','descuento_pct','subtotal',
+  'iva_pct','ieps_pct','iva_monto','ieps_monto','total','notas',
+  'facturado','factura_cfdi_id','lista_precio_id','precio_manual',
+  'presentacion_id','presentacion_nombre','presentacion_factor','paquetes','created_at',
 ] as const;
 
 export const COMPRA_COLUMNS = [
