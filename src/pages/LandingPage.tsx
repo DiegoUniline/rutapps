@@ -7,6 +7,7 @@ import {
   Award, Sparkles, BarChart3, MapPin,
 } from 'lucide-react';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
+import { ModuleVisual } from '@/components/landing/ModuleVisuals';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
