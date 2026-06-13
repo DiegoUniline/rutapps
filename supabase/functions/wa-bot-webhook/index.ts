@@ -853,6 +853,11 @@ function formatToolReply(name: string, out: any): string {
   if (out.error) return `⚠️ ${out.error}`;
   if (out.pdfUrl) return out.summary || out.resultado || "📄 Aquí tienes el reporte PDF.";
   if (out.resultado && !String(out.resultado).startsWith("[")) return out.resultado;
+  if (name === "cuentas_por_cobrar" && out.clientes?.length) {
+    const total = out.clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
+    const lines = out.clientes.map((c:any) => `• ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}`).join("\n");
+    return `💰 *Cuentas por cobrar*\nTotal mostrado: *${fmt(total)}*\n\n${lines}`;
+  }
   if (name === "resumen_ventas") {
     const top = (out.top_clientes || []).map((x:any) => `• ${x.cliente}: ${fmt(Number(x.monto || 0))}`).join("\n");
     return `📊 *Ventas ${out.fecha || ""}*\nTotal: *${fmt(Number(out.total_ventas || 0))}*\nFolios: *${out.folios || 0}*${top ? `\n\n*Top clientes:*\n${top}` : ""}`;
@@ -860,9 +865,9 @@ function formatToolReply(name: string, out: any): string {
   if ((name === "consultar_ventas_recientes" || name === "consultar_venta") && out.ventas?.length) {
     const lines = out.ventas.slice(0, 3).map((v:any) => {
       const cobros = (v.cobros || []).map((c:any) => `${c.metodo || "—"} ${fmt(Number(c.monto || 0))}`).join(", ") || "Sin cobros registrados";
-      return `• *${v.folio || "Venta"}*\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
+      return `• *${v.folio || "Movimiento"}*${v.tipo ? ` (${v.tipo})` : ""}\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
     }).join("\n");
-    return `🧾 *Ventas consultadas:*\n${lines}`;
+    return `🧾 *Movimientos consultados:*\n${lines}`;
   }
   return JSON.stringify(out).slice(0, 1500);
 }
@@ -917,7 +922,7 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
   for (let step = 0; step < 5; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk", "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {
@@ -933,19 +938,21 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
 
     if (msg.tool_calls && msg.tool_calls.length) {
       messages.push(msg);
+      const deterministicReplies: string[] = [];
       for (const call of msg.tool_calls) {
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
         toolsUsed.push(call.function.name);
         const out = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
         if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
+        deterministicReplies.push(formatToolReply(call.function.name, out));
         messages.push({
           role: "tool",
           tool_call_id: call.id,
           content: JSON.stringify(out).slice(0, 8000),
         });
       }
-      continue;
+      return { reply: deterministicReplies.filter(Boolean).join("\n\n").slice(0, 3500), intent: toolsUsed[0] || "tool", pdfUrl, pdfName, toolsUsed };
     }
 
     const reply = (msg.content || "").trim() || "✅";
