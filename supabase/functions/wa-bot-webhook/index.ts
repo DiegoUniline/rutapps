@@ -843,9 +843,9 @@ function inferRequiredTool(text: string): { name: string; args: any } | null {
   if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual|lista|cu[aá]les|cu[aá]ntos?/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
   const clienteQuery = text.replace(/^(saldo\s+de|saldo|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i, "").trim();
   if (/^(saldo\s+de|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i.test(text.trim()) && clienteQuery.length > 1) return { name: "consultar_cliente", args: { query: clienteQuery } };
-  if (/clientes?/.test(t) && /saldo|deben|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
+  if (/clientes?/.test(t) && /saldo|debe|deben|deuda|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
   if (/clientes?/.test(t) && /lista|tengo|ver|cu[aá]les|buscar/.test(t)) return { name: "buscar_clientes", args: { limite: 10 } };
-  if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|deben/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
+  if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|debe|deben|deuda/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
   if (/pedidos?/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, tipo: "pedido", limite: 5 } };
   if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
   if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
