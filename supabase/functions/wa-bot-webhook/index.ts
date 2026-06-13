@@ -18,6 +18,12 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n || 0);
 
+const activeProduct = (q: any) => q.eq("status", "activo");
+
+function cleanLike(value: unknown) {
+  return String(value || "").replace(/[%,()]/g, " ").trim();
+}
+
 function normalizePhone(raw: string): string {
   const cleaned = raw.replace(/@s\.whatsapp\.net$/, "").replace(/@g\.us$/, "").replace(/[^\d]/g, "");
   return cleaned;
@@ -217,37 +223,37 @@ async function buildReporte(empresaId: string, date: Date, label: string) {
 
 async function buildStockMessage(empresaId: string, threshold: number | null, nombre: string | null) {
   if (nombre) {
+    const safeNombre = cleanLike(nombre);
     const { data } = await admin.from("productos")
-      .select("id, codigo, nombre, cantidad, stock_min")
+      .select("id, codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .or(`nombre.ilike.%${nombre}%,codigo.ilike.%${nombre}%`)
+      .or(`nombre.ilike.%${safeNombre}%,codigo.ilike.%${safeNombre}%`)
       .limit(10);
     if (!data || !data.length) return `❌ No encontré productos que coincidan con "${nombre}".`;
     let msg = `📦 Resultados para "${nombre}":\n\n`;
     for (const p of data) {
-      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0}  Mín: ${p.stock_min ?? 0}\n`;
+      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"} · Mín: ${p.min ?? 0}${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
     }
     return msg;
   }
   // stock bajo
   const t = threshold;
-  let q = admin.from("productos")
-    .select("id, codigo, nombre, cantidad, stock_min")
+  let q = activeProduct(admin.from("productos")
+    .select("id, codigo, nombre, cantidad, min, unidad_granel")
     .eq("empresa_id", empresaId)
-    .eq("activo", true)
     .order("cantidad", { ascending: true })
-    .limit(30);
+    .limit(30));
   const { data } = await q;
   let items = (data || []).filter((p: any) => {
     const c = Number(p.cantidad || 0);
     if (t !== null) return c <= t;
-    const min = Number(p.stock_min || 0);
+    const min = Number(p.min || 0);
     return min > 0 && c <= min;
   }).slice(0, 20);
   if (!items.length) return `✅ No hay productos con stock bajo${t !== null ? ` (umbral ${t})` : ""}.`;
   let msg = `📦 *Productos con stock bajo${t !== null ? ` (≤ ${t})` : ""}:*\n\n`;
   for (const p of items) {
-    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0}${p.stock_min ? ` / min ${p.stock_min}` : ""}\n`;
+    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"}${p.min ? ` / min ${p.min}` : ""}\n`;
   }
   return msg;
 }
