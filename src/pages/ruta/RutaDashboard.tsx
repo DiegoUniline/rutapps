@@ -453,6 +453,7 @@ function formatDate(d?: string) {
 
 function statusLabel(s?: string) {
   if (!s) return '—';
+  if (s === 'hecho') return 'Entregada';
   if (s === 'entregado') return 'Entregada';
   if (s === 'no_entregado') return 'No entregada';
   if (s === 'pendiente') return 'Pendiente';
