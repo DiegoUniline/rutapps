@@ -14,6 +14,7 @@ import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
+import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
 
 
 const BRAND = {
