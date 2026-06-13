@@ -128,13 +128,18 @@ export default function RutaDashboard() {
 
   // Tendencia 7 días (ventas)
   const trend7 = useMemo(() => {
+    const isoLocal = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     const days: { d: string; label: string; total: number }[] = [];
     const base = new Date();
     for (let i = 6; i >= 0; i--) {
       const d = new Date(base); d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
       const label = d.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '');
-      days.push({ d: iso, label, total: 0 });
+      days.push({ d: isoLocal(d), label, total: 0 });
     }
     (ventas ?? []).forEach((v: any) => {
       if (v.status === 'cancelada') return;
