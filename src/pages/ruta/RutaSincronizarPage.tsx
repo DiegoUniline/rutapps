@@ -18,6 +18,7 @@ import {
   exportFullBackup, importFullBackup,
   getBackupTimestamp, getBackupItemCount, backupSyncQueueToStorage,
 } from '@/lib/offlineBackup';
+import { getSyncDiagnostics, formatBytes, requestPersistentStorage, type SyncDiagnostics } from '@/lib/syncDiagnostics';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
@@ -37,6 +38,20 @@ export default function RutaSincronizarPage() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [diag, setDiag] = useState<SyncDiagnostics | null>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+
+  const loadDiag = useCallback(async () => {
+    setDiagLoading(true);
+    try {
+      const d = await getSyncDiagnostics();
+      setDiag(d);
+    } finally {
+      setDiagLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadDiag(); }, [loadDiag]);
 
   // Load local data summary
   const loadSummary = useCallback(async () => {
