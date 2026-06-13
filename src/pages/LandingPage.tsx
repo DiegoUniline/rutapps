@@ -56,6 +56,17 @@ const REALTIME_BULLETS = [
 // ── Capacidades principales (todo lo que hace el sistema) ──
 const FEATURE_GROUPS = [
   {
+    title: 'Inteligencia Artificial',
+    color: 'hsl(280, 70%, 55%)',
+    bg: 'hsl(280, 70%, 96%)',
+    items: [
+      { icon: Brain, title: 'Asesor IA en el dashboard', desc: 'Un analista virtual que lee tus números, detecta caídas de venta, clientes en riesgo y te dice qué hacer hoy.' },
+      { icon: Sparkles, title: 'Onboarding inteligente', desc: 'Sube tu lista de clientes o productos en cualquier formato y la IA estructura, valida y carga todo por ti.' },
+      { icon: MessageSquare, title: 'Soporte conversacional', desc: 'Chat de ayuda con IA entrenado en Rutapp. Resuelve dudas y guía a tu equipo 24/7 en español.' },
+      { icon: Lightbulb, title: 'Sugerencias de compra', desc: 'La IA cruza ventas, stock y rotación para sugerirte qué reponer, cuánto y cuándo, antes de que te falte.' },
+    ],
+  },
+  {
     title: 'Operación de campo',
     color: 'hsl(230, 55%, 52%)',
     bg: 'hsl(230, 55%, 95%)',
