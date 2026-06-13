@@ -295,19 +295,19 @@ export default function LandingPage() {
               </p>
             </Reveal>
             <Reveal variant="up" delay={200}>
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                <Link to="/signup" className="group px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+              <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
+                <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
                   style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <a href="#modulos" className="px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                <a href="#modulos" className="w-full sm:w-auto text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Ver módulos
                 </a>
               </div>
             </Reveal>
             <Reveal variant="fade" delay={260}>
-              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]" style={{ color: BRAND.muted }}>
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] md:text-[12.5px]" style={{ color: BRAND.muted }}>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> 7 días gratis</span>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Sin tarjeta</span>
                 <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" style={{ color: BRAND.primary }} /> Listo en días</span>
@@ -315,9 +315,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Bento mockups */}
-          <Reveal variant="scale" delay={120} duration={500} className="lg:col-span-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[440px]">
+          {/* Bento mockups — hidden on small phones, simplified on tablet */}
+          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
               <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
                 style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
                 <LiveDashboardMockup />
