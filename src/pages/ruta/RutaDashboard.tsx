@@ -144,11 +144,35 @@ export default function RutaDashboard() {
   // Totales del rango
   const ventasActivasRango = ventasFiltradas.filter((v: any) => !isCancelado(v.status));
   const entregasFinalizadasRango = entregasFiltradas.filter((e: any) => isEntregaFinalizada(e.status));
+  const ventaIdsRango = useMemo(() => ventasActivasRango.map((v: any) => v.id).filter(Boolean), [ventasActivasRango]);
+
+  // Costo de ventas (utilidad bruta) — venta_lineas filtradas por ventas del rango
+  const { data: ventaLineasRango } = useOfflineQuery('venta_lineas', { venta_id: ventaIdsRango }, { enabled: ventaIdsRango.length > 0 });
+  const productoCosto = useMemo(() => {
+    const m = new Map<string, number>();
+    (productos ?? []).forEach((p: any) => m.set(p.id, Number(p.costo) || 0));
+    return m;
+  }, [productos]);
+  const costoVentasRango = useMemo(() => {
+    return (ventaLineasRango ?? []).reduce((s: number, l: any) => {
+      const costo = productoCosto.get(l.producto_id) ?? 0;
+      const factor = Number(l.presentacion_factor) || 1;
+      const cantidad = Number(l.cantidad) || 0;
+      return s + costo * factor * cantidad;
+    }, 0);
+  }, [ventaLineasRango, productoCosto]);
+
+  const totalVentasRango = ventasActivasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+  const totalGastosRango = gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
+  const utilidadBruta = totalVentasRango - costoVentasRango;
+  const utilidadNeta = utilidadBruta - totalGastosRango;
+  const margenPct = totalVentasRango > 0 ? (utilidadNeta / totalVentasRango) * 100 : 0;
+
   const rangoTotales = {
-    ventas: ventasActivasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    ventas: totalVentasRango,
     ventasCount: ventasActivasRango.length,
     cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
-    gastos: gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
+    gastos: totalGastosRango,
     entregas: entregasFinalizadasRango.length,
     clientesVisitados: new Set([
       ...ventasActivasRango.map((v: any) => v.cliente_id),
