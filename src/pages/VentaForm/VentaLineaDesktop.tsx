@@ -34,6 +34,12 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
   const lineTotal = r2(base + ieps + iva);
+  const storedBase = Number(l.subtotal) || 0;
+  const storedTotal = Number(l.total) || 0;
+  const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
+  const inferredDesc = readOnly && desc <= 0 && grossSubtotal > 0
+    ? Math.max(0, ((grossSubtotal - (storedBase > 0 ? Math.min(storedBase, grossSubtotal) : Math.min(displayLineTotal, grossSubtotal))) / grossSubtotal) * 100)
+    : desc;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   // Fallback to embedded product data from the DB join (venta_lineas → productos)
   const embeddedProd = (l as any).productos;
@@ -158,13 +164,13 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{l.descuento_pct ?? 0}%</span>
+        {readOnly ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '0%'}</span>
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
       </td>
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : (
           <div>
-            <span>{fmt(lineTotal)}</span>
+            <span>{fmt(displayLineTotal)}</span>
             {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {fmt(base)}</span>}
           </div>
         )}
