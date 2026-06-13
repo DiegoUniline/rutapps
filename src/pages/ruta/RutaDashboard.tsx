@@ -295,11 +295,11 @@ export default function RutaDashboard() {
               <p className="text-[11px] text-muted-foreground font-medium mb-3">Ventas últimos 7 días</p>
               <div className="flex items-end justify-between gap-1.5 h-28">
                 {trend7.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full flex-1 flex items-end">
+                  <div key={i} className="flex-1 h-full flex flex-col items-center gap-1 min-w-0">
+                    <div className="w-full h-24 flex items-end">
                       <div
                         className="w-full bg-primary/80 rounded-t-md min-h-[2px] transition-all"
-                        style={{ height: `${(d.total / trendMax) * 100}%` }}
+                        style={{ height: d.total > 0 ? `${Math.max(8, (d.total / trendMax) * 100)}%` : '2px' }}
                         title={fmt(d.total)}
                       />
                     </div>
