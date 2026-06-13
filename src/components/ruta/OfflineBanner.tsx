@@ -1,30 +1,37 @@
-import { useEffect } from 'react';
-import { WifiOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { WifiOff, CheckCircle2, CloudUpload } from 'lucide-react';
 import { useRutaStore } from '@/stores/rutaStore';
 import { hasRealConnection } from '@/lib/connectivity';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
+/**
+ * Banner superior que SIEMPRE indica el estado de la conexión y de la cola
+ * de sincronización. Tres estados:
+ *  - offline                → barra roja "Sin conexión · N pendientes"
+ *  - reconnected (transitorio)→ barra verde "Reconectado, sincronizando..."
+ *  - online sin pendientes  → oculto
+ *  - online con pendientes  → barra ámbar "N cambios por enviar"
+ */
 export default function OfflineBanner() {
-  const { isOffline, setOffline, pendingSyncCount } = useRutaStore();
+  const { isOffline, setOffline } = useRutaStore();
+  const { pendingCount, isSyncing } = useNetworkStatus();
+  const [justReconnected, setJustReconnected] = useState(false);
+  const wasOfflineRef = useRef(false);
 
+  // Probe real connectivity (navigator.onLine no es confiable en móvil)
   useEffect(() => {
     let cancelled = false;
-
     const check = async () => {
       const online = await hasRealConnection();
       if (!cancelled) setOffline(!online);
     };
-
-    // Eventos del navegador (rápidos pero poco confiables) → disparan recheck real
     const onOnline = () => check();
     const onOffline = () => check();
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     window.addEventListener('focus', onOnline);
-
-    // Probe inicial + cada 15s
     check();
     const interval = setInterval(check, 15000);
-
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -34,17 +41,71 @@ export default function OfflineBanner() {
     };
   }, [setOffline]);
 
-  if (!isOffline) return null;
+  // Mostrar destello "Reconectado" cuando se pasa de offline → online
+  useEffect(() => {
+    if (isOffline) {
+      wasOfflineRef.current = true;
+      setJustReconnected(false);
+    } else if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      setJustReconnected(true);
+      const t = setTimeout(() => setJustReconnected(false), 4500);
+      return () => clearTimeout(t);
+    }
+  }, [isOffline]);
 
-  return (
-    <div className="bg-destructive/10 border-b border-destructive/20 px-3 py-2 flex items-center gap-2 text-destructive text-xs font-medium">
-      <WifiOff className="h-3.5 w-3.5 shrink-0" />
-      <span>Sin conexión — guardando localmente</span>
-      {pendingSyncCount > 0 && (
-        <span className="ml-auto bg-destructive/20 rounded-full px-2 py-0.5 text-[10px] font-bold">
-          {pendingSyncCount} pendiente{pendingSyncCount > 1 ? 's' : ''}
+  // OFFLINE
+  if (isOffline) {
+    return (
+      <div className="bg-destructive/10 border-b border-destructive/30 px-3 py-2 flex items-center gap-2 text-destructive text-xs font-medium">
+        <WifiOff className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">
+          Sin conexión — tus cambios se guardan en este dispositivo
         </span>
-      )}
-    </div>
-  );
+        {pendingCount > 0 && (
+          <span className="ml-auto bg-destructive/20 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
+            {pendingCount} pendiente{pendingCount > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // RECONNECTED (transitorio)
+  if (justReconnected) {
+    return (
+      <div className="bg-emerald-500/10 border-b border-emerald-500/30 px-3 py-2 flex items-center gap-2 text-emerald-700 dark:text-emerald-300 text-xs font-medium animate-in fade-in slide-in-from-top-1">
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">
+          {pendingCount > 0 || isSyncing
+            ? 'Reconectado — sincronizando tus cambios...'
+            : 'Reconectado — todo al día ✓'}
+        </span>
+        {pendingCount > 0 && (
+          <span className="ml-auto bg-emerald-500/20 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
+            {pendingCount}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // ONLINE con pendientes
+  if (pendingCount > 0) {
+    return (
+      <div className="bg-amber-500/10 border-b border-amber-500/30 px-3 py-2 flex items-center gap-2 text-amber-700 dark:text-amber-300 text-xs font-medium">
+        <CloudUpload className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">
+          {isSyncing
+            ? `Enviando ${pendingCount} cambio${pendingCount > 1 ? 's' : ''}...`
+            : `${pendingCount} cambio${pendingCount > 1 ? 's' : ''} por sincronizar`}
+        </span>
+        <span className="ml-auto bg-amber-500/20 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
+          {pendingCount}
+        </span>
+      </div>
+    );
+  }
+
+  return null;
 }
