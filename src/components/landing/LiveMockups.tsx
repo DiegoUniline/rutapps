@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Battery, MapPin, ShoppingCart, TrendingUp, Package, Users,
   Wallet, Bell, Wifi, Signal, ChevronRight, Search, BarChart3,
-  ArrowUp, Check,
+  ArrowUp, Check, RefreshCw,
 } from 'lucide-react';
 
 /* ============================================================
