@@ -95,11 +95,18 @@ export default function RutaDashboard() {
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
   , [gastos, from, to, search]);
 
+  const devolucionesFiltradas = useMemo(() => (devoluciones ?? [])
+    .filter((d: any) => inRange(d.fecha))
+    .filter((d: any) => matchSearch([d.tipo, d.notas, clienteById.get(d.cliente_id)?.nombre]))
+    .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
+  , [devoluciones, from, to, search, clienteById]);
+
   const tabs: { key: TabKey; label: string; count: number; icon: any }[] = [
     { key: 'ventas', label: 'Ventas', count: ventasFiltradas.length, icon: ShoppingCart },
     { key: 'entregas', label: 'Entregas', count: entregasFiltradas.length, icon: Truck },
     { key: 'cobros', label: 'Cobros', count: cobrosFiltrados.length, icon: Banknote },
     { key: 'gastos', label: 'Gastos', count: gastosFiltrados.length, icon: Receipt },
+    { key: 'devoluciones', label: 'Devol.', count: devolucionesFiltradas.length, icon: RotateCcw },
   ];
 
   const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
