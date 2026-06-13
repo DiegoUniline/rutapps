@@ -21,8 +21,8 @@ function normPhone(s: string) {
 }
 
 export default function WhatsAppBotPage() {
-  const { user } = useAuth();
-  const empresaId = useEffectiveEmpresaId();
+  const { user, empresa } = useAuth();
+  const empresaId = empresa?.id || null;
   const qc = useQueryClient();
   const [newPhone, setNewPhone] = useState('');
   const [newName, setNewName] = useState('');
