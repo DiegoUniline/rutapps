@@ -1,7 +1,7 @@
 // WhatsApp bot webhook — recibe mensajes desde WhatsAPI y responde con
 // reportes, stock, estado de cuenta y cobros. Público (verify_jwt = false).
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { jsPDF } from "npm:jspdf@2.5.1";
+import { generarReporteBotPdf } from "./reportePdf.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
