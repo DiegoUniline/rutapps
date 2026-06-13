@@ -84,16 +84,20 @@ export default function WhatsAppBotPage() {
 
   const addNumber = useMutation({
     mutationFn: async (payload: { phone: string; nombre: string; profile_id?: string | null }) => {
-      const { error } = await supabase.from('wa_bot_authorized_numbers').insert({
+      const { data, error } = await supabase.from('wa_bot_authorized_numbers').insert({
         empresa_id: empresaId!,
         phone_e164: normPhone(payload.phone),
         nombre: payload.nombre || null,
         profile_id: payload.profile_id || null,
         created_by: user?.id,
-      });
+      }).select('id').single();
       if (error) throw error;
+      // Mensaje de bienvenida (Jarvis) — no bloquea si falla
+      try {
+        await supabase.functions.invoke('wa-bot-welcome', { body: { authorized_id: data.id } });
+      } catch { /* ignore */ }
     },
-    onSuccess: () => { toast.success('Número agregado'); setNewPhone(''); setNewName(''); qc.invalidateQueries({ queryKey: ['wa_bot_authorized_numbers', empresaId] }); },
+    onSuccess: () => { toast.success('Número agregado · Jarvis envió la bienvenida'); setNewPhone(''); setNewName(''); qc.invalidateQueries({ queryKey: ['wa_bot_authorized_numbers', empresaId] }); },
     onError: (e: any) => toast.error(e.message),
   });
 

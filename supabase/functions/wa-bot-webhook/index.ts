@@ -511,6 +511,18 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "consultar_venta",
+      description: "Detalle completo de una venta específica por folio (o id parcial): cliente, vendedor que la creó, fecha, total, saldo pendiente, status, líneas, descuentos y cobros aplicados.",
+      parameters: {
+        type: "object",
+        properties: { folio: { type: "string", description: "Folio de la venta, ej. 'VTA-0001' o '0001'." } },
+        required: ["folio"],
+      },
+    },
+  },
 ];
 
 async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean> }) {
@@ -583,6 +595,53 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     return { clientes: data || [] };
   }
 
+  if (name === "consultar_venta") {
+    if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
+    const folio = String(args?.folio || "").trim();
+    if (!folio) return { error: "Folio requerido" };
+    const { data: ventas } = await admin.from("ventas")
+      .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, total, productos(codigo, nombre)), cobro_aplicaciones(monto, cobros(fecha, metodo_pago, referencia))")
+      .eq("empresa_id", empresaId)
+      .ilike("folio", `%${folio}%`)
+      .order("fecha", { ascending: false })
+      .limit(3);
+    if (!ventas || !ventas.length) return { error: `No encontré ventas con folio "${folio}"` };
+    // Resolver vendedor (profiles)
+    const vendIds = Array.from(new Set(ventas.map((v:any) => v.vendedor_id).filter(Boolean)));
+    let vendMap = new Map<string,string>();
+    if (vendIds.length) {
+      const { data: profs } = await admin.from("profiles").select("id, nombre_completo, email").in("id", vendIds);
+      vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre_completo || p.email || "—"]));
+    }
+    return {
+      ventas: ventas.map((v:any) => ({
+        folio: v.folio,
+        fecha: v.fecha,
+        cliente: v.clientes?.nombre || "—",
+        vendedor: vendMap.get(v.vendedor_id) || "—",
+        condicion_pago: v.condicion_pago,
+        subtotal: Number(v.subtotal||0),
+        descuento_total: Number(v.descuento_total||0),
+        total: Number(v.total||0),
+        saldo_pendiente: Number(v.saldo_pendiente||0),
+        status: v.status,
+        lineas: (v.venta_lineas||[]).map((l:any) => ({
+          producto: `${l.productos?.codigo||""} ${l.productos?.nombre||"—"}`.trim(),
+          cantidad: Number(l.cantidad||0),
+          precio_unitario: Number(l.precio_unitario||0),
+          descuento_pct: Number(l.descuento_pct||0),
+          total: Number(l.total||0),
+        })),
+        cobros: (v.cobro_aplicaciones||[]).map((a:any) => ({
+          monto: Number(a.monto||0),
+          fecha: a.cobros?.fecha,
+          metodo: a.cobros?.metodo_pago,
+          referencia: a.cobros?.referencia,
+        })),
+      })),
+    };
+  }
+
   return { error: "Herramienta desconocida" };
 }
 
@@ -603,7 +662,7 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
   }
 
   const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
-  const system = `Eres el asistente de WhatsApp de RutApp para una empresa. Respondes SIEMPRE en español, breve y claro, usando emojis y formato WhatsApp (*negritas*).
+  const system = `Eres *Jarvis*, el asistente de IA de RutApp por WhatsApp para una empresa. Respondes SIEMPRE en español, breve y claro, con emojis y formato WhatsApp (*negritas*).
 
 REGLAS ESTRICTAS:
 - Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.

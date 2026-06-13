@@ -1,0 +1,1 @@
+ALTER TABLE public.wa_bot_authorized_numbers ADD COLUMN IF NOT EXISTS welcome_sent_at timestamptz;

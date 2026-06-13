@@ -7142,6 +7142,7 @@ export type Database = {
           phone_e164: string
           profile_id: string | null
           updated_at: string
+          welcome_sent_at: string | null
         }
         Insert: {
           activo?: boolean
@@ -7154,6 +7155,7 @@ export type Database = {
           phone_e164: string
           profile_id?: string | null
           updated_at?: string
+          welcome_sent_at?: string | null
         }
         Update: {
           activo?: boolean
@@ -7166,6 +7168,7 @@ export type Database = {
           phone_e164?: string
           profile_id?: string | null
           updated_at?: string
+          welcome_sent_at?: string | null
         }
         Relationships: [
           {
