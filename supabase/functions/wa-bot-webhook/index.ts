@@ -893,6 +893,9 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
 
 REGLAS ESTRICTAS:
 - Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.
+- Para cualquier pregunta sobre ventas, pedidos, clientes, productos, stock, saldos, cobros, pagos, gastos o vendedores DEBES usar una herramienta antes de responder.
+- No uses memoria ni conversación anterior como fuente de verdad; solo sirve para entender seguimientos. La respuesta final debe salir de la herramienta ejecutada.
+- Si la herramienta no tiene el dato exacto, responde "No encontré ese dato en el sistema" y pide un folio/nombre/fecha más específico.
 - Si la pregunta no se puede responder con las herramientas, dilo y sugiere lo que sí puedes hacer.
 - Si el usuario pide algo fuera de permisos (${permisosTxt}), explícale amablemente que no tiene permiso y que pida a su admin.
 - Para reportes diarios usa SIEMPRE 'generar_reporte_pdf' (no resumas tú el día completo en texto).
