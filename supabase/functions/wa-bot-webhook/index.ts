@@ -754,6 +754,40 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   return { error: "Herramienta desconocida" };
 }
 
+function inferRequiredTool(text: string): { name: string; args: any } | null {
+  const t = text.toLowerCase();
+  const fecha = /ayer/.test(t) ? "ayer" : "hoy";
+  const num = t.match(/(\d+(?:\.\d+)?)/);
+  if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
+  if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
+  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
+  if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
+  if (/cu[aá]nto\s+vend|ventas?\s+(de\s+)?hoy|vend[ií]\s+hoy/.test(t)) return { name: "resumen_ventas", args: { fecha } };
+  if (/cobros?|cobrado|pagos?/.test(t)) return { name: "resumen_cobros", args: { fecha } };
+  if (/cuentas?\s+por\s+cobrar|saldos?\s+pendientes?/.test(t)) return { name: "cuentas_por_cobrar", args: { limite: 10 } };
+  return null;
+}
+
+function formatToolReply(name: string, out: any): string {
+  if (!out) return "⚠️ No pude consultar la información.";
+  if (out.error) return `⚠️ ${out.error}`;
+  if (out.pdfUrl) return out.summary || out.resultado || "📄 Aquí tienes el reporte PDF.";
+  if (out.resultado && !String(out.resultado).startsWith("[")) return out.resultado;
+  if (name === "resumen_ventas") {
+    const top = (out.top_clientes || []).map((x:any) => `• ${x.cliente}: ${fmt(Number(x.monto || 0))}`).join("\n");
+    return `📊 *Ventas ${out.fecha || ""}*\nTotal: *${fmt(Number(out.total_ventas || 0))}*\nFolios: *${out.folios || 0}*${top ? `\n\n*Top clientes:*\n${top}` : ""}`;
+  }
+  if ((name === "consultar_ventas_recientes" || name === "consultar_venta") && out.ventas?.length) {
+    const lines = out.ventas.slice(0, 3).map((v:any) => {
+      const cobros = (v.cobros || []).map((c:any) => `${c.metodo || "—"} ${fmt(Number(c.monto || 0))}`).join(", ") || "Sin cobros registrados";
+      return `• *${v.folio || "Venta"}*\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
+    }).join("\n");
+    return `🧾 *Ventas consultadas:*\n${lines}`;
+  }
+  return JSON.stringify(out).slice(0, 1500);
+}
+
 async function runAgent(opts: { empresaId: string; permisos: Record<string, boolean>; phone: string; userMessage: string }) {
   if (!LOVABLE_AI_KEY) {
     return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
