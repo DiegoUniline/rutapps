@@ -7,7 +7,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
-type TabKey = 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
+type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
