@@ -309,10 +309,10 @@ export function useVentaForm() {
       ieps_total,
       total,
       descuento_total: Math.max(Number(form.descuento_total) || 0, impliedDiscount),
-      descuento_extra_amt: Number(form.descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0,
+      descuento_extra_amt: Number((form as any).descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0,
       descuento_promo: finalTotals.descuento_promo,
     };
-  }, [finalTotals, form.descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, isNew, readOnly]);
+  }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, isNew, readOnly]);
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
