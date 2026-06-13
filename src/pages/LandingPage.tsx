@@ -85,7 +85,7 @@ const FEATURE_GROUPS = [
       { icon: ShoppingCart, title: 'Punto de venta avanzado', desc: 'POS responsivo con búsqueda rápida, promociones nxm, descuentos y control de stock por almacén.' },
       { icon: Truck, title: 'Pedidos y entregas', desc: 'Flujo 1:N pedido → entregas. Despacha por ruta, marca entregado y descuenta inventario automático.' },
       { icon: Wallet, title: 'Cobranza inteligente', desc: 'Aplicación FIFO multi-folio, cobros parciales, liquidación de ruta con efectivo esperado vs real.' },
-      { icon: Receipt, title: 'Tickets y CFDI 4.0', desc: 'Tickets térmicos por Bluetooth, PDFs estilo Odoo y facturación SAT con Facturama integrado.' },
+      { icon: Receipt, title: 'Tickets térmicos y PDFs', desc: 'Tickets térmicos por Bluetooth y PDFs estilo Odoo profesionales para ventas, cobros, entregas y estados de cuenta.' },
     ],
   },
   {
