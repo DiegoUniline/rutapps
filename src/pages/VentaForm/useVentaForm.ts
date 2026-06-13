@@ -296,6 +296,24 @@ export function useVentaForm() {
     };
   }, [totals, promoByProduct, rawPricingMap, lineas, sinImpuestos]);
 
+  const displayTotals = useMemo(() => {
+    if (isNew || !readOnly) return finalTotals;
+    const subtotal = Number(form.subtotal) || 0;
+    const iva_total = Number(form.iva_total) || 0;
+    const ieps_total = Number(form.ieps_total) || 0;
+    const total = Number(form.total) || 0;
+    const impliedDiscount = Math.max(0, subtotal + iva_total + ieps_total - total);
+    return {
+      subtotal,
+      iva_total,
+      ieps_total,
+      total,
+      descuento_total: Math.max(Number(form.descuento_total) || 0, impliedDiscount),
+      descuento_extra_amt: Number(form.descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0,
+      descuento_promo: finalTotals.descuento_promo,
+    };
+  }, [finalTotals, form.descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, isNew, readOnly]);
+
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
     if (!tarifaRules?.length || !productosList || readOnly) return;
@@ -599,7 +617,7 @@ export function useVentaForm() {
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
-    pagosData, totalPagado, saldoPendiente, totals: finalTotals, promoResults, tarifaRules,
+    pagosData, totalPagado, saldoPendiente, totals: displayTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
