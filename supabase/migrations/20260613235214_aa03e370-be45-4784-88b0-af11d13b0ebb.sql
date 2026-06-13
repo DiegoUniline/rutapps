@@ -1,0 +1,8 @@
+ALTER TABLE public.ajustes_inventario ALTER COLUMN producto_id DROP NOT NULL;
+
+ALTER TABLE public.ajustes_inventario DROP CONSTRAINT IF EXISTS ajustes_inventario_producto_id_fkey;
+ALTER TABLE public.ajustes_inventario
+  ADD CONSTRAINT ajustes_inventario_producto_id_fkey
+  FOREIGN KEY (producto_id)
+  REFERENCES public.productos(id)
+  ON DELETE SET NULL;

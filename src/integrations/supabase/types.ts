@@ -26,7 +26,7 @@ export type Database = {
           fecha: string
           id: string
           motivo: string | null
-          producto_id: string
+          producto_id: string | null
           user_id: string
         }
         Insert: {
@@ -40,7 +40,7 @@ export type Database = {
           fecha?: string
           id?: string
           motivo?: string | null
-          producto_id: string
+          producto_id?: string | null
           user_id: string
         }
         Update: {
@@ -54,7 +54,7 @@ export type Database = {
           fecha?: string
           id?: string
           motivo?: string | null
-          producto_id?: string
+          producto_id?: string | null
           user_id?: string
         }
         Relationships: [

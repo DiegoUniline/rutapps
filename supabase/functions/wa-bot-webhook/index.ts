@@ -18,6 +18,12 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n || 0);
 
+const activeProduct = (q: any) => q.eq("status", "activo");
+
+function cleanLike(value: unknown) {
+  return String(value || "").replace(/[%,()]/g, " ").trim();
+}
+
 function normalizePhone(raw: string): string {
   const cleaned = raw.replace(/@s\.whatsapp\.net$/, "").replace(/@g\.us$/, "").replace(/[^\d]/g, "");
   return cleaned;
@@ -107,18 +113,20 @@ function parseIntent(text: string): Intent {
 }
 
 const HELP =
-  `🤖 *RutApp Bot* — comandos disponibles:\n\n` +
-  `📊 *reporte hoy* / *reporte ayer* / *reporte 12/06*\n` +
-  `   Genera el PDF del día con ventas, cobros, gastos.\n\n` +
-  `📦 *stock bajo* / *stock bajo 10*\n` +
-  `   Lista productos con inventario debajo del mínimo (o umbral).\n` +
-  `📦 *stock <producto>*\n` +
-  `   Inventario de un producto.\n\n` +
-  `👤 *cliente <nombre>*\n` +
-  `   Saldo y últimas ventas del cliente.\n\n` +
-  `💰 *cobros hoy* / *cobros ayer*\n` +
-  `   Resumen de cobros recibidos.\n\n` +
-  `Escribe *ayuda* para ver este menú.`;
+  `🤖 Soy *Jarvis*, la IA de RutApp. Respondo únicamente con información real del sistema de tu empresa.\n\n` +
+  `Puedes preguntarme en lenguaje natural sobre:\n` +
+  `📊 Ventas, pedidos y reportes PDF\n` +
+  `📦 Productos, stock y existencias\n` +
+  `👤 Clientes, saldos y cuentas por cobrar\n` +
+  `💰 Cobros, pagos, métodos de pago y gastos\n\n` +
+  `Ejemplos:\n` +
+  `• "Mándame el reporte de hoy en PDF"\n` +
+  `• "¿Qué productos tengo en stock?"\n` +
+  `• "¿Quién vendió la última venta?"\n` +
+  `• "¿Qué pedidos tengo hoy?"\n` +
+  `• "¿Quién me debe más?"\n` +
+  `• "Detalle de la venta VTA-0001"\n\n` +
+  `⚠️ Solo puedo recibir texto; no audios, imágenes ni stickers.`;
 
 // ----------------- Data helpers -----------------
 function dayRange(d: Date) {
@@ -217,37 +225,37 @@ async function buildReporte(empresaId: string, date: Date, label: string) {
 
 async function buildStockMessage(empresaId: string, threshold: number | null, nombre: string | null) {
   if (nombre) {
-    const { data } = await admin.from("productos")
-      .select("id, codigo, nombre, cantidad, stock_min")
+    const safeNombre = cleanLike(nombre);
+    const { data } = await activeProduct(admin.from("productos")
+      .select("id, codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .or(`nombre.ilike.%${nombre}%,codigo.ilike.%${nombre}%`)
-      .limit(10);
+      .or(`nombre.ilike.%${safeNombre}%,codigo.ilike.%${safeNombre}%`)
+      .limit(10));
     if (!data || !data.length) return `❌ No encontré productos que coincidan con "${nombre}".`;
     let msg = `📦 Resultados para "${nombre}":\n\n`;
     for (const p of data) {
-      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0}  Mín: ${p.stock_min ?? 0}\n`;
+      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"} · Mín: ${p.min ?? 0}${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
     }
     return msg;
   }
   // stock bajo
   const t = threshold;
-  let q = admin.from("productos")
-    .select("id, codigo, nombre, cantidad, stock_min")
+  let q = activeProduct(admin.from("productos")
+    .select("id, codigo, nombre, cantidad, min, unidad_granel")
     .eq("empresa_id", empresaId)
-    .eq("activo", true)
     .order("cantidad", { ascending: true })
-    .limit(30);
+    .limit(30));
   const { data } = await q;
   let items = (data || []).filter((p: any) => {
     const c = Number(p.cantidad || 0);
     if (t !== null) return c <= t;
-    const min = Number(p.stock_min || 0);
+    const min = Number(p.min || 0);
     return min > 0 && c <= min;
   }).slice(0, 20);
   if (!items.length) return `✅ No hay productos con stock bajo${t !== null ? ` (umbral ${t})` : ""}.`;
   let msg = `📦 *Productos con stock bajo${t !== null ? ` (≤ ${t})` : ""}:*\n\n`;
   for (const p of items) {
-    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0}${p.stock_min ? ` / min ${p.stock_min}` : ""}\n`;
+    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"}${p.min ? ` / min ${p.min}` : ""}\n`;
   }
   return msg;
 }
@@ -456,7 +464,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_stock_disponible",
-      description: "Devuelve productos reales con stock disponible (> 0). Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
+      description: "Devuelve productos reales con stock disponible (> 0) desde productos.cantidad. Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
       parameters: {
         type: "object",
         properties: {
@@ -541,13 +549,41 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_ventas_recientes",
-      description: "Consulta ventas reales recientes o de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy' o 'última venta'.",
+      description: "Consulta ventas o pedidos reales recientes/de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy', 'pedidos de hoy' o 'última venta'.",
       parameters: {
         type: "object",
         properties: {
           fecha: { type: "string", description: "Opcional: 'hoy', 'ayer', dd/mm/yyyy o yyyy-mm-dd." },
+          tipo: { type: "string", description: "Opcional: 'pedido' o 'venta_directa'." },
+          status: { type: "string", description: "Opcional: borrador, confirmado, entregado, facturado o cancelado." },
           limite: { type: "number", description: "Máximo de ventas, default 3." },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_clientes",
+      description: "Lista clientes reales de la empresa. Puede filtrar por nombre, teléfono, con saldo pendiente o por estado.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Opcional: nombre, código o teléfono." },
+          con_saldo: { type: "boolean", description: "true para solo clientes con saldo pendiente." },
+          limite: { type: "number", description: "Máximo de clientes, default 10." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_saldos",
+      description: "Resumen real de saldos/cuentas por cobrar: total pendiente y clientes con mayor saldo.",
+      parameters: {
+        type: "object",
+        properties: { limite: { type: "number", description: "Máximo clientes, default 10." } },
       },
     },
   },
@@ -578,14 +614,13 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   if (name === "consultar_stock_disponible") {
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const lim = Math.min(Number(args?.limite || 15), 30);
-    let q = admin.from("productos")
-      .select("codigo, nombre, cantidad, stock_min, precio")
+    let q = activeProduct(admin.from("productos")
+      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .eq("activo", true)
       .gt("cantidad", 0)
       .order("cantidad", { ascending: false })
-      .limit(lim);
-    const query = String(args?.query || "").trim();
+      .limit(lim));
+    const query = cleanLike(args?.query);
     if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`);
     const { data, error } = await q;
     if (error) return { error: error.message };
@@ -593,7 +628,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!productos.length) return { resultado: `📦 No encontré productos con stock disponible${query ? ` para "${query}"` : ""}.` };
     let resultado = `📦 *Productos con stock disponible${query ? ` (${query})` : ""}:*\n\n`;
     for (const p of productos as any[]) {
-      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)}*${p.precio != null ? ` · Precio: ${fmt(Number(p.precio || 0))}` : ""}\n`;
+      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}*${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
     }
     if (productos.length === lim) resultado += `\nMostré los primeros ${lim}. Puedes pedirme un producto por nombre o código.`;
     return { resultado, productos };
@@ -601,15 +636,16 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "buscar_producto") {
     if (!need("stock")) return { error: "Sin permiso para productos" };
-    const { data } = await admin.from("productos")
-      .select("codigo, nombre, cantidad, stock_min, precio")
+    const query = cleanLike(args?.query);
+    const { data } = await activeProduct(admin.from("productos")
+      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
-      .or(`nombre.ilike.%${args.query}%,codigo.ilike.%${args.query}%`)
-      .limit(10);
+      .or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`)
+      .limit(10));
     const productos = data || [];
-    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args.query}".` };
+    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args?.query}".` };
     let resultado = `📦 *Productos encontrados:*\n\n`;
-    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)}* · Precio: ${fmt(Number(p.precio || 0))}\n`;
+    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}* · Mín: ${Number(p.min || 0)} · Precio: ${fmt(Number(p.precio_principal || 0))}\n`;
     return { resultado, productos };
   }
 
@@ -617,6 +653,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("clientes")) return { error: "Sin permiso para clientes" };
     const msg = await buildClienteMessage(empresaId, args.query);
     return { resultado: msg };
+  }
+
+  if (name === "buscar_clientes") {
+    if (!need("clientes")) return { error: "Sin permiso para clientes" };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const query = cleanLike(args?.query);
+    let q = admin.from("clientes")
+      .select("codigo, nombre, telefono, saldo, status, credito, limite_credito, dias_credito")
+      .eq("empresa_id", empresaId)
+      .order("nombre", { ascending: true })
+      .limit(lim);
+    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%,telefono.ilike.%${query}%`);
+    if (args?.con_saldo === true) q = q.gt("saldo", 0).order("saldo", { ascending: false });
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    const clientes = data || [];
+    if (!clientes.length) return { resultado: `👤 No encontré clientes${query ? ` para "${query}"` : ""}.` };
+    let resultado = `👤 *Clientes${args?.con_saldo ? " con saldo" : ""}${query ? ` (${query})` : ""}:*\n\n`;
+    for (const c of clientes as any[]) {
+      resultado += `• ${c.codigo || ""} ${c.nombre}\n  Tel: ${c.telefono || "—"} · Saldo: *${fmt(Number(c.saldo || 0))}* · Estado: ${c.status || "—"}\n`;
+    }
+    return { resultado, clientes };
   }
 
   if (name === "resumen_cobros") {
@@ -649,6 +707,24 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
       .eq("empresa_id", empresaId).gt("saldo", 0)
       .order("saldo", { ascending: false }).limit(lim);
     return { clientes: data || [] };
+  }
+
+  if (name === "consultar_saldos") {
+    if (!need("clientes")) return { error: "Sin permiso para saldos" };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const { data, error } = await admin.from("clientes")
+      .select("codigo, nombre, telefono, saldo")
+      .eq("empresa_id", empresaId)
+      .gt("saldo", 0)
+      .order("saldo", { ascending: false })
+      .limit(lim);
+    if (error) return { error: error.message };
+    const clientes = data || [];
+    const total = clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
+    if (!clientes.length) return { resultado: "✅ No encontré saldos pendientes en clientes." };
+    let resultado = `💰 *Saldos pendientes*\nTotal mostrado: *${fmt(total)}*\n\n`;
+    for (const c of clientes as any[]) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
+    return { resultado, total_mostrado: total, clientes };
   }
 
   if (name === "consultar_venta") {
@@ -702,10 +778,12 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
     const lim = Math.min(Number(args?.limite || 3), 10);
     let q = admin.from("ventas")
-      .select("id, folio, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+      .select("id, folio, tipo, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
       .eq("empresa_id", empresaId)
       .order("created_at", { ascending: false })
       .limit(lim);
+    if (args?.tipo && ["pedido", "venta_directa"].includes(String(args.tipo))) q = q.eq("tipo", args.tipo);
+    if (args?.status && ["borrador", "confirmado", "entregado", "facturado", "cancelado"].includes(String(args.status))) q = q.eq("status", args.status);
     if (args?.fecha) {
       const date = parseFecha(args.fecha);
       const { start, end } = dayRange(date);
@@ -723,6 +801,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     }
     const detalle = ventasActivas.map((v:any) => ({
       folio: v.folio,
+      tipo: v.tipo,
       fecha: v.fecha,
       cliente: v.clientes?.nombre || "—",
       vendedor: vendMap.get(v.vendedor_id) || "—",
@@ -757,14 +836,21 @@ function inferRequiredTool(text: string): { name: string; args: any } | null {
   const t = text.toLowerCase();
   const fecha = /ayer/.test(t) ? "ayer" : "hoy";
   const num = t.match(/(\d+(?:\.\d+)?)/);
+  const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b|\b\d{3,}\b/i)?.[0];
   if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
+  if (folio && /detalle|venta|pedido|folio|ticket|qui[eé]n|vendedor|vend(i[oó]|io)|pago|saldo/.test(t)) return { name: "consultar_venta", args: { folio } };
   if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
-  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual|lista|cu[aá]les|cu[aá]ntos?/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  const clienteQuery = text.replace(/^(saldo\s+de|saldo|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i, "").trim();
+  if (/^(saldo\s+de|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i.test(text.trim()) && clienteQuery.length > 1) return { name: "consultar_cliente", args: { query: clienteQuery } };
+  if (/clientes?/.test(t) && /saldo|debe|deben|deuda|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
+  if (/clientes?/.test(t) && /lista|tengo|ver|cu[aá]les|buscar/.test(t)) return { name: "buscar_clientes", args: { limite: 10 } };
+  if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|debe|deben|deuda/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
+  if (/pedidos?/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, tipo: "pedido", limite: 5 } };
   if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
   if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
   if (/cu[aá]nto\s+vend|ventas?\s+(de\s+)?hoy|vend[ií]\s+hoy/.test(t)) return { name: "resumen_ventas", args: { fecha } };
   if (/cobros?|cobrado|pagos?/.test(t)) return { name: "resumen_cobros", args: { fecha } };
-  if (/cuentas?\s+por\s+cobrar|saldos?\s+pendientes?/.test(t)) return { name: "cuentas_por_cobrar", args: { limite: 10 } };
   return null;
 }
 
@@ -773,6 +859,11 @@ function formatToolReply(name: string, out: any): string {
   if (out.error) return `⚠️ ${out.error}`;
   if (out.pdfUrl) return out.summary || out.resultado || "📄 Aquí tienes el reporte PDF.";
   if (out.resultado && !String(out.resultado).startsWith("[")) return out.resultado;
+  if (name === "cuentas_por_cobrar" && out.clientes?.length) {
+    const total = out.clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
+    const lines = out.clientes.map((c:any) => `• ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}`).join("\n");
+    return `💰 *Cuentas por cobrar*\nTotal mostrado: *${fmt(total)}*\n\n${lines}`;
+  }
   if (name === "resumen_ventas") {
     const top = (out.top_clientes || []).map((x:any) => `• ${x.cliente}: ${fmt(Number(x.monto || 0))}`).join("\n");
     return `📊 *Ventas ${out.fecha || ""}*\nTotal: *${fmt(Number(out.total_ventas || 0))}*\nFolios: *${out.folios || 0}*${top ? `\n\n*Top clientes:*\n${top}` : ""}`;
@@ -780,9 +871,9 @@ function formatToolReply(name: string, out: any): string {
   if ((name === "consultar_ventas_recientes" || name === "consultar_venta") && out.ventas?.length) {
     const lines = out.ventas.slice(0, 3).map((v:any) => {
       const cobros = (v.cobros || []).map((c:any) => `${c.metodo || "—"} ${fmt(Number(c.monto || 0))}`).join(", ") || "Sin cobros registrados";
-      return `• *${v.folio || "Venta"}*\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
+      return `• *${v.folio || "Movimiento"}*${v.tipo ? ` (${v.tipo})` : ""}\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
     }).join("\n");
-    return `🧾 *Ventas consultadas:*\n${lines}`;
+    return `🧾 *Movimientos consultados:*\n${lines}`;
   }
   return JSON.stringify(out).slice(0, 1500);
 }
@@ -808,6 +899,9 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
 
 REGLAS ESTRICTAS:
 - Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.
+- Para cualquier pregunta sobre ventas, pedidos, clientes, productos, stock, saldos, cobros, pagos, gastos o vendedores DEBES usar una herramienta antes de responder.
+- No uses memoria ni conversación anterior como fuente de verdad; solo sirve para entender seguimientos. La respuesta final debe salir de la herramienta ejecutada.
+- Si la herramienta no tiene el dato exacto, responde "No encontré ese dato en el sistema" y pide un folio/nombre/fecha más específico.
 - Si la pregunta no se puede responder con las herramientas, dilo y sugiere lo que sí puedes hacer.
 - Si el usuario pide algo fuera de permisos (${permisosTxt}), explícale amablemente que no tiene permiso y que pida a su admin.
 - Para reportes diarios usa SIEMPRE 'generar_reporte_pdf' (no resumas tú el día completo en texto).
@@ -837,7 +931,7 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
   for (let step = 0; step < 5; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk", "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {
@@ -853,19 +947,21 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
 
     if (msg.tool_calls && msg.tool_calls.length) {
       messages.push(msg);
+      const deterministicReplies: string[] = [];
       for (const call of msg.tool_calls) {
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
         toolsUsed.push(call.function.name);
         const out = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
         if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
+        deterministicReplies.push(formatToolReply(call.function.name, out));
         messages.push({
           role: "tool",
           tool_call_id: call.id,
           content: JSON.stringify(out).slice(0, 8000),
         });
       }
-      continue;
+      return { reply: deterministicReplies.filter(Boolean).join("\n\n").slice(0, 3500), intent: toolsUsed[0] || "tool", pdfUrl, pdfName, toolsUsed };
     }
 
     const reply = (msg.content || "").trim() || "✅";
