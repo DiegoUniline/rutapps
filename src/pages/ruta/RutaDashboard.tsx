@@ -16,6 +16,7 @@ export default function RutaDashboard() {
   const today = todayLocal();
   const isSAOverride = !!overrideEmpresaId;
   const vendedorId = isSAOverride ? overrideVendedorId : profile?.id;
+  const allVendedores = isSAOverride && !vendedorId;
 
   // Filtros
   const [tab, setTab] = useState<TabKey>('resumen');
@@ -23,42 +24,25 @@ export default function RutaDashboard() {
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
 
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: entregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
-  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
-  const { data: cobros } = useOfflineQuery('cobros', { empresa_id: empresa?.id, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
-  const { data: devoluciones } = useOfflineQuery('devoluciones', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
+  const { data: perfiles } = useOfflineQuery('profiles', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const vendedorUserId = vendedorId
+    ? (vendedorId === profile?.id ? user?.id : (perfiles ?? []).find((p: any) => p.id === vendedorId)?.user_id)
+    : null;
+  const vendorScopedEnabled = !!empresa?.id && (allVendedores || !!vendedorId);
+  const cobrosEnabled = !!empresa?.id && (allVendedores || !!vendedorUserId);
+
+  const { data: ventas } = useOfflineQuery('ventas', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: entregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: cobros } = useOfflineQuery('cobros', allVendedores ? { empresa_id: empresa?.id } : { empresa_id: empresa?.id, user_id: vendedorUserId }, { enabled: cobrosEnabled });
+  const { data: devoluciones } = useOfflineQuery('devoluciones', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
 
   const clienteById = useMemo(() => {
     const m = new Map<string, any>();
     (clientes ?? []).forEach((c: any) => m.set(c.id, c));
     return m;
   }, [clientes]);
-
-  // KPIs del día (hoy fijo, no afectados por filtros)
-  const ventasHoy = (ventas ?? []).filter((v: any) => v.fecha === today && v.status !== 'cancelada');
-  const entregasHoy = (entregas ?? []).filter((e: any) => (e.fecha_entrega ?? e.fecha) === today && e.status === 'entregado');
-  const cobrosHoy = (cobros ?? []).filter((c: any) => c.fecha === today);
-  const gastosHoy = (gastos ?? []).filter((g: any) => g.fecha === today);
-  const clientesVisitadosHoy = new Set([
-    ...ventasHoy.map((v: any) => v.cliente_id),
-    ...entregasHoy.map((e: any) => e.cliente_id),
-  ].filter(Boolean)).size;
-
-  const kpis = {
-    totalVentas: ventasHoy.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
-    numVentas: ventasHoy.length,
-    totalEntregas: entregasHoy.length,
-    totalCobros: cobrosHoy.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
-    numCobros: cobrosHoy.length,
-    totalGastos: gastosHoy.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
-    numGastos: gastosHoy.length,
-    clientesVisitados: clientesVisitadosHoy,
-  };
-
-  const dayName = new Date().toLocaleDateString('es-MX', { weekday: 'long' });
-  const dateStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
 
   // Filtrado de listas
   const inRange = (fecha?: string) => {
@@ -71,6 +55,9 @@ export default function RutaDashboard() {
     const s = search.trim().toLowerCase();
     return texts.some(t => (t ?? '').toString().toLowerCase().includes(s));
   };
+  const isCancelado = (status?: string | null) => status === 'cancelado' || status === 'cancelada';
+  const isEntregaFinalizada = (status?: string | null) => status === 'hecho' || status === 'entregado';
+  const belongsToVendedor = (id?: string | null) => allVendedores || (!!vendedorId && id === vendedorId);
 
   const ventasFiltradas = useMemo(() => (ventas ?? [])
     .filter((v: any) => inRange(v.fecha))
@@ -79,22 +66,25 @@ export default function RutaDashboard() {
   , [ventas, from, to, search, clienteById]);
 
   const entregasFiltradas = useMemo(() => (entregas ?? [])
+    .filter((e: any) => belongsToVendedor(e.vendedor_ruta_id || e.vendedor_id))
     .filter((e: any) => inRange(e.fecha_entrega ?? e.fecha))
     .filter((e: any) => matchSearch([e.folio, clienteById.get(e.cliente_id)?.nombre]))
     .sort((a: any, b: any) => ((b.fecha_entrega ?? b.fecha) ?? '').localeCompare((a.fecha_entrega ?? a.fecha) ?? ''))
-  , [entregas, from, to, search, clienteById]);
+  , [entregas, from, to, search, clienteById, allVendedores, vendedorId]);
 
   const cobrosFiltrados = useMemo(() => (cobros ?? [])
+    .filter((c: any) => !isCancelado(c.status))
     .filter((c: any) => inRange(c.fecha))
     .filter((c: any) => matchSearch([c.folio, clienteById.get(c.cliente_id)?.nombre]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
   , [cobros, from, to, search, clienteById]);
 
   const gastosFiltrados = useMemo(() => (gastos ?? [])
+    .filter((g: any) => belongsToVendedor(g.vendedor_id))
     .filter((g: any) => inRange(g.fecha))
     .filter((g: any) => matchSearch([g.concepto, g.descripcion, g.categoria]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
-  , [gastos, from, to, search]);
+  , [gastos, from, to, search, allVendedores, vendedorId]);
 
   const devolucionesFiltradas = useMemo(() => (devoluciones ?? [])
     .filter((d: any) => inRange(d.fecha))
@@ -115,7 +105,7 @@ export default function RutaDashboard() {
   const topClientes = useMemo(() => {
     const map = new Map<string, { nombre: string; total: number; count: number }>();
     ventasFiltradas.forEach((v: any) => {
-      if (v.status === 'cancelada') return;
+      if (isCancelado(v.status)) return;
       const key = v.cliente_id ?? 'sin';
       const nombre = clienteById.get(v.cliente_id)?.nombre ?? 'Cliente';
       const cur = map.get(key) ?? { nombre, total: 0, count: 0 };
@@ -142,7 +132,7 @@ export default function RutaDashboard() {
       days.push({ d: isoLocal(d), label, total: 0 });
     }
     (ventas ?? []).forEach((v: any) => {
-      if (v.status === 'cancelada') return;
+      if (isCancelado(v.status)) return;
       const day = days.find(x => x.d === (v.fecha ?? '').slice(0, 10));
       if (day) day.total += v.total ?? 0;
     });
@@ -151,11 +141,18 @@ export default function RutaDashboard() {
   const trendMax = Math.max(1, ...trend7.map(t => t.total));
 
   // Totales del rango
+  const ventasActivasRango = ventasFiltradas.filter((v: any) => !isCancelado(v.status));
+  const entregasFinalizadasRango = entregasFiltradas.filter((e: any) => isEntregaFinalizada(e.status));
   const rangoTotales = {
-    ventas: ventasFiltradas.filter((v: any) => v.status !== 'cancelada').reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    ventas: ventasActivasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    ventasCount: ventasActivasRango.length,
     cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
     gastos: gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
-    entregas: entregasFiltradas.filter((e: any) => e.status === 'entregado').length,
+    entregas: entregasFinalizadasRango.length,
+    clientesVisitados: new Set([
+      ...ventasActivasRango.map((v: any) => v.cliente_id),
+      ...entregasFinalizadasRango.map((e: any) => e.cliente_id),
+    ].filter(Boolean)).size,
   };
 
   const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
@@ -168,10 +165,10 @@ export default function RutaDashboard() {
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-[13px] font-medium opacity-90">Vendido hoy</span>
+          <span className="text-[13px] font-medium opacity-90">Vendido en rango</span>
         </div>
-        <div className="text-[26px] font-bold leading-tight">{fmt(kpis.totalVentas)}</div>
-        <p className="text-[12px] opacity-80">{kpis.numVentas} ventas · {kpis.clientesVisitados} clientes visitados</p>
+        <div className="text-[26px] font-bold leading-tight">{fmt(rangoTotales.ventas)}</div>
+        <p className="text-[12px] opacity-80">{rangoTotales.ventasCount} ventas · {rangoTotales.clientesVisitados} clientes visitados</p>
       </div>
 
 
@@ -298,11 +295,11 @@ export default function RutaDashboard() {
               <p className="text-[11px] text-muted-foreground font-medium mb-3">Ventas últimos 7 días</p>
               <div className="flex items-end justify-between gap-1.5 h-28">
                 {trend7.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full flex-1 flex items-end">
+                  <div key={i} className="flex-1 h-full flex flex-col items-center gap-1 min-w-0">
+                    <div className="w-full h-24 flex items-end">
                       <div
                         className="w-full bg-primary/80 rounded-t-md min-h-[2px] transition-all"
-                        style={{ height: `${(d.total / trendMax) * 100}%` }}
+                        style={{ height: d.total > 0 ? `${Math.max(8, (d.total / trendMax) * 100)}%` : '2px' }}
                         title={fmt(d.total)}
                       />
                     </div>
@@ -346,9 +343,9 @@ export default function RutaDashboard() {
               title={clienteById.get(v.cliente_id)?.nombre ?? 'Cliente'}
               subtitle={`${v.folio ?? ''} · ${formatDate(v.fecha)}`}
               right={fmt(v.total ?? 0)}
-              rightSub={v.status === 'cancelada' ? 'Cancelada' : (v.saldo_pendiente > 0 ? `Saldo ${fmt(v.saldo_pendiente)}` : 'Pagada')}
-              rightColor={v.status === 'cancelada' ? 'text-muted-foreground' : v.saldo_pendiente > 0 ? 'text-warning' : 'text-success'}
-              dim={v.status === 'cancelada'}
+              rightSub={isCancelado(v.status) ? 'Cancelada' : (v.saldo_pendiente > 0 ? `Saldo ${fmt(v.saldo_pendiente)}` : 'Pagada')}
+              rightColor={isCancelado(v.status) ? 'text-muted-foreground' : v.saldo_pendiente > 0 ? 'text-warning' : 'text-success'}
+              dim={isCancelado(v.status)}
             />
           )))}
 
@@ -361,7 +358,7 @@ export default function RutaDashboard() {
               title={clienteById.get(e.cliente_id)?.nombre ?? 'Cliente'}
               subtitle={`${e.folio ?? ''} · ${formatDate(e.fecha_entrega ?? e.fecha)}`}
               right={statusLabel(e.status)}
-              rightColor={e.status === 'entregado' ? 'text-success' : e.status === 'no_entregado' ? 'text-destructive' : 'text-warning'}
+              rightColor={isEntregaFinalizada(e.status) ? 'text-success' : e.status === 'no_entregado' ? 'text-destructive' : 'text-warning'}
             />
           )))}
 
@@ -456,6 +453,7 @@ function formatDate(d?: string) {
 
 function statusLabel(s?: string) {
   if (!s) return '—';
+  if (s === 'hecho') return 'Entregada';
   if (s === 'entregado') return 'Entregada';
   if (s === 'no_entregado') return 'No entregada';
   if (s === 'pendiente') return 'Pendiente';
