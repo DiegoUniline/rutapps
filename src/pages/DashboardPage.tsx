@@ -870,6 +870,32 @@ export default function DashboardPage() {
 
   const devolucionesPct = kpis.totalVentas > 0 ? (devStats.totalCredito / kpis.totalVentas) * 100 : 0;
 
+  // === Estado de resultados (rango seleccionado) ===
+  const estadoResultados = useMemo(() => {
+    const lineas = (ventaLineasIS?.lineas ?? []) as any[];
+    const costMap = ventaLineasIS?.costMap ?? new Map<string, number>();
+    let ventasNetas = 0;     // subtotal después de descuento, antes de impuestos
+    let ventasBrutas = 0;    // precio_unitario * cantidad (antes de descuento)
+    let costo = 0;
+    for (const l of lineas) {
+      const cant = Number(l.cantidad) || 0;
+      const pu = Number(l.precio_unitario) || 0;
+      const sub = Number(l.subtotal) || 0;
+      ventasBrutas += pu * cant;
+      ventasNetas += sub;
+      const cu = costMap.get(l.producto_id) || 0;
+      const factor = Number(l.presentacion_factor) || 1;
+      costo += cu * factor * cant;
+    }
+    const descuentos = Math.max(0, ventasBrutas - ventasNetas);
+    const devoluciones = devStats.totalCredito || 0;
+    const ventasNetasFinal = ventasNetas - devoluciones;
+    const utilidadBruta = ventasNetasFinal - costo;
+    const margenPct = ventasNetasFinal > 0 ? (utilidadBruta / ventasNetasFinal) * 100 : 0;
+    return { ventasNetas, ventasBrutas, descuentos, devoluciones, costo, utilidadBruta, margenPct, ventasNetasFinal };
+  }, [ventaLineasIS, devStats.totalCredito]);
+
+
   const { data: evolucion } = useDashboardEvolucionMensual(12);
   const { data: ventasPorMes } = useDashboardVentasPorMes(12);
   const { data: usuarioMes } = useDashboardVentasUsuarioMes();
