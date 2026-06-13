@@ -27,7 +27,7 @@ import ControlPage from '@/pages/ControlPage';
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'cobros'
-  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control';
+  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
 
 const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
