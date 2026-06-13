@@ -776,7 +776,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
     const lim = Math.min(Number(args?.limite || 3), 10);
     let q = admin.from("ventas")
-      .select("id, folio, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+      .select("id, folio, tipo, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
       .eq("empresa_id", empresaId)
       .order("created_at", { ascending: false })
       .limit(lim);
@@ -836,12 +836,15 @@ function inferRequiredTool(text: string): { name: string; args: any } | null {
   const num = t.match(/(\d+(?:\.\d+)?)/);
   if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
   if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
-  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual|lista|cu[aá]les|cu[aá]ntos?/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
+  if (/clientes?/.test(t) && /saldo|deben|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
+  if (/clientes?/.test(t) && /lista|tengo|ver|cu[aá]les|buscar/.test(t)) return { name: "buscar_clientes", args: { limite: 10 } };
+  if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|deben/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
+  if (/pedidos?/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, tipo: "pedido", limite: 5 } };
   if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
   if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
   if (/cu[aá]nto\s+vend|ventas?\s+(de\s+)?hoy|vend[ií]\s+hoy/.test(t)) return { name: "resumen_ventas", args: { fecha } };
   if (/cobros?|cobrado|pagos?/.test(t)) return { name: "resumen_cobros", args: { fecha } };
-  if (/cuentas?\s+por\s+cobrar|saldos?\s+pendientes?/.test(t)) return { name: "cuentas_por_cobrar", args: { limite: 10 } };
   return null;
 }
 
