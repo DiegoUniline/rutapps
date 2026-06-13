@@ -455,6 +455,20 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "consultar_stock_disponible",
+      description: "Devuelve productos reales con stock disponible (> 0). Úsala cuando pregunten qué productos hay disponibles, existencias, inventario actual o stock disponible.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Opcional: nombre o código de producto para filtrar." },
+          limite: { type: "number", description: "Máximo de productos a devolver, default 15." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "buscar_producto",
       description: "Busca productos por nombre o código y devuelve stock, precio y datos básicos.",
       parameters: {
@@ -520,6 +534,20 @@ const TOOLS = [
         type: "object",
         properties: { folio: { type: "string", description: "Folio de la venta, ej. 'VTA-0001' o '0001'." } },
         required: ["folio"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_ventas_recientes",
+      description: "Consulta ventas reales recientes o de una fecha, incluyendo cliente, vendedor, método de pago, líneas, descuento, total y saldo. Úsala para preguntas de seguimiento como 'quién lo vendió', 'qué método de pago fue', 'la venta de hoy' o 'última venta'.",
+      parameters: {
+        type: "object",
+        properties: {
+          fecha: { type: "string", description: "Opcional: 'hoy', 'ayer', dd/mm/yyyy o yyyy-mm-dd." },
+          limite: { type: "number", description: "Máximo de ventas, default 3." },
+        },
       },
     },
   },
