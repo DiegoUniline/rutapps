@@ -220,9 +220,11 @@ export function useCompraForm() {
     try {
       const montoFinal = Math.min(newPago.monto, saldoActual);
       const { error } = await supabase.from('pago_compras').insert({ empresa_id: empresa!.id, compra_id: form.id, proveedor_id: form.proveedor_id || null, monto: montoFinal, metodo_pago: newPago.metodo_pago, fecha: newPago.fecha, referencia: newPago.referencia || null, notas: newPago.notas || null, user_id: user?.id } as any); if (error) throw error;
-      const nuevoSaldo = Math.max(0, saldoActual - montoFinal); const updates: any = { saldo_pendiente: nuevoSaldo }; if (nuevoSaldo === 0) updates.status = 'pagada';
+      const nuevoSaldo = Math.max(0, saldoActual - montoFinal);
+      // El pago NO cambia el status. Recibir y marcar pagada son acciones explícitas independientes.
+      const updates: any = { saldo_pendiente: nuevoSaldo };
       await supabase.from('compras').update(updates).eq('id', form.id); setForm(f => ({ ...f, ...updates })); setAddingPago(false);
-      toast.success(nuevoSaldo === 0 ? 'Pago registrado — Compra pagada' : 'Pago registrado'); qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] }); qc.invalidateQueries({ queryKey: ['compra', form.id] }); qc.invalidateQueries({ queryKey: ['compras'] });
+      toast.success('Pago registrado'); qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] }); qc.invalidateQueries({ queryKey: ['compra', form.id] }); qc.invalidateQueries({ queryKey: ['compras'] });
     } catch (err: any) { toast.error(err.message); }
   };
 
