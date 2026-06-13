@@ -102,12 +102,55 @@ export default function RutaDashboard() {
   , [devoluciones, from, to, search, clienteById]);
 
   const tabs: { key: TabKey; label: string; count: number; icon: any }[] = [
+    { key: 'resumen', label: 'Resumen', count: 0, icon: TrendingUp },
     { key: 'ventas', label: 'Ventas', count: ventasFiltradas.length, icon: ShoppingCart },
     { key: 'entregas', label: 'Entregas', count: entregasFiltradas.length, icon: Truck },
     { key: 'cobros', label: 'Cobros', count: cobrosFiltrados.length, icon: Banknote },
     { key: 'gastos', label: 'Gastos', count: gastosFiltrados.length, icon: Receipt },
     { key: 'devoluciones', label: 'Devol.', count: devolucionesFiltradas.length, icon: RotateCcw },
   ];
+
+  // Top clientes por ventas en el rango
+  const topClientes = useMemo(() => {
+    const map = new Map<string, { nombre: string; total: number; count: number }>();
+    ventasFiltradas.forEach((v: any) => {
+      if (v.status === 'cancelada') return;
+      const key = v.cliente_id ?? 'sin';
+      const nombre = clienteById.get(v.cliente_id)?.nombre ?? 'Cliente';
+      const cur = map.get(key) ?? { nombre, total: 0, count: 0 };
+      cur.total += v.total ?? 0;
+      cur.count += 1;
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [ventasFiltradas, clienteById]);
+
+  // Tendencia 7 días (ventas)
+  const trend7 = useMemo(() => {
+    const days: { d: string; label: string; total: number }[] = [];
+    const base = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(base); d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '');
+      days.push({ d: iso, label, total: 0 });
+    }
+    (ventas ?? []).forEach((v: any) => {
+      if (v.status === 'cancelada') return;
+      const day = days.find(x => x.d === (v.fecha ?? '').slice(0, 10));
+      if (day) day.total += v.total ?? 0;
+    });
+    return days;
+  }, [ventas]);
+  const trendMax = Math.max(1, ...trend7.map(t => t.total));
+
+  // Totales del rango
+  const rangoTotales = {
+    ventas: ventasFiltradas.filter((v: any) => v.status !== 'cancelada').reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
+    gastos: gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
+    entregas: entregasFiltradas.filter((e: any) => e.status === 'entregado').length,
+  };
 
   const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
 
