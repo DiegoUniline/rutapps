@@ -341,7 +341,7 @@ export default function LandingPage() {
             </h1>
             <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
               Ya no es solo preventa en ruta. Es el ERP completo para distribuidoras: ventas, cobranza, inventario,
-              compras, facturación CFDI, logística y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
+              compras, logística, app móvil offline y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
               <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
