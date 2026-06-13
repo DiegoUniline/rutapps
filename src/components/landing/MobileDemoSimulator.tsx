@@ -512,7 +512,7 @@ export default function MobileDemoSimulator({ open, onClose }: { open: boolean; 
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 animate-[fadeIn_200ms_ease-out]"
-      style={{ background: 'rgba(8,12,24,0.85)', backdropFilter: 'blur(10px)' }}>
+      style={{ background: 'rgba(240,242,245,0.95)', backdropFilter: 'blur(10px)' }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes pop { 0% { transform: scale(0); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
@@ -522,12 +522,13 @@ export default function MobileDemoSimulator({ open, onClose }: { open: boolean; 
 
       {/* Close + label */}
       <button onClick={onClose}
-        className="absolute top-3 right-3 sm:top-5 sm:right-5 z-10 w-10 h-10 rounded-full grid place-items-center text-white bg-white/10 hover:bg-white/20 active:scale-95 transition"
+        className="absolute top-3 right-3 sm:top-5 sm:right-5 z-10 w-10 h-10 rounded-full grid place-items-center bg-black/5 hover:bg-black/10 active:scale-95 transition"
+        style={{ color: T.text }}
         aria-label="Cerrar simulador">
         <X className="h-5 w-5" />
       </button>
-      <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-10 px-3 py-1.5 rounded-full text-[11px] font-bold text-white"
-        style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
+      <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-10 px-3 py-1.5 rounded-full text-[11px] font-bold"
+        style={{ background: 'rgba(0,0,0,0.05)', color: T.muted, backdropFilter: 'blur(8px)' }}>
         🔒 Simulador · nada se guarda
       </div>
 
