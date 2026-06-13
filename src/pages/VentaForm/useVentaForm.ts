@@ -162,7 +162,9 @@ export function useVentaForm() {
     () => (pagosData ?? []).reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0),
     [pagosData],
   );
-  const saldoPendiente = (form.total ?? 0) - totalPagado;
+  const saldoPendiente = form.saldo_pendiente != null
+    ? Number(form.saldo_pendiente) || 0
+    : (Number(form.total ?? 0) - totalPagado);
 
   // Load existing venta — only once per venta id
   useEffect(() => {
@@ -461,7 +463,7 @@ export function useVentaForm() {
         const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        const linePayload = { ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
+        const linePayload = { ...l, venta_id: ventaId, subtotal: lineSubtotal, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
