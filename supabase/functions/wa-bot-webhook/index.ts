@@ -224,11 +224,11 @@ async function buildReporte(empresaId: string, date: Date, label: string) {
 async function buildStockMessage(empresaId: string, threshold: number | null, nombre: string | null) {
   if (nombre) {
     const safeNombre = cleanLike(nombre);
-    const { data } = await admin.from("productos")
+    const { data } = await activeProduct(admin.from("productos")
       .select("id, codigo, nombre, cantidad, min, precio_principal, unidad_granel")
       .eq("empresa_id", empresaId)
       .or(`nombre.ilike.%${safeNombre}%,codigo.ilike.%${safeNombre}%`)
-      .limit(10);
+      .limit(10));
     if (!data || !data.length) return `❌ No encontré productos que coincidan con "${nombre}".`;
     let msg = `📦 Resultados para "${nombre}":\n\n`;
     for (const p of data) {
@@ -653,6 +653,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     return { resultado: msg };
   }
 
+  if (name === "buscar_clientes") {
+    if (!need("clientes")) return { error: "Sin permiso para clientes" };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const query = cleanLike(args?.query);
+    let q = admin.from("clientes")
+      .select("codigo, nombre, telefono, saldo, status, credito, limite_credito, dias_credito")
+      .eq("empresa_id", empresaId)
+      .order("nombre", { ascending: true })
+      .limit(lim);
+    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%,telefono.ilike.%${query}%`);
+    if (args?.con_saldo === true) q = q.gt("saldo", 0).order("saldo", { ascending: false });
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    const clientes = data || [];
+    if (!clientes.length) return { resultado: `👤 No encontré clientes${query ? ` para "${query}"` : ""}.` };
+    let resultado = `👤 *Clientes${args?.con_saldo ? " con saldo" : ""}${query ? ` (${query})` : ""}:*\n\n`;
+    for (const c of clientes as any[]) {
+      resultado += `• ${c.codigo || ""} ${c.nombre}\n  Tel: ${c.telefono || "—"} · Saldo: *${fmt(Number(c.saldo || 0))}* · Estado: ${c.status || "—"}\n`;
+    }
+    return { resultado, clientes };
+  }
+
   if (name === "resumen_cobros") {
     if (!need("cobros")) return { error: "Sin permiso para cobros" };
     const date = parseFecha(args?.fecha);
@@ -683,6 +705,24 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
       .eq("empresa_id", empresaId).gt("saldo", 0)
       .order("saldo", { ascending: false }).limit(lim);
     return { clientes: data || [] };
+  }
+
+  if (name === "consultar_saldos") {
+    if (!need("clientes")) return { error: "Sin permiso para saldos" };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const { data, error } = await admin.from("clientes")
+      .select("codigo, nombre, telefono, saldo")
+      .eq("empresa_id", empresaId)
+      .gt("saldo", 0)
+      .order("saldo", { ascending: false })
+      .limit(lim);
+    if (error) return { error: error.message };
+    const clientes = data || [];
+    const total = clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
+    if (!clientes.length) return { resultado: "✅ No encontré saldos pendientes en clientes." };
+    let resultado = `💰 *Saldos pendientes*\nTotal mostrado: *${fmt(total)}*\n\n`;
+    for (const c of clientes as any[]) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
+    return { resultado, total_mostrado: total, clientes };
   }
 
   if (name === "consultar_venta") {
