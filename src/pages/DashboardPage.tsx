@@ -20,6 +20,7 @@ import {
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
   useDashboardDevoluciones, useDashboardHoy,
   useDashboardEvolucionMensual, useDashboardVentasPorMes, useDashboardVentasUsuarioMes,
+  useDashboardVentaLineasIS,
   type DateRange
 } from '@/hooks/useDashboardData';
 import {
