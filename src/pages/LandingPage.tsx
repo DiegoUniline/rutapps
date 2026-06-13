@@ -280,17 +280,17 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal variant="up" delay={60} duration={420}>
-              <h1 className="mt-4 text-[40px] md:text-[56px] font-semibold leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
+              <h1 className="mt-4 text-[32px] sm:text-[40px] md:text-[56px] font-semibold leading-[1.05] md:leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
                 Tu distribuidora,<br />
                 <span className="relative inline-block">
                   en una sola pantalla.
-                  <span className="absolute left-0 -bottom-1 h-[5px] w-full rounded-full origin-left animate-[underlineGrow_700ms_cubic-bezier(0.22,1,0.36,1)_300ms_both]"
+                  <span className="absolute left-0 -bottom-1 h-[4px] md:h-[5px] w-full rounded-full origin-left animate-[underlineGrow_700ms_cubic-bezier(0.22,1,0.36,1)_300ms_both]"
                     style={{ background: `linear-gradient(90deg, ${BRAND.primary}, ${BRAND.accent})` }} />
                 </span>
               </h1>
             </Reveal>
             <Reveal variant="up" delay={140}>
-              <p className="mt-5 text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
+              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
                 Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
               </p>
             </Reveal>
