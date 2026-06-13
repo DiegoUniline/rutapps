@@ -177,6 +177,92 @@ export default function RutaSincronizarPage() {
           </div>
         </div>
 
+        {/* ── DIAGNÓSTICO DE INTEGRIDAD ── */}
+        <div className="bg-card border border-border rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <Shield className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[15px] font-bold text-foreground">Diagnóstico de integridad</p>
+              <p className="text-[11px] text-muted-foreground">
+                Verifica que tus datos no se pueden perder
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                await backupSyncQueueToStorage();
+                await requestPersistentStorage();
+                await loadDiag();
+                toast.success('Diagnóstico actualizado');
+              }}
+              disabled={diagLoading}
+              className="text-xs text-primary font-semibold disabled:opacity-50"
+            >
+              {diagLoading ? '...' : 'Verificar'}
+            </button>
+          </div>
+
+          {diag && (
+            <div className="space-y-1.5 text-[12px]">
+              <DiagRow
+                label="Cambios en cola (IndexedDB)"
+                value={diag.idbQueueCount.toLocaleString()}
+                ok={true}
+              />
+              <DiagRow
+                label="Respaldo en localStorage"
+                value={diag.localStorageBackupCount.toLocaleString()}
+                ok={diag.integrityOk}
+                hint={diag.lastBackupAt ? formatTimeAgo(diag.lastBackupAt) : 'sin respaldo'}
+              />
+              <DiagRow
+                label="App funciona sin internet"
+                value={diag.serviceWorkerActive ? 'Sí' : 'No'}
+                ok={diag.serviceWorkerActive}
+                hint={diag.serviceWorkerActive ? 'Service Worker activo' : 'Recarga online para activar'}
+              />
+              <DiagRow
+                label="Instalada como app"
+                value={diag.isStandalone ? 'Sí' : 'Navegador'}
+                ok={true}
+                hint={diag.isStandalone ? 'Modo PWA' : 'Instálala para mayor protección'}
+              />
+              <DiagRow
+                label="Storage persistente"
+                value={diag.storagePersisted ? 'Sí' : 'No'}
+                ok={diag.storagePersisted}
+                hint={diag.storagePersisted ? 'El navegador no borrará tus datos' : 'El navegador podría borrar datos si falta espacio'}
+              />
+              <DiagRow
+                label="Espacio usado"
+                value={formatBytes(diag.storageUsedBytes)}
+                ok={true}
+                hint={diag.storageQuotaBytes ? `de ${formatBytes(diag.storageQuotaBytes)}` : ''}
+              />
+              <div className={cn(
+                "mt-3 rounded-xl p-3 flex items-start gap-2",
+                diag.integrityOk && diag.serviceWorkerActive
+                  ? "bg-emerald-500/10"
+                  : "bg-amber-500/10"
+              )}>
+                {diag.integrityOk && diag.serviceWorkerActive ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                )}
+                <p className="text-[11px] leading-relaxed">
+                  {diag.integrityOk && diag.serviceWorkerActive
+                    ? 'Todo en orden. Puedes cerrar la app, recargar o trabajar sin internet — tus cambios están a salvo.'
+                    : !diag.serviceWorkerActive
+                      ? 'La app aún no quedó disponible offline. Recarga la página con internet para activar el modo sin conexión.'
+                      : 'El respaldo redundante quedó desactualizado. Presiona "Verificar" para refrescarlo.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* ── STEP 1: DOWNLOAD ── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="p-4">
