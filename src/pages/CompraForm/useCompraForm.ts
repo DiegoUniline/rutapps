@@ -200,8 +200,9 @@ export function useCompraForm() {
   const handleCancel = async () => {
     if (!form.id) return;
     try {
-      if (['recibida', 'pagada'].includes(form.status)) {
-        const validLines = lineas.filter(l => l.producto_id); const today = todayLocal();
+      // Revertir cualquier mercancía ya recibida, sin importar el status (puede haber recepción parcial en confirmada)
+      if (form.status !== 'cancelada') {
+        const validLines = lineas.filter(l => l.producto_id && (Number(l.cantidad_recibida) || 0) > 0); const today = todayLocal();
         const updates: Array<Promise<void>> = [];
         for (const l of validLines) {
           const factor = Number(l._factor_conversion) || 1;
