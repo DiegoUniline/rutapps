@@ -10,7 +10,7 @@ import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/compone
 import { ModuleVisual } from '@/components/landing/ModuleVisuals';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 
 const BRAND = {
   primary: '#0060e8',
