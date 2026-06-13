@@ -15,6 +15,9 @@ import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
 import { useEmpresaJornadaConfig } from '@/hooks/useEmpresaJornadaConfig';
 import SuperAdminMobileBar from '@/components/SuperAdminMobileBar';
 import { useRutaStore } from '@/stores/rutaStore';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useUnloadGuard } from '@/hooks/useUnloadGuard';
+import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 
 // Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
 // Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
@@ -57,6 +60,13 @@ export default function MobileLayout() {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const isOnline = !useRutaStore(state => state.isOffline);
+  const { pendingCount } = useNetworkStatus();
+
+  // Aviso al cerrar/recargar si hay cambios sin sincronizar
+  useUnloadGuard(pendingCount);
+
+  // Pedir storage persistente una sola vez al montar la app móvil
+  useEffect(() => { requestPersistentStorage().catch(() => {}); }, []);
 
   // Bloqueo por jornada (configurable por empresa) — solo en rutas de acción
   const { data: sesionActiva, isLoading: sesionLoading } = useRutaSesionActiva();
