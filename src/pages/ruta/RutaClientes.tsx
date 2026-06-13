@@ -246,6 +246,19 @@ export default function RutaClientes() {
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-card px-4 pt-2 pb-1 space-y-2">
 
+        <div className="flex items-center gap-2">
+          <h1 className="text-[18px] font-bold text-foreground">Clientes</h1>
+          <Badge variant="secondary" className="text-[11px]">{pendientesCount} pendientes</Badge>
+          {pendientesCount > 0 && (
+            <button
+              onClick={() => navigate('/ruta/navegacion')}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+            >
+              <Navigation className="h-3.5 w-3.5" /> Navegar
+            </button>
+          )}
+        </div>
+
         <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setModo('visitas')}
