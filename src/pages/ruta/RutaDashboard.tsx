@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { todayLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X } from 'lucide-react';
+import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
-type TabKey = 'ventas' | 'entregas' | 'cobros' | 'gastos';
+type TabKey = 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
