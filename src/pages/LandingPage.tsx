@@ -86,7 +86,7 @@ export default function LandingPage() {
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
       <Seo
         title="Rutapp · ERP para distribuidoras con IA"
-        description="Ventas, cobranza, inventario, ruta GPS e IA. Móvil offline. Todo tu negocio en una sola plataforma."
+        description="Ventas, cobranza, inventario, ruta GPS e IA en la nube. App móvil que tolera cortes de internet sin perder ventas."
         path="/"
         jsonLd={LANDING_JSON_LD}
       />
