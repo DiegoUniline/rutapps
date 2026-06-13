@@ -7,12 +7,12 @@ import {
 
 /* ──────────────────────────── Design tokens (real app) ──────────────────────────── */
 const T = {
-  bg: '#0b1322',
-  surface: '#111c33',
-  surface2: '#16243f',
-  border: 'rgba(255,255,255,0.06)',
-  text: '#e7ecf5',
-  muted: '#8a96ac',
+  bg: '#ffffff',
+  surface: '#f5f7fa',
+  surface2: '#eef0f4',
+  border: 'rgba(0,0,0,0.08)',
+  text: '#1a1a2a',
+  muted: '#6b7280',
   primary: '#5b6cf9',
   primarySoft: 'rgba(91,108,249,0.14)',
   warn: '#f59e0b',
