@@ -326,20 +326,20 @@ export default function LandingPage() {
         </div>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-6">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              Nuevo · Seguimiento en tiempo real de vendedores
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 text-white shadow-lg"
+              style={{ background: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+              <Sparkles className="h-3.5 w-3.5" />
+              Nuevo · Ahora con Inteligencia Artificial integrada
             </div>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1] mb-6">
-              Mira a tus vendedores
-              <span className="block" style={{ color: 'hsl(230, 55%, 52%)' }}>en vivo, en el mapa</span>
+              El control completo de tu negocio
+              <span className="block bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>
+                potenciado con IA
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-              El ERP completo para distribuidoras y venta en ruta. Seguimiento GPS al instante, app móvil offline,
-              optimización de rutas, inventario, cobranza y facturación CFDI — todo en un solo lugar.
+              Ya no es solo preventa en ruta. Es el ERP completo para distribuidoras: ventas, cobranza, inventario,
+              compras, facturación CFDI, logística y un asesor con IA que analiza tu negocio por ti — todo en un solo lugar.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
               <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
