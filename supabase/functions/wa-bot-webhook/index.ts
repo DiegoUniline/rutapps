@@ -704,8 +704,6 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     let q = admin.from("ventas")
       .select("id, folio, fecha, created_at, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, subtotal, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
       .eq("empresa_id", empresaId)
-      .neq("status", "cancelada")
-      .neq("status", "cancelado")
       .order("created_at", { ascending: false })
       .limit(lim);
     if (args?.fecha) {
@@ -715,14 +713,15 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     }
     const { data: ventas, error } = await q;
     if (error) return { error: error.message };
-    if (!ventas || !ventas.length) return { resultado: "📭 No encontré ventas con esos filtros." };
-    const vendIds = Array.from(new Set(ventas.map((v:any) => v.vendedor_id).filter(Boolean)));
+    const ventasActivas = (ventas || []).filter((v:any) => v.status !== "cancelada" && v.status !== "cancelado");
+    if (!ventasActivas.length) return { resultado: "📭 No encontré ventas con esos filtros." };
+    const vendIds = Array.from(new Set(ventasActivas.map((v:any) => v.vendedor_id).filter(Boolean)));
     let vendMap = new Map<string,string>();
     if (vendIds.length) {
       const { data: profs } = await admin.from("profiles").select("id, nombre").in("id", vendIds);
       vendMap = new Map((profs||[]).map((p:any) => [p.id, p.nombre || "—"]));
     }
-    const detalle = ventas.map((v:any) => ({
+    const detalle = ventasActivas.map((v:any) => ({
       folio: v.folio,
       fecha: v.fecha,
       cliente: v.clientes?.nombre || "—",
