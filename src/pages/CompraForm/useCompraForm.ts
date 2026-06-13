@@ -275,5 +275,6 @@ export function useCompraForm() {
     isLoading, addingPago, setAddingPago, newPago, setNewPago, confirmDialog, setConfirmDialog,
     requestPin, PinDialog, updateField, updateLinea, addLine, removeLine,
     handleSave, handleDelete, handleStatusChange, handleCancel, handleSavePago,
+    recibirLineaPendiente, recibirTodoPendiente,
   };
 }
