@@ -262,6 +262,7 @@ export default function LandingPage() {
               </span>
               En vivo
             </a>
+            <a href="#ai" className="hover:text-gray-900 transition-colors font-semibold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, hsl(280, 70%, 55%), hsl(230, 55%, 52%))' }}>✨ IA</a>
             <a href="#features" className="hover:text-gray-900 transition-colors">Funciones</a>
             <a href="#modules" className="hover:text-gray-900 transition-colors">Módulos</a>
             <a href="#screenshots" className="hover:text-gray-900 transition-colors">Capturas</a>
