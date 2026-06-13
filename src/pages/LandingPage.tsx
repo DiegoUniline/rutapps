@@ -7,6 +7,7 @@ import {
   Award, Sparkles, BarChart3, MapPin,
 } from 'lucide-react';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
+import { ModuleVisual } from '@/components/landing/ModuleVisuals';
 import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -386,7 +387,10 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="p-6 md:p-8 space-y-6">
+                  <div className="p-6 md:p-8 space-y-5">
+                    {/* Visual preview */}
+                    <ModuleVisual name={m.t} />
+
                     {/* Star feature */}
                     <div className="rounded-xl p-5 border" style={{ background: BRAND.primarySoft, borderColor: BRAND.primary + '33' }}>
                       <div className="flex items-center gap-2 mb-1.5">
