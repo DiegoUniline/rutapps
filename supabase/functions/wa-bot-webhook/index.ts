@@ -510,6 +510,17 @@ const TOOLS = [
         properties: { limite: { type: "number", description: "Máx clientes (default 10)" } },
       },
     },
+  {
+    type: "function",
+    function: {
+      name: "consultar_venta",
+      description: "Detalle completo de una venta específica por folio (o id parcial): cliente, vendedor que la creó, fecha, total, saldo pendiente, status, líneas, descuentos y cobros aplicados.",
+      parameters: {
+        type: "object",
+        properties: { folio: { type: "string", description: "Folio de la venta, ej. 'VTA-0001' o '0001'." } },
+        required: ["folio"],
+      },
+    },
   },
 ];
 
