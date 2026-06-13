@@ -49,7 +49,7 @@ export function CompraHeader(p: Props) {
 
 function StatusBar(p: Props) {
   const { fmt } = useCurrency();
-  const { form, setConfirmDialog, saldoActual, totals, hayPendienteRecibir, recibirTodoPendiente } = p;
+  const { form, setConfirmDialog, saldoActual, totals, hayPendienteRecibir } = p;
   const puedeRecibir = hayPendienteRecibir && !['borrador', 'cancelada'].includes(form.status);
   return (
     <div className="flex items-center gap-3 flex-wrap">
