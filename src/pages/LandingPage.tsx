@@ -682,6 +682,7 @@ export default function LandingPage() {
       </footer>
 
       <LandingChatWidget />
+      <MobileDemoSimulator open={simulatorOpen} onClose={() => setSimulatorOpen(false)} />
     </div>
   );
 }
