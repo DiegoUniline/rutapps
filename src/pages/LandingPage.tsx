@@ -14,6 +14,7 @@ import { Seo } from '@/components/seo/Seo';
 import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
+import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
 
 
 const BRAND = {
@@ -201,6 +202,7 @@ const fmtMX = (n: number) => `$${n.toLocaleString('es-MX')}`;
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
   
   const [searchParams] = useSearchParams();
   useFacebookPixel();
@@ -445,6 +447,16 @@ export default function LandingPage() {
             <p className="mt-4 text-[14.5px] md:text-[16px] leading-relaxed" style={{ color: BRAND.muted }}>
               Rutero, venta, cobro y entrega — diseñados para tocarse con el pulgar y tolerar cortes de red.
             </p>
+            <button
+              onClick={() => setSimulatorOpen(true)}
+              className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white text-[14px] font-bold shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
+              style={{ background: BRAND.primary, boxShadow: `0 15px 35px -10px ${BRAND.primary}80` }}
+            >
+              <Sparkles className="h-4 w-4" /> Probar venta móvil ahora
+            </button>
+            <p className="mt-2 text-[11.5px]" style={{ color: BRAND.muted }}>
+              Simulador interactivo · datos ficticios · nada se guarda
+            </p>
           </div>
 
           {/* Phones row */}
@@ -670,6 +682,7 @@ export default function LandingPage() {
       </footer>
 
       <LandingChatWidget />
+      <MobileDemoSimulator open={simulatorOpen} onClose={() => setSimulatorOpen(false)} />
     </div>
   );
 }
