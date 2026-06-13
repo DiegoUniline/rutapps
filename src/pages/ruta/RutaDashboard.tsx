@@ -73,6 +73,7 @@ export default function RutaDashboard() {
   , [entregas, from, to, search, clienteById, allVendedores, vendedorId]);
 
   const cobrosFiltrados = useMemo(() => (cobros ?? [])
+    .filter((c: any) => !isCancelado(c.status))
     .filter((c: any) => inRange(c.fecha))
     .filter((c: any) => matchSearch([c.folio, clienteById.get(c.cliente_id)?.nombre]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
@@ -131,7 +132,7 @@ export default function RutaDashboard() {
       days.push({ d: isoLocal(d), label, total: 0 });
     }
     (ventas ?? []).forEach((v: any) => {
-      if (v.status === 'cancelada') return;
+      if (isCancelado(v.status)) return;
       const day = days.find(x => x.d === (v.fecha ?? '').slice(0, 10));
       if (day) day.total += v.total ?? 0;
     });
@@ -140,11 +141,18 @@ export default function RutaDashboard() {
   const trendMax = Math.max(1, ...trend7.map(t => t.total));
 
   // Totales del rango
+  const ventasActivasRango = ventasFiltradas.filter((v: any) => !isCancelado(v.status));
+  const entregasFinalizadasRango = entregasFiltradas.filter((e: any) => isEntregaFinalizada(e.status));
   const rangoTotales = {
-    ventas: ventasFiltradas.filter((v: any) => v.status !== 'cancelada').reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    ventas: ventasActivasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+    ventasCount: ventasActivasRango.length,
     cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
     gastos: gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0),
-    entregas: entregasFiltradas.filter((e: any) => e.status === 'entregado').length,
+    entregas: entregasFinalizadasRango.length,
+    clientesVisitados: new Set([
+      ...ventasActivasRango.map((v: any) => v.cliente_id),
+      ...entregasFinalizadasRango.map((e: any) => e.cliente_id),
+    ].filter(Boolean)).size,
   };
 
   const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
@@ -157,10 +165,10 @@ export default function RutaDashboard() {
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-[13px] font-medium opacity-90">Vendido hoy</span>
+          <span className="text-[13px] font-medium opacity-90">Vendido en rango</span>
         </div>
-        <div className="text-[26px] font-bold leading-tight">{fmt(kpis.totalVentas)}</div>
-        <p className="text-[12px] opacity-80">{kpis.numVentas} ventas · {kpis.clientesVisitados} clientes visitados</p>
+        <div className="text-[26px] font-bold leading-tight">{fmt(rangoTotales.ventas)}</div>
+        <p className="text-[12px] opacity-80">{rangoTotales.ventasCount} ventas · {rangoTotales.clientesVisitados} clientes visitados</p>
       </div>
 
 
