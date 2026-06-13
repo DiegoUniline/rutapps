@@ -7,12 +7,12 @@ import {
 
 /* ──────────────────────────── Design tokens (real app) ──────────────────────────── */
 const T = {
-  bg: '#0b1322',
-  surface: '#111c33',
-  surface2: '#16243f',
-  border: 'rgba(255,255,255,0.06)',
-  text: '#e7ecf5',
-  muted: '#8a96ac',
+  bg: '#ffffff',
+  surface: '#f5f7fa',
+  surface2: '#eef0f4',
+  border: 'rgba(0,0,0,0.08)',
+  text: '#1a1a2a',
+  muted: '#6b7280',
   primary: '#5b6cf9',
   primarySoft: 'rgba(91,108,249,0.14)',
   warn: '#f59e0b',
@@ -56,10 +56,10 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto" style={{ width: 'min(360px, 92vw)' }}>
       <div className="rounded-[44px] p-2 shadow-2xl"
-        style={{ background: '#0a0f1c', boxShadow: '0 40px 80px -20px rgba(0,0,0,0.5)' }}>
+        style={{ background: '#f0f2f5', boxShadow: '0 40px 80px -20px rgba(0,0,0,0.15)' }}>
         <div className="rounded-[36px] overflow-hidden relative" style={{ aspectRatio: '9/19.5', background: T.bg, color: T.text }}>
           {/* Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-b-2xl z-30" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-white/90 rounded-b-2xl z-30 shadow-sm" />
           {/* Status bar */}
           <div className="flex items-center justify-between px-6 pt-2 pb-1 text-[11px] font-semibold relative z-20" style={{ color: T.text }}>
             <span>9:41</span>
@@ -512,7 +512,7 @@ export default function MobileDemoSimulator({ open, onClose }: { open: boolean; 
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 animate-[fadeIn_200ms_ease-out]"
-      style={{ background: 'rgba(8,12,24,0.85)', backdropFilter: 'blur(10px)' }}>
+      style={{ background: 'rgba(240,242,245,0.95)', backdropFilter: 'blur(10px)' }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes pop { 0% { transform: scale(0); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
@@ -522,12 +522,13 @@ export default function MobileDemoSimulator({ open, onClose }: { open: boolean; 
 
       {/* Close + label */}
       <button onClick={onClose}
-        className="absolute top-3 right-3 sm:top-5 sm:right-5 z-10 w-10 h-10 rounded-full grid place-items-center text-white bg-white/10 hover:bg-white/20 active:scale-95 transition"
+        className="absolute top-3 right-3 sm:top-5 sm:right-5 z-10 w-10 h-10 rounded-full grid place-items-center bg-black/5 hover:bg-black/10 active:scale-95 transition"
+        style={{ color: T.text }}
         aria-label="Cerrar simulador">
         <X className="h-5 w-5" />
       </button>
-      <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-10 px-3 py-1.5 rounded-full text-[11px] font-bold text-white"
-        style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
+      <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-10 px-3 py-1.5 rounded-full text-[11px] font-bold"
+        style={{ background: 'rgba(0,0,0,0.05)', color: T.muted, backdropFilter: 'blur(8px)' }}>
         🔒 Simulador · nada se guarda
       </div>
 
