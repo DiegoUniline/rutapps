@@ -113,18 +113,20 @@ function parseIntent(text: string): Intent {
 }
 
 const HELP =
-  `🤖 *RutApp Bot* — comandos disponibles:\n\n` +
-  `📊 *reporte hoy* / *reporte ayer* / *reporte 12/06*\n` +
-  `   Genera el PDF del día con ventas, cobros, gastos.\n\n` +
-  `📦 *stock bajo* / *stock bajo 10*\n` +
-  `   Lista productos con inventario debajo del mínimo (o umbral).\n` +
-  `📦 *stock <producto>*\n` +
-  `   Inventario de un producto.\n\n` +
-  `👤 *cliente <nombre>*\n` +
-  `   Saldo y últimas ventas del cliente.\n\n` +
-  `💰 *cobros hoy* / *cobros ayer*\n` +
-  `   Resumen de cobros recibidos.\n\n` +
-  `Escribe *ayuda* para ver este menú.`;
+  `🤖 Soy *Jarvis*, la IA de RutApp. Respondo únicamente con información real del sistema de tu empresa.\n\n` +
+  `Puedes preguntarme en lenguaje natural sobre:\n` +
+  `📊 Ventas, pedidos y reportes PDF\n` +
+  `📦 Productos, stock y existencias\n` +
+  `👤 Clientes, saldos y cuentas por cobrar\n` +
+  `💰 Cobros, pagos, métodos de pago y gastos\n\n` +
+  `Ejemplos:\n` +
+  `• "Mándame el reporte de hoy en PDF"\n` +
+  `• "¿Qué productos tengo en stock?"\n` +
+  `• "¿Quién vendió la última venta?"\n` +
+  `• "¿Qué pedidos tengo hoy?"\n` +
+  `• "¿Quién me debe más?"\n` +
+  `• "Detalle de la venta VTA-0001"\n\n` +
+  `⚠️ Solo puedo recibir texto; no audios, imágenes ni stickers.`;
 
 // ----------------- Data helpers -----------------
 function dayRange(d: Date) {
