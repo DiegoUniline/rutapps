@@ -55,6 +55,9 @@ export default function RutaDashboard() {
     const s = search.trim().toLowerCase();
     return texts.some(t => (t ?? '').toString().toLowerCase().includes(s));
   };
+  const isCancelado = (status?: string | null) => status === 'cancelado' || status === 'cancelada';
+  const isEntregaFinalizada = (status?: string | null) => status === 'hecho' || status === 'entregado';
+  const belongsToVendedor = (id?: string | null) => allVendedores || (!!vendedorId && id === vendedorId);
 
   const ventasFiltradas = useMemo(() => (ventas ?? [])
     .filter((v: any) => inRange(v.fecha))
@@ -63,10 +66,11 @@ export default function RutaDashboard() {
   , [ventas, from, to, search, clienteById]);
 
   const entregasFiltradas = useMemo(() => (entregas ?? [])
+    .filter((e: any) => belongsToVendedor(e.vendedor_ruta_id || e.vendedor_id))
     .filter((e: any) => inRange(e.fecha_entrega ?? e.fecha))
     .filter((e: any) => matchSearch([e.folio, clienteById.get(e.cliente_id)?.nombre]))
     .sort((a: any, b: any) => ((b.fecha_entrega ?? b.fecha) ?? '').localeCompare((a.fecha_entrega ?? a.fecha) ?? ''))
-  , [entregas, from, to, search, clienteById]);
+  , [entregas, from, to, search, clienteById, allVendedores, vendedorId]);
 
   const cobrosFiltrados = useMemo(() => (cobros ?? [])
     .filter((c: any) => inRange(c.fecha))
@@ -75,10 +79,11 @@ export default function RutaDashboard() {
   , [cobros, from, to, search, clienteById]);
 
   const gastosFiltrados = useMemo(() => (gastos ?? [])
+    .filter((g: any) => belongsToVendedor(g.vendedor_id))
     .filter((g: any) => inRange(g.fecha))
     .filter((g: any) => matchSearch([g.concepto, g.descripcion, g.categoria]))
     .sort((a: any, b: any) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
-  , [gastos, from, to, search]);
+  , [gastos, from, to, search, allVendedores, vendedorId]);
 
   const devolucionesFiltradas = useMemo(() => (devoluciones ?? [])
     .filter((d: any) => inRange(d.fecha))
@@ -99,7 +104,7 @@ export default function RutaDashboard() {
   const topClientes = useMemo(() => {
     const map = new Map<string, { nombre: string; total: number; count: number }>();
     ventasFiltradas.forEach((v: any) => {
-      if (v.status === 'cancelada') return;
+      if (isCancelado(v.status)) return;
       const key = v.cliente_id ?? 'sin';
       const nombre = clienteById.get(v.cliente_id)?.nombre ?? 'Cliente';
       const cur = map.get(key) ?? { nombre, total: 0, count: 0 };
