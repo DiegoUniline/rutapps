@@ -130,81 +130,87 @@ function dayRange(d: Date) {
 async function buildReporte(empresaId: string, date: Date, label: string) {
   const { start, end } = dayRange(date);
   const [ventasRes, cobrosRes, gastosRes, empresaRes] = await Promise.all([
-    admin.from("ventas").select("id, folio, total, status, condicion_pago, clientes(nombre)").eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
-    admin.from("cobros").select("id, monto, metodo_pago, clientes(nombre)").eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
-    admin.from("gastos").select("id, monto, concepto").eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
-    admin.from("empresas").select("nombre, razon_social").eq("id", empresaId).maybeSingle(),
+    admin.from("ventas")
+      .select("id, folio, total, status, condicion_pago, clientes(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("cobros")
+      .select("id, monto, metodo_pago, referencia, clientes(nombre)")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("gastos")
+      .select("id, monto, concepto, notas")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("empresas")
+      .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
+      .eq("id", empresaId).maybeSingle(),
   ]);
 
-  const ventas = (ventasRes.data || []).filter((v: any) => v.status !== "cancelada" && v.status !== "cancelado");
-  const totalVentas = ventas.reduce((s: number, v: any) => s + Number(v.total || 0), 0);
-  const cobros = cobrosRes.data || [];
-  const totalCobros = cobros.reduce((s: number, c: any) => s + Number(c.monto || 0), 0);
-  const gastos = gastosRes.data || [];
-  const totalGastos = gastos.reduce((s: number, g: any) => s + Number(g.monto || 0), 0);
+  const allVentas = (ventasRes.data || []) as any[];
+  const ventas = allVentas.filter(v => v.status !== "cancelada" && v.status !== "cancelado");
+  const canceladas = allVentas.filter(v => v.status === "cancelada" || v.status === "cancelado");
+
+  const totalVentas = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalContado = ventas.filter(v => (v.condicion_pago || "").toLowerCase() === "contado").reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalCredito = ventas.filter(v => (v.condicion_pago || "").toLowerCase() === "credito" || (v.condicion_pago || "").toLowerCase() === "crédito").reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalCancelado = canceladas.reduce((s, v) => s + Number(v.total || 0), 0);
+
+  const cobros = (cobrosRes.data || []) as any[];
+  const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
+  const gastos = (gastosRes.data || []) as any[];
+  const totalGastos = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
+
   const cobrosPorMetodo: Record<string, number> = {};
-  for (const c of cobros as any[]) {
+  for (const c of cobros) {
     const m = c.metodo_pago || "otro";
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto || 0);
   }
 
-  const empresaNombre = empresaRes.data?.razon_social || empresaRes.data?.nombre || "Mi Empresa";
-
-  // PDF
-  const doc = new jsPDF({ unit: "pt", format: "letter" });
-  let y = 50;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-  doc.text(empresaNombre, 40, y); y += 22;
-  doc.setFontSize(12); doc.text(`Reporte del día (${label})`, 40, y); y += 16;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-  doc.text(`Fecha: ${date.toLocaleDateString("es-MX")}`, 40, y); y += 20;
-
-  // KPIs
-  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Resumen", 40, y); y += 16;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-  const kpis = [
-    ["Total Ventas", fmt(totalVentas), `${ventas.length} folios`],
-    ["Total Cobros", fmt(totalCobros), `${cobros.length} mov.`],
-    ["Total Gastos", fmt(totalGastos), `${gastos.length} mov.`],
-    ["Neto (Cobros - Gastos)", fmt(totalCobros - totalGastos), ""],
-  ];
-  for (const [k, v, extra] of kpis) { doc.text(`${k}: ${v}  ${extra}`, 40, y); y += 14; }
-  y += 8;
-
-  // Ventas
-  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Ventas", 40, y); y += 14;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  for (const v of ventas as any[]) {
-    if (y > 740) { doc.addPage(); y = 50; }
-    const cli = v.clientes?.nombre || "—";
-    doc.text(`${v.folio || v.id.slice(0,8)}  ${cli.slice(0,40)}  ${v.condicion_pago || ""}  ${fmt(Number(v.total))}`, 40, y);
-    y += 12;
-  }
-  y += 6;
-
-  // Cobros por método
-  if (y > 700) { doc.addPage(); y = 50; }
-  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Cobros por método", 40, y); y += 14;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-  for (const [m, mt] of Object.entries(cobrosPorMetodo)) {
-    doc.text(`${m}: ${fmt(mt)}`, 40, y); y += 12;
-  }
-  y += 6;
-
-  // Gastos
-  if (gastos.length) {
-    if (y > 700) { doc.addPage(); y = 50; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Gastos", 40, y); y += 14;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    for (const g of gastos as any[]) {
-      if (y > 740) { doc.addPage(); y = 50; }
-      doc.text(`${(g.concepto || "—").slice(0,60)}  ${fmt(Number(g.monto))}`, 40, y); y += 12;
+  // Productos agregados desde venta_lineas
+  const prodMap = new Map<string, { codigo: string; nombre: string; cantidad: number; total: number }>();
+  for (const v of ventas) {
+    for (const l of (v.venta_lineas || []) as any[]) {
+      const codigo = l.productos?.codigo || "";
+      const nombre = l.productos?.nombre || "—";
+      const key = `${codigo}::${nombre}`;
+      const prev = prodMap.get(key) || { codigo, nombre, cantidad: 0, total: 0 };
+      prev.cantidad += Number(l.cantidad || 0);
+      prev.total += Number(l.total || 0);
+      prodMap.set(key, prev);
     }
   }
+  const productos = Array.from(prodMap.values()).sort((a, b) => b.total - a.total);
 
-  const pdfBytes = doc.output("arraybuffer");
+  const empresa = empresaRes.data || {};
+
+  const pdfBytes = await generarReporteBotPdf({
+    empresa,
+    fechaLabel: `Reporte del día (${label})`,
+    fechaISO: date.toISOString().slice(0, 10),
+    totals: {
+      totalVentas, totalContado, totalCredito, totalCancelado,
+      totalCobros, totalGastos, cobrosPorMetodo,
+      countVentas: ventas.length, countCobros: cobros.length, countGastos: gastos.length,
+    },
+    ventasActivas: ventas.map(v => ({
+      folio: v.folio,
+      cliente: v.clientes?.nombre || "—",
+      condicion_pago: v.condicion_pago || "",
+      total: Number(v.total || 0),
+    })),
+    ventasCanceladas: canceladas.map(v => ({
+      folio: v.folio, cliente: v.clientes?.nombre || "—", total: Number(v.total || 0),
+    })),
+    productos,
+    cobros: cobros.map(c => ({
+      cliente: c.clientes?.nombre || "—",
+      metodo_pago: c.metodo_pago || "",
+      referencia: c.referencia,
+      monto: Number(c.monto || 0),
+    })),
+    gastos: gastos.map(g => ({ concepto: g.concepto, notas: g.notas, monto: Number(g.monto || 0) })),
+  });
+
   return {
-    pdfBytes: new Uint8Array(pdfBytes),
+    pdfBytes,
     summary: `📊 Reporte ${label}: ventas ${fmt(totalVentas)} (${ventas.length}), cobros ${fmt(totalCobros)}, gastos ${fmt(totalGastos)}.`,
   };
 }
