@@ -37,6 +37,8 @@ export default function RutaDashboard() {
   const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
   const { data: cobros } = useOfflineQuery('cobros', allVendedores ? { empresa_id: empresa?.id } : { empresa_id: empresa?.id, user_id: vendedorUserId }, { enabled: cobrosEnabled });
   const { data: devoluciones } = useOfflineQuery('devoluciones', vendedorId ? { empresa_id: empresa?.id, vendedor_id: vendedorId } : { empresa_id: empresa?.id }, { enabled: vendorScopedEnabled });
+  const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: ventaLineas } = useOfflineQuery('venta_lineas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   const clienteById = useMemo(() => {
     const m = new Map<string, any>();
