@@ -566,13 +566,37 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (upErr) return { error: String(upErr) };
     const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
-    return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary };
+    return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary, resultado: summary };
   }
 
   if (name === "consultar_stock_bajo") {
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const msg = await buildStockMessage(empresaId, args?.umbral ?? null, null);
     return { resultado: msg };
+  }
+
+  if (name === "consultar_stock_disponible") {
+    if (!need("stock")) return { error: "Sin permiso para stock" };
+    const lim = Math.min(Number(args?.limite || 15), 30);
+    let q = admin.from("productos")
+      .select("codigo, nombre, cantidad, stock_min, precio")
+      .eq("empresa_id", empresaId)
+      .eq("activo", true)
+      .gt("cantidad", 0)
+      .order("cantidad", { ascending: false })
+      .limit(lim);
+    const query = String(args?.query || "").trim();
+    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    const productos = data || [];
+    if (!productos.length) return { resultado: `📦 No encontré productos con stock disponible${query ? ` para "${query}"` : ""}.` };
+    let resultado = `📦 *Productos con stock disponible${query ? ` (${query})` : ""}:*\n\n`;
+    for (const p of productos as any[]) {
+      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)}*${p.precio != null ? ` · Precio: ${fmt(Number(p.precio || 0))}` : ""}\n`;
+    }
+    if (productos.length === lim) resultado += `\nMostré los primeros ${lim}. Puedes pedirme un producto por nombre o código.`;
+    return { resultado, productos };
   }
 
   if (name === "buscar_producto") {
@@ -582,7 +606,11 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
       .eq("empresa_id", empresaId)
       .or(`nombre.ilike.%${args.query}%,codigo.ilike.%${args.query}%`)
       .limit(10);
-    return { productos: data || [] };
+    const productos = data || [];
+    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args.query}".` };
+    let resultado = `📦 *Productos encontrados:*\n\n`;
+    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)}* · Precio: ${fmt(Number(p.precio || 0))}\n`;
+    return { resultado, productos };
   }
 
   if (name === "consultar_cliente") {
