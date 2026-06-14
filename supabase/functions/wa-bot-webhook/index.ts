@@ -236,21 +236,22 @@ async function buildStockMessage(empresaId: string, threshold: number | null, no
   if (nombre) {
     const safeNombre = cleanLike(nombre);
     const { data } = await activeProduct(admin.from("productos")
-      .select("id, codigo, nombre, cantidad, min, precio_principal, unidad_granel")
+      .select(PRODUCTO_SELECT_BASE)
       .eq("empresa_id", empresaId)
       .or(`nombre.ilike.%${safeNombre}%,codigo.ilike.%${safeNombre}%`)
       .limit(10));
     if (!data || !data.length) return `❌ No encontré productos que coincidan con "${nombre}".`;
     let msg = `📦 Resultados para "${nombre}":\n\n`;
-    for (const p of data) {
-      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"} · Mín: ${p.min ?? 0}${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
+    for (const p of data as any[]) {
+      const u = unitFor(p);
+      msg += `• ${p.codigo || ""} ${p.nombre}\n   Stock: ${p.cantidad ?? 0} ${u} · Mín: ${p.min ?? 0}${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
     }
     return msg;
   }
   // stock bajo
   const t = threshold;
   let q = activeProduct(admin.from("productos")
-    .select("id, codigo, nombre, cantidad, min, unidad_granel")
+    .select(PRODUCTO_SELECT_BASE)
     .eq("empresa_id", empresaId)
     .order("cantidad", { ascending: true })
     .limit(30));
@@ -263,8 +264,9 @@ async function buildStockMessage(empresaId: string, threshold: number | null, no
   }).slice(0, 20);
   if (!items.length) return `✅ No hay productos con stock bajo${t !== null ? ` (umbral ${t})` : ""}.`;
   let msg = `📦 *Productos con stock bajo${t !== null ? ` (≤ ${t})` : ""}:*\n\n`;
-  for (const p of items) {
-    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0} ${p.unidad_granel || "pzs"}${p.min ? ` / min ${p.min}` : ""}\n`;
+  for (const p of items as any[]) {
+    const u = unitFor(p);
+    msg += `• ${p.codigo || ""} ${p.nombre} — ${p.cantidad ?? 0} ${u}${p.min ? ` / min ${p.min}` : ""}\n`;
   }
   return msg;
 }
