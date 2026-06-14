@@ -904,9 +904,10 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
     return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
   }
 
-  // Nombre de empresa para el system prompt
-  const { data: emp } = await admin.from("empresas").select("nombre").eq("id", opts.empresaId).maybeSingle();
+  // Empresa: nombre + zona horaria para el system prompt y las herramientas
+  const { data: emp } = await admin.from("empresas").select("nombre, zona_horaria").eq("id", opts.empresaId).maybeSingle();
   const empresaNombre = emp?.nombre || "tu empresa";
+  const tz = (emp?.zona_horaria as string | null) || DEFAULT_TZ;
 
   // Contexto breve: últimos 6 turnos de este teléfono
   const { data: prev } = await admin.from("wa_bot_logs")
@@ -920,7 +921,14 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
   }
 
   const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
-  const hoyMx = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const hoyMx = (() => {
+    try {
+      return new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: tz });
+    } catch {
+      return new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: DEFAULT_TZ });
+    }
+  })();
+  const hoyIso = todayInTz(tz);
 
   const system = `Eres *Jarvis*, el asistente IA del sistema RutApp para la empresa "${empresaNombre}". Hablas español de México por WhatsApp.
 
