@@ -8,11 +8,14 @@ interface Props {
   setCondicionPago: (v: 'contado' | 'credito' | 'por_definir') => void;
   setStep: (s: Step) => void;
   urlClienteId: string | null;
+  clienteId: string | null;
 }
 
-export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId }: Props) {
+export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId }: Props) {
   if (sinCompra) return null;
-  const nextStep = urlClienteId ? 'devoluciones' : 'cliente';
+  const hasCliente = !!(urlClienteId || clienteId);
+  const nextStep = hasCliente ? 'devoluciones' : 'cliente';
+
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
@@ -35,7 +38,7 @@ export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPa
             <div><p className="text-[14px] font-bold text-foreground">Pedido</p><p className="text-[11px] text-muted-foreground mt-0.5">Se entrega después · Todos los productos disponibles</p></div>
           </div>
         </button>
-        <button onClick={() => setSinCompra(true)}
+        <button onClick={() => { setSinCompra(true); if (!hasCliente) setStep('cliente'); }}
           className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-muted-foreground/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0"><EyeOff className="h-5 w-5 text-muted-foreground" /></div>
