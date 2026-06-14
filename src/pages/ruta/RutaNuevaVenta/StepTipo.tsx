@@ -8,11 +8,14 @@ interface Props {
   setCondicionPago: (v: 'contado' | 'credito' | 'por_definir') => void;
   setStep: (s: Step) => void;
   urlClienteId: string | null;
+  clienteId: string | null;
 }
 
-export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId }: Props) {
+export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId }: Props) {
   if (sinCompra) return null;
-  const nextStep = urlClienteId ? 'devoluciones' : 'cliente';
+  const hasCliente = !!(urlClienteId || clienteId);
+  const nextStep = hasCliente ? 'devoluciones' : 'cliente';
+
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
