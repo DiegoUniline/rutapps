@@ -697,6 +697,9 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
       <Route path="/logistica/reportes" element={<LogisticaReportesPage />} />
       <Route path="/ventas/:id" element={<VentaFormPage />} />
+      <Route path="/cotizaciones" element={<CotizacionesListPage />} />
+      <Route path="/cotizaciones/:id" element={<CotizacionFormPage />} />
+      <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
       {/* Parent menu redirects (avoid 404 when clicking parent group) */}
       <Route path="/almacen" element={<Navigate to="/almacen/inventario" replace />} />
       <Route path="/finanzas" element={<Navigate to="/finanzas/por-cobrar" replace />} />
