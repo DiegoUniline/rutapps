@@ -461,6 +461,16 @@ Deno.serve(async (req) => {
       return new Response("ok", { headers: corsHeaders });
     }
 
+    // Atajo: gestionar suscripciones a envíos automáticos
+    const subMatch = text.trim().toLowerCase().match(/^(activar|desactivar)\s+(reporte\s+diario|reporte|cobranza|alertas?)/i);
+    const isMisSubs = /^(mis\s+suscripciones|suscripciones|mis\s+env[ií]os)\s*$/i.test(text.trim());
+    if (subMatch || isMisSubs) {
+      const replyMsg = await handleSubscriptionCommand(auth.id, subMatch, isMisSubs);
+      await waSend(phone, replyMsg);
+      await log(empresaId, phone, text, "subscripciones", "ok", replyMsg.slice(0, 200));
+      return new Response("ok", { headers: corsHeaders });
+    }
+
     // ---- Agente IA con tool calling ----
     const result = await runAgent({
       empresaId,
