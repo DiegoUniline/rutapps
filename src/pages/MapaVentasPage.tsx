@@ -301,9 +301,14 @@ export default function MapaVentasPage() {
       </div>
 
       {/* Split: tabla izquierda + mapa derecha */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative">
         {/* Panel izquierdo: tabla con tabs */}
-        <div className="w-[420px] border-r border-border flex flex-col bg-card min-h-0 shrink-0">
+        <div
+          className={cn(
+            "border-r border-border flex flex-col bg-card min-h-0 shrink-0 transition-all duration-300 ease-in-out",
+            panelOpen ? "w-[420px]" : "w-0 overflow-hidden"
+          )}
+        >
           <PanelEntregas
             entregasData={entregasData ?? []}
             entregasConGps={entregasConGps}
@@ -313,6 +318,18 @@ export default function MapaVentasPage() {
             mapRef={mapRef}
           />
         </div>
+
+        {/* Botón toggle del panel (siempre visible en el borde) */}
+        <button
+          onClick={() => setPanelOpen(o => !o)}
+          className={cn(
+            "absolute top-3 z-20 bg-card border border-border rounded-r-md p-1.5 shadow-md hover:bg-accent transition-all",
+            panelOpen ? "left-[420px] rounded-l-none border-l-0" : "left-0 rounded-r-md"
+          )}
+          title={panelOpen ? "Ocultar panel" : "Mostrar panel"}
+        >
+          {panelOpen ? <ChevronLeft className="h-4 w-4 text-foreground" /> : <ChevronRight className="h-4 w-4 text-foreground" />}
+        </button>
 
         {/* Mapa derecha */}
         <div className="flex-1 relative min-h-0">
