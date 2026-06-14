@@ -155,9 +155,8 @@ export default function AdminPublicidadTab() {
   };
 
   const remove = async (ad: Publicidad) => {
-    const ok = await confirmDialog({
+    const ok = await confirmDialog(`¿Eliminar "${ad.titulo}"? Esta acción no se puede deshacer.`, {
       title: 'Eliminar anuncio',
-      description: `¿Eliminar "${ad.titulo}"? Esta acción no se puede deshacer.`,
       confirmText: 'Eliminar',
       variant: 'destructive',
     });
