@@ -764,6 +764,32 @@ export default function DashboardPage() {
   const { data: hoy } = useDashboardHoy(vendedorId || undefined);
   const { data: ventaLineasIS } = useDashboardVentaLineasIS(dateRange, vendedorId || undefined);
 
+  // === Período anterior (comparativo) ===
+  const prevRange = useMemo<DateRange>(() => {
+    const fromMs = dateRange.from.getTime();
+    const toMs = dateRange.to.getTime();
+    const spanMs = toMs - fromMs;
+    const dayMs = 24 * 60 * 60 * 1000;
+    const span = spanMs + dayMs;
+    return { from: new Date(fromMs - span), to: new Date(fromMs - dayMs) };
+  }, [dateRange]);
+  const { data: ventasPrev } = useDashboardVentas(prevRange, vendedorId || undefined);
+  const { data: cobrosPrev } = useDashboardCobros(prevRange, vendedorId || undefined);
+  const { data: comprasPrev } = useDashboardCompras(prevRange);
+  const { data: gastosPrev } = useDashboardGastos(prevRange, vendedorId || undefined);
+  const prevKpis = useMemo(() => {
+    const v = (ventasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
+    const c = (cobrosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
+    const co = (comprasPrev ?? []).reduce((s, r) => s + Number(r.total ?? 0), 0);
+    const g = (gastosPrev ?? []).reduce((s, r) => s + Number(r.monto ?? 0), 0);
+    const n = (ventasPrev ?? []).length;
+    return { ventas: v, cobros: c, compras: co, gastos: g, ticket: n > 0 ? v / n : 0 };
+  }, [ventasPrev, cobrosPrev, comprasPrev, gastosPrev]);
+  const calcTrend = (curr: number, prev: number) => {
+    if (!prev || prev === 0) return undefined;
+    return ((curr - prev) / prev) * 100;
+  };
+
   // === Datos para nuevas secciones ===
   const { data: monthlyGoal = 0 } = useMonthlyGoal();
   const monthRange = useMemo(() => ({ from: startOfMonthFn(new Date()), to: endOfMonthFn(new Date()) }), []);
