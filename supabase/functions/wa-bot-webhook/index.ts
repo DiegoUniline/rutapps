@@ -265,7 +265,7 @@ async function buildReporte(empresaId: string, fechaIso: string, label: string, 
   const pdfBytes = await generarReporteBotPdf({
     empresa,
     fechaLabel: `Reporte del día (${label})`,
-    fechaISO: date.toISOString().slice(0, 10),
+    fechaISO: fechaIso,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
       totalCobros, totalGastos, cobrosPorMetodo,
