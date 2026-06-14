@@ -2,6 +2,7 @@
 // reportes, stock, estado de cuenta y cobros. Público (verify_jwt = false).
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { generarReporteBotPdf } from "./reportePdf.ts";
+import { generarVentaBotPdf } from "./ventaPdf.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
