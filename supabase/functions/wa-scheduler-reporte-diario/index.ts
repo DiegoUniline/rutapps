@@ -137,28 +137,27 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
 async function run() {
   const { data: subs } = await admin
     .from("wa_bot_authorized_numbers")
-    .select("id, empresa_id, phone_e164, pref_hora_reporte_diario, pref_reporte_diario_frecuencia, last_sent_reporte_diario, auto_intro_sent_at, empresas:empresa_id(zona_horaria)")
+    .select("id, empresa_id, phone_e164, pref_hora_reporte_diario, pref_reporte_diario_frecuencia, pref_reporte_diario_formato, last_sent_reporte_diario, auto_intro_sent_at, empresas:empresa_id(zona_horaria)")
     .eq("activo", true)
     .eq("pref_reporte_diario", true);
 
   if (!subs?.length) return { processed: 0 };
 
-  const reportCache = new Map<string, { pdfUrl: string; summary: string }>();
+  const reportCache = new Map<string, { pdfUrl: string; xlsxUrl: string; summary: string }>();
   let processed = 0, sent = 0, failed = 0;
 
   for (const sub of subs as any[]) {
     const tz = sub.empresas?.zona_horaria || "America/Mexico_City";
     const parts = localParts(tz);
     const frecuencia = sub.pref_reporte_diario_frecuencia || "diario";
+    const formato = sub.pref_reporte_diario_formato || "pdf";
     const targetHour = sub.pref_hora_reporte_diario || 9;
 
-    // Para semanal: solo sábado a la hora objetivo
     if (frecuencia === "semanal" && parts.dow !== 6) continue;
     if (parts.hour !== targetHour) continue;
     if (parts.hour < 9 || parts.hour > 20) continue;
     if (sub.last_sent_reporte_diario === parts.date) continue;
 
-    // Rango de fechas
     const endLocal = parts.date;
     const startLocal = frecuencia === "semanal" ? addDays(endLocal, -6) : endLocal;
     const label = frecuencia === "semanal"
@@ -170,13 +169,21 @@ async function run() {
     let report = reportCache.get(cacheKey);
     if (!report) {
       try {
-        const { pdfBytes, summary } = await buildReporte(sub.empresa_id, startLocal, endLocal, tz, label);
-        const path = `${sub.empresa_id}/auto-reporte-${frecuencia}-${endLocal}-${Date.now()}.pdf`;
-        const up = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
-        if (up.error) { failed++; continue; }
-        const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60 * 60 * 24 * 2);
-        if (!signed?.signedUrl) { failed++; continue; }
-        report = { pdfUrl: signed.signedUrl, summary };
+        const { pdfBytes, xlsxBytes, summary } = await buildReporte(sub.empresa_id, startLocal, endLocal, tz, label);
+        const stamp = Date.now();
+        const pdfPath = `${sub.empresa_id}/auto-reporte-${frecuencia}-${endLocal}-${stamp}.pdf`;
+        const xlsxPath = `${sub.empresa_id}/auto-reporte-${frecuencia}-${endLocal}-${stamp}.xlsx`;
+        const [upPdf, upXlsx] = await Promise.all([
+          admin.storage.from("wa-bot-reports").upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true }),
+          admin.storage.from("wa-bot-reports").upload(xlsxPath, xlsxBytes, { contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", upsert: true }),
+        ]);
+        if (upPdf.error || upXlsx.error) { failed++; continue; }
+        const [{ data: sPdf }, { data: sXlsx }] = await Promise.all([
+          admin.storage.from("wa-bot-reports").createSignedUrl(pdfPath, 60 * 60 * 24 * 2),
+          admin.storage.from("wa-bot-reports").createSignedUrl(xlsxPath, 60 * 60 * 24 * 2),
+        ]);
+        if (!sPdf?.signedUrl || !sXlsx?.signedUrl) { failed++; continue; }
+        report = { pdfUrl: sPdf.signedUrl, xlsxUrl: sXlsx.signedUrl, summary };
         reportCache.set(cacheKey, report);
       } catch (e) {
         console.error("buildReporte error", e);
@@ -189,10 +196,23 @@ async function run() {
       await sleep(2000);
     }
 
-    const caption = `${report.summary}\n\n_Recibes este reporte automáticamente. Para cambiarlo escribe "desactivar reporte" o entra a RutApp → Bot WhatsApp._`;
-    const fileName = `reporte-${frecuencia}-${endLocal}.pdf`;
-    const ok = await waSendFile(sub.phone_e164, report.pdfUrl, fileName, caption);
-    if (ok) {
+    const caption = `${report.summary}\n\n_Recibes este reporte automáticamente. Cambia formato/horario en RutApp → Bot WhatsApp, o escribe "desactivar reporte"._`;
+    const sendPdf = formato === "pdf" || formato === "ambos";
+    const sendXlsx = formato === "excel" || formato === "ambos";
+
+    let anyOk = false;
+    if (sendPdf) {
+      const ok = await waSendFile(sub.phone_e164, report.pdfUrl, `reporte-${frecuencia}-${endLocal}.pdf`, caption);
+      if (ok) anyOk = true;
+      await sleep(2000);
+    }
+    if (sendXlsx) {
+      const captionXlsx = sendPdf ? `📎 Versión Excel del reporte` : caption;
+      const ok = await waSendFile(sub.phone_e164, report.xlsxUrl, `reporte-${frecuencia}-${endLocal}.xlsx`, captionXlsx);
+      if (ok) anyOk = true;
+    }
+
+    if (anyOk) {
       sent++;
       await admin.from("wa_bot_authorized_numbers").update({
         last_sent_reporte_diario: endLocal,
@@ -200,7 +220,7 @@ async function run() {
       }).eq("id", sub.id);
       await admin.from("wa_bot_logs").insert({
         empresa_id: sub.empresa_id, phone: sub.phone_e164, inbound_text: "(auto)",
-        intent: `auto_reporte_${frecuencia}`, outcome: "ok", response_summary: report.summary,
+        intent: `auto_reporte_${frecuencia}_${formato}`, outcome: "ok", response_summary: report.summary,
       });
     } else failed++;
 
@@ -209,6 +229,7 @@ async function run() {
 
   return { processed, sent, failed };
 }
+
 
 
 Deno.serve(async (req) => {
