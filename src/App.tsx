@@ -44,6 +44,9 @@ const ClientesListPage = lazy(() => import("@/pages/ClientesListPage"));
 const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
 const VentasListPage = lazy(() => import("@/pages/VentasListPage"));
 const VentaFormPage = lazy(() => import("@/pages/VentaForm/index"));
+const CotizacionesListPage = lazy(() => import("@/pages/CotizacionesListPage"));
+const CotizacionFormPage = lazy(() => import("@/pages/CotizacionFormPage"));
+const CotizacionPublicaPage = lazy(() => import("@/pages/CotizacionPublicaPage"));
 const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
 const PedidoPendienteDetailPage = lazy(() => import("@/pages/PedidoPendienteDetailPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
@@ -353,6 +356,7 @@ function AppRoutes() {
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
           <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
+          <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/partners" element={<PartnersLandingPage />} />
           <Route path="/tutoriales" element={<TutorialesPage />} />
@@ -693,6 +697,9 @@ function desktopRoutes(isBillingOwner: boolean) {
       <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
       <Route path="/logistica/reportes" element={<LogisticaReportesPage />} />
       <Route path="/ventas/:id" element={<VentaFormPage />} />
+      <Route path="/cotizaciones" element={<CotizacionesListPage />} />
+      <Route path="/cotizaciones/:id" element={<CotizacionFormPage />} />
+      <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
       {/* Parent menu redirects (avoid 404 when clicking parent group) */}
       <Route path="/almacen" element={<Navigate to="/almacen/inventario" replace />} />
       <Route path="/finanzas" element={<Navigate to="/finanzas/por-cobrar" replace />} />

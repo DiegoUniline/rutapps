@@ -68,6 +68,7 @@ export const MODULOS: ModuloDef[] = [
 
   // Ventas
   { id: 'ventas', label: 'Todas las ventas', group: 'Ventas' },
+  { id: 'ventas.cotizaciones', label: 'Cotizaciones', group: 'Ventas' },
   { id: 'ventas.reporte_diario', label: 'Reporte diario', group: 'Ventas' },
   { id: 'ventas.devoluciones', label: 'Devoluciones', group: 'Ventas' },
   { id: 'ventas.cobranza', label: 'Cobranza', group: 'Ventas' },
@@ -187,6 +188,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/dashboard': 'dashboard',
   '/supervisor': 'supervisor',
   '/ventas': 'ventas',
+  '/cotizaciones': 'ventas.cotizaciones',
   '/ventas/reporte-diario': 'ventas.reporte_diario',
   '/ventas/devoluciones': 'ventas.devoluciones',
   '/ventas/cobranza': 'ventas.cobranza',
