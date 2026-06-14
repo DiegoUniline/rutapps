@@ -144,16 +144,52 @@ export default function CotizacionFormPage() {
   async function handleSendWhatsApp() {
     const newId = isNew ? await handleSave('enviada') : (form.id as string);
     if (!newId) return;
-    // refetch latest with token + folio
+    const { data: emp } = await supabase.from('empresas')
+      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social')
+      .eq('id', empresa!.id).maybeSingle();
     const { data: cot } = await supabase.from('cotizaciones')
-      .select('*, clientes:cliente_id(nombre, telefono)')
+      .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
       .eq('id', newId).single();
     if (!cot) return;
     const tel = (cot as any).clientes?.telefono?.replace(/\D/g, '') ?? '';
+    if (!tel) { toast.error('El cliente no tiene teléfono'); return; }
     const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', symbol);
-    const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-    if (cot.estado === 'borrador') {
+
+    // Try sending via empresa's configured WhatsApp API
+    const { data: cfg } = await supabase.from('whatsapp_config')
+      .select('activo').eq('empresa_id', empresa!.id).maybeSingle();
+
+    let sentViaApi = false;
+    if (cfg?.activo) {
+      try {
+        const { sendDocumentWhatsApp } = await import('@/lib/whatsappDocument');
+        const blob = await buildCotizacionPdf(cot as any, emp as any, symbol);
+        const res = await sendDocumentWhatsApp({
+          blob,
+          fileName: `${(cot as any).folio}.pdf`,
+          empresaId: empresa!.id,
+          phone: tel,
+          caption: msg,
+          tipo: 'cotizacion',
+          referencia_id: newId,
+        });
+        if (res.success) {
+          sentViaApi = true;
+          toast.success('Cotización enviada por WhatsApp');
+        } else {
+          toast.error(res.error || 'No se pudo enviar por API, abriendo WhatsApp Web');
+        }
+      } catch (e: any) {
+        toast.error(e?.message || 'Error enviando por API');
+      }
+    }
+
+    if (!sentViaApi) {
+      const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+    }
+
+    if ((cot as any).estado === 'borrador') {
       await setEstado.mutateAsync({ id: newId, estado: 'enviada', extra: { enviada_wa_at: new Date().toISOString() } });
       setForm(f => ({ ...f, estado: 'enviada' }));
     } else {
