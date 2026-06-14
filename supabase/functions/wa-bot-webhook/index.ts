@@ -137,15 +137,79 @@ const HELP =
   `• "Detalle de la venta VTA-0001"\n\n` +
   `⚠️ Solo puedo recibir texto; no audios, imágenes ni stickers.`;
 
-// ----------------- Data helpers -----------------
-function dayRange(d: Date) {
-  const start = new Date(d); start.setHours(0, 0, 0, 0);
-  const end = new Date(d); end.setHours(23, 59, 59, 999);
-  return { start: start.toISOString(), end: end.toISOString() };
+// ----------------- Timezone helpers (usar zona horaria de la empresa) -----------------
+const DEFAULT_TZ = "America/Mexico_City";
+
+function tzOffsetMs(tz: string, date: Date): number {
+  // Offset (utc - local) en ms para la fecha dada en la zona indicada.
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const parts: any = {};
+  for (const p of dtf.formatToParts(date)) parts[p.type] = p.value;
+  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour === 24 ? 0 : +parts.hour, +parts.minute, +parts.second);
+  return asUTC - date.getTime();
 }
 
-async function buildReporte(empresaId: string, date: Date, label: string) {
-  const { start, end } = dayRange(date);
+function todayInTz(tz: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+}
+
+function addDaysIso(yyyy_mm_dd: string, days: number): string {
+  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
+  const t = Date.UTC(y, m - 1, d) + days * 86400000;
+  const dt = new Date(t);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+// Devuelve el rango UTC [start, end] que corresponde al día yyyy-mm-dd en la zona tz.
+function dayRange(yyyy_mm_dd: string, tz: string = DEFAULT_TZ) {
+  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
+  // Aproximación: medianoche supuesta como UTC, luego se corrige por offset.
+  let guessUtc = Date.UTC(y, m - 1, d, 0, 0, 0);
+  let off = tzOffsetMs(tz, new Date(guessUtc));
+  let startMs = guessUtc - off;
+  // Re-ajustar 1 vez por si cambia el offset (DST cerca del borde).
+  off = tzOffsetMs(tz, new Date(startMs));
+  startMs = guessUtc - off;
+  const endMs = startMs + 24 * 3600 * 1000 - 1;
+  return { start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() };
+}
+
+// Devuelve yyyy-mm-dd (en zona tz) interpretando entrada libre del usuario.
+function parseFechaTz(input: string | undefined | null, tz: string): string {
+  const today = todayInTz(tz);
+  if (!input) return today;
+  const t = String(input).toLowerCase().trim();
+  if (t === "hoy" || t === "today" || t === today) return today;
+  if (t === "ayer" || t === "yesterday") return addDaysIso(today, -1);
+  if (t === "antier" || t === "anteayer") return addDaysIso(today, -2);
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const y = +iso[1], mo = String(+iso[2]).padStart(2, "0"), d = String(+iso[3]).padStart(2, "0");
+    return `${y}-${mo}-${d}`;
+  }
+  const m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (m) {
+    const day = String(+m[1]).padStart(2, "0");
+    const mon = String(+m[2]).padStart(2, "0");
+    const yr = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : Number(today.slice(0, 4));
+    return `${yr}-${mon}-${day}`;
+  }
+  return today;
+}
+
+async function buildReporte(empresaId: string, fechaIso: string, label: string, tz: string) {
+  const { start, end } = dayRange(fechaIso, tz);
   const [ventasRes, cobrosRes, gastosRes, empresaRes] = await Promise.all([
     admin.from("ventas")
       .select("id, folio, total, status, condicion_pago, clientes(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))")
@@ -201,7 +265,7 @@ async function buildReporte(empresaId: string, date: Date, label: string) {
   const pdfBytes = await generarReporteBotPdf({
     empresa,
     fechaLabel: `Reporte del día (${label})`,
-    fechaISO: date.toISOString().slice(0, 10),
+    fechaISO: fechaIso,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
       totalCobros, totalGastos, cobrosPorMetodo,
@@ -297,8 +361,8 @@ async function buildClienteMessage(empresaId: string, query: string) {
 }
 
 
-async function buildCobrosMessage(empresaId: string, date: Date, label: string) {
-  const { start, end } = dayRange(date);
+async function buildCobrosMessage(empresaId: string, fechaIso: string, label: string, tz: string) {
+  const { start, end } = dayRange(fechaIso, tz);
   const { data } = await admin.from("cobros")
     .select("monto, metodo_pago, clientes(nombre)")
     .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end);
@@ -424,24 +488,7 @@ const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 
-function parseFecha(input: string | undefined | null): Date {
-  const now = new Date();
-  if (!input) return now;
-  const t = input.toLowerCase().trim();
-  if (t === "hoy" || t === "today") return now;
-  if (t === "ayer" || t === "yesterday") { const d = new Date(now); d.setDate(d.getDate()-1); return d; }
-  // ISO yyyy-mm-dd
-  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
-  // dd/mm/yyyy o dd-mm
-  const m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  if (m) {
-    const day = +m[1], mon = +m[2]-1;
-    const yr = m[3] ? (m[3].length === 2 ? 2000+ +m[3] : +m[3]) : now.getFullYear();
-    return new Date(yr, mon, day);
-  }
-  return now;
-}
+// parseFecha legacy eliminado: usar parseFechaTz(input, tz) que respeta zona horaria de la empresa.
 
 const TOOLS = [
   {
@@ -600,16 +647,16 @@ const TOOLS = [
   },
 ];
 
-async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean> }) {
-  const { empresaId, permisos } = ctx;
+async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean>; tz: string }) {
+  const { empresaId, permisos, tz } = ctx;
   const need = (k: string) => permisos[k];
 
   if (name === "generar_reporte_pdf") {
     if (!need("reportes")) return { error: "Sin permiso para reportes" };
-    const date = parseFecha(args?.fecha);
+    const fechaIso = parseFechaTz(args?.fecha, tz);
     const label = args?.fecha || "hoy";
-    const { pdfBytes, summary } = await buildReporte(empresaId, date, label);
-    const path = `${empresaId}/reporte-${date.toISOString().slice(0,10)}-${Date.now()}.pdf`;
+    const { pdfBytes, summary } = await buildReporte(empresaId, fechaIso, label, tz);
+    const path = `${empresaId}/reporte-${fechaIso}-${Date.now()}.pdf`;
     const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (upErr) return { error: String(upErr) };
     const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
@@ -688,15 +735,15 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "resumen_cobros") {
     if (!need("cobros")) return { error: "Sin permiso para cobros" };
-    const date = parseFecha(args?.fecha);
-    const msg = await buildCobrosMessage(empresaId, date, args?.fecha || "hoy");
+    const fechaIso = parseFechaTz(args?.fecha, tz);
+    const msg = await buildCobrosMessage(empresaId, fechaIso, args?.fecha || "hoy", tz);
     return { resultado: msg };
   }
 
   if (name === "resumen_ventas") {
     if (!need("reportes")) return { error: "Sin permiso para ventas" };
-    const date = parseFecha(args?.fecha);
-    const { start, end } = dayRange(date);
+    const fechaIso = parseFechaTz(args?.fecha, tz);
+    const { start, end } = dayRange(fechaIso, tz);
     const { data } = await admin.from("ventas")
       .select("folio, total, status, clientes(nombre)")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end);
@@ -705,7 +752,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const top: Record<string,number> = {};
     for (const x of v as any[]) { const c = x.clientes?.nombre || "—"; top[c]=(top[c]||0)+Number(x.total||0); }
     const topArr = Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
-    return { fecha: date.toISOString().slice(0,10), folios: v.length, total_ventas: total, top_clientes: topArr.map(([n,m])=>({cliente:n,monto:m})) };
+    return { fecha: fechaIso, folios: v.length, total_ventas: total, top_clientes: topArr.map(([n,m])=>({cliente:n,monto:m})) };
   }
 
   if (name === "cuentas_por_cobrar") {
@@ -791,8 +838,8 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (args?.tipo && ["pedido", "venta_directa"].includes(String(args.tipo))) q = q.eq("tipo", args.tipo);
     if (args?.status && ["borrador", "confirmado", "entregado", "facturado", "cancelado"].includes(String(args.status))) q = q.eq("status", args.status);
     if (args?.fecha) {
-      const date = parseFecha(args.fecha);
-      const { start, end } = dayRange(date);
+      const fechaIso = parseFechaTz(args.fecha, tz);
+      const { start, end } = dayRange(fechaIso, tz);
       q = q.gte("fecha", start).lte("fecha", end);
     }
     const { data: ventas, error } = await q;
@@ -857,9 +904,10 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
     return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
   }
 
-  // Nombre de empresa para el system prompt
-  const { data: emp } = await admin.from("empresas").select("nombre").eq("id", opts.empresaId).maybeSingle();
+  // Empresa: nombre + zona horaria para el system prompt y las herramientas
+  const { data: emp } = await admin.from("empresas").select("nombre, zona_horaria").eq("id", opts.empresaId).maybeSingle();
   const empresaNombre = emp?.nombre || "tu empresa";
+  const tz = (emp?.zona_horaria as string | null) || DEFAULT_TZ;
 
   // Contexto breve: últimos 6 turnos de este teléfono
   const { data: prev } = await admin.from("wa_bot_logs")
@@ -873,7 +921,14 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
   }
 
   const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
-  const hoyMx = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const hoyMx = (() => {
+    try {
+      return new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: tz });
+    } catch {
+      return new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: DEFAULT_TZ });
+    }
+  })();
+  const hoyIso = todayInTz(tz);
 
   const system = `Eres *Jarvis*, el asistente IA del sistema RutApp para la empresa "${empresaNombre}". Hablas español de México por WhatsApp.
 
@@ -894,7 +949,7 @@ FORMATO WHATSAPP:
 - Para stock muestra la unidad real del producto (ej. "150 PZA", "12.5 kg") tal como viene del campo 'unidad' en el resultado.
 - No uses markdown pesado (## o tablas); WhatsApp no las renderiza.
 
-Hoy es ${hoyMx}.`;
+Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando uses "hoy" o "ayer" en parámetros de fecha de las herramientas, se interpretan en esa zona; nunca uses UTC.`;
 
   const messages: any[] = [
     { role: "system", content: system },
@@ -911,7 +966,7 @@ Hoy es ${hoyMx}.`;
   const requiredTool = inferRequiredTool(opts.userMessage);
   if (requiredTool) {
     toolsUsed.push(requiredTool.name);
-    const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
+    const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
     if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
     // Reporte PDF: caption directo, no necesita pasar por LLM
     if (requiredTool.name === "generar_reporte_pdf") {
@@ -949,7 +1004,7 @@ Hoy es ${hoyMx}.`;
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
         toolsUsed.push(call.function.name);
-        const out: any = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
+        const out: any = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
         if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
         messages.push({
           role: "tool",
