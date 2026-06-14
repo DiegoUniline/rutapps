@@ -146,7 +146,7 @@ async function run() {
     const targetHour = sub.pref_hora_reporte_diario || 9;
 
     // Para semanal: solo sábado a la hora objetivo
-    if (frecuencia === "semanal" && parts.weekday !== 6) continue;
+    if (frecuencia === "semanal" && parts.dow !== 6) continue;
     if (parts.hour !== targetHour) continue;
     if (parts.hour < 9 || parts.hour > 20) continue;
     if (sub.last_sent_reporte_diario === parts.date) continue;
