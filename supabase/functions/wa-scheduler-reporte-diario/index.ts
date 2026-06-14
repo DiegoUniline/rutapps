@@ -171,6 +171,7 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     empresa: empresaRes.data || {},
     usuarioNombre: `Todos los usuarios`,
     fechaLabel: label,
+    label,
     fechaISO: endLocal,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
