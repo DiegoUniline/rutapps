@@ -738,6 +738,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     return { pdfUrl: signed?.signedUrl, fileName: `venta-${v.folio || "nota"}.pdf`, summary, resultado: summary };
   }
 
+  if (name === "consultar_stock_bajo") {
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const msg = await buildStockMessage(empresaId, args?.umbral ?? null, null);
     return { resultado: msg };
