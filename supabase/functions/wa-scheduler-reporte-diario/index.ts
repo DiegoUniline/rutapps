@@ -134,12 +134,14 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
 
 
 
-async function run() {
-  const { data: subs } = await admin
+async function run(opts: { force?: boolean; phone?: string } = {}) {
+  let q = admin
     .from("wa_bot_authorized_numbers")
     .select("id, empresa_id, phone_e164, pref_hora_reporte_diario, pref_reporte_diario_frecuencia, pref_reporte_diario_formato, last_sent_reporte_diario, auto_intro_sent_at, empresas:empresa_id(zona_horaria)")
-    .eq("activo", true)
-    .eq("pref_reporte_diario", true);
+    .eq("activo", true);
+  if (!opts.force) q = q.eq("pref_reporte_diario", true);
+  if (opts.phone) q = q.eq("phone_e164", opts.phone);
+  const { data: subs } = await q;
 
   if (!subs?.length) return { processed: 0 };
 
