@@ -11,18 +11,20 @@ interface Props {
   setClienteCredito: (v: { credito: boolean; limite: number; dias: number } | null) => void;
   setCondicionPago: (v: 'contado' | 'credito' | 'por_definir') => void;
   setStep: (s: Step) => void;
+  sinCompra?: boolean;
 }
 
 export function StepCliente(props: Props) {
-  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep } = props;
+  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra } = props;
 
   const selectCliente = (id: string | null, nombre: string, credito: { credito: boolean; limite: number; dias: number } | null) => {
     setClienteId(id);
     setClienteNombre(nombre);
     setClienteCredito(credito);
     setCondicionPago('contado');
-    setStep('devoluciones');
+    setStep(sinCompra ? 'tipo' : 'devoluciones');
   };
+
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
