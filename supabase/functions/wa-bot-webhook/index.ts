@@ -647,16 +647,16 @@ const TOOLS = [
   },
 ];
 
-async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean> }) {
-  const { empresaId, permisos } = ctx;
+async function execTool(name: string, args: any, ctx: { empresaId: string; permisos: Record<string, boolean>; tz: string }) {
+  const { empresaId, permisos, tz } = ctx;
   const need = (k: string) => permisos[k];
 
   if (name === "generar_reporte_pdf") {
     if (!need("reportes")) return { error: "Sin permiso para reportes" };
-    const date = parseFecha(args?.fecha);
+    const fechaIso = parseFechaTz(args?.fecha, tz);
     const label = args?.fecha || "hoy";
-    const { pdfBytes, summary } = await buildReporte(empresaId, date, label);
-    const path = `${empresaId}/reporte-${date.toISOString().slice(0,10)}-${Date.now()}.pdf`;
+    const { pdfBytes, summary } = await buildReporte(empresaId, fechaIso, label, tz);
+    const path = `${empresaId}/reporte-${fechaIso}-${Date.now()}.pdf`;
     const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
     if (upErr) return { error: String(upErr) };
     const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
