@@ -14,14 +14,28 @@ export interface CotizacionLinea {
   producto_id?: string | null;
   descripcion?: string | null;
   cantidad: number;
+  unidad_id?: string | null;
   precio_unitario: number;
   descuento_pct?: number;
+  // Impuestos al estilo ventas
+  iva_pct?: number;
+  ieps_pct?: number;
+  iva_monto?: number;
+  ieps_monto?: number;
+  // Legacy combinado (compatibilidad PDF/RPC stock)
   impuesto_pct?: number;
+  impuesto?: number;
   subtotal: number;
-  impuesto: number;
   total: number;
   producto_snapshot?: any;
+  lista_precio_id?: string | null;
+  precio_manual?: boolean;
   orden?: number;
+  // joined / display helpers
+  productos?: any;
+  unidad_label?: string;
+  impuestos_label?: string;
+  display_unit_price?: number;
 }
 
 export interface Cotizacion {
@@ -31,6 +45,7 @@ export interface Cotizacion {
   cliente_id?: string | null;
   vendedor_id?: string | null;
   tarifa_id?: string | null;
+  lista_precio_id?: string | null;
   almacen_id?: string | null;
   fecha: string;
   vigencia_dias: number;
@@ -38,6 +53,10 @@ export interface Cotizacion {
   subtotal: number;
   descuento: number;
   impuestos: number;
+  iva_total?: number;
+  ieps_total?: number;
+  descuento_extra?: number;
+  descuento_extra_tipo?: 'porcentaje' | 'monto';
   total: number;
   moneda?: string;
   notas?: string | null;
@@ -54,7 +73,7 @@ export interface Cotizacion {
 }
 
 const SELECT_LIST = `
-  id, folio, fecha, vigencia_dias, vence_at, total, subtotal, impuestos,
+  id, folio, fecha, vigencia_dias, vence_at, total, subtotal, impuestos, iva_total, ieps_total,
   estado, cliente_id, vendedor_id, venta_id, enviada_wa_at, token_publico,
   created_at, notas,
   clientes:cliente_id(nombre, telefono)
@@ -63,7 +82,7 @@ const SELECT_LIST = `
 const SELECT_FULL = `
   *,
   clientes:cliente_id(nombre, telefono, rfc, direccion),
-  cotizacion_lineas(*)
+  cotizacion_lineas(*, productos:producto_id(id, codigo, nombre, precio_principal, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, unidad_venta_id, es_granel, unidad_granel))
 `;
 
 export function useCotizaciones() {
@@ -116,14 +135,19 @@ export function useSaveCotizacion() {
         cliente_id: c.cliente_id ?? null,
         vendedor_id: c.vendedor_id ?? user?.id ?? null,
         tarifa_id: c.tarifa_id ?? null,
+        lista_precio_id: c.lista_precio_id ?? null,
         almacen_id: c.almacen_id ?? null,
         fecha: c.fecha,
         vigencia_dias: c.vigencia_dias ?? 15,
         subtotal: c.subtotal ?? 0,
         descuento: c.descuento ?? 0,
-        impuestos: c.impuestos ?? 0,
+        impuestos: (c.iva_total ?? 0) + (c.ieps_total ?? 0),
+        iva_total: c.iva_total ?? 0,
+        ieps_total: c.ieps_total ?? 0,
+        descuento_extra: c.descuento_extra ?? 0,
+        descuento_extra_tipo: c.descuento_extra_tipo ?? 'porcentaje',
         total: c.total ?? 0,
-        moneda: c.moneda ?? 'MXN',
+        moneda: c.moneda ?? empresa.moneda ?? 'MXN',
         notas: c.notas ?? null,
         estado: c.estado ?? 'borrador',
       };
@@ -132,7 +156,6 @@ export function useSaveCotizacion() {
       if (cotId) {
         const { error } = await supabase.from('cotizaciones').update(payload).eq('id', cotId);
         if (error) throw error;
-        // Replace lines
         await supabase.from('cotizacion_lineas').delete().eq('cotizacion_id', cotId);
       } else {
         payload.created_by = user?.id ?? null;
@@ -144,21 +167,32 @@ export function useSaveCotizacion() {
       if (lineas.length) {
         const toInsert = lineas
           .filter(l => l.producto_id || l.descripcion)
-          .map((l, i) => ({
-            cotizacion_id: cotId,
-            empresa_id: empresa.id,
-            producto_id: l.producto_id ?? null,
-            descripcion: l.descripcion ?? null,
-            cantidad: Number(l.cantidad ?? 0),
-            precio_unitario: Number(l.precio_unitario ?? 0),
-            descuento_pct: Number(l.descuento_pct ?? 0),
-            impuesto_pct: Number(l.impuesto_pct ?? 0),
-            subtotal: Number(l.subtotal ?? 0),
-            impuesto: Number(l.impuesto ?? 0),
-            total: Number(l.total ?? 0),
-            producto_snapshot: l.producto_snapshot ?? null,
-            orden: i,
-          }));
+          .map((l, i) => {
+            const iva_pct = Number(l.iva_pct ?? 0);
+            const ieps_pct = Number(l.ieps_pct ?? 0);
+            const iva_monto = Number(l.iva_monto ?? 0);
+            const ieps_monto = Number(l.ieps_monto ?? 0);
+            return {
+              cotizacion_id: cotId,
+              empresa_id: empresa.id,
+              producto_id: l.producto_id ?? null,
+              descripcion: l.descripcion ?? null,
+              cantidad: Number(l.cantidad ?? 0),
+              unidad_id: l.unidad_id ?? null,
+              precio_unitario: Number(l.precio_unitario ?? 0),
+              descuento_pct: Number(l.descuento_pct ?? 0),
+              iva_pct, ieps_pct, iva_monto, ieps_monto,
+              // legacy combinado (para PDF público y RPC validar_stock)
+              impuesto_pct: iva_pct + ieps_pct,
+              impuesto: iva_monto + ieps_monto,
+              subtotal: Number(l.subtotal ?? 0),
+              total: Number(l.total ?? 0),
+              producto_snapshot: l.producto_snapshot ?? null,
+              lista_precio_id: l.lista_precio_id ?? null,
+              precio_manual: !!l.precio_manual,
+              orden: i,
+            };
+          });
         if (toInsert.length) {
           const { error } = await supabase.from('cotizacion_lineas').insert(toInsert);
           if (error) throw error;
