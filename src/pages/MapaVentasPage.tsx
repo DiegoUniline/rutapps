@@ -319,20 +319,16 @@ export default function MapaVentasPage() {
           />
         </div>
 
-        {/* Botón toggle del panel (siempre visible en el borde) */}
-        <button
-          onClick={() => setPanelOpen(o => !o)}
-          className={cn(
-            "absolute top-3 z-20 bg-card border border-border rounded-r-md p-1.5 shadow-md hover:bg-accent transition-all",
-            panelOpen ? "left-[420px] rounded-l-none border-l-0" : "left-0 rounded-r-md"
-          )}
-          title={panelOpen ? "Ocultar panel" : "Mostrar panel"}
-        >
-          {panelOpen ? <ChevronLeft className="h-4 w-4 text-foreground" /> : <ChevronRight className="h-4 w-4 text-foreground" />}
-        </button>
-
         {/* Mapa derecha */}
         <div className="flex-1 relative min-h-0">
+          {/* Botón toggle del panel (en el borde izquierdo del mapa = borde derecho del panel) */}
+          <button
+            onClick={() => setPanelOpen(o => !o)}
+            className="absolute top-3 left-0 z-20 bg-card border border-border rounded-r-md p-1.5 shadow-md hover:bg-accent transition-all"
+            title={panelOpen ? "Ocultar panel" : "Mostrar panel"}
+          >
+            {panelOpen ? <ChevronLeft className="h-4 w-4 text-foreground" /> : <ChevronRight className="h-4 w-4 text-foreground" />}
+          </button>
           {loadingEntregas && (
             <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
