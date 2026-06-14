@@ -82,7 +82,7 @@ const SELECT_LIST = `
 const SELECT_FULL = `
   *,
   clientes:cliente_id(nombre, telefono, rfc, direccion),
-  cotizacion_lineas(*, productos:producto_id(id, codigo, nombre, precio_principal, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, unidad_venta_id, es_granel, unidad_granel))
+  cotizacion_lineas(*, productos:producto_id(id, codigo, nombre, precio_principal, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, unidad_venta_id, es_granel, unidad_granel), unidades:unidad_id(nombre, abreviatura))
 `;
 
 export function useCotizaciones() {
