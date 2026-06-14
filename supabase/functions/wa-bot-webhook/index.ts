@@ -137,15 +137,79 @@ const HELP =
   `• "Detalle de la venta VTA-0001"\n\n` +
   `⚠️ Solo puedo recibir texto; no audios, imágenes ni stickers.`;
 
-// ----------------- Data helpers -----------------
-function dayRange(d: Date) {
-  const start = new Date(d); start.setHours(0, 0, 0, 0);
-  const end = new Date(d); end.setHours(23, 59, 59, 999);
-  return { start: start.toISOString(), end: end.toISOString() };
+// ----------------- Timezone helpers (usar zona horaria de la empresa) -----------------
+const DEFAULT_TZ = "America/Mexico_City";
+
+function tzOffsetMs(tz: string, date: Date): number {
+  // Offset (utc - local) en ms para la fecha dada en la zona indicada.
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const parts: any = {};
+  for (const p of dtf.formatToParts(date)) parts[p.type] = p.value;
+  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour === 24 ? 0 : +parts.hour, +parts.minute, +parts.second);
+  return asUTC - date.getTime();
 }
 
-async function buildReporte(empresaId: string, date: Date, label: string) {
-  const { start, end } = dayRange(date);
+function todayInTz(tz: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+}
+
+function addDaysIso(yyyy_mm_dd: string, days: number): string {
+  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
+  const t = Date.UTC(y, m - 1, d) + days * 86400000;
+  const dt = new Date(t);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+// Devuelve el rango UTC [start, end] que corresponde al día yyyy-mm-dd en la zona tz.
+function dayRange(yyyy_mm_dd: string, tz: string = DEFAULT_TZ) {
+  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
+  // Aproximación: medianoche supuesta como UTC, luego se corrige por offset.
+  let guessUtc = Date.UTC(y, m - 1, d, 0, 0, 0);
+  let off = tzOffsetMs(tz, new Date(guessUtc));
+  let startMs = guessUtc - off;
+  // Re-ajustar 1 vez por si cambia el offset (DST cerca del borde).
+  off = tzOffsetMs(tz, new Date(startMs));
+  startMs = guessUtc - off;
+  const endMs = startMs + 24 * 3600 * 1000 - 1;
+  return { start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString() };
+}
+
+// Devuelve yyyy-mm-dd (en zona tz) interpretando entrada libre del usuario.
+function parseFechaTz(input: string | undefined | null, tz: string): string {
+  const today = todayInTz(tz);
+  if (!input) return today;
+  const t = String(input).toLowerCase().trim();
+  if (t === "hoy" || t === "today" || t === today) return today;
+  if (t === "ayer" || t === "yesterday") return addDaysIso(today, -1);
+  if (t === "antier" || t === "anteayer") return addDaysIso(today, -2);
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const y = +iso[1], mo = String(+iso[2]).padStart(2, "0"), d = String(+iso[3]).padStart(2, "0");
+    return `${y}-${mo}-${d}`;
+  }
+  const m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (m) {
+    const day = String(+m[1]).padStart(2, "0");
+    const mon = String(+m[2]).padStart(2, "0");
+    const yr = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : Number(today.slice(0, 4));
+    return `${yr}-${mon}-${day}`;
+  }
+  return today;
+}
+
+async function buildReporte(empresaId: string, fechaIso: string, label: string, tz: string) {
+  const { start, end } = dayRange(fechaIso, tz);
   const [ventasRes, cobrosRes, gastosRes, empresaRes] = await Promise.all([
     admin.from("ventas")
       .select("id, folio, total, status, condicion_pago, clientes(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))")
