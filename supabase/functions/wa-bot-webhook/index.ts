@@ -2,6 +2,7 @@
 // reportes, stock, estado de cuenta y cobros. Público (verify_jwt = false).
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { generarReporteBotPdf } from "./reportePdf.ts";
+import { generarVentaBotPdf } from "./ventaPdf.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -495,13 +496,27 @@ const TOOLS = [
     type: "function",
     function: {
       name: "generar_reporte_pdf",
-      description: "Genera el reporte diario en PDF (ventas, cobros, gastos) para una fecha y lo devuelve como URL para enviar al cliente. Úsala cuando el usuario pida 'reporte', 'cierre del día', 'resumen del día' etc.",
+      description: "Genera el PDF del reporte diario (ventas, cobros, gastos) para una fecha. SOLO se debe llamar cuando el usuario pida EXPLÍCITAMENTE un PDF, archivo, documento o que le 'mande/envíe' el reporte. Si el usuario solo pide un 'resumen', 'cierre', 'cuánto vendí/gané' usa las herramientas de texto (resumen_ventas, resumen_cobros, consultar_gastos); NO generes PDF.",
       parameters: {
         type: "object",
         properties: {
           fecha: { type: "string", description: "Fecha: 'hoy', 'ayer', o formato dd/mm/yyyy o yyyy-mm-dd" },
         },
         required: ["fecha"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generar_venta_pdf",
+      description: "Genera el PDF de UNA venta específica por folio (nota de venta con líneas, totales y cobros). SOLO se debe llamar cuando el usuario pida EXPLÍCITAMENTE un PDF, archivo, documento o 'manda/envía' la nota. Si solo pregunta detalle de la venta, usa consultar_venta (texto).",
+      parameters: {
+        type: "object",
+        properties: {
+          folio: { type: "string", description: "Folio de la venta, ej. 'VTA-0001' o '0001'." },
+        },
+        required: ["folio"],
       },
     },
   },
@@ -661,6 +676,66 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (upErr) return { error: String(upErr) };
     const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
     return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary, resultado: summary };
+  }
+
+  if (name === "generar_venta_pdf") {
+    if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
+    const folio = String(args?.folio || "").trim();
+    if (!folio) return { error: "Folio requerido" };
+    const [{ data: ventas }, { data: emp }] = await Promise.all([
+      admin.from("ventas")
+        .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+        .eq("empresa_id", empresaId)
+        .ilike("folio", `%${folio}%`)
+        .order("fecha", { ascending: false })
+        .limit(1),
+      admin.from("empresas")
+        .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
+        .eq("id", empresaId).maybeSingle(),
+    ]);
+    const v: any = (ventas || [])[0];
+    if (!v) return { error: `No encontré la venta "${folio}".` };
+    let vendNombre = "—";
+    if (v.vendedor_id) {
+      const { data: prof } = await admin.from("profiles").select("nombre").eq("id", v.vendedor_id).maybeSingle();
+      vendNombre = prof?.nombre || "—";
+    }
+    const pdfBytes = await generarVentaBotPdf({
+      empresa: (emp as any) || {},
+      venta: {
+        folio: v.folio,
+        fecha: v.fecha,
+        cliente: v.clientes?.nombre || "—",
+        cliente_telefono: v.clientes?.telefono || null,
+        vendedor: vendNombre,
+        condicion_pago: v.condicion_pago,
+        status: v.status,
+        subtotal: Number(v.subtotal || 0),
+        descuento_total: Number(v.descuento_total || 0),
+        total: Number(v.total || 0),
+        saldo_pendiente: Number(v.saldo_pendiente || 0),
+      },
+      lineas: (v.venta_lineas || []).map((l: any) => ({
+        codigo: l.productos?.codigo || "",
+        nombre: l.productos?.nombre || "—",
+        cantidad: Number(l.cantidad || 0),
+        precio_unitario: Number(l.precio_unitario || 0),
+        descuento_pct: Number(l.descuento_pct || 0),
+        total: Number(l.total || 0),
+      })),
+      cobros: (v.cobro_aplicaciones || []).map((a: any) => ({
+        fecha: a.cobros?.fecha,
+        metodo: a.cobros?.metodo_pago,
+        referencia: a.cobros?.referencia,
+        monto: Number(a.monto_aplicado || 0),
+      })),
+    });
+    const path = `${empresaId}/venta-${(v.folio || "sin-folio").replace(/[^\w-]/g, "_")}-${Date.now()}.pdf`;
+    const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
+    if (upErr) return { error: String(upErr) };
+    const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
+    const summary = `📄 Nota ${v.folio} — ${v.clientes?.nombre || "—"} · Total ${fmt(Number(v.total || 0))}.`;
+    return { pdfUrl: signed?.signedUrl, fileName: `venta-${v.folio || "nota"}.pdf`, summary, resultado: summary };
   }
 
   if (name === "consultar_stock_bajo") {
@@ -885,16 +960,22 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   return { error: "Herramienta desconocida" };
 }
 
-// Atajos mínimos: SOLO PDF directo y folio explícito. Todo lo demás lo decide el LLM.
+// Atajos mínimos: SOLO PDF cuando el usuario lo pide explícitamente.
+// Sin atajo para "reporte/cierre/resumen" sueltos — eso lo decide el LLM como texto.
+const PDF_KEYWORD = /\b(pdf|archivo|documento|m[áa]ndame|env[íi]ame|env[íi]a|m[áa]ndalo|imprime|imprimir|descargar)\b/i;
 function inferRequiredTool(text: string): { name: string; args: any } | null {
   const t = text.toLowerCase().trim();
-  // Reporte PDF explícito
-  if (/^(reporte|cierre|res(u|ú)men\s+del?\s+d(í|i)a)\b/.test(t) || /\bpdf\b/.test(t)) {
-    const fecha = /ayer/.test(t) ? "ayer" : "hoy";
-    return { name: "generar_reporte_pdf", args: { fecha } };
-  }
-  // Folio explícito (VTA-1234, PED-1, SAL-12)
   const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b/i)?.[0];
+  if (PDF_KEYWORD.test(t)) {
+    // Si menciona un folio + pide PDF → PDF de esa venta
+    if (folio) return { name: "generar_venta_pdf", args: { folio } };
+    // Reporte/cierre/resumen del día en PDF
+    if (/(reporte|cierre|res(u|ú)men|ventas?|cobros?|d[ií]a)/.test(t)) {
+      const fecha = /ayer/.test(t) ? "ayer" : "hoy";
+      return { name: "generar_reporte_pdf", args: { fecha } };
+    }
+  }
+  // Folio sin pedir PDF → detalle texto
   if (folio) return { name: "consultar_venta", args: { folio } };
   return null;
 }
@@ -939,7 +1020,9 @@ IDENTIDAD:
 REGLAS ABSOLUTAS:
 - PROHIBIDO inventar nombres, folios, montos, cantidades o cualquier dato. Si una herramienta no devuelve resultados, dilo claro: "No encontré ese dato en el sistema".
 - Para cualquier cifra, lista, cliente, producto, venta, cobro o saldo DEBES llamar a una herramienta primero. Nunca respondas un número de memoria.
-- Para reportes/cierres del día llama SIEMPRE 'generar_reporte_pdf'. No resumas el día entero a mano.
+- Para preguntas tipo "cuánto vendí/gané/cobré", "resumen", "cierre", "ventas de hoy/ayer" responde con TEXTO usando 'resumen_ventas' + 'resumen_cobros' + 'consultar_gastos'. NUNCA llames 'generar_reporte_pdf' a menos que el usuario use EXPLÍCITAMENTE la palabra "PDF", "archivo", "documento", "mándame", "envíame" o "imprime".
+- Para preguntas sobre una venta específica ("detalle de V-0001", "la venta de Juan") responde con TEXTO usando 'consultar_venta'. Llama 'generar_venta_pdf' SOLO si el usuario pide explícitamente el PDF/archivo/documento/nota de esa venta.
+- Si vas a generar un PDF, llama UNA SOLA herramienta de PDF y termina. No combines PDF + resumen de texto en la misma respuesta.
 - Usa el historial de conversación SOLO para entender referencias ("y de ayer", "y de ese cliente", "el mismo"). Los datos siempre vienen de las herramientas.
 - Si el usuario pide algo fuera de sus permisos (${permisosTxt}), avísale con respeto que pida a su admin.
 
@@ -968,9 +1051,10 @@ Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando use
     toolsUsed.push(requiredTool.name);
     const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
     if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
-    // Reporte PDF: caption directo, no necesita pasar por LLM
-    if (requiredTool.name === "generar_reporte_pdf") {
-      return { reply: out?.summary || "📄 Aquí tienes el reporte PDF.", intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+    // PDF: caption directo, no necesita pasar por LLM
+    if (requiredTool.name === "generar_reporte_pdf" || requiredTool.name === "generar_venta_pdf") {
+      const defaultMsg = requiredTool.name === "generar_venta_pdf" ? "📄 Aquí tienes la nota de venta." : "📄 Aquí tienes el reporte PDF.";
+      return { reply: out?.summary || defaultMsg, intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
     }
     // Folio: inyectamos el resultado como tool call sintético para que el LLM lo redacte
     messages.push({
