@@ -273,6 +273,65 @@ export default function WhatsAppBotPage() {
         </Table>
       </Card>
 
+      {/* Envíos automáticos por usuario */}
+      <Card className="p-4">
+        <h2 className="font-semibold mb-1">Envíos automáticos</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Elige qué reportes recibe cada número por WhatsApp. Llegan en la zona horaria de tu empresa, con segundos de retraso entre envíos para que no nos bloqueen.
+        </p>
+        <div className="space-y-3">
+          {(numbersQ.data || []).map((row: any) => (
+            <div key={row.id} className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{row.nombre || '—'}</div>
+                  <div className="text-xs font-mono text-muted-foreground">{row.phone_e164}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm">
+                    📊 Reporte diario
+                    {row.pref_reporte_diario && (
+                      <select
+                        className="ml-2 text-xs bg-background border border-border rounded px-1 py-0.5"
+                        value={row.pref_hora_reporte_diario || 9}
+                        onChange={(e) => updatePref.mutate({ id: row.id, patch: { pref_hora_reporte_diario: Number(e.target.value) } })}
+                      >
+                        {Array.from({ length: 12 }, (_, i) => i + 9).map((h) => (
+                          <option key={h} value={h}>{h}:00</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <Switch
+                    checked={!!row.pref_reporte_diario}
+                    onCheckedChange={(v) => updatePref.mutate({ id: row.id, patch: { pref_reporte_diario: v } })}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm">💰 Cobranza diaria <span className="text-xs text-muted-foreground">(1pm)</span></div>
+                  <Switch
+                    checked={!!row.pref_cobranza_diaria}
+                    onCheckedChange={(v) => updatePref.mutate({ id: row.id, patch: { pref_cobranza_diaria: v } })}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm">🔔 Alertas semanales <span className="text-xs text-muted-foreground">(lun 9am)</span></div>
+                  <Switch
+                    checked={!!row.pref_alertas_semanal}
+                    onCheckedChange={(v) => updatePref.mutate({ id: row.id, patch: { pref_alertas_semanal: v } })}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          {!numbersQ.data?.length && (
+            <div className="text-center text-muted-foreground py-4 text-sm">Agrega números autorizados arriba para configurar sus envíos.</div>
+          )}
+        </div>
+      </Card>
+
       {/* Historial */}
       <Card className="p-4">
         <h2 className="font-semibold mb-3 flex items-center gap-2"><Send className="h-4 w-4" /> Historial reciente</h2>
