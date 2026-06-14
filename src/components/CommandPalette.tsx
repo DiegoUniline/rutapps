@@ -43,7 +43,7 @@ const MENU_ITEMS: { title: string; subtitle?: string; to: string; icon: React.El
   { title: 'Productos', to: '/productos', icon: Package, keywords: 'productos articulos catalogo' },
   { title: 'Listas de Precios', to: '/listas-precio', icon: Tag, keywords: 'tarifas precios' },
   // Ventas
-  { title: 'Ventas', subtitle: 'Todas las ventas', to: '/ventas', icon: Receipt },
+  { title: 'Ventas', subtitle: 'Listado de ventas', to: '/ventas', icon: Receipt },
   { title: 'Cobranza', subtitle: 'Ventas', to: '/ventas/cobranza', icon: Wallet },
   { title: 'Promociones', subtitle: 'Ventas', to: '/ventas/promociones', icon: Tag },
   { title: 'Reporte diario', subtitle: 'Ventas', to: '/ventas/reporte-diario', icon: BarChart3 },
