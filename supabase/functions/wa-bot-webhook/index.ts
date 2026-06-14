@@ -488,24 +488,7 @@ const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const AI_MODEL = "google/gemini-3-flash-preview";
 
-function parseFecha(input: string | undefined | null): Date {
-  const now = new Date();
-  if (!input) return now;
-  const t = input.toLowerCase().trim();
-  if (t === "hoy" || t === "today") return now;
-  if (t === "ayer" || t === "yesterday") { const d = new Date(now); d.setDate(d.getDate()-1); return d; }
-  // ISO yyyy-mm-dd
-  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
-  // dd/mm/yyyy o dd-mm
-  const m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  if (m) {
-    const day = +m[1], mon = +m[2]-1;
-    const yr = m[3] ? (m[3].length === 2 ? 2000+ +m[3] : +m[3]) : now.getFullYear();
-    return new Date(yr, mon, day);
-  }
-  return now;
-}
+// parseFecha legacy eliminado: usar parseFechaTz(input, tz) que respeta zona horaria de la empresa.
 
 const TOOLS = [
   {
