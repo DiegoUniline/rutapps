@@ -290,18 +290,28 @@ export default function WhatsAppBotPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm">
-                    📊 Reporte diario
+                  <div className="text-sm flex flex-wrap items-center gap-1">
+                    📊 Reporte de ventas
                     {row.pref_reporte_diario && (
-                      <select
-                        className="ml-2 text-xs bg-background border border-border rounded px-1 py-0.5"
-                        value={row.pref_hora_reporte_diario || 9}
-                        onChange={(e) => updatePref.mutate({ id: row.id, patch: { pref_hora_reporte_diario: Number(e.target.value) } })}
-                      >
-                        {Array.from({ length: 12 }, (_, i) => i + 9).map((h) => (
-                          <option key={h} value={h}>{h}:00</option>
-                        ))}
-                      </select>
+                      <>
+                        <select
+                          className="text-xs bg-background border border-border rounded px-1 py-0.5"
+                          value={row.pref_reporte_diario_frecuencia || 'diario'}
+                          onChange={(e) => updatePref.mutate({ id: row.id, patch: { pref_reporte_diario_frecuencia: e.target.value } })}
+                        >
+                          <option value="diario">Diario</option>
+                          <option value="semanal">Semanal (Sáb · últ. 7 días)</option>
+                        </select>
+                        <select
+                          className="text-xs bg-background border border-border rounded px-1 py-0.5"
+                          value={row.pref_hora_reporte_diario || 9}
+                          onChange={(e) => updatePref.mutate({ id: row.id, patch: { pref_hora_reporte_diario: Number(e.target.value) } })}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 9).map((h) => (
+                            <option key={h} value={h}>{h}:00</option>
+                          ))}
+                        </select>
+                      </>
                     )}
                   </div>
                   <Switch
