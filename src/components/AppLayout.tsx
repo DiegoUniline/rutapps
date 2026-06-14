@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
+import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
@@ -168,6 +169,7 @@ const navItems: NavItem[] = [
     ],
   },
 
+  { label: 'Actualizaciones', icon: Sparkles, path: '/actualizaciones', highlight: 'cyan' },
   { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
 
 ];
@@ -896,6 +898,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <NotificationRuntime overlaysOnly />
       <PendingInvoiceModal />
+      <PublicidadPopup />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
       </Suspense>
