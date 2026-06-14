@@ -361,8 +361,8 @@ async function buildClienteMessage(empresaId: string, query: string) {
 }
 
 
-async function buildCobrosMessage(empresaId: string, date: Date, label: string) {
-  const { start, end } = dayRange(date);
+async function buildCobrosMessage(empresaId: string, fechaIso: string, label: string, tz: string) {
+  const { start, end } = dayRange(fechaIso, tz);
   const { data } = await admin.from("cobros")
     .select("monto, metodo_pago, clientes(nombre)")
     .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end);
