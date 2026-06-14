@@ -311,6 +311,15 @@ export default function WhatsAppBotPage() {
                             <option key={h} value={h}>{h}:00</option>
                           ))}
                         </select>
+                        <select
+                          className="text-xs bg-background border border-border rounded px-1 py-0.5"
+                          value={row.pref_reporte_diario_formato || 'pdf'}
+                          onChange={(e) => updatePref.mutate({ id: row.id, patch: { pref_reporte_diario_formato: e.target.value } })}
+                        >
+                          <option value="pdf">PDF</option>
+                          <option value="excel">Excel</option>
+                          <option value="ambos">PDF + Excel</option>
+                        </select>
                       </>
                     )}
                   </div>

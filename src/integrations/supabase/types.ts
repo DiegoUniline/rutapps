@@ -7148,6 +7148,7 @@ export type Database = {
           pref_cobranza_diaria: boolean
           pref_hora_reporte_diario: number
           pref_reporte_diario: boolean
+          pref_reporte_diario_formato: string
           pref_reporte_diario_frecuencia: string
           profile_id: string | null
           updated_at: string
@@ -7170,6 +7171,7 @@ export type Database = {
           pref_cobranza_diaria?: boolean
           pref_hora_reporte_diario?: number
           pref_reporte_diario?: boolean
+          pref_reporte_diario_formato?: string
           pref_reporte_diario_frecuencia?: string
           profile_id?: string | null
           updated_at?: string
@@ -7192,6 +7194,7 @@ export type Database = {
           pref_cobranza_diaria?: boolean
           pref_hora_reporte_diario?: number
           pref_reporte_diario?: boolean
+          pref_reporte_diario_formato?: string
           pref_reporte_diario_frecuencia?: string
           profile_id?: string | null
           updated_at?: string
