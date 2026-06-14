@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useNextUnseenPopup, resolveMediaUrl, toEmbedUrl, type Publicidad } from '@/hooks/usePublicidad';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,28 +9,20 @@ import { X, ExternalLink, Sparkles } from 'lucide-react';
 
 export default function PublicidadPopup() {
   const { user } = useAuth();
-  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
-  );
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const location = useLocation();
+  const isAdminView = !location.pathname.startsWith('/ruta');
   const { data: ad } = useNextUnseenPopup();
   const [open, setOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [media, setMedia] = useState<string | null>(null);
 
-  // Open dialog when an unseen ad is loaded (desktop only)
+  // Open dialog in the administrative desktop shell only; never in the route mobile app (/ruta).
   useEffect(() => {
-    if (ad && !open && isDesktop) {
+    if (ad && !open && isAdminView) {
       setOpen(true);
       setCountdown(5);
     }
-  }, [ad, isDesktop]);
+  }, [ad, open, isAdminView]);
 
   // Resolve media URL (signed for storage paths)
   useEffect(() => {
