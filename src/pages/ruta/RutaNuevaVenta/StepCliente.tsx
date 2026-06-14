@@ -37,12 +37,20 @@ export function StepCliente(props: Props) {
         </div>
       </div>
       <div className="flex-1 overflow-auto px-3 pb-4">
-        <button onClick={() => selectCliente(null, 'Público general', null)}
-          className="w-full mb-1.5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 bg-accent/40 border border-dashed border-primary/25 active:scale-[0.98] transition-transform text-left">
-          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0"><span className="text-primary text-[11px] font-bold">PG</span></div>
-          <div className="flex-1 min-w-0"><p className="text-[12.5px] font-medium text-foreground">Público general</p><p className="text-[10.5px] text-muted-foreground">Continuar sin cliente</p></div>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-        </button>
+        {!sinCompra && (
+          <button onClick={() => selectCliente(null, 'Público general', null)}
+            className="w-full mb-1.5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 bg-accent/40 border border-dashed border-primary/25 active:scale-[0.98] transition-transform text-left">
+            <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0"><span className="text-primary text-[11px] font-bold">PG</span></div>
+            <div className="flex-1 min-w-0"><p className="text-[12.5px] font-medium text-foreground">Público general</p><p className="text-[10.5px] text-muted-foreground">Continuar sin cliente</p></div>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+          </button>
+        )}
+        {sinCompra && (
+          <div className="mb-2 rounded-lg px-3 py-2 bg-amber-50 border border-amber-200 text-[11.5px] text-amber-900 font-medium">
+            Selecciona un cliente para registrar la visita sin compra.
+          </div>
+        )}
+
         <div className="space-y-[3px]">
           {filteredClientes?.map(c => (
             <button key={c.id}
