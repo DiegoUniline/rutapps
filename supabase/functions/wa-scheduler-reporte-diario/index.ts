@@ -32,8 +32,31 @@ function dayRangeUtc(dateLocal: string, tz: string): { start: string; end: strin
   return { start: new Date(startUtc).toISOString(), end: new Date(endUtc).toISOString() };
 }
 
-async function buildReporte(empresaId: string, fechaIso: string, tz: string) {
-  const { start, end } = dayRangeUtc(fechaIso, tz);
+function rangeUtcForDates(startLocal: string, endLocal: string, tz: string) {
+  const probe = new Date(`${startLocal}T12:00:00Z`);
+  const local = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(probe);
+  const get = (t: string) => parseInt(local.find((p) => p.type === t)?.value || "0", 10);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const offsetMs = asUtc - probe.getTime();
+  const [ys, ms, ds] = startLocal.split("-").map(Number);
+  const [ye, me, de] = endLocal.split("-").map(Number);
+  const startUtc = Date.UTC(ys, ms - 1, ds, 0, 0, 0) - offsetMs;
+  const endUtc = Date.UTC(ye, me - 1, de, 23, 59, 59) - offsetMs;
+  return { start: new Date(startUtc).toISOString(), end: new Date(endUtc).toISOString() };
+}
+
+function addDays(iso: string, n: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+
+async function buildReporte(empresaId: string, startLocal: string, endLocal: string, tz: string, label: string) {
+  const { start, end } = rangeUtcForDates(startLocal, endLocal, tz);
   const [ventasRes, cobrosRes, gastosRes, empresaRes] = await Promise.all([
     admin.from("ventas")
       .select("id, folio, total, status, condicion_pago, clientes(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))")
@@ -83,8 +106,8 @@ async function buildReporte(empresaId: string, fechaIso: string, tz: string) {
 
   const pdfBytes = await generarReporteBotPdf({
     empresa: empresaRes.data || {},
-    fechaLabel: `Reporte del día (hoy)`,
-    fechaISO: fechaIso,
+    fechaLabel: label,
+    fechaISO: endLocal,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
       totalCobros, totalGastos, cobrosPorMetodo,
@@ -99,9 +122,10 @@ async function buildReporte(empresaId: string, fechaIso: string, tz: string) {
 
   return {
     pdfBytes,
-    summary: `📊 *Reporte de hoy*\nVentas: ${fmt(totalVentas)} (${ventas.length})\nCobros: ${fmt(totalCobros)}\nGastos: ${fmt(totalGastos)}`,
+    summary: `📊 *${label}*\nVentas: ${fmt(totalVentas)} (${ventas.length})\nCobros: ${fmt(totalCobros)}\nGastos: ${fmt(totalGastos)}`,
   };
 }
+
 
 async function run() {
   // Trae preferencias activas
