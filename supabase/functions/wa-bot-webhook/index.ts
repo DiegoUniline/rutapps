@@ -966,7 +966,7 @@ Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando use
   const requiredTool = inferRequiredTool(opts.userMessage);
   if (requiredTool) {
     toolsUsed.push(requiredTool.name);
-    const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
+    const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
     if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
     // Reporte PDF: caption directo, no necesita pasar por LLM
     if (requiredTool.name === "generar_reporte_pdf") {
