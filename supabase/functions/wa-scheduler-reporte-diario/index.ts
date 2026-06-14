@@ -134,12 +134,14 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
 
 
 
-async function run() {
-  const { data: subs } = await admin
+async function run(opts: { force?: boolean; phone?: string } = {}) {
+  let q = admin
     .from("wa_bot_authorized_numbers")
     .select("id, empresa_id, phone_e164, pref_hora_reporte_diario, pref_reporte_diario_frecuencia, pref_reporte_diario_formato, last_sent_reporte_diario, auto_intro_sent_at, empresas:empresa_id(zona_horaria)")
-    .eq("activo", true)
-    .eq("pref_reporte_diario", true);
+    .eq("activo", true);
+  if (!opts.force) q = q.eq("pref_reporte_diario", true);
+  if (opts.phone) q = q.eq("phone_e164", opts.phone);
+  const { data: subs } = await q;
 
   if (!subs?.length) return { processed: 0 };
 
@@ -153,10 +155,12 @@ async function run() {
     const formato = sub.pref_reporte_diario_formato || "pdf";
     const targetHour = sub.pref_hora_reporte_diario || 9;
 
-    if (frecuencia === "semanal" && parts.dow !== 6) continue;
-    if (parts.hour !== targetHour) continue;
-    if (parts.hour < 9 || parts.hour > 20) continue;
-    if (sub.last_sent_reporte_diario === parts.date) continue;
+    if (!opts.force) {
+      if (frecuencia === "semanal" && parts.dow !== 6) continue;
+      if (parts.hour !== targetHour) continue;
+      if (parts.hour < 9 || parts.hour > 20) continue;
+      if (sub.last_sent_reporte_diario === parts.date) continue;
+    }
 
     const endLocal = parts.date;
     const startLocal = frecuencia === "semanal" ? addDays(endLocal, -6) : endLocal;
@@ -235,7 +239,9 @@ async function run() {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const result = await run();
+    let opts: { force?: boolean; phone?: string } = {};
+    if (req.method === "POST") { try { opts = await req.json(); } catch { /**/ } }
+    const result = await run(opts);
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("scheduler error", e);
