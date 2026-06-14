@@ -84,6 +84,7 @@ async function handleSubscriptionCommand(authId: string, match: RegExpMatchArray
   const { error } = await admin.from("wa_bot_authorized_numbers").update(patch).eq("id", authId);
   if (error) return `⚠️ No pude actualizar: ${error.message}`;
   return `${value ? "✅" : "🛑"} *${label}* ${value ? "activado" : "desactivado"}.\nEscribe "mis suscripciones" para ver tu estado.`;
+}
 
 async function log(empresa_id: string | null, phone: string, inbound: string, intent: string, outcome: string, summary: string, pdfUrl: string | null = null, params: any = null) {
   await admin.from("wa_bot_logs").insert({
