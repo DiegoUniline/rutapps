@@ -626,7 +626,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const lim = Math.min(Number(args?.limite || 15), 30);
     let q = activeProduct(admin.from("productos")
-      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
+      .select(PRODUCTO_SELECT_BASE)
       .eq("empresa_id", empresaId)
       .gt("cantidad", 0)
       .order("cantidad", { ascending: false })
@@ -635,29 +635,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`);
     const { data, error } = await q;
     if (error) return { error: error.message };
-    const productos = data || [];
-    if (!productos.length) return { resultado: `📦 No encontré productos con stock disponible${query ? ` para "${query}"` : ""}.` };
-    let resultado = `📦 *Productos con stock disponible${query ? ` (${query})` : ""}:*\n\n`;
-    for (const p of productos as any[]) {
-      resultado += `• ${p.codigo || ""} ${p.nombre} — Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}*${p.precio_principal != null ? ` · Precio: ${fmt(Number(p.precio_principal || 0))}` : ""}\n`;
-    }
-    if (productos.length === lim) resultado += `\nMostré los primeros ${lim}. Puedes pedirme un producto por nombre o código.`;
-    return { resultado, productos };
+    const productos = (data || []).map((p: any) => ({
+      codigo: p.codigo, nombre: p.nombre, cantidad: Number(p.cantidad || 0),
+      min: Number(p.min || 0), precio: Number(p.precio_principal || 0), unidad: unitFor(p),
+    }));
+    if (!productos.length) return { productos: [], mensaje: `No hay productos con stock disponible${query ? ` para "${query}"` : ""}.` };
+    return { productos, total: productos.length };
   }
 
   if (name === "buscar_producto") {
     if (!need("stock")) return { error: "Sin permiso para productos" };
     const query = cleanLike(args?.query);
     const { data } = await activeProduct(admin.from("productos")
-      .select("codigo, nombre, cantidad, min, precio_principal, unidad_granel")
+      .select(PRODUCTO_SELECT_BASE)
       .eq("empresa_id", empresaId)
       .or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%`)
       .limit(10));
-    const productos = data || [];
-    if (!productos.length) return { resultado: `❌ No encontré productos que coincidan con "${args?.query}".` };
-    let resultado = `📦 *Productos encontrados:*\n\n`;
-    for (const p of productos as any[]) resultado += `• ${p.codigo || ""} ${p.nombre}\n   Stock: *${Number(p.cantidad || 0)} ${p.unidad_granel || "pzs"}* · Mín: ${Number(p.min || 0)} · Precio: ${fmt(Number(p.precio_principal || 0))}\n`;
-    return { resultado, productos };
+    const productos = (data || []).map((p: any) => ({
+      codigo: p.codigo, nombre: p.nombre, cantidad: Number(p.cantidad || 0),
+      min: Number(p.min || 0), precio: Number(p.precio_principal || 0), unidad: unitFor(p),
+    }));
+    if (!productos.length) return { productos: [], mensaje: `No encontré productos para "${args?.query}".` };
+    return { productos };
   }
 
   if (name === "consultar_cliente") {
