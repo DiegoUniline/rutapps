@@ -261,19 +261,18 @@ async function buildStockMessage(empresaId: string, threshold: number | null, no
 }
 
 async function buildClienteMessage(empresaId: string, query: string) {
-  const { data: clientes } = await admin.from("clientes")
-    .select("id, nombre, telefono, saldo")
-    .eq("empresa_id", empresaId)
-    .or(`nombre.ilike.%${query}%,telefono.ilike.%${query}%`)
-    .limit(5);
-  if (!clientes || !clientes.length) return `❌ No encontré clientes con "${query}".`;
-  if (clientes.length > 1) {
-    let msg = `🔎 ${clientes.length} clientes coinciden con "${query}":\n\n`;
-    for (const c of clientes) msg += `• ${c.nombre}  — Saldo: ${fmt(Number(c.saldo || 0))}\n`;
+  const { data: clientes } = await admin.rpc("wa_clientes_saldos", {
+    p_empresa: empresaId, p_query: query, p_solo_con_saldo: false, p_limit: 5,
+  });
+  const list = (clientes || []) as any[];
+  if (!list.length) return `❌ No encontré clientes con "${query}".`;
+  if (list.length > 1) {
+    let msg = `🔎 ${list.length} clientes coinciden con "${query}":\n\n`;
+    for (const c of list) msg += `• ${c.nombre}  — Saldo: ${fmt(Number(c.saldo || 0))}\n`;
     msg += `\nEnvía *cliente <nombre exacto>* para ver detalle.`;
     return msg;
   }
-  const c = clientes[0];
+  const c = list[0];
   const { data: ventas } = await admin.from("ventas")
     .select("folio, fecha, total, saldo_pendiente, status")
     .eq("empresa_id", empresaId).eq("cliente_id", c.id)
@@ -285,6 +284,7 @@ async function buildClienteMessage(empresaId: string, query: string) {
   }
   return msg;
 }
+
 
 async function buildCobrosMessage(empresaId: string, date: Date, label: string) {
   const { start, end } = dayRange(date);
