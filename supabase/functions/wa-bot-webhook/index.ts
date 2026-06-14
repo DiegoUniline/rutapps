@@ -838,56 +838,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   return { error: "Herramienta desconocida" };
 }
 
+// Atajos mínimos: SOLO PDF directo y folio explícito. Todo lo demás lo decide el LLM.
 function inferRequiredTool(text: string): { name: string; args: any } | null {
-  const t = text.toLowerCase();
-  const fecha = /ayer/.test(t) ? "ayer" : "hoy";
-  const num = t.match(/(\d+(?:\.\d+)?)/);
-  const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b|\b\d{3,}\b/i)?.[0];
-  if (/\b(pdf|reporte|cierre)\b/.test(t)) return { name: "generar_reporte_pdf", args: { fecha } };
-  if (folio && /detalle|venta|pedido|folio|ticket|qui[eé]n|vendedor|vend(i[oó]|io)|pago|saldo/.test(t)) return { name: "consultar_venta", args: { folio } };
-  if (/stock\s*bajo|inventario\s*bajo|existencias?\s*bajas?/.test(t)) return { name: "consultar_stock_bajo", args: { umbral: num ? Number(num[1]) : undefined } };
-  if (/stock|inventario|existencias?|productos?/.test(t) && /disponible|tengo|hay|actual|lista|cu[aá]les|cu[aá]ntos?/.test(t)) return { name: "consultar_stock_disponible", args: { limite: 15 } };
-  const clienteQuery = text.replace(/^(saldo\s+de|saldo|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i, "").trim();
-  if (/^(saldo\s+de|cliente|cu[aá]nto\s+debe|deuda\s+de)\s+/i.test(text.trim()) && clienteQuery.length > 1) return { name: "consultar_cliente", args: { query: clienteQuery } };
-  if (/clientes?/.test(t) && /saldo|debe|deben|deuda|adeudan|pendiente|cuentas?\s+por\s+cobrar/.test(t)) return { name: "buscar_clientes", args: { con_saldo: true, limite: 10 } };
-  if (/clientes?/.test(t) && /lista|tengo|ver|cu[aá]les|buscar/.test(t)) return { name: "buscar_clientes", args: { limite: 10 } };
-  if (/saldos?|cuentas?\s+por\s+cobrar|adeudan|debe|deben|deuda/.test(t)) return { name: "consultar_saldos", args: { limite: 10 } };
-  if (/pedidos?/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, tipo: "pedido", limite: 5 } };
-  if (/qui[eé]n\s+lo\s+vend(i[oó]|io)|vendedor|vend(i[oó]|io)/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
-  if (/m[eé]todo\s+de\s+pago|c[oó]mo\s+(me\s+)?pag(aron|o)|forma\s+de\s+pago/.test(t)) return { name: "consultar_ventas_recientes", args: { fecha, limite: 3 } };
-  if (/cu[aá]nto\s+vend|ventas?\s+(de\s+)?hoy|vend[ií]\s+hoy/.test(t)) return { name: "resumen_ventas", args: { fecha } };
-  if (/cobros?|cobrado|pagos?/.test(t)) return { name: "resumen_cobros", args: { fecha } };
+  const t = text.toLowerCase().trim();
+  // Reporte PDF explícito
+  if (/^(reporte|cierre|res(u|ú)men\s+del?\s+d(í|i)a)\b/.test(t) || /\bpdf\b/.test(t)) {
+    const fecha = /ayer/.test(t) ? "ayer" : "hoy";
+    return { name: "generar_reporte_pdf", args: { fecha } };
+  }
+  // Folio explícito (VTA-1234, PED-1, SAL-12)
+  const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b/i)?.[0];
+  if (folio) return { name: "consultar_venta", args: { folio } };
   return null;
-}
-
-function formatToolReply(name: string, out: any): string {
-  if (!out) return "⚠️ No pude consultar la información.";
-  if (out.error) return `⚠️ ${out.error}`;
-  if (out.pdfUrl) return out.summary || out.resultado || "📄 Aquí tienes el reporte PDF.";
-  if (out.resultado && !String(out.resultado).startsWith("[")) return out.resultado;
-  if (name === "cuentas_por_cobrar" && out.clientes?.length) {
-    const total = out.clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
-    const lines = out.clientes.map((c:any) => `• ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}`).join("\n");
-    return `💰 *Cuentas por cobrar*\nTotal mostrado: *${fmt(total)}*\n\n${lines}`;
-  }
-  if (name === "resumen_ventas") {
-    const top = (out.top_clientes || []).map((x:any) => `• ${x.cliente}: ${fmt(Number(x.monto || 0))}`).join("\n");
-    return `📊 *Ventas ${out.fecha || ""}*\nTotal: *${fmt(Number(out.total_ventas || 0))}*\nFolios: *${out.folios || 0}*${top ? `\n\n*Top clientes:*\n${top}` : ""}`;
-  }
-  if ((name === "consultar_ventas_recientes" || name === "consultar_venta") && out.ventas?.length) {
-    const lines = out.ventas.slice(0, 3).map((v:any) => {
-      const cobros = (v.cobros || []).map((c:any) => `${c.metodo || "—"} ${fmt(Number(c.monto || 0))}`).join(", ") || "Sin cobros registrados";
-      return `• *${v.folio || "Movimiento"}*${v.tipo ? ` (${v.tipo})` : ""}\n  Cliente: ${v.cliente}\n  Vendedor: *${v.vendedor}*\n  Total: *${fmt(Number(v.total || 0))}* · Desc: ${fmt(Number(v.descuento_total || 0))}\n  Saldo: ${fmt(Number(v.saldo_pendiente || 0))}\n  Pago: ${cobros}`;
-    }).join("\n");
-    return `🧾 *Movimientos consultados:*\n${lines}`;
-  }
-  return JSON.stringify(out).slice(0, 1500);
 }
 
 async function runAgent(opts: { empresaId: string; permisos: Record<string, boolean>; phone: string; userMessage: string }) {
   if (!LOVABLE_AI_KEY) {
     return { reply: "⚠️ El agente IA no está configurado (falta LOVABLE_API_KEY). Usa *ayuda* para ver comandos.", intent: "no_ai", pdfUrl: null as string | null, pdfName: null as string | null, toolsUsed: null as any };
   }
+
+  // Nombre de empresa para el system prompt
+  const { data: emp } = await admin.from("empresas").select("nombre").eq("id", opts.empresaId).maybeSingle();
+  const empresaNombre = emp?.nombre || "tu empresa";
 
   // Contexto breve: últimos 6 turnos de este teléfono
   const { data: prev } = await admin.from("wa_bot_logs")
@@ -901,20 +873,28 @@ async function runAgent(opts: { empresaId: string; permisos: Record<string, bool
   }
 
   const permisosTxt = Object.entries(opts.permisos).filter(([,v])=>v).map(([k])=>k).join(", ") || "ninguno";
-  const system = `Eres *Jarvis*, el asistente de IA de RutApp por WhatsApp para una empresa. Respondes SIEMPRE en español, breve y claro, con emojis y formato WhatsApp (*negritas*).
+  const hoyMx = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
-REGLAS ESTRICTAS:
-- Solo puedes usar datos de la empresa actual mediante las herramientas. NUNCA inventes datos.
-- Para cualquier pregunta sobre ventas, pedidos, clientes, productos, stock, saldos, cobros, pagos, gastos o vendedores DEBES usar una herramienta antes de responder.
-- No uses memoria ni conversación anterior como fuente de verdad; solo sirve para entender seguimientos. La respuesta final debe salir de la herramienta ejecutada.
-- Si la herramienta no tiene el dato exacto, responde "No encontré ese dato en el sistema" y pide un folio/nombre/fecha más específico.
-- Si la pregunta no se puede responder con las herramientas, dilo y sugiere lo que sí puedes hacer.
-- Si el usuario pide algo fuera de permisos (${permisosTxt}), explícale amablemente que no tiene permiso y que pida a su admin.
-- Para reportes diarios usa SIEMPRE 'generar_reporte_pdf' (no resumas tú el día completo en texto).
-- Sé conciso: máximo ~15 líneas en la respuesta final.
-- Cuando una herramienta devuelva 'resultado' como string, úsalo prácticamente tal cual.
+  const system = `Eres *Jarvis*, el asistente IA del sistema RutApp para la empresa "${empresaNombre}". Hablas español de México por WhatsApp.
 
-Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
+IDENTIDAD:
+- Te llamas Jarvis. Eres el asistente operativo de RutApp (ventas, pedidos, inventario, cobranza, finanzas).
+- Conoces el sistema. Cuando alguien pregunta cualquier dato del negocio (ventas, clientes, productos, stock, saldos, cobros, gastos, pedidos, vendedores), consultas el sistema con tus herramientas y respondes con datos reales.
+
+REGLAS ABSOLUTAS:
+- PROHIBIDO inventar nombres, folios, montos, cantidades o cualquier dato. Si una herramienta no devuelve resultados, dilo claro: "No encontré ese dato en el sistema".
+- Para cualquier cifra, lista, cliente, producto, venta, cobro o saldo DEBES llamar a una herramienta primero. Nunca respondas un número de memoria.
+- Para reportes/cierres del día llama SIEMPRE 'generar_reporte_pdf'. No resumas el día entero a mano.
+- Usa el historial de conversación SOLO para entender referencias ("y de ayer", "y de ese cliente", "el mismo"). Los datos siempre vienen de las herramientas.
+- Si el usuario pide algo fuera de sus permisos (${permisosTxt}), avísale con respeto que pida a su admin.
+
+FORMATO WHATSAPP:
+- Conciso, máximo ~12 líneas. Usa *negritas* y emojis con moderación (📦 💰 🧾 👤 📊).
+- Montos en pesos: $1,234.56. Fechas DD/MM/YYYY.
+- Para stock muestra la unidad real del producto (ej. "150 PZA", "12.5 kg") tal como viene del campo 'unidad' en el resultado.
+- No uses markdown pesado (## o tablas); WhatsApp no las renderiza.
+
+Hoy es ${hoyMx}.`;
 
   const messages: any[] = [
     { role: "system", content: system },
@@ -926,56 +906,64 @@ Hoy es ${new Date().toLocaleDateString("es-MX")}.`;
   let pdfName: string | null = null;
   const toolsUsed: string[] = [];
 
+  // Atajos deterministas mínimos (PDF / folio): igual ejecutan tool, pero después
+  // la respuesta se compone con el mismo loop del LLM para que sea natural.
   const requiredTool = inferRequiredTool(opts.userMessage);
   if (requiredTool) {
     toolsUsed.push(requiredTool.name);
-    const out = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
-    if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
-    return { reply: formatToolReply(requiredTool.name, out), intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+    const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos });
+    if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
+    // Reporte PDF: caption directo, no necesita pasar por LLM
+    if (requiredTool.name === "generar_reporte_pdf") {
+      return { reply: out?.summary || "📄 Aquí tienes el reporte PDF.", intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+    }
+    // Folio: inyectamos el resultado como tool call sintético para que el LLM lo redacte
+    messages.push({
+      role: "assistant",
+      content: null,
+      tool_calls: [{ id: "call_seed", type: "function", function: { name: requiredTool.name, arguments: JSON.stringify(requiredTool.args) } }],
+    });
+    messages.push({ role: "tool", tool_call_id: "call_seed", content: JSON.stringify(out).slice(0, 8000) });
   }
 
-  for (let step = 0; step < 5; step++) {
+  for (let step = 0; step < 6; step++) {
     const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Lovable-API-Key": LOVABLE_AI_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk", "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${LOVABLE_AI_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: AI_MODEL, messages, tools: TOOLS, tool_choice: "auto" }),
     });
     if (!res.ok) {
-      const t = await res.text();
-      console.error("AI error", res.status, t);
-      if (res.status === 429) return { reply: "⚠️ Demasiadas solicitudes. Intenta en un momento.", intent: "rate_limit", pdfUrl: null, pdfName: null, toolsUsed };
-      if (res.status === 402) return { reply: "⚠️ Sin créditos de IA. Avisa a soporte de RutApp.", intent: "no_credits", pdfUrl: null, pdfName: null, toolsUsed };
-      return { reply: "⚠️ Error del asistente. Usa *ayuda* para ver comandos disponibles.", intent: "ai_error", pdfUrl: null, pdfName: null, toolsUsed };
+      const tx = await res.text();
+      console.error("AI error", res.status, tx);
+      if (res.status === 429) return { reply: "⚠️ Demasiadas consultas. Intenta en unos segundos.", intent: "rate_limit", pdfUrl, pdfName, toolsUsed };
+      if (res.status === 402) return { reply: "⚠️ Se agotaron los créditos de IA. Avisa a soporte de RutApp.", intent: "no_credits", pdfUrl, pdfName, toolsUsed };
+      return { reply: "⚠️ Error temporal del asistente. Intenta de nuevo en un momento.", intent: "ai_error", pdfUrl, pdfName, toolsUsed };
     }
     const json = await res.json();
     const msg = json.choices?.[0]?.message;
-    if (!msg) return { reply: "⚠️ Respuesta vacía del asistente.", intent: "empty", pdfUrl: null, pdfName: null, toolsUsed };
+    if (!msg) return { reply: "⚠️ Respuesta vacía del asistente.", intent: "empty", pdfUrl, pdfName, toolsUsed };
 
     if (msg.tool_calls && msg.tool_calls.length) {
       messages.push(msg);
-      const deterministicReplies: string[] = [];
       for (const call of msg.tool_calls) {
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
         toolsUsed.push(call.function.name);
-        const out = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
-        if (out && (out as any).pdfUrl) { pdfUrl = (out as any).pdfUrl; pdfName = (out as any).fileName; }
-        deterministicReplies.push(formatToolReply(call.function.name, out));
+        const out: any = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
+        if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
         messages.push({
           role: "tool",
           tool_call_id: call.id,
           content: JSON.stringify(out).slice(0, 8000),
         });
       }
-      return { reply: deterministicReplies.filter(Boolean).join("\n\n").slice(0, 3500), intent: toolsUsed[0] || "tool", pdfUrl, pdfName, toolsUsed };
+      continue; // dejamos que el LLM lea las herramientas y redacte la respuesta final
     }
 
-    const reply = (msg.content || "").trim() || "✅";
-    if (!toolsUsed.length && /venta|vend|stock|inventario|producto|cliente|saldo|cobro|pago|reporte|pdf|gasto|vendedor/i.test(opts.userMessage)) {
-      return { reply: "⚠️ No puedo responder eso sin consultar datos reales del sistema. Pídeme por ejemplo: *reporte hoy*, *stock disponible*, *quién vendió hoy* o *cliente <nombre>*.", intent: "needs_tool", pdfUrl: null, pdfName: null, toolsUsed };
-    }
-    return { reply, intent: toolsUsed[0] || "chat", pdfUrl, pdfName, toolsUsed };
+    const reply = (msg.content || "").trim();
+    if (!reply) return { reply: "⚠️ No obtuve respuesta. Reformula tu pregunta.", intent: "empty_reply", pdfUrl, pdfName, toolsUsed };
+    return { reply: reply.slice(0, 3500), intent: toolsUsed[toolsUsed.length-1] || "chat", pdfUrl, pdfName, toolsUsed };
   }
 
-  return { reply: "⚠️ El asistente tardó demasiado. Intenta reformular.", intent: "loop_limit", pdfUrl, pdfName, toolsUsed };
+  return { reply: "⚠️ El asistente tardó demasiado. Intenta reformular más específico.", intent: "loop_limit", pdfUrl, pdfName, toolsUsed };
 }
