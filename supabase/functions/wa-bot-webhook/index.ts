@@ -700,31 +700,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "cuentas_por_cobrar") {
     if (!need("clientes")) return { error: "Sin permiso" };
-    const lim = args?.limite || 10;
-    const { data } = await admin.from("clientes")
-      .select("nombre, telefono, saldo")
-      .eq("empresa_id", empresaId).gt("saldo", 0)
-      .order("saldo", { ascending: false }).limit(lim);
-    return { clientes: data || [] };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const { data } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId, p_query: null, p_solo_con_saldo: true, p_limit: lim,
+    });
+    return { clientes: (data || []).map((c: any) => ({ nombre: c.nombre, telefono: c.telefono, saldo: c.saldo })) };
   }
 
   if (name === "consultar_saldos") {
     if (!need("clientes")) return { error: "Sin permiso para saldos" };
     const lim = Math.min(Number(args?.limite || 10), 30);
-    const { data, error } = await admin.from("clientes")
-      .select("codigo, nombre, telefono, saldo")
-      .eq("empresa_id", empresaId)
-      .gt("saldo", 0)
-      .order("saldo", { ascending: false })
-      .limit(lim);
+    const { data, error } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId, p_query: null, p_solo_con_saldo: true, p_limit: lim,
+    });
     if (error) return { error: error.message };
-    const clientes = data || [];
+    const clientes = (data || []) as any[];
     const total = clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
     if (!clientes.length) return { resultado: "✅ No encontré saldos pendientes en clientes." };
     let resultado = `💰 *Saldos pendientes*\nTotal mostrado: *${fmt(total)}*\n\n`;
-    for (const c of clientes as any[]) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
+    for (const c of clientes) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
     return { resultado, total_mostrado: total, clientes };
   }
+
 
   if (name === "consultar_venta") {
     if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
