@@ -838,8 +838,8 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (args?.tipo && ["pedido", "venta_directa"].includes(String(args.tipo))) q = q.eq("tipo", args.tipo);
     if (args?.status && ["borrador", "confirmado", "entregado", "facturado", "cancelado"].includes(String(args.status))) q = q.eq("status", args.status);
     if (args?.fecha) {
-      const date = parseFecha(args.fecha);
-      const { start, end } = dayRange(date);
+      const fechaIso = parseFechaTz(args.fecha, tz);
+      const { start, end } = dayRange(fechaIso, tz);
       q = q.gte("fecha", start).lte("fecha", end);
     }
     const { data: ventas, error } = await q;
