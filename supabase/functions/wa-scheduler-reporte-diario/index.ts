@@ -58,15 +58,21 @@ function addDays(iso: string, n: number) {
 
 async function buildReporte(empresaId: string, startLocal: string, endLocal: string, tz: string, label: string) {
   const { start, end } = rangeUtcForDates(startLocal, endLocal, tz);
-  const [ventasRes, cobrosRes, gastosRes, empresaRes] = await Promise.all([
+  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, empresaRes] = await Promise.all([
     admin.from("ventas")
-      .select("id, folio, total, status, condicion_pago, clientes(nombre), venta_lineas(cantidad, total, productos(codigo, nombre))")
+      .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
     admin.from("cobros")
-      .select("id, monto, metodo_pago, referencia, clientes(nombre)")
-      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+      .select("id, monto, metodo_pago, referencia, fecha, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(id, folio, fecha, condicion_pago))")
+      .eq("empresa_id", empresaId).neq("status", "cancelado").gte("fecha", start).lte("fecha", end),
     admin.from("gastos")
       .select("id, monto, concepto, notas")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("devoluciones")
+      .select("id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))")
+      .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("visitas")
+      .select("id, tipo, motivo, notas, clientes(nombre)")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
     admin.from("empresas")
       .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
@@ -76,14 +82,18 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
   const allVentas = (ventasRes.data || []) as any[];
   const ventas = allVentas.filter((v) => v.status !== "cancelada" && v.status !== "cancelado");
   const canceladas = allVentas.filter((v) => v.status === "cancelada" || v.status === "cancelado");
+  const ventasContado = ventas.filter((v) => (v.condicion_pago || "").toLowerCase() === "contado");
+  const ventasCredito = ventas.filter((v) => /cr[eé]dito/i.test(v.condicion_pago || ""));
   const totalVentas = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalContado = ventas.filter((v) => (v.condicion_pago || "").toLowerCase() === "contado").reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalCredito = ventas.filter((v) => /cr[eé]dito/i.test(v.condicion_pago || "")).reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalContado = ventasContado.reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalCredito = ventasCredito.reduce((s, v) => s + Number(v.total || 0), 0);
   const totalCancelado = canceladas.reduce((s, v) => s + Number(v.total || 0), 0);
   const cobros = (cobrosRes.data || []) as any[];
   const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
   const gastos = (gastosRes.data || []) as any[];
   const totalGastos = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const devoluciones = (devsRes.data || []) as any[];
+  const visitas = (visitasRes.data || []) as any[];
 
   const cobrosPorMetodo: Record<string, number> = {};
   for (const c of cobros) {
@@ -91,35 +101,102 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto || 0);
   }
 
+  // Productos vendidos (agregado)
   const prodMap = new Map<string, { codigo: string; nombre: string; cantidad: number; total: number }>();
   for (const v of ventas) {
     for (const l of (v.venta_lineas || []) as any[]) {
-      const codigo = l.productos?.codigo || "";
-      const nombre = l.productos?.nombre || "—";
-      const key = `${codigo}::${nombre}`;
-      const prev = prodMap.get(key) || { codigo, nombre, cantidad: 0, total: 0 };
+      const pid = l.producto_id || `${l.productos?.codigo || ""}::${l.productos?.nombre || ""}`;
+      const prev = prodMap.get(pid) || { codigo: l.productos?.codigo || "", nombre: l.productos?.nombre || "—", cantidad: 0, total: 0 };
       prev.cantidad += Number(l.cantidad || 0);
       prev.total += Number(l.total || 0);
-      prodMap.set(key, prev);
+      prodMap.set(pid, prev);
     }
   }
   const productos = Array.from(prodMap.values()).sort((a, b) => b.total - a.total);
 
+  // Devoluciones (líneas planas)
+  const ACCION_LABELS: Record<string, string> = { reposicion: "Reposición", nota_credito: "Nota crédito", descuento_venta: "Desc. venta", devolucion_dinero: "Dev. dinero" };
+  const devLineas: any[] = [];
+  for (const d of devoluciones) {
+    for (const l of (d.devolucion_lineas || []) as any[]) {
+      devLineas.push({
+        nombre: l.productos?.nombre || "—",
+        codigo: l.productos?.codigo || "",
+        cantidad: Number(l.cantidad || 0),
+        motivo: l.motivo || "—",
+        accion: l.accion || "reposicion",
+        monto_credito: Number(l.monto_credito || 0),
+        cliente: d.clientes?.nombre || "—",
+      });
+    }
+  }
+  const totalDevUnidades = devLineas.reduce((s, d) => s + d.cantidad, 0);
+  const totalDevCredito = devLineas.reduce((s, d) => s + d.monto_credito, 0);
+  void ACCION_LABELS; // labels se aplican en el PDF
+
+  // Visitas
+  const visitasSinCompra = visitas.filter((v) => v.tipo === "sin_compra");
+
+  // Clientes visitados (unión cliente_id de ventas + clientes.nombre de visitas)
+  const clientesVisitadosSet = new Set<string>([
+    ...ventas.map((v) => v.cliente_id).filter(Boolean),
+    ...visitas.map((v) => v.clientes?.nombre).filter(Boolean),
+  ]);
+
+  // Abonos a crédito previo: cobros cuyo cobro_aplicaciones.ventas.fecha < startLocal
+  const abonosPrevios: any[] = [];
+  for (const c of cobros) {
+    for (const ap of ((c as any).cobro_aplicaciones || []) as any[]) {
+      const v = ap.ventas;
+      if (!v?.fecha) continue;
+      const vDate = String(v.fecha).slice(0, 10);
+      if (vDate >= startLocal) continue;
+      const dias = Math.max(0, Math.floor((new Date(c.fecha).getTime() - new Date(v.fecha).getTime()) / 86400000));
+      abonosPrevios.push({
+        cliente: c.clientes?.nombre || "—",
+        venta_folio: v.folio || "—",
+        venta_fecha: vDate,
+        metodo_pago: c.metodo_pago || "efectivo",
+        referencia: c.referencia || null,
+        monto_aplicado: Number(ap.monto_aplicado || 0),
+        dias_atraso: dias,
+      });
+    }
+  }
+  abonosPrevios.sort((a, b) => b.dias_atraso - a.dias_atraso);
+  const totalAbonosPrevios = abonosPrevios.reduce((s, a) => s + a.monto_aplicado, 0);
+  const clientesQueAbonaron = new Set(abonosPrevios.map((a) => a.cliente)).size;
+
   const reporteInput = {
     empresa: empresaRes.data || {},
+    usuarioNombre: `Todos los usuarios`,
+    fechaLabel: label,
     label,
     fechaISO: endLocal,
-    fechaLabel: label,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
-      totalCobros, totalGastos, cobrosPorMetodo,
-      countVentas: ventas.length, countCobros: cobros.length, countGastos: gastos.length,
+      totalCobros, totalGastos,
+      totalDevUnidades, totalDevCredito,
+      clientesVisitados: clientesVisitadosSet.size,
+      visitasSinCompra: visitasSinCompra.length,
+      cobrosPorMetodo,
+      countVentas: ventas.length,
+      countContado: ventasContado.length,
+      countCredito: ventasCredito.length,
+      countCobros: cobros.length,
+      countGastos: gastos.length,
+      countDevoluciones: devoluciones.length,
     },
     ventasActivas: ventas.map((v) => ({ folio: v.folio, cliente: v.clientes?.nombre || "—", condicion_pago: v.condicion_pago || "", total: Number(v.total || 0) })),
     ventasCanceladas: canceladas.map((v) => ({ folio: v.folio, cliente: v.clientes?.nombre || "—", total: Number(v.total || 0) })),
     productos,
     cobros: cobros.map((c) => ({ cliente: c.clientes?.nombre || "—", metodo_pago: c.metodo_pago || "", referencia: c.referencia, monto: Number(c.monto || 0) })),
     gastos: gastos.map((g) => ({ concepto: g.concepto, notas: g.notas, monto: Number(g.monto || 0) })),
+    devoluciones: devLineas,
+    visitasSinCompra: visitasSinCompra.map((v) => ({ cliente: v.clientes?.nombre, motivo: v.motivo, notas: v.notas })),
+    abonosCreditoPrevio: abonosPrevios.length > 0
+      ? { items: abonosPrevios, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
+      : undefined,
   };
 
   const pdfBytes = await generarReporteBotPdf(reporteInput as any);
@@ -131,6 +208,7 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     summary: `📊 *${label}*\nVentas: ${fmt(totalVentas)} (${ventas.length})\nCobros: ${fmt(totalCobros)}\nGastos: ${fmt(totalGastos)}`,
   };
 }
+
 
 
 
