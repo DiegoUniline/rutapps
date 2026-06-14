@@ -496,13 +496,27 @@ const TOOLS = [
     type: "function",
     function: {
       name: "generar_reporte_pdf",
-      description: "Genera el reporte diario en PDF (ventas, cobros, gastos) para una fecha y lo devuelve como URL para enviar al cliente. Úsala cuando el usuario pida 'reporte', 'cierre del día', 'resumen del día' etc.",
+      description: "Genera el PDF del reporte diario (ventas, cobros, gastos) para una fecha. SOLO se debe llamar cuando el usuario pida EXPLÍCITAMENTE un PDF, archivo, documento o que le 'mande/envíe' el reporte. Si el usuario solo pide un 'resumen', 'cierre', 'cuánto vendí/gané' usa las herramientas de texto (resumen_ventas, resumen_cobros, consultar_gastos); NO generes PDF.",
       parameters: {
         type: "object",
         properties: {
           fecha: { type: "string", description: "Fecha: 'hoy', 'ayer', o formato dd/mm/yyyy o yyyy-mm-dd" },
         },
         required: ["fecha"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generar_venta_pdf",
+      description: "Genera el PDF de UNA venta específica por folio (nota de venta con líneas, totales y cobros). SOLO se debe llamar cuando el usuario pida EXPLÍCITAMENTE un PDF, archivo, documento o 'manda/envía' la nota. Si solo pregunta detalle de la venta, usa consultar_venta (texto).",
+      parameters: {
+        type: "object",
+        properties: {
+          folio: { type: "string", description: "Folio de la venta, ej. 'VTA-0001' o '0001'." },
+        },
+        required: ["folio"],
       },
     },
   },
