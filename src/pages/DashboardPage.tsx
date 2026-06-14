@@ -1055,12 +1055,12 @@ export default function DashboardPage() {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-3">
-            <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} operaciones`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" />
-            <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" />
-            <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros`} icon={Wallet} color="bg-[hsl(var(--success))]" />
+            <KpiCard title="Ventas" value={money(kpis.totalVentas)} subtitle={`${kpis.numVentas} ops · ant. ${money(prevKpis.ventas)}`} icon={ShoppingCart} color="bg-[hsl(var(--chart-1))]" trend={calcTrend(kpis.totalVentas, prevKpis.ventas)} />
+            <KpiCard title="Ticket promedio" value={money(kpis.ticketPromedio)} subtitle={`${kpis.pedidos} pedidos · ${kpis.ventasDirectas} directas`} icon={TrendingUp} color="bg-[hsl(var(--chart-2))]" trend={calcTrend(kpis.ticketPromedio, prevKpis.ticket)} />
+            <KpiCard title="Cobrado" value={money(kpis.totalCobrado)} subtitle={`${(cobros ?? []).length} cobros · ant. ${money(prevKpis.cobros)}`} icon={Wallet} color="bg-[hsl(var(--success))]" trend={calcTrend(kpis.totalCobrado, prevKpis.cobros)} />
             <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
-            <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
-            <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
+            <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" trend={calcTrend(kpis.totalCompras, prevKpis.compras)} />
+            <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} trend={calcTrend(kpis.totalGastos, prevKpis.gastos)} />
             <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito · ${devolucionesPct.toFixed(1)}% s/venta`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
             <KpiExtras
               efectividadPct={kpisExtra.efectividadPct}
