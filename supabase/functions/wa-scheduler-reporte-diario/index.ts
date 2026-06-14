@@ -239,7 +239,9 @@ async function run(opts: { force?: boolean; phone?: string } = {}) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const result = await run();
+    let opts: { force?: boolean; phone?: string } = {};
+    if (req.method === "POST") { try { opts = await req.json(); } catch { /**/ } }
+    const result = await run(opts);
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("scheduler error", e);
