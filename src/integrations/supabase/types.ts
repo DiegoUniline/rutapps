@@ -1986,6 +1986,178 @@ export type Database = {
           },
         ]
       }
+      cotizacion_lineas: {
+        Row: {
+          cantidad: number
+          cotizacion_id: string
+          created_at: string
+          descripcion: string | null
+          descuento_pct: number
+          empresa_id: string
+          id: string
+          impuesto: number
+          impuesto_pct: number
+          orden: number
+          precio_unitario: number
+          producto_id: string | null
+          producto_snapshot: Json | null
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          cantidad?: number
+          cotizacion_id: string
+          created_at?: string
+          descripcion?: string | null
+          descuento_pct?: number
+          empresa_id: string
+          id?: string
+          impuesto?: number
+          impuesto_pct?: number
+          orden?: number
+          precio_unitario?: number
+          producto_id?: string | null
+          producto_snapshot?: Json | null
+          subtotal?: number
+          total?: number
+        }
+        Update: {
+          cantidad?: number
+          cotizacion_id?: string
+          created_at?: string
+          descripcion?: string | null
+          descuento_pct?: number
+          empresa_id?: string
+          id?: string
+          impuesto?: number
+          impuesto_pct?: number
+          orden?: number
+          precio_unitario?: number
+          producto_id?: string | null
+          producto_snapshot?: Json | null
+          subtotal?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_lineas_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cotizaciones: {
+        Row: {
+          almacen_id: string | null
+          cliente_id: string | null
+          cliente_snapshot: Json | null
+          created_at: string
+          created_by: string | null
+          descuento: number
+          empresa_id: string
+          enviada_wa_at: string | null
+          estado: string
+          fecha: string
+          folio: string | null
+          id: string
+          impuestos: number
+          moneda: string | null
+          notas: string | null
+          subtotal: number
+          tarifa_id: string | null
+          token_publico: string
+          total: number
+          updated_at: string
+          vence_at: string | null
+          vendedor_id: string | null
+          venta_id: string | null
+          vigencia_dias: number
+        }
+        Insert: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          cliente_snapshot?: Json | null
+          created_at?: string
+          created_by?: string | null
+          descuento?: number
+          empresa_id: string
+          enviada_wa_at?: string | null
+          estado?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          impuestos?: number
+          moneda?: string | null
+          notas?: string | null
+          subtotal?: number
+          tarifa_id?: string | null
+          token_publico?: string
+          total?: number
+          updated_at?: string
+          vence_at?: string | null
+          vendedor_id?: string | null
+          venta_id?: string | null
+          vigencia_dias?: number
+        }
+        Update: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          cliente_snapshot?: Json | null
+          created_at?: string
+          created_by?: string | null
+          descuento?: number
+          empresa_id?: string
+          enviada_wa_at?: string | null
+          estado?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          impuestos?: number
+          moneda?: string | null
+          notas?: string | null
+          subtotal?: number
+          tarifa_id?: string | null
+          token_publico?: string
+          total?: number
+          updated_at?: string
+          vence_at?: string | null
+          vendedor_id?: string | null
+          venta_id?: string | null
+          vigencia_dias?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_tarifa_id_fkey"
+            columns: ["tarifa_id"]
+            isOneToOne: false
+            referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cupon_usos: {
         Row: {
           aplicado_at: string | null
@@ -8013,6 +8185,17 @@ export type Database = {
         Returns: boolean
       }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
+      validar_stock_cotizacion: {
+        Args: { p_almacen_id: string; p_cotizacion_id: string }
+        Returns: {
+          cantidad_solicitada: number
+          descripcion: string
+          faltante: number
+          ok: boolean
+          producto_id: string
+          stock_disponible: number
+        }[]
+      }
       verify_admin_pin: {
         Args: { p_pin: string; p_user_id: string }
         Returns: boolean
