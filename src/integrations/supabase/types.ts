@@ -1995,14 +1995,22 @@ export type Database = {
           descuento_pct: number
           empresa_id: string
           id: string
+          ieps_monto: number
+          ieps_pct: number
           impuesto: number
           impuesto_pct: number
+          iva_monto: number
+          iva_pct: number
+          lista_precio_id: string | null
+          notas: string | null
           orden: number
+          precio_manual: boolean
           precio_unitario: number
           producto_id: string | null
           producto_snapshot: Json | null
           subtotal: number
           total: number
+          unidad_id: string | null
         }
         Insert: {
           cantidad?: number
@@ -2012,14 +2020,22 @@ export type Database = {
           descuento_pct?: number
           empresa_id: string
           id?: string
+          ieps_monto?: number
+          ieps_pct?: number
           impuesto?: number
           impuesto_pct?: number
+          iva_monto?: number
+          iva_pct?: number
+          lista_precio_id?: string | null
+          notas?: string | null
           orden?: number
+          precio_manual?: boolean
           precio_unitario?: number
           producto_id?: string | null
           producto_snapshot?: Json | null
           subtotal?: number
           total?: number
+          unidad_id?: string | null
         }
         Update: {
           cantidad?: number
@@ -2029,14 +2045,22 @@ export type Database = {
           descuento_pct?: number
           empresa_id?: string
           id?: string
+          ieps_monto?: number
+          ieps_pct?: number
           impuesto?: number
           impuesto_pct?: number
+          iva_monto?: number
+          iva_pct?: number
+          lista_precio_id?: string | null
+          notas?: string | null
           orden?: number
+          precio_manual?: boolean
           precio_unitario?: number
           producto_id?: string | null
           producto_snapshot?: Json | null
           subtotal?: number
           total?: number
+          unidad_id?: string | null
         }
         Relationships: [
           {
@@ -2063,13 +2087,19 @@ export type Database = {
           created_at: string
           created_by: string | null
           descuento: number
+          descuento_extra: number
+          descuento_extra_motivo: string | null
+          descuento_extra_tipo: string
           empresa_id: string
           enviada_wa_at: string | null
           estado: string
           fecha: string
           folio: string | null
           id: string
+          ieps_total: number
           impuestos: number
+          iva_total: number
+          lista_precio_id: string | null
           moneda: string | null
           notas: string | null
           subtotal: number
@@ -2089,13 +2119,19 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descuento?: number
+          descuento_extra?: number
+          descuento_extra_motivo?: string | null
+          descuento_extra_tipo?: string
           empresa_id: string
           enviada_wa_at?: string | null
           estado?: string
           fecha?: string
           folio?: string | null
           id?: string
+          ieps_total?: number
           impuestos?: number
+          iva_total?: number
+          lista_precio_id?: string | null
           moneda?: string | null
           notas?: string | null
           subtotal?: number
@@ -2115,13 +2151,19 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descuento?: number
+          descuento_extra?: number
+          descuento_extra_motivo?: string | null
+          descuento_extra_tipo?: string
           empresa_id?: string
           enviada_wa_at?: string | null
           estado?: string
           fecha?: string
           folio?: string | null
           id?: string
+          ieps_total?: number
           impuestos?: number
+          iva_total?: number
+          lista_precio_id?: string | null
           moneda?: string | null
           notas?: string | null
           subtotal?: number
