@@ -158,7 +158,7 @@ export default function AdminPublicidadTab() {
     const ok = await confirmDialog(`¿Eliminar "${ad.titulo}"? Esta acción no se puede deshacer.`, {
       title: 'Eliminar anuncio',
       confirmText: 'Eliminar',
-      variant: 'destructive',
+      destructive: true,
     });
     if (!ok) return;
     const { error } = await supabase.from('publicidad_anuncios').delete().eq('id', ad.id);
@@ -177,9 +177,8 @@ export default function AdminPublicidadTab() {
   };
 
   const resetVistas = async (ad: Publicidad) => {
-    const ok = await confirmDialog({
+    const ok = await confirmDialog('Esto eliminará el registro de quienes ya vieron este anuncio. El popup volverá a aparecerle a TODOS los usuarios. ¿Continuar?', {
       title: 'Reenviar a todos',
-      description: 'Esto eliminará el registro de quienes ya vieron este anuncio. El popup volverá a aparecerle a TODOS los usuarios. ¿Continuar?',
       confirmText: 'Reenviar',
     });
     if (!ok) return;
