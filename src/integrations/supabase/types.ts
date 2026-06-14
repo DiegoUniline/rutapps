@@ -7133,39 +7133,63 @@ export type Database = {
       wa_bot_authorized_numbers: {
         Row: {
           activo: boolean
+          auto_intro_sent_at: string | null
           created_at: string
           created_by: string | null
           empresa_id: string
           id: string
+          last_sent_alertas_semanal: string | null
+          last_sent_cobranza_diaria: string | null
+          last_sent_reporte_diario: string | null
           nombre: string | null
           permisos: Json
           phone_e164: string
+          pref_alertas_semanal: boolean
+          pref_cobranza_diaria: boolean
+          pref_hora_reporte_diario: number
+          pref_reporte_diario: boolean
           profile_id: string | null
           updated_at: string
           welcome_sent_at: string | null
         }
         Insert: {
           activo?: boolean
+          auto_intro_sent_at?: string | null
           created_at?: string
           created_by?: string | null
           empresa_id: string
           id?: string
+          last_sent_alertas_semanal?: string | null
+          last_sent_cobranza_diaria?: string | null
+          last_sent_reporte_diario?: string | null
           nombre?: string | null
           permisos?: Json
           phone_e164: string
+          pref_alertas_semanal?: boolean
+          pref_cobranza_diaria?: boolean
+          pref_hora_reporte_diario?: number
+          pref_reporte_diario?: boolean
           profile_id?: string | null
           updated_at?: string
           welcome_sent_at?: string | null
         }
         Update: {
           activo?: boolean
+          auto_intro_sent_at?: string | null
           created_at?: string
           created_by?: string | null
           empresa_id?: string
           id?: string
+          last_sent_alertas_semanal?: string | null
+          last_sent_cobranza_diaria?: string | null
+          last_sent_reporte_diario?: string | null
           nombre?: string | null
           permisos?: Json
           phone_e164?: string
+          pref_alertas_semanal?: boolean
+          pref_cobranza_diaria?: boolean
+          pref_hora_reporte_diario?: number
+          pref_reporte_diario?: boolean
           profile_id?: string | null
           updated_at?: string
           welcome_sent_at?: string | null
