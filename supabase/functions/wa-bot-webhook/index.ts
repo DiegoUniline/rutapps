@@ -1049,9 +1049,10 @@ Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando use
     toolsUsed.push(requiredTool.name);
     const out: any = await execTool(requiredTool.name, requiredTool.args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
     if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
-    // Reporte PDF: caption directo, no necesita pasar por LLM
-    if (requiredTool.name === "generar_reporte_pdf") {
-      return { reply: out?.summary || "📄 Aquí tienes el reporte PDF.", intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
+    // PDF: caption directo, no necesita pasar por LLM
+    if (requiredTool.name === "generar_reporte_pdf" || requiredTool.name === "generar_venta_pdf") {
+      const defaultMsg = requiredTool.name === "generar_venta_pdf" ? "📄 Aquí tienes la nota de venta." : "📄 Aquí tienes el reporte PDF.";
+      return { reply: out?.summary || defaultMsg, intent: requiredTool.name, pdfUrl, pdfName, toolsUsed };
     }
     // Folio: inyectamos el resultado como tool call sintético para que el LLM lo redacte
     messages.push({
