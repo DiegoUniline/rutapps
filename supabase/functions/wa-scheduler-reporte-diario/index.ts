@@ -2,6 +2,7 @@
 // en su zona horaria local, una sola vez al día.
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { generarReporteBotPdf } from "./reportePdf.ts";
+import { generarReporteBotXlsx } from "./reporteXlsx.ts";
 import { localParts, sleep, waSendFile, waSendText, buildIntroMessage } from "../_shared/wa-scheduler-utils.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
