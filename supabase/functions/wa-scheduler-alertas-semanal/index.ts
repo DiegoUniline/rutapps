@@ -104,12 +104,14 @@ async function buildAlertas(empresaId: string): Promise<string | null> {
   return `🔔 *Alertas inteligentes — Semana*\n\n${sections.join("\n\n")}`;
 }
 
-async function run() {
-  const { data: subs } = await admin
+async function run(opts: { force?: boolean; phone?: string } = {}) {
+  let q = admin
     .from("wa_bot_authorized_numbers")
     .select("id, empresa_id, phone_e164, last_sent_alertas_semanal, auto_intro_sent_at, empresas:empresa_id(zona_horaria)")
-    .eq("activo", true)
-    .eq("pref_alertas_semanal", true);
+    .eq("activo", true);
+  if (!opts.force) q = q.eq("pref_alertas_semanal", true);
+  if (opts.phone) q = q.eq("phone_e164", opts.phone);
+  const { data: subs } = await q;
   if (!subs?.length) return { processed: 0 };
   const cache = new Map<string, string | null>();
   let sent = 0, failed = 0, processed = 0;
@@ -117,9 +119,10 @@ async function run() {
   for (const sub of subs as any[]) {
     const tz = sub.empresas?.zona_horaria || "America/Mexico_City";
     const parts = localParts(tz);
-    // Lunes (dow=1) a las 9
-    if (parts.dow !== 1 || parts.hour !== 9) continue;
-    if (sub.last_sent_alertas_semanal === parts.date) continue;
+    if (!opts.force) {
+      if (parts.dow !== 1 || parts.hour !== 9) continue;
+      if (sub.last_sent_alertas_semanal === parts.date) continue;
+    }
 
     processed++;
     const key = `${sub.empresa_id}::${parts.date}`;
