@@ -105,10 +105,11 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
   }
   const productos = Array.from(prodMap.values()).sort((a, b) => b.total - a.total);
 
-  const pdfBytes = await generarReporteBotPdf({
+  const reporteInput = {
     empresa: empresaRes.data || {},
-    fechaLabel: label,
+    label,
     fechaISO: endLocal,
+    fechaLabel: label,
     totals: {
       totalVentas, totalContado, totalCredito, totalCancelado,
       totalCobros, totalGastos, cobrosPorMetodo,
@@ -119,13 +120,18 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     productos,
     cobros: cobros.map((c) => ({ cliente: c.clientes?.nombre || "—", metodo_pago: c.metodo_pago || "", referencia: c.referencia, monto: Number(c.monto || 0) })),
     gastos: gastos.map((g) => ({ concepto: g.concepto, notas: g.notas, monto: Number(g.monto || 0) })),
-  });
+  };
+
+  const pdfBytes = await generarReporteBotPdf(reporteInput as any);
+  const xlsxBytes = generarReporteBotXlsx(reporteInput as any);
 
   return {
     pdfBytes,
+    xlsxBytes,
     summary: `📊 *${label}*\nVentas: ${fmt(totalVentas)} (${ventas.length})\nCobros: ${fmt(totalCobros)}\nGastos: ${fmt(totalGastos)}`,
   };
 }
+
 
 
 async function run() {
