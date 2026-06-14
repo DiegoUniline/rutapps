@@ -333,6 +333,13 @@ export default function RutaClientes() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <button
+            onClick={() => navigate('/ruta/ventas/nueva')}
+            className="shrink-0 h-[44px] w-[44px] rounded-xl bg-emerald-600 text-white flex items-center justify-center active:scale-90 transition-transform"
+            title="Venta rápida (elegir cliente después)"
+          >
+            <ShoppingCart className="h-5 w-5" />
+          </button>
           {canCrearCliente && (
             <button
               onClick={() => navigate(`/ruta/clientes/nuevo?vendedorId=${profile?.id ?? ''}`)}
