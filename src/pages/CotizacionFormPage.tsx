@@ -91,13 +91,14 @@ export default function CotizacionFormPage() {
     loadedRef.current = existing.id!;
     setForm({ ...existing, fecha: existing.fecha?.slice(0, 10) ?? todayISO() });
     const ls = (existing.cotizacion_lineas ?? []).map((l: any) => {
-      const prod = l.productos;
+      const unidadData = l.unidades;
+      const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
       const taxes: string[] = [];
       if (Number(l.iva_pct) > 0) taxes.push(`IVA ${l.iva_pct}%`);
       if (Number(l.ieps_pct) > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
       return {
         ...l,
-        unidad_label: '',
+        unidad_label: unidadLabel,
         impuestos_label: taxes.join(', '),
       } as Linea;
     });
@@ -196,6 +197,7 @@ export default function CotizacionFormPage() {
     const listaPrecioId = (form as any).lista_precio_id || null;
     const pricing = resolveProductPricing(tarifaRules ?? [], prodForPricing, listaPrecioId);
     const snap = buildSalePricingSnapshot(prodForPricing, pricing);
+    const unidadLabel = (producto as any).unidades_venta?.abreviatura || (producto as any).unidades_venta?.nombre || (producto as any).unidades_compra?.abreviatura || '';
     setLineas(prev => {
       const next = [...prev];
       (next[idx] as any) = {
@@ -207,6 +209,7 @@ export default function CotizacionFormPage() {
         display_unit_price: snap.displayPrice,
         iva_pct: ivaPct, ieps_pct: iepsPct,
         unidad_id: producto.unidad_venta_id || producto.unidad_compra_id || null,
+        unidad_label: unidadLabel,
         impuestos_label: taxes.join(', '),
         productos: { id: producto.id, codigo: producto.codigo, nombre: producto.nombre, es_granel: (producto as any).es_granel, unidad_granel: (producto as any).unidad_granel },
         precio_manual: false,
@@ -396,7 +399,7 @@ export default function CotizacionFormPage() {
   const almacenOptions = (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre }));
 
   return (
-    <div className="p-3 sm:p-6 max-w-[1200px] mx-auto space-y-4">
+    <div className="p-3 sm:p-5 max-w-[1200px] space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate('/cotizaciones')}><ArrowLeft className="h-4 w-4" /></Button>
