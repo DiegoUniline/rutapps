@@ -127,6 +127,15 @@ export default function WhatsAppBotPage() {
     onSuccess: () => { toast.success('Número eliminado'); qc.invalidateQueries({ queryKey: ['wa_bot_authorized_numbers', empresaId] }); },
   });
 
+  const updatePref = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
+      const { error } = await supabase.from('wa_bot_authorized_numbers').update(patch).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wa_bot_authorized_numbers', empresaId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const profilesAvailables = useMemo(() => {
     const usedPhones = new Set((numbersQ.data || []).map((n: any) => n.phone_e164));
     return (profilesQ.data || []).filter(p => p.telefono && !usedPhones.has(normPhone(p.telefono!)));
