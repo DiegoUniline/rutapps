@@ -1004,7 +1004,7 @@ Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando use
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
         toolsUsed.push(call.function.name);
-        const out: any = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos });
+        const out: any = await execTool(call.function.name, args, { empresaId: opts.empresaId, permisos: opts.permisos, tz });
         if (out?.pdfUrl) { pdfUrl = out.pdfUrl; pdfName = out.fileName; }
         messages.push({
           role: "tool",
