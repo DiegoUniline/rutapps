@@ -67,7 +67,7 @@ export const MODULOS: ModuloDef[] = [
   { id: 'solo_movil', label: 'Solo vista móvil (ruta)', group: 'General' },
 
   // Ventas
-  { id: 'ventas', label: 'Todas las ventas', group: 'Ventas' },
+  { id: 'ventas', label: 'Ventas', group: 'Ventas' },
   { id: 'ventas.cotizaciones', label: 'Cotizaciones', group: 'Ventas' },
   { id: 'ventas.reporte_diario', label: 'Reporte diario', group: 'Ventas' },
   { id: 'ventas.devoluciones', label: 'Devoluciones', group: 'Ventas' },
