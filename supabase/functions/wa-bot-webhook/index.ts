@@ -949,7 +949,7 @@ FORMATO WHATSAPP:
 - Para stock muestra la unidad real del producto (ej. "150 PZA", "12.5 kg") tal como viene del campo 'unidad' en el resultado.
 - No uses markdown pesado (## o tablas); WhatsApp no las renderiza.
 
-Hoy es ${hoyMx}.`;
+Hoy es ${hoyMx} (${hoyIso}) en la zona horaria *${tz}* de la empresa. Cuando uses "hoy" o "ayer" en parámetros de fecha de las herramientas, se interpretan en esa zona; nunca uses UTC.`;
 
   const messages: any[] = [
     { role: "system", content: system },
