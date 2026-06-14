@@ -24,6 +24,15 @@ function cleanLike(value: unknown) {
   return String(value || "").replace(/[%,()]/g, " ").trim();
 }
 
+// Unidad real del producto: granel usa unidad_granel; no-granel usa la abreviatura
+// del catálogo de unidades (unidad_venta_id). Fallback "pzs".
+function unitFor(p: any): string {
+  if (p?.es_granel) return p.unidad_granel || "kg";
+  return p?.unidad_venta?.abreviatura || "pzs";
+}
+
+const PRODUCTO_SELECT_BASE = "id, codigo, nombre, cantidad, min, precio_principal, es_granel, unidad_granel, unidad_venta:unidades!unidad_venta_id(abreviatura)";
+
 function normalizePhone(raw: string): string {
   const cleaned = raw.replace(/@s\.whatsapp\.net$/, "").replace(/@g\.us$/, "").replace(/[^\d]/g, "");
   return cleaned;
