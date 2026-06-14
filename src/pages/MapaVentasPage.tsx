@@ -27,7 +27,7 @@ export default function MapaVentasPage() {
   const [fechaEntregas, setFechaEntregas] = useState(today);
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
