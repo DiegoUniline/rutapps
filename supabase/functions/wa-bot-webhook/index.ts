@@ -735,15 +735,15 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "resumen_cobros") {
     if (!need("cobros")) return { error: "Sin permiso para cobros" };
-    const date = parseFecha(args?.fecha);
-    const msg = await buildCobrosMessage(empresaId, date, args?.fecha || "hoy");
+    const fechaIso = parseFechaTz(args?.fecha, tz);
+    const msg = await buildCobrosMessage(empresaId, fechaIso, args?.fecha || "hoy", tz);
     return { resultado: msg };
   }
 
   if (name === "resumen_ventas") {
     if (!need("reportes")) return { error: "Sin permiso para ventas" };
-    const date = parseFecha(args?.fecha);
-    const { start, end } = dayRange(date);
+    const fechaIso = parseFechaTz(args?.fecha, tz);
+    const { start, end } = dayRange(fechaIso, tz);
     const { data } = await admin.from("ventas")
       .select("folio, total, status, clientes(nombre)")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end);
@@ -752,7 +752,7 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     const top: Record<string,number> = {};
     for (const x of v as any[]) { const c = x.clientes?.nombre || "—"; top[c]=(top[c]||0)+Number(x.total||0); }
     const topArr = Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
-    return { fecha: date.toISOString().slice(0,10), folios: v.length, total_ventas: total, top_clientes: topArr.map(([n,m])=>({cliente:n,monto:m})) };
+    return { fecha: fechaIso, folios: v.length, total_ventas: total, top_clientes: topArr.map(([n,m])=>({cliente:n,monto:m})) };
   }
 
   if (name === "cuentas_por_cobrar") {
