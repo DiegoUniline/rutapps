@@ -777,7 +777,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   };
 
   const currentStepIdx = STEPS.indexOf(step);
-  const goBack = () => { if (currentStepIdx === 0) navigate('/ruta/ventas'); else setStep(STEPS[currentStepIdx - 1]); };
+  const goBack = () => { if (currentStepIdx === 0) navigate('/ruta'); else setStep(STEPS[currentStepIdx - 1]); };
   const goToPayment = () => { initCuentasPendientes(); setStep('pago'); };
   const { symbol: currSym, fmt } = useCurrency();
   const fmtM = fmt;
