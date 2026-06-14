@@ -217,7 +217,7 @@ export type Database = {
           diferencia: number
           id: string
           notas: string | null
-          producto_id: string
+          producto_id: string | null
         }
         Insert: {
           ajustado?: boolean
@@ -230,7 +230,7 @@ export type Database = {
           diferencia?: number
           id?: string
           notas?: string | null
-          producto_id: string
+          producto_id?: string | null
         }
         Update: {
           ajustado?: boolean
@@ -243,7 +243,7 @@ export type Database = {
           diferencia?: number
           id?: string
           notas?: string | null
-          producto_id?: string
+          producto_id?: string | null
         }
         Relationships: [
           {
@@ -608,7 +608,7 @@ export type Database = {
           carga_id: string
           created_at: string
           id: string
-          producto_id: string
+          producto_id: string | null
         }
         Insert: {
           cantidad_cargada?: number
@@ -617,7 +617,7 @@ export type Database = {
           carga_id: string
           created_at?: string
           id?: string
-          producto_id: string
+          producto_id?: string | null
         }
         Update: {
           cantidad_cargada?: number
@@ -626,7 +626,7 @@ export type Database = {
           carga_id?: string
           created_at?: string
           id?: string
-          producto_id?: string
+          producto_id?: string | null
         }
         Relationships: [
           {
@@ -1206,21 +1206,21 @@ export type Database = {
           cliente_id: string
           created_at: string
           id: string
-          producto_id: string
+          producto_id: string | null
         }
         Insert: {
           cantidad?: number
           cliente_id: string
           created_at?: string
           id?: string
-          producto_id: string
+          producto_id?: string | null
         }
         Update: {
           cantidad?: number
           cliente_id?: string
           created_at?: string
           id?: string
-          producto_id?: string
+          producto_id?: string | null
         }
         Relationships: [
           {
@@ -1671,7 +1671,7 @@ export type Database = {
           id: string
           piezas_total: number | null
           precio_unitario: number
-          producto_id: string
+          producto_id: string | null
           subtotal: number | null
           total: number | null
         }
@@ -1684,7 +1684,7 @@ export type Database = {
           id?: string
           piezas_total?: number | null
           precio_unitario?: number
-          producto_id: string
+          producto_id?: string | null
           subtotal?: number | null
           total?: number | null
         }
@@ -1697,7 +1697,7 @@ export type Database = {
           id?: string
           piezas_total?: number | null
           precio_unitario?: number
-          producto_id?: string
+          producto_id?: string | null
           subtotal?: number | null
           total?: number | null
         }
@@ -1848,7 +1848,7 @@ export type Database = {
           linea_abierta_en: string
           linea_cerrada_en: string | null
           notas: string | null
-          producto_id: string
+          producto_id: string | null
           status: string
           stock_esperado: number | null
           stock_inicial: number
@@ -1865,7 +1865,7 @@ export type Database = {
           linea_abierta_en?: string
           linea_cerrada_en?: string | null
           notas?: string | null
-          producto_id: string
+          producto_id?: string | null
           status?: string
           stock_esperado?: number | null
           stock_inicial?: number
@@ -1882,7 +1882,7 @@ export type Database = {
           linea_abierta_en?: string
           linea_cerrada_en?: string | null
           notas?: string | null
-          producto_id?: string
+          producto_id?: string | null
           status?: string
           stock_esperado?: number | null
           stock_inicial?: number
@@ -2233,7 +2233,7 @@ export type Database = {
           id: string
           motivo: Database["public"]["Enums"]["motivo_diferencia"] | null
           notas: string | null
-          producto_id: string
+          producto_id: string | null
         }
         Insert: {
           cantidad_esperada?: number
@@ -2244,7 +2244,7 @@ export type Database = {
           id?: string
           motivo?: Database["public"]["Enums"]["motivo_diferencia"] | null
           notas?: string | null
-          producto_id: string
+          producto_id?: string | null
         }
         Update: {
           cantidad_esperada?: number
@@ -2255,7 +2255,7 @@ export type Database = {
           id?: string
           motivo?: Database["public"]["Enums"]["motivo_diferencia"] | null
           notas?: string | null
-          producto_id?: string
+          producto_id?: string | null
         }
         Relationships: [
           {
@@ -2284,7 +2284,7 @@ export type Database = {
           monto_credito: number
           motivo: Database["public"]["Enums"]["motivo_devolucion"]
           notas: string | null
-          producto_id: string
+          producto_id: string | null
           reemplazo_producto_id: string | null
         }
         Insert: {
@@ -2296,7 +2296,7 @@ export type Database = {
           monto_credito?: number
           motivo?: Database["public"]["Enums"]["motivo_devolucion"]
           notas?: string | null
-          producto_id: string
+          producto_id?: string | null
           reemplazo_producto_id?: string | null
         }
         Update: {
@@ -2308,7 +2308,7 @@ export type Database = {
           monto_credito?: number
           motivo?: Database["public"]["Enums"]["motivo_devolucion"]
           notas?: string | null
-          producto_id?: string
+          producto_id?: string | null
           reemplazo_producto_id?: string | null
         }
         Relationships: [
@@ -2722,7 +2722,7 @@ export type Database = {
           presentacion_factor: number | null
           presentacion_id: string | null
           presentacion_nombre: string | null
-          producto_id: string
+          producto_id: string | null
           unidad_id: string | null
         }
         Insert: {
@@ -2737,7 +2737,7 @@ export type Database = {
           presentacion_factor?: number | null
           presentacion_id?: string | null
           presentacion_nombre?: string | null
-          producto_id: string
+          producto_id?: string | null
           unidad_id?: string | null
         }
         Update: {
@@ -2752,7 +2752,7 @@ export type Database = {
           presentacion_factor?: number | null
           presentacion_id?: string | null
           presentacion_nombre?: string | null
-          producto_id?: string
+          producto_id?: string | null
           unidad_id?: string | null
         }
         Relationships: [
@@ -3346,7 +3346,7 @@ export type Database = {
           id: string
           merma_id: string
           precio_venta_unitario: number
-          producto_id: string
+          producto_id: string | null
           subtotal_costo: number
           subtotal_venta: number
         }
@@ -3358,7 +3358,7 @@ export type Database = {
           id?: string
           merma_id: string
           precio_venta_unitario?: number
-          producto_id: string
+          producto_id?: string | null
           subtotal_costo?: number
           subtotal_venta?: number
         }
@@ -3370,7 +3370,7 @@ export type Database = {
           id?: string
           merma_id?: string
           precio_venta_unitario?: number
-          producto_id?: string
+          producto_id?: string | null
           subtotal_costo?: number
           subtotal_venta?: number
         }
@@ -3594,7 +3594,7 @@ export type Database = {
           fecha: string
           id: string
           notas: string | null
-          producto_id: string
+          producto_id: string | null
           referencia_id: string | null
           referencia_tipo: string | null
           tipo: Database["public"]["Enums"]["tipo_movimiento"]
@@ -3611,7 +3611,7 @@ export type Database = {
           fecha?: string
           id?: string
           notas?: string | null
-          producto_id: string
+          producto_id?: string | null
           referencia_id?: string | null
           referencia_tipo?: string | null
           tipo: Database["public"]["Enums"]["tipo_movimiento"]
@@ -3628,7 +3628,7 @@ export type Database = {
           fecha?: string
           id?: string
           notas?: string | null
-          producto_id?: string
+          producto_id?: string | null
           referencia_id?: string | null
           referencia_tipo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_movimiento"]
@@ -6163,21 +6163,21 @@ export type Database = {
           cantidad: number
           created_at: string
           id: string
-          producto_id: string
+          producto_id: string | null
           traspaso_id: string
         }
         Insert: {
           cantidad?: number
           created_at?: string
           id?: string
-          producto_id: string
+          producto_id?: string | null
           traspaso_id: string
         }
         Update: {
           cantidad?: number
           created_at?: string
           id?: string
-          producto_id?: string
+          producto_id?: string | null
           traspaso_id?: string
         }
         Relationships: [
