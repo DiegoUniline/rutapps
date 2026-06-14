@@ -659,23 +659,22 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("clientes")) return { error: "Sin permiso para clientes" };
     const lim = Math.min(Number(args?.limite || 10), 30);
     const query = cleanLike(args?.query);
-    let q = admin.from("clientes")
-      .select("codigo, nombre, telefono, saldo, status, credito, limite_credito, dias_credito")
-      .eq("empresa_id", empresaId)
-      .order("nombre", { ascending: true })
-      .limit(lim);
-    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%,telefono.ilike.%${query}%`);
-    if (args?.con_saldo === true) q = q.gt("saldo", 0).order("saldo", { ascending: false });
-    const { data, error } = await q;
+    const { data, error } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId,
+      p_query: query || null,
+      p_solo_con_saldo: args?.con_saldo === true,
+      p_limit: lim,
+    });
     if (error) return { error: error.message };
-    const clientes = data || [];
+    const clientes = (data || []) as any[];
     if (!clientes.length) return { resultado: `👤 No encontré clientes${query ? ` para "${query}"` : ""}.` };
     let resultado = `👤 *Clientes${args?.con_saldo ? " con saldo" : ""}${query ? ` (${query})` : ""}:*\n\n`;
-    for (const c of clientes as any[]) {
+    for (const c of clientes) {
       resultado += `• ${c.codigo || ""} ${c.nombre}\n  Tel: ${c.telefono || "—"} · Saldo: *${fmt(Number(c.saldo || 0))}* · Estado: ${c.status || "—"}\n`;
     }
     return { resultado, clientes };
   }
+
 
   if (name === "resumen_cobros") {
     if (!need("cobros")) return { error: "Sin permiso para cobros" };
