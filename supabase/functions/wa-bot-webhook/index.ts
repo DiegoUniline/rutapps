@@ -960,16 +960,22 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
   return { error: "Herramienta desconocida" };
 }
 
-// Atajos mínimos: SOLO PDF directo y folio explícito. Todo lo demás lo decide el LLM.
+// Atajos mínimos: SOLO PDF cuando el usuario lo pide explícitamente.
+// Sin atajo para "reporte/cierre/resumen" sueltos — eso lo decide el LLM como texto.
+const PDF_KEYWORD = /\b(pdf|archivo|documento|m[áa]ndame|env[íi]ame|env[íi]a|m[áa]ndalo|imprime|imprimir|descargar)\b/i;
 function inferRequiredTool(text: string): { name: string; args: any } | null {
   const t = text.toLowerCase().trim();
-  // Reporte PDF explícito
-  if (/^(reporte|cierre|res(u|ú)men\s+del?\s+d(í|i)a)\b/.test(t) || /\bpdf\b/.test(t)) {
-    const fecha = /ayer/.test(t) ? "ayer" : "hoy";
-    return { name: "generar_reporte_pdf", args: { fecha } };
-  }
-  // Folio explícito (VTA-1234, PED-1, SAL-12)
   const folio = text.match(/\b(?:VTA|PED|SAL)-?\d+\b/i)?.[0];
+  if (PDF_KEYWORD.test(t)) {
+    // Si menciona un folio + pide PDF → PDF de esa venta
+    if (folio) return { name: "generar_venta_pdf", args: { folio } };
+    // Reporte/cierre/resumen del día en PDF
+    if (/(reporte|cierre|res(u|ú)men|ventas?|cobros?|d[ií]a)/.test(t)) {
+      const fecha = /ayer/.test(t) ? "ayer" : "hoy";
+      return { name: "generar_reporte_pdf", args: { fecha } };
+    }
+  }
+  // Folio sin pedir PDF → detalle texto
   if (folio) return { name: "consultar_venta", args: { folio } };
   return null;
 }
