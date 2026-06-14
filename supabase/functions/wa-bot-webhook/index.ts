@@ -55,6 +55,36 @@ async function waSendFile(phone: string, url: string, fileName: string, caption?
   }).catch(() => {});
 }
 
+// Maneja "activar/desactivar reporte|cobranza|alertas" y "mis suscripciones"
+async function handleSubscriptionCommand(authId: string, match: RegExpMatchArray | null, isMisSubs: boolean): Promise<string> {
+  const { data: row } = await admin
+    .from("wa_bot_authorized_numbers")
+    .select("pref_reporte_diario, pref_cobranza_diaria, pref_alertas_semanal, pref_hora_reporte_diario")
+    .eq("id", authId).maybeSingle();
+  if (!row) return "⚠️ No encontré tu suscripción.";
+
+  if (isMisSubs && !match) {
+    return `📬 *Tus envíos automáticos:*\n` +
+      `• Reporte diario: ${row.pref_reporte_diario ? `✅ activo (${row.pref_hora_reporte_diario || 9}:00)` : "⛔ inactivo"}\n` +
+      `• Cobranza diaria (1pm): ${row.pref_cobranza_diaria ? "✅ activo" : "⛔ inactivo"}\n` +
+      `• Alertas semanales (lun 9am): ${row.pref_alertas_semanal ? "✅ activo" : "⛔ inactivo"}\n\n` +
+      `Escribe "activar reporte", "desactivar cobranza", etc. O entra a *RutApp → Bot WhatsApp*.`;
+  }
+
+  const action = match![1].toLowerCase(); // activar | desactivar
+  const target = match![2].toLowerCase();
+  const value = action === "activar";
+  const patch: any = {};
+  let label = "";
+  if (/reporte/.test(target)) { patch.pref_reporte_diario = value; label = "Reporte diario"; }
+  else if (/cobranza/.test(target)) { patch.pref_cobranza_diaria = value; label = "Cobranza diaria"; }
+  else if (/alerta/.test(target)) { patch.pref_alertas_semanal = value; label = "Alertas semanales"; }
+  else return "⚠️ No reconocí esa suscripción. Usa: reporte / cobranza / alertas.";
+
+  const { error } = await admin.from("wa_bot_authorized_numbers").update(patch).eq("id", authId);
+  if (error) return `⚠️ No pude actualizar: ${error.message}`;
+  return `${value ? "✅" : "🛑"} *${label}* ${value ? "activado" : "desactivado"}.\nEscribe "mis suscripciones" para ver tu estado.`;
+
 async function log(empresa_id: string | null, phone: string, inbound: string, intent: string, outcome: string, summary: string, pdfUrl: string | null = null, params: any = null) {
   await admin.from("wa_bot_logs").insert({
     empresa_id, phone, inbound_text: inbound, intent, outcome, response_summary: summary, pdf_url: pdfUrl, params,
