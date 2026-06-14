@@ -7913,6 +7913,25 @@ export type Database = {
         Args: { p_pin: string; p_user_id: string }
         Returns: boolean
       }
+      wa_clientes_saldos: {
+        Args: {
+          p_empresa: string
+          p_limit?: number
+          p_query?: string
+          p_solo_con_saldo?: boolean
+        }
+        Returns: {
+          codigo: string
+          credito: boolean
+          dias_credito: number
+          id: string
+          limite_credito: number
+          nombre: string
+          saldo: number
+          status: string
+          telefono: string
+        }[]
+      }
     }
     Enums: {
       accion_devolucion:

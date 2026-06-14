@@ -261,19 +261,18 @@ async function buildStockMessage(empresaId: string, threshold: number | null, no
 }
 
 async function buildClienteMessage(empresaId: string, query: string) {
-  const { data: clientes } = await admin.from("clientes")
-    .select("id, nombre, telefono, saldo")
-    .eq("empresa_id", empresaId)
-    .or(`nombre.ilike.%${query}%,telefono.ilike.%${query}%`)
-    .limit(5);
-  if (!clientes || !clientes.length) return `❌ No encontré clientes con "${query}".`;
-  if (clientes.length > 1) {
-    let msg = `🔎 ${clientes.length} clientes coinciden con "${query}":\n\n`;
-    for (const c of clientes) msg += `• ${c.nombre}  — Saldo: ${fmt(Number(c.saldo || 0))}\n`;
+  const { data: clientes } = await admin.rpc("wa_clientes_saldos", {
+    p_empresa: empresaId, p_query: query, p_solo_con_saldo: false, p_limit: 5,
+  });
+  const list = (clientes || []) as any[];
+  if (!list.length) return `❌ No encontré clientes con "${query}".`;
+  if (list.length > 1) {
+    let msg = `🔎 ${list.length} clientes coinciden con "${query}":\n\n`;
+    for (const c of list) msg += `• ${c.nombre}  — Saldo: ${fmt(Number(c.saldo || 0))}\n`;
     msg += `\nEnvía *cliente <nombre exacto>* para ver detalle.`;
     return msg;
   }
-  const c = clientes[0];
+  const c = list[0];
   const { data: ventas } = await admin.from("ventas")
     .select("folio, fecha, total, saldo_pendiente, status")
     .eq("empresa_id", empresaId).eq("cliente_id", c.id)
@@ -285,6 +284,7 @@ async function buildClienteMessage(empresaId: string, query: string) {
   }
   return msg;
 }
+
 
 async function buildCobrosMessage(empresaId: string, date: Date, label: string) {
   const { start, end } = dayRange(date);
@@ -659,23 +659,22 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     if (!need("clientes")) return { error: "Sin permiso para clientes" };
     const lim = Math.min(Number(args?.limite || 10), 30);
     const query = cleanLike(args?.query);
-    let q = admin.from("clientes")
-      .select("codigo, nombre, telefono, saldo, status, credito, limite_credito, dias_credito")
-      .eq("empresa_id", empresaId)
-      .order("nombre", { ascending: true })
-      .limit(lim);
-    if (query) q = q.or(`nombre.ilike.%${query}%,codigo.ilike.%${query}%,telefono.ilike.%${query}%`);
-    if (args?.con_saldo === true) q = q.gt("saldo", 0).order("saldo", { ascending: false });
-    const { data, error } = await q;
+    const { data, error } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId,
+      p_query: query || null,
+      p_solo_con_saldo: args?.con_saldo === true,
+      p_limit: lim,
+    });
     if (error) return { error: error.message };
-    const clientes = data || [];
+    const clientes = (data || []) as any[];
     if (!clientes.length) return { resultado: `👤 No encontré clientes${query ? ` para "${query}"` : ""}.` };
     let resultado = `👤 *Clientes${args?.con_saldo ? " con saldo" : ""}${query ? ` (${query})` : ""}:*\n\n`;
-    for (const c of clientes as any[]) {
+    for (const c of clientes) {
       resultado += `• ${c.codigo || ""} ${c.nombre}\n  Tel: ${c.telefono || "—"} · Saldo: *${fmt(Number(c.saldo || 0))}* · Estado: ${c.status || "—"}\n`;
     }
     return { resultado, clientes };
   }
+
 
   if (name === "resumen_cobros") {
     if (!need("cobros")) return { error: "Sin permiso para cobros" };
@@ -701,31 +700,28 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
 
   if (name === "cuentas_por_cobrar") {
     if (!need("clientes")) return { error: "Sin permiso" };
-    const lim = args?.limite || 10;
-    const { data } = await admin.from("clientes")
-      .select("nombre, telefono, saldo")
-      .eq("empresa_id", empresaId).gt("saldo", 0)
-      .order("saldo", { ascending: false }).limit(lim);
-    return { clientes: data || [] };
+    const lim = Math.min(Number(args?.limite || 10), 30);
+    const { data } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId, p_query: null, p_solo_con_saldo: true, p_limit: lim,
+    });
+    return { clientes: (data || []).map((c: any) => ({ nombre: c.nombre, telefono: c.telefono, saldo: c.saldo })) };
   }
 
   if (name === "consultar_saldos") {
     if (!need("clientes")) return { error: "Sin permiso para saldos" };
     const lim = Math.min(Number(args?.limite || 10), 30);
-    const { data, error } = await admin.from("clientes")
-      .select("codigo, nombre, telefono, saldo")
-      .eq("empresa_id", empresaId)
-      .gt("saldo", 0)
-      .order("saldo", { ascending: false })
-      .limit(lim);
+    const { data, error } = await admin.rpc("wa_clientes_saldos", {
+      p_empresa: empresaId, p_query: null, p_solo_con_saldo: true, p_limit: lim,
+    });
     if (error) return { error: error.message };
-    const clientes = data || [];
+    const clientes = (data || []) as any[];
     const total = clientes.reduce((s: number, c: any) => s + Number(c.saldo || 0), 0);
     if (!clientes.length) return { resultado: "✅ No encontré saldos pendientes en clientes." };
     let resultado = `💰 *Saldos pendientes*\nTotal mostrado: *${fmt(total)}*\n\n`;
-    for (const c of clientes as any[]) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
+    for (const c of clientes) resultado += `• ${c.codigo || ""} ${c.nombre}: *${fmt(Number(c.saldo || 0))}*${c.telefono ? ` · ${c.telefono}` : ""}\n`;
     return { resultado, total_mostrado: total, clientes };
   }
+
 
   if (name === "consultar_venta") {
     if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
