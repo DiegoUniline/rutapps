@@ -5196,6 +5196,80 @@ export type Database = {
           },
         ]
       }
+      publicidad_anuncios: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          descripcion: string | null
+          id: string
+          media_url: string | null
+          mostrar_popup: boolean
+          tipo_media: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          descripcion?: string | null
+          id?: string
+          media_url?: string | null
+          mostrar_popup?: boolean
+          tipo_media?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          descripcion?: string | null
+          id?: string
+          media_url?: string | null
+          mostrar_popup?: boolean
+          tipo_media?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      publicidad_vistas: {
+        Row: {
+          anuncio_id: string
+          id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          anuncio_id: string
+          id?: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          anuncio_id?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicidad_vistas_anuncio_id_fkey"
+            columns: ["anuncio_id"]
+            isOneToOne: false
+            referencedRelation: "publicidad_anuncios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reportes_personalizados: {
         Row: {
           columnas: Json

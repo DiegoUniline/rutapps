@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -15,6 +15,7 @@ import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
 import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
+import AdminPublicidadTab from '@/components/admin/AdminPublicidadTab';
 import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncompletosTab';
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
@@ -26,7 +27,7 @@ import ControlPage from '@/pages/ControlPage';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'whatsapp'
-  | 'notifications' | 'payment_requests' | 'anuncios' | 'cobros'
+  | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
   | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
 
 const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
@@ -41,6 +42,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'notifications', label: 'Historial', icon: Bell },
   { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
   { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
+  { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
   { key: 'cobros', label: 'Cobros', icon: Store },
   { key: 'incompletos', label: 'Registros incompletos', icon: UserX },
   { key: 'cupones', label: 'Cupones', icon: Ticket },
@@ -137,6 +139,7 @@ export default function SuperAdminPage() {
             {tab === 'notifications' && <AdminNotificationsTab />}
             {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
             {tab === 'anuncios' && <AdminAnunciosTab />}
+            {tab === 'publicidad' && <AdminPublicidadTab />}
             {tab === 'cobros' && <AdminCobrosTab />}
             {tab === 'incompletos' && <AdminRegistrosIncompletosTab />}
             {tab === 'cupones' && <AdminCuponesTab />}
