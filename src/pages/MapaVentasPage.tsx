@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
-import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin } from 'lucide-react';
+import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, Info, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -27,6 +27,7 @@ export default function MapaVentasPage() {
   const [fechaEntregas, setFechaEntregas] = useState(today);
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
   const [selectedEntrega, setSelectedEntrega] = useState<any | null>(null);
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
@@ -300,9 +301,14 @@ export default function MapaVentasPage() {
       </div>
 
       {/* Split: tabla izquierda + mapa derecha */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative">
         {/* Panel izquierdo: tabla con tabs */}
-        <div className="w-[420px] border-r border-border flex flex-col bg-card min-h-0 shrink-0">
+        <div
+          className={cn(
+            "border-r border-border flex flex-col bg-card min-h-0 shrink-0 transition-all duration-300 ease-in-out",
+            panelOpen ? "w-[420px]" : "w-0 overflow-hidden"
+          )}
+        >
           <PanelEntregas
             entregasData={entregasData ?? []}
             entregasConGps={entregasConGps}
@@ -315,6 +321,14 @@ export default function MapaVentasPage() {
 
         {/* Mapa derecha */}
         <div className="flex-1 relative min-h-0">
+          {/* Botón toggle del panel (en el borde izquierdo del mapa = borde derecho del panel) */}
+          <button
+            onClick={() => setPanelOpen(o => !o)}
+            className="absolute top-3 left-0 z-20 bg-card border border-border rounded-r-md p-1.5 shadow-md hover:bg-accent transition-all"
+            title={panelOpen ? "Ocultar panel" : "Mostrar panel"}
+          >
+            {panelOpen ? <ChevronLeft className="h-4 w-4 text-foreground" /> : <ChevronRight className="h-4 w-4 text-foreground" />}
+          </button>
           {loadingEntregas && (
             <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center pointer-events-none">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
