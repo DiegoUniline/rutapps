@@ -678,7 +678,66 @@ async function execTool(name: string, args: any, ctx: { empresaId: string; permi
     return { pdfUrl: signed?.signedUrl, fileName: `reporte-${label}.pdf`, summary, resultado: summary };
   }
 
-  if (name === "consultar_stock_bajo") {
+  if (name === "generar_venta_pdf") {
+    if (!need("reportes") && !need("clientes")) return { error: "Sin permiso" };
+    const folio = String(args?.folio || "").trim();
+    if (!folio) return { error: "Folio requerido" };
+    const [{ data: ventas }, { data: emp }] = await Promise.all([
+      admin.from("ventas")
+        .select("id, folio, fecha, total, subtotal, descuento_total, saldo_pendiente, status, condicion_pago, vendedor_id, clientes(nombre, telefono), venta_lineas(cantidad, precio_unitario, descuento_pct, total, productos(codigo, nombre)), cobro_aplicaciones(monto_aplicado, cobros(fecha, metodo_pago, referencia))")
+        .eq("empresa_id", empresaId)
+        .ilike("folio", `%${folio}%`)
+        .order("fecha", { ascending: false })
+        .limit(1),
+      admin.from("empresas")
+        .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
+        .eq("id", empresaId).maybeSingle(),
+    ]);
+    const v: any = (ventas || [])[0];
+    if (!v) return { error: `No encontré la venta "${folio}".` };
+    let vendNombre = "—";
+    if (v.vendedor_id) {
+      const { data: prof } = await admin.from("profiles").select("nombre").eq("id", v.vendedor_id).maybeSingle();
+      vendNombre = prof?.nombre || "—";
+    }
+    const pdfBytes = await generarVentaBotPdf({
+      empresa: (emp as any) || {},
+      venta: {
+        folio: v.folio,
+        fecha: v.fecha,
+        cliente: v.clientes?.nombre || "—",
+        cliente_telefono: v.clientes?.telefono || null,
+        vendedor: vendNombre,
+        condicion_pago: v.condicion_pago,
+        status: v.status,
+        subtotal: Number(v.subtotal || 0),
+        descuento_total: Number(v.descuento_total || 0),
+        total: Number(v.total || 0),
+        saldo_pendiente: Number(v.saldo_pendiente || 0),
+      },
+      lineas: (v.venta_lineas || []).map((l: any) => ({
+        codigo: l.productos?.codigo || "",
+        nombre: l.productos?.nombre || "—",
+        cantidad: Number(l.cantidad || 0),
+        precio_unitario: Number(l.precio_unitario || 0),
+        descuento_pct: Number(l.descuento_pct || 0),
+        total: Number(l.total || 0),
+      })),
+      cobros: (v.cobro_aplicaciones || []).map((a: any) => ({
+        fecha: a.cobros?.fecha,
+        metodo: a.cobros?.metodo_pago,
+        referencia: a.cobros?.referencia,
+        monto: Number(a.monto_aplicado || 0),
+      })),
+    });
+    const path = `${empresaId}/venta-${(v.folio || "sin-folio").replace(/[^\w-]/g, "_")}-${Date.now()}.pdf`;
+    const { error: upErr } = await admin.storage.from("wa-bot-reports").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
+    if (upErr) return { error: String(upErr) };
+    const { data: signed } = await admin.storage.from("wa-bot-reports").createSignedUrl(path, 60*60*24);
+    const summary = `📄 Nota ${v.folio} — ${v.clientes?.nombre || "—"} · Total ${fmt(Number(v.total || 0))}.`;
+    return { pdfUrl: signed?.signedUrl, fileName: `venta-${v.folio || "nota"}.pdf`, summary, resultado: summary };
+  }
+
     if (!need("stock")) return { error: "Sin permiso para stock" };
     const msg = await buildStockMessage(empresaId, args?.umbral ?? null, null);
     return { resultado: msg };
