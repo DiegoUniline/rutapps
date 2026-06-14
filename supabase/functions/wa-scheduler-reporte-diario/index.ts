@@ -155,10 +155,12 @@ async function run(opts: { force?: boolean; phone?: string } = {}) {
     const formato = sub.pref_reporte_diario_formato || "pdf";
     const targetHour = sub.pref_hora_reporte_diario || 9;
 
-    if (frecuencia === "semanal" && parts.dow !== 6) continue;
-    if (parts.hour !== targetHour) continue;
-    if (parts.hour < 9 || parts.hour > 20) continue;
-    if (sub.last_sent_reporte_diario === parts.date) continue;
+    if (!opts.force) {
+      if (frecuencia === "semanal" && parts.dow !== 6) continue;
+      if (parts.hour !== targetHour) continue;
+      if (parts.hour < 9 || parts.hour > 20) continue;
+      if (sub.last_sent_reporte_diario === parts.date) continue;
+    }
 
     const endLocal = parts.date;
     const startLocal = frecuencia === "semanal" ? addDays(endLocal, -6) : endLocal;
