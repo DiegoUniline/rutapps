@@ -129,7 +129,11 @@ function MediaBlock({ ad, media }: { ad: Publicidad; media: string | null }) {
     return <div className="aspect-video w-full bg-muted animate-pulse" />;
   }
   if (ad.tipo_media === 'imagen') {
-    return <img src={media} alt={ad.titulo} className="w-full max-h-[400px] object-cover bg-black" />;
+    return (
+      <div className="w-full aspect-video bg-black flex items-center justify-center overflow-hidden">
+        <img src={media} alt={ad.titulo} className="w-full h-full object-contain" />
+      </div>
+    );
   }
   if (ad.tipo_media === 'video') {
     return (
