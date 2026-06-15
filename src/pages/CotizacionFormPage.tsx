@@ -392,6 +392,68 @@ export default function CotizacionFormPage() {
     setForm(f => ({ ...f, lista_precio_id: lista }));
   };
 
+  const hasChanges = useMemo(() => {
+    const currentLineas = lineas.filter(l => l.producto_id || l.descripcion).map(l => ({
+      producto_id: l.producto_id ?? null,
+      descripcion: l.descripcion ?? null,
+      cantidad: Number(l.cantidad) || 0,
+      precio_unitario: Number(l.precio_unitario) || 0,
+      descuento_pct: Number(l.descuento_pct) || 0,
+      iva_pct: Number(l.iva_pct) || 0,
+      ieps_pct: Number(l.ieps_pct) || 0,
+      unidad_id: l.unidad_id ?? null,
+    }));
+    const currentForm = {
+      cliente_id: form.cliente_id ?? null,
+      fecha: form.fecha ?? '',
+      vigencia_dias: form.vigencia_dias ?? 15,
+      tarifa_id: form.tarifa_id ?? null,
+      almacen_id: form.almacen_id ?? null,
+      descuento_extra: form.descuento_extra ?? 0,
+      descuento_extra_tipo: form.descuento_extra_tipo ?? 'porcentaje',
+      notas: form.notas ?? '',
+      vendedor_id: form.vendedor_id ?? null,
+    };
+    if (isNew) {
+      const isEmpty =
+        currentForm.cliente_id === null &&
+        currentForm.almacen_id === null &&
+        currentForm.tarifa_id === null &&
+        currentForm.notas === '' &&
+        currentForm.descuento_extra === 0 &&
+        currentLineas.length === 0;
+      return !isEmpty;
+    }
+    if (!existing) return false;
+    const originalLineas = (existing.cotizacion_lineas ?? []).map((l: any) => ({
+      producto_id: l.producto_id ?? null,
+      descripcion: l.descripcion ?? null,
+      cantidad: Number(l.cantidad) || 0,
+      precio_unitario: Number(l.precio_unitario) || 0,
+      descuento_pct: Number(l.descuento_pct) || 0,
+      iva_pct: Number(l.iva_pct) || 0,
+      ieps_pct: Number(l.ieps_pct) || 0,
+      unidad_id: l.unidad_id ?? null,
+    }));
+    const originalForm = {
+      cliente_id: existing.cliente_id ?? null,
+      fecha: existing.fecha?.slice(0, 10) ?? '',
+      vigencia_dias: existing.vigencia_dias ?? 15,
+      tarifa_id: existing.tarifa_id ?? null,
+      almacen_id: existing.almacen_id ?? null,
+      descuento_extra: existing.descuento_extra ?? 0,
+      descuento_extra_tipo: existing.descuento_extra_tipo ?? 'porcentaje',
+      notas: existing.notas ?? '',
+      vendedor_id: existing.vendedor_id ?? null,
+    };
+    if (JSON.stringify(currentForm) !== JSON.stringify(originalForm)) return true;
+    if (currentLineas.length !== originalLineas.length) return true;
+    for (let i = 0; i < currentLineas.length; i++) {
+      if (JSON.stringify(currentLineas[i]) !== JSON.stringify(originalLineas[i])) return true;
+    }
+    return false;
+  }, [isNew, form, lineas, existing]);
+
   if (!isNew && isError) return <div className="p-6 text-destructive">Error al cargar la cotización: {(error as any)?.message || 'desconocido'}</div>;
   if (!isNew && !existing && (isLoading || isFetching)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
 
@@ -411,7 +473,7 @@ export default function CotizacionFormPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {!readOnly && (
-            <Button onClick={() => handleSave()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Guardar</Button>
+            <Button onClick={() => handleSave()} disabled={save.isPending} variant={hasChanges ? 'default' : 'outline'}><Save className="h-4 w-4 mr-1" /> Guardar</Button>
           )}
           {!isNew && (
             <>
