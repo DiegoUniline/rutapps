@@ -260,7 +260,7 @@ export default function CotizacionFormPage() {
   async function handleDownloadPdf() {
     if (isNew || !form.id) { toast.info('Guarda la cotización primero.'); return; }
     const { data: emp } = await supabase.from('empresas')
-      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social')
+      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social, moneda')
       .eq('id', empresa!.id).maybeSingle();
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
@@ -277,7 +277,7 @@ export default function CotizacionFormPage() {
     const newId = isNew ? await handleSave('enviada') : (form.id as string);
     if (!newId) return;
     const { data: emp } = await supabase.from('empresas')
-      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social')
+      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social, moneda')
       .eq('id', empresa!.id).maybeSingle();
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
