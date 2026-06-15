@@ -33,6 +33,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMonto, setEditMonto] = useState('');
+  const [confirmState, setConfirmState] = useState<{ tipo: 'eliminar' | 'cancelar'; pago: Pago } | null>(null);
 
   const handleSubmit = async () => {
     const m = Number(monto);
