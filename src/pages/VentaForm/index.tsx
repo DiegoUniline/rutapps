@@ -179,8 +179,19 @@ export default function VentaFormPage() {
     const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
     const promos = (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento }));
     const vendedorNombre = (form as any).vendedores?.nombre;
+    // Use LIVE computed totals so the printed document reflects the latest edits
+    // (form.subtotal/total may still hold stale DB values until handleSave runs).
+    const formWithLiveTotals = {
+      ...form,
+      subtotal: totals.subtotal,
+      iva_total: totals.iva_total,
+      ieps_total: totals.ieps_total,
+      descuento_total: (totals as any).descuento_total ?? form.descuento_total ?? 0,
+      total: totals.total,
+      saldo_pendiente: saldoPendiente,
+    };
     const blob = await generarVentaPdf({
-      form, empresa, profile, userEmail: user?.email, clienteData, almacenName,
+      form: formWithLiveTotals, empresa, profile, userEmail: user?.email, clienteData, almacenName,
       lineas, productosList: productosList ?? [], entregasExistentes: entregasExistentes ?? [], pagosData: pagosData ?? [],
       promociones: promos, vendedorNombre,
     });
