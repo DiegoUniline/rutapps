@@ -51,13 +51,10 @@ export default function CotizacionesListPage() {
   }, [data, search, estadoFilter]);
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cotizaciones</h1>
-          <p className="text-sm text-muted-foreground">Envíalas por WhatsApp y conviértelas a venta.</p>
-        </div>
-        <Button onClick={() => navigate('/cotizaciones/nuevo')}>
+    <div className="p-4 space-y-3 min-h-full">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Cotizaciones</h1>
+        <Button onClick={() => navigate('/cotizaciones/nuevo')} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Nueva cotización
         </Button>
       </div>
