@@ -124,15 +124,45 @@ export default function FacturacionCfdiPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const cancelStatuses = ['cancelado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
   const filtered = (cfdis || []).filter((c: any) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       (c.folio_fiscal || '').toLowerCase().includes(q) ||
       (c.receiver_name || '').toLowerCase().includes(q) ||
       (c.receiver_rfc || '').toLowerCase().includes(q) ||
-      (c.folio || '').toLowerCase().includes(q)
-    );
+      (c.folio || '').toLowerCase().includes(q);
+    if (!matchSearch) return false;
+    const isCancel = cancelStatuses.includes(c.status);
+    const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
+    switch (facturaSubTab) {
+      case 'pue':
+        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PUE';
+      case 'ppd':
+        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PPD';
+      case 'pagos':
+        return !isCancel && isPago;
+      case 'canceladas':
+        return isCancel;
+      default:
+        return true;
+    }
   });
+
+  const counts = (cfdis || []).reduce(
+    (acc: any, c: any) => {
+      const isCancel = cancelStatuses.includes(c.status);
+      const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
+      acc.todas++;
+      if (isCancel) acc.canceladas++;
+      else if (isPago) acc.pagos++;
+      else if ((c.payment_method || '').toUpperCase() === 'PUE') acc.pue++;
+      else if ((c.payment_method || '').toUpperCase() === 'PPD') acc.ppd++;
+      return acc;
+    },
+    { todas: 0, pue: 0, ppd: 0, pagos: 0, canceladas: 0 },
+  );
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
