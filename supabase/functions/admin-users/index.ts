@@ -164,8 +164,11 @@ Deno.serve(async (req) => {
       });
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
+        // 200 con ok:false para que el cliente vea el motivo real
+        // (contraseña débil, rechazada por HIBP, igual a la actual, etc.)
+        // en vez del genérico "Edge Function returned a non-2xx status code".
+        return new Response(JSON.stringify({ ok: false, error: error.message }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -350,8 +353,8 @@ Deno.serve(async (req) => {
       // Update password
       const { error: pwError } = await adminClient.auth.admin.updateUserById(user_id, { password });
       if (pwError) {
-        return new Response(JSON.stringify({ error: pwError.message }), {
-          status: 400,
+        return new Response(JSON.stringify({ ok: false, error: pwError.message }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
