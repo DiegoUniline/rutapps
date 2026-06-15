@@ -629,18 +629,20 @@ function renderAuthenticatedRoutes() {
 function GuardedDesktopRoutes() {
   const location = useLocation();
   const { user, empresa } = useAuth();
-  const isBillingOwner = isSuperAdminEmail(user?.email) || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
+  const isFacturacionAdmin = isSuperAdminEmail(user?.email);
+  const isBillingOwner = isFacturacionAdmin || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
 
   return (
     <Suspense fallback={<PageLoader />}>
       <PermissionGuard path={location.pathname}>
         <Routes>
-          {desktopRoutes(isBillingOwner)}
+          {desktopRoutes(isBillingOwner, isFacturacionAdmin)}
         </Routes>
       </PermissionGuard>
     </Suspense>
   );
 }
+
 
 function HomeRedirect() {
   const { firstAccessibleRoute, loading } = usePermisos();
