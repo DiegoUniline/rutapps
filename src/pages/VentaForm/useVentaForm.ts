@@ -560,6 +560,11 @@ export function useVentaForm() {
       return;
     }
     const prevStatus = form.status;
+    // If transitioning out of borrador, persist any pending line edits + recalculated totals first
+    if (prevStatus === 'borrador' && newStatus !== 'borrador') {
+      const savedId = await handleSave();
+      if (!savedId) return; // save failed or aborted
+    }
     setForm(prev => ({ ...prev, status: newStatus }));
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
     await logHistorial(form.id!, newStatus === 'confirmado' ? 'confirmada' : newStatus === 'entregado' ? 'entregada' : newStatus === 'facturado' ? 'facturada' : 'editada', { status: { anterior: prevStatus, nuevo: newStatus } });
