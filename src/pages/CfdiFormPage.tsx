@@ -528,7 +528,8 @@ export default function CfdiFormPage() {
                 <tr className="bg-card border-b">
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-8">#</th>
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground">Descripción</th>
-                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-20">Clave SAT</th>
+                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-24">Clave SAT</th>
+                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-28">Unidad SAT</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-20">Cantidad</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-24">P. Unitario</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-16">IVA%</th>
