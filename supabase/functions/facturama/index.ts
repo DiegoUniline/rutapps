@@ -476,17 +476,22 @@ async function timbrar(supabase: any, userId: string, body: any) {
     cfdiRecord = data;
   }
 
-  // Deduct timbre after successful timbrado
+  // Confirm the previously-reserved timbre and link it to the new CFDI record
   const cfdiIdForDeduct = cfdiRecord?.id || cfdi_id;
   if (cfdiIdForDeduct) {
-    const { data: deducted } = await serviceDb.rpc("deduct_timbre", {
-      p_empresa_id: empresa_id,
+    const { data: confirmed } = await serviceDb.rpc("confirm_timbre_reserve", {
+      p_reservation_id: reservationId,
       p_cfdi_id: cfdiIdForDeduct,
-      p_user_id: userId,
     });
-    if (!deducted) {
-      console.error("Warning: Could not deduct timbre after successful timbrado");
+    if (!confirmed) {
+      console.error("Warning: Could not confirm reserved timbre after successful timbrado");
     }
+  } else {
+    // No pudimos guardar el CFDI: liberar el timbre, ya que la factura no quedó registrada localmente
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
+    }).catch((e: any) => console.error("release_timbre fallback fallo:", e));
   }
 
   return new Response(
@@ -501,7 +506,16 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
+  } catch (err) {
+    // Cualquier error inesperado (red, parseo, storage, etc.) libera la reserva si aún existe.
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
+    }).catch((e: any) => console.error("release_timbre en catch fallo:", e));
+    throw err;
+  }
 }
+
 
 // ========================================
 // CANCELAR CFDI
