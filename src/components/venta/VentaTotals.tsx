@@ -84,6 +84,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
             <span className="text-destructive font-semibold text-[13px]">{money(saldoPendiente)}</span>
           </div>
         )}
+        {saldoPendiente != null && saldoPendiente < 0 && (
+          <div className="flex justify-between pt-1">
+            <span className="text-success font-medium text-[13px]">Saldo a favor</span>
+            <span className="text-success font-semibold text-[13px]">{money(Math.abs(saldoPendiente))}</span>
+          </div>
+        )}
       </div>
     </div>
   );
