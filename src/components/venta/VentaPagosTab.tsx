@@ -61,17 +61,27 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
     setEditingId(null);
   };
 
-  const confirmDelete = async (p: Pago) => {
+  const confirmDelete = (p: Pago) => {
     if (!p.cobro_id || !onDeletePago) return;
-    if (!window.confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) return;
-    await onDeletePago(p.id, p.cobro_id);
+    setConfirmState({ tipo: 'eliminar', pago: p });
   };
 
-  const confirmCancel = async (p: Pago) => {
+  const confirmCancel = (p: Pago) => {
     if (!p.cobro_id || !onCancelPago) return;
-    if (!window.confirm('¿Cancelar este pago? El saldo de la venta se recalculará.')) return;
-    await onCancelPago(p.cobro_id);
+    setConfirmState({ tipo: 'cancelar', pago: p });
   };
+
+  const handleConfirm = async () => {
+    if (!confirmState) return;
+    const { tipo, pago } = confirmState;
+    setConfirmState(null);
+    if (tipo === 'eliminar' && pago.cobro_id && onDeletePago) {
+      await onDeletePago(pago.id, pago.cobro_id);
+    } else if (tipo === 'cancelar' && pago.cobro_id && onCancelPago) {
+      await onCancelPago(pago.cobro_id);
+    }
+  };
+
 
   const PagoActions = ({ p }: { p: Pago }) => {
     const cancelado = p.cobros?.status === 'cancelado';
