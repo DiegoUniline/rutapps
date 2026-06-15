@@ -561,7 +561,7 @@ export function useVentaForm() {
     }
     const prevStatus = form.status;
     // If transitioning out of borrador, persist any pending line edits + recalculated totals first
-    if (prevStatus === 'borrador' && newStatus !== 'borrador') {
+    if (prevStatus === 'borrador') {
       const savedId = await handleSave();
       if (!savedId) return; // save failed or aborted
     }
