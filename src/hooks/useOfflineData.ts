@@ -145,12 +145,16 @@ export function useOfflineMutation() {
   ) => {
     setIsPending(true);
     try {
-      if (operation === 'insert' && !data.id) {
-        data.id = crypto.randomUUID();
+      // Copy to avoid mutating caller's object; generate UUID with fallback
+      // for environments where crypto.randomUUID is unavailable (iOS < 15.4,
+      // old WebViews, insecure http:// contexts).
+      const record: Record<string, unknown> = { ...data };
+      if (operation === 'insert' && !record.id) {
+        record.id = generateUUID();
       }
 
-      await queueOperation(table, operation, data, keyField);
-      return data;
+      await queueOperation(table, operation, record, keyField);
+      return record;
     } finally {
       setIsPending(false);
     }
