@@ -20,6 +20,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientesPaginated } from '@/hooks/useClientes';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import CatalogCRUD from '@/components/CatalogCRUD';
