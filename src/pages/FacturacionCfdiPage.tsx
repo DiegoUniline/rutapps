@@ -360,6 +360,13 @@ export default function FacturacionCfdiPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-card">
+                     <TableHead className="w-[40px]">
+                       <Checkbox
+                         checked={allFilteredSelected}
+                         onCheckedChange={toggleAll}
+                         aria-label="Seleccionar todas"
+                       />
+                     </TableHead>
                      <TableHead className="w-[100px]">Folio</TableHead>
                      <TableHead>Receptor</TableHead>
                      <TableHead className="w-[120px]">RFC</TableHead>
@@ -372,7 +379,14 @@ export default function FacturacionCfdiPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((cfdi: any) => (
-                    <TableRow key={cfdi.id} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
+                    <TableRow key={cfdi.id} data-state={selectedIds.has(cfdi.id) ? 'selected' : undefined} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(cfdi.id)}
+                          onCheckedChange={() => toggleOne(cfdi.id)}
+                          aria-label="Seleccionar fila"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs font-semibold">
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>
