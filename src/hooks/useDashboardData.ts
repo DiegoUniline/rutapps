@@ -616,8 +616,8 @@ export function useDashboardHoy(vendedorId?: string) {
   return useQuery({
     queryKey: ['dashboard-hoy', empresa?.id, vendedorId],
     enabled: !!empresa?.id,
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 3 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     queryFn: async () => {
       const eid = empresa!.id;
       // today in company timezone (YYYY-MM-DD)
