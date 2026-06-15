@@ -21,6 +21,7 @@ import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { MobileProductoQuickForm } from '@/components/MobileProductoQuickForm';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductosPaginated } from '@/hooks/useData';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { cn, fmtNum } from '@/lib/utils';
