@@ -512,10 +512,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
   );
   } catch (err) {
     // Cualquier error inesperado (red, parseo, storage, etc.) libera la reserva si aún existe.
-    await serviceDb.rpc("release_timbre", {
-      p_reservation_id: reservationId,
-      p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
-    }).catch((e: any) => console.error("release_timbre en catch fallo:", e));
+    try {
+      await serviceDb.rpc("release_timbre", {
+        p_reservation_id: reservationId,
+        p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
+      });
+    } catch (e: any) { console.error("release_timbre en catch fallo:", e); }
     throw err;
   }
 }
