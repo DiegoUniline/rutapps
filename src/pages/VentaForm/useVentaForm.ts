@@ -430,7 +430,9 @@ export function useVentaForm() {
     savingRef.current = true;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
-    const vendedorId = profile?.id;
+    // Preserve original vendedor on edits — never overwrite with the current viewer.
+    // Only fall back to the current user when creating a brand-new venta.
+    const vendedorId = (form.vendedor_id as string | undefined) || profile?.id;
     if (!vendedorId) {
       toast.error('No se pudo determinar el vendedor');
       savingRef.current = false;
