@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -152,13 +153,15 @@ export default function ComprasPage() {
     queryKey: ['compra-lineas-all', empresa?.id],
     enabled: !!empresa?.id && viewMode === 'detalle',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('compra_lineas')
-        .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
-        .eq('compras.empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []).map((l: any) => ({
+      const data = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('compra_lineas')
+          .select('id, cantidad, precio_unitario, subtotal, total, producto_id, compra_id, productos(codigo, nombre, nombre_compra), compras!inner(folio, status, fecha, proveedor_id, proveedores(nombre))')
+          .eq('compras.empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      );
+      return data.map((l: any) => ({
         linea_id: l.id,
         compra_id: l.compra_id,
         cantidad: l.cantidad,
