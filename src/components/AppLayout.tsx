@@ -98,6 +98,23 @@ const navItems: NavItem[] = [
     ],
   },
 
+  // ── Catálogos ──
+  {
+    label: 'Catálogos',
+    icon: Package,
+    path: '/productos',
+    children: [
+      { label: 'Productos', path: '/productos' },
+      { label: 'Listas de precios', path: '/listas-precio' },
+      { label: 'Categorías', path: '/catalogos/clasificaciones' },
+      { label: 'Marcas', path: '/catalogos/marcas' },
+      { label: 'Unidades', path: '/catalogos/unidades' },
+      { label: 'Proveedores', path: '/proveedores' },
+    ],
+  },
+
+
+
   // ── Almacén ──
   {
     label: 'Almacén',
