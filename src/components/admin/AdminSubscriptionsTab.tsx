@@ -147,6 +147,7 @@ export default function AdminSubscriptionsTab() {
   const [timbresLoading, setTimbresLoading] = useState(false);
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   function openEdit(sub: SubscriptionRow) {
     setEditingSub(sub);
@@ -177,7 +178,11 @@ export default function AdminSubscriptionsTab() {
 
     const { error } = await supabase.from('subscriptions').update(payload).eq('id', editingSub.id);
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción actualizada'); setEditingSub(null); }
+    else {
+      toast.success('Suscripción actualizada');
+      setEditingSub(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-list'] });
+    }
   }
 
   async function createSubscription() {
@@ -195,7 +200,12 @@ export default function AdminSubscriptionsTab() {
       trial_ends_at: createForm.status === 'trial' ? addDays(now, 7).toISOString() : null,
     });
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción creada'); setShowCreate(false); }
+    else {
+      toast.success('Suscripción creada');
+      setShowCreate(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-empresas-simple'] });
+    }
   }
 
   function openTimbres(empresaId: string, nombre: string) {
