@@ -188,7 +188,11 @@ export function useVentaForm() {
     const existingLines = ((existingVenta as any).venta_lineas ?? []).map((l: any) => {
       const prod = (l as any).productos;
       const unidadData = (l as any).unidades;
-      const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
+      const prodUnidad = prod?.unidades_venta;
+      const unidadLabel = unidadData?.abreviatura || unidadData?.nombre
+        || prodUnidad?.abreviatura || prodUnidad?.nombre
+        || (prod?.es_granel ? prod?.unidad_granel : '')
+        || '';
       const taxes: string[] = [];
       if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
       if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
