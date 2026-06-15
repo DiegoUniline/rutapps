@@ -2077,6 +2077,13 @@ export type Database = {
             referencedRelation: "productos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cotizacion_lineas_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cotizaciones: {

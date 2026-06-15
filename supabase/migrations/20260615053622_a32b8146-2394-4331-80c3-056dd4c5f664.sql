@@ -1,0 +1,1 @@
+ALTER TABLE public.cotizacion_lineas ADD CONSTRAINT cotizacion_lineas_unidad_id_fkey FOREIGN KEY (unidad_id) REFERENCES public.unidades(id) ON DELETE SET NULL;
