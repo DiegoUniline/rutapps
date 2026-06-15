@@ -50,7 +50,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       const [lRes, pRes, tRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, lista_precio_id, precio_manual, productos(nombre, unidad_granel), lista_precios(nombre, es_principal)')
+          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
