@@ -16,9 +16,25 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
     return u ? `${u.clave} - ${u.nombre}` : '';
   };
 
+  const claveOk = !!form.codigo_sat && /^\d{8}$/.test((form.codigo_sat || '').toString().trim()) && form.codigo_sat !== '01010101';
+  const unidadOk = !!form.udem_sat_id;
+  const listoCfdi = claveOk && unidadOk;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
       <div>
+        <div className="mb-3 flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full border ${listoCfdi ? 'bg-primary/10 text-primary border-primary/30' : 'bg-destructive/10 text-destructive border-destructive/30'}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${listoCfdi ? 'bg-primary' : 'bg-destructive'}`} />
+            {listoCfdi ? 'Listo para CFDI' : 'Faltan datos SAT'}
+          </span>
+          {!listoCfdi && (
+            <span className="text-[11px] text-muted-foreground">
+              {!claveOk && 'Clave SAT (8 dígitos) requerida. '}
+              {!unidadOk && 'Unidad SAT requerida.'}
+            </span>
+          )}
+        </div>
         <OdooField label="Código SAT" value={form.codigo_sat} help onChange={v => set('codigo_sat', v)} />
         <OdooField label="Unidad SAT" value={form.udem_sat_id} type="select"
           options={unidadesSat?.map(u => ({ value: u.id, label: `${u.clave} - ${u.nombre}` })) ?? []}
