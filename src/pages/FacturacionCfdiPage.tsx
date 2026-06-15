@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp } from 'lucide-react';
+import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp, Trash2, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,8 @@ const STATUS_LABELS: Record<string, string> = {
   cancelacion_rechazada: 'Cancel. Rechazada',
 };
 
+type FacturaSubTab = 'todas' | 'borrador' | 'timbrado' | 'error' | 'canceladas';
+
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
@@ -50,7 +52,9 @@ export default function FacturacionCfdiPage() {
   const [selectedCfdi, setSelectedCfdi] = useState<any>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [facturaSubTab, setFacturaSubTab] = useState<'todas' | 'pue' | 'ppd' | 'pagos' | 'canceladas'>('todas');
+  const [showDelete, setShowDelete] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [facturaSubTab, setFacturaSubTab] = useState<FacturaSubTab>('todas');
 
   // Load timbre balance
   const { data: timbreSaldo } = useQuery({
@@ -124,7 +128,33 @@ export default function FacturacionCfdiPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Delete mutation (only borrador or error)
+  const eliminarMutation = useMutation({
+    mutationFn: async (cfdiId: string) => {
+      const cfdi = cfdis?.find((c: any) => c.id === cfdiId);
+      if (!cfdi) throw new Error('CFDI no encontrado');
+      if (cfdi.status === 'timbrado') throw new Error('No se puede eliminar un CFDI timbrado. Debe cancelarse.');
+      if (cfdi.status === 'cancelado') throw new Error('No se puede eliminar un CFDI cancelado.');
+
+      const { error } = await supabase
+        .from('cfdis')
+        .delete()
+        .eq('id', cfdiId)
+        .eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      return cfdiId;
+    },
+    onSuccess: () => {
+      toast.success('CFDI eliminado correctamente');
+      queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+      setShowDelete(false);
+      setDeletingId(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const cancelStatuses = ['cancelado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
+
   const filtered = (cfdis || []).filter((c: any) => {
     const q = search.toLowerCase();
     const matchSearch =
@@ -133,17 +163,16 @@ export default function FacturacionCfdiPage() {
       (c.receiver_rfc || '').toLowerCase().includes(q) ||
       (c.folio || '').toLowerCase().includes(q);
     if (!matchSearch) return false;
-    const isCancel = cancelStatuses.includes(c.status);
-    const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
+
     switch (facturaSubTab) {
-      case 'pue':
-        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PUE';
-      case 'ppd':
-        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PPD';
-      case 'pagos':
-        return !isCancel && isPago;
+      case 'borrador':
+        return c.status === 'borrador';
+      case 'timbrado':
+        return c.status === 'timbrado';
+      case 'error':
+        return c.status === 'error';
       case 'canceladas':
-        return isCancel;
+        return cancelStatuses.includes(c.status);
       default:
         return true;
     }
@@ -151,16 +180,14 @@ export default function FacturacionCfdiPage() {
 
   const counts = (cfdis || []).reduce(
     (acc: any, c: any) => {
-      const isCancel = cancelStatuses.includes(c.status);
-      const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
       acc.todas++;
-      if (isCancel) acc.canceladas++;
-      else if (isPago) acc.pagos++;
-      else if ((c.payment_method || '').toUpperCase() === 'PUE') acc.pue++;
-      else if ((c.payment_method || '').toUpperCase() === 'PPD') acc.ppd++;
+      if (c.status === 'borrador') acc.borrador++;
+      else if (c.status === 'timbrado') acc.timbrado++;
+      else if (c.status === 'error') acc.error++;
+      else if (cancelStatuses.includes(c.status)) acc.canceladas++;
       return acc;
     },
-    { todas: 0, pue: 0, ppd: 0, pagos: 0, canceladas: 0 },
+    { todas: 0, borrador: 0, timbrado: 0, error: 0, canceladas: 0 },
   );
 
 
@@ -209,12 +236,12 @@ export default function FacturacionCfdiPage() {
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
-            <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as any)}>
+            <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as FacturaSubTab)}>
               <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="todas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
-                <TabsTrigger value="pue" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PUE <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pue}</Badge></TabsTrigger>
-                <TabsTrigger value="ppd" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PPD <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.ppd}</Badge></TabsTrigger>
-                <TabsTrigger value="pagos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Complementos de Pago <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pagos}</Badge></TabsTrigger>
+                <TabsTrigger value="borrador" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Borradores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.borrador}</Badge></TabsTrigger>
+                <TabsTrigger value="timbrado" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Timbradas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.timbrado}</Badge></TabsTrigger>
+                <TabsTrigger value="error" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Errores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.error}</Badge></TabsTrigger>
                 <TabsTrigger value="canceladas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
               </TabsList>
             </Tabs>
@@ -249,7 +276,7 @@ export default function FacturacionCfdiPage() {
                      <TableHead className="w-[100px] text-right">Total</TableHead>
                      <TableHead className="w-[110px]">Status</TableHead>
                      <TableHead className="w-[100px]">Fecha</TableHead>
-                     <TableHead className="w-[120px]">Acciones</TableHead>
+                     <TableHead className="w-[140px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,10 +322,21 @@ export default function FacturacionCfdiPage() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive"
-                              onClick={() => { setCancelingId(cfdi.id); setShowCancel(true); }}
+                              onClick={(e) => { e.stopPropagation(); setCancelingId(cfdi.id); setShowCancel(true); }}
                               title="Cancelar"
                             >
                               <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {(cfdi.status === 'borrador' || cfdi.status === 'error') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={(e) => { e.stopPropagation(); setDeletingId(cfdi.id); setShowDelete(true); }}
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
@@ -365,6 +403,33 @@ export default function FacturacionCfdiPage() {
               onClick={() => cancelingId && cancelarMutation.mutate(cancelingId)}
             >
               {cancelarMutation.isPending ? 'Cancelando...' : 'Sí, cancelar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar CFDI
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción eliminará permanentemente el CFDI. No se puede deshacer.
+              Solo se pueden eliminar borradores o facturas con error.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowDelete(false)}>No, conservar</Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              disabled={eliminarMutation.isPending}
+              onClick={() => deletingId && eliminarMutation.mutate(deletingId)}
+            >
+              {eliminarMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
           </div>
         </DialogContent>
