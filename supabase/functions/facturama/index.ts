@@ -532,7 +532,12 @@ async function cancelar(supabase: any, userId: string, body: any) {
     .single();
 
   if (error || !cfdi) throw new Error("CFDI no encontrado");
+
+  // Verify the user has access to this CFDI's empresa
+  await assertEmpresaAccess(getServiceSupabase(), userId, cfdi.empresa_id);
+
   if (cfdi.status === "cancelado") throw new Error("CFDI ya está cancelado");
+
 
   const facturamaId = cfdi.facturama_id;
   if (!facturamaId) throw new Error("No hay ID de Facturama asociado");
