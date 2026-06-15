@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,9 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Search, Edit2, Plus, Stamp, Users, CreditCard } from 'lucide-react';
+import { Search, Edit2, Plus, Stamp, Users, CreditCard, CheckCircle2, AlertTriangle, Clock, Ban, HelpCircle } from 'lucide-react';
 import { format, differenceInDays, addDays, addMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface SubscriptionRow {
   id: string; empresa_id: string; plan_id: string | null; status: string;
@@ -20,6 +23,7 @@ interface SubscriptionRow {
   max_usuarios: number; stripe_customer_id: string | null; stripe_subscription_id: string | null;
   created_at: string; empresas?: { nombre: string };
   subscription_plans?: { nombre: string; precio_por_usuario: number; periodo: string } | null;
+  descuento_porcentaje?: number;
 }
 interface PlanRow {
   id: string; nombre: string; periodo: string; precio_por_usuario: number;
@@ -34,13 +38,93 @@ const STATUS_MAP: Record<string, { l: string; v: 'default' | 'secondary' | 'dest
   suspended: { l: 'Suspendida', v: 'destructive' },
 };
 
+const STALE = 2 * 60 * 1000;
+
+type SubTab = 'todas' | 'activas' | 'vencidas' | 'trial' | 'sin_sub';
+
 export default function AdminSubscriptionsTab() {
-  const { user } = useAuth();
-  const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
-  const [plans, setPlans] = useState<PlanRow[]>([]);
-  const [empresasSinSub, setEmpresasSinSub] = useState<EmpresaSimple[]>([]);
+  const [tab, setTab] = useState<SubTab>('todas');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  // Data fetching with React Query for caching
+  const { data: subscriptions = [], isLoading: loadingSubs } = useQuery<SubscriptionRow[]>({
+    queryKey: ['admin-subscriptions-list'],
+    staleTime: STALE,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('*, empresas(nombre), subscription_plans(nombre, precio_por_usuario, periodo)');
+      return (data || []) as SubscriptionRow[];
+    },
+  });
+
+  const { data: plans = [] } = useQuery<PlanRow[]>({
+    queryKey: ['admin-subscription-plans'],
+    staleTime: STALE,
+    queryFn: async () => {
+      const { data } = await supabase.from('subscription_plans').select('*').eq('activo', true);
+      return (data || []) as PlanRow[];
+    },
+  });
+
+  const { data: empresas = [] } = useQuery<EmpresaSimple[]>({
+    queryKey: ['admin-empresas-simple'],
+    staleTime: STALE,
+    queryFn: async () => {
+      const { data } = await supabase.from('empresas').select('id, nombre');
+      return (data || []) as EmpresaSimple[];
+    },
+  });
+
+  const { data: timbresSaldo = [] } = useQuery<{ empresa_id: string; saldo: number }[]>({
+    queryKey: ['admin-timbres-saldo'],
+    staleTime: STALE,
+    queryFn: async () => {
+      const { data } = await supabase.from('timbres_saldo').select('empresa_id, saldo');
+      return (data || []) as { empresa_id: string; saldo: number }[];
+    },
+  });
+
+  const timbresMap = useMemo(() => {
+    const tm: Record<string, number> = {};
+    timbresSaldo.forEach(t => { tm[t.empresa_id] = t.saldo; });
+    return tm;
+  }, [timbresSaldo]);
+
+  const subEmpresaIds = useMemo(() => new Set(subscriptions.map(s => s.empresa_id)), [subscriptions]);
+  const empresasSinSub = useMemo(() => empresas.filter(e => !subEmpresaIds.has(e.id)), [empresas, subEmpresaIds]);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const total = subscriptions.length;
+    const activas = subscriptions.filter(s => s.status === 'active').length;
+    const trial = subscriptions.filter(s => s.status === 'trial').length;
+    const vencidas = subscriptions.filter(s => s.status === 'past_due' || s.status === 'suspended').length;
+    const canceladas = subscriptions.filter(s => s.status === 'cancelled').length;
+    const sinSub = empresasSinSub.length;
+    return { total, activas, trial, vencidas, canceladas, sinSub };
+  }, [subscriptions, empresasSinSub]);
+
+  // Filter by tab + search
+  const filtered = useMemo(() => {
+    let list: (SubscriptionRow | { id: string; empresa_id: string; nombre: string; status: 'sin_sub' })[] = [];
+
+    if (tab === 'sin_sub') {
+      list = empresasSinSub.map(e => ({ id: e.id, empresa_id: e.id, nombre: e.nombre, status: 'sin_sub' as const }));
+    } else {
+      list = subscriptions;
+      if (tab === 'activas') list = list.filter(s => s.status === 'active');
+      if (tab === 'vencidas') list = list.filter(s => s.status === 'past_due' || s.status === 'suspended');
+      if (tab === 'trial') list = list.filter(s => s.status === 'trial');
+    }
+
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((s: any) => {
+      const nombre = s.empresas?.nombre || s.nombre || '';
+      return nombre.toLowerCase().includes(q);
+    });
+  }, [subscriptions, empresasSinSub, tab, search]);
 
   // Edit dialog
   const [editingSub, setEditingSub] = useState<SubscriptionRow | null>(null);
@@ -53,8 +137,7 @@ export default function AdminSubscriptionsTab() {
   // Create dialog
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({
-    empresa_id: '', plan_id: '', max_usuarios: 3, status: 'active',
-    period_months: 1,
+    empresa_id: '', plan_id: '', max_usuarios: 3, status: 'active', period_months: 1,
   });
 
   // Timbres dialog
@@ -63,35 +146,9 @@ export default function AdminSubscriptionsTab() {
   const [timbresCantidad, setTimbresCantidad] = useState('10');
   const [timbresLoading, setTimbresLoading] = useState(false);
 
-  // Timbres saldo cache
-  const [timbresMap, setTimbresMap] = useState<Record<string, number>>({});
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    const [subsRes, plansRes, empresasRes, timbresRes] = await Promise.all([
-      supabase.from('subscriptions').select('*, empresas(nombre), subscription_plans(nombre, precio_por_usuario, periodo)'),
-      supabase.from('subscription_plans').select('*').eq('activo', true),
-      supabase.from('empresas').select('id, nombre'),
-      supabase.from('timbres_saldo').select('empresa_id, saldo'),
-    ]);
-    const subs = (subsRes.data || []) as any[];
-    setSubscriptions(subs);
-    setPlans((plansRes.data || []) as any);
-
-    // Empresas sin suscripción
-    const subEmpresaIds = new Set(subs.map((s: any) => s.empresa_id));
-    setEmpresasSinSub(((empresasRes.data || []) as any[]).filter(e => !subEmpresaIds.has(e.id)));
-
-    // Timbres map
-    const tm: Record<string, number> = {};
-    ((timbresRes.data || []) as any[]).forEach((t: any) => { tm[t.empresa_id] = t.saldo; });
-    setTimbresMap(tm);
-    setLoading(false);
-  }
-
-  // === Edit ===
   function openEdit(sub: SubscriptionRow) {
     setEditingSub(sub);
     setEditForm({
@@ -101,7 +158,7 @@ export default function AdminSubscriptionsTab() {
       current_period_start: sub.current_period_start?.split('T')[0] || '',
       current_period_end: sub.current_period_end?.split('T')[0] || '',
       trial_ends_at: sub.trial_ends_at?.split('T')[0] || '',
-      descuento_porcentaje: (sub as any).descuento_porcentaje || 0,
+      descuento_porcentaje: sub.descuento_porcentaje || 0,
     });
   }
 
@@ -121,10 +178,13 @@ export default function AdminSubscriptionsTab() {
 
     const { error } = await supabase.from('subscriptions').update(payload).eq('id', editingSub.id);
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción actualizada'); setEditingSub(null); load(); }
+    else {
+      toast.success('Suscripción actualizada');
+      setEditingSub(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-list'] });
+    }
   }
 
-  // === Create ===
   async function createSubscription() {
     if (!createForm.empresa_id) { toast.error('Selecciona una empresa'); return; }
     const now = new Date();
@@ -140,10 +200,14 @@ export default function AdminSubscriptionsTab() {
       trial_ends_at: createForm.status === 'trial' ? addDays(now, 7).toISOString() : null,
     });
     if (error) toast.error('Error: ' + error.message);
-    else { toast.success('Suscripción creada'); setShowCreate(false); load(); }
+    else {
+      toast.success('Suscripción creada');
+      setShowCreate(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-empresas-simple'] });
+    }
   }
 
-  // === Timbres ===
   function openTimbres(empresaId: string, nombre: string) {
     setTimbresEmpresa({ id: empresaId, nombre });
     setTimbresCantidad('10');
@@ -165,7 +229,6 @@ export default function AdminSubscriptionsTab() {
       if (error) throw error;
       toast.success(`+${cant} timbres → saldo: ${data}`);
       setShowTimbres(false);
-      load();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -173,107 +236,175 @@ export default function AdminSubscriptionsTab() {
     }
   }
 
-  // === Helpers ===
   function getDays(sub: SubscriptionRow) {
     const end = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
     return end ? differenceInDays(new Date(end), new Date()) : null;
   }
 
-  const filtered = subscriptions.filter(s => (s.empresas?.nombre || '').toLowerCase().includes(search.toLowerCase()));
+  const SummaryCard = ({ icon: Icon, label, value, colorClass }: { icon: any; label: string; value: number; colorClass: string }) => (
+    <Card className="border border-border/60 shadow-sm">
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClass)}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <div className="text-2xl font-bold leading-none">{value}</div>
+          <div className="text-xs text-muted-foreground mt-1">{label}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <>
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <SummaryCard icon={CreditCard} label="Total" value={stats.total} colorClass="bg-primary" />
+        <SummaryCard icon={CheckCircle2} label="Activas" value={stats.activas} colorClass="bg-emerald-500" />
+        <SummaryCard icon={Clock} label="Trial" value={stats.trial} colorClass="bg-amber-500" />
+        <SummaryCard icon={AlertTriangle} label="Vencidas" value={stats.vencidas} colorClass="bg-destructive" />
+        <SummaryCard icon={Ban} label="Canceladas" value={stats.canceladas} colorClass="bg-slate-500" />
+        <SummaryCard icon={HelpCircle} label="Sin sub" value={stats.sinSub} colorClass="bg-muted-foreground" />
+      </div>
+
+      {/* Tabs + Table */}
       <Card className="border border-border/60 shadow-sm">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" /> Suscripciones ({subscriptions.length})
+              <CreditCard className="h-5 w-5 text-primary" /> Suscripciones
             </CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-56" />
+                <Input placeholder="Buscar empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-56 h-9" />
               </div>
               <Button size="sm" onClick={() => { setCreateForm({ empresa_id: '', plan_id: '', max_usuarios: 3, status: 'active', period_months: 1 }); setShowCreate(true); }}>
-                <Plus className="h-4 w-4 mr-1" /> Crear suscripción
+                <Plus className="h-4 w-4 mr-1" /> Crear
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? <div className="text-center py-8 text-muted-foreground">Cargando...</div> : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Usuarios</TableHead>
-                  <TableHead>Timbres</TableHead>
-                  <TableHead>Vence</TableHead>
-                  <TableHead>Días</TableHead>
-                  <TableHead className="w-24"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map(sub => {
-                  const days = getDays(sub);
-                  const timbres = timbresMap[sub.empresa_id] ?? 0;
-                  return (
-                    <TableRow key={sub.id}>
-                      <TableCell className="font-medium">{sub.empresas?.nombre || '—'}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {sub.subscription_plans?.nombre || 'Sin plan'}
-                        {(sub as any).descuento_porcentaje > 0 && (
-                          <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">-{(sub as any).descuento_porcentaje}%</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_MAP[sub.status]?.v || 'outline'}>
-                          {STATUS_MAP[sub.status]?.l || sub.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1 text-sm">
-                          <Users className="h-3.5 w-3.5 text-muted-foreground" /> {sub.max_usuarios}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <button
-                          onClick={() => openTimbres(sub.empresa_id, sub.empresas?.nombre || '—')}
-                          className="flex items-center gap-1 text-sm font-mono hover:text-primary transition-colors"
-                          title="Agregar timbres"
-                        >
-                          <Stamp className="h-3.5 w-3.5" />
-                          <span className={timbres > 0 ? 'text-primary font-semibold' : 'text-destructive font-semibold'}>{timbres}</span>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {sub.status === 'trial' && sub.trial_ends_at
-                          ? format(new Date(sub.trial_ends_at), 'dd MMM yy', { locale: es })
-                          : sub.current_period_end
-                          ? format(new Date(sub.current_period_end), 'dd MMM yy', { locale: es })
-                          : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {days !== null && <Badge variant={days <= 3 ? 'destructive' : days <= 7 ? 'secondary' : 'outline'}>{days <= 0 ? 'Vencido' : `${days}d`}</Badge>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(sub)} title="Editar">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => openTimbres(sub.empresa_id, sub.empresas?.nombre || '—')} title="Timbres">
-                            <Stamp className="h-4 w-4 text-primary" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+          <Tabs value={tab} onValueChange={(v) => setTab(v as SubTab)}>
+            <TabsList className="mb-3 bg-muted/50">
+              <TabsTrigger value="todas">Todas ({stats.total})</TabsTrigger>
+              <TabsTrigger value="activas">Activas ({stats.activas})</TabsTrigger>
+              <TabsTrigger value="vencidas">Vencidas ({stats.vencidas})</TabsTrigger>
+              <TabsTrigger value="trial">Trial ({stats.trial})</TabsTrigger>
+              <TabsTrigger value="sin_sub">Sin sub ({stats.sinSub})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={tab} className="m-0">
+              {loadingSubs ? (
+                <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Empresa</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Usuarios</TableHead>
+                        <TableHead>Timbres</TableHead>
+                        <TableHead>Vence</TableHead>
+                        <TableHead>Días</TableHead>
+                        <TableHead className="w-24"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tab === 'sin_sub' ? (
+                        (filtered as any[]).map((e: any) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="font-medium">{e.nombre}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">—</TableCell>
+                            <TableCell><Badge variant="outline">Sin suscripción</Badge></TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>
+                              <Button size="sm" variant="ghost" onClick={() => { setCreateForm(f => ({ ...f, empresa_id: e.id })); setShowCreate(true); }} title="Crear suscripción">
+                                <Plus className="h-4 w-4 text-primary" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        (filtered as SubscriptionRow[]).map(sub => {
+                          const days = getDays(sub);
+                          const timbres = timbresMap[sub.empresa_id] ?? 0;
+                          return (
+                            <TableRow key={sub.id}>
+                              <TableCell className="font-medium">{sub.empresas?.nombre || '—'}</TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {sub.subscription_plans?.nombre || 'Sin plan'}
+                                {sub.descuento_porcentaje ? (
+                                  <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">-{sub.descuento_porcentaje}%</Badge>
+                                ) : null}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={STATUS_MAP[sub.status]?.v || 'outline'}>
+                                  {STATUS_MAP[sub.status]?.l || sub.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="flex items-center gap-1 text-sm">
+                                  <Users className="h-3.5 w-3.5 text-muted-foreground" /> {sub.max_usuarios}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <button
+                                  onClick={() => openTimbres(sub.empresa_id, sub.empresas?.nombre || '—')}
+                                  className="flex items-center gap-1 text-sm font-mono hover:text-primary transition-colors"
+                                  title="Agregar timbres"
+                                >
+                                  <Stamp className="h-3.5 w-3.5" />
+                                  <span className={timbres > 0 ? 'text-primary font-semibold' : 'text-destructive font-semibold'}>{timbres}</span>
+                                </button>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {sub.status === 'trial' && sub.trial_ends_at
+                                  ? format(new Date(sub.trial_ends_at), 'dd MMM yy', { locale: es })
+                                  : sub.current_period_end
+                                  ? format(new Date(sub.current_period_end), 'dd MMM yy', { locale: es })
+                                  : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {days !== null && (
+                                  <Badge variant={days <= 3 ? 'destructive' : days <= 7 ? 'secondary' : 'outline'}>
+                                    {days <= 0 ? 'Vencido' : `${days}d`}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="ghost" onClick={() => openEdit(sub)} title="Editar">
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => openTimbres(sub.empresa_id, sub.empresas?.nombre || '—')} title="Timbres">
+                                    <Stamp className="h-4 w-4 text-primary" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                      {filtered.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                            No hay resultados
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -434,6 +565,7 @@ export default function AdminSubscriptionsTab() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
+
