@@ -329,6 +329,11 @@ export default function FacturacionCfdiPage() {
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2 flex-wrap p-2 rounded-lg border bg-primary/5">
               <span className="text-sm font-medium">{selectedIds.size} seleccionada(s)</span>
+              {selectedNonDeletable.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ({selectedNonDeletable.length} timbrada(s)/cancelada(s) no se pueden eliminar — conservadas para auditoría)
+                </span>
+              )}
               <div className="flex-1" />
               {selectedCancelable.length > 0 && (
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => setShowBulkCancel(true)} disabled={bulkProcessing}>
