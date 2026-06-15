@@ -18,15 +18,15 @@ export default function PartnerLayout() {
   const { signOut } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
   if (!partner) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      <aside className="md:w-64 md:min-h-screen border-b md:border-b-0 md:border-r border-border bg-card flex md:flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
+      <aside className="md:w-64 md:min-h-[100dvh] border-b md:border-b-0 md:border-r border-border bg-card flex md:flex-col">
         <div className="p-4 border-b border-border flex items-center gap-3">
           <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="" className="h-9 w-9 rounded-lg" />
           <div>

@@ -89,7 +89,7 @@ export default function DocumentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90dvh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-base">{fileName}</DialogTitle>
         </DialogHeader>

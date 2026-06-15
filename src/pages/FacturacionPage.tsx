@@ -60,7 +60,7 @@ export default function FacturacionPage() {
   const otherInvoices = invoices.filter(i => i.status !== 'open');
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">

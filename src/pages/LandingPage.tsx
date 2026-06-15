@@ -217,7 +217,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden antialiased"
+    <div className="min-h-[100dvh] bg-white overflow-x-hidden antialiased"
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
       <Seo
         title="Rutapp · ERP para distribuidoras con IA"

@@ -105,7 +105,7 @@ export function PresentacionSelectorModal({ open, onClose, producto, presentacio
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-card w-full sm:max-w-2xl lg:max-w-3xl rounded-t-2xl sm:rounded-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-card w-full sm:max-w-2xl lg:max-w-3xl rounded-t-2xl sm:rounded-2xl max-h-[95dvh] sm:max-h-[90dvh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
           <div>
             <h3 className="text-base sm:text-xl font-semibold">{producto.nombre}</h3>

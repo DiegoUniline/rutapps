@@ -316,7 +316,7 @@ export default function AuditoriasPage() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={v => !v && resetForm()}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nueva auditoría</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {/* Info: fecha y usuario */}

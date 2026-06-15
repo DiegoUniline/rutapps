@@ -904,7 +904,7 @@ export default function AdminWaCampaignsTab() {
       {/* Pending Recipients Modal */}
       {pendingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPendingModal(null)}>
-          <div className="bg-background rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[80dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b">
               <h3 className="font-semibold flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />

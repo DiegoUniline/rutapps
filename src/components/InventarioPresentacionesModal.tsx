@@ -80,7 +80,7 @@ export default function InventarioPresentacionesModal({ open, onClose, productos
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-card rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-lg shadow-2xl w-full max-w-5xl max-h-[90dvh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">

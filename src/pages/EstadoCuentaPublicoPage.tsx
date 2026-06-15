@@ -53,13 +53,13 @@ export default function EstadoCuentaPublicoPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   if (error || !data)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white text-center px-6">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-white text-center px-6">
         <div>
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-xl font-bold mb-2">Estado de cuenta no disponible</h1>
@@ -72,7 +72,7 @@ export default function EstadoCuentaPublicoPage() {
   const ventasConSaldo = data.ventas.filter((v) => Number(v.saldo_pendiente) > 0);
 
   return (
-    <div className="min-h-screen bg-white text-foreground">
+    <div className="min-h-[100dvh] bg-white text-foreground">
       <header className="bg-primary text-primary-foreground px-6 py-6">
         <div className="max-w-3xl mx-auto flex items-center gap-4">
           {data.empresa.logo_url && (

@@ -240,7 +240,7 @@ export default function PromocionesPage() {
 
       {/* Edit / Create Dialog */}
       <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing?.id ? 'Editar promoción' : 'Nueva promoción'}</DialogTitle>
           </DialogHeader>

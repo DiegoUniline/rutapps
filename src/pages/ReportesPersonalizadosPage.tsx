@@ -666,7 +666,7 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-[60]">
+      <DialogContent className="max-w-4xl max-h-[90dvh] overflow-y-auto z-[60]">
         <DialogHeader>
           <DialogTitle>{config.id ? 'Editar reporte' : 'Nuevo reporte personalizado'}</DialogTitle>
         </DialogHeader>

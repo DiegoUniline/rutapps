@@ -608,7 +608,7 @@ export default function AuditoriaResultadosPage() {
 
       {/* Approval dialog */}
       <Dialog open={showAprobar} onOpenChange={setShowAprobar}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-auto">
+        <DialogContent className="max-w-2xl max-h-[85dvh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" /> Aprobar auditoría

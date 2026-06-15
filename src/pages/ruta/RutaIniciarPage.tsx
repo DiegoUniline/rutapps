@@ -111,7 +111,7 @@ export default function RutaIniciarPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background">
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 px-3 h-12">
           <button onClick={() => nav('/ruta')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">

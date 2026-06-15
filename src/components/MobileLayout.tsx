@@ -117,7 +117,7 @@ export default function MobileLayout() {
   // POS has its own full-screen layout — render only the outlet
   if (isPosRoute) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-background">
         {isUpdating && (
           <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
@@ -133,7 +133,7 @@ export default function MobileLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Updating overlay */}
       {isUpdating && (
         <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">

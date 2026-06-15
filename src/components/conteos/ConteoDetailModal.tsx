@@ -117,7 +117,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={v => !v && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-mono">{conteo?.folio ?? 'Conteo'}</DialogTitle>
           </DialogHeader>

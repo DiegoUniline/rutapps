@@ -98,7 +98,7 @@ export default function KardexUbicacionModal({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[85dvh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="text-base">

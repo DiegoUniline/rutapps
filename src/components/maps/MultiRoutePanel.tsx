@@ -191,7 +191,7 @@ export default function MultiRoutePanel({
 
   return (
     <div className={cn('absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-80 flex flex-col transition-all',
-      expanded ? 'max-h-[75vh]' : 'max-h-[42px]')}>
+      expanded ? 'max-h-[75dvh]' : 'max-h-[42px]')}>
       <button onClick={() => setExpanded(!expanded)} className="px-3 py-2.5 border-b border-border flex items-center justify-between w-full hover:bg-accent/30 rounded-t-xl">
         <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           <RouteIcon className="h-3.5 w-3.5 text-primary" />

@@ -603,7 +603,7 @@ export default function AjustesInventarioPage() {
 
           {/* Products table */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <div className="max-h-[calc(100vh-380px)] overflow-auto">
+            <div className="max-h-[calc(100dvh-380px)] overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>

@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background">
       <div className="w-full max-w-sm bg-card border border-border rounded p-6">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-primary">Rutapp</h1>

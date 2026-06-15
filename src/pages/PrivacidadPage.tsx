@@ -4,7 +4,7 @@ import { Seo } from '@/components/seo/Seo';
 
 export default function PrivacidadPage() {
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-[100dvh] bg-background py-12 px-4">
       <Seo
         title="Aviso de Privacidad · Rutapp"
         description="Aviso de privacidad de Rutapp conforme a la LFPDPPP: datos recabados, finalidades, derechos ARCO y medidas de seguridad."

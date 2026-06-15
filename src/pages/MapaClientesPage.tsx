@@ -691,7 +691,7 @@ export default function MapaClientesPage() {
 
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
+    <div className="h-[calc(100dvh-theme(spacing.9))] flex flex-col">
       {/* Compact header */}
       <div className="bg-card border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1282,7 +1282,7 @@ export default function MapaClientesPage() {
         {/* Floating clients list panel */}
         {showListPanel && (
           <div className="absolute top-3 right-3 md:top-16 md:right-3 z-20 w-[340px] max-w-[calc(100vw-1.5rem)]
-            bg-card border border-border rounded-xl shadow-xl flex flex-col max-h-[70vh]">
+            bg-card border border-border rounded-xl shadow-xl flex flex-col max-h-[70dvh]">
             <div className="px-3 py-2 border-b border-border flex items-center gap-2">
               <Users className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-semibold text-foreground">Clientes filtrados</span>

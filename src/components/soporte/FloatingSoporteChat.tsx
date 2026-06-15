@@ -97,7 +97,7 @@ export default function FloatingSoporteChat() {
       className={cn(
         "fixed bottom-5 right-5 z-[60] flex flex-col overflow-hidden",
         "rounded-xl border bg-card shadow-2xl",
-        "w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-2rem)]",
+        "w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100dvh-2rem)]",
       )}
       role="dialog"
       aria-label="Asesor IA de Soporte"

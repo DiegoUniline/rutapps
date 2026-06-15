@@ -412,7 +412,7 @@ export default function SignupPage() {
     form.password === confirmPassword;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-card">
+    <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-card">
       <Seo
         title="Crear cuenta · Rutapp"
         description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
@@ -738,7 +738,7 @@ export default function SignupPage() {
 
       {/* Policies Dialog */}
       <Dialog open={showPoliciesDialog} onOpenChange={setShowPoliciesDialog}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-3xl max-h-[90dvh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />

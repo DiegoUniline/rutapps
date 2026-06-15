@@ -646,7 +646,7 @@ function AddEquivalenciaDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md z-[60] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md z-[60] max-h-[90dvh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva equivalencia</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <label className="block text-xs">
@@ -802,7 +802,7 @@ function JobDetailDialog({ jobId, onClose }: { jobId: string; onClose: () => voi
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-5xl z-[60] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl z-[60] max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Detalle de importación</span>

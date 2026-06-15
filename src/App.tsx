@@ -298,7 +298,7 @@ function AppRoutes() {
 
   if (loading || subscription.loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-6">
         <div className="relative flex flex-col items-center gap-5">
           <img
             src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png"
@@ -401,7 +401,7 @@ function AppRoutes() {
   const isBillingOwner = isSuperAdminEmail(user?.email) || isOwnerOfEmpresa;
   if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-background">
         <SubscriptionBanner />
       <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
@@ -477,7 +477,7 @@ function AppRoutes() {
   // Regular blocked users
   if (isBlockedTotal) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-background">
         <SubscriptionBanner />
       <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">

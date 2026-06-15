@@ -234,7 +234,7 @@ export default function ConteoFisicoPage() {
   const closeLineItem = mergedItems.find(i => i.id === closeLineId);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border p-3 space-y-2">
         <div className="flex items-center gap-2">

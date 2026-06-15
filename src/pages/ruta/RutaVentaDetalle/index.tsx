@@ -7,8 +7,8 @@ import { DetalleView } from './DetalleView';
 export default function RutaVentaDetalle() {
   const h = useVentaDetalle();
 
-  if (h.isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
-  if (!h.venta) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2"><p className="text-muted-foreground text-[13px]">Venta no encontrada</p><button onClick={() => h.navigate(-1)} className="text-primary text-[13px] font-medium">Volver</button></div>;
+  if (h.isLoading) return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
+  if (!h.venta) return <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-2"><p className="text-muted-foreground text-[13px]">Venta no encontrada</p><button onClick={() => h.navigate(-1)} className="text-primary text-[13px] font-medium">Volver</button></div>;
 
   const lineas = (h.venta as any).venta_lineas ?? [];
   const clienteNombre = (h.venta as any).clientes?.nombre ?? 'Sin cliente';

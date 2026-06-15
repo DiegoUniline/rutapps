@@ -118,7 +118,7 @@ export default function MermasPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-4 bg-background min-h-screen">
+    <div className="p-4 lg:p-6 space-y-4 bg-background min-h-[100dvh]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function MermasPage() {
 
       {/* Modal: nueva merma */}
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Registrar merma</DialogTitle>
           </DialogHeader>
@@ -350,7 +350,7 @@ export default function MermasPage() {
 
       {/* Detalle */}
       <Dialog open={!!detalleId} onOpenChange={(v) => !v && setDetalleId(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Merma {detalle?.folio}</DialogTitle>
           </DialogHeader>

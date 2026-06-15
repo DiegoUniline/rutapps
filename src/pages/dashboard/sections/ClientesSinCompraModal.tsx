@@ -14,7 +14,7 @@ interface Props {
 export default function ClientesSinCompraModal({ open, onClose, clientes }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[60]">
+      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto z-[60]">
         <DialogHeader><DialogTitle>Clientes sin compra 30+ días ({clientes.length})</DialogTitle></DialogHeader>
         {clientes.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4">Todos tus clientes activos han comprado en los últimos 30 días.</div>

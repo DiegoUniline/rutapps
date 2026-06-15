@@ -68,7 +68,7 @@ export function GoogleMapsProvider({ children, blocking = false }: { children: R
 
   if (blocking && (loading || !apiKey)) {
     return (
-      <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
+      <div className="h-[calc(100dvh-theme(spacing.9))] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );

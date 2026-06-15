@@ -280,7 +280,7 @@ export default function AuditoriaMobilePage() {
   // ── LOADING ──
   if (pageState === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Cargando auditoría...</div>
       </div>
     );
@@ -289,7 +289,7 @@ export default function AuditoriaMobilePage() {
   // ── NOT FOUND ──
   if (pageState === 'not_found') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-6 text-center gap-4">
         <Package className="h-16 w-16 text-muted-foreground/30" />
         <h1 className="text-xl font-semibold text-foreground">Auditoría no encontrada</h1>
         <p className="text-sm text-muted-foreground">Verifica que la URL sea correcta o solicita un nuevo enlace.</p>
@@ -300,7 +300,7 @@ export default function AuditoriaMobilePage() {
   // ── CLOSED ──
   if (pageState === 'closed') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-6 text-center gap-4">
         <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center">
           <Lock className="h-10 w-10 text-destructive" />
         </div>
@@ -327,7 +327,7 @@ export default function AuditoriaMobilePage() {
     };
 
     return (
-      <div className="min-h-screen flex flex-col bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="min-h-[100dvh] flex flex-col bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="px-5 pt-8 pb-4 space-y-2 text-center">
           <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
             <Package className="h-8 w-8 text-primary" />
@@ -379,7 +379,7 @@ export default function AuditoriaMobilePage() {
 
   // ── COUNTING ──
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Scanner overlay */}
       {scanning && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
