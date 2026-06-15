@@ -199,14 +199,26 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="bg-card">
+        <TabsList className="bg-card flex-wrap h-auto">
           <TabsTrigger value="facturas">Facturas</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="productos">Productos</TabsTrigger>
           <TabsTrigger value="config">Configuración Emisor</TabsTrigger>
           <TabsTrigger value="catalogos">Catálogos SAT</TabsTrigger>
         </TabsList>
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
+          <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as any)}>
+            <TabsList className="bg-card flex-wrap h-auto">
+              <TabsTrigger value="todas">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
+              <TabsTrigger value="pue">PUE <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pue}</Badge></TabsTrigger>
+              <TabsTrigger value="ppd">PPD <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.ppd}</Badge></TabsTrigger>
+              <TabsTrigger value="pagos">Complementos de Pago <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pagos}</Badge></TabsTrigger>
+              <TabsTrigger value="canceladas">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex items-center gap-2">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -214,6 +226,7 @@ export default function FacturacionCfdiPage() {
             </div>
             <Badge variant="secondary" className="text-xs">{filtered.length} facturas</Badge>
           </div>
+
 
           {isLoading ? (
             <TableSkeleton rows={6} cols={6} />
