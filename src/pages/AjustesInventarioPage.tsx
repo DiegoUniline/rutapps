@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClasificaciones } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload, ChevronDown, ChevronRight, User, Calendar, MapPin, List } from 'lucide-react';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
@@ -104,24 +105,27 @@ export default function AjustesInventarioPage() {
     queryKey: ['productos-ajuste', empresa?.id, almacenId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const [{ data, error }, { data: stockRows, error: stockError }] = await Promise.all([
-        supabase
-          .from('productos')
-          .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
-          .eq('empresa_id', empresa!.id)
-          .in('status', ['activo'] as any[])
-          .order('nombre'),
+      const [data, stockRows] = await Promise.all([
+        fetchAllPages<any>((from, to) =>
+          supabase
+            .from('productos')
+            .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+            .eq('empresa_id', empresa!.id)
+            .in('status', ['activo'] as any[])
+            .order('nombre')
+            .range(from, to)
+        ),
         almacenId
-          ? supabase
-              .from('stock_almacen')
-              .select('producto_id, cantidad')
-              .eq('empresa_id', empresa!.id)
-              .eq('almacen_id', almacenId)
-          : Promise.resolve({ data: [], error: null } as any),
+          ? fetchAllPages<any>((from, to) =>
+              supabase
+                .from('stock_almacen')
+                .select('producto_id, cantidad')
+                .eq('empresa_id', empresa!.id)
+                .eq('almacen_id', almacenId)
+                .range(from, to)
+            )
+          : Promise.resolve([] as any[]),
       ]);
-
-      if (error) throw error;
-      if (stockError) throw stockError;
 
       const stockMap = new Map((stockRows ?? []).map((item: any) => [item.producto_id, item.cantidad ?? 0]));
 
@@ -139,13 +143,14 @@ export default function AjustesInventarioPage() {
     queryKey: ['ajustes-historial', empresa?.id],
     enabled: !!empresa?.id && tab === 'historial',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ajustes_inventario')
-        .select('*, productos(codigo, nombre), almacenes(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .limit(500);
-      if (error) throw error;
+      const data = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('ajustes_inventario')
+          .select('*, productos(codigo, nombre), almacenes(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      );
 
       const userIds = [...new Set((data ?? []).map((a: any) => a.user_id))];
       const { data: profiles } = await supabase
@@ -179,13 +184,14 @@ export default function AjustesInventarioPage() {
     const uniqueIds = [...new Set(productIds)];
     if (!empresa?.id || uniqueIds.length === 0) return;
 
-    const { data: stockRows, error } = await supabase
-      .from('stock_almacen')
-      .select('producto_id, cantidad')
-      .eq('empresa_id', empresa.id)
-      .in('producto_id', uniqueIds as any);
-
-    if (error) throw error;
+    const stockRows = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('empresa_id', empresa.id)
+        .in('producto_id', uniqueIds as any)
+        .range(from, to)
+    );
 
     const totalMap = new Map<string, number>();
     for (const row of (stockRows ?? [])) {

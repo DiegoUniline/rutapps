@@ -62,12 +62,14 @@ export default function ConteoFisicoPage() {
     queryKey: ['conteo-items', countId],
     enabled: !!countId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('conteo_lineas')
-        .select('*, productos(codigo, nombre)')
-        .eq('conteo_id', countId!)
-        .order('created_at');
-      if (error) throw error;
+      const data = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('conteo_lineas')
+          .select('*, productos(codigo, nombre)')
+          .eq('conteo_id', countId!)
+          .order('created_at')
+          .range(from, to)
+      );
       return (data ?? []).map((l: any) => ({
         id: l.id,
         producto_id: l.producto_id,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { Brain, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -16,17 +17,23 @@ function useProductosConStock() {
     queryFn: async () => {
       const eid = empresa!.id;
 
-      const { data: productos } = await supabase
-        .from('productos')
-        .select('id, codigo, nombre, cantidad, costo, precio_principal, status, dias_cobertura, unidades:unidad_venta_id(abreviatura)')
-        .eq('empresa_id', eid)
-        .eq('status', 'activo')
-        .order('nombre');
+      const productos = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('productos')
+          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, dias_cobertura, unidades:unidad_venta_id(abreviatura)')
+          .eq('empresa_id', eid)
+          .eq('status', 'activo')
+          .order('nombre')
+          .range(from, to)
+      );
 
-      const { data: stockAlmacenData } = await supabase
-        .from('stock_almacen')
-        .select('producto_id, cantidad')
-        .eq('empresa_id', eid);
+      const stockAlmacenData = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('stock_almacen')
+          .select('producto_id, cantidad')
+          .eq('empresa_id', eid)
+          .range(from, to)
+      );
 
       const stockByProd: Record<string, number> = {};
       for (const sa of (stockAlmacenData ?? [])) {
