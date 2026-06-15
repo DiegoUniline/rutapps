@@ -332,6 +332,28 @@ export function useDeleteVenta() {
       if (checkErr) throw checkErr;
       if (count && count > 0) throw new Error('No puedes eliminar una venta con pagos aplicados. Cancélala primero.');
 
+      // Block deletion if a CFDI was already issued for this venta
+      const { count: cfdiCount } = await supabase
+        .from('cfdi_lineas')
+        .select('id', { count: 'exact', head: true })
+        .eq('venta_id', id);
+      if (cfdiCount && cfdiCount > 0) {
+        throw new Error('No puedes eliminar una venta facturada. Cancela primero el CFDI.');
+      }
+
+      // Clean dependent rows so the FK constraints don't block the delete
+      const { data: ents } = await (supabase as any).from('entregas').select('id').eq('pedido_id', id);
+      const eIds = ((ents ?? []) as any[]).map((e: any) => e.id);
+      if (eIds.length) {
+        await supabase.from('entrega_lineas').delete().in('entrega_id', eIds);
+        await supabase.from('entregas').delete().in('id', eIds);
+      }
+      await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
+      await supabase.from('venta_comisiones').delete().eq('venta_id', id);
+      await supabase.from('venta_historial').delete().eq('venta_id', id);
+      await supabase.from('promocion_aplicada').delete().eq('venta_id', id);
+      await supabase.from('venta_lineas').delete().eq('venta_id', id);
+
       const { error } = await supabase.from('ventas').delete().eq('id', id);
       if (error) throw error;
     },
@@ -346,6 +368,14 @@ export function useDeleteVenta() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['ventas'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['entregas'] });
+      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+      qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+    },
   });
 }
