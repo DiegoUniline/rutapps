@@ -252,6 +252,22 @@ export default function CfdiFormPage() {
       return;
     }
 
+    // Validate SAT data per line
+    const missing: string[] = [];
+    lineas.forEach((l, i) => {
+      const code = (l.product_code || '').toString().trim();
+      if (!/^\d{8}$/.test(code) || code === '01010101') {
+        missing.push(`Línea ${i + 1} "${l.descripcion || ''}" — Clave SAT inválida (debe ser 8 dígitos, no genérica)`);
+      }
+      if (!l.unit_code || !l.unit_name) {
+        missing.push(`Línea ${i + 1} — falta Unidad SAT`);
+      }
+    });
+    if (missing.length > 0) {
+      setErrorDialog('No se puede timbrar:\n\n' + missing.join('\n'));
+      return;
+    }
+
     // Save first if dirty
     if (dirty) await handleSave();
 
