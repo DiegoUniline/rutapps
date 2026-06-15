@@ -48,7 +48,7 @@ export default function CotizacionFormPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { empresa, user, profile } = useAuth();
-  const { data: existing, isLoading } = useCotizacion(isNew ? undefined : id);
+  const { data: existing, isLoading, isFetching, isError, error } = useCotizacion(isNew ? undefined : id);
   const { data: clientes } = useClientes();
   const { data: productosList } = useProductosForSelect();
   const { data: tarifasList } = useTarifasForSelect();
@@ -392,7 +392,8 @@ export default function CotizacionFormPage() {
     setForm(f => ({ ...f, lista_precio_id: lista }));
   };
 
-  if (!isNew && (isLoading || !existing)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
+  if (!isNew && isError) return <div className="p-6 text-destructive">Error al cargar la cotización: {(error as any)?.message || 'desconocido'}</div>;
+  if (!isNew && !existing && (isLoading || isFetching)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
 
   const clienteOptions = (clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map((t: any) => ({ value: t.id, label: t.nombre }));
