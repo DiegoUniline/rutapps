@@ -473,7 +473,7 @@ export default function CotizacionFormPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {!readOnly && (
-            <Button onClick={() => handleSave()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Guardar</Button>
+            <Button onClick={() => handleSave()} disabled={save.isPending} variant={hasChanges ? 'default' : 'outline'}><Save className="h-4 w-4 mr-1" /> Guardar</Button>
           )}
           {!isNew && (
             <>
