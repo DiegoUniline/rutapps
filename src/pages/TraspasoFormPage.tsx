@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { ArrowLeft, Save, Trash2, Check, FileText, Ban, Search } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -143,10 +144,9 @@ export default function TraspasoFormPage() {
   const { data: allProductos } = useQuery({
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre');
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('productos').select('id, codigo, nombre, cantidad, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre').range(from, to)
+    ),
   });
 
   // Fetch clasificaciones for filter
@@ -183,26 +183,26 @@ export default function TraspasoFormPage() {
   const { data: stockVendedorAlmacen } = useQuery({
     queryKey: ['stock-almacen-vendedor', vendedorAlmacenId],
     enabled: tipo === 'ruta_almacen' && !!vendedorAlmacenId,
-    queryFn: async () => {
-      const { data } = await supabase.from('stock_almacen')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('stock_almacen')
         .select('producto_id, cantidad')
         .eq('almacen_id', vendedorAlmacenId!)
-        .gt('cantidad', 0);
-      return data ?? [];
-    },
+        .gt('cantidad', 0)
+        .range(from, to)
+    ),
   });
 
   // Fetch per-warehouse stock for the selected origin almacen
   const { data: stockAlmacenOrigen } = useQuery({
     queryKey: ['stock-almacen-origen', almacenOrigenId],
     enabled: (tipo === 'almacen_almacen' || tipo === 'almacen_ruta') && !!almacenOrigenId,
-    queryFn: async () => {
-      const { data } = await supabase.from('stock_almacen')
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('stock_almacen')
         .select('producto_id, cantidad')
         .eq('almacen_id', almacenOrigenId)
-        .gt('cantidad', 0);
-      return data ?? [];
-    },
+        .gt('cantidad', 0)
+        .range(from, to)
+    ),
   });
 
   // Filtered product list: only those with stock > 0 from the selected origin

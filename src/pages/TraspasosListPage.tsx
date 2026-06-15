@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { Plus, List, Package, ChevronDown, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { TraspasoExpandedRow } from './traspasos/TraspasoExpandedRow';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -115,15 +116,14 @@ export default function TraspasosListPage() {
   const { data: traspasos, isLoading } = useQuery({
     queryKey: ['traspasos', empresa?.id],
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase
         .from('traspasos')
         .select('*, almacen_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacen_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre), vendedor_origen:profiles!traspasos_vendedor_origen_id_profiles_fkey(nombre), vendedor_destino:profiles!traspasos_vendedor_destino_id_profiles_fkey(nombre)')
         .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+        .order('created_at', { ascending: false })
+        .range(from, to)
+    ),
   });
 
   // Detalle: traspaso_lineas with traspaso + product info
@@ -131,13 +131,15 @@ export default function TraspasosListPage() {
     queryKey: ['traspaso-lineas-all', empresa?.id],
     enabled: !!empresa?.id && viewMode === 'detalle',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('traspaso_lineas')
-        .select('id, cantidad, producto_id, traspaso_id, productos(codigo, nombre), traspasos!inner(folio, tipo, status, fecha, almacen_origen_id, almacen_destino_id, almacenes_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacenes_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre))')
-        .eq('traspasos.empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []).map((l: any) => ({
+      const data = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('traspaso_lineas')
+          .select('id, cantidad, producto_id, traspaso_id, productos(codigo, nombre), traspasos!inner(folio, tipo, status, fecha, almacen_origen_id, almacen_destino_id, almacenes_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacenes_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre))')
+          .eq('traspasos.empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      );
+      return data.map((l: any) => ({
         linea_id: l.id,
         traspaso_id: l.traspaso_id,
         cantidad: l.cantidad,
