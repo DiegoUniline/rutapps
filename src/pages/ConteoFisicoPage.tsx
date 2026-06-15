@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Search, Plus, Lock, X, Package, CheckCircle, Circle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
