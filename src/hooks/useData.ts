@@ -367,11 +367,12 @@ export function useProductosForSelect() {
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('productos')
+      return fetchAllPages((from, to) => supabase.from('productos')
         .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo').order('nombre');
-      return data ?? [];
+        .eq('status', 'activo')
+        .order('nombre')
+        .range(from, to));
     },
   });
 }
