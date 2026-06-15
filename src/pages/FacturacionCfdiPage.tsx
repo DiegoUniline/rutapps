@@ -19,6 +19,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
+import ClientesListPage from '@/pages/ClientesListPage';
+import ProductosListPage from '@/pages/ProductosListPage';
 
 const STATUS_COLORS: Record<string, string> = {
   timbrado: 'default',
@@ -48,6 +50,7 @@ export default function FacturacionCfdiPage() {
   const [selectedCfdi, setSelectedCfdi] = useState<any>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [facturaSubTab, setFacturaSubTab] = useState<'todas' | 'pue' | 'ppd' | 'pagos' | 'canceladas'>('todas');
 
   // Load timbre balance
   const { data: timbreSaldo } = useQuery({
@@ -121,15 +124,45 @@ export default function FacturacionCfdiPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const cancelStatuses = ['cancelado', 'cancelacion_pendiente', 'cancelacion_rechazada'];
   const filtered = (cfdis || []).filter((c: any) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       (c.folio_fiscal || '').toLowerCase().includes(q) ||
       (c.receiver_name || '').toLowerCase().includes(q) ||
       (c.receiver_rfc || '').toLowerCase().includes(q) ||
-      (c.folio || '').toLowerCase().includes(q)
-    );
+      (c.folio || '').toLowerCase().includes(q);
+    if (!matchSearch) return false;
+    const isCancel = cancelStatuses.includes(c.status);
+    const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
+    switch (facturaSubTab) {
+      case 'pue':
+        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PUE';
+      case 'ppd':
+        return !isCancel && !isPago && (c.payment_method || '').toUpperCase() === 'PPD';
+      case 'pagos':
+        return !isCancel && isPago;
+      case 'canceladas':
+        return isCancel;
+      default:
+        return true;
+    }
   });
+
+  const counts = (cfdis || []).reduce(
+    (acc: any, c: any) => {
+      const isCancel = cancelStatuses.includes(c.status);
+      const isPago = (c.cfdi_type || '').toUpperCase() === 'P';
+      acc.todas++;
+      if (isCancel) acc.canceladas++;
+      else if (isPago) acc.pagos++;
+      else if ((c.payment_method || '').toUpperCase() === 'PUE') acc.pue++;
+      else if ((c.payment_method || '').toUpperCase() === 'PPD') acc.ppd++;
+      return acc;
+    },
+    { todas: 0, pue: 0, ppd: 0, pagos: 0, canceladas: 0 },
+  );
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -166,14 +199,26 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="bg-card">
+        <TabsList className="bg-card flex-wrap h-auto">
           <TabsTrigger value="facturas">Facturas</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="productos">Productos</TabsTrigger>
           <TabsTrigger value="config">Configuración Emisor</TabsTrigger>
           <TabsTrigger value="catalogos">Catálogos SAT</TabsTrigger>
         </TabsList>
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
+          <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as any)}>
+            <TabsList className="bg-card flex-wrap h-auto">
+              <TabsTrigger value="todas">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
+              <TabsTrigger value="pue">PUE <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pue}</Badge></TabsTrigger>
+              <TabsTrigger value="ppd">PPD <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.ppd}</Badge></TabsTrigger>
+              <TabsTrigger value="pagos">Complementos de Pago <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pagos}</Badge></TabsTrigger>
+              <TabsTrigger value="canceladas">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex items-center gap-2">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -181,6 +226,7 @@ export default function FacturacionCfdiPage() {
             </div>
             <Badge variant="secondary" className="text-xs">{filtered.length} facturas</Badge>
           </div>
+
 
           {isLoading ? (
             <TableSkeleton rows={6} cols={6} />
@@ -264,6 +310,21 @@ export default function FacturacionCfdiPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* CLIENTES TAB */}
+        <TabsContent value="clientes" className="mt-4">
+          <div className="-mx-4 md:-mx-6">
+            <ClientesListPage />
+          </div>
+        </TabsContent>
+
+        {/* PRODUCTOS TAB */}
+        <TabsContent value="productos" className="mt-4">
+          <div className="-mx-4 md:-mx-6">
+            <ProductosListPage />
+          </div>
+        </TabsContent>
+
 
         {/* CONFIG TAB */}
         <TabsContent value="config" className="mt-4">
