@@ -209,15 +209,15 @@ export default function FacturacionCfdiPage() {
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
-          <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as any)}>
-            <TabsList className="bg-card flex-wrap h-auto">
-              <TabsTrigger value="todas">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
-              <TabsTrigger value="pue">PUE <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pue}</Badge></TabsTrigger>
-              <TabsTrigger value="ppd">PPD <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.ppd}</Badge></TabsTrigger>
-              <TabsTrigger value="pagos">Complementos de Pago <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pagos}</Badge></TabsTrigger>
-              <TabsTrigger value="canceladas">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
-            </TabsList>
-          </Tabs>
+            <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as any)}>
+              <TabsList className="grid grid-cols-5 w-full">
+                <TabsTrigger value="todas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
+                <TabsTrigger value="pue" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PUE <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pue}</Badge></TabsTrigger>
+                <TabsTrigger value="ppd" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PPD <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.ppd}</Badge></TabsTrigger>
+                <TabsTrigger value="pagos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Complementos de Pago <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.pagos}</Badge></TabsTrigger>
+                <TabsTrigger value="canceladas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
+              </TabsList>
+            </Tabs>
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1 max-w-sm">
