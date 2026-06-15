@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, UserCheck, UserMinus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, UserPlus, ArrowRight, PieChart } from 'lucide-react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, CartesianGrid, Line } from 'recharts';
-import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
+import { format, subDays, eachDayOfInterval, startOfDay, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
