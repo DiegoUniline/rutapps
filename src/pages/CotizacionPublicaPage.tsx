@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { fmtMoney } from '@/lib/currency';
+import { formatCurrency } from '@/lib/currency';
 import { FileText, AlertCircle } from 'lucide-react';
 
 interface PublicData {
@@ -35,7 +35,7 @@ export default function CotizacionPublicaPage() {
       if (e1 || !cot) { setError('No se encontró la cotización'); setLoading(false); return; }
       const [{ data: lineas }, { data: empresa }, { data: cliente }] = await Promise.all([
         supabase.from('cotizacion_lineas').select('*').eq('cotizacion_id', cot.id).order('orden'),
-        supabase.from('empresas').select('nombre, telefono, email, direccion, ciudad, estado, rfc, logo_url').eq('id', cot.empresa_id).maybeSingle(),
+        supabase.from('empresas').select('nombre, telefono, email, direccion, ciudad, estado, rfc, logo_url, moneda').eq('id', cot.empresa_id).maybeSingle(),
         cot.cliente_id ? supabase.from('clientes').select('nombre, telefono, rfc, direccion').eq('id', cot.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
       setData({ cotizacion: cot, lineas: lineas ?? [], empresa: empresa ?? null, cliente: cliente ?? null });
@@ -57,6 +57,8 @@ export default function CotizacionPublicaPage() {
   }
 
   const { cotizacion: c, lineas, empresa, cliente } = data;
+  const moneda = c.moneda || empresa?.moneda || 'MXN';
+  const money = (v: number | null | undefined) => formatCurrency(Number(v ?? 0), moneda);
 
   return (
     <div className="min-h-[100dvh] bg-white text-zinc-900">
@@ -72,6 +74,7 @@ export default function CotizacionPublicaPage() {
             <div className="text-base font-bold">COTIZACIÓN</div>
             <div className="text-sm text-zinc-600">{c.folio}</div>
             <div className="text-xs text-zinc-500 mt-1">{fmtDate(c.fecha)}</div>
+            <div className="text-xs text-zinc-500">Moneda: {moneda}</div>
           </div>
         </header>
 
@@ -100,6 +103,7 @@ export default function CotizacionPublicaPage() {
                 <th className="text-left px-2 py-2">Descripción</th>
                 <th className="text-right px-2 py-2">Cant.</th>
                 <th className="text-right px-2 py-2">Precio</th>
+                <th className="text-right px-2 py-2">Desc.</th>
                 <th className="text-right px-2 py-2">Total</th>
               </tr>
             </thead>
@@ -109,8 +113,9 @@ export default function CotizacionPublicaPage() {
                   <td className="px-2 py-2 text-zinc-500">{i + 1}</td>
                   <td className="px-2 py-2">{l.descripcion || (l.producto_snapshot?.nombre ?? '—')}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{Number(l.cantidad).toLocaleString('es-MX', { maximumFractionDigits: 3 })}</td>
-                  <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(Number(l.precio_unitario))}</td>
-                  <td className="px-2 py-2 text-right tabular-nums font-medium">{fmtMoney(Number(l.total))}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{money(l.precio_unitario)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{Number(l.descuento_pct ?? 0) > 0 ? `${l.descuento_pct}%` : '—'}</td>
+                  <td className="px-2 py-2 text-right tabular-nums font-medium">{money(l.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,10 +124,10 @@ export default function CotizacionPublicaPage() {
 
         <section className="flex justify-end">
           <div className="w-full sm:w-72 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-zinc-600">Subtotal</span><span className="tabular-nums">{fmtMoney(c.subtotal)}</span></div>
-            {Number(c.descuento) > 0 && <div className="flex justify-between"><span className="text-zinc-600">Descuento</span><span className="tabular-nums">- {fmtMoney(c.descuento)}</span></div>}
-            {Number(c.impuestos) > 0 && <div className="flex justify-between"><span className="text-zinc-600">Impuestos</span><span className="tabular-nums">{fmtMoney(c.impuestos)}</span></div>}
-            <div className="flex justify-between border-t border-zinc-900 pt-1 text-base font-bold"><span>TOTAL</span><span className="tabular-nums">{fmtMoney(c.total)}</span></div>
+            <div className="flex justify-between"><span className="text-zinc-600">Subtotal</span><span className="tabular-nums">{money(c.subtotal)}</span></div>
+            {Number(c.descuento) > 0 && <div className="flex justify-between"><span className="text-zinc-600">Descuento</span><span className="tabular-nums">- {money(c.descuento)}</span></div>}
+            {Number(c.impuestos) > 0 && <div className="flex justify-between"><span className="text-zinc-600">Impuestos</span><span className="tabular-nums">{money(c.impuestos)}</span></div>}
+            <div className="flex justify-between border-t border-zinc-900 pt-1 text-base font-bold"><span>TOTAL</span><span className="tabular-nums">{money(c.total)}</span></div>
           </div>
         </section>
 
