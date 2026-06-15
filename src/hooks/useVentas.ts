@@ -333,7 +333,7 @@ export function useDeleteVenta() {
       if (count && count > 0) throw new Error('No puedes eliminar una venta con pagos aplicados. Cancélala primero.');
 
       // Block deletion if a CFDI was already issued for this venta
-      const { count: cfdiCount } = await supabase
+      const { count: cfdiCount } = await (supabase as any)
         .from('cfdi_lineas')
         .select('id', { count: 'exact', head: true })
         .eq('venta_id', id);
