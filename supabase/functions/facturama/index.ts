@@ -203,10 +203,17 @@ async function timbrar(supabase: any, userId: string, body: any) {
   const serviceDb = getServiceSupabase();
   const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
 
-  // Check timbre balance before proceeding
-  const { data: saldoRow } = await serviceDb.from("timbres_saldo").select("saldo").eq("empresa_id", empresa_id).single();
-  const saldoActual = saldoRow?.saldo ?? 0;
-  if (saldoActual < 1) {
+  // Atomic reservation of 1 timbre (prevents race conditions with concurrent timbrados).
+  // If the Facturama call fails further down, the reservation is released.
+  const { data: reservationId, error: reserveErr } = await serviceDb.rpc("reserve_timbre", {
+    p_empresa_id: empresa_id,
+    p_user_id: userId,
+  });
+  if (reserveErr) {
+    console.error("Error reserving timbre:", reserveErr);
+    throw new Error("No se pudo reservar el timbre. Intenta de nuevo.");
+  }
+  if (!reservationId) {
     throw new Error("No tienes timbres disponibles. Contacta al administrador para adquirir más timbres.");
   }
 
@@ -215,6 +222,9 @@ async function timbrar(supabase: any, userId: string, body: any) {
   if (!folio || folio.trim() === '') {
     folio = String(Date.now()).slice(-8);
   }
+
+  try {
+
 
   // Build Facturama items with exact tax calculations
   const facItems: any[] = [];
