@@ -424,7 +424,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
   let ivaTotal = 0, iepsTotal = 0, retencionesTotal = 0, subtotalTotal = 0;
   for (const fi of facItems) {
     subtotalTotal += fi.Subtotal;
-    for (const tax of fi.Taxes) {
+    for (const tax of (fi.Taxes || [])) {
       if (tax.IsRetention) retencionesTotal += tax.Total;
       else if (tax.Name === "IVA") ivaTotal += tax.Total;
       else if (tax.Name === "IEPS") iepsTotal += tax.Total;
