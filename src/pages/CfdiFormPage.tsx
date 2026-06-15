@@ -120,6 +120,14 @@ export default function CfdiFormPage() {
       return data || [];
     },
   });
+  const { data: unidadesSat } = useQuery({
+    queryKey: ['unidades_sat_all'],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.from('unidades_sat').select('clave, nombre').order('clave');
+      return data || [];
+    },
+  });
 
   const [lineas, setLineas] = useState<Partial<CfdiLinea>[]>([]);
   const [receiver, setReceiver] = useState({
