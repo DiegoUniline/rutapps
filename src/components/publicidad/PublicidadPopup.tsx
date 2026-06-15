@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { useNextUnseenPopup, resolveMediaUrl, toEmbedUrl, type Publicidad } from '@/hooks/usePublicidad';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,20 +10,24 @@ import { X, ExternalLink, Sparkles } from 'lucide-react';
 
 export default function PublicidadPopup() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const isAdminView = !location.pathname.startsWith('/ruta');
   const { data: ad } = useNextUnseenPopup();
   const [open, setOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [media, setMedia] = useState<string | null>(null);
+  const [dismissedAdId, setDismissedAdId] = useState<string | null>(null);
+  const seenKey = user?.id ? `publicidad_seen_${user.id}` : null;
 
   // Open dialog in the administrative desktop shell only; never in the route mobile app (/ruta).
   useEffect(() => {
-    if (ad && !open && isAdminView) {
+    const locallySeen = seenKey ? localStorage.getItem(seenKey)?.split(',').includes(ad?.id || '') : false;
+    if (ad && !open && isAdminView && ad.id !== dismissedAdId && !locallySeen) {
       setOpen(true);
       setCountdown(5);
     }
-  }, [ad, open, isAdminView]);
+  }, [ad, open, isAdminView, dismissedAdId, seenKey]);
 
   // Resolve media URL (signed for storage paths)
   useEffect(() => {
@@ -60,8 +65,16 @@ export default function PublicidadPopup() {
 
   const handleClose = async () => {
     if (!canClose) return;
+    if (ad) {
+      setDismissedAdId(ad.id);
+      if (seenKey) {
+        const prev = localStorage.getItem(seenKey)?.split(',').filter(Boolean) || [];
+        if (!prev.includes(ad.id)) localStorage.setItem(seenKey, [...prev, ad.id].join(','));
+      }
+    }
     setOpen(false);
     await markSeen();
+    await queryClient.invalidateQueries({ queryKey: ['publicidad', 'next-unseen', user?.id] });
   };
 
   if (!ad) return null;
