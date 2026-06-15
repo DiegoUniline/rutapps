@@ -162,9 +162,9 @@ export function useVentaForm() {
     () => (pagosData ?? []).reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0),
     [pagosData],
   );
-  const saldoPendiente = form.saldo_pendiente != null
-    ? Number(form.saldo_pendiente) || 0
-    : (Number(form.total ?? 0) - totalPagado);
+  // Always derive from total - totalPagado so it stays reactive when pagos change.
+  // totalPagado already excludes cancelled cobros.
+  const saldoPendiente = Number(form.total ?? 0) - totalPagado;
 
   // Load existing venta — only once per venta id
   useEffect(() => {
