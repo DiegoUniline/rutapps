@@ -325,10 +325,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
 
   if (response.status !== 200 && response.status !== 201) {
     // Release reservation: Facturama no aceptó la factura
-    await serviceDb.rpc("release_timbre", {
-      p_reservation_id: reservationId,
-      p_motivo: `Facturama rechazó timbrado: HTTP ${response.status}`,
-    }).catch((e: any) => console.error("release_timbre fallo:", e));
+    try {
+      await serviceDb.rpc("release_timbre", {
+        p_reservation_id: reservationId,
+        p_motivo: `Facturama rechazó timbrado: HTTP ${response.status}`,
+      });
+    } catch (e: any) { console.error("release_timbre fallo:", e); }
 
     // Save error to DB
     await supabase.from("cfdis").insert({
@@ -488,10 +490,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }
   } else {
     // No pudimos guardar el CFDI: liberar el timbre, ya que la factura no quedó registrada localmente
-    await serviceDb.rpc("release_timbre", {
-      p_reservation_id: reservationId,
-      p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
-    }).catch((e: any) => console.error("release_timbre fallback fallo:", e));
+    try {
+      await serviceDb.rpc("release_timbre", {
+        p_reservation_id: reservationId,
+        p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
+      });
+    } catch (e: any) { console.error("release_timbre fallback fallo:", e); }
   }
 
   return new Response(
@@ -508,10 +512,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
   );
   } catch (err) {
     // Cualquier error inesperado (red, parseo, storage, etc.) libera la reserva si aún existe.
-    await serviceDb.rpc("release_timbre", {
-      p_reservation_id: reservationId,
-      p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
-    }).catch((e: any) => console.error("release_timbre en catch fallo:", e));
+    try {
+      await serviceDb.rpc("release_timbre", {
+        p_reservation_id: reservationId,
+        p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
+      });
+    } catch (e: any) { console.error("release_timbre en catch fallo:", e); }
     throw err;
   }
 }
