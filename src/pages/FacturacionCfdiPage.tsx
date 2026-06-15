@@ -50,6 +50,7 @@ export default function FacturacionCfdiPage() {
   const [selectedCfdi, setSelectedCfdi] = useState<any>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [facturaSubTab, setFacturaSubTab] = useState<'todas' | 'pue' | 'ppd' | 'pagos' | 'canceladas'>('todas');
 
   // Load timbre balance
   const { data: timbreSaldo } = useQuery({
