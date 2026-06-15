@@ -673,6 +673,7 @@ export function useVentaForm() {
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
+    handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
   };
 }
