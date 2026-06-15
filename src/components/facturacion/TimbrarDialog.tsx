@@ -157,13 +157,30 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       return;
     }
 
+    // Validate SAT data per line (clave 8 dígitos + unidad SAT)
+    const missing: string[] = [];
+    for (const l of ventaLineas as any[]) {
+      const nombre = l.descripcion || l.productos?.nombre || `línea ${l.id?.slice(0, 6)}`;
+      const code = getProductCode(l);
+      if (!/^\d{8}$/.test(code) || code === '01010101') {
+        missing.push(`"${nombre}" sin Clave SAT válida (8 dígitos)`);
+      }
+      if (!l.productos?.udem_sat_id) {
+        missing.push(`"${nombre}" sin Unidad SAT`);
+      }
+    }
+    if (missing.length > 0) {
+      toast.error('Faltan datos SAT en productos:\n• ' + missing.slice(0, 5).join('\n• '));
+      return;
+    }
+
     setTimbrating(true);
     try {
-      const items = ventaLineas.map((l: any) => ({
-        product_code: l.productos?.codigo_sat || '01010101',
+      const items = (ventaLineas as any[]).map((l: any) => ({
+        product_code: getProductCode(l),
         description: l.descripcion || l.productos?.nombre || 'Producto',
-        unit: 'Pieza',
-        unit_code: 'H87',
+        unit: getUnitName(l),
+        unit_code: getUnitCode(l),
         unit_price: l.precio_unitario,
         quantity: l.cantidad,
         iva_rate: (l.iva_pct || 0) / 100,
