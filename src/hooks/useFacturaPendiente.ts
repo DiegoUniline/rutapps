@@ -32,7 +32,7 @@ export function useFacturaPendiente(): FacturaPendienteState {
   const { user, empresa } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['factura-pendiente', empresa?.id],
+    queryKey: ['factura-pendiente', empresa?.id, user?.email],
     queryFn: async (): Promise<Omit<FacturaPendienteState, 'loading'>> => {
       if (!empresa?.id) return EMPTY;
       // Super admin nunca se bloquea por factura pendiente
