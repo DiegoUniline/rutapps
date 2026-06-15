@@ -309,7 +309,11 @@ export default function LandingPage() {
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <a href="#modulos" className="w-full sm:w-auto text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                <Link to="/login" className="sm:hidden w-full text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
+                  Iniciar sesión
+                </Link>
+                <a href="#modulos" className="hidden sm:inline-flex w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Ver módulos
                 </a>
