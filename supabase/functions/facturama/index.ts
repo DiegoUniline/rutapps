@@ -279,7 +279,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
       facItem.Total += amount;
     }
 
-    facItem.TaxObject = facItem.Taxes.length > 0 ? "02" : "01";
+    if (facItem.Taxes.length > 0) {
+      facItem.TaxObject = "02";
+    } else {
+      facItem.TaxObject = "01";
+      delete facItem.Taxes;
+    }
     facItem.Total = r2(facItem.Total);
     totalFactura += facItem.Total;
     facItems.push(facItem);
