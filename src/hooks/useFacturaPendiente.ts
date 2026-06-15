@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { differenceInCalendarDays } from 'date-fns';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 export interface FacturaPendienteState {
   loading: boolean;
