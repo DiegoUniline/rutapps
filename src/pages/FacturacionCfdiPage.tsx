@@ -195,6 +195,71 @@ export default function FacturacionCfdiPage() {
     { todas: 0, borrador: 0, timbrado: 0, error: 0, canceladas: 0 },
   );
 
+  const selectedList = (cfdis || []).filter((c: any) => selectedIds.has(c.id));
+  const selectedDeletable = selectedList.filter((c: any) => c.status === 'borrador' || c.status === 'error');
+  const selectedCancelable = selectedList.filter((c: any) => c.status === 'timbrado');
+  const allFilteredSelected = filtered.length > 0 && filtered.every((c: any) => selectedIds.has(c.id));
+
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) filtered.forEach((c: any) => next.delete(c.id));
+      else filtered.forEach((c: any) => next.add(c.id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const runBulkDelete = async () => {
+    if (selectedDeletable.length === 0) return;
+    setBulkProcessing(true);
+    try {
+      const ids = selectedDeletable.map((c: any) => c.id);
+      const { error } = await supabase.from('cfdis').delete().in('id', ids).eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      toast.success(`${ids.length} CFDI(s) eliminado(s)`);
+      queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+      clearSelection();
+      setShowBulkDelete(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const runBulkCancel = async () => {
+    if (selectedCancelable.length === 0) return;
+    setBulkProcessing(true);
+    let ok = 0, fail = 0;
+    for (const cfdi of selectedCancelable) {
+      try {
+        const { data, error } = await supabase.functions.invoke('facturama', {
+          body: { action: 'cancelar', cfdi_id: cfdi.id, rfc_emisor: empresa?.rfc || '', motivo: '02' },
+        });
+        if (error || data?.error) throw new Error(error?.message || data?.error);
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+    }
+    setBulkProcessing(false);
+    if (ok) toast.success(`${ok} cancelación(es) procesada(s)`);
+    if (fail) toast.error(`${fail} fallaron`);
+    queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+    clearSelection();
+    setShowBulkCancel(false);
+  };
+
+
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
