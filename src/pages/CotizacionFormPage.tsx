@@ -56,6 +56,15 @@ export default function CotizacionFormPage() {
   const save = useSaveCotizacion();
   const setEstado = useSetCotizacionEstado();
   const { symbol } = useCurrency();
+  // Resolve currency symbol per cotización (falls back to empresa default)
+  const cotSymbol = (() => {
+    const code = (form as any)?.moneda;
+    if (!code) return symbol;
+    try {
+      const { getCurrencyConfig } = require('@/lib/currency');
+      return getCurrencyConfig(code).symbol;
+    } catch { return symbol; }
+  })();
 
   const [form, setForm] = useState<Partial<Cotizacion>>({
     fecha: todayISO(), vigencia_dias: 15, estado: 'borrador',
