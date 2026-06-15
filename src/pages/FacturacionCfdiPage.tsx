@@ -311,6 +311,21 @@ export default function FacturacionCfdiPage() {
           )}
         </TabsContent>
 
+        {/* CLIENTES TAB */}
+        <TabsContent value="clientes" className="mt-4">
+          <div className="-mx-4 md:-mx-6">
+            <ClientesListPage />
+          </div>
+        </TabsContent>
+
+        {/* PRODUCTOS TAB */}
+        <TabsContent value="productos" className="mt-4">
+          <div className="-mx-4 md:-mx-6">
+            <ProductosListPage />
+          </div>
+        </TabsContent>
+
+
         {/* CONFIG TAB */}
         <TabsContent value="config" className="mt-4">
           <ConfigEmisorCard />
