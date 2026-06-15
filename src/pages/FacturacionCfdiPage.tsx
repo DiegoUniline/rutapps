@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
@@ -55,6 +56,10 @@ export default function FacturacionCfdiPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [facturaSubTab, setFacturaSubTab] = useState<FacturaSubTab>('todas');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showBulkCancel, setShowBulkCancel] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Load timbre balance
   const { data: timbreSaldo } = useQuery({
@@ -190,6 +195,71 @@ export default function FacturacionCfdiPage() {
     { todas: 0, borrador: 0, timbrado: 0, error: 0, canceladas: 0 },
   );
 
+  const selectedList = (cfdis || []).filter((c: any) => selectedIds.has(c.id));
+  const selectedDeletable = selectedList.filter((c: any) => c.status === 'borrador' || c.status === 'error');
+  const selectedCancelable = selectedList.filter((c: any) => c.status === 'timbrado');
+  const allFilteredSelected = filtered.length > 0 && filtered.every((c: any) => selectedIds.has(c.id));
+
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) filtered.forEach((c: any) => next.delete(c.id));
+      else filtered.forEach((c: any) => next.add(c.id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const runBulkDelete = async () => {
+    if (selectedDeletable.length === 0) return;
+    setBulkProcessing(true);
+    try {
+      const ids = selectedDeletable.map((c: any) => c.id);
+      const { error } = await supabase.from('cfdis').delete().in('id', ids).eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      toast.success(`${ids.length} CFDI(s) eliminado(s)`);
+      queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+      clearSelection();
+      setShowBulkDelete(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const runBulkCancel = async () => {
+    if (selectedCancelable.length === 0) return;
+    setBulkProcessing(true);
+    let ok = 0, fail = 0;
+    for (const cfdi of selectedCancelable) {
+      try {
+        const { data, error } = await supabase.functions.invoke('facturama', {
+          body: { action: 'cancelar', cfdi_id: cfdi.id, rfc_emisor: empresa?.rfc || '', motivo: '02' },
+        });
+        if (error || data?.error) throw new Error(error?.message || data?.error);
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+    }
+    setBulkProcessing(false);
+    if (ok) toast.success(`${ok} cancelación(es) procesada(s)`);
+    if (fail) toast.error(`${fail} fallaron`);
+    queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+    clearSelection();
+    setShowBulkCancel(false);
+  };
+
+
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -246,13 +316,34 @@ export default function FacturacionCfdiPage() {
               </TabsList>
             </Tabs>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por RFC, nombre, folio..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
             </div>
             <Badge variant="secondary" className="text-xs">{filtered.length} facturas</Badge>
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 flex-wrap p-2 rounded-lg border bg-primary/5">
+              <span className="text-sm font-medium">{selectedIds.size} seleccionada(s)</span>
+              <div className="flex-1" />
+              {selectedCancelable.length > 0 && (
+                <Button size="sm" variant="outline" className="text-destructive" onClick={() => setShowBulkCancel(true)} disabled={bulkProcessing}>
+                  <XCircle className="h-4 w-4 mr-1.5" />
+                  Cancelar ({selectedCancelable.length})
+                </Button>
+              )}
+              {selectedDeletable.length > 0 && (
+                <Button size="sm" variant="destructive" onClick={() => setShowBulkDelete(true)} disabled={bulkProcessing}>
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Eliminar ({selectedDeletable.length})
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={clearSelection}>Limpiar</Button>
+            </div>
+          )}
+
 
 
           {isLoading ? (
@@ -269,6 +360,13 @@ export default function FacturacionCfdiPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-card">
+                     <TableHead className="w-[40px]">
+                       <Checkbox
+                         checked={allFilteredSelected}
+                         onCheckedChange={toggleAll}
+                         aria-label="Seleccionar todas"
+                       />
+                     </TableHead>
                      <TableHead className="w-[100px]">Folio</TableHead>
                      <TableHead>Receptor</TableHead>
                      <TableHead className="w-[120px]">RFC</TableHead>
@@ -281,7 +379,14 @@ export default function FacturacionCfdiPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((cfdi: any) => (
-                    <TableRow key={cfdi.id} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
+                    <TableRow key={cfdi.id} data-state={selectedIds.has(cfdi.id) ? 'selected' : undefined} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(cfdi.id)}
+                          onCheckedChange={() => toggleOne(cfdi.id)}
+                          aria-label="Seleccionar fila"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs font-semibold">
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>
@@ -430,6 +535,45 @@ export default function FacturacionCfdiPage() {
               onClick={() => deletingId && eliminarMutation.mutate(deletingId)}
             >
               {eliminarMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar {selectedDeletable.length} CFDI(s)
+            </DialogTitle>
+            <DialogDescription>
+              Se eliminarán permanentemente los borradores y CFDIs con error seleccionados. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkDelete}>
+              {bulkProcessing ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Cancel Dialog */}
+      <Dialog open={showBulkCancel} onOpenChange={setShowBulkCancel}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancelar {selectedCancelable.length} factura(s)</DialogTitle>
+            <DialogDescription>
+              Se enviará la solicitud de cancelación al SAT para cada CFDI timbrado seleccionado. ¿Deseas continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowBulkCancel(false)}>No</Button>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkCancel}>
+              {bulkProcessing ? 'Cancelando...' : 'Sí, cancelar todas'}
             </Button>
           </div>
         </DialogContent>
