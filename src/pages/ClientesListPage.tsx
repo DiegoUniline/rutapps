@@ -20,6 +20,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientesPaginated } from '@/hooks/useClientes';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import CatalogCRUD from '@/components/CatalogCRUD';
@@ -209,7 +210,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const statusFilter = forcedStatus;
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
-  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
+  const debouncedSearch = useDebounce(search, 300);
+  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
 
   // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
