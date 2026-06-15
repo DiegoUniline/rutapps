@@ -668,7 +668,7 @@ export default function CfdiFormPage() {
               </tbody>
               <tfoot>
                 <tr className="bg-card border-t">
-                  <td colSpan={readOnly ? 7 : 7} className="py-2 px-2 text-right text-[12px] font-semibold">Total</td>
+                  <td colSpan={8} className="py-2 px-2 text-right text-[12px] font-semibold">Total</td>
                   <td className="py-2 px-2 text-right font-bold text-sm">{fmt(totals.total)}</td>
                   {!readOnly && <td />}
                 </tr>
