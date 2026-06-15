@@ -56,6 +56,10 @@ export default function FacturacionCfdiPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [facturaSubTab, setFacturaSubTab] = useState<FacturaSubTab>('todas');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showBulkCancel, setShowBulkCancel] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Load timbre balance
   const { data: timbreSaldo } = useQuery({
