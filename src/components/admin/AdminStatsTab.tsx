@@ -437,10 +437,9 @@ export default function AdminStatsTab() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, hint, accent, onClick, expanded }: {
+function StatCard({ icon: Icon, label, value, hint, accent }: {
   icon: any; label: string; value: string; hint?: string;
   accent: 'primary' | 'success' | 'destructive' | 'muted';
-  onClick?: () => void; expanded?: boolean;
 }) {
   const accentMap = {
     primary: 'text-primary bg-primary/10',
@@ -449,13 +448,9 @@ function StatCard({ icon: Icon, label, value, hint, accent, onClick, expanded }:
     muted: 'text-muted-foreground bg-card/80',
   };
   const [iconColor, iconBg] = accentMap[accent].split(' ');
-  const clickable = !!onClick;
 
   return (
-    <Card
-      className={`border border-border/60 shadow-sm hover:shadow-md transition-shadow ${clickable ? 'cursor-pointer hover:border-primary/50' : ''}`}
-      onClick={onClick}
-    >
+    <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center gap-3">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${iconBg}`}>
@@ -466,20 +461,13 @@ function StatCard({ icon: Icon, label, value, hint, accent, onClick, expanded }:
             <div className="text-xs text-muted-foreground">{label}</div>
             {hint && <div className="text-[10px] text-muted-foreground/80 mt-0.5">{hint}</div>}
           </div>
-          {clickable && (
-            expanded
-              ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-              : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function EmpresaListCard({ title, icon: Icon, accent, rows }: {
-  title: string;
-  icon: any;
+function EmpresaList({ accent, rows }: {
   accent: 'primary' | 'success' | 'destructive' | 'muted';
   rows: { id: string; nombre: string; fecha: string; badge: string }[];
 }) {
@@ -489,42 +477,27 @@ function EmpresaListCard({ title, icon: Icon, accent, rows }: {
     destructive: 'text-destructive',
     muted: 'text-muted-foreground',
   }[accent];
-  const borderColor = {
-    primary: 'border-primary/40',
-    success: 'border-success/40',
-    destructive: 'border-destructive/40',
-    muted: 'border-border/60',
-  }[accent];
 
+  if (rows.length === 0) {
+    return <div className="text-xs text-muted-foreground py-4 text-center">Sin registros</div>;
+  }
   return (
-    <Card className={`border ${borderColor} shadow-sm`}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${accentColor}`} /> {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <div className="text-xs text-muted-foreground py-4 text-center">Sin registros</div>
-        ) : (
-          <div className="space-y-1 max-h-96 overflow-y-auto">
-            {rows.map(r => (
-              <div key={r.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-foreground truncate">{r.nombre}</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    Registrada {format(new Date(r.fecha), "dd MMM yyyy", { locale: es })}
-                  </div>
-                </div>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full bg-card border border-border font-medium ml-3 shrink-0 ${accentColor}`}>
-                  {r.badge}
-                </span>
-              </div>
-            ))}
+    <div className="space-y-1 max-h-96 overflow-y-auto">
+      {rows.map(r => (
+        <div key={r.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-foreground truncate">{r.nombre}</div>
+            <div className="text-[10px] text-muted-foreground">
+              Registrada {format(new Date(r.fecha), "dd MMM yyyy", { locale: es })}
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full bg-card border border-border font-medium ml-3 shrink-0 ${accentColor}`}>
+            {r.badge}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
+
 
