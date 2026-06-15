@@ -138,8 +138,9 @@ export default function FacturacionCfdiPage() {
     mutationFn: async (cfdiId: string) => {
       const cfdi = cfdis?.find((c: any) => c.id === cfdiId);
       if (!cfdi) throw new Error('CFDI no encontrado');
-      if (cfdi.status === 'timbrado') throw new Error('No se puede eliminar un CFDI timbrado. Debe cancelarse.');
-      if (cfdi.status === 'cancelado') throw new Error('No se puede eliminar un CFDI cancelado.');
+      if (cfdi.status !== 'borrador' && cfdi.status !== 'error') {
+        throw new Error('No se puede eliminar un CFDI timbrado o cancelado. Se conservan para auditoría.');
+      }
 
       const { error } = await supabase
         .from('cfdis')
@@ -198,6 +199,7 @@ export default function FacturacionCfdiPage() {
   const selectedList = (cfdis || []).filter((c: any) => selectedIds.has(c.id));
   const selectedDeletable = selectedList.filter((c: any) => c.status === 'borrador' || c.status === 'error');
   const selectedCancelable = selectedList.filter((c: any) => c.status === 'timbrado');
+  const selectedNonDeletable = selectedList.filter((c: any) => c.status !== 'borrador' && c.status !== 'error');
   const allFilteredSelected = filtered.length > 0 && filtered.every((c: any) => selectedIds.has(c.id));
 
   const toggleOne = (id: string) => {
@@ -327,6 +329,11 @@ export default function FacturacionCfdiPage() {
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2 flex-wrap p-2 rounded-lg border bg-primary/5">
               <span className="text-sm font-medium">{selectedIds.size} seleccionada(s)</span>
+              {selectedNonDeletable.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ({selectedNonDeletable.length} timbrada(s)/cancelada(s) no se pueden eliminar — conservadas para auditoría)
+                </span>
+              )}
               <div className="flex-1" />
               {selectedCancelable.length > 0 && (
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => setShowBulkCancel(true)} disabled={bulkProcessing}>
@@ -523,7 +530,7 @@ export default function FacturacionCfdiPage() {
             </DialogTitle>
             <DialogDescription>
               Esta acción eliminará permanentemente el CFDI. No se puede deshacer.
-              Solo se pueden eliminar borradores o facturas con error.
+              Las facturas timbradas o canceladas no se pueden eliminar porque se conservan para auditoría ante el SAT.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
@@ -550,6 +557,7 @@ export default function FacturacionCfdiPage() {
             </DialogTitle>
             <DialogDescription>
               Se eliminarán permanentemente los borradores y CFDIs con error seleccionados. Esta acción no se puede deshacer.
+              Las facturas timbradas o canceladas no se pueden eliminar porque se conservan para auditoría ante el SAT.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
