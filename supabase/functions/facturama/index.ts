@@ -490,10 +490,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }
   } else {
     // No pudimos guardar el CFDI: liberar el timbre, ya que la factura no quedó registrada localmente
-    await serviceDb.rpc("release_timbre", {
-      p_reservation_id: reservationId,
-      p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
-    }).catch((e: any) => console.error("release_timbre fallback fallo:", e));
+    try {
+      await serviceDb.rpc("release_timbre", {
+        p_reservation_id: reservationId,
+        p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
+      });
+    } catch (e: any) { console.error("release_timbre fallback fallo:", e); }
   }
 
   return new Response(
