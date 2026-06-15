@@ -539,6 +539,45 @@ export default function FacturacionCfdiPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar {selectedDeletable.length} CFDI(s)
+            </DialogTitle>
+            <DialogDescription>
+              Se eliminarán permanentemente los borradores y CFDIs con error seleccionados. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkDelete}>
+              {bulkProcessing ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Cancel Dialog */}
+      <Dialog open={showBulkCancel} onOpenChange={setShowBulkCancel}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancelar {selectedCancelable.length} factura(s)</DialogTitle>
+            <DialogDescription>
+              Se enviará la solicitud de cancelación al SAT para cada CFDI timbrado seleccionado. ¿Deseas continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowBulkCancel(false)}>No</Button>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkCancel}>
+              {bulkProcessing ? 'Cancelando...' : 'Sí, cancelar todas'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
