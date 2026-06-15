@@ -389,7 +389,7 @@ export default function CfdiFormPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto">
+    <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/facturacion-cfdi')}>
