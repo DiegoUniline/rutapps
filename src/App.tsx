@@ -765,9 +765,10 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
       {isBillingOwner && <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />}
       {isBillingOwner && <Route path="/completar-registro" element={<CompletarRegistroPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
+
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
       <Route path="/unsubscribe" element={<UnsubscribePage />} />
