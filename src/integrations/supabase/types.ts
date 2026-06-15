@@ -7950,6 +7950,10 @@ export type Database = {
         Args: { p_auditoria_id: string; p_cerrada_por: string }
         Returns: undefined
       }
+      confirm_timbre_reserve: {
+        Args: { p_cfdi_id: string; p_reservation_id: string }
+        Returns: boolean
+      }
       confirmar_traspaso: {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
@@ -8202,6 +8206,10 @@ export type Database = {
         }
         Returns: string
       }
+      release_timbre: {
+        Args: { p_motivo?: string; p_reservation_id: string }
+        Returns: boolean
+      }
       repair_missing_entrega_carga: {
         Args: never
         Returns: {
@@ -8215,6 +8223,10 @@ export type Database = {
       reprogramar_entregas_bulk: {
         Args: { p_entrega_ids: string[]; p_nueva_fecha: string }
         Returns: Json
+      }
+      reserve_timbre: {
+        Args: { p_empresa_id: string; p_user_id: string }
+        Returns: string
       }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
       surtir_linea_entrega: {
