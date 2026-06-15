@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Check, X, Trash2, Pencil, RotateCcw } from 'lucide-react';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Pago {
   id: string;
