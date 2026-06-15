@@ -353,8 +353,8 @@ Deno.serve(async (req) => {
       // Update password
       const { error: pwError } = await adminClient.auth.admin.updateUserById(user_id, { password });
       if (pwError) {
-        return new Response(JSON.stringify({ error: pwError.message }), {
-          status: 400,
+        return new Response(JSON.stringify({ ok: false, error: pwError.message }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
