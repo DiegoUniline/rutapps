@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import type { VentaLinea } from '@/types';
@@ -15,10 +16,12 @@ interface Props {
   onRemoveLine: (idx: number) => void;
   setLineas?: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
   currencySymbol?: string;
+  currencyCode?: string | null;
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$' }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode }: Props) {
   const { fmt } = useCurrency();
+  const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
@@ -85,7 +88,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Precio</label>
-            {readOnly ? <span className="text-sm">{fmt(price)}</span> : (
+            {readOnly ? <span className="text-sm">{money(price)}</span> : (
               <div className="space-y-1">
                 <input
                   type="number" inputMode="decimal" className="inline-edit-input text-sm text-right !py-1 w-full"
@@ -122,7 +125,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Total</label>
-            <span className="text-sm font-semibold">{fmt(displayLineTotal)}</span>
+            <span className="text-sm font-semibold">{money(displayLineTotal)}</span>
           </div>
         </div>
       )}

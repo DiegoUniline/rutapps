@@ -242,6 +242,7 @@ export default function CotizacionFormPage() {
       iva_total: totals.iva_total,
       ieps_total: totals.ieps_total,
       total: totals.total,
+      moneda: effectiveCurrencyCode,
       estado: estadoOverride ?? form.estado ?? 'borrador',
       id: isNew ? undefined : (form.id as string),
     };
@@ -556,6 +557,7 @@ export default function CotizacionFormPage() {
           sinImpuestos={sinImpuestos}
           setSinImpuestos={setSinImpuestos}
           readOnlyForm={readOnly}
+          currencyCode={effectiveCurrencyCode}
         />
       </div>
 
