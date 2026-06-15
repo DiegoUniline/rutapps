@@ -316,13 +316,34 @@ export default function FacturacionCfdiPage() {
               </TabsList>
             </Tabs>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por RFC, nombre, folio..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
             </div>
             <Badge variant="secondary" className="text-xs">{filtered.length} facturas</Badge>
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 flex-wrap p-2 rounded-lg border bg-primary/5">
+              <span className="text-sm font-medium">{selectedIds.size} seleccionada(s)</span>
+              <div className="flex-1" />
+              {selectedCancelable.length > 0 && (
+                <Button size="sm" variant="outline" className="text-destructive" onClick={() => setShowBulkCancel(true)} disabled={bulkProcessing}>
+                  <XCircle className="h-4 w-4 mr-1.5" />
+                  Cancelar ({selectedCancelable.length})
+                </Button>
+              )}
+              {selectedDeletable.length > 0 && (
+                <Button size="sm" variant="destructive" onClick={() => setShowBulkDelete(true)} disabled={bulkProcessing}>
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Eliminar ({selectedDeletable.length})
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={clearSelection}>Limpiar</Button>
+            </div>
+          )}
+
 
 
           {isLoading ? (
