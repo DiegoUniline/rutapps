@@ -70,18 +70,23 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   });
 
-  // Load selected venta lines
+  // Load selected venta lines (with product SAT unit join)
   const { data: ventaLineas } = useQuery({
     queryKey: ['venta-lineas-cfdi', selectedVentaId],
     enabled: !!selectedVentaId,
     queryFn: async () => {
       const { data } = await supabase
         .from('venta_lineas')
-        .select('*, productos(nombre, codigo_sat, codigo)')
+        .select('*, productos(nombre, codigo_sat, codigo, udem_sat_id, unidades_sat(clave, nombre))')
         .eq('venta_id', selectedVentaId!);
       return data || [];
     },
   });
+
+  // Helpers to extract real SAT unit/code from joined product (fallback "H87 / Pieza")
+  const getUnitCode = (l: any) => (l?.productos?.unidades_sat?.clave || 'H87').toString().toUpperCase();
+  const getUnitName = (l: any) => l?.productos?.unidades_sat?.nombre || 'Pieza';
+  const getProductCode = (l: any) => (l?.productos?.codigo_sat || '').toString().trim() || '01010101';
 
   // Catalogs
   const { data: formasPago } = useQuery({
