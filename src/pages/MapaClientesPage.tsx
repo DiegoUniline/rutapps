@@ -691,7 +691,7 @@ export default function MapaClientesPage() {
 
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
+    <div className="h-[calc(100dvh-theme(spacing.9))] flex flex-col">
       {/* Compact header */}
       <div className="bg-card border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2 flex-wrap">

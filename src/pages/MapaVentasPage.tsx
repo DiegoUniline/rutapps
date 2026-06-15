@@ -203,7 +203,7 @@ export default function MapaVentasPage() {
   const activeFiltersCount = [vendedorFilter].filter(Boolean).length;
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
+    <div className="h-[calc(100dvh-theme(spacing.9))] flex flex-col">
       {/* Header */}
       <div className="bg-card border-b border-border px-5 py-3">
         <div className="flex items-center gap-3 flex-wrap">

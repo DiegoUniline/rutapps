@@ -112,7 +112,7 @@ export default function LandingChatWidget() {
         <div
           className="fixed inset-x-0 bottom-0 z-[70] flex flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-bottom-4 duration-300
                      sm:bottom-5 sm:right-5 sm:left-auto sm:inset-x-auto
-                     sm:w-[400px] sm:h-[620px] sm:max-h-[calc(100vh-2.5rem)] sm:rounded-2xl
+                     sm:w-[400px] sm:h-[620px] sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-2xl
                      h-[92vh] rounded-t-2xl"
           role="dialog"
           aria-label="Chat con Cristóbal de RutApp"
