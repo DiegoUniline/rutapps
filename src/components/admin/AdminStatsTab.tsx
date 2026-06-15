@@ -35,12 +35,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATS_STALE = 2 * 60 * 1000; // 2 min
 
+type ClientesTab = 'porcobrar' | 'activos' | 'nuevos' | 'bajas';
+
 export default function AdminStatsTab() {
   const [days, setDays] = useState(30);
-  const [showPorCobrar, setShowPorCobrar] = useState(false);
-  const [showBajas, setShowBajas] = useState(false);
-  const [showNuevos, setShowNuevos] = useState(false);
-  const [showActivos, setShowActivos] = useState(false);
+  const [tab, setTab] = useState<ClientesTab>('porcobrar');
+
 
 
   // KPIs (admin-billing edge function) — independent
