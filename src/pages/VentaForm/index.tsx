@@ -249,7 +249,7 @@ export default function VentaFormPage() {
   return (
     <div className="min-h-full">
       <VentaFormHeader
-        isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} status={form.status}
+        isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} vendedorNombre={(form as any).vendedores?.nombre ?? profile?.nombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
         requiereFactura={billingEnabled && (form as any).requiere_factura} readOnly={readOnly}
         canCreateEntrega={canCreateEntrega} canDeleteCancelada={canDeleteCancelada} hayEntregas={hayEntregas}
