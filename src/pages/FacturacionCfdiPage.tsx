@@ -19,6 +19,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
+import ClientesListPage from '@/pages/ClientesListPage';
+import ProductosListPage from '@/pages/ProductosListPage';
 
 const STATUS_COLORS: Record<string, string> = {
   timbrado: 'default',
