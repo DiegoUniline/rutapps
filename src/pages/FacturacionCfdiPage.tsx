@@ -199,6 +199,7 @@ export default function FacturacionCfdiPage() {
   const selectedList = (cfdis || []).filter((c: any) => selectedIds.has(c.id));
   const selectedDeletable = selectedList.filter((c: any) => c.status === 'borrador' || c.status === 'error');
   const selectedCancelable = selectedList.filter((c: any) => c.status === 'timbrado');
+  const selectedNonDeletable = selectedList.filter((c: any) => c.status !== 'borrador' && c.status !== 'error');
   const allFilteredSelected = filtered.length > 0 && filtered.every((c: any) => selectedIds.has(c.id));
 
   const toggleOne = (id: string) => {
