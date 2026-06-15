@@ -85,7 +85,7 @@ export default function LoginPage() {
     const StepIcon = DEMO_STEPS[demoStep].icon;
     const progress = Math.min(((demoStep + 1) / DEMO_STEPS.length) * 100, 95);
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         <div className="w-full max-w-sm text-center space-y-6 p-6">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
             <StepIcon className="h-8 w-8 text-primary" />
@@ -106,7 +106,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
       <Seo
         title="Iniciar sesión · Rutapp"
         description="Accede a tu cuenta de Rutapp para gestionar ventas en ruta, inventario y cobranza desde cualquier dispositivo."
