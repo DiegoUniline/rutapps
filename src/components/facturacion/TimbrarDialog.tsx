@@ -239,9 +239,9 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
         iva_monto: l.iva_monto ?? 0,
         ieps_monto: l.ieps_monto ?? 0,
         total: l.total ?? 0,
-        product_code: l.productos?.codigo_sat || '01010101',
-        unit_code: 'H87',
-        unit_name: 'Pieza',
+        product_code: getProductCode(l),
+        unit_code: getUnitCode(l),
+        unit_name: getUnitName(l),
       }));
 
       const { error: linesError } = await supabase.from('cfdi_lineas').insert(cfdiLineas);
