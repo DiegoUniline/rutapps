@@ -300,9 +300,9 @@ export default function CfdiFormPage() {
         },
       });
 
-      // Check for errors - data.error contains the real Facturama message
+      // Check for errors - preserve FunctionsHttpError so catch can parse body
+      if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      if (error) throw new Error(data?.error || error.message || 'Error desconocido al timbrar');
       if (!data?.success) throw new Error(data?.error || 'Respuesta inesperada del servidor');
 
       // Mark venta_lineas as facturado
