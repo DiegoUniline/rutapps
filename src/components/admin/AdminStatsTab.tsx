@@ -223,14 +223,110 @@ export default function AdminStatsTab() {
         )}
         <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(safeStats.total_paid)} hint={safeStats.paid_count != null ? `${safeStats.paid_count} facturas pagadas` : undefined} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(safeStats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(safeStats.total_open)} hint={safeStats.open_count != null ? `${safeStats.open_count} facturas pendientes` : undefined} accent="destructive" />
+        <StatCard
+          icon={CreditCard}
+          label="Por cobrar"
+          value={fmt(safeStats.total_open)}
+          hint={`${pendientes.length} pendientes · click para ver`}
+          accent="destructive"
+          onClick={() => setShowPorCobrar(v => !v)}
+          expanded={showPorCobrar}
+        />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard icon={CreditCard} label="Suscripciones activas" value={safeStats.active_subscriptions.toString()} accent="success" />
+
+      {/* Desglose Por cobrar */}
+      {showPorCobrar && (
+        <Card className="border border-destructive/40 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-destructive" /> Facturas pendientes ({pendientes.length})</span>
+              <span className="text-xs font-semibold text-destructive">Total local: ${totalPendientesLocal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pendientes.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas pendientes</div>
+            ) : (
+              <div className="space-y-1 max-h-96 overflow-y-auto">
+                {pendientes.map((f: any) => (
+                  <div key={f.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {f.numero_factura ? `${f.numero_factura} · ` : ''}
+                        {f.concepto || 'Suscripción'} ·
+                        Emitida {f.fecha_emision ? format(new Date(f.fecha_emision), 'dd MMM yyyy', { locale: es }) : '—'}
+                        {f.fecha_vencimiento ? ` · Vence ${format(new Date(f.fecha_vencimiento), 'dd MMM yyyy', { locale: es })}` : ''}
+                      </div>
+                    </div>
+                    <span className="font-semibold text-destructive ml-3 shrink-0">
+                      ${Number(f.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          icon={UserCheck}
+          label="Clientes activos (pagando)"
+          value={activos.length.toString()}
+          hint="click para ver lista"
+          accent="success"
+          onClick={() => setShowActivos(v => !v)}
+          expanded={showActivos}
+        />
+        <StatCard
+          icon={UserPlus}
+          label="Nuevos este mes que pagaron"
+          value={nuevosEsteMesPagados.length.toString()}
+          hint="creados este mes · activos"
+          accent="primary"
+          onClick={() => setShowNuevos(v => !v)}
+          expanded={showNuevos}
+        />
+        <StatCard
+          icon={UserMinus}
+          label="Dados de baja"
+          value={bajas.length.toString()}
+          hint="cancelados / suspendidos"
+          accent="destructive"
+          onClick={() => setShowBajas(v => !v)}
+          expanded={showBajas}
+        />
         <StatCard icon={Receipt} label="Total facturado" value={fmt(safeStats.total_invoiced)} accent="muted" />
-        <StatCard icon={Users} label="Clientes Stripe" value={safeStats.total_customers.toString()} accent="primary" />
       </div>
+
+      {showActivos && (
+        <EmpresaListCard
+          title={`Clientes activos pagando (${activos.length})`}
+          icon={UserCheck}
+          accent="success"
+          rows={activos.map(e => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: 'Activa' }))}
+        />
+      )}
+      {showNuevos && (
+        <EmpresaListCard
+          title={`Nuevos este mes que pagaron (${nuevosEsteMesPagados.length})`}
+          icon={UserPlus}
+          accent="primary"
+          rows={nuevosEsteMesPagados.map(e => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: 'Activa' }))}
+        />
+      )}
+      {showBajas && (
+        <EmpresaListCard
+          title={`Empresas dadas de baja (${bajas.length})`}
+          icon={UserMinus}
+          accent="destructive"
+          rows={bajas.map((e: any) => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: STATUS_LABELS[e.status] || e.status }))}
+        />
+      )}
+
 
       {/* ── Nuevos registros por día ── */}
       <Card className="border border-border/60 shadow-sm">
