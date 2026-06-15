@@ -324,6 +324,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
   console.log(`📥 Facturama response [${response.status}]:`, content);
 
   if (response.status !== 200 && response.status !== 201) {
+    // Release reservation: Facturama no aceptó la factura
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: `Facturama rechazó timbrado: HTTP ${response.status}`,
+    }).catch((e: any) => console.error("release_timbre fallo:", e));
+
     // Save error to DB
     await supabase.from("cfdis").insert({
       empresa_id,
@@ -343,6 +349,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
 
     throw new Error(`Facturama rechazó: ${content}`);
   }
+
 
   const result = JSON.parse(content);
   const facturamaId = result.Id;
