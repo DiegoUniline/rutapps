@@ -50,7 +50,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       const [lRes, pRes, tRes] = await Promise.all([
         supabase
           .from('venta_lineas')
-          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, lista_precio_id, precio_manual, productos(nombre, unidad_granel), lista_precios(nombre, es_principal)')
+          .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
@@ -228,7 +228,12 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                             <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                             <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
-                            <td className="text-center py-1.5 text-muted-foreground">{(l.productos as any)?.unidad_granel || 'Pzs'}</td>
+                            <td className="py-1.5 text-center text-muted-foreground">{
+                              (l as any).unidades?.abreviatura
+                              || (l as any).productos?.unidades_venta?.abreviatura
+                              || ((l.productos as any)?.es_granel ? (l.productos as any)?.unidad_granel : '')
+                              || 'Pz'
+                            }</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.subtotal)}</td>
                             <td className="text-right py-1.5 tabular-nums">{descMonto > 0 ? <span className="text-destructive">-{fmt(descMonto)}</span> : '—'}</td>
                             <td className="text-right py-1.5 tabular-nums font-medium">{fmt(l.total)}</td>

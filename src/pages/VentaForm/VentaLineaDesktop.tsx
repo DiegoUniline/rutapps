@@ -50,7 +50,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const isEmpty = !l.producto_id;
   const lineData = l as any;
   const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
-  const unidadLabel = lineData.unidad_label || '';
+  const unidadLabel = lineData.unidad_label
+    || (l as any).unidades?.abreviatura
+    || (embeddedProd as any)?.unidades_venta?.abreviatura
+    || (prodDisplay?.es_granel ? prodDisplay?.unidad_granel : '')
+    || '';
   const impuestosLabel = lineData.impuestos_label || '';
 
   const handleIvaToggle = () => {
