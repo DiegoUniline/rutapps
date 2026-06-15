@@ -27,19 +27,20 @@ interface Props {
   setSinImpuestos?: (v: boolean) => void;
   readOnlyForm?: boolean;
   saldoPendiente?: number;
+  currencyCode?: string | null;
 }
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
-  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults } = props;
+  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode } = props;
 
   return (
     <div className="p-3 sm:p-4 space-y-3">
       {isMobile ? (
         <div className="space-y-2">
           {lineas.map((l, idx) => (
-            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} currencySymbol={symbol} />
+            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} currencySymbol={symbol} currencyCode={currencyCode} />
           ))}
         </div>
       ) : (
@@ -60,7 +61,7 @@ export function VentaLineasTab(props: Props) {
             </thead>
             <tbody>
               {lineas.map((l, idx) => (
-                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} currencySymbol={symbol} />
+                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} currencySymbol={symbol} currencyCode={currencyCode} />
               ))}
             </tbody>
           </table>
@@ -82,7 +83,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} currencyCode={currencyCode} />
     </div>
   );
 }

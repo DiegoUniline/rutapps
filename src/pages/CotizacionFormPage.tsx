@@ -7,7 +7,6 @@ import {
 } from '@/hooks/useCotizaciones';
 import { useClientes } from '@/hooks/useClientes';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
-import { useCurrency } from '@/hooks/useCurrency';
 import { getCurrencyConfig } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -56,7 +55,6 @@ export default function CotizacionFormPage() {
   const { data: almacenes } = useAlmacenes();
   const save = useSaveCotizacion();
   const setEstado = useSetCotizacionEstado();
-  const { symbol } = useCurrency();
 
   const [form, setForm] = useState<Partial<Cotizacion>>({
     fecha: todayISO(), vigencia_dias: 15, estado: 'borrador',
@@ -71,6 +69,8 @@ export default function CotizacionFormPage() {
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const readOnly = !isNew && (form.estado === 'convertida' || form.estado === 'cancelada');
+  const selectedTarifa = useMemo(() => (tarifasList ?? []).find((t: any) => t.id === form.tarifa_id), [tarifasList, form.tarifa_id]);
+  const effectiveCurrencyCode = ((selectedTarifa as any)?.moneda || form.moneda || empresa?.moneda || 'MXN') as string;
 
   // Cargar default tarifa + almacen del perfil en nuevo
   useEffect(() => {
