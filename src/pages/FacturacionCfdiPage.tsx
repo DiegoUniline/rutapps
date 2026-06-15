@@ -557,6 +557,7 @@ export default function FacturacionCfdiPage() {
             </DialogTitle>
             <DialogDescription>
               Se eliminarán permanentemente los borradores y CFDIs con error seleccionados. Esta acción no se puede deshacer.
+              Las facturas timbradas o canceladas no se pueden eliminar porque se conservan para auditoría ante el SAT.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
