@@ -98,8 +98,10 @@ export function VentaFormHeader({
         {!isNew && status === 'confirmado' && !entregaInmediata && tipo !== 'pedido' && (
           <button onClick={() => onStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
         )}
-        {!isNew && ((status === 'confirmado' && entregaInmediata) || status === 'entregado') && !requiereFactura && (
-          <button onClick={() => onStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
+        {!isNew && ((status === 'confirmado' && entregaInmediata) || status === 'entregado') && !requiereFactura && lineasPendientesFactura > 0 && (
+          <button onClick={onFacturar} className="btn-odoo-primary text-xs">
+            <Receipt className="h-3.5 w-3.5" /> Facturar
+          </button>
         )}
         {!readOnly && !isNew && (
           <button onClick={() => onSave()} disabled={isSaving} className="btn-odoo-secondary">
