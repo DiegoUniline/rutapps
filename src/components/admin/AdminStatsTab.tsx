@@ -84,6 +84,49 @@ export default function AdminStatsTab() {
   });
   const empresas = empresasData || [];
 
+  // Facturas pendientes con nombre de empresa (para desglose de "Por cobrar")
+  const { data: facturasPendientes } = useQuery({
+    queryKey: ['admin-stats-facturas-pendientes'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('facturas')
+        .select('id, total, fecha_emision, fecha_vencimiento, concepto, numero_factura, empresa_id, empresas(nombre)')
+        .eq('estado', 'pendiente')
+        .order('fecha_emision', { ascending: false });
+      return (data as any[]) || [];
+    },
+  });
+  const pendientes = facturasPendientes || [];
+  const totalPendientesLocal = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
+
+  // Empresas dadas de baja (canceladas / suspendidas)
+  const bajas = useMemo(() => {
+    return empresas
+      .filter(e => e.subscriptions?.some(s => ['cancelada', 'canceled', 'suspended', 'past_due'].includes(s.status)))
+      .map(e => ({
+        ...e,
+        status: e.subscriptions?.[0]?.status || 'cancelada',
+      }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
+  // Activas (suscripción pagando)
+  const activos = useMemo(() => {
+    return empresas
+      .filter(e => e.subscriptions?.some(s => s.status === 'active'))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
+  // Nuevos este mes (creados este mes que tienen suscripción activa = pagaron)
+  const nuevosEsteMesPagados = useMemo(() => {
+    const inicioMes = startOfMonth(new Date());
+    return empresas
+      .filter(e => new Date(e.created_at) >= inicioMes && e.subscriptions?.some(s => s.status === 'active'))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
+
   // ── Derived chart data ──
   const signupsByDay = useMemo(() => {
     if (!empresas.length) return [];
