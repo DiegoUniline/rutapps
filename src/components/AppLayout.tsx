@@ -152,6 +152,8 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Control', icon: ShieldAlert, path: '/control' },
+  { label: 'Facturación', icon: FileText, path: '/facturacion-cfdi', highlight: 'amber' },
+
   {
     label: 'Administración',
     icon: Shield,
@@ -190,19 +192,22 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .flatMap(it => {
       if (!it.children) {
-        // Hide CFDI top-level for everyone (legacy)
-        if (it.path.startsWith('/facturacion-cfdi')) return [];
+        // Top-level Facturación entry: visible ONLY for the dedicated super admin (diego.leon@uniline.mx)
+        if (it.path.startsWith('/facturacion-cfdi')) {
+          return isSuperAdminUser ? [it] : [];
+        }
         return [it];
       }
       const children = it.children.filter(c => {
         if (c.path === '/mi-suscripcion') return isBillingOwner;
-        // Hide all CFDI / Catálogos SAT entries from everyone
+        // Hide any legacy CFDI / Catálogos SAT children — only the new top-level entry exposes them
         if (c.path.startsWith('/facturacion-cfdi')) return false;
         return true;
       });
       if (children.length === 0) return [];
       return [{ ...it, children }];
     });
+
 
   if (isSuperAdmin) return stripBilling(navItems);
 

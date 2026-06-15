@@ -36,6 +36,21 @@ function getServiceSupabase() {
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function r6(n: number) { return Math.round(n * 1000000) / 1000000; }
 
+// Verifica que el empresa_id solicitado coincida con el del usuario, salvo super admin.
+async function assertEmpresaAccess(admin: any, userId: string, empresaId: string) {
+  if (!empresaId) throw new Error("empresa_id requerido");
+  const { data: isSA } = await admin.rpc("is_super_admin", { p_user_id: userId });
+  if (isSA) return;
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("empresa_id")
+    .eq("user_id", userId)
+    .single();
+  if (!prof || prof.empresa_id !== empresaId) {
+    throw new Error("No autorizado para operar sobre esta empresa");
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -76,6 +91,7 @@ serve(async (req) => {
     }
 
     if (action === "timbrar") {
+      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
       return await timbrar(supabase, user.id, body);
     } else if (action === "cancelar") {
       return await cancelar(supabase, user.id, body);
@@ -91,6 +107,7 @@ serve(async (req) => {
     );
   }
 });
+
 
 // ========================================
 // VERIFICAR CONEXIÓN
@@ -186,10 +203,17 @@ async function timbrar(supabase: any, userId: string, body: any) {
   const serviceDb = getServiceSupabase();
   const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
 
-  // Check timbre balance before proceeding
-  const { data: saldoRow } = await serviceDb.from("timbres_saldo").select("saldo").eq("empresa_id", empresa_id).single();
-  const saldoActual = saldoRow?.saldo ?? 0;
-  if (saldoActual < 1) {
+  // Atomic reservation of 1 timbre (prevents race conditions with concurrent timbrados).
+  // If the Facturama call fails further down, the reservation is released.
+  const { data: reservationId, error: reserveErr } = await serviceDb.rpc("reserve_timbre", {
+    p_empresa_id: empresa_id,
+    p_user_id: userId,
+  });
+  if (reserveErr) {
+    console.error("Error reserving timbre:", reserveErr);
+    throw new Error("No se pudo reservar el timbre. Intenta de nuevo.");
+  }
+  if (!reservationId) {
     throw new Error("No tienes timbres disponibles. Contacta al administrador para adquirir más timbres.");
   }
 
@@ -198,6 +222,9 @@ async function timbrar(supabase: any, userId: string, body: any) {
   if (!folio || folio.trim() === '') {
     folio = String(Date.now()).slice(-8);
   }
+
+  try {
+
 
   // Build Facturama items with exact tax calculations
   const facItems: any[] = [];
@@ -297,6 +324,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
   console.log(`📥 Facturama response [${response.status}]:`, content);
 
   if (response.status !== 200 && response.status !== 201) {
+    // Release reservation: Facturama no aceptó la factura
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: `Facturama rechazó timbrado: HTTP ${response.status}`,
+    }).catch((e: any) => console.error("release_timbre fallo:", e));
+
     // Save error to DB
     await supabase.from("cfdis").insert({
       empresa_id,
@@ -316,6 +349,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
 
     throw new Error(`Facturama rechazó: ${content}`);
   }
+
 
   const result = JSON.parse(content);
   const facturamaId = result.Id;
@@ -442,17 +476,22 @@ async function timbrar(supabase: any, userId: string, body: any) {
     cfdiRecord = data;
   }
 
-  // Deduct timbre after successful timbrado
+  // Confirm the previously-reserved timbre and link it to the new CFDI record
   const cfdiIdForDeduct = cfdiRecord?.id || cfdi_id;
   if (cfdiIdForDeduct) {
-    const { data: deducted } = await serviceDb.rpc("deduct_timbre", {
-      p_empresa_id: empresa_id,
+    const { data: confirmed } = await serviceDb.rpc("confirm_timbre_reserve", {
+      p_reservation_id: reservationId,
       p_cfdi_id: cfdiIdForDeduct,
-      p_user_id: userId,
     });
-    if (!deducted) {
-      console.error("Warning: Could not deduct timbre after successful timbrado");
+    if (!confirmed) {
+      console.error("Warning: Could not confirm reserved timbre after successful timbrado");
     }
+  } else {
+    // No pudimos guardar el CFDI: liberar el timbre, ya que la factura no quedó registrada localmente
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: "CFDI timbrado en Facturama pero no persistido localmente",
+    }).catch((e: any) => console.error("release_timbre fallback fallo:", e));
   }
 
   return new Response(
@@ -467,7 +506,16 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
+  } catch (err) {
+    // Cualquier error inesperado (red, parseo, storage, etc.) libera la reserva si aún existe.
+    await serviceDb.rpc("release_timbre", {
+      p_reservation_id: reservationId,
+      p_motivo: `Error inesperado en timbrar: ${(err as any)?.message || String(err)}`,
+    }).catch((e: any) => console.error("release_timbre en catch fallo:", e));
+    throw err;
+  }
 }
+
 
 // ========================================
 // CANCELAR CFDI
@@ -484,7 +532,12 @@ async function cancelar(supabase: any, userId: string, body: any) {
     .single();
 
   if (error || !cfdi) throw new Error("CFDI no encontrado");
+
+  // Verify the user has access to this CFDI's empresa
+  await assertEmpresaAccess(getServiceSupabase(), userId, cfdi.empresa_id);
+
   if (cfdi.status === "cancelado") throw new Error("CFDI ya está cancelado");
+
 
   const facturamaId = cfdi.facturama_id;
   if (!facturamaId) throw new Error("No hay ID de Facturama asociado");

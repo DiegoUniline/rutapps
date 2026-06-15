@@ -629,18 +629,20 @@ function renderAuthenticatedRoutes() {
 function GuardedDesktopRoutes() {
   const location = useLocation();
   const { user, empresa } = useAuth();
-  const isBillingOwner = isSuperAdminEmail(user?.email) || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
+  const isFacturacionAdmin = isSuperAdminEmail(user?.email);
+  const isBillingOwner = isFacturacionAdmin || (!!empresa?.owner_user_id && empresa.owner_user_id === user?.id);
 
   return (
     <Suspense fallback={<PageLoader />}>
       <PermissionGuard path={location.pathname}>
         <Routes>
-          {desktopRoutes(isBillingOwner)}
+          {desktopRoutes(isBillingOwner, isFacturacionAdmin)}
         </Routes>
       </PermissionGuard>
     </Suspense>
   );
 }
+
 
 function HomeRedirect() {
   const { firstAccessibleRoute, loading } = usePermisos();
@@ -648,7 +650,7 @@ function HomeRedirect() {
   return <Navigate to={firstAccessibleRoute} replace />;
 }
 
-function desktopRoutes(isBillingOwner: boolean) {
+function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
   return (
     <>
       <Route path="/" element={<HomeRedirect />} />
@@ -763,9 +765,10 @@ function desktopRoutes(isBillingOwner: boolean) {
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
       {isBillingOwner && <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />}
       {isBillingOwner && <Route path="/completar-registro" element={<CompletarRegistroPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
-      {isBillingOwner && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
+
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
       <Route path="/unsubscribe" element={<UnsubscribePage />} />
