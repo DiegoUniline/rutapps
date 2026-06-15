@@ -392,7 +392,7 @@ export default function CotizacionFormPage() {
     setForm(f => ({ ...f, lista_precio_id: lista }));
   };
 
-  if (!isNew && isLoading) return <div className="p-6 text-muted-foreground">Cargando…</div>;
+  if (!isNew && (isLoading || !existing)) return <div className="p-6 text-muted-foreground">Cargando…</div>;
 
   const clienteOptions = (clientes ?? []).map((c: any) => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map((t: any) => ({ value: t.id, label: t.nombre }));
