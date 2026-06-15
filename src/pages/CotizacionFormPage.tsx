@@ -266,7 +266,10 @@ export default function CotizacionFormPage() {
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
       .eq('id', form.id).single();
-    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const { data: tarifa } = (cot as any)?.tarifa_id
+      ? await supabase.from('tarifas').select('moneda').eq('id', (cot as any).tarifa_id).maybeSingle()
+      : { data: null } as any;
+    const sym = getCurrencyConfig((tarifa as any)?.moneda || (cot as any)?.moneda || (emp as any)?.moneda).symbol;
     const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -286,7 +289,10 @@ export default function CotizacionFormPage() {
     if (!cot) return;
     const tel = (cot as any).clientes?.telefono?.replace(/\D/g, '') ?? '';
     if (!tel) { toast.error('El cliente no tiene teléfono'); return; }
-    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const { data: tarifa } = (cot as any)?.tarifa_id
+      ? await supabase.from('tarifas').select('moneda').eq('id', (cot as any).tarifa_id).maybeSingle()
+      : { data: null } as any;
+    const sym = getCurrencyConfig((tarifa as any)?.moneda || (cot as any)?.moneda || (emp as any)?.moneda).symbol;
     const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', sym);
     const { data: cfg } = await supabase.from('whatsapp_config').select('activo').eq('empresa_id', empresa!.id).maybeSingle();
     let sentViaApi = false;
