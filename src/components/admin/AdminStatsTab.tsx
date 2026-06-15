@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, UserCheck, UserMinus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, UserPlus, ArrowRight, PieChart } from 'lucide-react';
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, CartesianGrid, Line } from 'recharts';
-import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
+import { format, subDays, eachDayOfInterval, startOfDay, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
@@ -35,6 +36,11 @@ const STATS_STALE = 2 * 60 * 1000; // 2 min
 
 export default function AdminStatsTab() {
   const [days, setDays] = useState(30);
+  const [showPorCobrar, setShowPorCobrar] = useState(false);
+  const [showBajas, setShowBajas] = useState(false);
+  const [showNuevos, setShowNuevos] = useState(false);
+  const [showActivos, setShowActivos] = useState(false);
+
 
   // KPIs (admin-billing edge function) — independent
   const { data: stats, isLoading: loadingStats } = useQuery<DashboardStats | null>({
@@ -77,6 +83,49 @@ export default function AdminStatsTab() {
     },
   });
   const empresas = empresasData || [];
+
+  // Facturas pendientes con nombre de empresa (para desglose de "Por cobrar")
+  const { data: facturasPendientes } = useQuery({
+    queryKey: ['admin-stats-facturas-pendientes'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('facturas')
+        .select('id, total, fecha_emision, fecha_vencimiento, concepto, numero_factura, empresa_id, empresas(nombre)')
+        .eq('estado', 'pendiente')
+        .order('fecha_emision', { ascending: false });
+      return (data as any[]) || [];
+    },
+  });
+  const pendientes = facturasPendientes || [];
+  const totalPendientesLocal = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
+
+  // Empresas dadas de baja (canceladas / suspendidas)
+  const bajas = useMemo(() => {
+    return empresas
+      .filter(e => e.subscriptions?.some(s => ['cancelada', 'canceled', 'suspended', 'past_due'].includes(s.status)))
+      .map(e => ({
+        ...e,
+        status: e.subscriptions?.[0]?.status || 'cancelada',
+      }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
+  // Activas (suscripción pagando)
+  const activos = useMemo(() => {
+    return empresas
+      .filter(e => e.subscriptions?.some(s => s.status === 'active'))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
+  // Nuevos este mes (creados este mes que tienen suscripción activa = pagaron)
+  const nuevosEsteMesPagados = useMemo(() => {
+    const inicioMes = startOfMonth(new Date());
+    return empresas
+      .filter(e => new Date(e.created_at) >= inicioMes && e.subscriptions?.some(s => s.status === 'active'))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [empresas]);
+
 
   // ── Derived chart data ──
   const signupsByDay = useMemo(() => {
@@ -174,14 +223,110 @@ export default function AdminStatsTab() {
         )}
         <StatCard icon={DollarSign} label="Ingresos cobrados (saldo $0)" value={fmt(safeStats.total_paid)} hint={safeStats.paid_count != null ? `${safeStats.paid_count} facturas pagadas` : undefined} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(safeStats.mrr)} accent="primary" />
-        <StatCard icon={CreditCard} label="Por cobrar" value={fmt(safeStats.total_open)} hint={safeStats.open_count != null ? `${safeStats.open_count} facturas pendientes` : undefined} accent="destructive" />
+        <StatCard
+          icon={CreditCard}
+          label="Por cobrar"
+          value={fmt(safeStats.total_open)}
+          hint={`${pendientes.length} pendientes · click para ver`}
+          accent="destructive"
+          onClick={() => setShowPorCobrar(v => !v)}
+          expanded={showPorCobrar}
+        />
         <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard icon={CreditCard} label="Suscripciones activas" value={safeStats.active_subscriptions.toString()} accent="success" />
+
+      {/* Desglose Por cobrar */}
+      {showPorCobrar && (
+        <Card className="border border-destructive/40 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-destructive" /> Facturas pendientes ({pendientes.length})</span>
+              <span className="text-xs font-semibold text-destructive">Total local: ${totalPendientesLocal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pendientes.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas pendientes</div>
+            ) : (
+              <div className="space-y-1 max-h-96 overflow-y-auto">
+                {pendientes.map((f: any) => (
+                  <div key={f.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {f.numero_factura ? `${f.numero_factura} · ` : ''}
+                        {f.concepto || 'Suscripción'} ·
+                        Emitida {f.fecha_emision ? format(new Date(f.fecha_emision), 'dd MMM yyyy', { locale: es }) : '—'}
+                        {f.fecha_vencimiento ? ` · Vence ${format(new Date(f.fecha_vencimiento), 'dd MMM yyyy', { locale: es })}` : ''}
+                      </div>
+                    </div>
+                    <span className="font-semibold text-destructive ml-3 shrink-0">
+                      ${Number(f.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          icon={UserCheck}
+          label="Clientes activos (pagando)"
+          value={activos.length.toString()}
+          hint="click para ver lista"
+          accent="success"
+          onClick={() => setShowActivos(v => !v)}
+          expanded={showActivos}
+        />
+        <StatCard
+          icon={UserPlus}
+          label="Nuevos este mes que pagaron"
+          value={nuevosEsteMesPagados.length.toString()}
+          hint="creados este mes · activos"
+          accent="primary"
+          onClick={() => setShowNuevos(v => !v)}
+          expanded={showNuevos}
+        />
+        <StatCard
+          icon={UserMinus}
+          label="Dados de baja"
+          value={bajas.length.toString()}
+          hint="cancelados / suspendidos"
+          accent="destructive"
+          onClick={() => setShowBajas(v => !v)}
+          expanded={showBajas}
+        />
         <StatCard icon={Receipt} label="Total facturado" value={fmt(safeStats.total_invoiced)} accent="muted" />
-        <StatCard icon={Users} label="Clientes Stripe" value={safeStats.total_customers.toString()} accent="primary" />
       </div>
+
+      {showActivos && (
+        <EmpresaListCard
+          title={`Clientes activos pagando (${activos.length})`}
+          icon={UserCheck}
+          accent="success"
+          rows={activos.map(e => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: 'Activa' }))}
+        />
+      )}
+      {showNuevos && (
+        <EmpresaListCard
+          title={`Nuevos este mes que pagaron (${nuevosEsteMesPagados.length})`}
+          icon={UserPlus}
+          accent="primary"
+          rows={nuevosEsteMesPagados.map(e => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: 'Activa' }))}
+        />
+      )}
+      {showBajas && (
+        <EmpresaListCard
+          title={`Empresas dadas de baja (${bajas.length})`}
+          icon={UserMinus}
+          accent="destructive"
+          rows={bajas.map((e: any) => ({ id: e.id, nombre: e.nombre, fecha: e.created_at, badge: STATUS_LABELS[e.status] || e.status }))}
+        />
+      )}
+
 
       {/* ── Nuevos registros por día ── */}
       <Card className="border border-border/60 shadow-sm">
@@ -318,8 +463,10 @@ export default function AdminStatsTab() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, hint, accent }: {
-  icon: any; label: string; value: string; hint?: string; accent: 'primary' | 'success' | 'destructive' | 'muted';
+function StatCard({ icon: Icon, label, value, hint, accent, onClick, expanded }: {
+  icon: any; label: string; value: string; hint?: string;
+  accent: 'primary' | 'success' | 'destructive' | 'muted';
+  onClick?: () => void; expanded?: boolean;
 }) {
   const accentMap = {
     primary: 'text-primary bg-primary/10',
@@ -328,21 +475,82 @@ function StatCard({ icon: Icon, label, value, hint, accent }: {
     muted: 'text-muted-foreground bg-card/80',
   };
   const [iconColor, iconBg] = accentMap[accent].split(' ');
+  const clickable = !!onClick;
 
   return (
-    <Card className="border border-border/60 shadow-sm hover:shadow-md transition-shadow">
+    <Card
+      className={`border border-border/60 shadow-sm hover:shadow-md transition-shadow ${clickable ? 'cursor-pointer hover:border-primary/50' : ''}`}
+      onClick={onClick}
+    >
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center gap-3">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${iconBg}`}>
             <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-xl font-bold text-foreground">{value}</div>
             <div className="text-xs text-muted-foreground">{label}</div>
             {hint && <div className="text-[10px] text-muted-foreground/80 mt-0.5">{hint}</div>}
           </div>
+          {clickable && (
+            expanded
+              ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+              : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
+
+function EmpresaListCard({ title, icon: Icon, accent, rows }: {
+  title: string;
+  icon: any;
+  accent: 'primary' | 'success' | 'destructive' | 'muted';
+  rows: { id: string; nombre: string; fecha: string; badge: string }[];
+}) {
+  const accentColor = {
+    primary: 'text-primary',
+    success: 'text-success',
+    destructive: 'text-destructive',
+    muted: 'text-muted-foreground',
+  }[accent];
+  const borderColor = {
+    primary: 'border-primary/40',
+    success: 'border-success/40',
+    destructive: 'border-destructive/40',
+    muted: 'border-border/60',
+  }[accent];
+
+  return (
+    <Card className={`border ${borderColor} shadow-sm`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${accentColor}`} /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <div className="text-xs text-muted-foreground py-4 text-center">Sin registros</div>
+        ) : (
+          <div className="space-y-1 max-h-96 overflow-y-auto">
+            {rows.map(r => (
+              <div key={r.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-foreground truncate">{r.nombre}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Registrada {format(new Date(r.fecha), "dd MMM yyyy", { locale: es })}
+                  </div>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full bg-card border border-border font-medium ml-3 shrink-0 ${accentColor}`}>
+                  {r.badge}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
