@@ -650,7 +650,7 @@ function HomeRedirect() {
   return <Navigate to={firstAccessibleRoute} replace />;
 }
 
-function desktopRoutes(isBillingOwner: boolean) {
+function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
   return (
     <>
       <Route path="/" element={<HomeRedirect />} />
