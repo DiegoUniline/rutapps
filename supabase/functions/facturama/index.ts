@@ -279,7 +279,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
       facItem.Total += amount;
     }
 
-    facItem.TaxObject = facItem.Taxes.length > 0 ? "02" : "01";
+    if (facItem.Taxes.length > 0) {
+      facItem.TaxObject = "02";
+    } else {
+      facItem.TaxObject = "01";
+      delete facItem.Taxes;
+    }
     facItem.Total = r2(facItem.Total);
     totalFactura += facItem.Total;
     facItems.push(facItem);
@@ -419,7 +424,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
   let ivaTotal = 0, iepsTotal = 0, retencionesTotal = 0, subtotalTotal = 0;
   for (const fi of facItems) {
     subtotalTotal += fi.Subtotal;
-    for (const tax of fi.Taxes) {
+    for (const tax of (fi.Taxes || [])) {
       if (tax.IsRetention) retencionesTotal += tax.Total;
       else if (tax.Name === "IVA") ivaTotal += tax.Total;
       else if (tax.Name === "IEPS") iepsTotal += tax.Total;
