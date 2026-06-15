@@ -44,6 +44,7 @@ export default function VentaFormPage() {
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog,
     set, handleProductSelect, handleSave: baseSave, handleDelete, handleStatusChange, handleAddPago,
+    handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
   } = h;
 
