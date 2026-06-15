@@ -547,8 +547,8 @@ export function useVentaForm() {
       return;
     }
     if (newStatus === 'borrador') {
-      if (['entregado', 'facturado'].includes(form.status ?? '') || form.entrega_inmediata) {
-        toast.error('Una venta entregada no puede volver a borrador, solo cancelar');
+      if (['entregado', 'facturado'].includes(form.status ?? '')) {
+        toast.error('Una venta entregada o facturada no puede volver a borrador, solo cancelar');
         return;
       }
       const prevStatus = form.status;
