@@ -265,7 +265,8 @@ export default function CotizacionFormPage() {
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
       .eq('id', form.id).single();
-    const blob = await buildCotizacionPdf(cot as any, emp as any, symbol);
+    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `${cot.folio}.pdf`; a.click();
@@ -284,13 +285,14 @@ export default function CotizacionFormPage() {
     if (!cot) return;
     const tel = (cot as any).clientes?.telefono?.replace(/\D/g, '') ?? '';
     if (!tel) { toast.error('El cliente no tiene teléfono'); return; }
-    const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', symbol);
+    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', sym);
     const { data: cfg } = await supabase.from('whatsapp_config').select('activo').eq('empresa_id', empresa!.id).maybeSingle();
     let sentViaApi = false;
     if (cfg?.activo) {
       try {
         const { sendDocumentWhatsApp } = await import('@/lib/whatsappDocument');
-        const blob = await buildCotizacionPdf(cot as any, emp as any, symbol);
+        const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
         const res = await sendDocumentWhatsApp({
           blob, fileName: `${(cot as any).folio}.pdf`, empresaId: empresa!.id,
           phone: tel, caption: msg, tipo: 'cotizacion', referencia_id: newId,
