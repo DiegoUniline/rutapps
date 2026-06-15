@@ -138,8 +138,9 @@ export default function FacturacionCfdiPage() {
     mutationFn: async (cfdiId: string) => {
       const cfdi = cfdis?.find((c: any) => c.id === cfdiId);
       if (!cfdi) throw new Error('CFDI no encontrado');
-      if (cfdi.status === 'timbrado') throw new Error('No se puede eliminar un CFDI timbrado. Debe cancelarse.');
-      if (cfdi.status === 'cancelado') throw new Error('No se puede eliminar un CFDI cancelado.');
+      if (cfdi.status !== 'borrador' && cfdi.status !== 'error') {
+        throw new Error('No se puede eliminar un CFDI timbrado o cancelado. Se conservan para auditoría.');
+      }
 
       const { error } = await supabase
         .from('cfdis')
