@@ -8,6 +8,7 @@ import {
 import { useClientes } from '@/hooks/useClientes';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { getCurrencyConfig } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -259,12 +260,13 @@ export default function CotizacionFormPage() {
   async function handleDownloadPdf() {
     if (isNew || !form.id) { toast.info('Guarda la cotización primero.'); return; }
     const { data: emp } = await supabase.from('empresas')
-      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social')
+      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social, moneda')
       .eq('id', empresa!.id).maybeSingle();
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
       .eq('id', form.id).single();
-    const blob = await buildCotizacionPdf(cot as any, emp as any, symbol);
+    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `${cot.folio}.pdf`; a.click();
@@ -275,7 +277,7 @@ export default function CotizacionFormPage() {
     const newId = isNew ? await handleSave('enviada') : (form.id as string);
     if (!newId) return;
     const { data: emp } = await supabase.from('empresas')
-      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social')
+      .select('nombre, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, razon_social, moneda')
       .eq('id', empresa!.id).maybeSingle();
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
@@ -283,13 +285,14 @@ export default function CotizacionFormPage() {
     if (!cot) return;
     const tel = (cot as any).clientes?.telefono?.replace(/\D/g, '') ?? '';
     if (!tel) { toast.error('El cliente no tiene teléfono'); return; }
-    const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', symbol);
+    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', sym);
     const { data: cfg } = await supabase.from('whatsapp_config').select('activo').eq('empresa_id', empresa!.id).maybeSingle();
     let sentViaApi = false;
     if (cfg?.activo) {
       try {
         const { sendDocumentWhatsApp } = await import('@/lib/whatsappDocument');
-        const blob = await buildCotizacionPdf(cot as any, emp as any, symbol);
+        const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
         const res = await sendDocumentWhatsApp({
           blob, fileName: `${(cot as any).folio}.pdf`, empresaId: empresa!.id,
           phone: tel, caption: msg, tipo: 'cotizacion', referencia_id: newId,
