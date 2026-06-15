@@ -559,10 +559,3 @@ export default function AdminSubscriptionsTab() {
   );
 }
 
-// Re-import useAuth hook at module level to avoid issues
-function useAuth() {
-  // This is a local wrapper — the actual hook is imported at top
-  // but we need it inside the component. Actually the import is already at top.
-  // Remove this local function; use the real import.
-  return { user: null as any, signOut: () => {} };
-}
