@@ -382,7 +382,7 @@ export function useTarifasForSelect() {
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
+      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
       return data ?? [];
     },
   });

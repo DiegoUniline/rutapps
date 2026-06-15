@@ -75,7 +75,7 @@ export interface Cotizacion {
 const SELECT_LIST = `
   id, folio, fecha, vigencia_dias, vence_at, total, subtotal, impuestos, iva_total, ieps_total,
   estado, cliente_id, vendedor_id, venta_id, enviada_wa_at, token_publico,
-  created_at, notas,
+  created_at, notas, moneda,
   clientes:cliente_id(nombre, telefono)
 `;
 
@@ -129,6 +129,9 @@ export function useSaveCotizacion() {
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
       const { cotizacion: c, lineas } = input;
+      const { data: tarifa } = c.tarifa_id
+        ? await supabase.from('tarifas').select('moneda').eq('id', c.tarifa_id).maybeSingle()
+        : { data: null } as any;
 
       const payload: any = {
         empresa_id: empresa.id,
@@ -147,7 +150,7 @@ export function useSaveCotizacion() {
         descuento_extra: c.descuento_extra ?? 0,
         descuento_extra_tipo: c.descuento_extra_tipo ?? 'porcentaje',
         total: c.total ?? 0,
-        moneda: c.moneda ?? empresa.moneda ?? 'MXN',
+        moneda: (tarifa as any)?.moneda ?? c.moneda ?? empresa.moneda ?? 'MXN',
         notas: c.notas ?? null,
         estado: c.estado ?? 'borrador',
       };

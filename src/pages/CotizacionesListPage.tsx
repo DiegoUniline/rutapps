@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCotizaciones, useDeleteCotizacion, type Cotizacion, type CotizacionEstado } from '@/hooks/useCotizaciones';
-import { useCurrency } from '@/hooks/useCurrency';
-import { fmtMoney } from '@/lib/currency';
+import { formatCurrency } from '@/lib/currency';
 import { Plus, Trash2, FileText, Send, ShoppingCart, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -117,7 +116,7 @@ export default function CotizacionesListPage() {
                   <td className="px-3 py-2 font-medium">{c.folio}</td>
                   <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.fecha)}</td>
                   <td className="px-3 py-2">{c.clientes?.nombre || 'Sin cliente'}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{fmtMoney(c.total)}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(c.total, c.moneda)}</td>
                   <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.vence_at)}</td>
                   <td className="px-3 py-2">
                     <Badge className={ESTADO_STYLES[c.estado] || 'bg-muted'}>{c.estado}</Badge>

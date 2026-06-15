@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
@@ -20,10 +21,12 @@ interface Props {
   navigateCell: (row: number, col: number, dir: 'next' | 'prev') => void;
   setLineas: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
   currencySymbol?: string;
+  currencyCode?: string | null;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$' }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode }: Props) {
   const { fmt } = useCurrency();
+  const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
@@ -108,7 +111,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">{isEmpty ? '' : (unidadLabel || '—')}</td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{fmt(price)}</span>
+        {readOnly ? <span className="text-[12px] block text-right">{money(price)}</span>
         : isEmpty ? <span></span>
         : (
           <div className="flex items-center gap-1 justify-end">
@@ -170,8 +173,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : (
           <div>
-            <span>{fmt(displayLineTotal)}</span>
-            {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {fmt(base)}</span>}
+            <span>{money(displayLineTotal)}</span>
+            {(discount > 0 || iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">base: {money(base)}</span>}
           </div>
         )}
       </td>

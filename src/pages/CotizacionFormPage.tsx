@@ -7,7 +7,6 @@ import {
 } from '@/hooks/useCotizaciones';
 import { useClientes } from '@/hooks/useClientes';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
-import { useCurrency } from '@/hooks/useCurrency';
 import { getCurrencyConfig } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -56,7 +55,6 @@ export default function CotizacionFormPage() {
   const { data: almacenes } = useAlmacenes();
   const save = useSaveCotizacion();
   const setEstado = useSetCotizacionEstado();
-  const { symbol } = useCurrency();
 
   const [form, setForm] = useState<Partial<Cotizacion>>({
     fecha: todayISO(), vigencia_dias: 15, estado: 'borrador',
@@ -71,6 +69,8 @@ export default function CotizacionFormPage() {
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const readOnly = !isNew && (form.estado === 'convertida' || form.estado === 'cancelada');
+  const selectedTarifa = useMemo(() => (tarifasList ?? []).find((t: any) => t.id === form.tarifa_id), [tarifasList, form.tarifa_id]);
+  const effectiveCurrencyCode = ((selectedTarifa as any)?.moneda || form.moneda || empresa?.moneda || 'MXN') as string;
 
   // Cargar default tarifa + almacen del perfil en nuevo
   useEffect(() => {
@@ -242,6 +242,7 @@ export default function CotizacionFormPage() {
       iva_total: totals.iva_total,
       ieps_total: totals.ieps_total,
       total: totals.total,
+      moneda: effectiveCurrencyCode,
       estado: estadoOverride ?? form.estado ?? 'borrador',
       id: isNew ? undefined : (form.id as string),
     };
@@ -265,7 +266,10 @@ export default function CotizacionFormPage() {
     const { data: cot } = await supabase.from('cotizaciones')
       .select('*, clientes:cliente_id(nombre, telefono, rfc, direccion), cotizacion_lineas(*)')
       .eq('id', form.id).single();
-    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const { data: tarifa } = (cot as any)?.tarifa_id
+      ? await supabase.from('tarifas').select('moneda').eq('id', (cot as any).tarifa_id).maybeSingle()
+      : { data: null } as any;
+    const sym = getCurrencyConfig((tarifa as any)?.moneda || (cot as any)?.moneda || (emp as any)?.moneda).symbol;
     const blob = await buildCotizacionPdf(cot as any, emp as any, sym);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -285,7 +289,10 @@ export default function CotizacionFormPage() {
     if (!cot) return;
     const tel = (cot as any).clientes?.telefono?.replace(/\D/g, '') ?? '';
     if (!tel) { toast.error('El cliente no tiene teléfono'); return; }
-    const sym = getCurrencyConfig((cot as any)?.moneda || (emp as any)?.moneda).symbol;
+    const { data: tarifa } = (cot as any)?.tarifa_id
+      ? await supabase.from('tarifas').select('moneda').eq('id', (cot as any).tarifa_id).maybeSingle()
+      : { data: null } as any;
+    const sym = getCurrencyConfig((tarifa as any)?.moneda || (cot as any)?.moneda || (emp as any)?.moneda).symbol;
     const msg = buildCotizacionWhatsappMessage(cot as any, empresa?.nombre || 'Rutapp', sym);
     const { data: cfg } = await supabase.from('whatsapp_config').select('activo').eq('empresa_id', empresa!.id).maybeSingle();
     let sentViaApi = false;
@@ -556,6 +563,7 @@ export default function CotizacionFormPage() {
           sinImpuestos={sinImpuestos}
           setSinImpuestos={setSinImpuestos}
           readOnlyForm={readOnly}
+          currencyCode={effectiveCurrencyCode}
         />
       </div>
 
