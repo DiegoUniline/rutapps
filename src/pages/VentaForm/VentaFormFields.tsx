@@ -80,7 +80,19 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     <div className="bg-card border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
       <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{fmt(form.total ?? 0)}</span></div>
       <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">{fmt(totalPagado)}</span></div>
-      <div className="flex justify-between border-t border-border pt-0.5"><span className="font-medium">Saldo</span><span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>{fmt(saldoPendiente)}</span></div>
+      <div className="flex justify-between border-t border-border pt-0.5">
+        <span className="font-medium">
+          {saldoPendiente < 0 ? 'Saldo a favor' : 'Saldo'}
+        </span>
+        <span className={cn(
+          "font-semibold",
+          saldoPendiente > 0 && "text-destructive",
+          saldoPendiente < 0 && "text-success",
+          saldoPendiente === 0 && "text-foreground"
+        )}>
+          {fmt(Math.abs(saldoPendiente))}
+        </span>
+      </div>
     </div>
   );
 
