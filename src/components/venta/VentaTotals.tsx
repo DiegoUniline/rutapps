@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/currency';
 import { Tag, Gift } from 'lucide-react';
 import type { PromoResult } from '@/hooks/usePromociones';
 
@@ -14,10 +15,12 @@ interface VentaTotalsProps {
   promoResults?: PromoResult[];
   descuento_promo?: number;
   descuento_extra_amt?: number;
+  currencyCode?: string | null;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt, currencyCode }: VentaTotalsProps) {
   const { fmt } = useCurrency();
+  const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
 
   return (
@@ -25,12 +28,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
       <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-80")}>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span>{fmt(subtotal)}</span>
+          <span>{money(subtotal)}</span>
         </div>
         {lineDescuento > 0 && (
           <div className="flex justify-between text-destructive">
             <span>Descuento</span>
-            <span>-{fmt(lineDescuento)}</span>
+            <span>-{money(lineDescuento)}</span>
           </div>
         )}
         {/* Promo results */}
@@ -47,7 +50,7 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
                   {pr.descripcion}
                 </span>
                 {pr.descuento > 0 && (
-                  <span className="font-bold text-primary tabular-nums shrink-0">-{fmt(pr.descuento)}</span>
+                  <span className="font-bold text-primary tabular-nums shrink-0">-{money(pr.descuento)}</span>
                 )}
               </div>
             ))}
@@ -56,29 +59,29 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
         {(descuento_extra_amt ?? 0) > 0 && (
           <div className="flex justify-between text-destructive">
             <span>Descuento extra</span>
-            <span>-{fmt(descuento_extra_amt!)}</span>
+            <span>-{money(descuento_extra_amt!)}</span>
           </div>
         )}
         {ieps_total > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">IEPS</span>
-            <span>{fmt(ieps_total)}</span>
+            <span>{money(ieps_total)}</span>
           </div>
         )}
         {iva_total > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">IVA</span>
-            <span>{fmt(iva_total)}</span>
+            <span>{money(iva_total)}</span>
           </div>
         )}
         <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
           <span>Total</span>
-          <span>{fmt(total)}</span>
+          <span>{money(total)}</span>
         </div>
         {saldoPendiente != null && saldoPendiente > 0 && (
           <div className="flex justify-between pt-1">
             <span className="text-destructive font-medium text-[13px]">Saldo pendiente</span>
-            <span className="text-destructive font-semibold text-[13px]">{fmt(saldoPendiente)}</span>
+            <span className="text-destructive font-semibold text-[13px]">{money(saldoPendiente)}</span>
           </div>
         )}
       </div>

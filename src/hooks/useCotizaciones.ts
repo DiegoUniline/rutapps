@@ -75,7 +75,7 @@ export interface Cotizacion {
 const SELECT_LIST = `
   id, folio, fecha, vigencia_dias, vence_at, total, subtotal, impuestos, iva_total, ieps_total,
   estado, cliente_id, vendedor_id, venta_id, enviada_wa_at, token_publico,
-  created_at, notas,
+  created_at, notas, moneda,
   clientes:cliente_id(nombre, telefono)
 `;
 
