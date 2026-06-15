@@ -524,7 +524,7 @@ export default function FacturacionCfdiPage() {
             </DialogTitle>
             <DialogDescription>
               Esta acción eliminará permanentemente el CFDI. No se puede deshacer.
-              Solo se pueden eliminar borradores o facturas con error.
+              Las facturas timbradas o canceladas no se pueden eliminar porque se conservan para auditoría ante el SAT.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
