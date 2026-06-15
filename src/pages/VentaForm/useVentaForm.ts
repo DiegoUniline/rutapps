@@ -612,9 +612,53 @@ export function useVentaForm() {
     if (cobroErr) throw cobroErr;
     const { error: appErr } = await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: form.id, monto_aplicado: monto });
     if (appErr) throw appErr;
-    // saldo_pendiente recalculated automatically by DB trigger trg_recalc_venta_saldo
     toast.success('Pago registrado');
     import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobro.id, empresa.id));
+    queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+    queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+  };
+
+  const handleCancelPago = async (cobroId: string) => {
+    if (!form.id) return;
+    const { error } = await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cobroId);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Pago cancelado');
+    queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+    queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+  };
+
+  const handleReactivarPago = async (cobroId: string) => {
+    if (!form.id) return;
+    const { error } = await supabase.from('cobros').update({ status: 'activo' } as any).eq('id', cobroId);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Pago reactivado');
+    queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+    queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+  };
+
+  const handleDeletePago = async (aplicacionId: string, cobroId: string) => {
+    if (!form.id) return;
+    const { error: delAppErr } = await supabase.from('cobro_aplicaciones').delete().eq('id', aplicacionId);
+    if (delAppErr) { toast.error(delAppErr.message); return; }
+    const { count } = await supabase.from('cobro_aplicaciones').select('id', { count: 'exact', head: true }).eq('cobro_id', cobroId);
+    if (!count || count === 0) {
+      await supabase.from('cobros').delete().eq('id', cobroId);
+    }
+    toast.success('Pago eliminado');
+    queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+    queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+  };
+
+  const handleUpdatePago = async (aplicacionId: string, cobroId: string, nuevoMonto: number) => {
+    if (!form.id || nuevoMonto <= 0) return;
+    const { data: apps } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cobroId);
+    const isSingle = (apps ?? []).length === 1;
+    const { error: appErr } = await supabase.from('cobro_aplicaciones').update({ monto_aplicado: nuevoMonto } as any).eq('id', aplicacionId);
+    if (appErr) { toast.error(appErr.message); return; }
+    if (isSingle) {
+      await supabase.from('cobros').update({ monto: nuevoMonto } as any).eq('id', cobroId);
+    }
+    toast.success('Pago actualizado');
     queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
     queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
   };
@@ -629,6 +673,7 @@ export function useVentaForm() {
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
+    handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
   };
 }
