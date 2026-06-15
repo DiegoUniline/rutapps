@@ -12,6 +12,7 @@ interface VentaFormHeaderProps {
   isNew: boolean;
   folio?: string;
   clienteNombre?: string;
+  vendedorNombre?: string;
   status?: string;
   entregaInmediata?: boolean;
   tipo?: string;
