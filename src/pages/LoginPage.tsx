@@ -106,7 +106,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
       <Seo
         title="Iniciar sesión · Rutapp"
         description="Accede a tu cuenta de Rutapp para gestionar ventas en ruta, inventario y cobranza desde cualquier dispositivo."
