@@ -164,8 +164,11 @@ Deno.serve(async (req) => {
       });
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
+        // 200 con ok:false para que el cliente vea el motivo real
+        // (contraseña débil, rechazada por HIBP, igual a la actual, etc.)
+        // en vez del genérico "Edge Function returned a non-2xx status code".
+        return new Response(JSON.stringify({ ok: false, error: error.message }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
