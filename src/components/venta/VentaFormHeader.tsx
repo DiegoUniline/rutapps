@@ -37,7 +37,7 @@ interface VentaFormHeaderProps {
 }
 
 export function VentaFormHeader({
-  isNew, folio, clienteNombre, status, entregaInmediata, tipo,
+  isNew, folio, clienteNombre, vendedorNombre, status, entregaInmediata, tipo,
   requiereFactura, readOnly, canCreateEntrega, canDeleteCancelada, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
@@ -53,9 +53,16 @@ export function VentaFormHeader({
           <h1 className="text-[15px] font-semibold text-foreground truncate">
             {isNew ? 'Nueva venta' : (folio || 'Venta')}
           </h1>
-          {clienteNombre && (
-            <p className="text-xs text-muted-foreground truncate">{clienteNombre}</p>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {clienteNombre && (
+              <p className="text-xs text-muted-foreground truncate">{clienteNombre}</p>
+            )}
+            {vendedorNombre && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+                <User className="h-3 w-3" /> {vendedorNombre}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
