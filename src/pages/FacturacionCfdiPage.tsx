@@ -199,12 +199,12 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="bg-card flex-wrap h-auto">
-          <TabsTrigger value="facturas">Facturas</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-          <TabsTrigger value="productos">Productos</TabsTrigger>
-          <TabsTrigger value="config">Configuración Emisor</TabsTrigger>
-          <TabsTrigger value="catalogos">Catálogos SAT</TabsTrigger>
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas</TabsTrigger>
+          <TabsTrigger value="clientes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Clientes</TabsTrigger>
+          <TabsTrigger value="productos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Productos</TabsTrigger>
+          <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Configuración Emisor</TabsTrigger>
+          <TabsTrigger value="catalogos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Catálogos SAT</TabsTrigger>
         </TabsList>
 
         {/* FACTURAS TAB */}
