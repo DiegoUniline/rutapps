@@ -36,6 +36,12 @@ function writeCache(userId: string, empresaId: string | null | undefined, state:
   }
 }
 
+function normalizeCachedState(cached: any, isSuperAdmin: boolean): Omit<SubscriptionState, 'loading'> | null {
+  if (!cached) return null;
+  if (!isSuperAdmin) return cached;
+  return { ...cached, isBlocked: false, isSuperAdmin: true, maxUsuarios: 999 };
+}
+
 async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean, userEmail?: string | null): Promise<Omit<SubscriptionState, 'loading'>> {
   let isSuperAdmin = isSuperAdminEmail(userEmail);
 
@@ -43,7 +49,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
     const { data: sa } = await supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle();
     isSuperAdmin = isSuperAdmin || !!sa;
   } catch {
-      const cached = readCache(userId, empresaId);
+    const cached = normalizeCachedState(readCache(userId, empresaId), isSuperAdmin);
     if (cached) return cached;
     return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: isSuperAdmin ? 999 : 3 };
   }
@@ -70,7 +76,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
     // bogus blocked=true entry (this was the root cause of false "Cuenta
     // suspendida" on unstable mobile connections).
     if (error) {
-      const cached = readCache(userId, empresaId);
+      const cached = normalizeCachedState(readCache(userId, empresaId), isSuperAdmin);
       if (cached) return cached;
       return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: 3 };
     }
@@ -117,7 +123,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
     writeCache(userId, empresaId, state);
     return state;
   } catch {
-    const cached = readCache(userId, empresaId);
+    const cached = normalizeCachedState(readCache(userId, empresaId), isSuperAdmin);
     if (cached) return cached;
       return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: isSuperAdmin ? 999 : 3 };
   }
