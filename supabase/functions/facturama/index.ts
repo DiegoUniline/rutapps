@@ -36,6 +36,21 @@ function getServiceSupabase() {
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function r6(n: number) { return Math.round(n * 1000000) / 1000000; }
 
+// Verifica que el empresa_id solicitado coincida con el del usuario, salvo super admin.
+async function assertEmpresaAccess(admin: any, userId: string, empresaId: string) {
+  if (!empresaId) throw new Error("empresa_id requerido");
+  const { data: isSA } = await admin.rpc("is_super_admin", { p_user_id: userId });
+  if (isSA) return;
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("empresa_id")
+    .eq("user_id", userId)
+    .single();
+  if (!prof || prof.empresa_id !== empresaId) {
+    throw new Error("No autorizado para operar sobre esta empresa");
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -76,6 +91,7 @@ serve(async (req) => {
     }
 
     if (action === "timbrar") {
+      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
       return await timbrar(supabase, user.id, body);
     } else if (action === "cancelar") {
       return await cancelar(supabase, user.id, body);
@@ -91,6 +107,7 @@ serve(async (req) => {
     );
   }
 });
+
 
 // ========================================
 // VERIFICAR CONEXIÓN
