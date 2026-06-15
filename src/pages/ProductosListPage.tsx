@@ -163,7 +163,8 @@ export default function ProductosListPage() {
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'activo';
   const clasificacionFilter = filters.clasificacion?.length ? filters.clasificacion.join(',') : 'todos';
   const marcaFilter = filters.marca?.length ? filters.marca.join(',') : 'todos';
-  const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
+  const debouncedSearch = useDebounce(search, 300);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
