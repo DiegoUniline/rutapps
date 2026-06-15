@@ -176,12 +176,15 @@ export function useUsuarios() {
       const { data, error } = await supabase.functions.invoke('admin-users', {
         body: { action: 'set-password', user_id: passwordModal.userId, password: newPassword },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Mostrar siempre el motivo real (HIBP, contraseña débil, igual a la actual, etc.)
+      const realError = (data as any)?.error || error?.message;
+      if (realError || (data as any)?.ok === false) {
+        throw new Error(realError || 'No se pudo actualizar la contraseña');
+      }
       toast.success('Contraseña actualizada');
       setPasswordModal(null);
       setNewPassword('');
-    } catch (e: any) { toast.error(e.message); } finally { setSettingPassword(false); }
+    } catch (e: any) { toast.error(e.message || 'Error al actualizar contraseña'); } finally { setSettingPassword(false); }
   }, [passwordModal, newPassword]);
 
   const toggleEstado = useCallback(async (p: ProfileUser, email?: string) => {
