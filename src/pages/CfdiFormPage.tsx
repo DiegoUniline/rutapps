@@ -120,6 +120,14 @@ export default function CfdiFormPage() {
       return data || [];
     },
   });
+  const { data: unidadesSat } = useQuery({
+    queryKey: ['unidades_sat_all'],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.from('unidades_sat').select('clave, nombre').order('clave');
+      return data || [];
+    },
+  });
 
   const [lineas, setLineas] = useState<Partial<CfdiLinea>[]>([]);
   const [receiver, setReceiver] = useState({
@@ -249,6 +257,22 @@ export default function CfdiFormPage() {
     }
     if (lineas.length === 0) {
       toast.error('Agrega al menos una línea');
+      return;
+    }
+
+    // Validate SAT data per line
+    const missing: string[] = [];
+    lineas.forEach((l, i) => {
+      const code = (l.product_code || '').toString().trim();
+      if (!/^\d{8}$/.test(code) || code === '01010101') {
+        missing.push(`Línea ${i + 1} "${l.descripcion || ''}" — Clave SAT inválida (debe ser 8 dígitos, no genérica)`);
+      }
+      if (!l.unit_code || !l.unit_name) {
+        missing.push(`Línea ${i + 1} — falta Unidad SAT`);
+      }
+    });
+    if (missing.length > 0) {
+      setErrorDialog('No se puede timbrar:\n\n' + missing.join('\n'));
       return;
     }
 
@@ -504,7 +528,8 @@ export default function CfdiFormPage() {
                 <tr className="bg-card border-b">
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-8">#</th>
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground">Descripción</th>
-                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-20">Clave SAT</th>
+                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-24">Clave SAT</th>
+                  <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-28">Unidad SAT</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-20">Cantidad</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-24">P. Unitario</th>
                   <th className="py-2 px-2 text-right text-[11px] font-medium text-muted-foreground w-16">IVA%</th>
@@ -529,15 +554,50 @@ export default function CfdiFormPage() {
                       )}
                     </td>
                     <td className="py-1.5 px-2">
-                      {readOnly ? (
-                        <span className="font-mono text-[11px]">{l.product_code}</span>
-                      ) : (
-                        <Input
-                          value={l.product_code || ''}
-                          onChange={e => updateLine(idx, 'product_code', e.target.value)}
-                          className="h-7 text-[11px] font-mono border-0 bg-transparent px-1 focus:bg-background focus:border focus:border-primary"
-                        />
-                      )}
+                      {(() => {
+                        const code = (l.product_code || '').toString().trim();
+                        const invalid = !/^\d{8}$/.test(code) || code === '01010101';
+                        return readOnly ? (
+                          <span className={cn("font-mono text-[11px]", invalid && "text-destructive")}>{l.product_code || '—'}</span>
+                        ) : (
+                          <Input
+                            value={l.product_code || ''}
+                            onChange={e => updateLine(idx, 'product_code', e.target.value)}
+                            maxLength={8}
+                            placeholder="8 dígitos"
+                            className={cn("h-7 text-[11px] font-mono px-1 focus:bg-background focus:border focus:border-primary", invalid ? "border border-destructive/60 bg-destructive/5" : "border-0 bg-transparent")}
+                          />
+                        );
+                      })()}
+                    </td>
+                    <td className="py-1.5 px-2">
+                      {(() => {
+                        const uc = (l.unit_code || '').toString().toUpperCase();
+                        const invalid = !uc;
+                        return readOnly ? (
+                          <span className={cn("font-mono text-[11px]", invalid && "text-destructive")}>{uc || '—'}{l.unit_name ? ` ${l.unit_name}` : ''}</span>
+                        ) : (
+                          <select
+                            value={uc}
+                            onChange={e => {
+                              const clave = e.target.value;
+                              const u = (unidadesSat || []).find((x: any) => x.clave === clave);
+                              setLineas(prev => {
+                                const next = [...prev];
+                                next[idx] = calcLinea({ ...next[idx], unit_code: clave, unit_name: u?.nombre || '' });
+                                return next;
+                              });
+                              setDirty(true);
+                            }}
+                            className={cn("h-7 text-[11px] rounded px-1 w-full", invalid ? "border border-destructive/60 bg-destructive/5" : "border border-transparent bg-transparent focus:bg-background focus:border-primary")}
+                          >
+                            <option value="">— Selecciona —</option>
+                            {(unidadesSat || []).map((u: any) => (
+                              <option key={u.clave} value={u.clave}>{u.clave} - {u.nombre}</option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </td>
                     <td className="py-1.5 px-2">
                       {readOnly ? (
@@ -608,7 +668,7 @@ export default function CfdiFormPage() {
               </tbody>
               <tfoot>
                 <tr className="bg-card border-t">
-                  <td colSpan={readOnly ? 7 : 7} className="py-2 px-2 text-right text-[12px] font-semibold">Total</td>
+                  <td colSpan={8} className="py-2 px-2 text-right text-[12px] font-semibold">Total</td>
                   <td className="py-2 px-2 text-right font-bold text-sm">{fmt(totals.total)}</td>
                   {!readOnly && <td />}
                 </tr>

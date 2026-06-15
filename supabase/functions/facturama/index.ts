@@ -226,6 +226,26 @@ async function timbrar(supabase: any, userId: string, body: any) {
   try {
 
 
+  // Validate SAT data per item BEFORE building Facturama payload
+  const satErrors: string[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const code = (it.product_code || '').toString().trim();
+    if (!/^\d{8}$/.test(code)) {
+      satErrors.push(`Línea ${i + 1}: Clave SAT inválida ("${code}"), debe ser 8 dígitos`);
+    } else if (code === '01010101') {
+      satErrors.push(`Línea ${i + 1}: Clave SAT genérica (01010101) no permitida; usa la clave real del producto`);
+    }
+    if (!it.unit_code || !it.unit) {
+      satErrors.push(`Línea ${i + 1}: falta Unidad SAT (unit_code/unit)`);
+    }
+  }
+  if (satErrors.length > 0) {
+    // No timbre fue cobrado todavía (reservation ocurrió arriba), liberamos
+    try { await serviceDb.rpc("release_timbre", { p_reservation_id: reservationId, p_motivo: "Validación SAT" }); } catch {}
+    throw new Error("Datos SAT inválidos:\n• " + satErrors.join("\n• "));
+  }
+
   // Build Facturama items with exact tax calculations
   const facItems: any[] = [];
   let totalFactura = 0;
@@ -236,10 +256,10 @@ async function timbrar(supabase: any, userId: string, body: any) {
     const subtotal = r2(unitPrice * quantity);
 
     const facItem: any = {
-      ProductCode: item.product_code || "01010101",
+      ProductCode: item.product_code,
       Description: item.description,
-      Unit: item.unit || "Pieza",
-      UnitCode: item.unit_code || "H87",
+      Unit: item.unit,
+      UnitCode: item.unit_code,
       UnitPrice: unitPrice,
       Quantity: quantity,
       Subtotal: subtotal,

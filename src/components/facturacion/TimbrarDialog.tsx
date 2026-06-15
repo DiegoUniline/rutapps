@@ -70,18 +70,23 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     },
   });
 
-  // Load selected venta lines
+  // Load selected venta lines (with product SAT unit join)
   const { data: ventaLineas } = useQuery({
     queryKey: ['venta-lineas-cfdi', selectedVentaId],
     enabled: !!selectedVentaId,
     queryFn: async () => {
       const { data } = await supabase
         .from('venta_lineas')
-        .select('*, productos(nombre, codigo_sat, codigo)')
+        .select('*, productos(nombre, codigo_sat, codigo, udem_sat_id, unidades_sat(clave, nombre))')
         .eq('venta_id', selectedVentaId!);
       return data || [];
     },
   });
+
+  // Helpers to extract real SAT unit/code from joined product (fallback "H87 / Pieza")
+  const getUnitCode = (l: any) => (l?.productos?.unidades_sat?.clave || 'H87').toString().toUpperCase();
+  const getUnitName = (l: any) => l?.productos?.unidades_sat?.nombre || 'Pieza';
+  const getProductCode = (l: any) => (l?.productos?.codigo_sat || '').toString().trim() || '01010101';
 
   // Catalogs
   const { data: formasPago } = useQuery({
@@ -152,13 +157,30 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       return;
     }
 
+    // Validate SAT data per line (clave 8 dígitos + unidad SAT)
+    const missing: string[] = [];
+    for (const l of ventaLineas as any[]) {
+      const nombre = l.descripcion || l.productos?.nombre || `línea ${l.id?.slice(0, 6)}`;
+      const code = getProductCode(l);
+      if (!/^\d{8}$/.test(code) || code === '01010101') {
+        missing.push(`"${nombre}" sin Clave SAT válida (8 dígitos)`);
+      }
+      if (!l.productos?.udem_sat_id) {
+        missing.push(`"${nombre}" sin Unidad SAT`);
+      }
+    }
+    if (missing.length > 0) {
+      toast.error('Faltan datos SAT en productos:\n• ' + missing.slice(0, 5).join('\n• '));
+      return;
+    }
+
     setTimbrating(true);
     try {
-      const items = ventaLineas.map((l: any) => ({
-        product_code: l.productos?.codigo_sat || '01010101',
+      const items = (ventaLineas as any[]).map((l: any) => ({
+        product_code: getProductCode(l),
         description: l.descripcion || l.productos?.nombre || 'Producto',
-        unit: 'Pieza',
-        unit_code: 'H87',
+        unit: getUnitName(l),
+        unit_code: getUnitCode(l),
         unit_price: l.precio_unitario,
         quantity: l.cantidad,
         iva_rate: (l.iva_pct || 0) / 100,
@@ -217,9 +239,9 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
         iva_monto: l.iva_monto ?? 0,
         ieps_monto: l.ieps_monto ?? 0,
         total: l.total ?? 0,
-        product_code: l.productos?.codigo_sat || '01010101',
-        unit_code: 'H87',
-        unit_name: 'Pieza',
+        product_code: getProductCode(l),
+        unit_code: getUnitCode(l),
+        unit_name: getUnitName(l),
       }));
 
       const { error: linesError } = await supabase.from('cfdi_lineas').insert(cfdiLineas);
