@@ -274,6 +274,35 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
           Saldo a favor del cliente: {fmt(Math.abs(saldoPendiente))}
         </div>
       )}
+
+      <AlertDialog open={!!confirmState} onOpenChange={(open) => !open && setConfirmState(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmState?.tipo === 'eliminar' ? '¿Eliminar este pago?' : '¿Cancelar este pago?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmState?.tipo === 'eliminar'
+                ? 'Esta acción no se puede deshacer. El pago será eliminado permanentemente y el saldo de la venta se recalculará.'
+                : 'El pago quedará marcado como cancelado y el saldo de la venta se recalculará. Podrás reactivarlo después si es necesario.'}
+              {confirmState && (
+                <span className="block mt-2 font-medium text-foreground">
+                  Monto: {fmt(confirmState.pago.monto_aplicado)}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              className={confirmState?.tipo === 'eliminar' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              {confirmState?.tipo === 'eliminar' ? 'Eliminar' : 'Cancelar pago'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
