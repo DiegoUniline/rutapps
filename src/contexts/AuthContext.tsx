@@ -207,7 +207,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       initialisedRef.current = true;
       const u = session?.user ?? null;
       setUser(u);
-      loadUserData(u).finally(() => setLoading(false));
+      // Defer Supabase queries out of the auth callback to avoid client deadlock
+      // on slow networks (Supabase docs: never await supabase.from(...) inside
+      // onAuthStateChange).
+      setTimeout(() => {
+        loadUserData(u).finally(() => setLoading(false));
+      }, 0);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
