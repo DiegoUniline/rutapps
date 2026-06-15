@@ -8147,6 +8147,7 @@ export type Database = {
         Args: { p_producto_id: string }
         Returns: undefined
       }
+      recalc_venta_totales: { Args: { p_venta_id: string }; Returns: undefined }
       rechazar_solicitud_partner: {
         Args: { _motivo?: string; _solicitud_id: string }
         Returns: undefined
