@@ -509,7 +509,7 @@ export default function CotizacionFormPage() {
 
       {/* Validación stock */}
       <Dialog open={stockDialog.open} onOpenChange={(o) => setStockDialog(s => ({ ...s, open: o }))}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[60]">
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto z-[60]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {stockDialog.ok ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <AlertTriangle className="h-5 w-5 text-amber-500" />}

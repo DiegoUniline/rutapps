@@ -141,8 +141,8 @@ export default function RutaEntregaDetalle() {
   }, [entrega, venta, id, pedidoId, queryClient]);
 
 
-  if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
-  if (!entrega) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2"><p className="text-muted-foreground text-[13px]">Entrega no encontrada</p><button onClick={() => navigate(-1)} className="text-primary text-[13px] font-medium">Volver</button></div>;
+  if (isLoading) return <div className="min-h-[100dvh] bg-background flex items-center justify-center"><p className="text-muted-foreground text-[13px]">Cargando...</p></div>;
+  if (!entrega) return <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-2"><p className="text-muted-foreground text-[13px]">Entrega no encontrada</p><button onClick={() => navigate(-1)} className="text-primary text-[13px] font-medium">Volver</button></div>;
 
   const cliente = (entrega as any).clientes;
   const clienteNombre = cliente?.nombre ?? '—';
@@ -431,7 +431,7 @@ export default function RutaEntregaDetalle() {
   const totalSaldoPendiente = (otrasPendientes ?? []).reduce((acc, v) => acc + (v.saldo_pendiente ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
         <div className="flex-1 min-w-0">
@@ -658,7 +658,7 @@ export default function RutaEntregaDetalle() {
 
       {showNoEntregadoModal && (
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingNoEntregado && setShowNoEntregadoModal(false)}>
-          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[90dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><XCircle className="h-4 w-4 text-destructive" /> No entregado</h3>
               <button onClick={() => setShowNoEntregadoModal(false)} disabled={savingNoEntregado} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>

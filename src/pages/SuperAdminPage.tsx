@@ -70,14 +70,14 @@ export default function SuperAdminPage() {
   }, [user]);
 
   if (isSuperAdmin === null) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Verificando permisos...</div>;
+    return <div className="flex items-center justify-center min-h-[100dvh] text-muted-foreground">Verificando permisos...</div>;
   }
   if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-[100dvh] bg-background flex">
       {/* Sidebar */}
-      <aside className="w-60 shrink-0 border-r border-border bg-card flex flex-col sticky top-0 h-screen">
+      <aside className="w-60 shrink-0 border-r border-border bg-card flex flex-col sticky top-0 h-[100dvh]">
         <div className="px-4 py-4 border-b border-border flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
             <Shield className="h-5 w-5 text-primary" />

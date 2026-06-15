@@ -93,7 +93,7 @@ export default function PartnersLandingPage() {
   };
 
   return (
-    <div className="min-h-screen text-gray-900 bg-white">
+    <div className="min-h-[100dvh] text-gray-900 bg-white">
       <Seo
         title="Programa de Partners · Rutapp"
         description="Únete al programa de partners de Rutapp: comisiones recurrentes, cupones personalizados y dashboard de ventas para socios e integradores."

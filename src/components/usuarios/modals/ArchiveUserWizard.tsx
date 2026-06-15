@@ -93,7 +93,7 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
 
   return (
     <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90dvh] overflow-y-auto shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-primary/5">
           <div className="flex items-center gap-2">

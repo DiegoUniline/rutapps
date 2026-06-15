@@ -4,7 +4,7 @@ import { Seo } from '@/components/seo/Seo';
 
 export default function TerminosPage() {
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-[100dvh] bg-background py-12 px-4">
       <Seo
         title="Términos y Condiciones · Rutapp"
         description="Términos y condiciones de uso de la plataforma Rutapp: registro, planes, pagos, cancelación y políticas legales."

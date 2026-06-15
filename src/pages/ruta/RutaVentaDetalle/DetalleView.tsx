@@ -40,7 +40,7 @@ export function DetalleView(p: Props) {
   const { symbol: s } = useCurrency();
   const [showTax, setShowTax] = useState(true);
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <Header {...p} />
       <WADialog {...p} s={s} />
       <div className="p-4 space-y-4 pb-28">

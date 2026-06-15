@@ -188,7 +188,7 @@ export default function TutorialesPage() {
   }, [videos]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <Seo
         title="Video tutoriales · Rutapp"
         description="Aprende a usar Rutapp paso a paso: videos sobre ventas en ruta, inventario, cobranza, facturación CFDI 4.0 y más."

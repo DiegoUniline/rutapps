@@ -152,14 +152,14 @@ export default function CompletarRegistroPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-card">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-card">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-card py-8 px-4">
+    <div className="min-h-[100dvh] bg-card py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center space-y-2">
           <img

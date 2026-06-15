@@ -55,7 +55,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
       if (isOfflineChunk) {
         return (
-          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+          <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="pt-8 pb-4 flex justify-center">
                 <div className="rounded-full p-4 bg-amber-50 text-amber-500">
@@ -95,7 +95,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="pt-8 pb-4 flex justify-center">
               <div className="rounded-full p-4 bg-red-50 text-red-500">

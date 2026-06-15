@@ -1048,7 +1048,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Editar Datos Empresa ─────── */}
       <Dialog open={editDatosOpen} onOpenChange={setEditDatosOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" /> Editar datos de empresa
@@ -1078,7 +1078,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Editar Plan / Suscripción ─────── */}
       <Dialog open={editPlanOpen} onOpenChange={setEditPlanOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" /> Editar plan
@@ -1166,7 +1166,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Nueva factura ─────── */}
       <Dialog open={showSubInvoice} onOpenChange={setShowSubInvoice}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-primary" /> Nueva factura
@@ -1285,7 +1285,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Reset Password ─────── */}
       <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Restablecer contraseña</DialogTitle>
             <DialogDescription>{resetDialog?.nombre} — <span className="font-mono">{resetDialog?.email}</span></DialogDescription>
@@ -1316,7 +1316,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Aplicar pago ─────── */}
       <Dialog open={!!markPaidFactura} onOpenChange={(o) => !o && setMarkPaidFactura(null)}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Aplicar pago a factura</DialogTitle>
             <DialogDescription>
@@ -1382,7 +1382,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ─────── Dialog: Editar factura ─────── */}
       <Dialog open={!!editFactura} onOpenChange={(o) => !o && setEditFactura(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar factura</DialogTitle>
             <DialogDescription>

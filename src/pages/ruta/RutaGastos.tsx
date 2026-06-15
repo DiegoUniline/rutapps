@@ -107,7 +107,7 @@ export default function RutaGastos() {
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div
-            className="bg-card w-full max-w-lg rounded-2xl p-5 space-y-4 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto"
+            className="bg-card w-full max-w-lg rounded-2xl p-5 space-y-4 animate-in zoom-in-95 max-h-[90dvh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">

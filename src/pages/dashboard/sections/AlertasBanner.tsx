@@ -79,7 +79,7 @@ export default function AlertasBanner() {
       </div>
 
       <Dialog open={!!modalKey} onOpenChange={(o) => !o && setModalKey(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[60]">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto z-[60]">
           <DialogHeader>
             <DialogTitle>{modalKey ? MODAL_TITLES[modalKey] : ''}</DialogTitle>
           </DialogHeader>

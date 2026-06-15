@@ -79,7 +79,7 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-auto">
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h3 className="text-base font-bold text-foreground flex items-center gap-2">
             <Edit2 className="h-4 w-4 text-primary" /> Editar usuario

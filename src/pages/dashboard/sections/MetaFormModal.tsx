@@ -265,7 +265,7 @@ export default function MetaFormModal({ open, onClose, year, month, editing }: P
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="z-[60] max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="z-[60] max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar meta' : 'Nueva meta'}</DialogTitle>
         </DialogHeader>

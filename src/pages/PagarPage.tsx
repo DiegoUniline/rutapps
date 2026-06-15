@@ -155,7 +155,7 @@ export default function PagarPage() {
   // ─── Loading ───
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
@@ -164,7 +164,7 @@ export default function PagarPage() {
   // ─── Already completed ───
   if (error === 'completed' || success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
         <div className="w-full max-w-lg">
           <div className="bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-emerald-100 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-8 text-center">
@@ -223,7 +223,7 @@ export default function PagarPage() {
   // ─── Error / Not found ───
   if (!link || (error && error !== '')) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg border border-red-100 p-8 max-w-md w-full text-center space-y-4">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto" />
           <h1 className="text-xl font-bold text-slate-800">Enlace no válido</h1>
@@ -235,7 +235,7 @@ export default function PagarPage() {
 
   // ─── Payment Form ───
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-slate-200/60 overflow-hidden">
           {/* Header */}

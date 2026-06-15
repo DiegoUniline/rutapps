@@ -43,7 +43,7 @@ export default function NotificationModal({ notifications, views }: Props) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full max-h-[85dvh] overflow-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-start justify-between p-6 pb-0">
           <h2 className="text-lg font-bold text-foreground pr-4 leading-snug">{current.title}</h2>

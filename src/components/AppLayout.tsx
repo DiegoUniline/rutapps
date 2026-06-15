@@ -653,7 +653,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Mobile layout with hamburger
   if (isMobile) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-[100dvh] flex flex-col bg-background">
         <SandboxBanner />
         <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
@@ -789,7 +789,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-background">
+    <div className="h-[100dvh] overflow-hidden flex flex-col bg-background">
       <SandboxBanner />
       <NotificationRuntime bannersOnly />
       <div className="flex-1 flex min-h-0">

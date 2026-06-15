@@ -34,7 +34,7 @@ export default function UnsubscribePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-6">
+    <div className="min-h-[100dvh] bg-white flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
         {state === 'loading' && <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />}
         {state === 'valid' && (

@@ -313,7 +313,7 @@ export default function DashboardAIAdvisor({ buildSnapshot }: Props) {
           onClick={() => setHistoryOpen(false)}
         >
           <div
-            className="bg-card border rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-card border rounded-xl shadow-xl w-full max-w-3xl max-h-[90dvh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <header className="flex items-center justify-between px-5 py-3 border-b">

@@ -35,7 +35,7 @@ export function CobrarView(p: Props) {
   const sinDistribuir = (parseFloat(p.montoRecibido) || 0) - p.totalACobrar;
 
   return (
-    <div className="flex flex-col h-screen bg-background" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="flex flex-col h-[100dvh] bg-background" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
         <button onClick={p.onBack} className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-[12px] font-semibold active:scale-95 transition-transform">Salir</button>

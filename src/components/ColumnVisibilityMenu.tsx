@@ -38,7 +38,7 @@ export function ColumnVisibilityMenu({ columns, visible, onToggle, onShowAll, on
           <span className="text-[10px] text-muted-foreground">({visibleCount}/{columns.length})</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
+      <DropdownMenuContent align="end" className="w-56 max-h-[70dvh] overflow-y-auto">
         <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
           Columnas visibles
         </DropdownMenuLabel>

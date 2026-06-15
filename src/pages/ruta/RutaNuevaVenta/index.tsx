@@ -75,7 +75,7 @@ export default function RutaNuevaVenta() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background">
       {AlmacenDialog}
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 px-3 h-12">

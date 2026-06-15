@@ -383,7 +383,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90vh] overflow-auto">
+      <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
         {/* Header */}
         <div className="p-5 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
           <div>

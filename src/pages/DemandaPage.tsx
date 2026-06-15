@@ -1278,7 +1278,7 @@ export default function DemandaPage() {
 
       {/* Result dialog: shows partial / not-surtido alerts */}
       <Dialog open={!!surtirResult} onOpenChange={(o) => !o && setSurtirResult(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />

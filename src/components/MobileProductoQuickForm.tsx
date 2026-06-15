@@ -195,7 +195,7 @@ export function MobileProductoQuickForm({ open, onOpenChange, onCreated }: Props
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="p-0 gap-0 max-w-md w-[calc(100vw-1rem)] max-h-[90vh] overflow-hidden flex flex-col z-[60]"
+        className="p-0 gap-0 max-w-md w-[calc(100vw-1rem)] max-h-[90dvh] overflow-hidden flex flex-col z-[60]"
         onOpenAutoFocus={e => e.preventDefault()}
       >
         {/* Header */}

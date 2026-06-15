@@ -1082,7 +1082,7 @@ export default function PuntoVentaPage() {
   // Block POS if user has no warehouse assigned
   if (!almacenId) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background px-6 text-center gap-4">
+      <div className="h-[100dvh] flex flex-col items-center justify-center bg-background px-6 text-center gap-4">
         <Warehouse className="h-16 w-16 text-muted-foreground/40" />
         <h1 className="text-xl font-bold text-foreground">Sin almacén asignado</h1>
         <p className="text-sm text-muted-foreground max-w-md">
@@ -1096,7 +1096,7 @@ export default function PuntoVentaPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
       <header className="bg-card border-b border-border shrink-0 pt-[env(safe-area-inset-top)]">
         <div className="h-12 flex items-center px-3 sm:px-4 gap-2 sm:gap-3">
@@ -1952,7 +1952,7 @@ export default function PuntoVentaPage() {
       {/* ─── Ticket modal after sale (auto-print) ─── */}
       {showTicket && lastVentaData && (
         <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center" onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }}>
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border max-h-[90dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="px-5 pt-4 pb-2 border-b border-border flex items-center justify-between">
               <h3 className="text-[14px] font-bold text-foreground flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-primary" /> Venta registrada
@@ -2069,7 +2069,7 @@ export default function PuntoVentaPage() {
 
       {/* Mobile "More actions" sheet — shift management for street vendors */}
       <Sheet open={showMoreSheet} onOpenChange={setShowMoreSheet}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 max-h-[80vh]">
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 max-h-[80dvh]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-left text-[15px] font-bold">Más acciones</SheetTitle>
           </SheetHeader>

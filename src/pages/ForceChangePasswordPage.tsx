@@ -43,7 +43,7 @@ export default function ForceChangePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border shadow-lg">
         <CardHeader className="text-center space-y-3 pb-2">
           <div className="mx-auto h-14 w-14 rounded-full bg-amber-500/10 flex items-center justify-center">

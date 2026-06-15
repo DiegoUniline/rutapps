@@ -184,7 +184,7 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 gap-0 max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="p-0 gap-0 max-w-[95vw] sm:max-w-lg w-full max-h-[90dvh] overflow-hidden flex flex-col">
         <div className="bg-primary px-4 py-3 sm:px-6 sm:py-4 text-primary-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />

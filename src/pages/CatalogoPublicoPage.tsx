@@ -100,7 +100,7 @@ export default function CatalogoPublicoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">Cargando catálogo...</p>
@@ -111,7 +111,7 @@ export default function CatalogoPublicoPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 text-center max-w-sm">
           <Package className="h-12 w-12 text-slate-300 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-slate-800 mb-1">Catálogo no disponible</h2>
@@ -124,7 +124,7 @@ export default function CatalogoPublicoPage() {
   if (!data) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
