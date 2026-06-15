@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 import { Search, Edit2, Plus, Stamp, Users, CreditCard, CheckCircle2, AlertTriangle, Clock, Ban, HelpCircle } from 'lucide-react';
 import { format, differenceInDays, addDays, addMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface SubscriptionRow {
   id: string; empresa_id: string; plan_id: string | null; status: string;
