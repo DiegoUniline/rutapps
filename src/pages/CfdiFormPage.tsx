@@ -554,15 +554,50 @@ export default function CfdiFormPage() {
                       )}
                     </td>
                     <td className="py-1.5 px-2">
-                      {readOnly ? (
-                        <span className="font-mono text-[11px]">{l.product_code}</span>
-                      ) : (
-                        <Input
-                          value={l.product_code || ''}
-                          onChange={e => updateLine(idx, 'product_code', e.target.value)}
-                          className="h-7 text-[11px] font-mono border-0 bg-transparent px-1 focus:bg-background focus:border focus:border-primary"
-                        />
-                      )}
+                      {(() => {
+                        const code = (l.product_code || '').toString().trim();
+                        const invalid = !/^\d{8}$/.test(code) || code === '01010101';
+                        return readOnly ? (
+                          <span className={cn("font-mono text-[11px]", invalid && "text-destructive")}>{l.product_code || '—'}</span>
+                        ) : (
+                          <Input
+                            value={l.product_code || ''}
+                            onChange={e => updateLine(idx, 'product_code', e.target.value)}
+                            maxLength={8}
+                            placeholder="8 dígitos"
+                            className={cn("h-7 text-[11px] font-mono px-1 focus:bg-background focus:border focus:border-primary", invalid ? "border border-destructive/60 bg-destructive/5" : "border-0 bg-transparent")}
+                          />
+                        );
+                      })()}
+                    </td>
+                    <td className="py-1.5 px-2">
+                      {(() => {
+                        const uc = (l.unit_code || '').toString().toUpperCase();
+                        const invalid = !uc;
+                        return readOnly ? (
+                          <span className={cn("font-mono text-[11px]", invalid && "text-destructive")}>{uc || '—'}{l.unit_name ? ` ${l.unit_name}` : ''}</span>
+                        ) : (
+                          <select
+                            value={uc}
+                            onChange={e => {
+                              const clave = e.target.value;
+                              const u = (unidadesSat || []).find((x: any) => x.clave === clave);
+                              setLineas(prev => {
+                                const next = [...prev];
+                                next[idx] = calcLinea({ ...next[idx], unit_code: clave, unit_name: u?.nombre || '' });
+                                return next;
+                              });
+                              setDirty(true);
+                            }}
+                            className={cn("h-7 text-[11px] rounded px-1 w-full", invalid ? "border border-destructive/60 bg-destructive/5" : "border border-transparent bg-transparent focus:bg-background focus:border-primary")}
+                          >
+                            <option value="">— Selecciona —</option>
+                            {(unidadesSat || []).map((u: any) => (
+                              <option key={u.clave} value={u.clave}>{u.clave} - {u.nombre}</option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </td>
                     <td className="py-1.5 px-2">
                       {readOnly ? (
