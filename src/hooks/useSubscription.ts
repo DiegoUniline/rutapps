@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { differenceInDays } from 'date-fns';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface SubscriptionState {
   loading: boolean;
@@ -35,16 +36,16 @@ function writeCache(userId: string, empresaId: string | null | undefined, state:
   }
 }
 
-async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean): Promise<Omit<SubscriptionState, 'loading'>> {
-  let isSuperAdmin = false;
+async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean, userEmail?: string | null): Promise<Omit<SubscriptionState, 'loading'>> {
+  let isSuperAdmin = isSuperAdminEmail(userEmail);
 
   try {
     const { data: sa } = await supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle();
-    isSuperAdmin = !!sa;
+    isSuperAdmin = isSuperAdmin || !!sa;
   } catch {
       const cached = readCache(userId, empresaId);
     if (cached) return cached;
-    return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
+    return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: isSuperAdmin ? 999 : 3 };
   }
 
   if (isSuperAdmin && !empresaId) {
@@ -118,7 +119,7 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
   } catch {
     const cached = readCache(userId, empresaId);
     if (cached) return cached;
-    return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
+      return { status: 'offline', daysLeft: null, isBlocked: false, isSuperAdmin, maxUsuarios: isSuperAdmin ? 999 : 3 };
   }
 }
 
@@ -129,8 +130,8 @@ export function useSubscription(): SubscriptionState {
   const isOverride = !!overrideEmpresaId;
 
   const { data, isLoading, isPlaceholderData } = useQuery({
-    queryKey: ['subscription-state', user?.id, empresa?.id, isOverride],
-    queryFn: () => fetchSubscription(user!.id, empresa?.id, isOverride),
+    queryKey: ['subscription-state', user?.id, user?.email, empresa?.id, isOverride],
+    queryFn: () => fetchSubscription(user!.id, empresa?.id, isOverride, user?.email),
     enabled: !!user?.id,
     staleTime: 60_000, // 1 min
     gcTime: 5 * 60_000,
