@@ -9,6 +9,17 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+/* POS / low-vertical-resolution shells: lock body, scroll in content area */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+@media (max-height: 800px) and (orientation: landscape) {
+  :root { font-size: 14px; }
+}
+
 /* Safe area class for bottom elements */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
