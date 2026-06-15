@@ -203,7 +203,7 @@ export function useVenta(id?: string) {
       // Try server first
       const { data, error } = await supabase
         .from('ventas')
-        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel), unidades(nombre, abreviatura))')
+        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(nombre, abreviatura)), unidades(nombre, abreviatura))')
         .eq('id', id!)
         .maybeSingle();
       if (error) throw error;
