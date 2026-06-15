@@ -412,7 +412,7 @@ export default function SignupPage() {
     form.password === confirmPassword;
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-card">
+    <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-card pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))]">
       <Seo
         title="Crear cuenta · Rutapp"
         description="Regístrate en Rutapp y prueba gratis 7 días el ERP de venta en ruta: inventario, cobranza, rutas optimizadas y facturación CFDI 4.0."
