@@ -9,11 +9,10 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
-/* POS / low-vertical-resolution shells: lock body, scroll in content area */
+/* POS / low-vertical-resolution shells: full height, scroll managed per layout */
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
   margin: 0;
-  overflow: hidden;
 }
 
 @media (max-height: 800px) and (orientation: landscape) {
