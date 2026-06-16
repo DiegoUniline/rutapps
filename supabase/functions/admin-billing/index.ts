@@ -319,10 +319,13 @@ Deno.serve(async (req) => {
           invoice_pdf: inv.invoice_pdf,
           customer_email: custEmail,
           customer_name: custName,
+          customer_id: custId || null,
+          subscription_id: typeof inv.subscription === 'string' ? inv.subscription : (inv.subscription?.id || null),
           empresa_id: empresa?.id || resolvedId || null,
           empresa_nombre: empresa?.nombre || inv?.metadata?.empresa_nombre || null,
           description: inv.lines?.data?.[0]?.description || "Suscripción Rutapp",
         };
+
       }).filter((x): x is NonNullable<typeof x> => x !== null);
 
       // Sort by created desc

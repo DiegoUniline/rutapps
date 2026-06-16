@@ -132,6 +132,26 @@ export default function AdminStatsTab() {
   const cobradas = facturas.filter(isCollected);
   const totalPendientesLocal = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
 
+  // ── Stripe invoices (todas, agrupadas por status) ──
+  const { data: stripeInvoices, isLoading: loadingStripeInv } = useQuery<any[]>({
+    queryKey: ['admin-stats-stripe-invoices'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return [];
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=all`,
+        { headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+      );
+      const data = await res.json();
+      return data?.invoices || [];
+    },
+  });
+  const stripeInvs = stripeInvoices || [];
+
+
+
   // ── A la fecha ──
   const aLaFecha = useMemo(() => {
     const endTs = to.getTime();
@@ -383,12 +403,26 @@ export default function AdminStatsTab() {
       {/* ── TABS ── */}
       <Tabs defaultValue="panel">
         <TabsList className="grid grid-cols-5 w-full">
-          <TabsTrigger value="panel"><LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />Panel</TabsTrigger>
-          <TabsTrigger value="altas"><UserPlus className="h-3.5 w-3.5 mr-1.5" />Altas</TabsTrigger>
-          <TabsTrigger value="bajas"><UserMinus className="h-3.5 w-3.5 mr-1.5" />Bajas</TabsTrigger>
-          <TabsTrigger value="ingresos"><DollarSign className="h-3.5 w-3.5 mr-1.5" />Ingresos</TabsTrigger>
-          <TabsTrigger value="salud"><Activity className="h-3.5 w-3.5 mr-1.5" />Salud SaaS</TabsTrigger>
+          {[
+            { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
+            { v: 'altas', icon: UserPlus, l: 'Altas' },
+            { v: 'bajas', icon: UserMinus, l: 'Bajas' },
+            { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
+            { v: 'salud', icon: Activity, l: 'Salud SaaS' },
+          ].map(t => {
+            const Icon = t.icon;
+            return (
+              <TabsTrigger
+                key={t.v}
+                value={t.v}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="h-3.5 w-3.5 mr-1.5" />{t.l}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
+
 
         {/* ──────────── PANEL ──────────── */}
         <TabsContent value="panel" className="space-y-4 mt-4">
@@ -460,7 +494,11 @@ export default function AdminStatsTab() {
               </ResponsiveContainer>
             </ChartCard>
           </div>
+
+          {/* ── Facturas de Stripe (todas, agrupadas por status) ── */}
+          <StripeInvoicesTable invoices={stripeInvs} loading={loadingStripeInv} />
         </TabsContent>
+
 
         {/* ──────────── ALTAS ──────────── */}
         <TabsContent value="altas" className="space-y-4 mt-4">
@@ -826,5 +864,143 @@ function Benchmark({ label, value, unit, good, warn, reverse }: {
         <span className="text-[10px] opacity-70">{benchmarkText}</span>
       </div>
     </div>
+  );
+}
+
+// ─────────── Stripe Invoices Table (grouped by status) ───────────
+const STRIPE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  paid:          { label: 'Pagadas',     color: 'text-success bg-success/10 border-success/30' },
+  open:          { label: 'Abiertas',    color: 'text-warning bg-yellow-500/10 border-yellow-500/30' },
+  uncollectible: { label: 'Incobrables', color: 'text-destructive bg-destructive/10 border-destructive/30' },
+  void:          { label: 'Anuladas',    color: 'text-muted-foreground bg-muted/30 border-border' },
+  draft:         { label: 'Borrador',    color: 'text-muted-foreground bg-muted/30 border-border' },
+};
+
+function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: boolean }) {
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    invoices.forEach((inv: any) => {
+      const k = inv.status || 'open';
+      if (!map[k]) map[k] = [];
+      map[k].push(inv);
+    });
+    return map;
+  }, [invoices]);
+
+  const order = ['paid', 'open', 'uncollectible', 'void', 'draft'];
+  const statuses = order.filter(s => grouped[s]?.length).concat(
+    Object.keys(grouped).filter(s => !order.includes(s))
+  );
+
+  const grandTotal = invoices.reduce((s, i) => s + (i.amount_due || 0) / 100, 0);
+  const grandPaid = invoices.reduce((s, i) => s + (i.amount_paid || 0) / 100, 0);
+  const grandPending = invoices.reduce((s, i) => s + (i.amount_remaining || 0) / 100, 0);
+
+  return (
+    <Card className="border border-border/60 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-primary" /> Facturas de Stripe ({invoices.length})
+        </CardTitle>
+        <p className="text-[11px] text-muted-foreground">
+          Todas las facturas emitidas en Stripe, agrupadas por status. IDs de cliente y suscripción incluidos.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Cargando facturas de Stripe…
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas en Stripe</div>
+        ) : (
+          <div className="space-y-6">
+            {statuses.map(status => {
+              const rows = grouped[status] || [];
+              const meta = STRIPE_STATUS_LABELS[status] || { label: status, color: 'text-foreground bg-muted/30 border-border' };
+              const sumDue = rows.reduce((s, r) => s + (r.amount_due || 0) / 100, 0);
+              const sumPaid = rows.reduce((s, r) => s + (r.amount_paid || 0) / 100, 0);
+              const sumRem = rows.reduce((s, r) => s + (r.amount_remaining || 0) / 100, 0);
+              return (
+                <div key={status}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-xs font-semibold uppercase px-3 py-1 rounded-full border ${meta.color}`}>
+                      {meta.label} · {rows.length}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Total: <strong className="text-foreground">{fmtMoney2(sumDue)}</strong>
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto border border-border rounded-lg">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
+                          <th className="text-left px-2 py-1.5 font-semibold">Empresa</th>
+                          <th className="text-left px-2 py-1.5 font-semibold">Cliente Stripe</th>
+                          <th className="text-left px-2 py-1.5 font-semibold">Suscripción</th>
+                          <th className="text-left px-2 py-1.5 font-semibold">Fecha</th>
+                          <th className="text-right px-2 py-1.5 font-semibold">Total</th>
+                          <th className="text-right px-2 py-1.5 font-semibold">Pagado</th>
+                          <th className="text-right px-2 py-1.5 font-semibold">Pendiente</th>
+                          <th className="text-center px-2 py-1.5 font-semibold">Link</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.id} className="border-t border-border hover:bg-accent/30">
+                            <td className="px-2 py-1.5 font-mono text-[10px]">{r.number || r.id.slice(0, 14)}</td>
+                            <td className="px-2 py-1.5">
+                              <div className="font-medium text-foreground truncate max-w-[180px]">{r.empresa_nombre || r.customer_name || '—'}</div>
+                              {r.customer_email && <div className="text-[9px] text-muted-foreground truncate max-w-[180px]">{r.customer_email}</div>}
+                            </td>
+                            <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.customer_id || '—'}</td>
+                            <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.subscription_id || '—'}</td>
+                            <td className="px-2 py-1.5 text-muted-foreground">{r.created ? format(new Date(r.created * 1000), 'dd/MM/yy', { locale: es }) : '—'}</td>
+                            <td className="px-2 py-1.5 text-right font-semibold">{fmtMoney2((r.amount_due || 0) / 100)}</td>
+                            <td className="px-2 py-1.5 text-right text-success">{fmtMoney2((r.amount_paid || 0) / 100)}</td>
+                            <td className="px-2 py-1.5 text-right text-destructive">{fmtMoney2((r.amount_remaining || 0) / 100)}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              {r.hosted_invoice_url && (
+                                <a href={r.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Ver</a>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-muted/30 font-semibold border-t-2 border-border">
+                        <tr>
+                          <td colSpan={5} className="px-2 py-2 text-right text-muted-foreground">Subtotal {meta.label.toLowerCase()}:</td>
+                          <td className="px-2 py-2 text-right">{fmtMoney2(sumDue)}</td>
+                          <td className="px-2 py-2 text-right text-success">{fmtMoney2(sumPaid)}</td>
+                          <td className="px-2 py-2 text-right text-destructive">{fmtMoney2(sumRem)}</td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Gran total */}
+            <div className="border-t-2 border-primary pt-3 mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-primary/5 border border-primary/30 rounded-lg px-4 py-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Total facturado</div>
+                <div className="text-lg font-bold text-foreground">{fmtMoney2(grandTotal)}</div>
+              </div>
+              <div className="bg-success/5 border border-success/30 rounded-lg px-4 py-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Total cobrado</div>
+                <div className="text-lg font-bold text-success">{fmtMoney2(grandPaid)}</div>
+              </div>
+              <div className="bg-destructive/5 border border-destructive/30 rounded-lg px-4 py-3">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold">Total pendiente</div>
+                <div className="text-lg font-bold text-destructive">{fmtMoney2(grandPending)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
