@@ -405,7 +405,9 @@ Deno.serve(async (req) => {
 
         const MX_TZ2 = "America/Mexico_City";
         const todayMx2 = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ2 });
-        const startUnix = Math.floor(new Date(`${todayMx2}T00:00:00-06:00`).getTime() / 1000);
+        // Widen window: include last 72h to catch retries/renewals whose invoice was created earlier
+        const hoursBack = Number(body?.hours_back ?? 72);
+        const startUnix = Math.floor(Date.now() / 1000) - hoursBack * 3600;
         const endUnix = Math.floor(Date.now() / 1000);
 
         const dispatched: any[] = [];
