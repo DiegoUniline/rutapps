@@ -351,8 +351,116 @@ Deno.serve(async (req) => {
         }
 
         log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
+
+        // ── Notify client + admins (real-time, per attempt) ──
+        try {
+          const { data: waConfig } = await supabase
+            .from("whatsapp_config")
+            .select("api_token")
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          const { data: empresaRow } = await supabase
+            .from("empresas").select("nombre").eq("id", empresa_id).maybeSingle();
+          const { data: profileRow } = await supabase
+            .from("profiles").select("user_id, nombre, telefono")
+            .eq("empresa_id", empresa_id).limit(1).maybeSingle();
+          let clienteEmail = invoice.customer_email || "";
+          let clienteNombre = profileRow?.nombre || "";
+          let clienteTelefono = profileRow?.telefono || "";
+          if (!clienteEmail && profileRow?.user_id) {
+            const { data: u } = await supabase.auth.admin.getUserById(profileRow.user_id);
+            clienteEmail = u?.user?.email || "";
+          }
+          const todayMx = new Date().toLocaleDateString("es-MX", { timeZone: TZ });
+          await notifyBillingEvent(supabase, waConfig?.api_token, {
+            evento: "cobro_exitoso",
+            empresa: empresaRow?.nombre || "",
+            clienteNombre,
+            clienteEmail,
+            clienteTelefono,
+            monto: `$${((invoice.amount_paid ?? invoice.total ?? 0) / 100).toLocaleString("es-MX")} MXN`,
+            numUsuarios: numUsuariosMeta ?? undefined,
+            invoiceUrl: invoice.hosted_invoice_url || null,
+            fecha: todayMx,
+            fechaVigencia: venc,
+            idempotencyKey: `inv-${invoice.id}-paid-${event.id}`,
+          });
+        } catch (e) {
+          console.error("[STRIPE-WEBHOOK] Client/admin notify (success) failed:", e);
+        }
       }
     }
+
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const stripeCustomerId = typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
+      const stripeSubId = typeof (invoice as any).subscription === "string"
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id;
+
+      let empresa_id: string | null = invoice.metadata?.empresa_id ?? null;
+      if (!empresa_id && stripeSubId) {
+        const { data } = await supabase
+          .from("subscriptions").select("empresa_id")
+          .eq("stripe_subscription_id", stripeSubId).maybeSingle();
+        empresa_id = data?.empresa_id ?? null;
+      }
+      if (!empresa_id && stripeCustomerId) {
+        const { data } = await supabase
+          .from("subscriptions").select("empresa_id")
+          .eq("stripe_customer_id", stripeCustomerId).maybeSingle();
+        empresa_id = data?.empresa_id ?? null;
+      }
+
+      if (empresa_id) {
+        try {
+          const { data: waConfig } = await supabase
+            .from("whatsapp_config").select("api_token")
+            .order("created_at", { ascending: true }).limit(1).maybeSingle();
+          const { data: empresaRow } = await supabase
+            .from("empresas").select("nombre").eq("id", empresa_id).maybeSingle();
+          const { data: profileRow } = await supabase
+            .from("profiles").select("user_id, nombre, telefono")
+            .eq("empresa_id", empresa_id).limit(1).maybeSingle();
+          let clienteEmail = invoice.customer_email || "";
+          let clienteNombre = profileRow?.nombre || "";
+          let clienteTelefono = profileRow?.telefono || "";
+          if (!clienteEmail && profileRow?.user_id) {
+            const u = await supabase.auth.admin.getUserById(profileRow.user_id);
+            clienteEmail = u.data?.user?.email || "";
+          }
+          const intento = invoice.attempt_count ?? undefined;
+          const lastErr =
+            (invoice as any).last_finalization_error?.message ||
+            (invoice as any).last_payment_error?.message ||
+            `Stripe status: ${invoice.status}`;
+          const todayMx = new Date().toLocaleDateString("es-MX", { timeZone: TZ });
+
+          await notifyBillingEvent(supabase, waConfig?.api_token, {
+            evento: "cobro_fallido",
+            empresa: empresaRow?.nombre || "",
+            clienteNombre,
+            clienteEmail,
+            clienteTelefono,
+            monto: `$${((invoice.amount_due ?? 0) / 100).toLocaleString("es-MX")} MXN`,
+            invoiceUrl: invoice.hosted_invoice_url || null,
+            enlacePago: invoice.hosted_invoice_url || null,
+            fecha: todayMx,
+            intento,
+            detalle: lastErr,
+            idempotencyKey: `inv-${invoice.id}-failed-${event.id}`,
+          });
+          log("Payment failed notified", { empresa_id, intento, invoice: invoice.id });
+        } catch (e) {
+          console.error("[STRIPE-WEBHOOK] Client/admin notify (failed) error:", e);
+        }
+      }
+    }
+
+
 
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object as Stripe.Subscription;
