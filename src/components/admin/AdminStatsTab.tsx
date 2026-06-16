@@ -183,7 +183,7 @@ export default function AdminStatsTab() {
     };
     return {
       altas: empresas.filter(e => inWin(e.created_at)).length,
-      bajas: empresas.filter(e => e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && inWin(s.updated_at || s.created_at))).length,
+      bajas: empresas.filter(e => e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && inWin(bajaDate(s)))).length,
       ingresos: cobradas.filter(f => inWin(f.fecha_pago)).reduce((s, f) => s + Number(f.total || 0), 0),
     };
   }, [empresas, cobradas]);
