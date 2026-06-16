@@ -398,7 +398,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onSuccess: () => {
       toast.success('Liquidación reabierta para edición');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
-      onClose();
+      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
     },
     onError: (e: any) => toast.error(e.message),
   });
