@@ -1002,7 +1002,13 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
                                       {r.customer_email && <div className="text-[9px] text-muted-foreground truncate max-w-[180px]">{r.customer_email}</div>}
                                     </td>
                                     <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.customer_id || '—'}</td>
-                                    <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.subscription_id || '—'}</td>
+                                    <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
+                                      {r.subscription_id ? (
+                                        r.subscription_id
+                                      ) : r.due_date ? (
+                                        <span title="Sin suscripción · Vence" className="text-warning">Vence {format(new Date(r.due_date * 1000), 'dd/MM/yy', { locale: es })}</span>
+                                      ) : '—'}
+                                    </td>
                                     <td className="px-2 py-1.5 text-muted-foreground">{r.created ? format(new Date(r.created * 1000), 'dd/MM/yy', { locale: es }) : '—'}</td>
                                     <td className="px-2 py-1.5 text-right font-semibold">{fmtMoney2((r.amount_due || 0) / 100)}</td>
                                     <td className="px-2 py-1.5 text-right text-success">{fmtMoney2((r.amount_paid || 0) / 100)}</td>
