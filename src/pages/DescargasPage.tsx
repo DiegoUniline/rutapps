@@ -461,7 +461,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const s = STATUS_MAP[descarga.status] || STATUS_MAP.pendiente;
+              const s = STATUS_MAP[currentStatus] || STATUS_MAP.pendiente;
               return (
                 <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold", s.color)}>
                   <s.icon className="h-3 w-3" /> {s.label}
@@ -586,7 +586,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
-            {(descarga.status === 'rechazada' || descarga.status === 'aprobada') && (
+            {(currentStatus === 'rechazada' || currentStatus === 'aprobada') && (
               <Button
                 onClick={() => reabrirMutation.mutate()}
                 disabled={reabrirMutation.isPending}
