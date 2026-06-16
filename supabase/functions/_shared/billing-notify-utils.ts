@@ -1,12 +1,13 @@
-// Shared helpers to notify the client + Rutapp admins on every billing event.
-// Used by stripe-webhook (per-attempt, real-time) and billing-notify (daily summary).
+// Shared helpers to notify Rutapp admins (Diego + WhatsApp) on every billing event.
+// - Skips $0 invoices entirely.
+// - Sends ONLY to admin (no client notifications).
+// - Builds rutapp.mx/factura/{folio} pay links.
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
 export const ADMIN_WA_PHONE = "5213171035768";
 export const ADMIN_EMAIL_TO = "diego.leon@uniline.mx";
-export const ADMIN_EMAIL_BCC = ["ventas@uniline.mx"];
 
 export interface BillingEventPayload {
   evento: "cobro_exitoso" | "cobro_fallido";
@@ -15,9 +16,11 @@ export interface BillingEventPayload {
   clienteEmail?: string;
   clienteTelefono?: string;
   monto?: string;
+  amountCents?: number;
   numUsuarios?: number;
   invoiceUrl?: string | null;
   enlacePago?: string | null;
+  folio?: string | null;
   fecha?: string;
   fechaVigencia?: string;
   intento?: number;
@@ -27,38 +30,16 @@ export interface BillingEventPayload {
 
 type SB = ReturnType<typeof createClient>;
 
-async function sendTransactionalEmail(
-  to: string,
-  templateData: Record<string, unknown>,
-  idempotencyKey: string
-) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceKey) return;
-  try {
-    await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({
-        templateName: "client-billing-status",
-        recipientEmail: to,
-        idempotencyKey,
-        templateData,
-      }),
-    });
-  } catch (e) {
-    console.error(`Email to ${to} failed:`, e);
-  }
+function buildPayUrl(folio?: string | null, fallback?: string | null): string | undefined {
+  if (folio) return `https://rutapp.mx/factura/${encodeURIComponent(folio)}`;
+  return fallback || undefined;
 }
 
 async function sendAdminAlertEmail(
   to: string,
   payload: BillingEventPayload,
-  idempotencyKey: string
+  payUrl: string | undefined,
+  idempotencyKey: string,
 ) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -75,7 +56,7 @@ async function sendAdminAlertEmail(
         templateName: "admin-billing-alert",
         recipientEmail: to,
         idempotencyKey,
-        templateData: payload,
+        templateData: { ...payload, payUrl },
       }),
     });
   } catch (e) {
@@ -83,11 +64,7 @@ async function sendAdminAlertEmail(
   }
 }
 
-async function sendWAText(
-  waToken: string,
-  phone: string,
-  message: string
-): Promise<boolean> {
+async function sendWAText(waToken: string, phone: string, message: string): Promise<boolean> {
   const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
   try {
     const res = await fetch(WHATSAPI_URL, {
@@ -101,119 +78,79 @@ async function sendWAText(
   }
 }
 
-function buildAdminText(p: BillingEventPayload): string {
+function buildAdminText(p: BillingEventPayload, payUrl?: string): string {
   const isFail = p.evento === "cobro_fallido";
+  const head = isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*";
   const lines = [
-    isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*",
+    head,
     "",
-    `*Empresa:* ${p.empresa || "—"}`,
-    `*Cliente:* ${p.clienteNombre || "—"}`,
-    `*Email:* ${p.clienteEmail || "—"}`,
-    `*Teléfono:* ${p.clienteTelefono || "—"}`,
-    `*Monto:* ${p.monto || "—"}`,
+    `🏢 *Empresa:* ${p.empresa || "—"}`,
+    `👤 *Cliente:* ${p.clienteNombre || "—"}`,
+    `✉️ ${p.clienteEmail || "—"}`,
+    `📱 ${p.clienteTelefono || "—"}`,
+    "",
+    `💰 *Monto:* ${p.monto || "—"}`,
   ];
-  if (p.numUsuarios) lines.push(`*Usuarios:* ${p.numUsuarios}`);
-  if (p.fecha) lines.push(`*Fecha:* ${p.fecha}`);
-  if (p.intento) lines.push(`*Intento:* #${p.intento}`);
-  if (p.invoiceUrl) lines.push(`*Factura:* ${p.invoiceUrl}`);
-  if (p.detalle) lines.push(`*Detalle:* ${p.detalle}`);
-  return lines.join("\n");
-}
-
-function buildClientText(p: BillingEventPayload): string {
-  const isFail = p.evento === "cobro_fallido";
-  const lines: string[] = [];
-  if (isFail) {
-    lines.push("⚠️ *Pago pendiente — Rutapp*", "");
-    lines.push(`Hola ${p.clienteNombre || ""}${p.empresa ? ` de *${p.empresa}*` : ""},`, "");
-    lines.push(`No pudimos procesar tu pago${p.monto ? ` de *${p.monto}*` : ""}.${p.intento ? ` (Intento #${p.intento})` : ""}`);
-    if (p.detalle) lines.push(`Motivo: ${p.detalle}`);
-    if (p.enlacePago || p.invoiceUrl) lines.push(`\n💳 Reintentar: ${p.enlacePago || p.invoiceUrl}`);
-    lines.push("\n⚠️ Si no se regulariza, tu acceso será suspendido.");
-  } else {
-    lines.push("✅ *Pago confirmado — Rutapp*", "");
-    lines.push(`Hola ${p.clienteNombre || ""}${p.empresa ? ` de *${p.empresa}*` : ""},`, "");
-    lines.push("¡Gracias por tu pago! 💪");
-    if (p.monto) lines.push(`\n💰 *Monto:* ${p.monto}`);
-    if (p.numUsuarios) lines.push(`👥 *Usuarios:* ${p.numUsuarios}`);
-    if (p.fechaVigencia) lines.push(`📅 *Próximo cobro:* ${p.fechaVigencia}`);
-    if (p.invoiceUrl) lines.push(`\n🧾 Factura: ${p.invoiceUrl}`);
-    lines.push("\nGracias por ser parte de *Rutapp*. 🚀");
+  if (p.folio) lines.push(`🧾 *Folio:* ${p.folio}`);
+  if (p.fecha) lines.push(`📅 *Fecha:* ${p.fecha}`);
+  if (p.intento) lines.push(`🔁 *Intento:* #${p.intento}`);
+  if (isFail && p.detalle) lines.push(`ℹ️ ${p.detalle}`);
+  if (payUrl) {
+    lines.push("");
+    lines.push(isFail ? `💳 *Reintentar pago:* ${payUrl}` : `🧾 *Ver factura:* ${payUrl}`);
   }
   return lines.join("\n");
 }
 
 /**
- * Sends client + admin notifications (email + WhatsApp) for a billing event.
- * Idempotent per `idempotencyKey` for emails.
+ * Sends admin notifications (email to Diego + WhatsApp to admin) for a billing event.
+ * Skips $0 invoices. NO client-facing messages are sent from here.
  */
 export async function notifyBillingEvent(
   supabase: SB,
   waToken: string | undefined,
-  payload: BillingEventPayload
+  payload: BillingEventPayload,
 ) {
-  const { evento, clienteEmail, clienteTelefono, invoiceUrl, idempotencyKey } = payload;
-
-  // ── 1. Client email ──
-  if (clienteEmail) {
-    await sendTransactionalEmail(
-      clienteEmail,
-      {
-        evento,
-        nombre: payload.clienteNombre,
-        empresa: payload.empresa,
-        monto: payload.monto,
-        numUsuarios: payload.numUsuarios,
-        fechaVigencia: payload.fechaVigencia,
-        fecha: payload.fecha,
-        invoiceUrl: invoiceUrl || undefined,
-        enlacePago: payload.enlacePago || undefined,
-        intento: payload.intento,
-        detalle: payload.detalle,
-      },
-      `client-${evento}-${idempotencyKey}`
-    );
+  // ── Skip $0 invoices entirely ──
+  const cents = payload.amountCents;
+  if (typeof cents === "number" && cents <= 0) {
+    console.log("[billing-notify] Skipping $0 invoice", payload.idempotencyKey);
+    return;
+  }
+  if (cents === undefined) {
+    // fallback: parse digits out of the monto string
+    const digits = (payload.monto || "").replace(/[^\d]/g, "");
+    if (digits && Number(digits) === 0) {
+      console.log("[billing-notify] Skipping $0 invoice (string)", payload.idempotencyKey);
+      return;
+    }
   }
 
-  // ── 2. Client WhatsApp ──
-  if (waToken && clienteTelefono) {
-    const clientText = buildClientText(payload);
-    const ok = await sendWAText(waToken, clienteTelefono, clientText);
-    try {
-      await supabase.from("billing_notifications").insert({
-        customer_email: clienteEmail || "",
-        customer_phone: clienteTelefono.replace(/[\s\-\(\)]/g, ""),
-        channel: "whatsapp",
-        tipo: evento,
-        mensaje: clientText,
-        stripe_invoice_url: invoiceUrl || null,
-        monto_centavos: 0,
-        status: ok ? "sent" : "error",
-      });
-    } catch { /* silent */ }
-  }
+  const payUrl = buildPayUrl(payload.folio, payload.enlacePago || payload.invoiceUrl);
 
-  // ── 3. Admin WhatsApp ──
+  // ── Admin WhatsApp ──
   if (waToken) {
-    const adminText = buildAdminText(payload);
+    const adminText = buildAdminText(payload, payUrl);
     const ok = await sendWAText(waToken, ADMIN_WA_PHONE, adminText);
     try {
       await supabase.from("billing_notifications").insert({
         customer_email: ADMIN_EMAIL_TO,
         customer_phone: ADMIN_WA_PHONE,
         channel: "whatsapp",
-        tipo: `admin_${evento}`,
+        tipo: `admin_${payload.evento}`,
         mensaje: adminText,
-        stripe_invoice_url: invoiceUrl || null,
-        monto_centavos: 0,
+        stripe_invoice_url: payload.invoiceUrl || null,
+        monto_centavos: cents || 0,
         status: ok ? "sent" : "error",
       });
     } catch { /* silent */ }
   }
 
-  // ── 4. Admin emails (to + each "BCC" as individual sends) ──
-  const adminRecipients = [ADMIN_EMAIL_TO, ...ADMIN_EMAIL_BCC];
-  for (const to of adminRecipients) {
-    await sendAdminAlertEmail(to, payload, `admin-${evento}-${idempotencyKey}-${to}`);
-  }
+  // ── Admin email (only Diego) ──
+  await sendAdminAlertEmail(
+    ADMIN_EMAIL_TO,
+    payload,
+    payUrl,
+    `admin-${payload.evento}-${payload.idempotencyKey}-${ADMIN_EMAIL_TO}`,
+  );
 }
