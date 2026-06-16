@@ -128,6 +128,7 @@ const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage
 const CompletarRegistroPage = lazy(() => import("@/pages/CompletarRegistroPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
+const FacturaRedirectPage = lazy(() => import("@/pages/FacturaRedirectPage"));
 const EstadoCuentaPublicoPage = lazy(() => import("@/pages/EstadoCuentaPublicoPage"));
 const UnsubscribePage = lazy(() => import("@/pages/UnsubscribePage"));
 const PartnersLandingPage = lazy(() => import("@/pages/PartnersLandingPage"));
@@ -355,6 +356,7 @@ function AppRoutes() {
           <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
+          <Route path="/factura/:folio" element={<FacturaRedirectPage />} />
           <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />
           <Route path="/cotizacion/:token" element={<CotizacionPublicaPage />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
