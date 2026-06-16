@@ -545,6 +545,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
+            {descarga.status === 'rechazada' && (
+              <Button
+                onClick={() => reabrirMutation.mutate()}
+                disabled={reabrirMutation.isPending}
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1 border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Reabrir
+              </Button>
+            )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
           </div>
         </div>
@@ -1022,23 +1033,6 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           <div className="px-5 py-3 border-t border-border">
             <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del administrador</div>
             <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
-          </div>
-        )}
-
-        {/* ═══ REABRIR PARA EDICIÓN (solo rechazadas) ═══ */}
-        {descarga.status === 'rechazada' && (
-          <div className="p-5 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">
-              Reabre esta liquidación para corregir errores. Volverá al estado "pendiente" y podrá ser revisada nuevamente.
-            </p>
-            <Button
-              onClick={() => reabrirMutation.mutate()}
-              disabled={reabrirMutation.isPending}
-              variant="outline"
-              className="w-full"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" /> Reabrir para edición
-            </Button>
           </div>
         )}
       </div>
