@@ -549,9 +549,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <Button
                 onClick={() => reabrirMutation.mutate()}
                 disabled={reabrirMutation.isPending}
-                variant="outline"
                 size="sm"
-                className="text-xs gap-1 border-amber-500 text-amber-600 hover:bg-amber-50"
+                className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600 border-none"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> Reabrir
               </Button>
