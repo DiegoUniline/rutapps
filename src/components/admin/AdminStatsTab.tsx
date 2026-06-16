@@ -132,6 +132,26 @@ export default function AdminStatsTab() {
   const cobradas = facturas.filter(isCollected);
   const totalPendientesLocal = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
 
+  // ── Stripe invoices (todas, agrupadas por status) ──
+  const { data: stripeInvoices, isLoading: loadingStripeInv } = useQuery<any[]>({
+    queryKey: ['admin-stats-stripe-invoices'],
+    staleTime: STATS_STALE,
+    queryFn: async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return [];
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=list_all_invoices&status=all`,
+        { headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+      );
+      const data = await res.json();
+      return data?.invoices || [];
+    },
+  });
+  const stripeInvs = stripeInvoices || [];
+
+
+
   // ── A la fecha ──
   const aLaFecha = useMemo(() => {
     const endTs = to.getTime();
