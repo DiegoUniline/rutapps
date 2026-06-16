@@ -78,6 +78,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
   const [incluirStock, setIncluirStock] = useState(false);
+  const [editingEfectivo, setEditingEfectivo] = useState(false);
+  const [efectivoDraft, setEfectivoDraft] = useState('');
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
