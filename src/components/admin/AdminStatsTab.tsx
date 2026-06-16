@@ -30,7 +30,7 @@ interface DashboardStats {
 
 interface EmpresaRow {
   id: string; nombre: string; created_at: string;
-  subscriptions: { status: string; plan_id: string | null; created_at: string; updated_at?: string }[];
+  subscriptions: { status: string; plan_id: string | null; created_at: string; updated_at?: string; current_period_end?: string | null; fecha_vencimiento?: string | null }[];
 }
 
 interface FacturaRow {
