@@ -78,6 +78,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
   const [incluirStock, setIncluirStock] = useState(false);
+  const [editingEfectivo, setEditingEfectivo] = useState(false);
+  const [efectivoDraft, setEfectivoDraft] = useState('');
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -401,6 +403,27 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editEfectivoMutation = useMutation({
+    mutationFn: async (nuevoMonto: number) => {
+      const diff = nuevoMonto - efectivoSistema;
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({
+          efectivo_entregado: nuevoMonto,
+          diferencia_efectivo: diff,
+        } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Monto reportado actualizado');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      setEditingEfectivo(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
@@ -609,8 +632,47 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
               <div className="bg-card rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
-                <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
+                  {!editingEfectivo && (
+                    <button
+                      type="button"
+                      onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
+                      className="text-[10px] text-primary hover:underline font-semibold"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+                {editingEfectivo ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={efectivoDraft}
+                      onChange={(e) => setEfectivoDraft(e.target.value)}
+                      className="h-9 text-base font-bold"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const n = Number(efectivoDraft);
+                        if (isNaN(n) || n < 0) { toast.error('Monto inválido'); return; }
+                        editEfectivoMutation.mutate(n);
+                      }}
+                      disabled={editEfectivoMutation.isPending}
+                      className="h-9 text-xs"
+                    >
+                      Guardar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
+                )}
               </div>
               {descarga.notas && (
                 <div className="bg-card rounded-md p-3">
