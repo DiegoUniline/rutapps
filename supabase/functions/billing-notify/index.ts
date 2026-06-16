@@ -416,6 +416,7 @@ Deno.serve(async (req) => {
           invoiceUrl: "https://invoice.stripe.com/preview",
           fecha: todayMx,
           fechaVigencia: venc,
+          metodoPago: "Visa terminación 4582",
           idempotencyKey: `preview-success-${Date.now()}`,
         };
         const baseFailed = {
