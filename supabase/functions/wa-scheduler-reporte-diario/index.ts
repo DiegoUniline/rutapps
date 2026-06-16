@@ -314,21 +314,26 @@ async function run(opts: { force?: boolean; phone?: string } = {}) {
       await sleep(2000);
     }
 
-    const caption = `${report.summary}\n\n_Recibes este reporte automáticamente. Cambia formato/horario en RutApp → Bot WhatsApp, o escribe "desactivar reporte"._`;
+    // 1) Enviar resumen de texto con los datos clave
+    const footer = `\n\n_Recibes este reporte automáticamente. Cambia formato/horario en RutApp → Bot WhatsApp, o escribe "desactivar reporte"._`;
+    await waSendText(sub.phone_e164, report.summary + footer);
+    await sleep(1500);
+
+    // 2) Enviar archivos con caption corto
     const sendPdf = formato === "pdf" || formato === "ambos";
     const sendXlsx = formato === "excel" || formato === "ambos";
 
     let anyOk = false;
     if (sendPdf) {
-      const ok = await waSendFile(sub.phone_e164, report.pdfUrl, `reporte-${frecuencia}-${endLocal}.pdf`, caption);
+      const ok = await waSendFile(sub.phone_e164, report.pdfUrl, `reporte-${frecuencia}-${endLocal}.pdf`, `📄 ${label} — detalle completo`);
       if (ok) anyOk = true;
       await sleep(2000);
     }
     if (sendXlsx) {
-      const captionXlsx = sendPdf ? `📎 Versión Excel del reporte` : caption;
-      const ok = await waSendFile(sub.phone_e164, report.xlsxUrl, `reporte-${frecuencia}-${endLocal}.xlsx`, captionXlsx);
+      const ok = await waSendFile(sub.phone_e164, report.xlsxUrl, `reporte-${frecuencia}-${endLocal}.xlsx`, `📊 ${label} — versión Excel`);
       if (ok) anyOk = true;
     }
+
 
     if (anyOk) {
       sent++;
