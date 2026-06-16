@@ -5,7 +5,6 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Img,
   Preview,
@@ -27,114 +26,158 @@ interface Props {
   invoiceUrl?: string
   intento?: number
   detalle?: string
+  metodoPago?: string
 }
 
 const LOGO = 'https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png'
+const PRIMARY = '#1554F0'
+const SUCCESS = '#16a34a'
+const DANGER = '#dc2626'
+const TEXT_DARK = '#0f172a'
+const TEXT_MUTED = '#64748b'
+const BORDER = '#e2e8f0'
+
 const isFail = (e: string) => e === 'cobro_fallido'
 
 const Email = ({
   evento,
-  nombre,
-  empresa,
   monto,
-  numUsuarios,
-  fechaVigencia,
   fecha,
   folio,
   payUrl,
-  intento,
+  invoiceUrl,
   detalle,
+  metodoPago,
 }: Props) => {
   const fail = isFail(evento)
-  const accent = fail ? '#dc2626' : '#16a34a'
-  const accentSoft = fail ? '#fef2f2' : '#f0fdf4'
-  const titulo = fail ? '⚠️ No pudimos procesar tu pago' : '✅ ¡Gracias por tu pago!'
+  const accent = fail ? DANGER : SUCCESS
+  const accentSoft = fail ? '#fee2e2' : '#dcfce7'
+  const titulo = fail ? 'No pudimos procesar tu pago' : 'Pago recibido correctamente'
   const subtitulo = fail
-    ? 'Tu cargo fue rechazado por el banco. Reintenta para mantener tu acceso activo.'
-    : 'Tu suscripción de Rutapp está al día. ¡Gracias por confiar en nosotros! 🚀'
+    ? 'Intentamos renovar tu suscripción, pero tu banco rechazó el cargo. Tu información y acceso permanecen seguros.'
+    : 'Tu suscripción fue renovada exitosamente. Gracias por seguir utilizando RutApp.'
+  const pillText = fail ? 'Pago pendiente' : 'Pago completado'
+  const pillNote = fail
+    ? 'Reintentaremos automáticamente en las próximas 24 horas.'
+    : 'Tu cuenta se encuentra activa.'
+  const primaryLabel = fail ? 'Actualizar método de pago' : 'Ver factura'
+  const secondaryLabel = fail ? 'Reintentar ahora' : 'Ir al sistema'
+  const primaryUrl = fail ? (payUrl || 'https://rutapp.mx/facturacion') : (invoiceUrl || payUrl || 'https://rutapp.mx/facturacion')
+  const secondaryUrl = fail ? (payUrl || 'https://rutapp.mx/facturacion') : 'https://rutapp.mx'
 
   return (
     <Html lang="es">
       <Head />
-      <Preview>{fail ? `Pago pendiente${monto ? ` de ${monto}` : ''} — Rutapp` : `Pago confirmado${monto ? ` de ${monto}` : ''} — Rutapp`}</Preview>
+      <Preview>{fail ? `Pago pendiente${monto ? ` de ${monto}` : ''} — RutApp` : `Pago confirmado${monto ? ` de ${monto}` : ''} — RutApp`}</Preview>
       <Body style={main}>
-        <Container style={container}>
-          {/* Header */}
-          <Section style={{ textAlign: 'center', padding: '12px 0 20px' }}>
-            <Img src={LOGO} width="56" height="56" alt="Rutapp" style={{ borderRadius: '14px', margin: '0 auto' }} />
+        <Container style={card}>
+          {/* Logo */}
+          <Section style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+            <Img src={LOGO} width="56" height="56" alt="RutApp" style={{ margin: '0 auto', borderRadius: '12px' }} />
             <Text style={brand}>RUTAPP</Text>
           </Section>
 
-          {/* Banner */}
-          <Section style={{ ...banner, background: accentSoft, borderLeft: `4px solid ${accent}` }}>
-            <Heading style={{ ...h1, color: accent }}>{titulo}</Heading>
-            <Text style={bannerSub}>{subtitulo}</Text>
+          {/* Big status icon */}
+          <Section style={{ textAlign: 'center', padding: '8px 0 0' }}>
+            <table style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: '88px',
+                      height: '88px',
+                      background: accentSoft,
+                      borderRadius: '50%',
+                      textAlign: 'center',
+                      verticalAlign: 'middle',
+                      fontSize: '44px',
+                      lineHeight: '88px',
+                      color: accent,
+                    }}
+                  >
+                    {fail ? '✕' : '✓'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </Section>
 
-          {/* Greeting */}
-          <Section style={{ padding: '20px 28px 4px' }}>
-            <Text style={text}>
-              Hola <b>{nombre || 'cliente'}</b>{empresa ? <> de <b>{empresa}</b></> : null},
-            </Text>
-            <Text style={text}>
-              {fail ? (
-                <>Intentamos cobrar tu suscripción de <b>Rutapp</b>{monto ? <> por <b>{monto}</b></> : null}{intento ? ` (Intento #${intento})` : ''} y el cargo no fue aprobado por tu banco.</>
-              ) : (
-                <>Recibimos tu pago correctamente. Tu suscripción está activa y todos tus usuarios tienen acceso completo.</>
-              )}
-            </Text>
+          {/* Title + subtitle */}
+          <Section style={{ textAlign: 'center', padding: '20px 32px 0' }}>
+            <Heading style={h1}>{titulo}</Heading>
+            <Text style={subtitle}>{subtitulo}</Text>
           </Section>
 
-          {/* Amount */}
-          <Section style={amountWrap}>
-            <Text style={amountLabel}>{fail ? 'Monto pendiente' : 'Monto pagado'}</Text>
-            <Text style={{ ...amountValue, color: accent }}>{monto || '—'}</Text>
-            {folio ? <Text style={folioText}>Folio: <strong>{folio}</strong></Text> : null}
+          {/* Data card */}
+          <Section style={dataCard}>
+            <DataRow color={accent} icon="📅" label={fail ? 'Fecha del intento' : 'Fecha'} value={fecha || '—'} />
+            {metodoPago ? <DataRow color={accent} icon="💳" label="Método de pago" value={metodoPago} /> : null}
+            <DataRow color={accent} icon="$" label={fail ? 'Monto' : 'Importe'} value={monto || '—'} bold />
+            {folio ? <DataRow color={accent} icon="📄" label="Folio" value={folio} /> : null}
+            {fail && detalle ? <DataRow color={accent} icon="ℹ️" label="Motivo" value={detalle} /> : null}
           </Section>
 
-          {/* CTA */}
-          {payUrl ? (
-            <Section style={{ textAlign: 'center', padding: '4px 0 24px' }}>
-              <Button href={payUrl} style={{ ...btn, background: accent }}>
-                {fail ? '💳 Reintentar pago' : '🧾 Ver factura'}
-              </Button>
-              <Text style={btnHint}>{payUrl.replace(/^https?:\/\//, '')}</Text>
-            </Section>
-          ) : null}
-
-          {/* Details */}
-          <Section style={card}>
-            {numUsuarios ? <Row label="👥 Usuarios" value={String(numUsuarios)} /> : null}
-            {fecha ? <Row label="📅 Fecha" value={fecha} /> : null}
-            {fechaVigencia ? <Row label="🔁 Próximo cobro" value={fechaVigencia} /> : null}
-            {fail && detalle ? <Row label="ℹ️ Motivo" value={detalle} /> : null}
+          {/* Status pill */}
+          <Section style={{ textAlign: 'center', padding: '4px 0 0' }}>
+            <table style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr>
+                  <td style={{ ...pill, background: accentSoft, color: accent }}>
+                    <span style={{ color: accent }}>●</span>&nbsp;&nbsp;{pillText}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <Text style={pillSub}>{pillNote}</Text>
           </Section>
 
-          <Section style={{ padding: '0 28px 12px' }}>
-            <Text style={text}>
-              {fail
-                ? 'Para evitar la suspensión de tu cuenta, actualiza tu método de pago o reintenta el cargo desde el botón de arriba. Si necesitas ayuda, responde a este correo.'
-                : '¡Seguimos trabajando para que tu operación nunca se detenga! 💪'}
-            </Text>
+          {/* CTAs */}
+          <Section style={{ textAlign: 'center', padding: '4px 32px 24px' }}>
+            <Button href={primaryUrl} style={btnPrimary}>{primaryLabel}</Button>
+            <div style={{ height: '12px' }} />
+            <Button href={secondaryUrl} style={btnSecondary}>{secondaryLabel}</Button>
           </Section>
 
-          <Hr style={hr} />
-          <Text style={footer}>
-            Rutapp.mx · Notificación automática de facturación<br />
-            Si tienes dudas, responde a este correo y te ayudamos.
-          </Text>
+          {/* Footer */}
+          <Section style={footerWrap}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '50%', verticalAlign: 'top' }}>
+                    <Text style={footerTitle}>🎧 ¿Necesitas ayuda?</Text>
+                    <Text style={footerSub}>Estamos para ayudarte</Text>
+                  </td>
+                  <td style={{ width: '50%', verticalAlign: 'top', textAlign: 'right' as const }}>
+                    <Text style={footerLine}>✉️ soporte@rutapp.mx</Text>
+                    <Text style={footerLine}>📱 317 128 8029</Text>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
         </Container>
       </Body>
     </Html>
   )
 }
 
-const Row = ({ label, value }: { label: string; value: string }) => (
+const DataRow = ({ color, icon, label, value, bold }: { color: string; icon: string; label: string; value: string; bold?: boolean }) => (
   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
     <tbody>
       <tr>
-        <td style={cellLabel}>{label}</td>
-        <td style={cellValue}>{value}</td>
+        <td style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'middle' }}>
+          <table style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '28px', color, fontSize: '16px', verticalAlign: 'middle' }}>{icon}</td>
+                <td style={{ fontSize: '14px', color: TEXT_MUTED, verticalAlign: 'middle' }}>{label}</td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+        <td style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' as const, fontSize: bold ? '16px' : '14px', color: TEXT_DARK, fontWeight: bold ? 700 : 500 }}>
+          {value}
+        </td>
       </tr>
     </tbody>
   </table>
@@ -144,37 +187,33 @@ export const template = {
   component: Email,
   subject: (d: Props) =>
     isFail(d.evento)
-      ? `⚠️ Pago pendiente${d.monto ? ` de ${d.monto}` : ''} — Rutapp`
-      : `✅ Pago confirmado${d.monto ? ` de ${d.monto}` : ''} — Rutapp`,
+      ? `No pudimos procesar tu pago${d.monto ? ` de ${d.monto}` : ''} — RutApp`
+      : `Pago recibido${d.monto ? ` de ${d.monto}` : ''} — RutApp`,
   displayName: 'Notificación de cobro al cliente',
   previewData: {
-    evento: 'cobro_exitoso',
+    evento: 'cobro_fallido',
     nombre: 'Juan',
     empresa: 'Empresa Demo',
     monto: '$2,700 MXN',
-    numUsuarios: 3,
-    folio: 'RUT-0001',
-    payUrl: 'https://rutapp.mx/factura/RUT-0001',
-    fecha: '16/06/2026',
-    fechaVigencia: '16/07/2026',
+    folio: 'RUT-002',
+    fecha: '15/06/2026',
+    metodoPago: 'Visa terminación 4582',
+    detalle: 'Tu banco rechazó el cargo',
+    payUrl: 'https://rutapp.mx/factura/RUT-002',
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#f4f6f9', fontFamily: '-apple-system, "Segoe UI", Arial, sans-serif', padding: '24px 0' }
-const container = { padding: '0', maxWidth: '600px', margin: '0 auto', background: '#ffffff', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }
-const brand = { fontSize: '11px', letterSpacing: '2px', color: '#6b7280', fontWeight: 700, marginTop: '10px' }
-const banner = { padding: '20px 28px', margin: '0 28px', borderRadius: '8px' }
-const bannerSub = { fontSize: '14px', color: '#374151', margin: '6px 0 0', lineHeight: 1.5 }
-const h1 = { fontSize: '22px', margin: 0, fontWeight: 700 }
-const text = { fontSize: '14px', color: '#374151', margin: '0 0 12px', lineHeight: 1.6 }
-const amountWrap = { textAlign: 'center' as const, padding: '20px 24px 12px' }
-const amountLabel = { fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '1px', margin: 0 }
-const amountValue = { fontSize: '36px', fontWeight: 800, margin: '6px 0 4px', lineHeight: 1.1 }
-const folioText = { fontSize: '13px', color: '#6b7280', margin: 0 }
-const btn = { color: '#ffffff', padding: '14px 32px', borderRadius: '10px', fontSize: '15px', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }
-const btnHint = { fontSize: '12px', color: '#6b7280', margin: '10px 0 0' }
-const card = { border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 16px', background: '#fafafa', margin: '0 28px 20px' }
-const cellLabel = { fontSize: '13px', color: '#6b7280', padding: '8px 0', width: '40%' }
-const cellValue = { fontSize: '14px', color: '#111827', padding: '8px 0', textAlign: 'right' as const, wordBreak: 'break-word' as const, fontWeight: 500 }
-const hr = { borderColor: '#e5e7eb', margin: '4px 28px' }
-const footer = { fontSize: '11px', color: '#9ca3af', margin: '0', padding: '14px 28px 24px', textAlign: 'center' as const, lineHeight: 1.6 }
+const main = { backgroundColor: '#f1f5f9', fontFamily: '-apple-system, "Segoe UI", Roboto, Arial, sans-serif', padding: '32px 12px' }
+const card = { maxWidth: '560px', margin: '0 auto', background: '#ffffff', borderRadius: '20px', padding: '24px 0 0', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.06)' }
+const brand = { fontSize: '12px', letterSpacing: '4px', color: TEXT_MUTED, fontWeight: 700, marginTop: '8px', textAlign: 'center' as const }
+const h1 = { fontSize: '22px', margin: 0, fontWeight: 800, color: TEXT_DARK, lineHeight: 1.3 }
+const subtitle = { fontSize: '14px', color: TEXT_MUTED, margin: '10px 0 0', lineHeight: 1.6 }
+const dataCard = { margin: '20px 32px', border: `1px solid ${BORDER}`, borderRadius: '14px', overflow: 'hidden' as const }
+const pill = { padding: '6px 14px', borderRadius: '999px', fontSize: '13px', fontWeight: 600, display: 'inline-block' }
+const pillSub = { fontSize: '13px', color: TEXT_MUTED, margin: '10px 0 16px', textAlign: 'center' as const }
+const btnPrimary = { background: PRIMARY, color: '#ffffff', padding: '14px 24px', borderRadius: '12px', fontSize: '15px', fontWeight: 700, textDecoration: 'none', display: 'block', textAlign: 'center' as const, width: '100%', boxSizing: 'border-box' as const }
+const btnSecondary = { background: '#ffffff', color: PRIMARY, padding: '13px 24px', borderRadius: '12px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', display: 'block', textAlign: 'center' as const, width: '100%', boxSizing: 'border-box' as const, border: `1.5px solid ${PRIMARY}` }
+const footerWrap = { borderTop: `1px solid ${BORDER}`, padding: '20px 32px', margin: 0 }
+const footerTitle = { fontSize: '13px', color: TEXT_DARK, margin: 0, fontWeight: 700 }
+const footerSub = { fontSize: '12px', color: TEXT_MUTED, margin: '2px 0 0' }
+const footerLine = { fontSize: '13px', color: TEXT_DARK, margin: '0 0 4px' }
