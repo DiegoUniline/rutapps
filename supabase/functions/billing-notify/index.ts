@@ -207,6 +207,93 @@ async function sendWA(
   return status === "sent";
 }
 
+/* ─── Admin copy: WhatsApp + email to internal team ─── */
+interface AdminCopyPayload {
+  evento: "cobro_exitoso" | "cobro_fallido";
+  empresa?: string;
+  clienteNombre?: string;
+  clienteEmail?: string;
+  clienteTelefono?: string;
+  monto?: string;
+  numUsuarios?: number;
+  invoiceUrl?: string | null;
+  fecha?: string;
+  detalle?: string;
+}
+
+async function notifyAdmins(
+  supabase: ReturnType<typeof createClient>,
+  waToken: string | undefined,
+  payload: AdminCopyPayload
+) {
+  const isFail = payload.evento === "cobro_fallido";
+  const title = isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*";
+  const lines = [
+    title,
+    "",
+    `*Empresa:* ${payload.empresa || "—"}`,
+    `*Cliente:* ${payload.clienteNombre || "—"}`,
+    `*Email:* ${payload.clienteEmail || "—"}`,
+    `*Teléfono:* ${payload.clienteTelefono || "—"}`,
+    `*Monto:* ${payload.monto || "—"}`,
+  ];
+  if (payload.numUsuarios) lines.push(`*Usuarios:* ${payload.numUsuarios}`);
+  if (payload.fecha) lines.push(`*Fecha:* ${payload.fecha}`);
+  if (payload.invoiceUrl) lines.push(`*Factura:* ${payload.invoiceUrl}`);
+  if (payload.detalle) lines.push(`*Detalle:* ${payload.detalle}`);
+  const text = lines.join("\n");
+
+  // ── WhatsApp copy to admin ──
+  if (waToken) {
+    try {
+      const res = await fetch(WHATSAPI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-token": waToken },
+        body: JSON.stringify({ action: "send-text", phone: ADMIN_WA_PHONE, message: text }),
+      });
+      await supabase.from("billing_notifications").insert({
+        customer_email: ADMIN_EMAIL_TO,
+        customer_phone: ADMIN_WA_PHONE,
+        channel: "whatsapp",
+        tipo: `admin_${payload.evento}`,
+        mensaje: text,
+        stripe_invoice_url: payload.invoiceUrl || null,
+        monto_centavos: 0,
+        status: res.ok ? "sent" : "error",
+      });
+    } catch (e) {
+      console.error("Admin WA error:", e);
+    }
+  }
+
+  // ── Email copy to admin + BCC ──
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (supabaseUrl && serviceKey) {
+      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+        },
+        body: JSON.stringify({
+          templateName: "admin-billing-alert",
+          recipientEmail: ADMIN_EMAIL_TO,
+          bcc: ADMIN_EMAIL_BCC,
+          idempotencyKey: `admin-${payload.evento}-${payload.clienteEmail || "x"}-${payload.fecha || Date.now()}`,
+          templateData: payload,
+        }),
+      });
+    }
+  } catch (e) {
+    console.error("Admin email error:", e);
+  }
+}
+
+
+
 /* ─── Check if already notified today (Mexico TZ) ─── */
 async function alreadyNotifiedToday(
   supabase: ReturnType<typeof createClient>,
