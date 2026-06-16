@@ -430,7 +430,8 @@ Deno.serve(async (req) => {
           enlacePago: "https://invoice.stripe.com/preview",
           fecha: todayMx,
           intento: 1,
-          detalle: "Your card was declined.",
+          detalle: "card_declined",
+          metodoPago: "Visa terminación 4582",
           idempotencyKey: `preview-failed-${Date.now()}`,
         };
 
