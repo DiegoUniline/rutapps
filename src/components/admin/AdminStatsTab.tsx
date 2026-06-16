@@ -30,7 +30,7 @@ interface DashboardStats {
 
 interface EmpresaRow {
   id: string; nombre: string; created_at: string;
-  subscriptions: { status: string; plan_id: string | null; created_at: string; updated_at?: string }[];
+  subscriptions: { status: string; plan_id: string | null; created_at: string; updated_at?: string; current_period_end?: string | null; fecha_vencimiento?: string | null }[];
 }
 
 interface FacturaRow {
@@ -52,7 +52,12 @@ const STATUS_LABELS: Record<string, string> = {
   active: 'Activa', trial: 'Trial', past_due: 'Vencida',
   suspended: 'Suspendida', gracia: 'Gracia', cancelada: 'Cancelada', sin_sub: 'Sin sub',
 };
-const BAJA_STATUSES = ['cancelada', 'canceled', 'suspended', 'past_due'];
+const BAJA_STATUSES = ['cancelada', 'canceled', 'cancelled', 'suspended', 'expired'];
+// Fecha efectiva en la que la suscripción se dio de baja.
+// Usamos current_period_end (cuando terminó el acceso) o fecha_vencimiento;
+// NO usamos updated_at porque cualquier toque del cron lo mueve y rompe el cálculo.
+const bajaDate = (s: { current_period_end?: string | null; fecha_vencimiento?: string | null; updated_at?: string | null; created_at: string }) =>
+  s.current_period_end || s.fecha_vencimiento || s.updated_at || s.created_at;
 const STATS_STALE = 2 * 60 * 1000;
 
 type Preset = 'hoy' | '7d' | '30d' | 'mes' | 'ytd' | 'todo' | 'custom';
@@ -109,7 +114,7 @@ export default function AdminStatsTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from('empresas')
-        .select('id, nombre, created_at, subscriptions(status, plan_id, created_at, updated_at)')
+        .select('id, nombre, created_at, subscriptions(status, plan_id, created_at, updated_at, current_period_end, fecha_vencimiento)')
         .order('created_at', { ascending: true });
       return (data as any) || [];
     },
@@ -160,7 +165,7 @@ export default function AdminStatsTab() {
       e.subscriptions?.some(s => s.status === 'active' && new Date(s.created_at).getTime() <= endTs)
     ).length;
     const bajas = empresas.filter(e =>
-      e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && new Date(s.updated_at || s.created_at).getTime() <= endTs)
+      e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && new Date(bajaDate(s)).getTime() <= endTs)
     ).length;
     const ingresos = cobradas
       .filter(f => f.fecha_pago && new Date(f.fecha_pago).getTime() <= endTs)
@@ -178,7 +183,7 @@ export default function AdminStatsTab() {
     };
     return {
       altas: empresas.filter(e => inWin(e.created_at)).length,
-      bajas: empresas.filter(e => e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && inWin(s.updated_at || s.created_at))).length,
+      bajas: empresas.filter(e => e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && inWin(bajaDate(s)))).length,
       ingresos: cobradas.filter(f => inWin(f.fecha_pago)).reduce((s, f) => s + Number(f.total || 0), 0),
     };
   }, [empresas, cobradas]);
@@ -228,7 +233,7 @@ export default function AdminStatsTab() {
       }).length;
       const bajas = empresas.filter(e =>
         e.subscriptions?.some(s => {
-          const t = new Date(s.updated_at || s.created_at).getTime();
+          const t = new Date(bajaDate(s)).getTime();
           return BAJA_STATUSES.includes(s.status) && t >= ms && t <= me;
         })
       ).length;
@@ -331,7 +336,7 @@ export default function AdminStatsTab() {
       .map(e => ({
         ...e,
         status: e.subscriptions?.find(s => BAJA_STATUSES.includes(s.status))?.status || 'cancelada',
-        fechaBaja: e.subscriptions?.find(s => BAJA_STATUSES.includes(s.status))?.updated_at || e.created_at,
+        fechaBaja: (() => { const s = e.subscriptions?.find(x => BAJA_STATUSES.includes(x.status)); return s ? bajaDate(s) : e.created_at; })(),
       }))
       .sort((a, b) => new Date(b.fechaBaja).getTime() - new Date(a.fechaBaja).getTime())
       .slice(0, 15);
