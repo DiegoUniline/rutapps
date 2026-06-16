@@ -25,6 +25,7 @@ export interface BillingEventPayload {
   fechaVigencia?: string;
   intento?: number;
   detalle?: string;
+  metodoPago?: string;
   idempotencyKey: string;
 }
 
@@ -44,6 +45,57 @@ type SB = ReturnType<typeof createClient>;
 function buildPayUrl(folio?: string | null, fallback?: string | null): string | undefined {
   if (folio) return `https://rutapp.mx/factura/${encodeURIComponent(folio)}`;
   return fallback || undefined;
+}
+
+/** Translate Stripe decline codes / English messages into Spanish for the client. */
+export function translateDeclineReason(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  const raw = String(input).trim();
+  if (!raw) return undefined;
+  const key = raw.toLowerCase().replace(/[.\s]+$/g, "");
+  const map: Record<string, string> = {
+    generic_decline: "Tu banco rechazó el cargo.",
+    card_declined: "Tu tarjeta fue rechazada por tu banco.",
+    "your card was declined": "Tu tarjeta fue rechazada por tu banco.",
+    "your card has been declined": "Tu tarjeta fue rechazada por tu banco.",
+    do_not_honor: "Tu banco no autorizó la operación.",
+    insufficient_funds: "Fondos insuficientes en la tarjeta.",
+    "your card has insufficient funds": "Fondos insuficientes en la tarjeta.",
+    expired_card: "La tarjeta está vencida.",
+    "your card has expired": "La tarjeta está vencida.",
+    incorrect_cvc: "El código de seguridad (CVC) es incorrecto.",
+    "your card's security code is incorrect": "El código de seguridad (CVC) es incorrecto.",
+    incorrect_number: "El número de tarjeta es incorrecto.",
+    invalid_number: "El número de tarjeta es inválido.",
+    invalid_expiry_month: "El mes de vencimiento es inválido.",
+    invalid_expiry_year: "El año de vencimiento es inválido.",
+    invalid_cvc: "El código de seguridad (CVC) es inválido.",
+    processing_error: "Ocurrió un error al procesar el pago. Intenta nuevamente.",
+    "an error occurred while processing your card": "Ocurrió un error al procesar tu tarjeta. Intenta nuevamente.",
+    lost_card: "La tarjeta fue reportada como extraviada.",
+    stolen_card: "La tarjeta fue reportada como robada.",
+    pickup_card: "Tu banco solicitó retener la tarjeta. Contáctalos.",
+    authentication_required: "Tu banco requiere autenticación adicional (3D Secure).",
+    "authentication required": "Tu banco requiere autenticación adicional (3D Secure).",
+    card_not_supported: "La tarjeta no es compatible con este tipo de cobro.",
+    currency_not_supported: "La moneda no es compatible con esta tarjeta.",
+    fraudulent: "Tu banco bloqueó el cargo por seguridad.",
+    transaction_not_allowed: "Tu banco no permite este tipo de transacción.",
+    try_again_later: "Tu banco pidió reintentar el cargo más tarde.",
+    withdrawal_count_limit_exceeded: "Se superó el límite de transacciones de tu tarjeta.",
+    call_issuer: "Tu banco solicita que te comuniques con ellos.",
+    new_account_information_available: "Hay nueva información de la tarjeta. Actualiza el método de pago.",
+    restricted_card: "La tarjeta tiene restricciones de uso.",
+  };
+  if (map[key]) return map[key];
+  if (/declin/i.test(raw)) return "Tu tarjeta fue rechazada por tu banco.";
+  if (/insufficient/i.test(raw)) return "Fondos insuficientes en la tarjeta.";
+  if (/expired/i.test(raw)) return "La tarjeta está vencida.";
+  if (/cvc|security code/i.test(raw)) return "El código de seguridad (CVC) es incorrecto.";
+  if (/processing/i.test(raw)) return "Ocurrió un error al procesar el pago. Intenta nuevamente.";
+  if (/authentication/i.test(raw)) return "Tu banco requiere autenticación adicional (3D Secure).";
+  if (/[áéíóúñ¿¡]/i.test(raw) || /\b(tarjeta|banco|pago|fondos)\b/i.test(raw)) return raw;
+  return "Tu banco rechazó el cargo. Verifica tu método de pago e intenta nuevamente.";
 }
 
 async function postTransactional(
@@ -158,6 +210,10 @@ export async function notifyBillingEvent(
   const payUrl = buildPayUrl(payload.folio, payload.enlacePago || payload.invoiceUrl);
   const { evento, idempotencyKey, invoiceUrl } = payload;
 
+  // Translate any Stripe decline reason / English motive into Spanish before sending
+  const detalleEs = translateDeclineReason(payload.detalle);
+  payload = { ...payload, detalle: detalleEs };
+
   const clientEmail = options.overrideClientEmail || payload.clienteEmail;
   const clientPhone = options.overrideClientPhone || payload.clienteTelefono;
 
@@ -179,6 +235,7 @@ export async function notifyBillingEvent(
         invoiceUrl: invoiceUrl || undefined,
         intento: payload.intento,
         detalle: payload.detalle,
+        metodoPago: payload.metodoPago,
       },
       `client-${evento}-${idempotencyKey}-${clientEmail}`,
     );
