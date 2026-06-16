@@ -18,6 +18,11 @@ const RUTAPP_PRODUCT_IDS = new Set([
 const GRACE_DAYS = 3;
 const FACTURACION_URL = "https://rutapp.mx/facturacion";
 
+/* ─── Admin copy targets ─── */
+const ADMIN_WA_PHONE = "5213171035768";
+const ADMIN_EMAIL_TO = "diego.leon@uniline.mx";
+const ADMIN_EMAIL_BCC = ["ventas@uniline.mx"];
+
 /* ─── Template types ─── */
 interface TemplateConfig {
   tipo: string;
@@ -201,6 +206,99 @@ async function sendWA(
 
   return status === "sent";
 }
+
+/* ─── Admin copy: WhatsApp + email to internal team ─── */
+interface AdminCopyPayload {
+  evento: "cobro_exitoso" | "cobro_fallido";
+  empresa?: string;
+  clienteNombre?: string;
+  clienteEmail?: string;
+  clienteTelefono?: string;
+  monto?: string;
+  numUsuarios?: number;
+  invoiceUrl?: string | null;
+  fecha?: string;
+  detalle?: string;
+}
+
+async function notifyAdmins(
+  supabase: ReturnType<typeof createClient>,
+  waToken: string | undefined,
+  payload: AdminCopyPayload
+) {
+  const isFail = payload.evento === "cobro_fallido";
+  const title = isFail ? "⚠️ *Cobro FALLIDO — Rutapp*" : "✅ *Cobro exitoso — Rutapp*";
+  const lines = [
+    title,
+    "",
+    `*Empresa:* ${payload.empresa || "—"}`,
+    `*Cliente:* ${payload.clienteNombre || "—"}`,
+    `*Email:* ${payload.clienteEmail || "—"}`,
+    `*Teléfono:* ${payload.clienteTelefono || "—"}`,
+    `*Monto:* ${payload.monto || "—"}`,
+  ];
+  if (payload.numUsuarios) lines.push(`*Usuarios:* ${payload.numUsuarios}`);
+  if (payload.fecha) lines.push(`*Fecha:* ${payload.fecha}`);
+  if (payload.invoiceUrl) lines.push(`*Factura:* ${payload.invoiceUrl}`);
+  if (payload.detalle) lines.push(`*Detalle:* ${payload.detalle}`);
+  const text = lines.join("\n");
+
+  // ── WhatsApp copy to admin ──
+  if (waToken) {
+    try {
+      const res = await fetch(WHATSAPI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-token": waToken },
+        body: JSON.stringify({ action: "send-text", phone: ADMIN_WA_PHONE, message: text }),
+      });
+      await supabase.from("billing_notifications").insert({
+        customer_email: ADMIN_EMAIL_TO,
+        customer_phone: ADMIN_WA_PHONE,
+        channel: "whatsapp",
+        tipo: `admin_${payload.evento}`,
+        mensaje: text,
+        stripe_invoice_url: payload.invoiceUrl || null,
+        monto_centavos: 0,
+        status: res.ok ? "sent" : "error",
+      });
+    } catch (e) {
+      console.error("Admin WA error:", e);
+    }
+  }
+
+  // ── Email copy to admin + BCC ──
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (supabaseUrl && serviceKey) {
+      const adminRecipients = [ADMIN_EMAIL_TO, ...ADMIN_EMAIL_BCC];
+      for (const to of adminRecipients) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceKey}`,
+              apikey: serviceKey,
+            },
+            body: JSON.stringify({
+              templateName: "admin-billing-alert",
+              recipientEmail: to,
+              idempotencyKey: `admin-${payload.evento}-${payload.clienteEmail || "x"}-${to}-${payload.fecha || Date.now()}`,
+              templateData: payload,
+            }),
+          });
+        } catch (e) {
+          console.error(`Admin email to ${to} error:`, e);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Admin email error:", e);
+  }
+}
+
+
 
 /* ─── Check if already notified today (Mexico TZ) ─── */
 async function alreadyNotifiedToday(
@@ -516,6 +614,16 @@ Deno.serve(async (req) => {
               fechaVigencia: `1 de ${getMonthName(2)}`,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_paid);
           }
+          await notifyAdmins(supabase, waToken, {
+            evento: "cobro_exitoso",
+            empresa: empresaNombre,
+            clienteNombre: profile.nombre || "",
+            clienteEmail: inv.customer_email || "",
+            clienteTelefono: profile.telefono || "",
+            monto: `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`,
+            invoiceUrl: inv.hosted_invoice_url,
+            fecha: todayStr,
+          });
           results.push({ id: profile.empresa_id, action: "payment_confirmed", status: "sent" });
 
         } else if ((inv.status === "open" || inv.status === "uncollectible") && tplMap.cobro_fallido.activo) {
@@ -529,6 +637,17 @@ Deno.serve(async (req) => {
               enlacePago: inv.hosted_invoice_url || FACTURACION_URL,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_due);
           }
+          await notifyAdmins(supabase, waToken, {
+            evento: "cobro_fallido",
+            empresa: empresaNombre,
+            clienteNombre: profile.nombre || "",
+            clienteEmail: inv.customer_email || "",
+            clienteTelefono: profile.telefono || "",
+            monto: `$${(inv.amount_due / 100).toLocaleString("es-MX")} MXN`,
+            invoiceUrl: inv.hosted_invoice_url,
+            fecha: todayStr,
+            detalle: `Stripe status: ${inv.status}`,
+          });
           results.push({ id: profile.empresa_id, action: "payment_failed", status: "sent" });
         }
       }
