@@ -271,21 +271,27 @@ async function notifyAdmins(
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (supabaseUrl && serviceKey) {
-      await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          templateName: "admin-billing-alert",
-          recipientEmail: ADMIN_EMAIL_TO,
-          bcc: ADMIN_EMAIL_BCC,
-          idempotencyKey: `admin-${payload.evento}-${payload.clienteEmail || "x"}-${payload.fecha || Date.now()}`,
-          templateData: payload,
-        }),
-      });
+      const adminRecipients = [ADMIN_EMAIL_TO, ...ADMIN_EMAIL_BCC];
+      for (const to of adminRecipients) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceKey}`,
+              apikey: serviceKey,
+            },
+            body: JSON.stringify({
+              templateName: "admin-billing-alert",
+              recipientEmail: to,
+              idempotencyKey: `admin-${payload.evento}-${payload.clienteEmail || "x"}-${to}-${payload.fecha || Date.now()}`,
+              templateData: payload,
+            }),
+          });
+        } catch (e) {
+          console.error(`Admin email to ${to} error:`, e);
+        }
+      }
     }
   } catch (e) {
     console.error("Admin email error:", e);
