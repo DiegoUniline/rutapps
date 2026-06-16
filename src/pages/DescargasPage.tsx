@@ -381,6 +381,26 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
+  const reabrirMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({
+          status: 'pendiente',
+          aprobado_por: null,
+          fecha_aprobacion: null,
+        } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Liquidación reabierta para edición');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
