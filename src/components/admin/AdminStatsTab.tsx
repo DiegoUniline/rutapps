@@ -916,74 +916,123 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
         ) : invoices.length === 0 ? (
           <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas en Stripe</div>
         ) : (
-          <div className="space-y-6">
-            {statuses.map(status => {
-              const rows = grouped[status] || [];
-              const meta = STRIPE_STATUS_LABELS[status] || { label: status, color: 'text-foreground bg-muted/30 border-border' };
-              const sumDue = rows.reduce((s, r) => s + (r.amount_due || 0) / 100, 0);
-              const sumPaid = rows.reduce((s, r) => s + (r.amount_paid || 0) / 100, 0);
-              const sumRem = rows.reduce((s, r) => s + (r.amount_remaining || 0) / 100, 0);
-              return (
-                <div key={status}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold uppercase px-3 py-1 rounded-full border ${meta.color}`}>
+          <div className="space-y-4">
+            <Tabs defaultValue={statuses[0]} className="w-full">
+              <TabsList className="flex flex-wrap h-auto bg-muted/40 p-1 gap-1">
+                {statuses.map(status => {
+                  const rows = grouped[status] || [];
+                  const meta = STRIPE_STATUS_LABELS[status] || { label: status, color: '' };
+                  return (
+                    <TabsTrigger
+                      key={status}
+                      value={status}
+                      className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
                       {meta.label} · {rows.length}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Total: <strong className="text-foreground">{fmtMoney2(sumDue)}</strong>
-                    </span>
-                  </div>
-                  <div className="overflow-x-auto border border-border rounded-lg">
-                    <table className="w-full text-[11px]">
-                      <thead className="bg-muted/40 text-muted-foreground">
-                        <tr>
-                          <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
-                          <th className="text-left px-2 py-1.5 font-semibold">Empresa</th>
-                          <th className="text-left px-2 py-1.5 font-semibold">Cliente Stripe</th>
-                          <th className="text-left px-2 py-1.5 font-semibold">Suscripción</th>
-                          <th className="text-left px-2 py-1.5 font-semibold">Fecha</th>
-                          <th className="text-right px-2 py-1.5 font-semibold">Total</th>
-                          <th className="text-right px-2 py-1.5 font-semibold">Pagado</th>
-                          <th className="text-right px-2 py-1.5 font-semibold">Pendiente</th>
-                          <th className="text-center px-2 py-1.5 font-semibold">Link</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map(r => (
-                          <tr key={r.id} className="border-t border-border hover:bg-accent/30">
-                            <td className="px-2 py-1.5 font-mono text-[10px]">{r.number || r.id.slice(0, 14)}</td>
-                            <td className="px-2 py-1.5">
-                              <div className="font-medium text-foreground truncate max-w-[180px]">{r.empresa_nombre || r.customer_name || '—'}</div>
-                              {r.customer_email && <div className="text-[9px] text-muted-foreground truncate max-w-[180px]">{r.customer_email}</div>}
-                            </td>
-                            <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.customer_id || '—'}</td>
-                            <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.subscription_id || '—'}</td>
-                            <td className="px-2 py-1.5 text-muted-foreground">{r.created ? format(new Date(r.created * 1000), 'dd/MM/yy', { locale: es }) : '—'}</td>
-                            <td className="px-2 py-1.5 text-right font-semibold">{fmtMoney2((r.amount_due || 0) / 100)}</td>
-                            <td className="px-2 py-1.5 text-right text-success">{fmtMoney2((r.amount_paid || 0) / 100)}</td>
-                            <td className="px-2 py-1.5 text-right text-destructive">{fmtMoney2((r.amount_remaining || 0) / 100)}</td>
-                            <td className="px-2 py-1.5 text-center">
-                              {r.hosted_invoice_url && (
-                                <a href={r.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Ver</a>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-muted/30 font-semibold border-t-2 border-border">
-                        <tr>
-                          <td colSpan={5} className="px-2 py-2 text-right text-muted-foreground">Subtotal {meta.label.toLowerCase()}:</td>
-                          <td className="px-2 py-2 text-right">{fmtMoney2(sumDue)}</td>
-                          <td className="px-2 py-2 text-right text-success">{fmtMoney2(sumPaid)}</td>
-                          <td className="px-2 py-2 text-right text-destructive">{fmtMoney2(sumRem)}</td>
-                          <td />
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-              );
-            })}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              {statuses.map(status => {
+                const rows = grouped[status] || [];
+                const meta = STRIPE_STATUS_LABELS[status] || { label: status, color: 'text-foreground bg-muted/30 border-border' };
+                const sumDue = rows.reduce((s, r) => s + (r.amount_due || 0) / 100, 0);
+                const sumPaid = rows.reduce((s, r) => s + (r.amount_paid || 0) / 100, 0);
+                const sumRem = rows.reduce((s, r) => s + (r.amount_remaining || 0) / 100, 0);
+
+                // Agrupar por año-mes, más reciente primero
+                const byMonth: Record<string, any[]> = {};
+                rows.forEach(r => {
+                  const key = r.created ? format(new Date(r.created * 1000), 'yyyy-MM') : '0000-00';
+                  if (!byMonth[key]) byMonth[key] = [];
+                  byMonth[key].push(r);
+                });
+                const monthKeys = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
+
+                return (
+                  <TabsContent key={status} value={status} className="mt-3 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-semibold uppercase px-3 py-1 rounded-full border ${meta.color}`}>
+                        {meta.label} · {rows.length}
+                      </span>
+                      <div className="text-xs text-muted-foreground flex gap-4">
+                        <span>Total: <strong className="text-foreground">{fmtMoney2(sumDue)}</strong></span>
+                        <span>Cobrado: <strong className="text-success">{fmtMoney2(sumPaid)}</strong></span>
+                        <span>Pendiente: <strong className="text-destructive">{fmtMoney2(sumRem)}</strong></span>
+                      </div>
+                    </div>
+
+                    {monthKeys.map(mk => {
+                      const monthRows = byMonth[mk];
+                      const monthLabel = mk === '0000-00'
+                        ? 'Sin fecha'
+                        : format(new Date(`${mk}-01T00:00:00`), 'MMMM yyyy', { locale: es });
+                      const mDue = monthRows.reduce((s, r) => s + (r.amount_due || 0) / 100, 0);
+                      const mPaid = monthRows.reduce((s, r) => s + (r.amount_paid || 0) / 100, 0);
+                      const mRem = monthRows.reduce((s, r) => s + (r.amount_remaining || 0) / 100, 0);
+                      const sortedRows = [...monthRows].sort((a, b) => (b.created || 0) - (a.created || 0));
+                      return (
+                        <div key={mk}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-foreground capitalize">{monthLabel} · {monthRows.length}</span>
+                            <span className="text-[11px] text-muted-foreground">{fmtMoney2(mDue)}</span>
+                          </div>
+                          <div className="overflow-x-auto border border-border rounded-lg">
+                            <table className="w-full text-[11px]">
+                              <thead className="bg-muted/40 text-muted-foreground">
+                                <tr>
+                                  <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
+                                  <th className="text-left px-2 py-1.5 font-semibold">Empresa</th>
+                                  <th className="text-left px-2 py-1.5 font-semibold">Cliente Stripe</th>
+                                  <th className="text-left px-2 py-1.5 font-semibold">Suscripción</th>
+                                  <th className="text-left px-2 py-1.5 font-semibold">Fecha</th>
+                                  <th className="text-right px-2 py-1.5 font-semibold">Total</th>
+                                  <th className="text-right px-2 py-1.5 font-semibold">Pagado</th>
+                                  <th className="text-right px-2 py-1.5 font-semibold">Pendiente</th>
+                                  <th className="text-center px-2 py-1.5 font-semibold">Link</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sortedRows.map(r => (
+                                  <tr key={r.id} className="border-t border-border hover:bg-accent/30">
+                                    <td className="px-2 py-1.5 font-mono text-[10px]">{r.number || r.id.slice(0, 14)}</td>
+                                    <td className="px-2 py-1.5">
+                                      <div className="font-medium text-foreground truncate max-w-[180px]">{r.empresa_nombre || r.customer_name || '—'}</div>
+                                      {r.customer_email && <div className="text-[9px] text-muted-foreground truncate max-w-[180px]">{r.customer_email}</div>}
+                                    </td>
+                                    <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.customer_id || '—'}</td>
+                                    <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.subscription_id || '—'}</td>
+                                    <td className="px-2 py-1.5 text-muted-foreground">{r.created ? format(new Date(r.created * 1000), 'dd/MM/yy', { locale: es }) : '—'}</td>
+                                    <td className="px-2 py-1.5 text-right font-semibold">{fmtMoney2((r.amount_due || 0) / 100)}</td>
+                                    <td className="px-2 py-1.5 text-right text-success">{fmtMoney2((r.amount_paid || 0) / 100)}</td>
+                                    <td className="px-2 py-1.5 text-right text-destructive">{fmtMoney2((r.amount_remaining || 0) / 100)}</td>
+                                    <td className="px-2 py-1.5 text-center">
+                                      {r.hosted_invoice_url && (
+                                        <a href={r.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Ver</a>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-muted/30 font-semibold border-t-2 border-border">
+                                <tr>
+                                  <td colSpan={5} className="px-2 py-2 text-right text-muted-foreground capitalize">Subtotal {monthLabel}:</td>
+                                  <td className="px-2 py-2 text-right">{fmtMoney2(mDue)}</td>
+                                  <td className="px-2 py-2 text-right text-success">{fmtMoney2(mPaid)}</td>
+                                  <td className="px-2 py-2 text-right text-destructive">{fmtMoney2(mRem)}</td>
+                                  <td />
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
 
             {/* Gran total */}
             <div className="border-t-2 border-primary pt-3 mt-4 grid grid-cols-3 gap-3">
