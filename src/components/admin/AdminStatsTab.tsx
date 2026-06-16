@@ -494,7 +494,11 @@ export default function AdminStatsTab() {
               </ResponsiveContainer>
             </ChartCard>
           </div>
+
+          {/* ── Facturas de Stripe (todas, agrupadas por status) ── */}
+          <StripeInvoicesTable invoices={stripeInvs} loading={loadingStripeInv} />
         </TabsContent>
+
 
         {/* ──────────── ALTAS ──────────── */}
         <TabsContent value="altas" className="space-y-4 mt-4">
