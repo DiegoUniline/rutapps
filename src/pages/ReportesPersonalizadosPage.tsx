@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Play, FileSpreadsheet, FileText, FileDown,
-  ArrowUp, ArrowDown, Loader2, FileBarChart2, RefreshCw,
+  ArrowUp, ArrowDown, Loader2, FileBarChart2, RefreshCw, GripVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -658,6 +658,17 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
     onChange({ ...config, columnas: next });
   };
 
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const reorder = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    const next = [...config.columnas];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange({ ...config, columnas: next });
+  };
+
+
   const renameCol = (idx: number, header: string) => {
     const next = [...config.columnas];
     next[idx] = { ...next[idx], header };
@@ -721,22 +732,47 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
                 )}
                 {config.columnas.map((col, idx) => {
                   const def = allCampos.find(c => c.key === col.key);
+                  const isDragging = dragIdx === idx;
+                  const isOver = overIdx === idx && dragIdx !== null && dragIdx !== idx;
                   return (
-                    <div key={col.key} className="p-2 flex items-center gap-2">
+                    <div
+                      key={col.key}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragIdx(idx);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (overIdx !== idx) setOverIdx(idx);
+                      }}
+                      onDragLeave={() => { if (overIdx === idx) setOverIdx(null); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIdx !== null) reorder(dragIdx, idx);
+                        setDragIdx(null);
+                        setOverIdx(null);
+                      }}
+                      onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
+                      className={`p-2 flex items-center gap-2 transition-colors ${isDragging ? 'opacity-40' : ''} ${isOver ? 'bg-primary/10 border-t-2 border-primary' : ''}`}
+                    >
+                      <span className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none" title="Arrastra para reordenar">
+                        <GripVertical className="w-4 h-4" />
+                      </span>
                       <span className="text-xs text-muted-foreground w-5">{idx + 1}</span>
                       <Input
                         value={col.header ?? def?.label ?? col.key}
                         onChange={(e) => renameCol(idx, e.target.value)}
                         className="h-8 text-sm flex-1"
                       />
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(idx, -1)}><ArrowUp className="w-3.5 h-3.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(idx, 1)}><ArrowDown className="w-3.5 h-3.5" /></Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggle(col.key)}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>
                   );
                 })}
+
               </div>
             </div>
           </div>
