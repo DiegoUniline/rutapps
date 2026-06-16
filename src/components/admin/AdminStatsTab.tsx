@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ComposedChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart as RPieChart, Pie, Cell, CartesianGrid, Line, AreaChart, Area, Legend,
 } from 'recharts';
 import {
