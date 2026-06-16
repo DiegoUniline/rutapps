@@ -403,6 +403,27 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editEfectivoMutation = useMutation({
+    mutationFn: async (nuevoMonto: number) => {
+      const diff = nuevoMonto - efectivoSistema;
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({
+          efectivo_entregado: nuevoMonto,
+          diferencia_efectivo: diff,
+        } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Monto reportado actualizado');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      setEditingEfectivo(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
