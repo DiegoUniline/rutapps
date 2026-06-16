@@ -545,6 +545,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
+            {descarga.status === 'rechazada' && (
+              <Button
+                onClick={() => reabrirMutation.mutate()}
+                disabled={reabrirMutation.isPending}
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1 border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Reabrir
+              </Button>
+            )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
           </div>
         </div>
