@@ -52,7 +52,12 @@ const STATUS_LABELS: Record<string, string> = {
   active: 'Activa', trial: 'Trial', past_due: 'Vencida',
   suspended: 'Suspendida', gracia: 'Gracia', cancelada: 'Cancelada', sin_sub: 'Sin sub',
 };
-const BAJA_STATUSES = ['cancelada', 'canceled', 'suspended', 'past_due'];
+const BAJA_STATUSES = ['cancelada', 'canceled', 'cancelled', 'suspended', 'expired'];
+// Fecha efectiva en la que la suscripción se dio de baja.
+// Usamos current_period_end (cuando terminó el acceso) o fecha_vencimiento;
+// NO usamos updated_at porque cualquier toque del cron lo mueve y rompe el cálculo.
+const bajaDate = (s: { current_period_end?: string | null; fecha_vencimiento?: string | null; updated_at?: string | null; created_at: string }) =>
+  s.current_period_end || s.fecha_vencimiento || s.updated_at || s.created_at;
 const STATS_STALE = 2 * 60 * 1000;
 
 type Preset = 'hoy' | '7d' | '30d' | 'mes' | 'ytd' | 'todo' | 'custom';
