@@ -58,7 +58,7 @@ function addDays(iso: string, n: number) {
 
 async function buildReporte(empresaId: string, startLocal: string, endLocal: string, tz: string, label: string) {
   const { start, end } = rangeUtcForDates(startLocal, endLocal, tz);
-  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, empresaRes] = await Promise.all([
+  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, entregasRes, empresaRes] = await Promise.all([
     admin.from("ventas")
       .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
@@ -74,10 +74,16 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     admin.from("visitas")
       .select("id, tipo, motivo, notas, clientes(nombre)")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
+    admin.from("entregas")
+      .select("id, status")
+      .eq("empresa_id", empresaId).gte("fecha", startLocal).lte("fecha", endLocal),
     admin.from("empresas")
       .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
       .eq("id", empresaId).maybeSingle(),
   ]);
+  const entregas = (entregasRes.data || []) as any[];
+  const entregasHechas = entregas.filter((e) => e.status === "hecho").length;
+  const entregasNoEntregadas = entregas.filter((e) => e.status === "no_entregado").length;
 
   const allVentas = (ventasRes.data || []) as any[];
   const ventas = allVentas.filter((v) => v.status !== "cancelada" && v.status !== "cancelado");
