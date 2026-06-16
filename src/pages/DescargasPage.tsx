@@ -80,6 +80,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [incluirStock, setIncluirStock] = useState(false);
   const [editingEfectivo, setEditingEfectivo] = useState(false);
   const [efectivoDraft, setEfectivoDraft] = useState('');
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -323,11 +324,25 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const totalDevCredito = devLineas.reduce((s, l) => s + l.monto_credito, 0);
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
-  const isPendiente = descarga.status === 'pendiente';
+  const currentStatus = statusOverride ?? descarga.status;
+  const isPendiente = currentStatus === 'pendiente';
   const dif = Number(descarga.diferencia_efectivo);
 
   // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
   const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
+
+  useEffect(() => {
+    setStatusOverride(null);
+    setEditingEfectivo(false);
+    setEfectivoDraft('');
+  }, [descarga.id]);
+
+  useEffect(() => {
+    if (isPendiente && efectivoDraft === '') {
+      setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0));
+      setEditingEfectivo(true);
+    }
+  }, [isPendiente, efectivoDraft, descarga.efectivo_entregado]);
 
   const aprobarMutation = useMutation({
     mutationFn: async (accion: 'aprobada' | 'rechazada') => {
@@ -397,6 +412,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
     onSuccess: () => {
       toast.success('Liquidación reabierta para edición');
+      setStatusOverride('pendiente');
+      setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0));
+      setEditingEfectivo(true);
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
     },
@@ -443,7 +461,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const s = STATUS_MAP[descarga.status] || STATUS_MAP.pendiente;
+              const s = STATUS_MAP[currentStatus] || STATUS_MAP.pendiente;
               return (
                 <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold", s.color)}>
                   <s.icon className="h-3 w-3" /> {s.label}
@@ -568,7 +586,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
-            {(descarga.status === 'rechazada' || descarga.status === 'aprobada') && (
+            {(currentStatus === 'rechazada' || currentStatus === 'aprobada') && (
               <Button
                 onClick={() => reabrirMutation.mutate()}
                 disabled={reabrirMutation.isPending}
