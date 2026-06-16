@@ -336,7 +336,7 @@ export default function AdminStatsTab() {
       .map(e => ({
         ...e,
         status: e.subscriptions?.find(s => BAJA_STATUSES.includes(s.status))?.status || 'cancelada',
-        fechaBaja: e.subscriptions?.find(s => BAJA_STATUSES.includes(s.status))?.updated_at || e.created_at,
+        fechaBaja: (() => { const s = e.subscriptions?.find(x => BAJA_STATUSES.includes(x.status)); return s ? bajaDate(s) : e.created_at; })(),
       }))
       .sort((a, b) => new Date(b.fechaBaja).getTime() - new Date(a.fechaBaja).getTime())
       .slice(0, 15);
