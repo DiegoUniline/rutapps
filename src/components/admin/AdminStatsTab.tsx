@@ -165,7 +165,7 @@ export default function AdminStatsTab() {
       e.subscriptions?.some(s => s.status === 'active' && new Date(s.created_at).getTime() <= endTs)
     ).length;
     const bajas = empresas.filter(e =>
-      e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && new Date(s.updated_at || s.created_at).getTime() <= endTs)
+      e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && new Date(bajaDate(s)).getTime() <= endTs)
     ).length;
     const ingresos = cobradas
       .filter(f => f.fecha_pago && new Date(f.fecha_pago).getTime() <= endTs)
