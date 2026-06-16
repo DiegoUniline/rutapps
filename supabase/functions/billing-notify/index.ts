@@ -393,7 +393,104 @@ Deno.serve(async (req) => {
         const ok = await sendWA(supabase, waToken, body.phone, tpl, vars, body.email || "", null, body.monto_centavos || 0);
         return new Response(JSON.stringify({ ok }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // ─── Resend today's Stripe events (success + failed) ───
+      if (body?.resend_today) {
+        const { notifyBillingEvent } = await import("../_shared/billing-notify-utils.ts");
+        const stripeNow = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config").select("api_token")
+          .order("created_at", { ascending: true }).limit(1).maybeSingle();
+        const waToken = waConfig?.api_token;
+
+        const MX_TZ2 = "America/Mexico_City";
+        const todayMx2 = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ2 });
+        const startUnix = Math.floor(new Date(`${todayMx2}T00:00:00-06:00`).getTime() / 1000);
+        const endUnix = Math.floor(Date.now() / 1000);
+
+        const dispatched: any[] = [];
+        // Paginate Stripe invoices for today
+        let starting_after: string | undefined = undefined;
+        const allInvoices: Stripe.Invoice[] = [];
+        for (let i = 0; i < 5; i++) {
+          const page: any = await stripeNow.invoices.list({
+            limit: 100,
+            created: { gte: startUnix, lte: endUnix },
+            expand: ["data.lines.data.price"],
+            ...(starting_after ? { starting_after } : {}),
+          });
+          allInvoices.push(...page.data);
+          if (!page.has_more) break;
+          starting_after = page.data[page.data.length - 1]?.id;
+        }
+
+        for (const inv of allInvoices) {
+          const isRutapp = inv.lines?.data?.some((line: any) => {
+            const pid = typeof line.price?.product === "string" ? line.price.product : line.price?.product?.id;
+            return pid && RUTAPP_PRODUCT_IDS.has(pid);
+          });
+          if (!isRutapp) continue;
+
+          // Locate empresa
+          const stripeCustomerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
+          const stripeSubId = typeof (inv as any).subscription === "string" ? (inv as any).subscription : (inv as any).subscription?.id;
+          let empresa_id: string | null = inv.metadata?.empresa_id ?? null;
+          if (!empresa_id && stripeSubId) {
+            const { data } = await supabase.from("subscriptions").select("empresa_id").eq("stripe_subscription_id", stripeSubId).maybeSingle();
+            empresa_id = data?.empresa_id ?? null;
+          }
+          if (!empresa_id && stripeCustomerId) {
+            const { data } = await supabase.from("subscriptions").select("empresa_id").eq("stripe_customer_id", stripeCustomerId).maybeSingle();
+            empresa_id = data?.empresa_id ?? null;
+          }
+          if (!empresa_id) continue;
+
+          const { data: empresaRow } = await supabase.from("empresas").select("nombre").eq("id", empresa_id).maybeSingle();
+          const { data: profileRow } = await supabase.from("profiles").select("user_id, nombre, telefono").eq("empresa_id", empresa_id).limit(1).maybeSingle();
+          let clienteEmail = inv.customer_email || "";
+          if (!clienteEmail && profileRow?.user_id) {
+            const u = await supabase.auth.admin.getUserById(profileRow.user_id);
+            clienteEmail = u.data?.user?.email || "";
+          }
+
+          const isPaid = inv.status === "paid";
+          const isFailed = inv.status === "open" || inv.status === "uncollectible" || (inv.attempt_count ?? 0) > 0 && inv.status !== "paid" && inv.status !== "draft" && inv.status !== "void";
+          if (!isPaid && !isFailed) continue;
+
+          const evento = isPaid ? "cobro_exitoso" : "cobro_fallido";
+          const monto = isPaid
+            ? `$${((inv.amount_paid ?? inv.total ?? 0) / 100).toLocaleString("es-MX")} MXN`
+            : `$${((inv.amount_due ?? 0) / 100).toLocaleString("es-MX")} MXN`;
+          const detalle = isFailed
+            ? ((inv as any).last_finalization_error?.message ||
+               (inv as any).last_payment_error?.message ||
+               `Stripe status: ${inv.status}`)
+            : undefined;
+
+          await notifyBillingEvent(supabase, waToken, {
+            evento,
+            empresa: empresaRow?.nombre || "",
+            clienteNombre: profileRow?.nombre || "",
+            clienteEmail,
+            clienteTelefono: profileRow?.telefono || "",
+            monto,
+            invoiceUrl: inv.hosted_invoice_url || null,
+            enlacePago: inv.hosted_invoice_url || null,
+            fecha: todayMx2,
+            intento: inv.attempt_count ?? undefined,
+            detalle,
+            idempotencyKey: `manual-resend-${inv.id}-${todayMx2}`,
+          });
+          dispatched.push({ id: inv.id, evento, empresa: empresaRow?.nombre, monto, email: clienteEmail });
+        }
+
+        return new Response(JSON.stringify({ ok: true, count: dispatched.length, dispatched }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
+
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const results: Array<{ id: string; action: string; status: string }> = [];
