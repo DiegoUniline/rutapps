@@ -233,7 +233,7 @@ export default function AdminStatsTab() {
       }).length;
       const bajas = empresas.filter(e =>
         e.subscriptions?.some(s => {
-          const t = new Date(s.updated_at || s.created_at).getTime();
+          const t = new Date(bajaDate(s)).getTime();
           return BAJA_STATUSES.includes(s.status) && t >= ms && t <= me;
         })
       ).length;
