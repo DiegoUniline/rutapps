@@ -608,6 +608,16 @@ Deno.serve(async (req) => {
               fechaVigencia: `1 de ${getMonthName(2)}`,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_paid);
           }
+          await notifyAdmins(supabase, waToken, {
+            evento: "cobro_exitoso",
+            empresa: empresaNombre,
+            clienteNombre: profile.nombre || "",
+            clienteEmail: inv.customer_email || "",
+            clienteTelefono: profile.telefono || "",
+            monto: `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`,
+            invoiceUrl: inv.hosted_invoice_url,
+            fecha: todayStr,
+          });
           results.push({ id: profile.empresa_id, action: "payment_confirmed", status: "sent" });
 
         } else if ((inv.status === "open" || inv.status === "uncollectible") && tplMap.cobro_fallido.activo) {
@@ -621,6 +631,17 @@ Deno.serve(async (req) => {
               enlacePago: inv.hosted_invoice_url || FACTURACION_URL,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_due);
           }
+          await notifyAdmins(supabase, waToken, {
+            evento: "cobro_fallido",
+            empresa: empresaNombre,
+            clienteNombre: profile.nombre || "",
+            clienteEmail: inv.customer_email || "",
+            clienteTelefono: profile.telefono || "",
+            monto: `$${(inv.amount_due / 100).toLocaleString("es-MX")} MXN`,
+            invoiceUrl: inv.hosted_invoice_url,
+            fecha: todayStr,
+            detalle: `Stripe status: ${inv.status}`,
+          });
           results.push({ id: profile.empresa_id, action: "payment_failed", status: "sent" });
         }
       }
