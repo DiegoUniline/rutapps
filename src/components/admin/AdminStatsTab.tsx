@@ -588,21 +588,17 @@ export default function AdminStatsTab() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ChartCard title="Bajas mensuales" subtitle="Últimos 12 meses" icon={UserMinus}>
+            <ChartCard title="Altas vs Bajas por mes" subtitle="Últimos 12 meses — comparativo mensual" icon={UserMinus}>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={monthlySeries}>
-                  <defs>
-                    <linearGradient id="gBajas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={DANGER} stopOpacity={0.5} />
-                      <stop offset="100%" stopColor={DANGER} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={monthlySeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke={MUTED} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke={MUTED} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Area type="monotone" dataKey="bajas" stroke={DANGER} strokeWidth={2} fill="url(#gBajas)" />
-                </AreaChart>
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="altas" fill={SUCCESS} radius={[3, 3, 0, 0]} name="Altas" />
+                  <Bar dataKey="bajas" fill={DANGER} radius={[3, 3, 0, 0]} name="Bajas" />
+                </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
