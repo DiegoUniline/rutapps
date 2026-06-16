@@ -25,6 +25,7 @@ export interface BillingEventPayload {
   fechaVigencia?: string;
   intento?: number;
   detalle?: string;
+  metodoPago?: string;
   idempotencyKey: string;
 }
 
