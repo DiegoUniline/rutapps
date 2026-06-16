@@ -210,6 +210,10 @@ export async function notifyBillingEvent(
   const payUrl = buildPayUrl(payload.folio, payload.enlacePago || payload.invoiceUrl);
   const { evento, idempotencyKey, invoiceUrl } = payload;
 
+  // Translate any Stripe decline reason / English motive into Spanish before sending
+  const detalleEs = translateDeclineReason(payload.detalle);
+  payload = { ...payload, detalle: detalleEs };
+
   const clientEmail = options.overrideClientEmail || payload.clienteEmail;
   const clientPhone = options.overrideClientPhone || payload.clienteTelefono;
 
@@ -231,6 +235,7 @@ export async function notifyBillingEvent(
         invoiceUrl: invoiceUrl || undefined,
         intento: payload.intento,
         detalle: payload.detalle,
+        metodoPago: payload.metodoPago,
       },
       `client-${evento}-${idempotencyKey}-${clientEmail}`,
     );
