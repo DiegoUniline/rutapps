@@ -279,14 +279,30 @@ export async function notifyBillingEvent(
     } catch { /* silent */ }
   }
 
-  // ── 4. Admin emails (Diego + BCC) ──
+  // ── 4. Admin emails — hidden BCC copies of the SAME client-facing email ──
+  // Admins receive an identical copy of the email the client sees (same design,
+  // same content), sent silently to each admin recipient.
   const adminRecipients = [ADMIN_EMAIL_TO, ...ADMIN_EMAIL_BCC];
   for (const to of adminRecipients) {
     await postTransactional(
-      "admin-billing-alert",
+      "client-billing-status",
       to,
-      { ...payload, payUrl },
-      `admin-${evento}-${idempotencyKey}-${to}`,
+      {
+        evento,
+        nombre: payload.clienteNombre,
+        empresa: payload.empresa,
+        monto: payload.monto,
+        numUsuarios: payload.numUsuarios,
+        fechaVigencia: payload.fechaVigencia,
+        fecha: payload.fecha,
+        folio: payload.folio || undefined,
+        payUrl,
+        invoiceUrl: invoiceUrl || undefined,
+        intento: payload.intento,
+        detalle: payload.detalle,
+        metodoPago: payload.metodoPago,
+      },
+      `admin-bcc-${evento}-${idempotencyKey}-${to}`,
     );
   }
 }
