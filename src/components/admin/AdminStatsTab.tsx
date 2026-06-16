@@ -109,7 +109,7 @@ export default function AdminStatsTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from('empresas')
-        .select('id, nombre, created_at, subscriptions(status, plan_id, created_at, updated_at)')
+        .select('id, nombre, created_at, subscriptions(status, plan_id, created_at, updated_at, current_period_end, fecha_vencimiento)')
         .order('created_at', { ascending: true });
       return (data as any) || [];
     },
