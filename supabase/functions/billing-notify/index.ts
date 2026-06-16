@@ -470,6 +470,8 @@ Deno.serve(async (req) => {
             clienteEmail,
             clienteTelefono: profileRow?.telefono || "",
             monto,
+            amountCents: isPaid ? (inv.amount_paid ?? inv.total ?? 0) : (inv.amount_due ?? 0),
+            folio: (inv as any).number || null,
             invoiceUrl: inv.hosted_invoice_url || null,
             enlacePago: inv.hosted_invoice_url || null,
             fecha: todayMx2,
