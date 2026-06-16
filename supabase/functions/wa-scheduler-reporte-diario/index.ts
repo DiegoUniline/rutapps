@@ -208,42 +208,32 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
   const pdfBytes = await generarReporteBotPdf(reporteInput as any);
   const xlsxBytes = generarReporteBotXlsx(reporteInput as any);
 
-  // Resumen ejecutivo en texto (acompaña al PDF)
-  const topProductos = productos.slice(0, 3)
-    .map((p, i) => `   ${i + 1}. ${p.nombre} — ${p.cantidad} u · ${fmt(p.total)}`)
-    .join("\n");
-  const metodosTxt = Object.entries(cobrosPorMetodo)
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
-    .map(([m, v]) => `   • ${m}: ${fmt(v as number)}`)
-    .join("\n");
+  // Resumen ejecutivo en texto (acompaña al PDF) — limpio, con negritas
   const utilidadAprox = totalCobros - totalGastos;
+  const topProducto = productos[0];
+  const metodoTop = Object.entries(cobrosPorMetodo).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
 
   const lines: string[] = [];
   lines.push(`📊 *${label}*`);
-  lines.push(`🏢 ${(empresaRes.data as any)?.nombre || ""}`);
+  lines.push(`_${(empresaRes.data as any)?.nombre || ""}_`);
   lines.push("");
-  lines.push(`*Ventas:* ${fmt(totalVentas)} (${ventas.length})`);
-  lines.push(`   • Contado: ${fmt(totalContado)} (${ventasContado.length})`);
-  lines.push(`   • Crédito: ${fmt(totalCredito)} (${ventasCredito.length})`);
-  if (canceladas.length) lines.push(`   • Canceladas: ${fmt(totalCancelado)} (${canceladas.length})`);
-  lines.push("");
-  lines.push(`*Cobros:* ${fmt(totalCobros)} (${cobros.length})`);
-  if (metodosTxt) lines.push(metodosTxt);
-  if (abonosPrevios.length) lines.push(`   • Abonos a crédito previo: ${fmt(totalAbonosPrevios)} (${clientesQueAbonaron} clientes)`);
-  lines.push("");
-  lines.push(`*Gastos:* ${fmt(totalGastos)} (${gastos.length})`);
-  lines.push(`*Flujo neto (cobros − gastos):* ${fmt(utilidadAprox)}`);
-  lines.push("");
-  lines.push(`👥 Clientes visitados: ${clientesVisitadosSet.size}`);
-  if (visitasSinCompra.length) lines.push(`🚫 Visitas sin compra: ${visitasSinCompra.length}`);
-  if (devLineas.length) lines.push(`↩️ Devoluciones: ${totalDevUnidades} u · ${fmt(totalDevCredito)}`);
-  if (topProductos) {
-    lines.push("");
-    lines.push(`🏆 *Top productos:*`);
-    lines.push(topProductos);
+  lines.push(`💰 *Ventas:* ${fmt(totalVentas)}  ·  ${ventas.length} tickets`);
+  if (ventasContado.length || ventasCredito.length) {
+    const parts: string[] = [];
+    if (ventasContado.length) parts.push(`Contado ${fmt(totalContado)}`);
+    if (ventasCredito.length) parts.push(`Crédito ${fmt(totalCredito)}`);
+    lines.push(`    ${parts.join("  ·  ")}`);
   }
+  lines.push(`💵 *Cobros:* ${fmt(totalCobros)}  ·  ${cobros.length} pagos`);
+  if (metodoTop) lines.push(`    Top: ${metodoTop[0]} ${fmt(metodoTop[1] as number)}`);
+  if (entregas.length) {
+    lines.push(`🚚 *Entregas:* ${entregasHechas} de ${entregas.length}${entregasNoEntregadas ? `  ·  ${entregasNoEntregadas} no entregadas` : ""}`);
+  }
+  if (totalGastos > 0) lines.push(`📉 *Gastos:* ${fmt(totalGastos)}`);
   lines.push("");
-  lines.push(`📎 Detalle completo en el PDF adjunto.`);
+  lines.push(`✅ *Flujo neto:* ${fmt(utilidadAprox)}`);
+  if (clientesVisitadosSet.size) lines.push(`👥 Clientes atendidos: ${clientesVisitadosSet.size}`);
+  if (topProducto) lines.push(`🏆 Top producto: ${topProducto.nombre} (${topProducto.cantidad} u)`);
 
   const summary = lines.join("\n");
 
