@@ -84,3 +84,6 @@ verify_jwt = false
 
 [functions.landing-chat]
 verify_jwt = false
+
+[functions.factura-redirect]
+verify_jwt = false
