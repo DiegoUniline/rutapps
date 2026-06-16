@@ -427,13 +427,7 @@ Deno.serve(async (req) => {
         }
 
         for (const inv of allInvoices) {
-          const isRutapp = inv.lines?.data?.some((line: any) => {
-            const pid = typeof line.price?.product === "string" ? line.price.product : line.price?.product?.id;
-            return pid && RUTAPP_PRODUCT_IDS.has(pid);
-          });
-          if (!isRutapp) continue;
-
-          // Locate empresa
+          // Locate empresa first (via subscription/customer mapping in our DB)
           const stripeCustomerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
           const stripeSubId = typeof (inv as any).subscription === "string" ? (inv as any).subscription : (inv as any).subscription?.id;
           let empresa_id: string | null = inv.metadata?.empresa_id ?? null;
@@ -445,7 +439,7 @@ Deno.serve(async (req) => {
             const { data } = await supabase.from("subscriptions").select("empresa_id").eq("stripe_customer_id", stripeCustomerId).maybeSingle();
             empresa_id = data?.empresa_id ?? null;
           }
-          if (!empresa_id) continue;
+          if (!empresa_id) continue; // not a Rutapp tenant invoice
 
           const { data: empresaRow } = await supabase.from("empresas").select("nombre").eq("id", empresa_id).maybeSingle();
           const { data: profileRow } = await supabase.from("profiles").select("user_id, nombre, telefono").eq("empresa_id", empresa_id).limit(1).maybeSingle();
