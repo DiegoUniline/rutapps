@@ -1,7 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
@@ -31,52 +30,26 @@ interface Props {
 
 const LOGO = 'https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png'
 const PRIMARY = '#1554F0'
+const PRIMARY_HEX = '1554F0'
 const SUCCESS = '#16a34a'
 const DANGER = '#dc2626'
 const TEXT_DARK = '#0f172a'
 const TEXT_MUTED = '#64748b'
 const BORDER = '#e2e8f0'
 
-// ── SVG icon helpers (data URIs so Gmail/Outlook render them) ──
-const svg = (markup: string) =>
-  `data:image/svg+xml;utf8,${encodeURIComponent(markup)}`
-
-const iconCalendar = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 9h18'/><path d='M8 3v4M16 3v4'/><circle cx='8' cy='14' r='1' fill='${c}'/><circle cx='12' cy='14' r='1' fill='${c}'/><circle cx='16' cy='14' r='1' fill='${c}'/></svg>`
-)
-const iconCard = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='5' width='20' height='14' rx='2'/><path d='M2 10h20'/></svg>`
-)
-const iconDollar = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v12M15 9.5a2.5 2.5 0 0 0-2.5-2.5h-1A2.5 2.5 0 0 0 9 9.5c0 1.4 1.1 2.5 2.5 2.5h1A2.5 2.5 0 0 1 15 14.5 2.5 2.5 0 0 1 12.5 17h-1A2.5 2.5 0 0 1 9 14.5'/></svg>`
-)
-const iconDoc = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/><path d='M14 3v6h6'/><path d='M8 13h6M8 17h8'/></svg>`
-)
-const iconInfo = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg>`
-)
-const iconHeadset = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 14v-2a9 9 0 0 1 18 0v2'/><path d='M21 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM3 14a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z'/><path d='M18 16v1a3 3 0 0 1-3 3h-2'/></svg>`
-)
-const iconMail = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='14' rx='2'/><path d='m3 7 9 6 9-6'/></svg>`
-)
-const iconWhatsapp = (c: string) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='${c}'><path d='M20.5 3.5A11 11 0 0 0 3.2 17.3L2 22l4.8-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1-.7-.4-1.5-.8-2.1-1.6-.5-.6-.9-1.3-1-1.5 0-.2 0-.3.1-.4l.4-.4c.1-.1.1-.2.2-.4 0-.2 0-.3 0-.4 0-.1-.5-1.2-.7-1.7-.2-.4-.4-.3-.5-.4h-.4c-.2 0-.4 0-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.1 1.7 2.6 4.2 3.6.6.2 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1z'/></svg>`
-)
-// Big card with red X badge (failure) / green check badge (success)
-const iconBigCard = (fail: boolean) => svg(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'>
-    <rect x='6' y='14' width='46' height='32' rx='5' fill='none' stroke='${PRIMARY}' stroke-width='3'/>
-    <rect x='6' y='22' width='46' height='6' fill='${PRIMARY}'/>
-    <circle cx='50' cy='46' r='10' fill='${fail ? DANGER : SUCCESS}'/>
-    ${fail
-      ? `<path d='M46 42l8 8M54 42l-8 8' stroke='#fff' stroke-width='2.5' stroke-linecap='round'/>`
-      : `<path d='M45 46l4 4 7-7' stroke='#fff' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/>`
-    }
-  </svg>`
-)
+// ── Hosted PNG icons (icons8 CDN — Gmail/Outlook/Apple Mail safe) ──
+const ICON = {
+  calendar:  `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/calendar.png`,
+  card:      `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/bank-card-back-side.png`,
+  dollar:    `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/us-dollar-circled--v1.png`,
+  doc:       `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/document.png`,
+  info:      `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/info--v1.png`,
+  headset:   `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/headset.png`,
+  mail:      `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/new-post.png`,
+  whatsapp:  `https://img.icons8.com/ios-filled/48/${PRIMARY_HEX}/whatsapp.png`,
+  bigFail:   `https://img.icons8.com/fluency/96/cancel.png`,
+  bigSuccess:`https://img.icons8.com/fluency/96/ok.png`,
+}
 
 const isFail = (e: string) => e === 'cobro_fallido'
 
@@ -105,6 +78,7 @@ const Email = ({
   const secondaryLabel = fail ? 'Reintentar ahora' : 'Ir al sistema'
   const primaryUrl = fail ? (payUrl || 'https://rutapp.mx/facturacion') : (invoiceUrl || payUrl || 'https://rutapp.mx/facturacion')
   const secondaryUrl = fail ? (payUrl || 'https://rutapp.mx/facturacion') : 'https://rutapp.mx'
+  const heroIcon = fail ? ICON.bigFail : ICON.bigSuccess
 
   return (
     <Html lang="es">
@@ -113,27 +87,57 @@ const Email = ({
       <Body style={main}>
         <Container style={card}>
           {/* Logo */}
-          <Section style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-            <Img src={LOGO} width="56" height="56" alt="RutApp" style={{ margin: '0 auto', borderRadius: '12px' }} />
-            <Text style={brand}>RUTAPP</Text>
-          </Section>
-
-          {/* Big status icon — card with badge */}
-          <Section style={{ textAlign: 'center', padding: '12px 0 0' }}>
-            <table style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
               <tbody>
                 <tr>
-                  <td
-                    style={{
-                      width: '96px',
-                      height: '96px',
-                      background: '#eff6ff',
-                      borderRadius: '50%',
-                      textAlign: 'center',
-                      verticalAlign: 'middle',
-                    }}
-                  >
-                    <Img src={iconBigCard(fail)} width="56" height="56" alt="" style={{ display: 'inline-block' }} />
+                  <td align="center" style={{ padding: '24px 0 4px' }}>
+                    <Img src={LOGO} width="56" height="56" alt="RutApp" style={{ display: 'block', borderRadius: '12px', border: '0', outline: 'none', textDecoration: 'none' }} />
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style={{ padding: '8px 0 0' }}>
+                    <Text style={brand}>RUTAPP</Text>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+
+          {/* Hero icon */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+              <tbody>
+                <tr>
+                  <td align="center" style={{ padding: '16px 0 4px' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={tableReset}>
+                      <tbody>
+                        <tr>
+                          <td
+                            align="center"
+                            valign="middle"
+                            width={96}
+                            height={96}
+                            style={{
+                              width: '96px',
+                              height: '96px',
+                              backgroundColor: '#eff6ff',
+                              borderRadius: '48px',
+                              textAlign: 'center',
+                              verticalAlign: 'middle',
+                            }}
+                          >
+                            <Img
+                              src={heroIcon}
+                              width="56"
+                              height="56"
+                              alt=""
+                              style={{ display: 'block', margin: '0 auto', border: '0', outline: 'none' }}
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </td>
                 </tr>
               </tbody>
@@ -141,78 +145,154 @@ const Email = ({
           </Section>
 
           {/* Title + subtitle */}
-          <Section style={{ textAlign: 'center', padding: '20px 32px 0' }}>
-            <Heading style={h1}>{titulo}</Heading>
-            <Text style={subtitle}>{subtitulo}</Text>
-          </Section>
-
-          {/* Data card */}
-          <Section style={dataCard}>
-            <DataRow icon={iconCalendar(PRIMARY)} label={fail ? 'Fecha del intento' : 'Fecha'} value={fecha || '—'} />
-            {metodoPago ? <DataRow icon={iconCard(PRIMARY)} label="Método de pago" value={metodoPago} /> : null}
-            <DataRow icon={iconDollar(PRIMARY)} label={fail ? 'Monto' : 'Importe'} value={monto || '—'} bold />
-            {folio ? <DataRow icon={iconDoc(PRIMARY)} label="Folio" value={folio} /> : null}
-            {fail && detalle ? <DataRow icon={iconInfo(PRIMARY)} label="Motivo" value={detalle} /> : null}
-          </Section>
-
-          {/* Status pill */}
-          <Section style={{ textAlign: 'center', padding: '4px 0 0' }}>
-            <table style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
               <tbody>
                 <tr>
-                  <td style={{ ...pill, background: accentSoft, color: accent }}>
-                    <span style={{ color: accent }}>●</span>&nbsp;&nbsp;{pillText}
+                  <td align="center" style={{ padding: '20px 32px 0' }}>
+                    <Heading style={h1}>{titulo}</Heading>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style={{ padding: '10px 32px 0' }}>
+                    <Text style={subtitle}>{subtitulo}</Text>
                   </td>
                 </tr>
               </tbody>
             </table>
-            <Text style={pillSub}>{pillNote}</Text>
           </Section>
 
-          {/* CTAs */}
-          <Section style={{ textAlign: 'center', padding: '4px 32px 24px' }}>
-            <Button href={primaryUrl} style={btnPrimary}>{primaryLabel}</Button>
-            <div style={{ height: '12px' }} />
-            <Button href={secondaryUrl} style={btnSecondary}>{secondaryLabel}</Button>
-          </Section>
-
-          {/* Footer */}
-          <Section style={footerWrap}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          {/* Data card */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
               <tbody>
                 <tr>
-                  <td style={{ width: '50%', verticalAlign: 'top' }}>
-                    <table style={{ borderCollapse: 'collapse' }}>
+                  <td style={{ padding: '20px 32px 0' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={dataCardTable}>
+                      <tbody>
+                        <DataRow icon={ICON.calendar} label={fail ? 'Fecha del intento' : 'Fecha'} value={fecha || '—'} />
+                        {metodoPago ? <DataRow icon={ICON.card} label="Método de pago" value={metodoPago} /> : null}
+                        <DataRow icon={ICON.dollar} label={fail ? 'Monto' : 'Importe'} value={monto || '—'} bold />
+                        {folio ? <DataRow icon={ICON.doc} label="Folio" value={folio} /> : null}
+                        {fail && detalle ? <DataRow icon={ICON.info} label="Motivo" value={detalle} last /> : null}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+
+          {/* Status pill */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+              <tbody>
+                <tr>
+                  <td align="center" style={{ padding: '16px 0 0' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={tableReset}>
                       <tbody>
                         <tr>
-                          <td style={{ paddingRight: '10px', verticalAlign: 'middle' }}>
-                            <Img src={iconHeadset(PRIMARY)} width="22" height="22" alt="" />
-                          </td>
-                          <td style={{ verticalAlign: 'middle' }}>
-                            <Text style={footerTitle}>¿Necesitas ayuda?</Text>
-                            <Text style={footerSub}>Estamos para ayudarte</Text>
+                          <td style={{ ...pill, backgroundColor: accentSoft, color: accent }}>
+                            <span style={{ color: accent, fontSize: '14px' }}>●</span>
+                            <span style={{ display: 'inline-block', width: '8px' }}>&nbsp;</span>
+                            {pillText}
                           </td>
                         </tr>
                       </tbody>
                     </table>
                   </td>
-                  <td style={{ width: '50%', verticalAlign: 'top', textAlign: 'right' as const }}>
-                    <table style={{ borderCollapse: 'collapse', marginLeft: 'auto' }}>
+                </tr>
+                <tr>
+                  <td align="center" style={{ padding: '10px 24px 0' }}>
+                    <Text style={pillSub}>{pillNote}</Text>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+
+          {/* CTAs */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '8px 32px 0' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
                       <tbody>
                         <tr>
-                          <td style={{ paddingRight: '8px', verticalAlign: 'middle' }}>
-                            <Img src={iconMail(PRIMARY)} width="16" height="16" alt="" />
-                          </td>
-                          <td style={{ verticalAlign: 'middle' }}>
-                            <Text style={footerLine}>soporte@rutapp.mx</Text>
+                          <td align="center" bgcolor={PRIMARY} style={btnPrimaryCell}>
+                            <a href={primaryUrl} style={btnPrimaryLink}>{primaryLabel}</a>
                           </td>
                         </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td style={{ height: '12px', lineHeight: '12px', fontSize: '12px' }}>&nbsp;</td></tr>
+                <tr>
+                  <td style={{ padding: '0 32px 24px' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+                      <tbody>
                         <tr>
-                          <td style={{ paddingRight: '8px', verticalAlign: 'middle' }}>
-                            <Img src={iconWhatsapp(PRIMARY)} width="16" height="16" alt="" />
+                          <td align="center" bgcolor="#ffffff" style={btnSecondaryCell}>
+                            <a href={secondaryUrl} style={btnSecondaryLink}>{secondaryLabel}</a>
                           </td>
-                          <td style={{ verticalAlign: 'middle' }}>
-                            <Text style={footerLine}>317 128 8029</Text>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+
+          {/* Footer */}
+          <Section>
+            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={{ ...tableReset, borderTop: `1px solid ${BORDER}` }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '20px 32px' }}>
+                    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} width="100%" style={tableReset}>
+                      <tbody>
+                        <tr>
+                          {/* Left: Help */}
+                          <td width="50%" valign="top" style={{ verticalAlign: 'top' }}>
+                            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={tableReset}>
+                              <tbody>
+                                <tr>
+                                  <td width={28} valign="middle" style={{ verticalAlign: 'middle', paddingRight: '8px' }}>
+                                    <Img src={ICON.headset} width="24" height="24" alt="" style={iconImg} />
+                                  </td>
+                                  <td valign="middle" style={{ verticalAlign: 'middle' }}>
+                                    <Text style={footerTitle}>¿Necesitas ayuda?</Text>
+                                    <Text style={footerSub}>Estamos para ayudarte</Text>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                          {/* Right: Contacts */}
+                          <td width="50%" valign="top" align="right" style={{ verticalAlign: 'top', textAlign: 'right' as const }}>
+                            <table role="presentation" cellPadding={0} cellSpacing={0} border={0} align="right" style={tableReset}>
+                              <tbody>
+                                <tr>
+                                  <td width={24} valign="middle" style={{ verticalAlign: 'middle', paddingRight: '8px' }}>
+                                    <Img src={ICON.mail} width="18" height="18" alt="" style={iconImg} />
+                                  </td>
+                                  <td valign="middle" style={{ verticalAlign: 'middle' }}>
+                                    <Text style={footerLine}>soporte@rutapp.mx</Text>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td width={24} valign="middle" style={{ verticalAlign: 'middle', paddingRight: '8px' }}>
+                                    <Img src={ICON.whatsapp} width="18" height="18" alt="" style={iconImg} />
+                                  </td>
+                                  <td valign="middle" style={{ verticalAlign: 'middle' }}>
+                                    <Text style={footerLine}>317 128 8029</Text>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </td>
                         </tr>
                       </tbody>
@@ -228,28 +308,46 @@ const Email = ({
   )
 }
 
-const DataRow = ({ icon, label, value, bold }: { icon: string; label: string; value: string; bold?: boolean }) => (
-  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-    <tbody>
-      <tr>
-        <td style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'middle' }}>
-          <table style={{ borderCollapse: 'collapse' }}>
-            <tbody>
-              <tr>
-                <td style={{ width: '32px', verticalAlign: 'middle' }}>
-                  <Img src={icon} width="20" height="20" alt="" />
-                </td>
-                <td style={{ fontSize: '14px', color: TEXT_MUTED, verticalAlign: 'middle' }}>{label}</td>
-              </tr>
-            </tbody>
-          </table>
-        </td>
-        <td style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' as const, fontSize: bold ? '16px' : '14px', color: TEXT_DARK, fontWeight: bold ? 700 : 600 }}>
-          {value}
-        </td>
-      </tr>
-    </tbody>
-  </table>
+const DataRow = ({ icon, label, value, bold, last }: { icon: string; label: string; value: string; bold?: boolean; last?: boolean }) => (
+  <tr>
+    <td
+      valign="middle"
+      style={{
+        padding: '14px 16px',
+        borderBottom: last ? 'none' : `1px solid ${BORDER}`,
+        verticalAlign: 'middle',
+      }}
+    >
+      <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={tableReset}>
+        <tbody>
+          <tr>
+            <td width={32} valign="middle" style={{ verticalAlign: 'middle', paddingRight: '8px' }}>
+              <Img src={icon} width="24" height="24" alt="" style={iconImg} />
+            </td>
+            <td valign="middle" style={{ verticalAlign: 'middle', fontSize: '14px', color: TEXT_MUTED, fontFamily: 'Arial, sans-serif' }}>
+              {label}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </td>
+    <td
+      align="right"
+      valign="middle"
+      style={{
+        padding: '14px 16px',
+        borderBottom: last ? 'none' : `1px solid ${BORDER}`,
+        textAlign: 'right' as const,
+        verticalAlign: 'middle',
+        fontSize: bold ? '16px' : '14px',
+        color: TEXT_DARK,
+        fontWeight: bold ? 700 : 600,
+        fontFamily: 'Arial, sans-serif',
+      }}
+    >
+      {value}
+    </td>
+  </tr>
 )
 
 export const template = {
@@ -272,17 +370,122 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#f1f5f9', fontFamily: '-apple-system, "Segoe UI", Roboto, Arial, sans-serif', padding: '32px 12px' }
-const card = { maxWidth: '560px', margin: '0 auto', background: '#ffffff', borderRadius: '20px', padding: '24px 0 0', boxShadow: '0 4px 24px rgba(15, 23, 42, 0.06)' }
-const brand = { fontSize: '12px', letterSpacing: '4px', color: TEXT_MUTED, fontWeight: 700, marginTop: '8px', textAlign: 'center' as const }
-const h1 = { fontSize: '22px', margin: 0, fontWeight: 800, color: TEXT_DARK, lineHeight: 1.3 }
-const subtitle = { fontSize: '14px', color: TEXT_MUTED, margin: '10px 0 0', lineHeight: 1.6 }
-const dataCard = { margin: '20px 32px', border: `1px solid ${BORDER}`, borderRadius: '14px', overflow: 'hidden' as const }
-const pill = { padding: '6px 14px', borderRadius: '999px', fontSize: '13px', fontWeight: 600, display: 'inline-block' }
-const pillSub = { fontSize: '13px', color: TEXT_MUTED, margin: '10px 0 16px', textAlign: 'center' as const }
-const btnPrimary = { background: PRIMARY, color: '#ffffff', padding: '14px 24px', borderRadius: '12px', fontSize: '15px', fontWeight: 700, textDecoration: 'none', display: 'block', textAlign: 'center' as const, width: '100%', boxSizing: 'border-box' as const }
-const btnSecondary = { background: '#ffffff', color: PRIMARY, padding: '13px 24px', borderRadius: '12px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', display: 'block', textAlign: 'center' as const, width: '100%', boxSizing: 'border-box' as const, border: `1.5px solid ${PRIMARY}` }
-const footerWrap = { borderTop: `1px solid ${BORDER}`, padding: '20px 32px', margin: 0 }
-const footerTitle = { fontSize: '13px', color: TEXT_DARK, margin: 0, fontWeight: 700 }
-const footerSub = { fontSize: '12px', color: TEXT_MUTED, margin: '2px 0 0' }
-const footerLine = { fontSize: '13px', color: TEXT_DARK, margin: '0 0 4px' }
+// ── Styles (inline-only, no flex/grid/position) ──
+const main = {
+  backgroundColor: '#f1f5f9',
+  fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+  padding: '32px 12px',
+  margin: 0,
+}
+const card = {
+  maxWidth: '560px',
+  margin: '0 auto',
+  backgroundColor: '#ffffff',
+  borderRadius: '20px',
+  padding: '0',
+}
+const tableReset = { borderCollapse: 'collapse' as const, borderSpacing: 0 }
+const brand = {
+  fontSize: '12px',
+  letterSpacing: '4px',
+  color: TEXT_MUTED,
+  fontWeight: 700,
+  margin: 0,
+  textAlign: 'center' as const,
+  fontFamily: 'Arial, sans-serif',
+}
+const h1 = {
+  fontSize: '22px',
+  margin: 0,
+  fontWeight: 800,
+  color: TEXT_DARK,
+  lineHeight: '1.3',
+  textAlign: 'center' as const,
+  fontFamily: 'Arial, sans-serif',
+}
+const subtitle = {
+  fontSize: '14px',
+  color: TEXT_MUTED,
+  margin: 0,
+  lineHeight: '1.6',
+  textAlign: 'center' as const,
+  fontFamily: 'Arial, sans-serif',
+}
+const dataCardTable = {
+  borderCollapse: 'separate' as const,
+  borderSpacing: 0,
+  border: `1px solid ${BORDER}`,
+  borderRadius: '14px',
+  overflow: 'hidden' as const,
+  backgroundColor: '#ffffff',
+}
+const pill = {
+  padding: '6px 14px',
+  borderRadius: '999px',
+  fontSize: '13px',
+  fontWeight: 600,
+  fontFamily: 'Arial, sans-serif',
+}
+const pillSub = {
+  fontSize: '13px',
+  color: TEXT_MUTED,
+  margin: 0,
+  textAlign: 'center' as const,
+  fontFamily: 'Arial, sans-serif',
+}
+const btnPrimaryCell = {
+  backgroundColor: PRIMARY,
+  borderRadius: '12px',
+  padding: 0,
+}
+const btnPrimaryLink = {
+  display: 'block',
+  padding: '14px 24px',
+  color: '#ffffff',
+  fontSize: '15px',
+  fontWeight: 700,
+  textDecoration: 'none',
+  fontFamily: 'Arial, sans-serif',
+  textAlign: 'center' as const,
+}
+const btnSecondaryCell = {
+  backgroundColor: '#ffffff',
+  borderRadius: '12px',
+  border: `1.5px solid ${PRIMARY}`,
+  padding: 0,
+}
+const btnSecondaryLink = {
+  display: 'block',
+  padding: '13px 24px',
+  color: PRIMARY,
+  fontSize: '15px',
+  fontWeight: 600,
+  textDecoration: 'none',
+  fontFamily: 'Arial, sans-serif',
+  textAlign: 'center' as const,
+}
+const footerTitle = {
+  fontSize: '13px',
+  color: TEXT_DARK,
+  margin: 0,
+  fontWeight: 700,
+  fontFamily: 'Arial, sans-serif',
+}
+const footerSub = {
+  fontSize: '12px',
+  color: TEXT_MUTED,
+  margin: '2px 0 0',
+  fontFamily: 'Arial, sans-serif',
+}
+const footerLine = {
+  fontSize: '13px',
+  color: TEXT_DARK,
+  margin: '0 0 4px',
+  fontFamily: 'Arial, sans-serif',
+}
+const iconImg = {
+  display: 'block',
+  border: '0',
+  outline: 'none',
+  textDecoration: 'none',
+}
