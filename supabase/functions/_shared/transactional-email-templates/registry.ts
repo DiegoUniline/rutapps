@@ -10,7 +10,9 @@ export interface TemplateEntry {
 }
 
 import { template as cobroRecibo } from './cobro-recibo.tsx'
+import { template as adminBillingAlert } from './admin-billing-alert.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'cobro-recibo': cobroRecibo,
+  'admin-billing-alert': adminBillingAlert,
 }
