@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -375,6 +375,26 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
     onSuccess: (_, accion) => {
       toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const reabrirMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({
+          status: 'pendiente',
+          aprobado_por: null,
+          fecha_aprobacion: null,
+        } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Liquidación reabierta para edición');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       onClose();
     },
@@ -1002,6 +1022,23 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           <div className="px-5 py-3 border-t border-border">
             <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del administrador</div>
             <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
+          </div>
+        )}
+
+        {/* ═══ REABRIR PARA EDICIÓN (solo rechazadas) ═══ */}
+        {descarga.status === 'rechazada' && (
+          <div className="p-5 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">
+              Reabre esta liquidación para corregir errores. Volverá al estado "pendiente" y podrá ser revisada nuevamente.
+            </p>
+            <Button
+              onClick={() => reabrirMutation.mutate()}
+              disabled={reabrirMutation.isPending}
+              variant="outline"
+              className="w-full"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" /> Reabrir para edición
+            </Button>
           </div>
         )}
       </div>
