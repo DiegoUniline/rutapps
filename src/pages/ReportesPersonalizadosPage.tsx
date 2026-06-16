@@ -658,6 +658,17 @@ function EditorDialog({ open, onClose, config, onChange, onSave, saving }: {
     onChange({ ...config, columnas: next });
   };
 
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const reorder = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    const next = [...config.columnas];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange({ ...config, columnas: next });
+  };
+
+
   const renameCol = (idx: number, header: string) => {
     const next = [...config.columnas];
     next[idx] = { ...next[idx], header };
