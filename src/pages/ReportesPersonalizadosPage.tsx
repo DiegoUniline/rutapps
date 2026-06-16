@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Play, FileSpreadsheet, FileText, FileDown,
-  ArrowUp, ArrowDown, Loader2, FileBarChart2, RefreshCw,
+  ArrowUp, ArrowDown, Loader2, FileBarChart2, RefreshCw, GripVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
