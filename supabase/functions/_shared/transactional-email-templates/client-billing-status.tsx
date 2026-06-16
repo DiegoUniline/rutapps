@@ -37,6 +37,47 @@ const TEXT_DARK = '#0f172a'
 const TEXT_MUTED = '#64748b'
 const BORDER = '#e2e8f0'
 
+// ── SVG icon helpers (data URIs so Gmail/Outlook render them) ──
+const svg = (markup: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(markup)}`
+
+const iconCalendar = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 9h18'/><path d='M8 3v4M16 3v4'/><circle cx='8' cy='14' r='1' fill='${c}'/><circle cx='12' cy='14' r='1' fill='${c}'/><circle cx='16' cy='14' r='1' fill='${c}'/></svg>`
+)
+const iconCard = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='5' width='20' height='14' rx='2'/><path d='M2 10h20'/></svg>`
+)
+const iconDollar = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v12M15 9.5a2.5 2.5 0 0 0-2.5-2.5h-1A2.5 2.5 0 0 0 9 9.5c0 1.4 1.1 2.5 2.5 2.5h1A2.5 2.5 0 0 1 15 14.5 2.5 2.5 0 0 1 12.5 17h-1A2.5 2.5 0 0 1 9 14.5'/></svg>`
+)
+const iconDoc = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/><path d='M14 3v6h6'/><path d='M8 13h6M8 17h8'/></svg>`
+)
+const iconInfo = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg>`
+)
+const iconHeadset = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 14v-2a9 9 0 0 1 18 0v2'/><path d='M21 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2zM3 14a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2z'/><path d='M18 16v1a3 3 0 0 1-3 3h-2'/></svg>`
+)
+const iconMail = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${c}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='14' rx='2'/><path d='m3 7 9 6 9-6'/></svg>`
+)
+const iconWhatsapp = (c: string) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='${c}'><path d='M20.5 3.5A11 11 0 0 0 3.2 17.3L2 22l4.8-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.2-.3.2-.5.1-.7-.4-1.5-.8-2.1-1.6-.5-.6-.9-1.3-1-1.5 0-.2 0-.3.1-.4l.4-.4c.1-.1.1-.2.2-.4 0-.2 0-.3 0-.4 0-.1-.5-1.2-.7-1.7-.2-.4-.4-.3-.5-.4h-.4c-.2 0-.4 0-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.1 1.7 2.6 4.2 3.6.6.2 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1z'/></svg>`
+)
+// Big card with red X badge (failure) / green check badge (success)
+const iconBigCard = (fail: boolean) => svg(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'>
+    <rect x='6' y='14' width='46' height='32' rx='5' fill='none' stroke='${PRIMARY}' stroke-width='3'/>
+    <rect x='6' y='22' width='46' height='6' fill='${PRIMARY}'/>
+    <circle cx='50' cy='46' r='10' fill='${fail ? DANGER : SUCCESS}'/>
+    ${fail
+      ? `<path d='M46 42l8 8M54 42l-8 8' stroke='#fff' stroke-width='2.5' stroke-linecap='round'/>`
+      : `<path d='M45 46l4 4 7-7' stroke='#fff' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/>`
+    }
+  </svg>`
+)
+
 const isFail = (e: string) => e === 'cobro_fallido'
 
 const Email = ({
@@ -77,25 +118,22 @@ const Email = ({
             <Text style={brand}>RUTAPP</Text>
           </Section>
 
-          {/* Big status icon */}
-          <Section style={{ textAlign: 'center', padding: '8px 0 0' }}>
+          {/* Big status icon — card with badge */}
+          <Section style={{ textAlign: 'center', padding: '12px 0 0' }}>
             <table style={{ margin: '0 auto', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr>
                   <td
                     style={{
-                      width: '88px',
-                      height: '88px',
-                      background: accentSoft,
+                      width: '96px',
+                      height: '96px',
+                      background: '#eff6ff',
                       borderRadius: '50%',
                       textAlign: 'center',
                       verticalAlign: 'middle',
-                      fontSize: '44px',
-                      lineHeight: '88px',
-                      color: accent,
                     }}
                   >
-                    {fail ? '✕' : '✓'}
+                    <Img src={iconBigCard(fail)} width="56" height="56" alt="" style={{ display: 'inline-block' }} />
                   </td>
                 </tr>
               </tbody>
@@ -110,11 +148,11 @@ const Email = ({
 
           {/* Data card */}
           <Section style={dataCard}>
-            <DataRow color={accent} icon="📅" label={fail ? 'Fecha del intento' : 'Fecha'} value={fecha || '—'} />
-            {metodoPago ? <DataRow color={accent} icon="💳" label="Método de pago" value={metodoPago} /> : null}
-            <DataRow color={accent} icon="$" label={fail ? 'Monto' : 'Importe'} value={monto || '—'} bold />
-            {folio ? <DataRow color={accent} icon="📄" label="Folio" value={folio} /> : null}
-            {fail && detalle ? <DataRow color={accent} icon="ℹ️" label="Motivo" value={detalle} /> : null}
+            <DataRow icon={iconCalendar(PRIMARY)} label={fail ? 'Fecha del intento' : 'Fecha'} value={fecha || '—'} />
+            {metodoPago ? <DataRow icon={iconCard(PRIMARY)} label="Método de pago" value={metodoPago} /> : null}
+            <DataRow icon={iconDollar(PRIMARY)} label={fail ? 'Monto' : 'Importe'} value={monto || '—'} bold />
+            {folio ? <DataRow icon={iconDoc(PRIMARY)} label="Folio" value={folio} /> : null}
+            {fail && detalle ? <DataRow icon={iconInfo(PRIMARY)} label="Motivo" value={detalle} /> : null}
           </Section>
 
           {/* Status pill */}
@@ -144,12 +182,41 @@ const Email = ({
               <tbody>
                 <tr>
                   <td style={{ width: '50%', verticalAlign: 'top' }}>
-                    <Text style={footerTitle}>🎧 ¿Necesitas ayuda?</Text>
-                    <Text style={footerSub}>Estamos para ayudarte</Text>
+                    <table style={{ borderCollapse: 'collapse' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ paddingRight: '10px', verticalAlign: 'middle' }}>
+                            <Img src={iconHeadset(PRIMARY)} width="22" height="22" alt="" />
+                          </td>
+                          <td style={{ verticalAlign: 'middle' }}>
+                            <Text style={footerTitle}>¿Necesitas ayuda?</Text>
+                            <Text style={footerSub}>Estamos para ayudarte</Text>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </td>
                   <td style={{ width: '50%', verticalAlign: 'top', textAlign: 'right' as const }}>
-                    <Text style={footerLine}>✉️ soporte@rutapp.mx</Text>
-                    <Text style={footerLine}>📱 317 128 8029</Text>
+                    <table style={{ borderCollapse: 'collapse', marginLeft: 'auto' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ paddingRight: '8px', verticalAlign: 'middle' }}>
+                            <Img src={iconMail(PRIMARY)} width="16" height="16" alt="" />
+                          </td>
+                          <td style={{ verticalAlign: 'middle' }}>
+                            <Text style={footerLine}>soporte@rutapp.mx</Text>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ paddingRight: '8px', verticalAlign: 'middle' }}>
+                            <Img src={iconWhatsapp(PRIMARY)} width="16" height="16" alt="" />
+                          </td>
+                          <td style={{ verticalAlign: 'middle' }}>
+                            <Text style={footerLine}>317 128 8029</Text>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </td>
                 </tr>
               </tbody>
@@ -161,21 +228,23 @@ const Email = ({
   )
 }
 
-const DataRow = ({ color, icon, label, value, bold }: { color: string; icon: string; label: string; value: string; bold?: boolean }) => (
+const DataRow = ({ icon, label, value, bold }: { icon: string; label: string; value: string; bold?: boolean }) => (
   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
     <tbody>
       <tr>
-        <td style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'middle' }}>
+        <td style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, verticalAlign: 'middle' }}>
           <table style={{ borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ width: '28px', color, fontSize: '16px', verticalAlign: 'middle' }}>{icon}</td>
+                <td style={{ width: '32px', verticalAlign: 'middle' }}>
+                  <Img src={icon} width="20" height="20" alt="" />
+                </td>
                 <td style={{ fontSize: '14px', color: TEXT_MUTED, verticalAlign: 'middle' }}>{label}</td>
               </tr>
             </tbody>
           </table>
         </td>
-        <td style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' as const, fontSize: bold ? '16px' : '14px', color: TEXT_DARK, fontWeight: bold ? 700 : 500 }}>
+        <td style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, textAlign: 'right' as const, fontSize: bold ? '16px' : '14px', color: TEXT_DARK, fontWeight: bold ? 700 : 600 }}>
           {value}
         </td>
       </tr>
