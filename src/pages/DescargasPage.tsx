@@ -1024,23 +1024,6 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
           </div>
         )}
-
-        {/* ═══ REABRIR PARA EDICIÓN (solo rechazadas) ═══ */}
-        {descarga.status === 'rechazada' && (
-          <div className="p-5 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">
-              Reabre esta liquidación para corregir errores. Volverá al estado "pendiente" y podrá ser revisada nuevamente.
-            </p>
-            <Button
-              onClick={() => reabrirMutation.mutate()}
-              disabled={reabrirMutation.isPending}
-              variant="outline"
-              className="w-full"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" /> Reabrir para edición
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
