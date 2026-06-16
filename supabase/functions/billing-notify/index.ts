@@ -394,6 +394,65 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ ok }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // ─── Preview client-facing messages to Diego/WA admin (test only) ───
+      if (body?.test_client_preview) {
+        const { notifyBillingEvent, ADMIN_WA_PHONE, ADMIN_EMAIL_TO } = await import("../_shared/billing-notify-utils.ts");
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config").select("api_token")
+          .order("created_at", { ascending: true }).limit(1).maybeSingle();
+        const waToken = waConfig?.api_token;
+        const todayMx = new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" });
+        const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
+        const venc = nextMonth.toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" });
+
+        const baseSuccess = {
+          evento: "cobro_exitoso" as const,
+          empresa: "Tu Empresa S.A. de C.V.",
+          clienteNombre: "Diego (cliente de prueba)",
+          monto: "$2,700 MXN",
+          amountCents: 270000,
+          numUsuarios: 3,
+          folio: "RUT-PREVIEW-001",
+          invoiceUrl: "https://invoice.stripe.com/preview",
+          fecha: todayMx,
+          fechaVigencia: venc,
+          idempotencyKey: `preview-success-${Date.now()}`,
+        };
+        const baseFailed = {
+          evento: "cobro_fallido" as const,
+          empresa: "Tu Empresa S.A. de C.V.",
+          clienteNombre: "Diego (cliente de prueba)",
+          monto: "$2,700 MXN",
+          amountCents: 270000,
+          numUsuarios: 3,
+          folio: "RUT-PREVIEW-002",
+          invoiceUrl: "https://invoice.stripe.com/preview",
+          enlacePago: "https://invoice.stripe.com/preview",
+          fecha: todayMx,
+          intento: 1,
+          detalle: "Your card was declined.",
+          idempotencyKey: `preview-failed-${Date.now()}`,
+        };
+
+        // Send as if Diego were the client. Skip admin to avoid duplicate copies.
+        await notifyBillingEvent(supabase, waToken, baseSuccess, {
+          skipAdmin: true,
+          overrideClientEmail: ADMIN_EMAIL_TO,
+          overrideClientPhone: ADMIN_WA_PHONE,
+        });
+        await notifyBillingEvent(supabase, waToken, baseFailed, {
+          skipAdmin: true,
+          overrideClientEmail: ADMIN_EMAIL_TO,
+          overrideClientPhone: ADMIN_WA_PHONE,
+        });
+
+        return new Response(JSON.stringify({
+          ok: true,
+          sentTo: { email: ADMIN_EMAIL_TO, phone: ADMIN_WA_PHONE },
+          previews: ["cobro_exitoso", "cobro_fallido"],
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       // ─── Resend today's Stripe events (success + failed) ───
       if (body?.resend_today) {
         const { notifyBillingEvent } = await import("../_shared/billing-notify-utils.ts");
