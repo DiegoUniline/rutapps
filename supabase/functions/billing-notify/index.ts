@@ -18,6 +18,11 @@ const RUTAPP_PRODUCT_IDS = new Set([
 const GRACE_DAYS = 3;
 const FACTURACION_URL = "https://rutapp.mx/facturacion";
 
+/* ─── Admin copy targets ─── */
+const ADMIN_WA_PHONE = "5213171035768";
+const ADMIN_EMAIL_TO = "diego.leon@uniline.mx";
+const ADMIN_EMAIL_BCC = ["ventas@uniline.mx"];
+
 /* ─── Template types ─── */
 interface TemplateConfig {
   tipo: string;
