@@ -632,8 +632,47 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
               <div className="bg-card rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
-                <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
+                  {!editingEfectivo && (
+                    <button
+                      type="button"
+                      onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
+                      className="text-[10px] text-primary hover:underline font-semibold"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+                {editingEfectivo ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={efectivoDraft}
+                      onChange={(e) => setEfectivoDraft(e.target.value)}
+                      className="h-9 text-base font-bold"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const n = Number(efectivoDraft);
+                        if (isNaN(n) || n < 0) { toast.error('Monto inválido'); return; }
+                        editEfectivoMutation.mutate(n);
+                      }}
+                      disabled={editEfectivoMutation.isPending}
+                      className="h-9 text-xs"
+                    >
+                      Guardar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingEfectivo(false)} className="h-9 text-xs">
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
+                )}
               </div>
               {descarga.notas && (
                 <div className="bg-card rounded-md p-3">
