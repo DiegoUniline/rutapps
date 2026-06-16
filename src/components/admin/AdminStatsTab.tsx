@@ -383,12 +383,26 @@ export default function AdminStatsTab() {
       {/* ── TABS ── */}
       <Tabs defaultValue="panel">
         <TabsList className="grid grid-cols-5 w-full">
-          <TabsTrigger value="panel"><LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />Panel</TabsTrigger>
-          <TabsTrigger value="altas"><UserPlus className="h-3.5 w-3.5 mr-1.5" />Altas</TabsTrigger>
-          <TabsTrigger value="bajas"><UserMinus className="h-3.5 w-3.5 mr-1.5" />Bajas</TabsTrigger>
-          <TabsTrigger value="ingresos"><DollarSign className="h-3.5 w-3.5 mr-1.5" />Ingresos</TabsTrigger>
-          <TabsTrigger value="salud"><Activity className="h-3.5 w-3.5 mr-1.5" />Salud SaaS</TabsTrigger>
+          {[
+            { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
+            { v: 'altas', icon: UserPlus, l: 'Altas' },
+            { v: 'bajas', icon: UserMinus, l: 'Bajas' },
+            { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
+            { v: 'salud', icon: Activity, l: 'Salud SaaS' },
+          ].map(t => {
+            const Icon = t.icon;
+            return (
+              <TabsTrigger
+                key={t.v}
+                value={t.v}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="h-3.5 w-3.5 mr-1.5" />{t.l}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
+
 
         {/* ──────────── PANEL ──────────── */}
         <TabsContent value="panel" className="space-y-4 mt-4">
