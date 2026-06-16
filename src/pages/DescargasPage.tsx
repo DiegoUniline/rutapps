@@ -568,14 +568,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             }}>
               <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
-            {descarga.status === 'rechazada' && (
+            {(descarga.status === 'rechazada' || descarga.status === 'aprobada') && (
               <Button
                 onClick={() => reabrirMutation.mutate()}
                 disabled={reabrirMutation.isPending}
                 size="sm"
                 className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600 border-none"
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Reabrir
+                <RefreshCw className="h-3.5 w-3.5" /> Reabrir para editar
               </Button>
             )}
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
@@ -634,7 +634,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="bg-card rounded-md p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
-                  {!editingEfectivo && (
+                  {!editingEfectivo && isPendiente && (
                     <button
                       type="button"
                       onClick={() => { setEfectivoDraft(String(Number(descarga.efectivo_entregado) || 0)); setEditingEfectivo(true); }}
@@ -642,6 +642,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     >
                       Editar
                     </button>
+                  )}
+                  {!editingEfectivo && !isPendiente && (
+                    <span className="text-[10px] text-muted-foreground italic">
+                      Reabre la liquidación para editar
+                    </span>
                   )}
                 </div>
                 {editingEfectivo ? (
