@@ -20,7 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
-import FacturacionAvanzadaTab from '@/components/facturacion/FacturacionAvanzadaTab';
+// FacturacionAvanzadaTab fue movido a /facturacion-cfdi/avanzado como vistas
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import ClientesListPage from '@/pages/ClientesListPage';
 import ProductosListPage from '@/pages/ProductosListPage';
