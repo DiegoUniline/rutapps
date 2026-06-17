@@ -20,30 +20,13 @@ import {
 } from 'lucide-react';
 
 /**
- * Tab "Avanzado" para facturación - solo visible al super admin.
- * Incluye: Complemento de Pago (REP), Factura Global, Descarga Masiva,
- * Reenvío por correo, Validación RFC, Sustitución guiada.
+ * Secciones avanzadas de facturación (solo super admin).
+ * Cada sección se exporta para usarse como vista independiente dentro del módulo.
  */
 export default function FacturacionAvanzadaTab() {
-  return (
-    <Tabs defaultValue="pagos" className="w-full mt-4">
-      <TabsList className="grid grid-cols-6 w-full">
-        <TabsTrigger value="pagos"><Receipt className="h-4 w-4 mr-1" />Complementos Pago</TabsTrigger>
-        <TabsTrigger value="global"><Users className="h-4 w-4 mr-1" />Factura Global</TabsTrigger>
-        <TabsTrigger value="masiva"><Download className="h-4 w-4 mr-1" />Descarga Masiva</TabsTrigger>
-        <TabsTrigger value="correo"><Mail className="h-4 w-4 mr-1" />Reenvío Correo</TabsTrigger>
-        <TabsTrigger value="rfc"><ShieldCheck className="h-4 w-4 mr-1" />Validar RFC</TabsTrigger>
-        <TabsTrigger value="sustituir"><RefreshCw className="h-4 w-4 mr-1" />Sustituir CFDI</TabsTrigger>
-      </TabsList>
-      <TabsContent value="pagos" className="mt-4"><ComplementosPagoSection /></TabsContent>
-      <TabsContent value="global" className="mt-4"><FacturaGlobalSection /></TabsContent>
-      <TabsContent value="masiva" className="mt-4"><DescargaMasivaSection /></TabsContent>
-      <TabsContent value="correo" className="mt-4"><ReenvioCorreoSection /></TabsContent>
-      <TabsContent value="rfc" className="mt-4"><ValidarRfcSection /></TabsContent>
-      <TabsContent value="sustituir" className="mt-4"><SustituirCfdiSection /></TabsContent>
-    </Tabs>
-  );
+  return <ComplementosPagoSection />;
 }
+
 
 // ============================================================
 // 1. COMPLEMENTOS DE PAGO (REP)
