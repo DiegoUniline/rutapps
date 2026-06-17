@@ -20,35 +20,18 @@ import {
 } from 'lucide-react';
 
 /**
- * Tab "Avanzado" para facturación - solo visible al super admin.
- * Incluye: Complemento de Pago (REP), Factura Global, Descarga Masiva,
- * Reenvío por correo, Validación RFC, Sustitución guiada.
+ * Secciones avanzadas de facturación (solo super admin).
+ * Cada sección se exporta para usarse como vista independiente dentro del módulo.
  */
 export default function FacturacionAvanzadaTab() {
-  return (
-    <Tabs defaultValue="pagos" className="w-full mt-4">
-      <TabsList className="grid grid-cols-6 w-full">
-        <TabsTrigger value="pagos"><Receipt className="h-4 w-4 mr-1" />Complementos Pago</TabsTrigger>
-        <TabsTrigger value="global"><Users className="h-4 w-4 mr-1" />Factura Global</TabsTrigger>
-        <TabsTrigger value="masiva"><Download className="h-4 w-4 mr-1" />Descarga Masiva</TabsTrigger>
-        <TabsTrigger value="correo"><Mail className="h-4 w-4 mr-1" />Reenvío Correo</TabsTrigger>
-        <TabsTrigger value="rfc"><ShieldCheck className="h-4 w-4 mr-1" />Validar RFC</TabsTrigger>
-        <TabsTrigger value="sustituir"><RefreshCw className="h-4 w-4 mr-1" />Sustituir CFDI</TabsTrigger>
-      </TabsList>
-      <TabsContent value="pagos" className="mt-4"><ComplementosPagoSection /></TabsContent>
-      <TabsContent value="global" className="mt-4"><FacturaGlobalSection /></TabsContent>
-      <TabsContent value="masiva" className="mt-4"><DescargaMasivaSection /></TabsContent>
-      <TabsContent value="correo" className="mt-4"><ReenvioCorreoSection /></TabsContent>
-      <TabsContent value="rfc" className="mt-4"><ValidarRfcSection /></TabsContent>
-      <TabsContent value="sustituir" className="mt-4"><SustituirCfdiSection /></TabsContent>
-    </Tabs>
-  );
+  return <ComplementosPagoSection />;
 }
+
 
 // ============================================================
 // 1. COMPLEMENTOS DE PAGO (REP)
 // ============================================================
-function ComplementosPagoSection() {
+export function ComplementosPagoSection() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const [showDialog, setShowDialog] = useState(false);
@@ -268,7 +251,7 @@ function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () =
 // ============================================================
 // 2. FACTURA GLOBAL
 // ============================================================
-function FacturaGlobalSection() {
+export function FacturaGlobalSection() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
@@ -429,7 +412,7 @@ function FacturaGlobalSection() {
 // ============================================================
 // 3. DESCARGA MASIVA
 // ============================================================
-function DescargaMasivaSection() {
+export function DescargaMasivaSection() {
   const { empresa } = useAuth();
   const today = new Date();
   const [desde, setDesde] = useState(format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd'));
@@ -538,7 +521,7 @@ function DescargaMasivaSection() {
 // ============================================================
 // 4. REENVÍO POR CORREO
 // ============================================================
-function ReenvioCorreoSection() {
+export function ReenvioCorreoSection() {
   const { empresa } = useAuth();
   const [cfdiId, setCfdiId] = useState('');
   const [email, setEmail] = useState('');
@@ -619,7 +602,7 @@ function ReenvioCorreoSection() {
 // ============================================================
 // 5. VALIDAR RFC
 // ============================================================
-function ValidarRfcSection() {
+export function ValidarRfcSection() {
   const [rfc, setRfc] = useState('');
   const [name, setName] = useState('');
   const [zip, setZip] = useState('');
@@ -671,7 +654,7 @@ function ValidarRfcSection() {
 // ============================================================
 // 6. SUSTITUIR CFDI (placeholder UI - requiere wizard completo)
 // ============================================================
-function SustituirCfdiSection() {
+export function SustituirCfdiSection() {
   return (
     <Card>
       <CardHeader><CardTitle>Sustituir CFDI</CardTitle></CardHeader>

@@ -112,6 +112,8 @@ const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
 const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
+const FacturacionAvanzadaPage = lazy(() => import("@/pages/FacturacionAvanzadaPage"));
+
 const ComisionesLayoutPage = lazy(() => import("@/pages/comisiones/ComisionesLayoutPage"));
 const ComisionesAvancePage = lazy(() => import("@/pages/comisiones/ComisionesAvancePage"));
 const ComisionesEsquemasPage = lazy(() => import("@/pages/comisiones/ComisionesEsquemasPage"));
@@ -769,7 +771,10 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       {isBillingOwner && <Route path="/completar-registro" element={<CompletarRegistroPage />} />}
       {isFacturacionAdmin && <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />}
       {isFacturacionAdmin && <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/avanzado" element={<FacturacionAvanzadaPage />} />}
+      {isFacturacionAdmin && <Route path="/facturacion-cfdi/avanzado/:section" element={<FacturacionAvanzadaPage />} />}
       {isFacturacionAdmin && <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />}
+
 
       <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="/cliente/:token" element={<EstadoCuentaPublicoPage />} />

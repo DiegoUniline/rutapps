@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp, Trash2, AlertTriangle } from 'lucide-react';
+import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp, Trash2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
-import FacturacionAvanzadaTab from '@/components/facturacion/FacturacionAvanzadaTab';
+// FacturacionAvanzadaTab fue movido a /facturacion-cfdi/avanzado como vistas
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import ClientesListPage from '@/pages/ClientesListPage';
 import ProductosListPage from '@/pages/ProductosListPage';
@@ -284,6 +284,12 @@ export default function FacturacionCfdiPage() {
           </Badge>
         </div>
         <div className="flex gap-2">
+          {isSuperAdmin && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/facturacion-cfdi/avanzado')}>
+              <Sparkles className="h-4 w-4" />
+              <span className="ml-1.5 hidden sm:inline">Avanzado</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -298,19 +304,18 @@ export default function FacturacionCfdiPage() {
             Timbrar CFDI
           </Button>
         </div>
+
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className={`grid ${isSuperAdmin ? 'grid-cols-6' : 'grid-cols-5'} w-full`}>
+        <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas</TabsTrigger>
           <TabsTrigger value="clientes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Clientes</TabsTrigger>
           <TabsTrigger value="productos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Productos</TabsTrigger>
           <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Configuración Emisor</TabsTrigger>
           <TabsTrigger value="catalogos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Catálogos SAT</TabsTrigger>
-          {isSuperAdmin && (
-            <TabsTrigger value="avanzado" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Avanzado</TabsTrigger>
-          )}
         </TabsList>
+
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
@@ -492,11 +497,8 @@ export default function FacturacionCfdiPage() {
           <CatalogosTab />
         </TabsContent>
 
-        {isSuperAdmin && (
-          <TabsContent value="avanzado" className="mt-4">
-            <FacturacionAvanzadaTab />
-          </TabsContent>
-        )}
+
+
       </Tabs>
 
       {/* Timbrar Dialog */}
