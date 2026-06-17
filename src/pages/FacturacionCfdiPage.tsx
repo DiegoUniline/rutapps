@@ -20,6 +20,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
+import FacturacionAvanzadaTab from '@/components/facturacion/FacturacionAvanzadaTab';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import ClientesListPage from '@/pages/ClientesListPage';
 import ProductosListPage from '@/pages/ProductosListPage';
 
@@ -45,6 +47,7 @@ type FacturaSubTab = 'todas' | 'borrador' | 'timbrado' | 'error' | 'canceladas';
 
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
+  const isSuperAdmin = useIsSuperAdmin();
   const { fmt } = useCurrency();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
