@@ -5,6 +5,7 @@ import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Cale
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 
 type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
