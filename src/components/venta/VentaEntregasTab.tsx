@@ -35,6 +35,7 @@ interface VentaEntregasTabProps {
   isCreatingEntrega: boolean;
   isMobile: boolean;
   onCreateEntrega: (lineas: { producto_id: string; cantidad_pedida: number }[]) => void;
+  tipo?: string;
 }
 
 const STATUS_COLOR: Record<string, string> = {
