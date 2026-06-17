@@ -497,11 +497,8 @@ export default function FacturacionCfdiPage() {
           <CatalogosTab />
         </TabsContent>
 
-        {isSuperAdmin && (
-          <TabsContent value="avanzado" className="mt-4">
-            <FacturacionAvanzadaTab />
-          </TabsContent>
-        )}
+
+
       </Tabs>
 
       {/* Timbrar Dialog */}
