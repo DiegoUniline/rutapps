@@ -35,6 +35,7 @@ interface VentaEntregasTabProps {
   isCreatingEntrega: boolean;
   isMobile: boolean;
   onCreateEntrega: (lineas: { producto_id: string; cantidad_pedida: number }[]) => void;
+  tipo?: string;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -51,13 +52,14 @@ export function VentaEntregasTab({
   lineas, productosList, entregasExistentes, entregasActivas,
   lineDeliverySummary, canCreateEntrega, fullyDelivered,
   remaining, isCreatingEntrega, isMobile, onCreateEntrega,
+  tipo,
 }: VentaEntregasTabProps) {
   const productLineas = lineas.filter(l => l.producto_id);
 
   return (
     <div className="p-3 sm:p-4 space-y-4">
-      {/* Per-line delivery summary */}
-      {productLineas.length > 0 && (
+      {/* Per-line delivery summary — hidden for venta_directa */}
+      {productLineas.length > 0 && tipo !== 'venta_directa' && (
         <div>
           <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Resumen por producto</h4>
           {isMobile ? (
@@ -119,7 +121,7 @@ export function VentaEntregasTab({
       <div>
         <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Entregas creadas</h4>
         {entregasActivas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay entregas creadas para este pedido</p>
+          <p className="text-sm text-muted-foreground">No hay entregas creadas para esta {tipo === 'venta_directa' ? 'venta' : 'venta'}</p>
         ) : isMobile ? (
           <div className="space-y-2">
             {entregasExistentes.map(e => {
@@ -184,7 +186,7 @@ export function VentaEntregasTab({
         </Button>
       )}
 
-      {fullyDelivered && (
+      {fullyDelivered && tipo !== 'venta_directa' && (
         <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
           <span className="inline-block w-2 h-2 rounded-full bg-primary" />
           Pedido completamente surtido
