@@ -15,26 +15,24 @@ interface CfdiHistoryProps {
 export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps) {
   const navigate = useNavigate();
   const { fmt: fmtCur } = useCurrency();
-  // Get unique cfdi_ids from facturado lines
-  const cfdiIds = [...new Set(lineas.filter(l => l.facturado && l.factura_cfdi_id).map(l => l.factura_cfdi_id))];
-
   const { data: cfdis } = useQuery({
     queryKey: ['cfdis-venta', ventaId],
-    enabled: cfdiIds.length > 0,
+    enabled: !!ventaId,
     queryFn: async () => {
       const { data } = await supabase
         .from('cfdis')
         .select('*, cfdi_lineas(id)')
         .eq('venta_id', ventaId)
         .order('created_at', { ascending: false });
-      // Only show CFDIs that are timbrado/cancelado OR have lines
       return (data ?? []).filter((c: any) =>
         c.status === 'timbrado' || c.status === 'cancelado' || (c.cfdi_lineas && c.cfdi_lineas.length > 0)
       );
     },
   });
 
-  if (!cfdis || cfdis.length === 0) return null;
+  if (!cfdis || cfdis.length === 0) {
+    return <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>;
+  }
 
   return (
     <div className="space-y-3">
