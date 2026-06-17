@@ -52,6 +52,7 @@ export function VentaEntregasTab({
   lineas, productosList, entregasExistentes, entregasActivas,
   lineDeliverySummary, canCreateEntrega, fullyDelivered,
   remaining, isCreatingEntrega, isMobile, onCreateEntrega,
+  tipo,
 }: VentaEntregasTabProps) {
   const productLineas = lineas.filter(l => l.producto_id);
 
