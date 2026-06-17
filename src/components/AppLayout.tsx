@@ -169,7 +169,22 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Control', icon: ShieldAlert, path: '/control' },
-  { label: 'Facturación', icon: FileText, path: '/facturacion-cfdi', highlight: 'amber' },
+  {
+    label: 'Facturación',
+    icon: FileText,
+    path: '/facturacion-cfdi',
+    highlight: 'amber',
+    children: [
+      { label: 'Facturas', path: '/facturacion-cfdi' },
+      { label: 'Complementos de Pago', path: '/facturacion-cfdi/avanzado/pagos' },
+      { label: 'Factura Global', path: '/facturacion-cfdi/avanzado/global' },
+      { label: 'Descarga Masiva', path: '/facturacion-cfdi/avanzado/masiva' },
+      { label: 'Reenvío por Correo', path: '/facturacion-cfdi/avanzado/correo' },
+      { label: 'Validar RFC', path: '/facturacion-cfdi/avanzado/rfc' },
+      { label: 'Sustituir CFDI', path: '/facturacion-cfdi/avanzado/sustituir' },
+    ],
+  },
+
 
   {
     label: 'Administración',
