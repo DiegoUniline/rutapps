@@ -61,6 +61,9 @@ function calcLinea(l: Partial<CfdiLinea>): Partial<CfdiLinea> {
 export default function CfdiFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = (location.state as any)?.returnTo as string | undefined;
+  const goBack = () => { if (backTo) navigate(backTo); else navigate('/facturacion-cfdi'); };
   const { empresa } = useAuth();
   const { fmt: fmtCurrency } = useCurrency();
   const queryClient = useQueryClient();
