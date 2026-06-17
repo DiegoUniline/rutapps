@@ -31,7 +31,7 @@ export default function FacturacionAvanzadaTab() {
 // ============================================================
 // 1. COMPLEMENTOS DE PAGO (REP)
 // ============================================================
-function ComplementosPagoSection() {
+export function ComplementosPagoSection() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const [showDialog, setShowDialog] = useState(false);
@@ -251,7 +251,7 @@ function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () =
 // ============================================================
 // 2. FACTURA GLOBAL
 // ============================================================
-function FacturaGlobalSection() {
+export function FacturaGlobalSection() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
@@ -412,7 +412,7 @@ function FacturaGlobalSection() {
 // ============================================================
 // 3. DESCARGA MASIVA
 // ============================================================
-function DescargaMasivaSection() {
+export function DescargaMasivaSection() {
   const { empresa } = useAuth();
   const today = new Date();
   const [desde, setDesde] = useState(format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd'));
@@ -521,7 +521,7 @@ function DescargaMasivaSection() {
 // ============================================================
 // 4. REENVÍO POR CORREO
 // ============================================================
-function ReenvioCorreoSection() {
+export function ReenvioCorreoSection() {
   const { empresa } = useAuth();
   const [cfdiId, setCfdiId] = useState('');
   const [email, setEmail] = useState('');
@@ -602,7 +602,7 @@ function ReenvioCorreoSection() {
 // ============================================================
 // 5. VALIDAR RFC
 // ============================================================
-function ValidarRfcSection() {
+export function ValidarRfcSection() {
   const [rfc, setRfc] = useState('');
   const [name, setName] = useState('');
   const [zip, setZip] = useState('');
@@ -654,7 +654,7 @@ function ValidarRfcSection() {
 // ============================================================
 // 6. SUSTITUIR CFDI (placeholder UI - requiere wizard completo)
 // ============================================================
-function SustituirCfdiSection() {
+export function SustituirCfdiSection() {
   return (
     <Card>
       <CardHeader><CardTitle>Sustituir CFDI</CardTitle></CardHeader>
