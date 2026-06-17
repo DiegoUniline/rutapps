@@ -36,8 +36,8 @@ html, body, #root {
     --popover: 0 0% 100%;
     --popover-foreground: 220 14% 10%;
 
-    /* Primary: neutral indigo — professional, understated */
-    --primary: 230 55% 52%;
+    /* Primary: Rutapp corporate blue #0061e8 */
+    --primary: 215 100% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 10% 40%;
@@ -47,7 +47,11 @@ html, body, #root {
     --muted-foreground: 220 10% 46%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 230 55% 52%;
+    --accent-foreground: 215 100% 45%;
+
+    /* Rutapp corporate orange #ff7a00 — secondary brand accent */
+    --brand-orange: 29 100% 50%;
+    --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 52%;
     --destructive-foreground: 0 0% 100%;
@@ -60,7 +64,7 @@ html, body, #root {
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 230 55% 52%;
+    --ring: 215 100% 45%;
 
     --radius: 0.625rem;
 
@@ -69,12 +73,12 @@ html, body, #root {
     --sidebar-foreground: 220 14% 28%;
     --sidebar-border: 220 13% 91%;
     --sidebar-hover: 220 14% 92%;
-    --sidebar-accent: 230 55% 52%;
+    --sidebar-accent: 215 100% 45%;
     --sidebar-muted: 220 10% 56%;
 
     /* Chart colors */
-    --chart-1: 230 55% 60%;
-    --chart-2: 260 45% 60%;
+    --chart-1: 215 100% 45%;
+    --chart-2: 29 100% 50%;
     --chart-3: 200 55% 50%;
     --chart-4: 170 50% 42%;
     --chart-5: 220 10% 50%;
@@ -119,8 +123,8 @@ html, body, #root {
     --popover: 220 14% 12%;
     --popover-foreground: 220 10% 93%;
 
-    --primary: 228 60% 65%;
-    --primary-foreground: 225 30% 12%;
+    --primary: 215 100% 60%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 220 10% 45%;
     --secondary-foreground: 0 0% 98%;
@@ -129,7 +133,10 @@ html, body, #root {
     --muted-foreground: 220 10% 60%;
 
     --accent: 225 20% 18%;
-    --accent-foreground: 228 60% 70%;
+    --accent-foreground: 215 100% 65%;
+
+    --brand-orange: 29 100% 55%;
+    --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -142,17 +149,17 @@ html, body, #root {
 
     --border: 220 14% 20%;
     --input: 220 14% 20%;
-    --ring: 228 60% 65%;
+    --ring: 215 100% 60%;
 
     --sidebar: 220 14% 12%;
     --sidebar-foreground: 220 10% 75%;
     --sidebar-border: 220 14% 18%;
     --sidebar-hover: 220 14% 16%;
-    --sidebar-accent: 228 60% 65%;
+    --sidebar-accent: 215 100% 60%;
     --sidebar-muted: 220 10% 50%;
 
-    --chart-1: 228 60% 65%;
-    --chart-2: 260 45% 62%;
+    --chart-1: 215 100% 60%;
+    --chart-2: 29 100% 55%;
     --chart-3: 200 50% 55%;
     --chart-4: 170 45% 45%;
     --chart-5: 220 10% 45%;
