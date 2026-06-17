@@ -37,7 +37,7 @@ export default function RutaVentasTab() {
     <div className="flex flex-col h-full">
       {tabs.length > 1 && (
         <div className="sticky top-0 z-20 bg-background px-4 pt-2 pb-0.5">
-          <div className="flex gap-0.5 bg-card rounded-lg p-0.5 border border-border">
+          <div className="flex gap-0.5 bg-accent rounded-lg p-[4px] border-0">
             {tabs.map(t => (
               <button
                 key={t.key}

@@ -136,7 +136,7 @@ export default function RutaIniciarPage() {
 
         {/* Selector de modo (sólo si la empresa lo permite) */}
         {permiteSinVehiculo && (
-          <div className="bg-card border border-border rounded-xl p-1 grid grid-cols-2 gap-1">
+          <div className="bg-accent rounded-lg p-[4px] border-0 grid grid-cols-2 gap-1">
             <button
               onClick={() => setSinVehiculo(false)}
               className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[12px] font-semibold transition-colors ${

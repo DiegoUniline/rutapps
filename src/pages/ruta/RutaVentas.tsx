@@ -82,16 +82,16 @@ export default function RutaVentas() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 mb-3 bg-card/60 border border-border rounded-xl p-1">
+        <div className="flex gap-1.5 mb-3 bg-accent rounded-lg p-[4px] border-0">
           <button
             onClick={() => setTab('todas')}
-            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
           >
             Todas
           </button>
           <button
             onClick={() => setTab('por_cobrar')}
-            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'por_cobrar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'por_cobrar' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
           >
             Por cobrar
             {porCobrar.length > 0 && (
