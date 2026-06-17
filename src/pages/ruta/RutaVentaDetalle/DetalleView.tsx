@@ -83,6 +83,7 @@ function Header({ venta, onBack }: Props) {
 function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
   const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
+    { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
     { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
     { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
     { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
@@ -94,7 +95,7 @@ function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPD
   }
 
   return (
-    <div className="grid grid-cols-5 gap-1">
+    <div className="grid grid-cols-3 gap-1">
       {actions.map((a) => (
         <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
           <a.icon className={`h-5 w-5 ${a.color}`} />
