@@ -123,8 +123,8 @@ html, body, #root {
     --popover: 220 14% 12%;
     --popover-foreground: 220 10% 93%;
 
-    --primary: 228 60% 65%;
-    --primary-foreground: 225 30% 12%;
+    --primary: 215 100% 60%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 220 10% 45%;
     --secondary-foreground: 0 0% 98%;
@@ -133,7 +133,10 @@ html, body, #root {
     --muted-foreground: 220 10% 60%;
 
     --accent: 225 20% 18%;
-    --accent-foreground: 228 60% 70%;
+    --accent-foreground: 215 100% 65%;
+
+    --brand-orange: 29 100% 55%;
+    --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -146,17 +149,17 @@ html, body, #root {
 
     --border: 220 14% 20%;
     --input: 220 14% 20%;
-    --ring: 228 60% 65%;
+    --ring: 215 100% 60%;
 
     --sidebar: 220 14% 12%;
     --sidebar-foreground: 220 10% 75%;
     --sidebar-border: 220 14% 18%;
     --sidebar-hover: 220 14% 16%;
-    --sidebar-accent: 228 60% 65%;
+    --sidebar-accent: 215 100% 60%;
     --sidebar-muted: 220 10% 50%;
 
-    --chart-1: 228 60% 65%;
-    --chart-2: 260 45% 62%;
+    --chart-1: 215 100% 60%;
+    --chart-2: 29 100% 55%;
     --chart-3: 200 50% 55%;
     --chart-4: 170 45% 45%;
     --chart-5: 220 10% 45%;
