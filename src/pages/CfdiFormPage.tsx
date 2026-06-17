@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -61,6 +61,9 @@ function calcLinea(l: Partial<CfdiLinea>): Partial<CfdiLinea> {
 export default function CfdiFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = (location.state as any)?.returnTo as string | undefined;
+  const goBack = () => { if (backTo) navigate(backTo); else navigate('/facturacion-cfdi'); };
   const { empresa } = useAuth();
   const { fmt: fmtCurrency } = useCurrency();
   const queryClient = useQueryClient();
@@ -342,7 +345,7 @@ export default function CfdiFormPage() {
       queryClient.invalidateQueries({ queryKey: ['cfdi-lineas', cfdi.id] });
       queryClient.invalidateQueries({ queryKey: ['venta'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
-      navigate('/facturacion-cfdi');
+      goBack();
     } catch (e: any) {
       let errorMsg = 'No se pudo timbrar la factura.';
 
@@ -407,7 +410,7 @@ export default function CfdiFormPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-muted-foreground">CFDI no encontrado</p>
-        <Button variant="link" onClick={() => navigate('/facturacion-cfdi')}>Volver</Button>
+        <Button variant="link" onClick={() => goBack()}>Volver</Button>
       </div>
     );
   }
@@ -416,7 +419,7 @@ export default function CfdiFormPage() {
     <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/facturacion-cfdi')}>
+        <Button variant="ghost" size="icon" onClick={() => goBack()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
