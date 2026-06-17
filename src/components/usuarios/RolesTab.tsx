@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Plus, Shield, Edit2, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, X, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones, MODULOS_MOVIL, getMobileModuloGroups } from '@/hooks/usePermisos';
@@ -310,8 +310,8 @@ function MobilePermissionsTable({ permisos, disabled, onToggle }: {
           {groups.map(group => {
             const groupMods = MODULOS_MOVIL.filter(m => m.group === group);
             return (
-              <>
-                <tr key={`g-${group}`} className="bg-accent/50 border-t border-border">
+              <Fragment key={group}>
+                <tr className="bg-accent/50 border-t border-border">
                   <td colSpan={2} className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
                 </tr>
                 {groupMods.map(mod => {
@@ -335,7 +335,7 @@ function MobilePermissionsTable({ permisos, disabled, onToggle }: {
                     </tr>
                   );
                 })}
-              </>
+              </Fragment>
             );
           })}
         </tbody>
