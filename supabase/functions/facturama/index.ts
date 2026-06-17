@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SUPER_ADMIN_EMAIL = "diego.leon@uniline.mx";
+async function assertSuperAdmin(user: any) {
+  const email = (user?.email || "").toLowerCase();
+  if (email !== SUPER_ADMIN_EMAIL) throw new Error("Acceso restringido: solo super admin");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
