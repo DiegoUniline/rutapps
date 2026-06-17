@@ -118,7 +118,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
       toast.success('Borrador de factura creado');
       queryClient.invalidateQueries({ queryKey: ['cfdis'] });
       onClose();
-      navigate(`/facturacion-cfdi/${cfdi.id}`);
+      navigate(`/facturacion-cfdi/${cfdi.id}`, { state: { returnTo: `/ventas/${ventaId}` } });
     } catch (e: any) {
       toast.error(e.message || 'Error al crear borrador');
     } finally {
