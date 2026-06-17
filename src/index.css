@@ -273,6 +273,21 @@ html, body, #root {
            disabled:opacity-50 disabled:pointer-events-none;
   }
 
+  /* Segmented control (corporate style — matches shadcn Tabs) */
+  .seg-group {
+    @apply inline-flex items-center bg-accent rounded-lg p-[4px] gap-0 border-0;
+  }
+  .seg-btn {
+    @apply inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-[12px] font-semibold
+           bg-transparent text-muted-foreground border-0 shadow-none transition-all
+           hover:bg-primary/10 hover:text-primary
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .seg-btn-active {
+    @apply bg-primary text-primary-foreground shadow-sm;
+    box-shadow: 0 1px 3px 0 hsl(var(--primary) / 0.25);
+  }
+
   /* Inputs */
   .input-odoo {
     @apply w-full border border-input rounded-lg px-3 py-2 text-[13px] bg-card
