@@ -251,6 +251,7 @@ export interface ModuloMovilDef { id: string; label: string; group: string; desc
 
 export const MODULOS_MOVIL: ModuloMovilDef[] = [
   // Pestañas y vistas reales de la app móvil
+  { id: 'ruta.resumen', label: 'Resumen (dashboard)', group: 'Vistas', description: 'Pestaña "Resumen" del dashboard de ruta' },
   { id: 'ruta.clientes', label: 'Clientes (pestaña principal)', group: 'Vistas', description: 'Pestaña inferior "Clientes"' },
   { id: 'ruta.entregas', label: 'Entregas / Pedidos', group: 'Vistas', description: 'Sub-pestaña dentro de Clientes' },
   { id: 'ruta.mapa', label: 'Mapa / Navegación', group: 'Vistas', description: 'Sub-pestaña de Navegación y mapa' },

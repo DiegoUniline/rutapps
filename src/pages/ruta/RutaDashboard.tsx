@@ -5,6 +5,7 @@ import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Cale
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 
 type TabKey = 'resumen' | 'ventas' | 'entregas' | 'cobros' | 'gastos' | 'devoluciones';
@@ -13,13 +14,15 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
+  const canResumen = hasPermisoMovil('ruta.resumen');
   const today = todayLocal();
   const isSAOverride = !!overrideEmpresaId;
   const vendedorId = isSAOverride ? overrideVendedorId : profile?.id;
   const allVendedores = isSAOverride && !vendedorId;
 
   // Filtros
-  const [tab, setTab] = useState<TabKey>('resumen');
+  const [tab, setTab] = useState<TabKey>(canResumen ? 'resumen' : 'ventas');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
@@ -94,7 +97,7 @@ export default function RutaDashboard() {
   , [devoluciones, from, to, search, clienteById]);
 
   const tabs: { key: TabKey; label: string; count: number; icon: any }[] = [
-    { key: 'resumen', label: 'Resumen', count: 0, icon: TrendingUp },
+    ...(canResumen ? [{ key: 'resumen' as TabKey, label: 'Resumen', count: 0, icon: TrendingUp }] : []),
     { key: 'ventas', label: 'Ventas', count: ventasFiltradas.length, icon: ShoppingCart },
     { key: 'entregas', label: 'Entregas', count: entregasFiltradas.length, icon: Truck },
     { key: 'cobros', label: 'Cobros', count: cobrosFiltrados.length, icon: Banknote },
