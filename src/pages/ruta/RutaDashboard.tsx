@@ -14,13 +14,15 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
+  const canResumen = hasPermisoMovil('ruta.resumen');
   const today = todayLocal();
   const isSAOverride = !!overrideEmpresaId;
   const vendedorId = isSAOverride ? overrideVendedorId : profile?.id;
   const allVendedores = isSAOverride && !vendedorId;
 
   // Filtros
-  const [tab, setTab] = useState<TabKey>('resumen');
+  const [tab, setTab] = useState<TabKey>(canResumen ? 'resumen' : 'ventas');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
