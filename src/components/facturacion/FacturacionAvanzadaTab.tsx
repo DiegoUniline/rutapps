@@ -135,12 +135,12 @@ function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () =
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
-        .select('id, fecha, monto, metodo, forma_pago, ventas:venta_id(id, folio, total, factura_cfdi_id, cfdis:factura_cfdi_id(id, folio_fiscal, folio, serie, payment_method, currency, status, total, receiver_rfc, receiver_name, receiver_fiscal_regime, receiver_tax_zip_code))')
+        .select('id, fecha, monto, metodo_pago, ventas:venta_id(id, folio, total, factura_cfdi_id, cfdis:factura_cfdi_id(id, folio_fiscal, folio, serie, payment_method, currency, status, total, receiver_rfc, receiver_name, receiver_fiscal_regime, receiver_tax_zip_code))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false })
         .limit(200);
       if (error) throw error;
-      return (data || []).filter((c: any) => c.ventas?.cfdis?.payment_method === 'PPD' && c.ventas?.cfdis?.status === 'timbrado');
+      return ((data as any[]) || []).filter((c: any) => c.ventas?.cfdis?.payment_method === 'PPD' && c.ventas?.cfdis?.status === 'timbrado');
     },
   });
 
