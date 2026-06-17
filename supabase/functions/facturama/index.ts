@@ -101,6 +101,24 @@ serve(async (req) => {
       return await timbrar(supabase, user.id, body);
     } else if (action === "cancelar") {
       return await cancelar(supabase, user.id, body);
+    } else if (action === "timbrar_pago") {
+      await assertSuperAdmin(user);
+      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
+      return await timbrarPago(supabase, user.id, body);
+    } else if (action === "timbrar_global") {
+      await assertSuperAdmin(user);
+      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
+      return await timbrarGlobal(supabase, user.id, body);
+    } else if (action === "validar_rfc") {
+      await assertSuperAdmin(user);
+      return await validarRfc(body);
+    } else if (action === "sustituir") {
+      await assertSuperAdmin(user);
+      await assertEmpresaAccess(getServiceSupabase(), user.id, body.empresa_id);
+      return await sustituir(supabase, user.id, body);
+    } else if (action === "enviar_correo") {
+      await assertSuperAdmin(user);
+      return await enviarCorreo(supabase, body);
     } else {
       throw new Error(`Acción no válida: ${action}`);
     }
