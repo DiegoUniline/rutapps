@@ -223,22 +223,21 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
   const isBillingOwner = isSuperAdminUser || !!isOwner;
   const stripBilling = (items: NavItem[]): NavItem[] => items
     .flatMap(it => {
-      if (!it.children) {
-        // Top-level Facturación entry: visible ONLY for the dedicated super admin (diego.leon@uniline.mx)
-        if (it.path.startsWith('/facturacion-cfdi')) {
-          return isSuperAdminUser ? [it] : [];
-        }
-        return [it];
+      // Top-level Facturación entry (with or without children): only super admin can see it
+      if (it.path.startsWith('/facturacion-cfdi')) {
+        return isSuperAdminUser ? [it] : [];
       }
+      if (!it.children) return [it];
       const children = it.children.filter(c => {
         if (c.path === '/mi-suscripcion') return isBillingOwner;
-        // Hide any legacy CFDI / Catálogos SAT children — only the new top-level entry exposes them
+        // Hide legacy CFDI children from other modules
         if (c.path.startsWith('/facturacion-cfdi')) return false;
         return true;
       });
       if (children.length === 0) return [];
       return [{ ...it, children }];
     });
+
 
 
   if (isSuperAdmin) return stripBilling(navItems);
