@@ -64,7 +64,7 @@ html, body, #root {
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 230 55% 52%;
+    --ring: 215 100% 45%;
 
     --radius: 0.625rem;
 
@@ -73,12 +73,12 @@ html, body, #root {
     --sidebar-foreground: 220 14% 28%;
     --sidebar-border: 220 13% 91%;
     --sidebar-hover: 220 14% 92%;
-    --sidebar-accent: 230 55% 52%;
+    --sidebar-accent: 215 100% 45%;
     --sidebar-muted: 220 10% 56%;
 
     /* Chart colors */
-    --chart-1: 230 55% 60%;
-    --chart-2: 260 45% 60%;
+    --chart-1: 215 100% 45%;
+    --chart-2: 29 100% 50%;
     --chart-3: 200 55% 50%;
     --chart-4: 170 50% 42%;
     --chart-5: 220 10% 50%;
