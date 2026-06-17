@@ -121,7 +121,7 @@ export function VentaEntregasTab({
       <div>
         <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Entregas creadas</h4>
         {entregasActivas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay entregas creadas para este pedido</p>
+          <p className="text-sm text-muted-foreground">No hay entregas creadas para esta {tipo === 'venta_directa' ? 'venta' : 'venta'}</p>
         ) : isMobile ? (
           <div className="space-y-2">
             {entregasExistentes.map(e => {
