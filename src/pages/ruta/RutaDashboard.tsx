@@ -97,7 +97,7 @@ export default function RutaDashboard() {
   , [devoluciones, from, to, search, clienteById]);
 
   const tabs: { key: TabKey; label: string; count: number; icon: any }[] = [
-    { key: 'resumen', label: 'Resumen', count: 0, icon: TrendingUp },
+    ...(canResumen ? [{ key: 'resumen' as TabKey, label: 'Resumen', count: 0, icon: TrendingUp }] : []),
     { key: 'ventas', label: 'Ventas', count: ventasFiltradas.length, icon: ShoppingCart },
     { key: 'entregas', label: 'Entregas', count: entregasFiltradas.length, icon: Truck },
     { key: 'cobros', label: 'Cobros', count: cobrosFiltrados.length, icon: Banknote },
