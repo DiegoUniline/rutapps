@@ -45,7 +45,7 @@ export default function RutaClientesEntregas() {
       )}
       {visibleTabs.length > 1 && (
         <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5">
-          <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
+          <div className="flex gap-0.5 bg-accent rounded-lg p-[4px] border-0">
             {visibleTabs.map(t => (
               <button
                 key={t.key}

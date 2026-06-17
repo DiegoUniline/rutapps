@@ -88,12 +88,12 @@ export function StepResumen(props: Props) {
               <Tag className="h-3 w-3" /> Descuento al total (opcional)
             </p>
             <div className="flex items-stretch gap-1.5 mb-2">
-              <div className="inline-flex bg-accent/40 rounded-md p-0.5">
+              <div className="inline-flex bg-accent rounded-lg p-[4px]">
                 <button
                   type="button"
                   onClick={() => setDescuentoExtraTipo('monto')}
                   className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
-                    descuentoExtraTipo === 'monto' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
+                    descuentoExtraTipo === 'monto' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground')}
                   aria-label="Monto fijo"
                 >
                   {s}
@@ -102,7 +102,7 @@ export function StepResumen(props: Props) {
                   type="button"
                   onClick={() => setDescuentoExtraTipo('porcentaje')}
                   className={cn("px-2.5 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors",
-                    descuentoExtraTipo === 'porcentaje' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
+                    descuentoExtraTipo === 'porcentaje' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground')}
                   aria-label="Porcentaje"
                 >
                   %

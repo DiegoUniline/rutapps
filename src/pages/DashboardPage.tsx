@@ -340,7 +340,7 @@ function RankingsSection({
             {ordProd === 'top' ? 'Productos más vendidos' : 'Productos menos vendidos'}
           </h2>
           <div className="flex items-center gap-2">
-            <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+            <div className="flex bg-accent rounded-lg p-[4px] gap-0">
               <button onClick={() => setOrdProd('top')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordProd === 'top' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Más</button>
               <button onClick={() => setOrdProd('bottom')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordProd === 'bottom' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Menos</button>
             </div>
@@ -382,7 +382,7 @@ function RankingsSection({
             {ordCli === 'top' ? 'Mejores clientes' : 'Clientes con menos compras'}
           </h2>
           <div className="flex items-center gap-2">
-            <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+            <div className="flex bg-accent rounded-lg p-[4px] gap-0">
               <button onClick={() => setOrdCli('top')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordCli === 'top' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Más</button>
               <button onClick={() => setOrdCli('bottom')} className={cn("px-2 py-1 rounded text-[11px] font-semibold", ordCli === 'bottom' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>Menos</button>
             </div>
@@ -475,7 +475,7 @@ function EvolucionMensualSection({
         <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
           <Activity className="h-4 w-4 text-primary" /> Crecimiento de ventas por mes (12 meses)
         </h2>
-        <div className="flex bg-accent/50 rounded-md p-0.5 gap-0.5">
+        <div className="flex bg-accent rounded-lg p-[4px] gap-0">
           {(['producto', 'cliente', 'vendedor'] as const).map(t => (
             <button key={t} onClick={() => setTipo(t)} className={cn("px-3 py-1 rounded text-[11px] font-semibold capitalize", tipo === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
               {t === 'producto' ? 'Productos' : t === 'cliente' ? 'Clientes' : 'Vendedores'}
@@ -982,12 +982,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-          <div className="flex bg-accent/50 rounded-lg p-0.5 gap-0.5 shrink-0">
+          <div className="flex bg-accent rounded-lg p-[4px] gap-0 shrink-0">
             {PRESETS.map((p, i) => (
               <button key={i} onClick={() => handlePreset(i)}
                 className={cn(
                   "px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
-                  activePreset === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  activePreset === i ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25" : "text-muted-foreground hover:text-foreground"
                 )}>
                 {p.label}
               </button>

@@ -259,7 +259,7 @@ export default function RutaClientes() {
           )}
         </div>
 
-        <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
+        <div className="flex gap-0.5 bg-accent rounded-lg p-[4px] border-0">
           <button
             onClick={() => setModo('visitas')}
             className={cn(

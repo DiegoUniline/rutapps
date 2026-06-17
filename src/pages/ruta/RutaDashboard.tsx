@@ -266,7 +266,7 @@ export default function RutaDashboard() {
 
       {/* Tabs - scroll horizontal */}
       <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
-        <div className="inline-flex gap-1 bg-primary/10 rounded-xl p-1 min-w-full">
+        <div className="inline-flex gap-1 bg-accent rounded-lg p-[4px] min-w-full">
           {tabs.map(t => (
             <button
               key={t.key}
