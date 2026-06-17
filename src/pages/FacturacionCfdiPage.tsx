@@ -308,26 +308,27 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full">
-          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas</TabsTrigger>
-          <TabsTrigger value="clientes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Clientes</TabsTrigger>
-          <TabsTrigger value="productos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Productos</TabsTrigger>
-          <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Configuración Emisor</TabsTrigger>
-          <TabsTrigger value="catalogos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Catálogos SAT</TabsTrigger>
+        <TabsList className="grid grid-cols-5 w-full bg-background border border-border rounded-lg p-0 h-auto divide-x divide-border overflow-hidden">
+          <TabsTrigger value="facturas" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Facturas</TabsTrigger>
+          <TabsTrigger value="clientes" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Clientes</TabsTrigger>
+          <TabsTrigger value="productos" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Productos</TabsTrigger>
+          <TabsTrigger value="config" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Configuración Emisor</TabsTrigger>
+          <TabsTrigger value="catalogos" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Catálogos SAT</TabsTrigger>
         </TabsList>
 
 
         {/* FACTURAS TAB */}
         <TabsContent value="facturas" className="mt-4 space-y-3">
             <Tabs value={facturaSubTab} onValueChange={(v) => setFacturaSubTab(v as FacturaSubTab)}>
-              <TabsList className="grid grid-cols-5 w-full">
-                <TabsTrigger value="todas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
-                <TabsTrigger value="borrador" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Borradores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.borrador}</Badge></TabsTrigger>
-                <TabsTrigger value="timbrado" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Timbradas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.timbrado}</Badge></TabsTrigger>
-                <TabsTrigger value="error" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Errores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.error}</Badge></TabsTrigger>
-                <TabsTrigger value="canceladas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
+              <TabsList className="grid grid-cols-5 w-full bg-background border border-border rounded-lg p-0 h-auto divide-x divide-border overflow-hidden">
+                <TabsTrigger value="todas" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Todas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.todas}</Badge></TabsTrigger>
+                <TabsTrigger value="borrador" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Borradores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.borrador}</Badge></TabsTrigger>
+                <TabsTrigger value="timbrado" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Timbradas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.timbrado}</Badge></TabsTrigger>
+                <TabsTrigger value="error" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Errores <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.error}</Badge></TabsTrigger>
+                <TabsTrigger value="canceladas" className="rounded-none h-10 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none">Canceladas <Badge variant="secondary" className="ml-1.5 text-[10px]">{counts.canceladas}</Badge></TabsTrigger>
               </TabsList>
             </Tabs>
+
 
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 max-w-sm">
