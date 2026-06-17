@@ -159,7 +159,7 @@ function ComplementoPagoDialog({ open, onClose }: { open: boolean; onClose: () =
           rfc: empresa!.rfc,
           name: empresa!.razon_social,
         },
-        expedition_place: empresa!.codigo_postal,
+        expedition_place: (empresa as any).cp,
         fecha_pago: new Date(fechaPago).toISOString(),
         forma_pago: formaPago,
         moneda: cfdi.currency || 'MXN',
@@ -290,7 +290,7 @@ function FacturaGlobalSection() {
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin + 'T23:59:59')
-        .in('status', ['cobrado', 'parcial', 'pendiente'])
+        .in("status", ["entregado","facturado","confirmado"] as any)
         .order('fecha', { ascending: true });
       if (error) throw error;
       return (data || []).filter((v: any) => v.venta_lineas?.every((l: any) => !l.facturado_global));
@@ -310,7 +310,7 @@ function FacturaGlobalSection() {
           rfc: empresa!.rfc,
           name: empresa!.razon_social,
         },
-        expedition_place: empresa!.codigo_postal,
+        expedition_place: (empresa as any).cp,
         periodicidad,
         meses: mes,
         year,
