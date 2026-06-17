@@ -58,8 +58,8 @@ export function VentaEntregasTab({
 
   return (
     <div className="p-3 sm:p-4 space-y-4">
-      {/* Per-line delivery summary */}
-      {productLineas.length > 0 && (
+      {/* Per-line delivery summary — hidden for venta_directa */}
+      {productLineas.length > 0 && tipo !== 'venta_directa' && (
         <div>
           <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Resumen por producto</h4>
           {isMobile ? (
