@@ -284,6 +284,12 @@ export default function FacturacionCfdiPage() {
           </Badge>
         </div>
         <div className="flex gap-2">
+          {isSuperAdmin && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/facturacion-cfdi/avanzado')}>
+              <Sparkles className="h-4 w-4" />
+              <span className="ml-1.5 hidden sm:inline">Avanzado</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -298,6 +304,7 @@ export default function FacturacionCfdiPage() {
             Timbrar CFDI
           </Button>
         </div>
+
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
