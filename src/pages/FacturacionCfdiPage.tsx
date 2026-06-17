@@ -301,12 +301,15 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className={`grid ${isSuperAdmin ? 'grid-cols-6' : 'grid-cols-5'} w-full`}>
           <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas</TabsTrigger>
           <TabsTrigger value="clientes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Clientes</TabsTrigger>
           <TabsTrigger value="productos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Productos</TabsTrigger>
           <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Configuración Emisor</TabsTrigger>
           <TabsTrigger value="catalogos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Catálogos SAT</TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="avanzado" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Avanzado</TabsTrigger>
+          )}
         </TabsList>
 
         {/* FACTURAS TAB */}
@@ -488,6 +491,12 @@ export default function FacturacionCfdiPage() {
         <TabsContent value="catalogos" className="mt-4">
           <CatalogosTab />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="avanzado" className="mt-4">
+            <FacturacionAvanzadaTab />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Timbrar Dialog */}
