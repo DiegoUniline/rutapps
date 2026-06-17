@@ -79,6 +79,20 @@ export default function VentaFormPage() {
     },
   });
 
+  // Count of CFDIs issued for this venta (used in Facturas tab label)
+  const { data: cfdisCount } = useQuery({
+    queryKey: ['cfdis-count-venta', form.id],
+    enabled: !!form.id && !isNew,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('cfdis')
+        .select('id', { count: 'exact', head: true })
+        .eq('venta_id', form.id!)
+        .in('status', ['borrador', 'timbrado', 'cancelado']);
+      return count ?? 0;
+    },
+  });
+
   const checkoutCuentasPendientes = useMemo(() =>
     (clientePendingVentas ?? []).map((v: any) => ({
       id: v.id,
