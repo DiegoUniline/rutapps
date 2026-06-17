@@ -334,12 +334,14 @@ export default function VentasListPage() {
         <div className="flex items-center gap-2 shrink-0">
           {/* View toggle */}
           {!isMobile && (
-            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+            <div className="inline-flex items-center bg-accent rounded-lg p-[4px] gap-0">
               <button
                 onClick={() => { setViewMode('ventas'); setPage(1); }}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
-                  viewMode === 'ventas' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all",
+                  viewMode === 'ventas'
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                    : "bg-transparent text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 )}
               >
                 <List className="h-3.5 w-3.5" /> Ventas
@@ -347,8 +349,10 @@ export default function VentasListPage() {
               <button
                 onClick={() => { setViewMode('productos'); setPage(1); }}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
-                  viewMode === 'productos' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all",
+                  viewMode === 'productos'
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                    : "bg-transparent text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 )}
               >
                 <Package className="h-3.5 w-3.5" /> Productos
