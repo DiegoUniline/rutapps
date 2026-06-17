@@ -976,6 +976,230 @@ export type Database = {
           },
         ]
       }
+      cfdi_pago_documentos: {
+        Row: {
+          cfdi_id: string | null
+          cfdi_pago_id: string
+          cfdi_relacionado_uuid: string
+          created_at: string
+          empresa_id: string
+          folio_dr: string | null
+          id: string
+          imp_pagado: number
+          imp_saldo_ant: number
+          imp_saldo_insoluto: number
+          iva_trasladado_dr: number
+          metodo_pago_dr: string | null
+          moneda_dr: string
+          num_parcialidad: number
+          objeto_imp_dr: string | null
+          serie_dr: string | null
+          tipo_cambio_dr: number
+          venta_id: string | null
+        }
+        Insert: {
+          cfdi_id?: string | null
+          cfdi_pago_id: string
+          cfdi_relacionado_uuid: string
+          created_at?: string
+          empresa_id: string
+          folio_dr?: string | null
+          id?: string
+          imp_pagado?: number
+          imp_saldo_ant?: number
+          imp_saldo_insoluto?: number
+          iva_trasladado_dr?: number
+          metodo_pago_dr?: string | null
+          moneda_dr?: string
+          num_parcialidad?: number
+          objeto_imp_dr?: string | null
+          serie_dr?: string | null
+          tipo_cambio_dr?: number
+          venta_id?: string | null
+        }
+        Update: {
+          cfdi_id?: string | null
+          cfdi_pago_id?: string
+          cfdi_relacionado_uuid?: string
+          created_at?: string
+          empresa_id?: string
+          folio_dr?: string | null
+          id?: string
+          imp_pagado?: number
+          imp_saldo_ant?: number
+          imp_saldo_insoluto?: number
+          iva_trasladado_dr?: number
+          metodo_pago_dr?: string | null
+          moneda_dr?: string
+          num_parcialidad?: number
+          objeto_imp_dr?: string | null
+          serie_dr?: string | null
+          tipo_cambio_dr?: number
+          venta_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_pago_documentos_cfdi_id_fkey"
+            columns: ["cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_pago_documentos_cfdi_pago_id_fkey"
+            columns: ["cfdi_pago_id"]
+            isOneToOne: false
+            referencedRelation: "cfdi_pagos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_pago_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_pago_documentos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cfdi_pagos: {
+        Row: {
+          cadena_original: string | null
+          cancel_date: string | null
+          cancel_status: string | null
+          cobro_id: string | null
+          created_at: string
+          cta_beneficiario: string | null
+          cta_ordenante: string | null
+          empresa_id: string
+          enviado_a: string | null
+          enviado_at: string | null
+          error_detalle: string | null
+          expedition_place: string | null
+          facturama_id: string | null
+          fecha_pago: string
+          fecha_timbrado: string | null
+          folio: string | null
+          folio_fiscal: string | null
+          forma_pago: string
+          id: string
+          moneda: string
+          monto: number
+          no_certificado_emisor: string | null
+          no_certificado_sat: string | null
+          nom_banco_ord_ext: string | null
+          num_operacion: string | null
+          pdf_url: string | null
+          rfc_emisor_cta_ben: string | null
+          rfc_emisor_cta_ord: string | null
+          sello_cfdi: string | null
+          sello_sat: string | null
+          serie: string | null
+          status: string
+          tipo_cambio: number
+          updated_at: string
+          user_id: string
+          xml_url: string | null
+        }
+        Insert: {
+          cadena_original?: string | null
+          cancel_date?: string | null
+          cancel_status?: string | null
+          cobro_id?: string | null
+          created_at?: string
+          cta_beneficiario?: string | null
+          cta_ordenante?: string | null
+          empresa_id: string
+          enviado_a?: string | null
+          enviado_at?: string | null
+          error_detalle?: string | null
+          expedition_place?: string | null
+          facturama_id?: string | null
+          fecha_pago: string
+          fecha_timbrado?: string | null
+          folio?: string | null
+          folio_fiscal?: string | null
+          forma_pago: string
+          id?: string
+          moneda?: string
+          monto?: number
+          no_certificado_emisor?: string | null
+          no_certificado_sat?: string | null
+          nom_banco_ord_ext?: string | null
+          num_operacion?: string | null
+          pdf_url?: string | null
+          rfc_emisor_cta_ben?: string | null
+          rfc_emisor_cta_ord?: string | null
+          sello_cfdi?: string | null
+          sello_sat?: string | null
+          serie?: string | null
+          status?: string
+          tipo_cambio?: number
+          updated_at?: string
+          user_id: string
+          xml_url?: string | null
+        }
+        Update: {
+          cadena_original?: string | null
+          cancel_date?: string | null
+          cancel_status?: string | null
+          cobro_id?: string | null
+          created_at?: string
+          cta_beneficiario?: string | null
+          cta_ordenante?: string | null
+          empresa_id?: string
+          enviado_a?: string | null
+          enviado_at?: string | null
+          error_detalle?: string | null
+          expedition_place?: string | null
+          facturama_id?: string | null
+          fecha_pago?: string
+          fecha_timbrado?: string | null
+          folio?: string | null
+          folio_fiscal?: string | null
+          forma_pago?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          no_certificado_emisor?: string | null
+          no_certificado_sat?: string | null
+          nom_banco_ord_ext?: string | null
+          num_operacion?: string | null
+          pdf_url?: string | null
+          rfc_emisor_cta_ben?: string | null
+          rfc_emisor_cta_ord?: string | null
+          sello_cfdi?: string | null
+          sello_sat?: string | null
+          serie?: string | null
+          status?: string
+          tipo_cambio?: number
+          updated_at?: string
+          user_id?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_pagos_cobro_id_fkey"
+            columns: ["cobro_id"]
+            isOneToOne: false
+            referencedRelation: "cobros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cfdis: {
         Row: {
           cadena_original: string | null
@@ -985,6 +1209,8 @@ export type Database = {
           created_at: string
           currency: string
           empresa_id: string
+          enviado_a: string | null
+          enviado_at: string | null
           error_detalle: string | null
           expedition_place: string | null
           facturama_id: string | null
@@ -1024,6 +1250,8 @@ export type Database = {
           created_at?: string
           currency?: string
           empresa_id: string
+          enviado_a?: string | null
+          enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
           facturama_id?: string | null
@@ -1063,6 +1291,8 @@ export type Database = {
           created_at?: string
           currency?: string
           empresa_id?: string
+          enviado_a?: string | null
+          enviado_at?: string | null
           error_detalle?: string | null
           expedition_place?: string | null
           facturama_id?: string | null
@@ -1278,6 +1508,9 @@ export type Database = {
           regimen_fiscal: string | null
           requiere_factura: boolean | null
           rfc: string | null
+          rfc_validado_at: string | null
+          rfc_validado_detalle: Json | null
+          rfc_validado_status: string | null
           status: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id: string | null
           telefono: string | null
@@ -1323,6 +1556,9 @@ export type Database = {
           regimen_fiscal?: string | null
           requiere_factura?: boolean | null
           rfc?: string | null
+          rfc_validado_at?: string | null
+          rfc_validado_detalle?: Json | null
+          rfc_validado_status?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
@@ -1368,6 +1604,9 @@ export type Database = {
           regimen_fiscal?: string | null
           requiere_factura?: boolean | null
           rfc?: string | null
+          rfc_validado_at?: string | null
+          rfc_validado_detalle?: Json | null
+          rfc_validado_status?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
@@ -7087,6 +7326,7 @@ export type Database = {
           descuento_pct: number | null
           factura_cfdi_id: string | null
           facturado: boolean | null
+          facturado_global: boolean
           id: string
           ieps_monto: number | null
           ieps_pct: number | null
@@ -7113,6 +7353,7 @@ export type Database = {
           descuento_pct?: number | null
           factura_cfdi_id?: string | null
           facturado?: boolean | null
+          facturado_global?: boolean
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
@@ -7139,6 +7380,7 @@ export type Database = {
           descuento_pct?: number | null
           factura_cfdi_id?: string | null
           facturado?: boolean | null
+          facturado_global?: boolean
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
