@@ -36,8 +36,8 @@ html, body, #root {
     --popover: 0 0% 100%;
     --popover-foreground: 220 14% 10%;
 
-    /* Primary: neutral indigo — professional, understated */
-    --primary: 230 55% 52%;
+    /* Primary: Rutapp corporate blue #0061e8 */
+    --primary: 215 100% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 10% 40%;
@@ -47,7 +47,11 @@ html, body, #root {
     --muted-foreground: 220 10% 46%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 230 55% 52%;
+    --accent-foreground: 215 100% 45%;
+
+    /* Rutapp corporate orange #ff7a00 — secondary brand accent */
+    --brand-orange: 29 100% 50%;
+    --brand-orange-foreground: 0 0% 100%;
 
     --destructive: 0 65% 52%;
     --destructive-foreground: 0 0% 100%;
