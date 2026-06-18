@@ -55,7 +55,7 @@ export default function CompraFormPage() {
       ]} />
 
       <div className="flex items-end justify-end gap-4">
-        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-72 space-y-2">
+        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-full md:w-72 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{fmt(h.totals.subtotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">{fmt(h.totals.iva_total)}</span></div>
           <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
