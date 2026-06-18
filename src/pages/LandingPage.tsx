@@ -356,8 +356,8 @@ export default function LandingPage() {
       </section>
 
       {/* STATS strip */}
-      <section className="px-5 py-8 border-y" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 border-y" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
+        <div className="max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             ['10', 'Módulos integrados'],
             ['Nube', 'En tiempo real'],
@@ -373,8 +373,8 @@ export default function LandingPage() {
       </section>
 
       {/* MODULES — bento dense */}
-      <section id="modulos" className="px-5 py-16 md:py-20">
-        <div className="max-w-7xl mx-auto">
+      <section id="modulos" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1440px] mx-auto">
           <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Módulos</span>
@@ -407,7 +407,7 @@ export default function LandingPage() {
         <WhatsAppAgentSection />
 
         {/* ZIGZAG — los módulos más chidos, con visual real */}
-        <div className="max-w-7xl mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
+        <div className="max-w-[1440px] mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
           {[
             { name: 'Ventas', kicker: 'POS + Rutero', idx: 0 },
             { name: 'Cobranza', kicker: 'FIFO multi-folio', idx: 1 },
@@ -457,10 +457,10 @@ export default function LandingPage() {
 
 
       {/* MOBILE — phones showcase */}
-      <section id="movil" className="px-5 py-16 md:py-24 relative overflow-hidden" style={{ background: BRAND.surface }}>
+      <section id="movil" className="px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative overflow-hidden" style={{ background: BRAND.surface }}>
         <div className="absolute inset-0 pointer-events-none opacity-60"
           style={{ background: `radial-gradient(60% 40% at 50% 0%, ${BRAND.primarySoft}, transparent)` }} />
-        <div className="max-w-7xl mx-auto relative">
+        <div className="max-w-[1440px] mx-auto relative">
           <div className="text-center max-w-2xl mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
             <h2 className="mt-2 text-[28px] md:text-[44px] font-semibold tracking-tight leading-[1.05]" style={{ letterSpacing: '-0.025em' }}>
