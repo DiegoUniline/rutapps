@@ -34,6 +34,7 @@ export default function RutaCxC() {
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
       if (!v.cliente_id || saldo <= 0 || v.status === 'cancelada') return;
+      if (clientesPermitidos && !clientesPermitidos.has(v.cliente_id)) return;
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
       const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha };
@@ -43,7 +44,7 @@ export default function RutaCxC() {
       map.set(v.cliente_id, prev);
     });
     return Array.from(map.values()).sort((a, b) => b.saldo - a.saldo);
-  }, [ventas, clientes]);
+  }, [ventas, clientes, clientesPermitidos]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
