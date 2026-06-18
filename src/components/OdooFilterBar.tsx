@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Layers, X, Check, CalendarDays, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronDown, Layers, X, Check, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 export interface FilterOption {
   key: string;
