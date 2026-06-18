@@ -320,7 +320,7 @@ export function OdooFilterBar({
 
             {/* Clear all */}
             {activeCount > 0 && onClearFilters && (
-              <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1">
+              <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
                 <X className="h-3 w-3" /> Limpiar
               </button>
             )}
