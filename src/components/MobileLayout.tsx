@@ -285,22 +285,23 @@ export default function MobileLayout() {
               <span className="text-[10px] font-medium">{tab.label}</span>
             </NavLink>
           ))}
-          {/* More button */}
-          <button
-            onClick={() => setMoreOpen(v => !v)}
-            className={cn(
-              "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-              isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <MoreHorizontal className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Más</span>
-          </button>
+          {!inicioMode && (
+            <button
+              onClick={() => setMoreOpen(v => !v)}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Más</span>
+            </button>
+          )}
         </div>
       </nav>
 
       {/* More popup */}
-      {moreOpen && (
+      {!inicioMode && moreOpen && (
         <div className="fixed inset-0 z-[55]" onClick={() => setMoreOpen(false)}>
           <div
             className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
