@@ -72,7 +72,7 @@ function IndependentFilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "btn-odoo-secondary flex items-center gap-1",
+          "btn-odoo-secondary flex items-center gap-1 shrink-0",
           count > 0 && "border-primary text-primary"
         )}
       >
