@@ -43,11 +43,12 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
 
-  // ── Ventas ──
+  // ── Ventas (Ingresos · verde) ──
   {
     label: 'Ventas',
     icon: ShoppingCart,
     path: '/ventas',
+    highlight: 'green',
     children: [
       { label: 'Ventas', path: '/ventas' },
       { label: 'Cotizaciones', path: '/cotizaciones' },
@@ -61,7 +62,7 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── POS ──
+  // ── POS (Ingresos · verde) ──
   {
     label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
     children: [
@@ -70,7 +71,7 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Compras ──
+  // ── Compras (Egresos · rosa) ──
   {
     label: 'Compras',
     icon: ShoppingBag,
@@ -84,11 +85,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Logística ──
+  // ── Logística (Operaciones · cyan) ──
   {
     label: 'Logística',
     icon: MapPin,
     path: '/logistica',
+    highlight: 'cyan',
     children: [
       { label: 'Pedidos · Pendientes · Entregas', path: '/logistica/pedidos' },
       { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
@@ -98,11 +100,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Catálogos ──
+  // ── Catálogos (Datos maestros · violeta) ──
   {
     label: 'Catálogos',
     icon: Package,
     path: '/productos',
+    highlight: 'violet',
     children: [
       { label: 'Productos', path: '/productos' },
       { label: 'Listas de precios', path: '/listas-precio' },
@@ -115,11 +118,12 @@ const navItems: NavItem[] = [
 
 
 
-  // ── Almacén ──
+  // ── Almacén (Operaciones · cyan) ──
   {
     label: 'Almacén',
     icon: Warehouse,
     path: '/almacen',
+    highlight: 'cyan',
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
@@ -129,11 +133,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Finanzas ──
+  // ── Finanzas (Fiscal · ámbar) ──
   {
     label: 'Finanzas',
     icon: DollarSign,
     path: '/finanzas',
+    highlight: 'amber',
     children: [
       { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
       { label: 'Gastos', path: '/finanzas/gastos' },
@@ -151,11 +156,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Configuración ──
+  // ── Configuración (Datos maestros · violeta) ──
   {
     label: 'Configuración',
     icon: Settings,
     path: '/catalogos/clasificaciones',
+    highlight: 'violet',
     children: [
       { label: 'Categorías', path: '/catalogos/clasificaciones' },
       { label: 'Marcas', path: '/catalogos/marcas' },
