@@ -32,9 +32,10 @@ const METODOS_PAGO = [
 
 export default function RutaCobrar() {
   const navigate = useNavigate();
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
+  const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('cliente');
@@ -50,7 +51,11 @@ export default function RutaCobrar() {
 
   // Offline-compatible: read clients and ventas from local cache
   const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
-  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  // Ventas: si no tiene "Ver todos", filtra a las del vendedor en sesión
+  const ventasFilter = seeAll
+    ? { empresa_id: empresa?.id }
+    : { empresa_id: empresa?.id, vendedor_id: profile?.id };
+  const { data: allVentas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && (seeAll || !!profile?.id) });
 
   const clientes = useMemo(() => {
     if (!clientesRaw) return [];
