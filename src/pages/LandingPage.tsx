@@ -16,6 +16,7 @@ import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
 import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
 import { WhatsAppAgentSection } from '@/components/landing/WhatsAppAgentSection';
+import { useLenis } from '@/hooks/useLenis';
 
 
 const BRAND = {
@@ -207,6 +208,7 @@ export default function LandingPage() {
   
   const [searchParams] = useSearchParams();
   useFacebookPixel();
+  useLenis();
 
   useEffect(() => {
     const ref = searchParams.get('ref');
