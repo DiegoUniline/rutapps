@@ -171,6 +171,17 @@ export default function MobileLayout() {
       <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-foreground pl-2">Ruta</span>
+          <label
+            className="flex items-center gap-1.5 pl-2 cursor-pointer select-none"
+            title={inicioMode ? 'Modo Inicio activo' : 'Activar modo Inicio'}
+          >
+            <Home className={cn("h-3.5 w-3.5", inicioMode ? "text-primary" : "text-muted-foreground")} />
+            <Switch
+              checked={inicioMode}
+              onCheckedChange={toggleInicioMode}
+              className="scale-75 origin-left"
+            />
+          </label>
         </div>
         <div className="flex items-center gap-1">
           <button
