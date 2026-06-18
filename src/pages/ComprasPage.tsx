@@ -512,7 +512,7 @@ export default function ComprasPage() {
               activeGroupByLevels={groupByLevels}
               onGroupByLevelChange={setGroupByLevel}
             />
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
               <ExportButton
                 onExcel={() => exportToExcel({
                   fileName: 'Compras', title: 'Reporte de Compras',
@@ -525,14 +525,15 @@ export default function ComprasPage() {
                   totals: { total: totalCompras, saldo_pendiente: totalSaldo },
                 })}
               />
-              <button onClick={() => navigate('/almacen/compras/sugeridas')} className="btn-odoo-secondary shrink-0">
+              <button onClick={() => navigate('/almacen/compras/sugeridas')} className="btn-odoo-secondary">
                 Sugeridas
               </button>
-              <button onClick={() => navigate('/almacen/compras/nueva')} className="btn-odoo-primary shrink-0">
+              <button onClick={() => navigate('/almacen/compras/nueva')} className="btn-odoo-primary">
                 <Plus className="h-3.5 w-3.5" /> Nueva compra
               </button>
             </div>
           </div>
+
 
           {isLoading ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={8} /></div>
