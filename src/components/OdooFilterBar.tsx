@@ -250,7 +250,7 @@ export function OdooFilterBar({
                 <button
                   onClick={() => setGroupOpen(!groupOpen)}
                   className={cn(
-                    "btn-odoo-secondary flex items-center gap-1",
+                    "btn-odoo-secondary flex items-center gap-1 shrink-0",
                     hasGroupBy && "border-primary text-primary"
                   )}
                 >
