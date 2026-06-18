@@ -472,7 +472,7 @@ export default function LandingPage() {
           </div>
 
           {/* Phones row */}
-          <div className="mt-12 md:mt-14 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-6 [&>*]:scale-[0.78] [&>*]:origin-top sm:[&>*]:scale-90 lg:[&>*]:scale-100">
+          <div className="mt-12 md:mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6 [&>*]:scale-90 [&>*]:origin-top lg:[&>*]:scale-100">
             <Reveal variant="up" delay={0} duration={480} className="lg:translate-y-6"><Float amplitude={8} duration={5} delay={0}><PhoneRutero /></Float></Reveal>
             <Reveal variant="up" delay={90} duration={480}><Float amplitude={8} duration={5.5} delay={0.4}><PhonePOS /></Float></Reveal>
             <Reveal variant="up" delay={180} duration={480} className="lg:translate-y-6"><Float amplitude={8} duration={5.2} delay={0.8}><PhoneCobro /></Float></Reveal>
