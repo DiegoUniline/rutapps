@@ -28,7 +28,7 @@ export default function CompraFormPage() {
   const puedeRecibir = hayPendienteRecibir && !['borrador', 'cancelada'].includes(h.form.status);
 
   return (
-    <><div className="p-4 space-y-4 min-h-full">
+    <><div className="p-3 sm:p-4 space-y-4 min-h-full max-w-full overflow-x-hidden">
       <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} hayPendienteRecibir={hayPendienteRecibir} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} recibirTodoPendiente={h.recibirTodoPendiente} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: todayInTimezone(empresa?.zona_horaria), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
@@ -55,7 +55,7 @@ export default function CompraFormPage() {
       ]} />
 
       <div className="flex items-end justify-end gap-4">
-        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-72 space-y-2">
+        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-full md:w-72 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{fmt(h.totals.subtotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">{fmt(h.totals.iva_total)}</span></div>
           <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
