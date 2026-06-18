@@ -16,6 +16,7 @@ export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
   const { fmt } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
@@ -24,13 +25,15 @@ export default function RutaGastos() {
 
   const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
     empresa_id: empresa?.id,
-    fecha: today,
     user_id: user?.id,
   }, {
     enabled: !!empresa?.id && !!user?.id,
     orderBy: 'created_at',
     ascending: false,
   });
+
+  const filteredGastos = useMemo(() => filterByDate((gastos ?? []) as any[], 'fecha'), [gastos, filterByDate]);
+  const totalPeriodo = filteredGastos.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
 
   // Realtime: actualizar al instante cuando se inserta/edita/elimina un gasto
   useEffect(() => {
