@@ -1,6 +1,6 @@
 import { todayLocal } from '@/lib/utils';
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
@@ -32,6 +32,8 @@ const METODOS_PAGO = [
 
 export default function RutaCobrar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedClienteId = (location.state as any)?.clienteId as string | undefined;
   const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
@@ -106,6 +108,15 @@ export default function RutaCobrar() {
     setMontoRecibido('');
     setStep('monto');
   };
+
+  // Auto-seleccionar cliente cuando se llega desde CxC con state.clienteId
+  useEffect(() => {
+    if (!preselectedClienteId || clienteId) return;
+    const lista = clientesFiltrados as any[];
+    if (!lista || lista.length === 0) return;
+    const c = lista.find((x: any) => x.id === preselectedClienteId);
+    if (c) selectCliente(c);
+  }, [preselectedClienteId, clienteId, clientesFiltrados]);
 
   const totalPendienteCliente = useMemo(() =>
     (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
