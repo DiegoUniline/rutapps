@@ -118,7 +118,11 @@ export function useOfflineQuery<T = any>(
           return query.range(from, to);
         });
 
-        setData(serverData as T[]);
+        // Evita el "parpadeo a vacío" cuando ya hay datos locales (p. ej. un
+        // registro recién insertado que aún no terminó de sincronizar al servidor).
+        if (serverData.length > 0 || !hasLocalData) {
+          setData(serverData as T[]);
+        }
 
         // Update local cache
         if (localTable && serverData.length > 0) {
