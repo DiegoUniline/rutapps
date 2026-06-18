@@ -270,12 +270,12 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* HERO — compact, side-by-side */}
-      <section className="relative pt-20 md:pt-24 pb-12 px-5">
-        <div className="absolute inset-x-0 top-0 h-[480px] -z-10"
-          style={{ background: `radial-gradient(60% 50% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-6">
+      {/* HERO — side-by-side, edge-to-edge on desktop */}
+      <section className="relative pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 xl:px-10">
+        <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
+          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
+        <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="lg:col-span-5 xl:col-span-5">
             <Reveal variant="up" duration={350}>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-white"
                 style={{ borderColor: BRAND.line, color: BRAND.ink2 }}>
@@ -287,7 +287,7 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal variant="up" delay={60} duration={420}>
-              <h1 className="mt-4 text-[32px] sm:text-[40px] md:text-[56px] font-semibold leading-[1.05] md:leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
+              <h1 className="mt-4 text-[32px] sm:text-[42px] md:text-[52px] lg:text-[58px] font-semibold leading-[1.05] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
                 Tu distribuidora,<br />
                 <span className="relative inline-block">
                   en una sola pantalla.
@@ -297,7 +297,7 @@ export default function LandingPage() {
               </h1>
             </Reveal>
             <Reveal variant="up" delay={140}>
-              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
+              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md lg:max-w-sm" style={{ color: BRAND.ink2 }}>
                 Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
               </p>
             </Reveal>
@@ -314,10 +314,6 @@ export default function LandingPage() {
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <Link to="/login" className="sm:hidden w-full text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
-                  Iniciar sesión
-                </Link>
                 <a href="#modulos" className="hidden sm:inline-flex w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Ver módulos
@@ -333,9 +329,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Bento mockups — hidden on small phones, simplified on tablet */}
-          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
+          {/* Bento mockups — edge-to-edge, larger */}
+          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-7 xl:col-span-7">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[380px] md:h-[480px] lg:h-[520px]">
               <Parallax offset={30} className="col-span-4 row-span-2">
                 <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
                   style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
