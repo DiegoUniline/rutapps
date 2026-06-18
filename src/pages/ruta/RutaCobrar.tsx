@@ -109,6 +109,15 @@ export default function RutaCobrar() {
     setStep('monto');
   };
 
+  // Auto-seleccionar cliente cuando se llega desde CxC con state.clienteId
+  useEffect(() => {
+    if (!preselectedClienteId || clienteId) return;
+    const lista = clientesFiltrados as any[];
+    if (!lista || lista.length === 0) return;
+    const c = lista.find((x: any) => x.id === preselectedClienteId);
+    if (c) selectCliente(c);
+  }, [preselectedClienteId, clienteId, clientesFiltrados]);
+
   const totalPendienteCliente = useMemo(() =>
     (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
     [ventasPendientes]
