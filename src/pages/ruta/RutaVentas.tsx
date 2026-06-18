@@ -147,7 +147,7 @@ export default function RutaVentas() {
       </div>
 
 
-      <div className="flex-1 px-4 space-y-2 pb-4">
+      <div className="flex-1 px-4 space-y-1.5 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((v: any) => {
           const saldo = v.saldo_pendiente ?? 0;
@@ -156,14 +156,14 @@ export default function RutaVentas() {
           return (
             <div
               key={v.id}
-              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 text-left"
+              className="w-full bg-card border border-border rounded-xl p-2.5 flex items-center gap-2.5 text-left"
             >
               <button
                 onClick={() => navigate(`/ruta/ventas/${v.id}`)}
                 className="flex-1 min-w-0 text-left active:opacity-70"
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-semibold text-foreground">{v.folio ?? '—'}</span>
+                  <span className="text-[13px] font-semibold text-foreground">{v.folio ?? '—'}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
                     {v.status}
                   </span>
@@ -182,7 +182,7 @@ export default function RutaVentas() {
                 </p>
               </button>
               <div className="text-right shrink-0">
-                <p className="text-[15px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
+                <p className="text-[14px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                 {saldo > 0 && v.status !== 'cancelado' && (
                   <p className="text-[11px] font-medium text-destructive">Saldo: {fmt(saldo)}</p>
                 )}
@@ -193,7 +193,7 @@ export default function RutaVentas() {
               {tab === 'por_cobrar' ? (
                 <button
                   onClick={() => navigate(`/ruta/ventas/${v.id}`)}
-                  className="shrink-0 bg-success text-white rounded-lg px-2.5 py-2 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                  className="shrink-0 bg-success text-white rounded-lg px-2 py-1.5 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
                   title="Cobrar"
                 >
                   <Banknote className="h-3.5 w-3.5" />
@@ -211,6 +211,7 @@ export default function RutaVentas() {
           </p>
         )}
       </div>
+
     </div>
   );
 }
