@@ -451,24 +451,25 @@ export default function ComprasPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 min-h-full max-w-full overflow-x-hidden">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Compras <HelpButton title={HELP.compras.title} sections={HELP.compras.sections} /> <VideoHelpButton module="compras" /></h1>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total compras</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total compras</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{fmt(totalCompras)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Saldo por pagar</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalSaldo)}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Saldo por pagar</p>
+          <p className="text-base sm:text-2xl font-bold text-destructive truncate">{fmt(totalSaldo)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
-          <p className="text-2xl font-bold text-foreground">{total}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Registros</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{total}</p>
         </div>
       </div>
+
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
@@ -511,7 +512,7 @@ export default function ComprasPage() {
               activeGroupByLevels={groupByLevels}
               onGroupByLevelChange={setGroupByLevel}
             />
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
               <ExportButton
                 onExcel={() => exportToExcel({
                   fileName: 'Compras', title: 'Reporte de Compras',
@@ -524,14 +525,15 @@ export default function ComprasPage() {
                   totals: { total: totalCompras, saldo_pendiente: totalSaldo },
                 })}
               />
-              <button onClick={() => navigate('/almacen/compras/sugeridas')} className="btn-odoo-secondary shrink-0">
+              <button onClick={() => navigate('/almacen/compras/sugeridas')} className="btn-odoo-secondary">
                 Sugeridas
               </button>
-              <button onClick={() => navigate('/almacen/compras/nueva')} className="btn-odoo-primary shrink-0">
+              <button onClick={() => navigate('/almacen/compras/nueva')} className="btn-odoo-primary">
                 <Plus className="h-3.5 w-3.5" /> Nueva compra
               </button>
             </div>
           </div>
+
 
           {isLoading ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={8} /></div>
@@ -590,12 +592,13 @@ export default function ComprasPage() {
           </div>
 
           {!isLoadingLineas && totalD > 0 && (
-            <div className="flex items-center gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
+            <div className="flex items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2 flex-wrap">
               <span><strong className="text-foreground">{totalD}</strong> líneas</span>
               <span>Total unidades: <strong className="text-foreground">{fmtNum(totalCantidadD)}</strong></span>
               <span>Total importe: <strong className="text-foreground">{fmt(totalSubtotalD)}</strong></span>
             </div>
           )}
+
 
           {isLoadingLineas ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
