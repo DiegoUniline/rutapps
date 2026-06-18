@@ -232,7 +232,7 @@ export default function LandingPage() {
       />
 
       {/* NAV */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line }}>
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 h-14 overflow-hidden">
           <Link to="/" className="flex min-w-0 items-center gap-2">
             <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
