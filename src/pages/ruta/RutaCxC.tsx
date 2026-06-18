@@ -20,6 +20,8 @@ export default function RutaCxC() {
     : { empresa_id: empresa?.id, vendedor_id: vendedorId };
   const { data: ventas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && !!vendedorId });
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: vendedores } = useOfflineQuery('vendedores', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+
 
   // Si la empresa restringe clientes a "propios" y el usuario no ve todo, sólo cuentas de sus clientes
   const clientesPermitidos = useMemo(() => {
