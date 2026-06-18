@@ -55,7 +55,26 @@ export default function MobileLayout() {
   const { profile } = useAuth();
   const { hasPermiso, hasPermisoMovil } = usePermisos();
   const { requireJornada } = useEmpresaJornadaConfig();
-  const tabs = ALL_TABS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const userId = profile?.id || 'anon';
+  const inicioModeKey = `ruta:inicioMode:${userId}`;
+  const [inicioMode, setInicioMode] = useState<boolean>(() => {
+    try { return localStorage.getItem(inicioModeKey) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(inicioModeKey);
+      setInicioMode(v === '1');
+    } catch {}
+  }, [inicioModeKey]);
+  const toggleInicioMode = (on: boolean) => {
+    setInicioMode(on);
+    try { localStorage.setItem(inicioModeKey, on ? '1' : '0'); } catch {}
+    if (on) navigate('/ruta/inicio');
+    else navigate('/ruta');
+  };
+  const tabs = inicioMode
+    ? [TAB_INICIO]
+    : ALL_TABS_CLASSIC.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
   const moreItems = ALL_MORE_ITEMS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
   const morePaths = moreItems.map(i => i.path);
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
