@@ -652,8 +652,8 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="px-5 py-16 md:py-20">
-        <Reveal variant="scale" duration={500} className="max-w-4xl mx-auto block">
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <Reveal variant="scale" duration={500} className="max-w-[1280px] mx-auto block">
           <div className="relative rounded-2xl overflow-hidden p-8 md:p-12 text-center" style={{ background: BRAND.ink }}>
             <div className="absolute inset-0 opacity-50"
               style={{ background: `radial-gradient(50% 70% at 50% 0%, ${BRAND.primary}66, transparent), radial-gradient(40% 60% at 80% 100%, ${BRAND.accent}40, transparent)` }} />
@@ -677,8 +677,8 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="px-5 pt-10 pb-6 border-t" style={{ borderColor: BRAND.line }}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="px-4 sm:px-6 lg:px-8 pt-10 pb-6 border-t" style={{ borderColor: BRAND.line }}>
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-md grid place-items-center text-white font-black text-[10px]" style={{ background: BRAND.primary }}>R</div>
             <span className="text-[14px] font-bold">Rutapp</span>
