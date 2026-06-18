@@ -91,6 +91,24 @@ export function WhatsAppAgentSection() {
             opacity: 1;
             transform: translateY(0);
           }
+          .wa-price {
+            opacity: 0;
+            transform: translateX(-12px);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.85s;
+            box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.35);
+            animation: waPricePulse 2.2s ease-in-out infinite 1.5s;
+          }
+          .wa-in-view .wa-price {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          @keyframes waPricePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.35); }
+            50% { box-shadow: 0 0 18px 4px rgba(37, 211, 102, 0.22); }
+          }
+          .wa-price-dot {
+            box-shadow: 0 0 8px rgba(37, 211, 102, 0.6);
+          }
         `}</style>
 
         {/* glow blobs */}
