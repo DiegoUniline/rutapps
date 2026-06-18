@@ -131,7 +131,7 @@ export default function RutaInicio() {
             onClick={e => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
-              <h2 className="text-base font-bold text-foreground">Todas las opciones</h2>
+              <h2 className="text-base font-bold text-foreground">Más opciones</h2>
               <button
                 onClick={() => setMoreOpen(false)}
                 className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
