@@ -232,7 +232,7 @@ export default function LandingPage() {
       />
 
       {/* NAV */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line }}>
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 h-14 overflow-hidden">
           <Link to="/" className="flex min-w-0 items-center gap-2">
             <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
@@ -271,7 +271,7 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO — side-by-side, edge-to-edge on desktop */}
-      <section className="relative overflow-hidden pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 xl:px-10">
+      <section className="relative overflow-hidden pb-12 px-4 sm:px-6 lg:px-8 xl:px-10" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
         <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
           style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
         <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
