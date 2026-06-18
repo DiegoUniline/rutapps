@@ -39,6 +39,7 @@ const ALL_TABS = [
 const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
+  { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
