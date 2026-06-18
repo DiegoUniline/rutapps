@@ -14,8 +14,9 @@ export default function RutaCxC() {
 
   const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
   const vendedorId = profile?.id;
-  // Si tiene "ver todos", trae todas las ventas de la empresa; si no, sólo las suyas
-  const ventasFilter = seeAll
+  const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!vendedorId;
+  // Si la empresa está por clientes propios, el saldo se calcula por clientes asignados.
+  const ventasFilter = seeAll || limitarPorClientesPropios
     ? { empresa_id: empresa?.id }
     : { empresa_id: empresa?.id, vendedor_id: vendedorId };
   const { data: ventas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && !!vendedorId });
@@ -23,13 +24,13 @@ export default function RutaCxC() {
   const { data: vendedores } = useOfflineQuery('vendedores', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
 
-  // Si la empresa restringe clientes a "propios" y el usuario no ve todo, sólo cuentas de sus clientes
+  // En móvil, la configuración "clientes propios" manda sobre "ver todos".
   const clientesPermitidos = useMemo(() => {
-    if (seeAll || clientesVisibilidad !== 'propios') return null;
+    if (!limitarPorClientesPropios) return null;
     return new Set(((clientes ?? []) as any[])
-      .filter((c: any) => c.vendedor_id === profile?.id)
+      .filter((c: any) => c.vendedor_id === vendedorId)
       .map((c: any) => c.id));
-  }, [clientes, seeAll, clientesVisibilidad, profile?.id]);
+  }, [clientes, limitarPorClientesPropios, vendedorId]);
 
   const vendedorMap = useMemo(() => {
     const map = new Map<string, string>();
