@@ -785,8 +785,22 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ── Tabs ───────────────────────────────────────── */}
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="border border-border/60 p-1 h-auto bg-muted/30">
-          <TabsTrigger value="usuarios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <div className="-mx-3 sm:mx-0 overflow-x-auto">
+          <TabsList className="border border-border/60 p-1 h-auto bg-muted/30 w-max min-w-full mx-3 sm:mx-0">
+            <TabsTrigger value="usuarios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Users className="h-3.5 w-3.5" /> Usuarios
+            </TabsTrigger>
+            <TabsTrigger value="facturas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Receipt className="h-3.5 w-3.5" /> Facturas
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Wallet className="h-3.5 w-3.5" /> Pagos
+            </TabsTrigger>
+            <TabsTrigger value="historial" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Clock className="h-3.5 w-3.5" /> Historial
+            </TabsTrigger>
+          </TabsList>
+        </div>
             <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
           </TabsTrigger>
           <TabsTrigger value="facturas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
