@@ -266,8 +266,16 @@ export function useSaveTarifa() {
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
         (clean as any).empresa_id = empresa.id;
-        const { data, error } = await supabase.from('tarifas').insert(clean as any).select('id').single();
+        const { data, error } = await supabase.from('tarifas').insert(clean as any).select('id, nombre').single();
         if (error) throw error;
+        // Auto-create default principal lista_precios so the tarifa appears in "Listas de Precios"
+        await supabase.from('lista_precios').insert({
+          tarifa_id: data.id,
+          empresa_id: empresa.id,
+          nombre: data.nombre,
+          es_principal: true,
+          activa: true,
+        } as any);
         return data;
       }
     },
@@ -275,6 +283,7 @@ export function useSaveTarifa() {
       qc.invalidateQueries({ queryKey: ['tarifas'] });
       qc.invalidateQueries({ queryKey: ['tarifa'] });
       qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
     },
   });
 }
