@@ -12,14 +12,12 @@ export default function RutaCxC() {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
 
-  const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
+  const { clientesVisibilidad } = useDataVisibility('cobros');
   const vendedorId = profile?.id;
+  // La configuración de empresa "clientes_visibilidad" manda en app móvil.
+  // 'todos' = todas las ventas; 'propios' = filtrar por clientes asignados al vendedor.
   const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!vendedorId;
-  // Si la empresa está por clientes propios, el saldo se calcula por clientes asignados.
-  const ventasFilter = seeAll || limitarPorClientesPropios
-    ? { empresa_id: empresa?.id }
-    : { empresa_id: empresa?.id, vendedor_id: vendedorId };
-  const { data: ventas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && !!vendedorId });
+  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id && !!vendedorId });
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const { data: vendedores } = useOfflineQuery('vendedores', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
