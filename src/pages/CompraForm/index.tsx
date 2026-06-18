@@ -28,7 +28,7 @@ export default function CompraFormPage() {
   const puedeRecibir = hayPendienteRecibir && !['borrador', 'cancelada'].includes(h.form.status);
 
   return (
-    <><div className="p-4 space-y-4 min-h-full">
+    <><div className="p-3 sm:p-4 space-y-4 min-h-full max-w-full overflow-x-hidden">
       <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} hayPendienteRecibir={hayPendienteRecibir} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} recibirTodoPendiente={h.recibirTodoPendiente} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: todayInTimezone(empresa?.zona_horaria), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
