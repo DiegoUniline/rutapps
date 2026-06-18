@@ -32,6 +32,8 @@ const METODOS_PAGO = [
 
 export default function RutaCobrar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedClienteId = (location.state as any)?.clienteId as string | undefined;
   const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
