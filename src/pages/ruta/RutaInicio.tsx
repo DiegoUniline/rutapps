@@ -79,10 +79,10 @@ export default function RutaInicio() {
   const { hasPermisoMovil } = usePermisos();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const visibleTop = TOP_ITEMS.filter(i => !i.permiso || hasPermisoMovil(i.permiso));
+  const topPaths = new Set(visibleTop.map(i => i.path));
   const visibleSections = ALL_SECTIONS.map(section => ({
     ...section,
-    items: section.items.filter(i => !i.permiso || hasPermisoMovil(i.permiso)),
+    items: section.items.filter(i => (!i.permiso || hasPermisoMovil(i.permiso)) && !topPaths.has(i.path)),
   })).filter(section => section.items.length > 0);
 
   const go = (path: string) => {
