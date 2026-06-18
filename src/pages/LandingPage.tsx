@@ -5,7 +5,7 @@ import {
   ShoppingCart, Users, Package, Wallet, Truck, Check, X,
   ArrowRight, Menu, Route, CreditCard, Radio, FileText,
   WifiOff, Brain, Boxes, LineChart, Zap, AlertTriangle,
-  Award, Sparkles, BarChart3, MapPin,
+  Award, Sparkles, BarChart3, MapPin, MessageCircle, Send, Mic, Bot,
 } from 'lucide-react';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 import { ModuleVisual } from '@/components/landing/ModuleVisuals';
