@@ -47,6 +47,7 @@ export default function RutaDevolucion() {
   const [searchCliente, setSearchCliente] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
   const [step, setStep] = useState<Step>('tipo');
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const saveDevolucion = useSaveDevolucion();
 
@@ -56,7 +57,18 @@ export default function RutaDevolucion() {
   const { data: clientes } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
     status: 'activo',
-  }, { enabled: !!empresa?.id && tipo === 'tienda', orderBy: 'nombre' });
+  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
+
+  const { data: historial } = useOfflineQuery('devoluciones', {
+    empresa_id: empresa?.id,
+    vendedor_id: vendedorId,
+  }, { enabled: !!empresa?.id && !!vendedorId, orderBy: 'created_at', ascending: false });
+
+  const clienteMap = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c.nombre])), [clientes]);
+  const filteredHistorial = useMemo(
+    () => filterByDate((historial ?? []) as any[], 'fecha'),
+    [historial, filterByDate]
+  );
 
   const productosDisponibles = useMemo(() => {
     if (!carga?.carga_lineas) return [];
