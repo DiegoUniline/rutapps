@@ -270,12 +270,12 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* HERO — compact, side-by-side */}
-      <section className="relative pt-20 md:pt-24 pb-12 px-5">
-        <div className="absolute inset-x-0 top-0 h-[480px] -z-10"
-          style={{ background: `radial-gradient(60% 50% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-6">
+      {/* HERO — side-by-side, edge-to-edge on desktop */}
+      <section className="relative pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 xl:px-10">
+        <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
+          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
+        <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="lg:col-span-5 xl:col-span-5">
             <Reveal variant="up" duration={350}>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-white"
                 style={{ borderColor: BRAND.line, color: BRAND.ink2 }}>
@@ -287,7 +287,7 @@ export default function LandingPage() {
               </div>
             </Reveal>
             <Reveal variant="up" delay={60} duration={420}>
-              <h1 className="mt-4 text-[32px] sm:text-[40px] md:text-[56px] font-semibold leading-[1.05] md:leading-[1.02] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
+              <h1 className="mt-4 text-[32px] sm:text-[42px] md:text-[52px] lg:text-[58px] font-semibold leading-[1.05] tracking-tight" style={{ letterSpacing: '-0.035em' }}>
                 Tu distribuidora,<br />
                 <span className="relative inline-block">
                   en una sola pantalla.
@@ -314,10 +314,6 @@ export default function LandingPage() {
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <Link to="/login" className="sm:hidden w-full text-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                  style={{ borderColor: BRAND.line, color: BRAND.ink }}>
-                  Iniciar sesión
-                </Link>
                 <a href="#modulos" className="hidden sm:inline-flex w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
                   Ver módulos
@@ -333,9 +329,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          {/* Bento mockups — hidden on small phones, simplified on tablet */}
-          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
+          {/* Bento mockups — edge-to-edge, larger */}
+          <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-7 xl:col-span-7">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[380px] md:h-[480px] lg:h-[520px]">
               <Parallax offset={30} className="col-span-4 row-span-2">
                 <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
                   style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
@@ -360,8 +356,8 @@ export default function LandingPage() {
       </section>
 
       {/* STATS strip */}
-      <section className="px-5 py-8 border-y" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 border-y" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
+        <div className="max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             ['10', 'Módulos integrados'],
             ['Nube', 'En tiempo real'],
@@ -377,8 +373,8 @@ export default function LandingPage() {
       </section>
 
       {/* MODULES — bento dense */}
-      <section id="modulos" className="px-5 py-16 md:py-20">
-        <div className="max-w-7xl mx-auto">
+      <section id="modulos" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1440px] mx-auto">
           <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Módulos</span>
@@ -411,7 +407,7 @@ export default function LandingPage() {
         <WhatsAppAgentSection />
 
         {/* ZIGZAG — los módulos más chidos, con visual real */}
-        <div className="max-w-7xl mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
+        <div className="max-w-[1440px] mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
           {[
             { name: 'Ventas', kicker: 'POS + Rutero', idx: 0 },
             { name: 'Cobranza', kicker: 'FIFO multi-folio', idx: 1 },
@@ -461,10 +457,10 @@ export default function LandingPage() {
 
 
       {/* MOBILE — phones showcase */}
-      <section id="movil" className="px-5 py-16 md:py-24 relative overflow-hidden" style={{ background: BRAND.surface }}>
+      <section id="movil" className="px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative overflow-hidden" style={{ background: BRAND.surface }}>
         <div className="absolute inset-0 pointer-events-none opacity-60"
           style={{ background: `radial-gradient(60% 40% at 50% 0%, ${BRAND.primarySoft}, transparent)` }} />
-        <div className="max-w-7xl mx-auto relative">
+        <div className="max-w-[1440px] mx-auto relative">
           <div className="text-center max-w-2xl mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>App móvil</span>
             <h2 className="mt-2 text-[28px] md:text-[44px] font-semibold tracking-tight leading-[1.05]" style={{ letterSpacing: '-0.025em' }}>
@@ -484,7 +480,7 @@ export default function LandingPage() {
           </div>
 
           {/* Feature pills */}
-          <div className="mt-14 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          <div className="mt-14 max-w-[1100px] mx-auto grid grid-cols-2 md:grid-cols-3 gap-2.5">
             {[
               [Zap, 'Venta en segundos'],
               [Wallet, 'Cobro multi-folio FIFO'],
@@ -526,10 +522,10 @@ export default function LandingPage() {
       </section>
 
       {/* AI — dark, dense */}
-      <section id="ia" className="px-5 py-16 md:py-20 relative overflow-hidden" style={{ background: BRAND.ink }}>
+      <section id="ia" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 relative overflow-hidden" style={{ background: BRAND.ink }}>
         <div className="absolute inset-0 opacity-40"
           style={{ background: `radial-gradient(40% 50% at 70% 30%, ${BRAND.primary}66, transparent), radial-gradient(35% 45% at 20% 80%, ${BRAND.accent}40, transparent)` }} />
-        <div className="max-w-7xl mx-auto relative grid lg:grid-cols-12 gap-8 items-center">
+        <div className="max-w-[1440px] mx-auto relative grid lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-4">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">
               <Sparkles className="h-3 w-3" style={{ color: BRAND.accent }} /> Asesor IA
@@ -568,8 +564,8 @@ export default function LandingPage() {
       </section>
 
       {/* COMPARE — compact table */}
-      <section className="px-5 py-16 md:py-20">
-        <div className="max-w-5xl mx-auto">
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-8">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Comparativa</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
@@ -609,8 +605,8 @@ export default function LandingPage() {
       </section>
 
       {/* PRICING */}
-      <section id="precios" className="px-5 py-16 md:py-20" style={{ background: BRAND.surface }}>
-        <div className="max-w-6xl mx-auto">
+      <section id="precios" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
+        <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-10">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Precios</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
@@ -656,8 +652,8 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="px-5 py-16 md:py-20">
-        <Reveal variant="scale" duration={500} className="max-w-4xl mx-auto block">
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <Reveal variant="scale" duration={500} className="max-w-[1280px] mx-auto block">
           <div className="relative rounded-2xl overflow-hidden p-8 md:p-12 text-center" style={{ background: BRAND.ink }}>
             <div className="absolute inset-0 opacity-50"
               style={{ background: `radial-gradient(50% 70% at 50% 0%, ${BRAND.primary}66, transparent), radial-gradient(40% 60% at 80% 100%, ${BRAND.accent}40, transparent)` }} />
@@ -681,8 +677,8 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="px-5 pt-10 pb-6 border-t" style={{ borderColor: BRAND.line }}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="px-4 sm:px-6 lg:px-8 pt-10 pb-6 border-t" style={{ borderColor: BRAND.line }}>
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-md grid place-items-center text-white font-black text-[10px]" style={{ background: BRAND.primary }}>R</div>
             <span className="text-[14px] font-bold">Rutapp</span>
