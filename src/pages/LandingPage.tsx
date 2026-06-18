@@ -336,18 +336,24 @@ export default function LandingPage() {
           {/* Bento mockups — hidden on small phones, simplified on tablet */}
           <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
             <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
-              <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
-                <LiveDashboardMockup />
-              </div>
-              <div className="col-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-                <LiveSupervisorMap />
-              </div>
-              <div className="col-span-2 rounded-2xl border bg-white grid place-items-center overflow-hidden transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-                <div className="scale-75 origin-center"><LiveMobileApp /></div>
-              </div>
+              <Parallax offset={30} className="col-span-4 row-span-2">
+                <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
+                  <LiveDashboardMockup />
+                </div>
+              </Parallax>
+              <Parallax offset={60} className="col-span-2">
+                <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                  <LiveSupervisorMap />
+                </div>
+              </Parallax>
+              <Parallax offset={-40} className="col-span-2">
+                <div className="rounded-2xl border bg-white grid place-items-center overflow-hidden transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                  <div className="scale-75 origin-center"><LiveMobileApp /></div>
+                </div>
+              </Parallax>
             </div>
           </Reveal>
         </div>
