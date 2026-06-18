@@ -35,7 +35,9 @@ export default function RutaCobrar() {
   const { empresa, user, profile } = useAuth();
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
-  const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
+  const { clientesVisibilidad } = useDataVisibility('cobros');
+  // La configuración de empresa "clientes_visibilidad" manda en app móvil.
+  // 'todos' = todas las ventas; 'propios' = solo clientes asignados al vendedor.
   const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!profile?.id;
   const queryClient = useQueryClient();
 
@@ -52,11 +54,7 @@ export default function RutaCobrar() {
 
   // Offline-compatible: read clients and ventas from local cache
   const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
-  // Si la empresa está por clientes propios, el saldo se calcula por clientes asignados.
-  const ventasFilter = seeAll || limitarPorClientesPropios
-    ? { empresa_id: empresa?.id }
-    : { empresa_id: empresa?.id, vendedor_id: profile?.id };
-  const { data: allVentas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && (seeAll || !!profile?.id) });
+  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   // En móvil, la configuración "clientes propios" manda sobre "ver todos".
   const clientesFiltrados = useMemo(() => {
