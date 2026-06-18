@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ReceiptText, Building2, CreditCard, Wallet } from 'lucide-react';
+import { Plus, Banknote, ReceiptText, Building2, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useDateFilter } from '@/hooks/useDateFilter';
@@ -75,7 +75,7 @@ export default function RutaCobros() {
               <p className="text-3xl font-bold text-success tabular-nums">{fmt(totalFiltrado)}</p>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <Banknote className="h-8 w-8 text-success" strokeWidth={1.5} />
+              <ReceiptText className="h-8 w-8 text-success" strokeWidth={1.5} />
               <p className="text-xs font-semibold text-muted-foreground">{filteredCobros.length} cobros</p>
             </div>
           </div>
