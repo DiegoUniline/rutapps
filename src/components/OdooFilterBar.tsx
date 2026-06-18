@@ -230,121 +230,130 @@ export function OdooFilterBar({
 
       {/* Row 2: Dates → Filters → Group by → Clear (desktop) / collapsed button (mobile) */}
       {(() => {
-        const controls = (
+        const controls = (isMobile: boolean) => (
           <>
             {/* Dates first */}
-            {onDateFromChange && onDateToChange && (
-              <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <input
-                  type="date"
-                  value={dateFrom ?? ''}
-                  onChange={e => onDateFromChange(e.target.value)}
-                  className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
-                />
-                <span className="text-[11px] text-muted-foreground">al</span>
-                <input
-                  type="date"
-                  value={dateTo ?? ''}
-                  onChange={e => onDateToChange(e.target.value)}
-                  className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
-                />
-              </div>
-            )}
+            <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
+              {onDateFromChange && onDateToChange && (
+                <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
+                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <input
+                    type="date"
+                    value={dateFrom ?? ''}
+                    onChange={e => onDateFromChange(e.target.value)}
+                    className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
+                  />
+                  <span className="text-[11px] text-muted-foreground">al</span>
+                  <input
+                    type="date"
+                    value={dateTo ?? ''}
+                    onChange={e => onDateToChange(e.target.value)}
+                    className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
+                  />
+                </div>
+              )}
+            </ResponsiveFilterCard>
 
             {/* Filter dropdowns */}
             {filterOptions && filterOptions.length > 0 && onToggleFilter && filterOptions.map(fo => (
-              <IndependentFilterDropdown
-                key={fo.key}
-                filter={fo}
-                selected={activeFilters?.[fo.key] ?? []}
-                onToggle={(val) => onToggleFilter(fo.key, val)}
-                onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
-              />
+              <ResponsiveFilterCard key={fo.key} label={fo.label} isMobile={isMobile}>
+                <IndependentFilterDropdown
+                  filter={fo}
+                  selected={activeFilters?.[fo.key] ?? []}
+                  onToggle={(val) => onToggleFilter(fo.key, val)}
+                  onSetAll={(vals) => onSetFilter?.(fo.key, vals)}
+                />
+              </ResponsiveFilterCard>
             ))}
 
             {/* Group by — multi-level */}
-            {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
-              <div ref={groupRef} className="relative">
-                <button
-                  onClick={() => setGroupOpen(!groupOpen)}
-                  className={cn(
-                    "btn-odoo-secondary flex items-center gap-1 shrink-0",
-                    hasGroupBy && "border-primary text-primary"
-                  )}
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  {levels.length > 0
-                    ? `Agrupado (${levels.length})`
-                    : 'Agrupar por'}
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                {groupOpen && (
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[220px] py-2 animate-in fade-in-0 zoom-in-95 duration-150">
-                    {[0, 1, 2].map(level => {
-                      const currentVal = levels[level] ?? '';
-                      const prevLevel = level > 0 ? levels[level - 1] : 'always';
-                      if (level > 0 && !prevLevel) return null;
-                      const usedInOtherLevels = levels.filter((_, i) => i !== level);
-                      const availableOptions = groupByOptions.filter(g => !usedInOtherLevels.includes(g.value));
-                      return (
-                        <div key={level} className={cn(level > 0 && "border-t border-border mt-1 pt-1")}>
-                          <div className="px-3 py-1 text-[10px] text-muted-foreground uppercase font-semibold">
-                            {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (onGroupByLevelChange) onGroupByLevelChange(level, '');
-                              else if (level === 0 && onGroupByChange) onGroupByChange('');
-                              if (level === 0) setGroupOpen(false);
-                            }}
-                            className={cn(
-                              "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
-                              !currentVal && "font-semibold text-primary"
-                            )}
-                          >
-                            {level === 0 ? 'Sin agrupación' : 'Ninguna'}
-                          </button>
-                          {availableOptions.map(g => (
+            <ResponsiveFilterCard label="Agrupar" isMobile={isMobile}>
+              {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
+                <div ref={groupRef} className="relative">
+                  <button
+                    onClick={() => setGroupOpen(!groupOpen)}
+                    className={cn(
+                      "btn-odoo-secondary flex items-center gap-1 shrink-0",
+                      hasGroupBy && "border-primary text-primary"
+                    )}
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    {levels.length > 0
+                      ? `Agrupado (${levels.length})`
+                      : 'Agrupar por'}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  {groupOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[220px] py-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                      {[0, 1, 2].map(level => {
+                        const currentVal = levels[level] ?? '';
+                        const prevLevel = level > 0 ? levels[level - 1] : 'always';
+                        if (level > 0 && !prevLevel) return null;
+                        const usedInOtherLevels = levels.filter((_, i) => i !== level);
+                        const availableOptions = groupByOptions.filter(g => !usedInOtherLevels.includes(g.value));
+                        return (
+                          <div key={level} className={cn(level > 0 && "border-t border-border mt-1 pt-1")}>
+                            <div className="px-3 py-1 text-[10px] text-muted-foreground uppercase font-semibold">
+                              {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
+                            </div>
                             <button
-                              key={g.value}
                               onClick={() => {
-                                if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
-                                else if (level === 0 && onGroupByChange) onGroupByChange(g.value);
+                                if (onGroupByLevelChange) onGroupByLevelChange(level, '');
+                                else if (level === 0 && onGroupByChange) onGroupByChange('');
+                                if (level === 0) setGroupOpen(false);
                               }}
                               className={cn(
                                 "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
-                                currentVal === g.value && "font-semibold text-primary"
+                                !currentVal && "font-semibold text-primary"
                               )}
                             >
-                              {currentVal === g.value && <Check className="h-3 w-3 inline mr-1" />}
-                              {g.label}
+                              {level === 0 ? 'Sin agrupación' : 'Ninguna'}
                             </button>
-                          ))}
-                        </div>
-                      );
-                    })}
-                    <div className="border-t border-border mt-1 pt-1 px-3">
-                      <button
-                        onClick={() => setGroupOpen(false)}
-                        className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
-                      >
-                        Cerrar
-                      </button>
+                            {availableOptions.map(g => (
+                              <button
+                                key={g.value}
+                                onClick={() => {
+                                  if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
+                                  else if (level === 0 && onGroupByChange) onGroupByChange(g.value);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                                  currentVal === g.value && "font-semibold text-primary"
+                                )}
+                              >
+                                {currentVal === g.value && <Check className="h-3 w-3 inline mr-1" />}
+                                {g.label}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      <div className="border-t border-border mt-1 pt-1 px-3">
+                        <button
+                          onClick={() => setGroupOpen(false)}
+                          className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </ResponsiveFilterCard>
 
             {/* Clear all */}
-            {activeCount > 0 && onClearFilters && (
-              <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
-                <X className="h-3 w-3" /> Limpiar
-              </button>
-            )}
+            <ResponsiveFilterCard label="Acción" isMobile={isMobile}>
+              {activeCount > 0 && onClearFilters && (
+                <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
+                  <X className="h-3 w-3" /> Limpiar
+                </button>
+              )}
+            </ResponsiveFilterCard>
 
-            {children}
+            <ResponsiveFilterCard label="Más" isMobile={isMobile}>
+              {children}
+            </ResponsiveFilterCard>
           </>
         );
 
