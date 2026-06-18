@@ -9,6 +9,10 @@ import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useDateFilter } from '@/hooks/useDateFilter';
+import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
+import { fmtDate } from '@/lib/utils';
 
 interface DevItem {
   producto_id: string;
@@ -43,6 +47,7 @@ export default function RutaDevolucion() {
   const [searchCliente, setSearchCliente] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
   const [step, setStep] = useState<Step>('tipo');
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const saveDevolucion = useSaveDevolucion();
 
@@ -52,7 +57,18 @@ export default function RutaDevolucion() {
   const { data: clientes } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
     status: 'activo',
-  }, { enabled: !!empresa?.id && tipo === 'tienda', orderBy: 'nombre' });
+  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
+
+  const { data: historial } = useOfflineQuery('devoluciones', {
+    empresa_id: empresa?.id,
+    vendedor_id: vendedorId,
+  }, { enabled: !!empresa?.id && !!vendedorId, orderBy: 'created_at', ascending: false });
+
+  const clienteMap = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c.nombre])), [clientes]);
+  const filteredHistorial = useMemo(
+    () => filterByDate((historial ?? []) as any[], 'fecha'),
+    [historial, filterByDate]
+  );
 
   const productosDisponibles = useMemo(() => {
     if (!carga?.carga_lineas) return [];
@@ -170,42 +186,59 @@ export default function RutaDevolucion() {
         </div>
       </header>
 
-      {/* ─── STEP: Tipo ─── */}
+      {/* ─── STEP: Tipo + Historial ─── */}
       {step === 'tipo' && (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-          <div className="text-center">
-            <h2 className="text-[18px] font-bold text-foreground mb-1">¿Dónde se hace la devolución?</h2>
-            <p className="text-[12px] text-muted-foreground">Elige antes de continuar</p>
+        <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-[15px] font-bold text-foreground">Nueva devolución</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setTipo('almacen'); setStep('items'); }}
+                className="rounded-xl border-2 border-primary bg-primary/5 p-3 text-left active:scale-[0.98] transition-all"
+              >
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-1.5">
+                  <span className="text-lg">🏭</span>
+                </div>
+                <p className="text-[13px] font-bold text-foreground">Al almacén</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">No vendido</p>
+              </button>
+              <button
+                onClick={() => { setTipo('tienda'); setStep('cliente'); }}
+                className="rounded-xl border-2 border-border bg-card p-3 text-left active:scale-[0.98] transition-all hover:border-primary/40"
+              >
+                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-1.5">
+                  <span className="text-lg">🏪</span>
+                </div>
+                <p className="text-[13px] font-bold text-foreground">En tienda</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Con cliente</p>
+              </button>
+            </div>
           </div>
-          <div className="w-full max-w-xs space-y-3">
-            <button
-              onClick={() => { setTipo('almacen'); setStep('items'); }}
-              className="w-full rounded-xl border-2 border-primary bg-primary/5 p-4 text-left active:scale-[0.98] transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-xl">🏭</span>
+
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-bold text-foreground">Historial</h3>
+            <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            <div className="space-y-1.5">
+              {filteredHistorial.length === 0 && (
+                <p className="text-center text-muted-foreground text-[12px] py-6">Sin devoluciones en el periodo</p>
+              )}
+              {filteredHistorial.map((d: any) => (
+                <div key={d.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                    <RotateCcw className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-semibold text-foreground truncate">
+                      {d.tipo === 'tienda' ? (clienteMap.get(d.cliente_id) ?? 'Cliente') : 'Al almacén'}
+                    </p>
+                    <p className="text-[10.5px] text-muted-foreground">
+                      {fmtDate(d.fecha)} · {d.tipo === 'tienda' ? 'Tienda' : 'Almacén'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[14px] font-bold text-foreground">Al almacén</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Regreso producto no vendido al final del día</p>
-                </div>
-              </div>
-            </button>
-            <button
-              onClick={() => { setTipo('tienda'); setStep('cliente'); }}
-              className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-primary/40"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                  <span className="text-xl">🏪</span>
-                </div>
-                <div>
-                  <p className="text-[14px] font-bold text-foreground">En tienda</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Cambio de producto vencido o dañado con cliente</p>
-                </div>
-              </div>
-            </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
