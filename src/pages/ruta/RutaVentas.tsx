@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, ChevronRight, Banknote } from 'lucide-react';
+import { Plus, Search, ChevronRight, Banknote, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
@@ -50,6 +50,8 @@ export default function RutaVentas() {
     ...v,
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
+
+  const totalVentas = enrichedTodas.reduce((s, v: any) => s + (v.total ?? 0), 0);
 
   const statusColors: Record<string, string> = {
     borrador: 'bg-card/50 text-muted-foreground',
@@ -117,6 +119,18 @@ export default function RutaVentas() {
           <>
             <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
             <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            {enrichedTodas.length > 0 && (
+              <div className="mt-3 bg-card rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-bold text-primary/70 uppercase tracking-wider">Total vendido</p>
+                  <p className="text-3xl font-bold text-primary tabular-nums">{fmt(totalVentas)}</p>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <ShoppingCart className="h-8 w-8 text-primary" strokeWidth={1.5} />
+                  <p className="text-xs font-semibold text-muted-foreground">{enrichedTodas.length} ventas</p>
+                </div>
+              </div>
+            )}
           </>
         )}
         {tab === 'por_cobrar' && porCobrar.length > 0 && (
