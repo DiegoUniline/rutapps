@@ -9,6 +9,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
