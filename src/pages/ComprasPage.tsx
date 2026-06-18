@@ -451,24 +451,25 @@ export default function ComprasPage() {
   );
 
   return (
-    <div className="p-4 space-y-3 min-h-full">
+    <div className="p-3 sm:p-4 space-y-3 min-h-full max-w-full overflow-x-hidden">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Compras <HelpButton title={HELP.compras.title} sections={HELP.compras.sections} /> <VideoHelpButton module="compras" /></h1>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total compras</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total compras</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{fmt(totalCompras)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Saldo por pagar</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalSaldo)}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Saldo por pagar</p>
+          <p className="text-base sm:text-2xl font-bold text-destructive truncate">{fmt(totalSaldo)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
-          <p className="text-2xl font-bold text-foreground">{total}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Registros</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{total}</p>
         </div>
       </div>
+
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
