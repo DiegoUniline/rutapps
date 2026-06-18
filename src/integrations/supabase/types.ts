@@ -8472,6 +8472,16 @@ export type Database = {
         Returns: string
       }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
+      super_admin_list_empresas: {
+        Args: never
+        Returns: {
+          current_period_end: string
+          id: string
+          nombre: string
+          status: string
+          trial_ends_at: string
+        }[]
+      }
       surtir_linea_entrega: {
         Args: {
           p_almacen_origen_id: string
