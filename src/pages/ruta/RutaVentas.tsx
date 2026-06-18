@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, ChevronRight, Banknote } from 'lucide-react';
+import { Plus, Search, ChevronRight, Banknote, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
