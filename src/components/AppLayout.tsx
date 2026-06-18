@@ -205,8 +205,8 @@ const navItems: NavItem[] = [
       // Operación
       { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'Control', path: '/control' },
-
       // Cuenta
+
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
       { label: 'Tutoriales', path: '/tutoriales' },
     ],
