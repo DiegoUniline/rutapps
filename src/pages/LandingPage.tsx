@@ -233,10 +233,10 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-5 h-14">
-          <Link to="/" className="flex items-center gap-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 h-14 overflow-hidden">
+          <Link to="/" className="flex min-w-0 items-center gap-2">
             <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
-            <span className="text-[15px] font-bold tracking-tight">Rutapp</span>
+            <span className="text-[15px] font-bold tracking-tight max-[340px]:hidden">Rutapp</span>
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
             <a href="#modulos">Módulos</a>
@@ -252,10 +252,10 @@ export default function LandingPage() {
               Empezar <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="flex md:hidden items-center gap-1.5">
-            <Link to="/login" className="px-2.5 py-1 text-xs font-medium" style={{ color: BRAND.ink2 }}>Entrar</Link>
-            <Link to="/signup" className="px-2.5 py-1 text-xs font-semibold text-white rounded" style={{ background: BRAND.ink }}>Probar</Link>
-            <button onClick={() => setMobileMenu(!mobileMenu)} className="p-1.5" aria-label="Menú">
+          <div className="flex md:hidden shrink-0 items-center gap-1">
+            <Link to="/login" className="px-2 py-1 text-xs font-medium" style={{ color: BRAND.ink2 }}>Entrar</Link>
+            <Link to="/signup" className="px-2 py-1 text-xs font-semibold text-white rounded" style={{ background: BRAND.ink }}>Probar</Link>
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="p-1.5 shrink-0" aria-label="Menú">
               {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
@@ -271,7 +271,7 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO — side-by-side, edge-to-edge on desktop */}
-      <section className="relative pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 xl:px-10">
+      <section className="relative overflow-hidden pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
           style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
         <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
@@ -331,7 +331,7 @@ export default function LandingPage() {
 
           {/* Bento mockups — edge-to-edge, larger */}
           <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-7 xl:col-span-7">
-            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[380px] md:h-[480px] lg:h-[520px]">
+            <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[380px] md:h-[480px] lg:h-[520px] overflow-hidden rounded-2xl p-1">
               <Parallax offset={30} className="col-span-4 row-span-2">
                 <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
                   style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
