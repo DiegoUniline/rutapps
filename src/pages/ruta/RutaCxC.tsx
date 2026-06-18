@@ -120,6 +120,10 @@ export default function RutaCxC() {
                     {c.numCuentas} cuenta{c.numCuentas === 1 ? '' : 's'}
                     {c.oldest && <span className={overdue ? 'text-destructive ml-1' : 'ml-1'}>· {d} días</span>}
                   </p>
+                  {c.vendedorNombre && (
+                    <p className="text-[10px] text-primary font-medium mt-0.5">Vendedor: {c.vendedorNombre}</p>
+                  )}
+
                 </div>
                 <div className="text-right shrink-0 flex items-center gap-2">
                   <div>
