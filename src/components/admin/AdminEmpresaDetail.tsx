@@ -785,20 +785,22 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
       {/* ── Tabs ───────────────────────────────────────── */}
       <Tabs defaultValue="usuarios" className="space-y-4">
-        <TabsList className="border border-border/60 p-1 h-auto bg-muted/30">
-          <TabsTrigger value="usuarios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
-          </TabsTrigger>
-          <TabsTrigger value="facturas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Receipt className="h-4 w-4" /> Facturas ({facturas.length})
-          </TabsTrigger>
-          <TabsTrigger value="pagos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Wallet className="h-4 w-4" /> Pagos ({pagos.length})
-          </TabsTrigger>
-          <TabsTrigger value="historial" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <History className="h-4 w-4" /> Histórico
-          </TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 sm:mx-0 overflow-x-auto">
+          <TabsList className="border border-border/60 p-1 h-auto bg-muted/30 w-max min-w-full mx-3 sm:mx-0">
+            <TabsTrigger value="usuarios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
+            </TabsTrigger>
+            <TabsTrigger value="facturas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Receipt className="h-4 w-4" /> Facturas ({facturas.length})
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <Wallet className="h-4 w-4" /> Pagos ({pagos.length})
+            </TabsTrigger>
+            <TabsTrigger value="historial" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+              <History className="h-4 w-4" /> Histórico
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── USUARIOS ───────────────────────────────── */}
         <TabsContent value="usuarios">
