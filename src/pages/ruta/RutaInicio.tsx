@@ -91,8 +91,7 @@ export default function RutaInicio() {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-lg font-bold text-foreground mb-4">Inicio</h1>
+    <div className="p-4 pt-2">
       <div className="grid grid-cols-2 gap-3">
         {visibleTop.map(item => {
           const { bg, fg } = colorClasses[item.color];
