@@ -31,22 +31,36 @@ export default function RutaCxC() {
       .map((c: any) => c.id));
   }, [clientes, seeAll, clientesVisibilidad, profile?.id]);
 
+  const vendedorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (vendedores ?? []).forEach((v: any) => {
+      if (v.id && v.nombre) map.set(v.id, v.nombre);
+    });
+    return map;
+  }, [vendedores]);
+
   const clientesConSaldo = useMemo(() => {
-    const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string }>();
+    const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string; vendedorId?: string; vendedorNombre?: string }>();
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
       if (!v.cliente_id || saldo <= 0 || v.status === 'cancelada') return;
       if (clientesPermitidos && !clientesPermitidos.has(v.cliente_id)) return;
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
-      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha };
+      const vendedorId = c?.vendedor_id ?? v.vendedor_id;
+      const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha, vendedorId };
       prev.saldo += saldo;
       prev.numCuentas += 1;
       if (v.fecha && (!prev.oldest || v.fecha < prev.oldest)) prev.oldest = v.fecha;
+      if (!prev.vendedorId && vendedorId) prev.vendedorId = vendedorId;
       map.set(v.cliente_id, prev);
     });
-    return Array.from(map.values()).sort((a, b) => b.saldo - a.saldo);
-  }, [ventas, clientes, clientesPermitidos]);
+    return Array.from(map.values()).map(c => ({
+      ...c,
+      vendedorNombre: c.vendedorId ? vendedorMap.get(c.vendedorId) ?? undefined : undefined,
+    })).sort((a, b) => b.saldo - a.saldo);
+  }, [ventas, clientes, clientesPermitidos, vendedorMap]);
+
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
