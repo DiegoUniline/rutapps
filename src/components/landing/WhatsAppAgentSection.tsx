@@ -111,10 +111,6 @@ export function WhatsAppAgentSection() {
           }
         `}</style>
 
-        {/* glow blobs */}
-        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full opacity-30 blur-3xl animate-pulse" style={{ background: WA }} />
-        <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full opacity-20 blur-3xl animate-pulse" style={{ background: BRAND.primary }} />
-
         <div className="relative grid md:grid-cols-2 gap-10 md:gap-12 items-center">
           {/* Left copy */}
           <div className="wa-left text-white">
