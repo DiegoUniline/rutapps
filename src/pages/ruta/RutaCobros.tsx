@@ -69,12 +69,15 @@ export default function RutaCobros() {
         <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
 
         {filteredCobros.length > 0 && (
-          <div className="bg-success/8 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total cobrado</p>
-              <p className="text-2xl font-bold text-success tabular-nums">{fmt(totalFiltrado)}</p>
+          <div className="bg-success/15 rounded-2xl p-5 flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-bold text-success/70 uppercase tracking-wider">Total cobrado</p>
+              <p className="text-3xl font-bold text-success tabular-nums">{fmt(totalFiltrado)}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{filteredCobros.length} cobros</p>
+            <div className="flex flex-col items-center gap-3">
+              <Banknote className="h-8 w-8 text-success" strokeWidth={1.5} />
+              <p className="text-xs font-semibold text-muted-foreground">{filteredCobros.length} cobros</p>
+            </div>
           </div>
         )}
       </div>
