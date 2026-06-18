@@ -4,6 +4,7 @@ import { Search, ChevronRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 
 export default function RutaCxC() {
   const navigate = useNavigate();
@@ -11,15 +12,29 @@ export default function RutaCxC() {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
 
+  const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
   const vendedorId = profile?.id;
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
+  // Si tiene "ver todos", trae todas las ventas de la empresa; si no, sólo las suyas
+  const ventasFilter = seeAll
+    ? { empresa_id: empresa?.id }
+    : { empresa_id: empresa?.id, vendedor_id: vendedorId };
+  const { data: ventas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && !!vendedorId });
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+
+  // Si la empresa restringe clientes a "propios" y el usuario no ve todo, sólo cuentas de sus clientes
+  const clientesPermitidos = useMemo(() => {
+    if (seeAll || clientesVisibilidad !== 'propios') return null;
+    return new Set(((clientes ?? []) as any[])
+      .filter((c: any) => c.vendedor_id === profile?.id)
+      .map((c: any) => c.id));
+  }, [clientes, seeAll, clientesVisibilidad, profile?.id]);
 
   const clientesConSaldo = useMemo(() => {
     const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string }>();
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
       if (!v.cliente_id || saldo <= 0 || v.status === 'cancelada') return;
+      if (clientesPermitidos && !clientesPermitidos.has(v.cliente_id)) return;
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';
       const prev = map.get(v.cliente_id) ?? { id: v.cliente_id, nombre, saldo: 0, numCuentas: 0, oldest: v.fecha };
@@ -29,7 +44,7 @@ export default function RutaCxC() {
       map.set(v.cliente_id, prev);
     });
     return Array.from(map.values()).sort((a, b) => b.saldo - a.saldo);
-  }, [ventas, clientes]);
+  }, [ventas, clientes, clientesPermitidos]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
