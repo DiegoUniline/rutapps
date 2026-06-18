@@ -5,6 +5,7 @@ import { useDateFilter } from '@/hooks/useDateFilter';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { Search } from 'lucide-react';
 
 export default function RutaProductosVendidos() {
