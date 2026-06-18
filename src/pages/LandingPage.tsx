@@ -393,14 +393,16 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
             {MODULES.map((m, i) => (
               <Reveal key={m.t} variant="up" delay={i * 35} duration={350}>
-                <div
-                  className="group rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-transparent cursor-default"
+                <motion.div
+                  whileHover={{ y: -6, scale: 1.03 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="group rounded-xl border bg-white p-4 hover:shadow-lg hover:border-transparent cursor-default"
                   style={{ borderColor: BRAND.line }}
                 >
                   <m.icon className="h-4 w-4 mb-2 transition-transform duration-200 group-hover:scale-110" style={{ color: BRAND.primary }} />
                   <div className="text-[13.5px] font-semibold">{m.t}</div>
                   <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
-                </div>
+                </motion.div>
               </Reveal>
             ))}
           </div>
