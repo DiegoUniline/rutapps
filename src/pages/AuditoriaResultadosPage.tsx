@@ -346,7 +346,7 @@ export default function AuditoriaResultadosPage() {
         )}
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 min-w-0">
           <div className="bg-card rounded-lg p-2 text-center">
             <div className="flex items-center justify-center gap-1 text-destructive">
               <TrendingDown className="h-3.5 w-3.5" />

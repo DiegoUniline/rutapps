@@ -206,7 +206,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
 
         <div className="space-y-3 mt-2">
           {/* Código + Nombre */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Código *</Label>
               <Input value={codigo} onChange={e => setCodigo(e.target.value)} placeholder="PROD-0001" className="h-9 text-sm" />
@@ -232,7 +232,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           {/* Unidades + Factor */}
           <div className="bg-muted/30 rounded-md p-3 space-y-2">
             <Label className="text-xs font-semibold">Unidades de medida</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">Unid. venta *</Label>
                 <Select value={unidadVentaId} onValueChange={setUnidadVentaId}>
@@ -279,7 +279,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
 
           {/* Costo / Margen / Precio */}
           <div className="bg-muted/30 rounded-md p-3 space-y-2">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">Costo *</Label>
                 <Input type="number" step="0.01" value={costo} onChange={e => setCosto(Number(e.target.value) || 0)} className="h-9 text-sm text-right" />
