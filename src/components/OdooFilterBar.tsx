@@ -215,7 +215,7 @@ export function OdooFilterBar({
           <>
             {/* Dates first */}
             {onDateFromChange && onDateToChange && (
-              <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap sm:shrink-0">
+              <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
                 <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <input
                   type="date"
