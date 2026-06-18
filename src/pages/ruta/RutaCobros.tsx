@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Banknote, Building2, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useCurrency } from '@/hooks/useCurrency';
+import { todayLocal } from '@/lib/utils';
 
 const METODO_ICONS: Record<string, any> = {
   efectivo: Banknote,
