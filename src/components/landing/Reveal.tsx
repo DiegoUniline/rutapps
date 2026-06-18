@@ -29,7 +29,7 @@ export function Reveal({
   className = '',
   style,
   as = 'div',
-  duration = 0.6,
+  duration = 600,
   once = true,
 }: RevealProps) {
   const reduce = useReducedMotion();
@@ -45,7 +45,7 @@ export function Reveal({
       y: 0,
       scale: 1,
       transition: {
-        duration: reduce ? 0 : duration,
+        duration: reduce ? 0 : duration / 1000,
         delay: reduce ? 0 : delay / 1000,
         ease: [0.22, 1, 0.36, 1],
       },
