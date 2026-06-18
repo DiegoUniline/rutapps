@@ -154,7 +154,6 @@ export function OdooFilterBar({
   dateFrom, dateTo, onDateFromChange, onDateToChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
   const levels = activeGroupByLevels ?? (activeGroupBy ? [activeGroupBy] : []);
 
