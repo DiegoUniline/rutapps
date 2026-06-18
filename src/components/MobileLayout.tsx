@@ -56,7 +56,7 @@ export default function MobileLayout() {
   const { hasPermiso, hasPermisoMovil } = usePermisos();
   const { requireJornada } = useEmpresaJornadaConfig();
   const userId = profile?.id || 'anon';
-  const inicioModeKey = `ruta:inicioMode:${userId}`;
+  const inicioModeKey = `ruta:inicioMode:v2:${userId}`;
   const [inicioMode, setInicioMode] = useState<boolean>(() => {
     try { return localStorage.getItem(inicioModeKey) === '1'; } catch { return false; }
   });
