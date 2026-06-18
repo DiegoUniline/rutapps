@@ -337,7 +337,7 @@ export function OdooFilterBar({
             </div>
 
             {/* Mobile: horizontal scrollable filter bar */}
-            <div className="flex sm:hidden items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
               {controls}
             </div>
           </>
