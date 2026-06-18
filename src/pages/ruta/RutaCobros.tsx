@@ -137,6 +137,25 @@ export default function RutaCobros() {
 
         <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
 
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {PRESETS.map(p => {
+            const active = activePreset === p.key;
+            return (
+              <button
+                key={p.key}
+                onClick={() => applyPreset(p.key)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-colors ${
+                  active
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-foreground border-border hover:border-primary/50'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+
         {filteredCobros.length > 0 && (
           <div className="bg-success/8 rounded-xl p-4 flex items-center justify-between">
             <div>
