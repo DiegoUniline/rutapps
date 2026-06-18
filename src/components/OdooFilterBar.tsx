@@ -361,12 +361,12 @@ export function OdooFilterBar({
           <>
             {/* Desktop / tablet: inline row */}
             <div className="hidden sm:flex items-center gap-2 flex-wrap">
-              {controls}
+              {controls(false)}
             </div>
 
-            {/* Mobile: horizontal scrollable filter bar */}
+            {/* Mobile: horizontal scrollable filter cards */}
             <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {controls}
+              {controls(true)}
             </div>
           </>
         );
