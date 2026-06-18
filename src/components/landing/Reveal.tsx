@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, ReactNode, CSSProperties } from 'react';
+import { ReactNode, CSSProperties } from 'react';
+import { motion, useReducedMotion, type Variants } from 'motion/react';
 
 type Variant = 'up' | 'fade' | 'scale' | 'left' | 'right';
 
@@ -8,17 +9,17 @@ interface RevealProps {
   variant?: Variant;
   className?: string;
   style?: CSSProperties;
-  as?: keyof JSX.IntrinsicElements;
+  as?: 'div' | 'section' | 'span' | 'article' | 'header' | 'footer' | 'li' | 'ul';
   duration?: number;
   once?: boolean;
 }
 
-const initialTransform: Record<Variant, string> = {
-  up: 'translate3d(0, 16px, 0)',
-  fade: 'translate3d(0, 0, 0)',
-  scale: 'scale(0.96)',
-  left: 'translate3d(-20px, 0, 0)',
-  right: 'translate3d(20px, 0, 0)',
+const offsets: Record<Variant, { x?: number; y?: number; scale?: number }> = {
+  up: { y: 24 },
+  fade: {},
+  scale: { scale: 0.96 },
+  left: { x: -28 },
+  right: { x: 28 },
 };
 
 export function Reveal({
@@ -27,49 +28,42 @@ export function Reveal({
   variant = 'up',
   className = '',
   style,
-  as: Tag = 'div',
-  duration = 420,
+  as = 'div',
+  duration = 0.6,
   once = true,
 }: RevealProps) {
-  const ref = useRef<HTMLElement | null>(null);
-  const [visible, setVisible] = useState(false);
+  const reduce = useReducedMotion();
+  const off = offsets[variant];
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            setVisible(true);
-            if (once) io.disconnect();
-          } else if (!once) {
-            setVisible(false);
-          }
-        });
+  const variants: Variants = {
+    hidden: reduce
+      ? { opacity: 1 }
+      : { opacity: 0, x: off.x ?? 0, y: off.y ?? 0, scale: off.scale ?? 1 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: reduce ? 0 : duration,
+        delay: reduce ? 0 : delay / 1000,
+        ease: [0.22, 1, 0.36, 1],
       },
-      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [once]);
-
-  const styleCombined: CSSProperties = {
-    ...style,
-    opacity: visible ? 1 : 0,
-    transform: visible ? 'translate3d(0,0,0) scale(1)' : initialTransform[variant],
-    transition: `opacity ${duration}ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms, transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms`,
-    willChange: 'opacity, transform',
+    },
   };
 
+  const MotionTag = (motion as any)[as] ?? motion.div;
+
   return (
-    // @ts-expect-error dynamic tag
-    <Tag ref={ref} className={className} style={styleCombined}>
+    <MotionTag
+      className={className}
+      style={style}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once, amount: 0.18, margin: '0px 0px -40px 0px' }}
+      variants={variants}
+    >
       {children}
-    </Tag>
+    </MotionTag>
   );
 }
