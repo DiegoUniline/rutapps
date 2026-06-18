@@ -5,7 +5,7 @@ import {
   ShoppingCart, Users, Package, Wallet, Truck, Check, X,
   ArrowRight, Menu, Route, CreditCard, Radio, FileText,
   WifiOff, Brain, Boxes, LineChart, Zap, AlertTriangle,
-  Award, Sparkles, BarChart3, MapPin, MessageCircle, Send, Mic, Bot,
+  Award, Sparkles, BarChart3, MapPin,
 } from 'lucide-react';
 import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 import { ModuleVisual } from '@/components/landing/ModuleVisuals';
@@ -15,6 +15,7 @@ import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
 import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
+import { WhatsAppAgentSection } from '@/components/landing/WhatsAppAgentSection';
 
 
 const BRAND = {
@@ -395,122 +396,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* WHATSAPP AI AGENT — WOW */}
-        <div className="max-w-7xl mx-auto mt-16 md:mt-24">
-          <Reveal variant="up">
-            <div
-              className="relative overflow-hidden rounded-3xl border p-6 md:p-12"
-              style={{
-                borderColor: BRAND.line,
-                background: `linear-gradient(135deg, #0b1d14 0%, #0f2e1f 45%, #123d28 100%)`,
-              }}
-            >
-              {/* glow blobs */}
-              <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: '#25D366' }} />
-              <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full opacity-20 blur-3xl" style={{ background: BRAND.primary }} />
-
-              <div className="relative grid md:grid-cols-2 gap-10 md:gap-12 items-center">
-                {/* Left copy */}
-                <div className="text-white">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 backdrop-blur px-3 py-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: '#25D366' }} />
-                      <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#25D366' }} />
-                    </span>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.14em]">Nuevo · Agente AI por WhatsApp</span>
-                  </div>
-
-                  <h2 className="mt-4 text-[30px] md:text-[44px] font-semibold leading-[1.05] tracking-tight" style={{ letterSpacing: '-0.025em' }}>
-                    Pídele reportes a tu negocio.{' '}
-                    <span style={{ color: '#25D366' }}>Por WhatsApp.</span>
-                  </h2>
-                  <p className="mt-4 text-[15px] md:text-[17px] text-white/75 max-w-xl leading-relaxed">
-                    Tu Agente AI vive en WhatsApp. Le escribes "ventas de hoy" o "cobranza de la semana" y te responde al instante. Además te envía reportes automáticos cuando tú decides.
-                  </p>
-
-                  <ul className="mt-6 space-y-3">
-                    {[
-                      { icon: MessageCircle, t: 'Chatea en lenguaje natural', d: '"¿Cuánto vendí ayer?", "Top 5 clientes del mes"' },
-                      { icon: Send, t: 'Reportes automáticos a tu WA', d: 'Diario, semanal o cuando lo programes' },
-                      { icon: Bot, t: 'Entiende tu negocio', d: 'Ventas, cobranza, inventario, rutas y más' },
-                    ].map((f) => (
-                      <li key={f.t} className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5 h-8 w-8 rounded-lg grid place-items-center" style={{ background: 'rgba(37,211,102,0.18)' }}>
-                          <f.icon className="h-4 w-4" style={{ color: '#25D366' }} />
-                        </div>
-                        <div>
-                          <div className="text-[14.5px] font-semibold text-white">{f.t}</div>
-                          <div className="text-[12.5px] text-white/60">{f.d}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-7 flex flex-wrap items-center gap-3">
-                    <Link
-                      to="/signup"
-                      className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
-                      style={{ background: '#25D366' }}
-                    >
-                      Yo lo quiero <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <span className="text-[12px] text-white/55">Incluido en tu plan · Sin apps extra</span>
-                  </div>
-                </div>
-
-                {/* Right phone mockup */}
-                <div className="relative mx-auto w-full max-w-[340px]">
-                  <div className="relative rounded-[36px] border-[10px] border-black/80 bg-[#0b141a] shadow-2xl overflow-hidden" style={{ aspectRatio: '9 / 18' }}>
-                    {/* WA header */}
-                    <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#075E54' }}>
-                      <div className="h-9 w-9 rounded-full grid place-items-center" style={{ background: BRAND.primary }}>
-                        <Sparkles className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[13px] font-semibold text-white leading-tight">Rutapp AI</div>
-                        <div className="text-[10.5px] text-white/70">en línea</div>
-                      </div>
-                    </div>
-
-                    {/* chat body */}
-                    <div className="px-3 py-4 space-y-2.5" style={{ background: '#0b141a', minHeight: '70%' }}>
-                      <div className="ml-auto max-w-[78%] rounded-2xl rounded-tr-sm px-3 py-2 text-[12.5px] text-[#111] shadow" style={{ background: '#DCF8C6' }}>
-                        Mándame las ventas de hoy 📊
-                      </div>
-                      <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-3 py-2 text-[12.5px] text-white/95 shadow" style={{ background: '#1f2c34' }}>
-                        <div className="font-semibold mb-1" style={{ color: '#25D366' }}>Ventas de hoy</div>
-                        <div className="text-white/80">💰 $48,250 MXN</div>
-                        <div className="text-white/80">🧾 23 tickets</div>
-                        <div className="text-white/80">👥 18 clientes</div>
-                        <div className="mt-1.5 text-[11px] text-white/55">Subiendo 12% vs ayer ↑</div>
-                      </div>
-                      <div className="ml-auto max-w-[78%] rounded-2xl rounded-tr-sm px-3 py-2 text-[12.5px] text-[#111] shadow" style={{ background: '#DCF8C6' }}>
-                        Y cobranza pendiente?
-                      </div>
-                      <div className="max-w-[80%] rounded-2xl rounded-tl-sm px-3 py-2 text-[12.5px] text-white/95 shadow" style={{ background: '#1f2c34' }}>
-                        <span className="inline-flex gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* WA input bar */}
-                    <div className="absolute bottom-0 inset-x-0 flex items-center gap-2 px-3 py-2.5" style={{ background: '#1f2c34' }}>
-                      <div className="flex-1 rounded-full px-3 py-1.5 text-[11.5px] text-white/50" style={{ background: '#2a3942' }}>
-                        Escribe a tu Agente AI…
-                      </div>
-                      <div className="h-8 w-8 rounded-full grid place-items-center" style={{ background: '#25D366' }}>
-                        <Mic className="h-4 w-4 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
+        <WhatsAppAgentSection />
 
         {/* ZIGZAG — los módulos más chidos, con visual real */}
         <div className="max-w-7xl mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
