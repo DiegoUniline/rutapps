@@ -592,12 +592,13 @@ export default function ComprasPage() {
           </div>
 
           {!isLoadingLineas && totalD > 0 && (
-            <div className="flex items-center gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
+            <div className="flex items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2 flex-wrap">
               <span><strong className="text-foreground">{totalD}</strong> líneas</span>
               <span>Total unidades: <strong className="text-foreground">{fmtNum(totalCantidadD)}</strong></span>
               <span>Total importe: <strong className="text-foreground">{fmt(totalSubtotalD)}</strong></span>
             </div>
           )}
+
 
           {isLoadingLineas ? (
             <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={9} /></div>
