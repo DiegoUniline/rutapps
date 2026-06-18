@@ -71,8 +71,6 @@ export default function RutaGastos() {
     }
   };
 
-  const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
-
   if (!hasPermisoMovil('ruta.gastos')) {
     return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar gastos." />;
   }
@@ -80,8 +78,8 @@ export default function RutaGastos() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
+      <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3 space-y-3">
+        <div className="flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-foreground">Gastos</h1>
           <button
             onClick={() => setShowForm(true)}
@@ -91,11 +89,13 @@ export default function RutaGastos() {
           </button>
         </div>
 
-        {/* Today total */}
+        <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+        <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+
         <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground">Total hoy</span>
+          <span className="text-[13px] text-muted-foreground">Total</span>
           <span className="text-[18px] font-bold text-destructive">
-            {fmt(totalHoy)}
+            {fmt(totalPeriodo)}
           </span>
         </div>
       </div>
