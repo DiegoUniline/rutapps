@@ -43,11 +43,12 @@ const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
 
-  // ── Ventas ──
+  // ── Ventas (Ingresos · verde) ──
   {
     label: 'Ventas',
     icon: ShoppingCart,
     path: '/ventas',
+    highlight: 'green',
     children: [
       { label: 'Ventas', path: '/ventas' },
       { label: 'Cotizaciones', path: '/cotizaciones' },
@@ -61,7 +62,7 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── POS ──
+  // ── POS (Ingresos · verde) ──
   {
     label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
     children: [
@@ -70,7 +71,7 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Compras ──
+  // ── Compras (Egresos · rosa) ──
   {
     label: 'Compras',
     icon: ShoppingBag,
@@ -84,11 +85,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Logística ──
+  // ── Logística (Operaciones · cyan) ──
   {
     label: 'Logística',
     icon: MapPin,
     path: '/logistica',
+    highlight: 'cyan',
     children: [
       { label: 'Pedidos · Pendientes · Entregas', path: '/logistica/pedidos' },
       { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
@@ -98,11 +100,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Catálogos ──
+  // ── Catálogos (Datos maestros · violeta) ──
   {
     label: 'Catálogos',
     icon: Package,
     path: '/productos',
+    highlight: 'violet',
     children: [
       { label: 'Productos', path: '/productos' },
       { label: 'Listas de precios', path: '/listas-precio' },
@@ -115,11 +118,12 @@ const navItems: NavItem[] = [
 
 
 
-  // ── Almacén ──
+  // ── Almacén (Operaciones · cyan) ──
   {
     label: 'Almacén',
     icon: Warehouse,
     path: '/almacen',
+    highlight: 'cyan',
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
@@ -129,11 +133,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Finanzas ──
+  // ── Finanzas (Fiscal · ámbar) ──
   {
     label: 'Finanzas',
     icon: DollarSign,
     path: '/finanzas',
+    highlight: 'amber',
     children: [
       { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
       { label: 'Gastos', path: '/finanzas/gastos' },
@@ -151,11 +156,12 @@ const navItems: NavItem[] = [
     ],
   },
 
-  // ── Configuración ──
+  // ── Configuración (Datos maestros · violeta) ──
   {
     label: 'Configuración',
     icon: Settings,
     path: '/catalogos/clasificaciones',
+    highlight: 'violet',
     children: [
       { label: 'Categorías', path: '/catalogos/clasificaciones' },
       { label: 'Marcas', path: '/catalogos/marcas' },
@@ -289,41 +295,51 @@ function SidebarItem({ item, collapsed, onNavigate, forceOpen }: { item: NavItem
   const [openState, setOpen] = useState(isActive);
   const open = forceOpen || openState;
 
+  // Shared accent token map for grouped modules (left bar + tinted icon)
+  const HL_TOKENS: Record<string, { bar: string; iconBg: string; iconText: string; hoverBg: string; activeText: string; idleText: string }> = {
+    amber:  { bar: 'bg-warning',     iconBg: 'bg-warning/10',     iconText: 'text-warning',     hoverBg: 'hover:bg-warning/5',     activeText: 'text-warning font-semibold',     idleText: 'text-sidebar-foreground/80' },
+    green:  { bar: 'bg-success',     iconBg: 'bg-success/10',     iconText: 'text-success',     hoverBg: 'hover:bg-success/5',     activeText: 'text-success font-semibold',     idleText: 'text-sidebar-foreground/80' },
+    cyan:   { bar: 'bg-info',        iconBg: 'bg-info/10',        iconText: 'text-info',        hoverBg: 'hover:bg-info/5',        activeText: 'text-info font-semibold',        idleText: 'text-sidebar-foreground/80' },
+    violet: { bar: 'bg-violet',      iconBg: 'bg-violet/10',      iconText: 'text-violet',      hoverBg: 'hover:bg-violet/5',      activeText: 'text-violet font-semibold',      idleText: 'text-sidebar-foreground/80' },
+    teal:   { bar: 'bg-teal',        iconBg: 'bg-teal/10',        iconText: 'text-teal',        hoverBg: 'hover:bg-teal/5',        activeText: 'text-teal font-semibold',        idleText: 'text-sidebar-foreground/80' },
+    pink:   { bar: 'bg-pink',        iconBg: 'bg-pink/10',        iconText: 'text-pink',        hoverBg: 'hover:bg-pink/5',        activeText: 'text-pink font-semibold',        idleText: 'text-sidebar-foreground/80' },
+  };
+  const hl = item.highlight ? HL_TOKENS[item.highlight] : null;
+
   if (!item.children) {
-    const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
-      amber:  { active: 'text-warning font-semibold',  idle: 'text-warning hover:bg-sidebar-hover',  icon: 'text-warning' },
-      green:  { active: 'text-success font-semibold',  idle: 'text-success hover:bg-sidebar-hover',  icon: 'text-success' },
-      cyan:   { active: 'text-info font-semibold',     idle: 'text-info hover:bg-sidebar-hover',     icon: 'text-info' },
-      violet: { active: 'text-violet font-semibold',   idle: 'text-violet hover:bg-sidebar-hover',   icon: 'text-violet' },
-      teal:   { active: 'text-teal font-semibold',     idle: 'text-teal hover:bg-sidebar-hover',     icon: 'text-teal' },
-      pink:   { active: 'text-pink font-semibold',     idle: 'text-pink hover:bg-sidebar-hover',     icon: 'text-pink' },
-    };
-    const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
       <div className="group relative flex items-center">
+        {hl && !collapsed && (
+          <div className={cn("absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full", hl.bar)} />
+        )}
         <Link
           to={item.path}
           onClick={onNavigate}
           className={cn(
             "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all flex-1 min-w-0",
-            collapsed ? "justify-center px-2" : "",
+            collapsed ? "justify-center px-2" : hl ? "ml-1" : "",
             isActive
               ? hl
-                ? hl.active
+                ? cn(hl.activeText, hl.hoverBg)
                 : "bg-primary/10 text-primary font-semibold"
               : hl
-                ? hl.idle
+                ? cn(hl.idleText, hl.hoverBg)
                 : item.accent
                   ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
           )}
           title={collapsed ? item.label : undefined}
         >
-          <item.icon className={cn(
-            "h-4 w-4 shrink-0",
-            item.accent && !isActive && "text-primary/70",
-            hl && !isActive && hl.icon
-          )} />
+          {hl ? (
+            <span className={cn("p-1 rounded-md shrink-0", hl.iconBg)}>
+              <item.icon className={cn("h-3.5 w-3.5", hl.iconText)} />
+            </span>
+          ) : (
+            <item.icon className={cn(
+              "h-4 w-4 shrink-0",
+              item.accent && !isActive && "text-primary/70",
+            )} />
+          )}
           {!collapsed && <span className="truncate">{item.label}</span>}
         </Link>
         {!collapsed && item.path !== '/favoritos' && (
@@ -336,19 +352,32 @@ function SidebarItem({ item, collapsed, onNavigate, forceOpen }: { item: NavItem
   }
 
   return (
-    <div>
+    <div className="relative">
+      {hl && !collapsed && (
+        <div className={cn("absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full", hl.bar)} />
+      )}
       <button
         onClick={() => setOpen(!open)}
         className={cn(
           "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
-          collapsed ? "justify-center px-2" : "",
+          collapsed ? "justify-center px-2" : hl ? "ml-1" : "",
           isActive
-            ? "text-primary font-semibold"
-            : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
+            ? hl
+              ? cn(hl.activeText, hl.hoverBg)
+              : "text-primary font-semibold"
+            : hl
+              ? cn(hl.idleText, hl.hoverBg)
+              : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        {hl ? (
+          <span className={cn("p-1 rounded-md shrink-0", hl.iconBg)}>
+            <item.icon className={cn("h-3.5 w-3.5", hl.iconText)} />
+          </span>
+        ) : (
+          <item.icon className="h-4 w-4 shrink-0" />
+        )}
         {!collapsed && (
           <>
             <span className="flex-1 text-left">{item.label}</span>
@@ -357,7 +386,7 @@ function SidebarItem({ item, collapsed, onNavigate, forceOpen }: { item: NavItem
         )}
       </button>
       {open && !collapsed && (
-        <div className="ml-[22px] pl-3 border-l border-sidebar-border/60 mt-0.5">
+        <div className={cn("ml-[22px] pl-3 border-l mt-0.5", hl ? "border-current/20" : "border-sidebar-border/60")}>
           {item.children!.map(child => {
             const childPath = child.path.split('?')[0];
             const childActive = location.pathname === childPath ||
@@ -378,7 +407,7 @@ function SidebarItem({ item, collapsed, onNavigate, forceOpen }: { item: NavItem
                       className={cn(
                         "block px-2 py-1 text-[12px] transition-colors flex-1 min-w-0 whitespace-normal break-words leading-snug pr-7 rounded",
                         childActive
-                          ? "text-primary font-semibold"
+                          ? hl ? hl.activeText : "text-primary font-semibold"
                           : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
                       )}
                     >
