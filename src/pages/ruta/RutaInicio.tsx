@@ -19,12 +19,12 @@ type Section = {
 
 const TOP_ITEMS: Item[] = [
   { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes', color: 'primary' },
-  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender', color: 'primary' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', color: 'primary' },
   { label: 'Cobros', icon: HandCoins, path: '/ruta/cobros', permiso: 'ruta.cobros', color: 'primary' },
   { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', color: 'brand-orange' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa', color: 'secondary' },
   { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos', color: 'success' },
+  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender', color: 'primary' },
 ];
 
 const ALL_SECTIONS: Section[] = [
@@ -93,19 +93,19 @@ export default function RutaInicio() {
   return (
     <div className="p-4">
       <h1 className="text-lg font-bold text-foreground mb-4">Inicio</h1>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {visibleTop.map(item => {
           const { bg, fg } = colorClasses[item.color];
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
+              className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
             >
-              <div className={cn('w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm', bg, fg)}>
-                <item.icon className="h-5 w-5" />
+              <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center shadow-md', bg, fg)}>
+                <item.icon className="h-6 w-6" />
               </div>
-              <span className="text-[10px] font-semibold text-foreground text-center leading-tight px-1">
+              <span className="text-[12px] font-semibold text-foreground text-center leading-tight px-1">
                 {item.label}
               </span>
             </button>
@@ -113,12 +113,12 @@ export default function RutaInicio() {
         })}
         <button
           onClick={() => setMoreOpen(true)}
-          className="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
+          className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
         >
-          <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground shadow-sm">
-            <MoreHorizontal className="h-5 w-5" />
+          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground shadow-md">
+            <MoreHorizontal className="h-6 w-6" />
           </div>
-          <span className="text-[10px] font-semibold text-foreground text-center leading-tight px-1">Más</span>
+          <span className="text-[12px] font-semibold text-foreground text-center leading-tight px-1">Más</span>
         </button>
       </div>
 
