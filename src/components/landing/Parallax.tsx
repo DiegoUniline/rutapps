@@ -23,8 +23,8 @@ export function Parallax({ children, offset = 60, className = '', style }: Paral
   const y = useSpring(rawY, { stiffness: 80, damping: 20, mass: 0.3 });
 
   return (
-    <div ref={ref} className={className} style={style}>
-      <motion.div style={{ y: reduce ? 0 : y, willChange: 'transform' }}>
+    <div ref={ref} className={`overflow-hidden ${className}`} style={style}>
+      <motion.div className="h-full" style={{ y: reduce ? 0 : y, willChange: 'transform' }}>
         {children}
       </motion.div>
     </div>
