@@ -84,18 +84,18 @@ export default function ConteosFisicosPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Activos</p>
-          <p className="text-2xl font-bold">{activos}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Card className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Activos</p>
+          <p className="text-base sm:text-2xl font-bold truncate">{activos}</p>
         </Card>
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Total</p>
-          <p className="text-2xl font-bold">{total}</p>
+        <Card className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total</p>
+          <p className="text-base sm:text-2xl font-bold truncate">{total}</p>
         </Card>
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Diferencia (cerrados)</p>
-          <p className={cn("text-2xl font-bold", difTotal >= 0 ? "text-green-600" : "text-red-600")}>
+        <Card className="p-2.5 sm:p-3 min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Diferencia</p>
+          <p className={cn("text-base sm:text-2xl font-bold truncate", difTotal >= 0 ? "text-green-600" : "text-red-600")}>
             {fmt(difTotal)}
           </p>
         </Card>

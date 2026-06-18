@@ -108,22 +108,22 @@ export default function AuditoriaMovimientosModal({
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-4 gap-3">
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-xs text-muted-foreground">Stock Inicial</p>
-            <p className="text-xl font-bold font-mono">{cantidadEsperada}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="rounded-lg border p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Stock Inicial</p>
+            <p className="text-base sm:text-xl font-bold font-mono truncate">{cantidadEsperada}</p>
           </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-xs text-muted-foreground">Entradas</p>
-            <p className="text-xl font-bold font-mono text-emerald-600">+{totalEntradas}</p>
+          <div className="rounded-lg border p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Entradas</p>
+            <p className="text-base sm:text-xl font-bold font-mono text-emerald-600 truncate">+{totalEntradas}</p>
           </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-xs text-muted-foreground">Salidas</p>
-            <p className="text-xl font-bold font-mono text-red-600">-{totalSalidas}</p>
+          <div className="rounded-lg border p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Salidas</p>
+            <p className="text-base sm:text-xl font-bold font-mono text-red-600 truncate">-{totalSalidas}</p>
           </div>
-          <div className="rounded-lg border p-3 text-center">
-            <p className="text-xs text-muted-foreground">Stock Teórico</p>
-            <p className="text-xl font-bold font-mono">{stockTeorico}</p>
+          <div className="rounded-lg border p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Stock Teórico</p>
+            <p className="text-base sm:text-xl font-bold font-mono truncate">{stockTeorico}</p>
           </div>
         </div>
 

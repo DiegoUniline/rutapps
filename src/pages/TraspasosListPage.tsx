@@ -436,18 +436,18 @@ export default function TraspasosListPage() {
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Traspasos <HelpButton title={HELP.traspasos.title} sections={HELP.traspasos.sections} /> <VideoHelpButton module="traspasos" /></h1>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total traspasos</p>
-          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{filtered.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Confirmados</p>
-          <p className="text-2xl font-bold text-success">{filtered.filter(t => t.status === 'confirmado').length}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Confirmados</p>
+          <p className="text-base sm:text-2xl font-bold text-success truncate">{filtered.filter(t => t.status === 'confirmado').length}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Borradores</p>
-          <p className="text-2xl font-bold text-warning">{filtered.filter(t => t.status === 'borrador').length}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Borradores</p>
+          <p className="text-base sm:text-2xl font-bold text-warning truncate">{filtered.filter(t => t.status === 'borrador').length}</p>
         </div>
       </div>
 

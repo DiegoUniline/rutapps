@@ -139,7 +139,7 @@ export default function CuentasCobrarPage() {
       {/* Aging */}
       <div className="bg-card border border-border rounded-lg p-4">
         <h3 className="text-sm font-semibold mb-3">Antigüedad de saldos</h3>
-        <div className="grid grid-cols-5 gap-2 text-center">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center">
           {[
             { label: 'Corriente', val: aging.corriente, color: 'text-success' },
             { label: '16-30 días', val: aging.d30, color: 'text-warning' },
@@ -147,9 +147,9 @@ export default function CuentasCobrarPage() {
             { label: '61-90 días', val: aging.d90, color: 'text-destructive' },
             { label: '+90 días', val: aging.masD90, color: 'text-destructive font-bold' },
           ].map(a => (
-            <div key={a.label}>
-              <p className="text-[10px] text-muted-foreground">{a.label}</p>
-              <p className={cn("text-sm font-bold", a.color)}>{fmt(a.val)}</p>
+            <div key={a.label} className="min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">{a.label}</p>
+              <p className={cn("text-xs sm:text-sm font-bold truncate", a.color)}>{fmt(a.val)}</p>
             </div>
           ))}
         </div>

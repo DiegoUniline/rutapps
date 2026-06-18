@@ -552,7 +552,7 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* Live Preview */}
-            <div className="w-[440px] shrink-0">
+            <div className="w-full lg:w-[440px] lg:shrink-0">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Vista previa en tiempo real</span>
               </div>
