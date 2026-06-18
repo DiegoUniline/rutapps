@@ -16,6 +16,7 @@ import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useClienteInsights } from '@/hooks/useClienteInsights';
 import { usePermisos } from '@/hooks/usePermisos';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
