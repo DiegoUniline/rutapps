@@ -73,28 +73,28 @@ export default function RutaVentas() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-[20px] font-bold text-foreground">Ventas</h1>
+      <div className="sticky top-0 z-10 bg-background px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-[18px] font-bold text-foreground">Ventas</h1>
           <button
             onClick={() => navigate('/ruta/ventas/nueva')}
-            className="bg-primary text-primary-foreground rounded-xl px-4 py-2 text-[13px] font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="bg-primary text-primary-foreground rounded-xl px-3 py-1.5 text-[12px] font-semibold flex items-center gap-1 active:scale-95 transition-transform"
           >
             <Plus className="h-4 w-4" /> Nueva
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 mb-3 bg-accent rounded-lg p-[4px] border-0">
+        <div className="flex gap-1 mb-2 bg-accent rounded-lg p-[3px] border-0">
           <button
             onClick={() => setTab('todas')}
-            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
           >
             Todas
           </button>
           <button
             onClick={() => setTab('por_cobrar')}
-            className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'por_cobrar' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'por_cobrar' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
           >
             Por cobrar
             {porCobrar.length > 0 && (
@@ -110,7 +110,7 @@ export default function RutaVentas() {
           <input
             type="text"
             placeholder="Buscar por folio o cliente..."
-            className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -120,31 +120,34 @@ export default function RutaVentas() {
             <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
             <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
             {enrichedTodas.length > 0 && (
-              <div className="mt-3 bg-card rounded-2xl p-5 shadow-sm flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs font-bold text-primary/70 uppercase tracking-wider">Total vendido</p>
-                  <p className="text-3xl font-bold text-primary tabular-nums">{fmt(totalVentas)}</p>
+              <div className="mt-2 bg-card rounded-xl p-3 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                    <ShoppingCart className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-[11px] font-bold text-primary/70 uppercase tracking-wider">Total vendido</p>
+                    <p className="text-xl font-bold text-primary tabular-nums">{fmt(totalVentas)}</p>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center gap-3">
-                  <ShoppingCart className="h-8 w-8 text-primary" strokeWidth={1.5} />
-                  <p className="text-xs font-semibold text-muted-foreground">{enrichedTodas.length} ventas</p>
-                </div>
+                <p className="text-xs font-semibold text-muted-foreground">{enrichedTodas.length} ventas</p>
               </div>
             )}
           </>
         )}
         {tab === 'por_cobrar' && porCobrar.length > 0 && (
-          <div className="mt-3 bg-destructive/8 border border-destructive/20 rounded-xl p-4 flex items-center justify-between">
+          <div className="mt-2 bg-destructive/8 border border-destructive/20 rounded-xl p-3 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total por cobrar</p>
-              <p className="text-2xl font-bold text-destructive tabular-nums">{fmt(totalPorCobrar)}</p>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total por cobrar</p>
+              <p className="text-xl font-bold text-destructive tabular-nums">{fmt(totalPorCobrar)}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{porCobrar.length} ventas</p>
+            <p className="text-xs text-muted-foreground">{porCobrar.length} ventas</p>
           </div>
         )}
       </div>
 
-      <div className="flex-1 px-4 space-y-2 pb-4">
+
+      <div className="flex-1 px-4 space-y-1.5 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((v: any) => {
           const saldo = v.saldo_pendiente ?? 0;
@@ -153,14 +156,14 @@ export default function RutaVentas() {
           return (
             <div
               key={v.id}
-              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 text-left"
+              className="w-full bg-card border border-border rounded-xl p-2.5 flex items-center gap-2.5 text-left"
             >
               <button
                 onClick={() => navigate(`/ruta/ventas/${v.id}`)}
                 className="flex-1 min-w-0 text-left active:opacity-70"
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-semibold text-foreground">{v.folio ?? '—'}</span>
+                  <span className="text-[13px] font-semibold text-foreground">{v.folio ?? '—'}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
                     {v.status}
                   </span>
@@ -179,7 +182,7 @@ export default function RutaVentas() {
                 </p>
               </button>
               <div className="text-right shrink-0">
-                <p className="text-[15px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
+                <p className="text-[14px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                 {saldo > 0 && v.status !== 'cancelado' && (
                   <p className="text-[11px] font-medium text-destructive">Saldo: {fmt(saldo)}</p>
                 )}
@@ -190,7 +193,7 @@ export default function RutaVentas() {
               {tab === 'por_cobrar' ? (
                 <button
                   onClick={() => navigate(`/ruta/ventas/${v.id}`)}
-                  className="shrink-0 bg-success text-white rounded-lg px-2.5 py-2 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                  className="shrink-0 bg-success text-white rounded-lg px-2 py-1.5 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
                   title="Cobrar"
                 >
                   <Banknote className="h-3.5 w-3.5" />
@@ -208,6 +211,7 @@ export default function RutaVentas() {
           </p>
         )}
       </div>
+
     </div>
   );
 }
