@@ -46,33 +46,51 @@ export default function SuperAdminEmpresaSelector() {
     if (!isAllowed) return;
     (async () => {
       const nowIso = new Date().toISOString();
-      const [{ data: empresasData }, { data: subs }] = await Promise.all([
-        supabase.from('empresas').select('id, nombre').order('nombre'),
-        supabase.from('subscriptions').select('empresa_id, status, current_period_end, trial_ends_at'),
-      ]);
 
-      const subsByEmpresa = new Map<string, any>();
-      (subs || []).forEach(s => subsByEmpresa.set(s.empresa_id, s));
+      // Source 1: SECURITY DEFINER RPC -> siempre devuelve TODAS las empresas
+      // para el super admin (evita cualquier filtro de RLS sobre empresas/subscriptions).
+      const { data: rpcData, error: rpcError } = await supabase.rpc('super_admin_list_empresas');
+
+      let rows: any[] = (rpcData as any[]) || [];
+
+      if (rpcError || rows.length === 0) {
+        if (rpcError) console.warn('[SA] super_admin_list_empresas RPC error:', rpcError);
+        const [{ data: empresasData }, { data: subs }] = await Promise.all([
+          supabase.from('empresas').select('id, nombre').order('nombre'),
+          supabase.from('subscriptions').select('empresa_id, status, current_period_end, trial_ends_at'),
+        ]);
+        const subsByEmpresa = new Map<string, any>();
+        (subs || []).forEach(s => subsByEmpresa.set(s.empresa_id, s));
+        rows = (empresasData || []).map(e => {
+          const s = subsByEmpresa.get(e.id);
+          return {
+            id: e.id,
+            nombre: e.nombre,
+            status: s?.status ?? null,
+            current_period_end: s?.current_period_end ?? null,
+            trial_ends_at: s?.trial_ends_at ?? null,
+          };
+        });
+      }
 
       const isVigente = (s: any) => {
-        if (!s) return false;
+        if (!s?.status) return false;
         if (s.status === 'gracia') return true;
         if (s.status === 'active' && s.current_period_end && s.current_period_end >= nowIso) return true;
         if (s.status === 'trial' && s.trial_ends_at && s.trial_ends_at >= nowIso) return true;
         return false;
       };
 
-      const all: EmpresaOption[] = (empresasData || []).map(e => {
-        const s = subsByEmpresa.get(e.id);
-        return {
-          id: e.id,
-          nombre: e.nombre,
-          status: s?.status ?? null,
-          current_period_end: s?.current_period_end ?? null,
-          trial_ends_at: s?.trial_ends_at ?? null,
-          vigente: isVigente(s),
-        };
-      });
+      const all: EmpresaOption[] = rows
+        .map((r: any) => ({
+          id: r.id,
+          nombre: r.nombre,
+          status: r.status ?? null,
+          current_period_end: r.current_period_end ?? null,
+          trial_ends_at: r.trial_ends_at ?? null,
+          vigente: isVigente(r),
+        }))
+        .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
       setEmpresas(all);
     })();
   }, [isAllowed, realEmpresa?.id]);
