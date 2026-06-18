@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
+import { Switch } from '@/components/ui/switch';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,16 +31,17 @@ const RUTAS_REQUIEREN_JORNADA = [
   '/ruta/entregas/', // confirmar/editar entregas
 ];
 
-const ALL_TABS = [
-  { label: 'Inicio', icon: Home, path: '/ruta/inicio', permiso: null as string | null },
+const TAB_INICIO = { label: 'Inicio', icon: Home, path: '/ruta/inicio', permiso: null as string | null };
+
+const ALL_TABS_CLASSIC = [
   { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes' },
+  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
   { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Resumen', icon: BarChart3, path: '/ruta/dashboard', permiso: null as string | null },
 ];
 
 const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
-  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
@@ -53,7 +55,26 @@ export default function MobileLayout() {
   const { profile } = useAuth();
   const { hasPermiso, hasPermisoMovil } = usePermisos();
   const { requireJornada } = useEmpresaJornadaConfig();
-  const tabs = ALL_TABS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
+  const userId = profile?.id || 'anon';
+  const inicioModeKey = `ruta:inicioMode:${userId}`;
+  const [inicioMode, setInicioMode] = useState<boolean>(() => {
+    try { return localStorage.getItem(inicioModeKey) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(inicioModeKey);
+      setInicioMode(v === '1');
+    } catch {}
+  }, [inicioModeKey]);
+  const toggleInicioMode = (on: boolean) => {
+    setInicioMode(on);
+    try { localStorage.setItem(inicioModeKey, on ? '1' : '0'); } catch {}
+    if (on) navigate('/ruta/inicio');
+    else navigate('/ruta');
+  };
+  const tabs = inicioMode
+    ? [TAB_INICIO]
+    : ALL_TABS_CLASSIC.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
   const moreItems = ALL_MORE_ITEMS.filter(t => !t.permiso || hasPermisoMovil(t.permiso));
   const morePaths = moreItems.map(i => i.path);
   const isSoloMovil = hasPermiso('solo_movil', 'ver');
@@ -150,6 +171,17 @@ export default function MobileLayout() {
       <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-foreground pl-2">Ruta</span>
+          <label
+            className="flex items-center gap-1.5 pl-2 cursor-pointer select-none"
+            title={inicioMode ? 'Modo Inicio activo' : 'Activar modo Inicio'}
+          >
+            <Home className={cn("h-3.5 w-3.5", inicioMode ? "text-primary" : "text-muted-foreground")} />
+            <Switch
+              checked={inicioMode}
+              onCheckedChange={toggleInicioMode}
+              className="scale-75 origin-left"
+            />
+          </label>
         </div>
         <div className="flex items-center gap-1">
           <button
