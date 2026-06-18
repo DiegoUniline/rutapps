@@ -251,18 +251,18 @@ export function ImportDialog({ open, onOpenChange, type }: ImportDialogProps) {
               <h3 className="font-semibold text-lg">Importación completada</h3>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-secondary/50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-foreground">{result.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
+              <div className="bg-secondary/50 rounded-lg p-2 sm:p-3 min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{result.total}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Total</p>
               </div>
-              <div className="bg-success/10 rounded-lg p-3">
-                <p className="text-2xl font-bold text-success">{result.created}</p>
-                <p className="text-xs text-muted-foreground">Creados</p>
+              <div className="bg-success/10 rounded-lg p-2 sm:p-3 min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-success truncate">{result.created}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Creados</p>
               </div>
-              <div className="bg-primary/10 rounded-lg p-3">
-                <p className="text-2xl font-bold text-primary">{result.updated}</p>
-                <p className="text-xs text-muted-foreground">Actualizados</p>
+              <div className="bg-primary/10 rounded-lg p-2 sm:p-3 min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-primary truncate">{result.updated}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Actualizados</p>
               </div>
             </div>
 

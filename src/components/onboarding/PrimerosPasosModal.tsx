@@ -207,7 +207,7 @@ export default function PrimerosPasosModal({ open, onOpenChange }: Props) {
               <p className="text-sm text-muted-foreground">
                 Vamos a dejar listo <strong>{nombre}</strong> en unos pasos cortos. Solo captura lo esencial y empieza a vender.
               </p>
-              <div className="grid grid-cols-4 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                 <Mini icon={Package} label="Producto" />
                 <Mini icon={Boxes} label="Stock" />
                 <Mini icon={Tag} label="Precios" />

@@ -86,18 +86,18 @@ export default function CuentasPagarPage() {
         <HelpButton title={HELP.cuentasPagar.title} sections={HELP.cuentasPagar.sections} />
       </h1>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
-          <p className="text-2xl font-bold text-destructive">{fmt(totalPorPagar)}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total por pagar</p>
+          <p className="text-base sm:text-2xl font-bold text-destructive truncate">{fmt(totalPorPagar)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total compras crédito</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Total crédito</p>
+          <p className="text-base sm:text-2xl font-bold text-foreground truncate">{fmt(totalCompras)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Con saldo pendiente</p>
-          <p className="text-2xl font-bold text-warning">{conSaldo}</p>
+        <div className="bg-card border border-border rounded-lg p-2.5 sm:p-4 min-w-0">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase truncate">Con saldo</p>
+          <p className="text-base sm:text-2xl font-bold text-warning truncate">{conSaldo}</p>
         </div>
       </div>
 

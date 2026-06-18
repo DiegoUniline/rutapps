@@ -307,7 +307,7 @@ export default function SubscriptionCard() {
         )}
 
         {/* Cards grid */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <button
             onClick={() => setShowUsers(true)}
             className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-center"
