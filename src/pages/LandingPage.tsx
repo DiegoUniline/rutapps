@@ -16,6 +16,8 @@ import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
 import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
 import { WhatsAppAgentSection } from '@/components/landing/WhatsAppAgentSection';
+import { Parallax, Float } from '@/components/landing/Parallax';
+import { motion } from 'motion/react';
 import { useLenis } from '@/hooks/useLenis';
 
 
