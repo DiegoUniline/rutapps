@@ -6,6 +6,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
@@ -113,7 +114,10 @@ export default function RutaVentas() {
           />
         </div>
         {tab === 'todas' && (
-          <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+          <>
+            <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+          </>
         )}
         {tab === 'por_cobrar' && porCobrar.length > 0 && (
           <div className="mt-3 bg-destructive/8 border border-destructive/20 rounded-xl p-4 flex items-center justify-between">

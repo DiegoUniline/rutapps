@@ -1,18 +1,22 @@
-import { todayLocal } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useDateFilter } from '@/hooks/useDateFilter';
+import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { toast } from 'sonner';
 import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { supabase } from '@/integrations/supabase/client';
+import { todayLocal } from '@/lib/utils';
 
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
   const { fmt } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
@@ -21,13 +25,15 @@ export default function RutaGastos() {
 
   const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
     empresa_id: empresa?.id,
-    fecha: today,
     user_id: user?.id,
   }, {
     enabled: !!empresa?.id && !!user?.id,
     orderBy: 'created_at',
     ascending: false,
   });
+
+  const filteredGastos = useMemo(() => filterByDate((gastos ?? []) as any[], 'fecha'), [gastos, filterByDate]);
+  const totalPeriodo = filteredGastos.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
 
   // Realtime: actualizar al instante cuando se inserta/edita/elimina un gasto
   useEffect(() => {
@@ -65,8 +71,6 @@ export default function RutaGastos() {
     }
   };
 
-  const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
-
   if (!hasPermisoMovil('ruta.gastos')) {
     return <MobileNoAccess titulo="Sin permiso" mensaje="Tu rol no permite registrar gastos." />;
   }
@@ -74,8 +78,8 @@ export default function RutaGastos() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
+      <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3 space-y-3">
+        <div className="flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-foreground">Gastos</h1>
           <button
             onClick={() => setShowForm(true)}
@@ -85,11 +89,13 @@ export default function RutaGastos() {
           </button>
         </div>
 
-        {/* Today total */}
+        <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+        <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+
         <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground">Total hoy</span>
+          <span className="text-[13px] text-muted-foreground">Total</span>
           <span className="text-[18px] font-bold text-destructive">
-            {fmt(totalHoy)}
+            {fmt(totalPeriodo)}
           </span>
         </div>
       </div>
@@ -97,7 +103,7 @@ export default function RutaGastos() {
       {/* List */}
       <div className="flex-1 px-4 space-y-2 pb-4 pt-2">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
-        {gastos?.map(g => (
+        {filteredGastos.map(g => (
           <div key={g.id} className="bg-card border border-border rounded-xl p-3.5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
               <Receipt className="h-5 w-5 text-destructive" />
@@ -113,8 +119,8 @@ export default function RutaGastos() {
             </span>
           </div>
         ))}
-        {!isLoading && gastos?.length === 0 && (
-          <p className="text-center text-muted-foreground text-[13px] py-8">Sin gastos registrados hoy</p>
+        {!isLoading && filteredGastos.length === 0 && (
+          <p className="text-center text-muted-foreground text-[13px] py-8">Sin gastos registrados en el periodo</p>
         )}
       </div>
 
