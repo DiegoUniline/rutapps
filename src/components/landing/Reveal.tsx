@@ -18,8 +18,8 @@ const offsets: Record<Variant, { x?: number; y?: number; scale?: number }> = {
   up: { y: 24 },
   fade: {},
   scale: { scale: 0.96 },
-  left: { x: -28 },
-  right: { x: 28 },
+  left: { x: -14 },
+  right: { x: 14 },
 };
 
 export function Reveal({
