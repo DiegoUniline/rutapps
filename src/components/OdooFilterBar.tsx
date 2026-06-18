@@ -143,7 +143,26 @@ function IndependentFilterDropdown({
     </div>
   );
 }
-
+function ResponsiveFilterCard({
+  label,
+  isMobile,
+  children,
+}: {
+  label: string;
+  isMobile: boolean;
+  children: React.ReactNode;
+}) {
+  const hasChildren = Children.toArray(children).length > 0;
+  if (!isMobile || !hasChildren) return <>{children}</>;
+  return (
+    <div className="shrink-0 flex flex-col gap-1 bg-background border border-border rounded-lg px-2.5 py-2 shadow-sm min-w-[140px]">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+        {label}
+      </span>
+      <div className="flex items-center">{children}</div>
+    </div>
+  );
+}
 
 export function OdooFilterBar({
   search, onSearchChange, placeholder = 'Buscar...', children,
