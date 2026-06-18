@@ -297,7 +297,7 @@ export default function LandingPage() {
               </h1>
             </Reveal>
             <Reveal variant="up" delay={140}>
-              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md lg:max-w-sm" style={{ color: BRAND.ink2 }}>
+              <p className="mt-4 md:mt-5 text-[14.5px] md:text-[16px] leading-relaxed max-w-md" style={{ color: BRAND.ink2 }}>
                 Ventas, cobranza, inventario, ruta GPS e <b style={{ color: BRAND.ink }}>IA</b> en la nube. App móvil que aguanta cortes de internet y sincroniza al recuperar señal.
               </p>
             </Reveal>
