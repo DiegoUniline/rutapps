@@ -171,7 +171,9 @@ const navItems: NavItem[] = [
       { label: 'General', path: '/configuracion' },
     ],
   },
+
   { label: 'Control', icon: ShieldAlert, path: '/control' },
+
   {
     label: 'Facturación',
     icon: FileText,
