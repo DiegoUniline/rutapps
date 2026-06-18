@@ -36,6 +36,7 @@ export default function RutaCobrar() {
   const { symbol: s, fmt: fmtC } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
   const { seeAll, clientesVisibilidad } = useDataVisibility('cobros');
+  const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!profile?.id;
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('cliente');
@@ -51,18 +52,18 @@ export default function RutaCobrar() {
 
   // Offline-compatible: read clients and ventas from local cache
   const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
-  // Ventas: si no tiene "Ver todos", filtra a las del vendedor en sesión
-  const ventasFilter = seeAll
+  // Si la empresa está por clientes propios, el saldo se calcula por clientes asignados.
+  const ventasFilter = seeAll || limitarPorClientesPropios
     ? { empresa_id: empresa?.id }
     : { empresa_id: empresa?.id, vendedor_id: profile?.id };
   const { data: allVentas } = useOfflineQuery('ventas', ventasFilter, { enabled: !!empresa?.id && (seeAll || !!profile?.id) });
 
-  // Si configuración exige "propios", limita los clientes al vendedor en sesión
+  // En móvil, la configuración "clientes propios" manda sobre "ver todos".
   const clientesFiltrados = useMemo(() => {
     if (!clientesRaw) return [];
-    if (seeAll || clientesVisibilidad !== 'propios') return clientesRaw as any[];
+    if (!limitarPorClientesPropios) return clientesRaw as any[];
     return (clientesRaw as any[]).filter((c: any) => c.vendedor_id === profile?.id);
-  }, [clientesRaw, seeAll, clientesVisibilidad, profile?.id]);
+  }, [clientesRaw, limitarPorClientesPropios, profile?.id]);
 
   const clientes = useMemo(() => {
     const saldosPorCliente: Record<string, number> = {};
