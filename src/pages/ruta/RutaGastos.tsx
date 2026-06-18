@@ -1,5 +1,5 @@
 import { todayLocal } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
@@ -7,6 +7,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
@@ -27,6 +28,20 @@ export default function RutaGastos() {
     orderBy: 'created_at',
     ascending: false,
   });
+
+  // Realtime: actualizar al instante cuando se inserta/edita/elimina un gasto
+  useEffect(() => {
+    if (!empresa?.id) return;
+    const channel = supabase
+      .channel(`gastos-ruta-${empresa.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'gastos', filter: `empresa_id=eq.${empresa.id}` },
+        () => { refetch(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [empresa?.id, refetch]);
 
   const handleSaveGasto = async () => {
     if (!concepto || !monto || !empresa || !user) return;
