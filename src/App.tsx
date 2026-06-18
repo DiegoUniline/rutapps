@@ -595,6 +595,7 @@ function renderAuthenticatedRoutes() {
       {/* Mobile route sales module */}
       <Route path="/ruta" element={<MobileLayout />}>
         <Route index element={<RutaClientesEntregas />} />
+        <Route path="inicio" element={<RutaInicio />} />
         <Route path="dashboard" element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentasTab />} />
         <Route path="pos" element={<Suspense fallback={<PageLoader />}><PuntoVentaPage /></Suspense>} />
