@@ -1,78 +1,114 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Package, BarChart3, ScanBarcode, Navigation, Receipt, PackageCheck, RefreshCw, UserCircle, ShoppingCart, HandCoins, Truck, Map, MoreHorizontal, X } from 'lucide-react';
+import {
+  ContactRound,
+  Package,
+  BarChart3,
+  Calculator,
+  MapPinned,
+  ReceiptText,
+  PackageCheck,
+  RefreshCw,
+  UserCircle,
+  ShoppingCart,
+  Truck,
+  Map,
+  LayoutGrid,
+  X,
+  ChevronRight,
+  ReceiptCent,
+} from 'lucide-react';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 
+type Tone = 'primary' | 'orange' | 'green' | 'muted';
+
 type Item = {
   label: string;
+  sub: string;
   icon: any;
   path: string;
   permiso: string | null;
-  color: 'primary' | 'brand-orange' | 'secondary' | 'success' | 'warning' | 'teal' | 'violet' | 'pink';
+  tone: Tone;
 };
 
-type Section = {
-  title: string;
-  items: Item[];
-};
+type Section = { title: string; items: Item[] };
 
 const TOP_ITEMS: Item[] = [
-  { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes', color: 'primary' },
-  { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', color: 'primary' },
-  { label: 'Cobros', icon: HandCoins, path: '/ruta/cobros', permiso: 'ruta.cobros', color: 'primary' },
-  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', color: 'brand-orange' },
-  { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa', color: 'secondary' },
-  { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos', color: 'success' },
-  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender', color: 'primary' },
+  { label: 'Clientes', sub: 'Cartera y datos', icon: ContactRound, path: '/ruta', permiso: 'ruta.clientes', tone: 'primary' },
+  { label: 'Ventas', sub: 'Pedidos y preventa', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', tone: 'primary' },
+  { label: 'Cobros', sub: 'Pagos y saldos', icon: ReceiptText, path: '/ruta/cobros', permiso: 'ruta.cobros', tone: 'primary' },
+  { label: 'Stock', sub: 'Inventario móvil', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', tone: 'orange' },
+  { label: 'Navegación', sub: 'Rutas y visitas', icon: MapPinned, path: '/ruta/navegacion', permiso: 'ruta.mapa', tone: 'primary' },
+  { label: 'Gastos', sub: 'Registro operativo', icon: ReceiptCent, path: '/ruta/gastos', permiso: 'ruta.gastos', tone: 'green' },
+  { label: 'POS', sub: 'Venta rápida', icon: Calculator, path: '/ruta/pos', permiso: 'ruta.vender', tone: 'primary' },
 ];
 
 const ALL_SECTIONS: Section[] = [
   {
     title: 'Ventas',
     items: [
-      { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes', color: 'primary' },
-      { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender', color: 'primary' },
-      { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', color: 'primary' },
-      { label: 'Cobros', icon: HandCoins, path: '/ruta/cobros', permiso: 'ruta.cobros', color: 'primary' },
+      { label: 'Clientes', sub: 'Cartera y datos', icon: ContactRound, path: '/ruta', permiso: 'ruta.clientes', tone: 'primary' },
+      { label: 'POS', sub: 'Venta rápida', icon: Calculator, path: '/ruta/pos', permiso: 'ruta.vender', tone: 'primary' },
+      { label: 'Ventas', sub: 'Pedidos y preventa', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', tone: 'primary' },
+      { label: 'Cobros', sub: 'Pagos y saldos', icon: ReceiptText, path: '/ruta/cobros', permiso: 'ruta.cobros', tone: 'primary' },
     ],
   },
   {
     title: 'Inventario',
     items: [
-      { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', color: 'brand-orange' },
-      { label: 'Mi carga', icon: Truck, path: '/ruta/carga', permiso: 'ruta.carga', color: 'brand-orange' },
-      { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga', color: 'brand-orange' },
+      { label: 'Stock', sub: 'Inventario móvil', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock', tone: 'orange' },
+      { label: 'Mi carga', sub: 'Producto a bordo', icon: Truck, path: '/ruta/carga', permiso: 'ruta.carga', tone: 'orange' },
+      { label: 'Liquidar', sub: 'Cierre de ruta', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga', tone: 'orange' },
     ],
   },
   {
     title: 'Logística',
     items: [
-      { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa', color: 'secondary' },
-      { label: 'Mapa', icon: Map, path: '/ruta/mapa', permiso: 'ruta.mapa', color: 'secondary' },
+      { label: 'Navegación', sub: 'Rutas y visitas', icon: MapPinned, path: '/ruta/navegacion', permiso: 'ruta.mapa', tone: 'primary' },
+      { label: 'Mapa', sub: 'Vista general', icon: Map, path: '/ruta/mapa', permiso: 'ruta.mapa', tone: 'primary' },
     ],
   },
   {
     title: 'Administración',
     items: [
-      { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos', color: 'success' },
-      { label: 'Resumen', icon: BarChart3, path: '/ruta/dashboard', permiso: null, color: 'success' },
-      { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null, color: 'success' },
-      { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null, color: 'success' },
+      { label: 'Gastos', sub: 'Registro operativo', icon: ReceiptCent, path: '/ruta/gastos', permiso: 'ruta.gastos', tone: 'green' },
+      { label: 'Resumen', sub: 'Indicadores', icon: BarChart3, path: '/ruta/dashboard', permiso: null, tone: 'green' },
+      { label: 'Sincronizar', sub: 'Datos al día', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null, tone: 'primary' },
+      { label: 'Perfil', sub: 'Tu cuenta', icon: UserCircle, path: '/ruta/perfil', permiso: null, tone: 'muted' },
     ],
   },
 ];
 
-const colorClasses: Record<Item['color'], { bg: string; fg: string }> = {
-  primary: { bg: 'bg-primary', fg: 'text-primary-foreground' },
-  'brand-orange': { bg: 'bg-brand-orange', fg: 'text-brand-orange-foreground' },
-  secondary: { bg: 'bg-secondary', fg: 'text-secondary-foreground' },
-  success: { bg: 'bg-success', fg: 'text-success-foreground' },
-  warning: { bg: 'bg-warning', fg: 'text-warning-foreground' },
-  teal: { bg: 'bg-teal', fg: 'text-teal-foreground' },
-  violet: { bg: 'bg-violet', fg: 'text-violet-foreground' },
-  pink: { bg: 'bg-pink', fg: 'text-pink-foreground' },
+const toneClasses: Record<Tone, { bg: string; fg: string; chev: string }> = {
+  primary: { bg: 'bg-primary/10', fg: 'text-primary', chev: 'text-primary' },
+  orange: { bg: 'bg-brand-orange/15', fg: 'text-brand-orange', chev: 'text-brand-orange' },
+  green: { bg: 'bg-success/15', fg: 'text-success', chev: 'text-success' },
+  muted: { bg: 'bg-muted', fg: 'text-muted-foreground', chev: 'text-muted-foreground' },
 };
+
+function Card({ item, onClick, compact = false }: { item: Item; onClick: () => void; compact?: boolean }) {
+  const t = toneClasses[item.tone];
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex flex-col items-center justify-center gap-2 rounded-2xl bg-card border border-border shadow-sm active:scale-[0.97] transition-transform hover:shadow-md px-3 py-4"
+    >
+      <div className={cn('w-16 h-16 rounded-full flex items-center justify-center', t.bg)}>
+        <item.icon className={cn('h-8 w-8', t.fg)} strokeWidth={2} />
+      </div>
+      <div className="flex flex-col items-center gap-0.5 mt-1">
+        <span className={cn('font-bold text-foreground text-center leading-tight', compact ? 'text-[13px]' : 'text-[15px]')}>
+          {item.label}
+        </span>
+        <span className={cn('text-muted-foreground text-center leading-tight', compact ? 'text-[10px]' : 'text-[11px]')}>
+          {item.sub}
+        </span>
+      </div>
+      <ChevronRight className={cn('absolute bottom-2 right-2 h-4 w-4', t.chev)} />
+    </button>
+  );
+}
 
 export default function RutaInicio() {
   const navigate = useNavigate();
@@ -86,6 +122,15 @@ export default function RutaInicio() {
     items: section.items.filter(i => (!i.permiso || hasPermisoMovil(i.permiso)) && !topPaths.has(i.path)),
   })).filter(section => section.items.length > 0);
 
+  const moreItem: Item = {
+    label: 'Más',
+    sub: 'Herramientas',
+    icon: LayoutGrid,
+    path: '__more__',
+    permiso: null,
+    tone: 'muted',
+  };
+
   const go = (path: string) => {
     setMoreOpen(false);
     navigate(path);
@@ -94,35 +139,12 @@ export default function RutaInicio() {
   return (
     <div className="p-4 pt-2">
       <div className="grid grid-cols-2 gap-3">
-        {visibleTop.map(item => {
-          const { bg, fg } = colorClasses[item.color];
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className="flex flex-col items-center justify-center gap-2.5 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
-            >
-              <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center shadow-md', bg, fg)}>
-                <item.icon className="h-7 w-7" />
-              </div>
-              <span className="text-[13px] font-semibold text-foreground text-center leading-tight px-1">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-        <button
-          onClick={() => setMoreOpen(true)}
-          className="flex flex-col items-center justify-center gap-2.5 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground shadow-md">
-            <MoreHorizontal className="h-7 w-7" />
-          </div>
-          <span className="text-[13px] font-semibold text-foreground text-center leading-tight px-1">Más</span>
-        </button>
+        {visibleTop.map(item => (
+          <Card key={item.path} item={item} onClick={() => navigate(item.path)} />
+        ))}
+        <Card item={moreItem} onClick={() => setMoreOpen(true)} />
       </div>
 
-      {/* More bottom sheet */}
       {moreOpen && (
         <div className="fixed inset-0 z-[60]" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" />
@@ -145,24 +167,10 @@ export default function RutaInicio() {
                   <h3 className="text-xs font-bold tracking-wider text-muted-foreground uppercase mb-3">
                     {section.title}
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {section.items.map(item => {
-                      const { bg, fg } = colorClasses[item.color];
-                      return (
-                        <button
-                          key={item.path}
-                          onClick={() => go(item.path)}
-                          className="flex flex-col items-center justify-center gap-2.5 aspect-square rounded-2xl bg-background border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
-                        >
-                          <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center shadow-md', bg, fg)}>
-                            <item.icon className="h-7 w-7" />
-                          </div>
-                          <span className="text-[12px] font-semibold text-foreground text-center leading-tight px-1">
-                            {item.label}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div className="grid grid-cols-2 gap-3">
+                    {section.items.map(item => (
+                      <Card key={item.path} item={item} onClick={() => go(item.path)} compact />
+                    ))}
                   </div>
                 </div>
               ))}
