@@ -168,8 +168,7 @@ export default function RutaEntregas() {
         {counts.pendientes > 0 && (
           <Button
             size="sm"
-            variant="outline"
-            className="ml-auto rounded-xl gap-1.5 text-[11px]"
+            className="ml-auto rounded-xl gap-1.5 text-[11px] bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90"
             onClick={() => navigate('/ruta/navegacion')}
           >
             <Navigation className="h-3.5 w-3.5" /> Navegar
