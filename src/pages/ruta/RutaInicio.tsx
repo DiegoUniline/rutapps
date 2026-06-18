@@ -99,7 +99,7 @@ export default function RutaInicio() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
+              className="flex flex-col items-center justify-center gap-2.5 aspect-[4/3] rounded-2xl bg-card border border-border shadow-sm active:scale-95 transition-transform hover:shadow-md"
             >
               <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center shadow-md', bg, fg)}>
                 <item.icon className="h-7 w-7" />
