@@ -9,6 +9,7 @@ import DateFilterBar from '@/components/ruta/DateFilterBar';
 import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 
 type Tab = 'todas' | 'por_cobrar';
 
@@ -23,10 +24,13 @@ export default function RutaVentas() {
   const isSA = isSuperAdminEmail(user?.email);
   const vendedorId = (isSA && overrideVendedorId) ? overrideVendedorId : profile?.id;
 
+  // La configuración de empresa "clientes_visibilidad" manda en app móvil.
+  // 'todos' = ve todas las ventas de la empresa; 'propios' = solo las de sus clientes asignados.
+  const { clientesVisibilidad } = useDataVisibility('ventas');
+  const limitarPorClientesPropios = clientesVisibilidad === 'propios' && !!vendedorId;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,
-    vendedor_id: vendedorId,
   }, {
     enabled: !!empresa?.id && !!vendedorId,
     orderBy: 'created_at',
@@ -36,17 +40,30 @@ export default function RutaVentas() {
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  // Cuentas por cobrar de este vendedor (ignora filtro de fechas para no esconder vencidas)
+  const clientesPermitidos = useMemo(() => {
+    if (!limitarPorClientesPropios) return null;
+    return new Set(((clientes ?? []) as any[])
+      .filter((c: any) => c.vendedor_id === vendedorId)
+      .map((c: any) => c.id));
+  }, [clientes, limitarPorClientesPropios, vendedorId]);
+
+  const ventasVisibles = useMemo(() => {
+    const list = (ventas ?? []) as any[];
+    if (!clientesPermitidos) return list;
+    return list.filter(v => v.cliente_id && clientesPermitidos.has(v.cliente_id));
+  }, [ventas, clientesPermitidos]);
+
+  // Cuentas por cobrar (ignora filtro de fechas para no esconder vencidas)
   const porCobrar = useMemo(() => {
-    return ((ventas ?? []) as any[])
+    return ventasVisibles
       .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.status !== 'cancelado' && v.status !== 'borrador')
       .map(v => ({ ...v, _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente' }))
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-  }, [ventas, clientes]);
+  }, [ventasVisibles, clientes]);
 
   const totalPorCobrar = porCobrar.reduce((s, v: any) => s + (v.saldo_pendiente ?? 0), 0);
 
-  const enrichedTodas = filterByDate((ventas ?? []) as any[], 'fecha').map((v: any) => ({
+  const enrichedTodas = filterByDate(ventasVisibles, 'fecha').map((v: any) => ({
     ...v,
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
