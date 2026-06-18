@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Layers, X, Check, CalendarDays, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronDown, Layers, X, Check, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 export interface FilterOption {
   key: string;
@@ -73,7 +72,7 @@ function IndependentFilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "btn-odoo-secondary flex items-center gap-1",
+          "btn-odoo-secondary flex items-center gap-1 shrink-0",
           count > 0 && "border-primary text-primary"
         )}
       >
@@ -155,7 +154,6 @@ export function OdooFilterBar({
   dateFrom, dateTo, onDateFromChange, onDateToChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
   const levels = activeGroupByLevels ?? (activeGroupBy ? [activeGroupBy] : []);
 
@@ -217,7 +215,7 @@ export function OdooFilterBar({
           <>
             {/* Dates first */}
             {onDateFromChange && onDateToChange && (
-              <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap sm:shrink-0">
+              <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
                 <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <input
                   type="date"
@@ -252,7 +250,7 @@ export function OdooFilterBar({
                 <button
                   onClick={() => setGroupOpen(!groupOpen)}
                   className={cn(
-                    "btn-odoo-secondary flex items-center gap-1",
+                    "btn-odoo-secondary flex items-center gap-1 shrink-0",
                     hasGroupBy && "border-primary text-primary"
                   )}
                 >
@@ -322,7 +320,7 @@ export function OdooFilterBar({
 
             {/* Clear all */}
             {activeCount > 0 && onClearFilters && (
-              <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1">
+              <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0">
                 <X className="h-3 w-3" /> Limpiar
               </button>
             )}
@@ -338,43 +336,9 @@ export function OdooFilterBar({
               {controls}
             </div>
 
-            {/* Mobile: single button → bottom sheet with all filters */}
-            <div className="flex sm:hidden items-center gap-2">
-              <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-                <SheetTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "btn-odoo-secondary flex items-center gap-1.5 flex-1 justify-center",
-                      (activeCount > 0 || hasGroupBy) && "border-primary text-primary"
-                    )}
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Filtros
-                    {(activeCount > 0 || hasGroupBy) && (
-                      <span className="ml-1 inline-flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1">
-                        {activeCount + (hasGroupBy ? 1 : 0)}
-                      </span>
-                    )}
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto z-[60]">
-                  <SheetHeader>
-                    <SheetTitle className="text-left">Filtros</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col gap-3 mt-4 pb-6">
-                    {controls}
-                  </div>
-                </SheetContent>
-              </Sheet>
-              {activeCount > 0 && onClearFilters && (
-                <button
-                  onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }}
-                  className="text-[11px] text-destructive hover:underline flex items-center gap-1 shrink-0"
-                >
-                  <X className="h-3 w-3" /> Limpiar
-                </button>
-              )}
+            {/* Mobile: horizontal scrollable filter bar */}
+            <div className="flex sm:hidden items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {controls}
             </div>
           </>
         );
