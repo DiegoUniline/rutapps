@@ -283,6 +283,7 @@ export function useSaveTarifa() {
       qc.invalidateQueries({ queryKey: ['tarifas'] });
       qc.invalidateQueries({ queryKey: ['tarifa'] });
       qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
     },
   });
 }
