@@ -51,6 +51,8 @@ export default function RutaVentas() {
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
 
+  const totalVentas = enrichedTodas.reduce((s, v: any) => s + (v.total ?? 0), 0);
+
   const statusColors: Record<string, string> = {
     borrador: 'bg-card/50 text-muted-foreground',
     confirmado: 'bg-primary/10 text-primary',
