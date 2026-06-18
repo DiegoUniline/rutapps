@@ -9,6 +9,10 @@ import { usePermisos } from '@/hooks/usePermisos';
 import MobileNoAccess from '@/components/ruta/MobileNoAccess';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useDateFilter } from '@/hooks/useDateFilter';
+import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
+import { fmtDate } from '@/lib/utils';
 
 interface DevItem {
   producto_id: string;
