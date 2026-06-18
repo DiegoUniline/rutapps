@@ -480,7 +480,7 @@ export default function LandingPage() {
           </div>
 
           {/* Feature pills */}
-          <div className="mt-14 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          <div className="mt-14 max-w-[1100px] mx-auto grid grid-cols-2 md:grid-cols-3 gap-2.5">
             {[
               [Zap, 'Venta en segundos'],
               [Wallet, 'Cobro multi-folio FIFO'],
@@ -522,10 +522,10 @@ export default function LandingPage() {
       </section>
 
       {/* AI — dark, dense */}
-      <section id="ia" className="px-5 py-16 md:py-20 relative overflow-hidden" style={{ background: BRAND.ink }}>
+      <section id="ia" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 relative overflow-hidden" style={{ background: BRAND.ink }}>
         <div className="absolute inset-0 opacity-40"
           style={{ background: `radial-gradient(40% 50% at 70% 30%, ${BRAND.primary}66, transparent), radial-gradient(35% 45% at 20% 80%, ${BRAND.accent}40, transparent)` }} />
-        <div className="max-w-7xl mx-auto relative grid lg:grid-cols-12 gap-8 items-center">
+        <div className="max-w-[1440px] mx-auto relative grid lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-4">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">
               <Sparkles className="h-3 w-3" style={{ color: BRAND.accent }} /> Asesor IA
@@ -564,8 +564,8 @@ export default function LandingPage() {
       </section>
 
       {/* COMPARE — compact table */}
-      <section className="px-5 py-16 md:py-20">
-        <div className="max-w-5xl mx-auto">
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-8">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Comparativa</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
@@ -605,8 +605,8 @@ export default function LandingPage() {
       </section>
 
       {/* PRICING */}
-      <section id="precios" className="px-5 py-16 md:py-20" style={{ background: BRAND.surface }}>
-        <div className="max-w-6xl mx-auto">
+      <section id="precios" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
+        <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-10">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Precios</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
