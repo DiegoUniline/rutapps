@@ -174,7 +174,7 @@ export function WhatsAppAgentSection() {
                 Yo lo quiero <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
               <div className="wa-price inline-flex items-center gap-2 rounded-full border border-[#25D366]/30 bg-white/10 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm">
-                <span className="inline-flex h-2 w-2 rounded-full bg-[#25D366] animate-pulse" />
+                <span className="wa-price-dot inline-flex h-2 w-2 rounded-full bg-[#25D366] animate-pulse" />
                 Solo $69 pesos extras al mes
               </div>
             </div>
