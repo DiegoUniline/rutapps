@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -31,15 +31,16 @@ const RUTAS_REQUIEREN_JORNADA = [
 ];
 
 const ALL_TABS = [
+  { label: 'Inicio', icon: Home, path: '/ruta/inicio', permiso: null as string | null },
   { label: 'Clientes', icon: Users, path: '/ruta', permiso: 'ruta.clientes' },
-  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
+  { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Resumen', icon: BarChart3, path: '/ruta/dashboard', permiso: null as string | null },
 ];
 
 const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
+  { label: 'Stock', icon: Package, path: '/ruta/stock', permiso: 'ruta.stock' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
-  { label: 'Gastos', icon: Receipt, path: '/ruta/gastos', permiso: 'ruta.gastos' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },

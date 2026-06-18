@@ -159,6 +159,7 @@ import RutaVentasTab from "@/pages/ruta/RutaVentasTab";
 import RutaClientesEntregas from "@/pages/ruta/RutaClientesEntregas";
 import RutaStock from "@/pages/ruta/RutaStock";
 import RutaGastos from "@/pages/ruta/RutaGastos";
+import RutaInicio from "@/pages/ruta/RutaInicio";
 import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta/index";
 import RutaCobros from "@/pages/ruta/RutaCobros";
 import RutaCobrar from "@/pages/ruta/RutaCobrar";
@@ -529,6 +530,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/ruta" element={<MobileLayout />}>
           <Route index element={<RutaClientesEntregas />} />
+          <Route path="inicio" element={<RutaInicio />} />
           <Route path="dashboard" element={<RutaDashboard />} />
           <Route path="ventas" element={<RutaVentasTab />} />
           <Route path="pos" element={<Suspense fallback={<PageLoader />}><PuntoVentaPage /></Suspense>} />
@@ -593,6 +595,7 @@ function renderAuthenticatedRoutes() {
       {/* Mobile route sales module */}
       <Route path="/ruta" element={<MobileLayout />}>
         <Route index element={<RutaClientesEntregas />} />
+        <Route path="inicio" element={<RutaInicio />} />
         <Route path="dashboard" element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentasTab />} />
         <Route path="pos" element={<Suspense fallback={<PageLoader />}><PuntoVentaPage /></Suspense>} />
