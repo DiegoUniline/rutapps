@@ -16,6 +16,8 @@ import { Reveal } from '@/components/landing/Reveal';
 import LandingChatWidget from '@/components/landing/LandingChatWidget';
 import MobileDemoSimulator from '@/components/landing/MobileDemoSimulator';
 import { WhatsAppAgentSection } from '@/components/landing/WhatsAppAgentSection';
+import { Parallax, Float } from '@/components/landing/Parallax';
+import { motion } from 'motion/react';
 import { useLenis } from '@/hooks/useLenis';
 
 
@@ -334,18 +336,24 @@ export default function LandingPage() {
           {/* Bento mockups — hidden on small phones, simplified on tablet */}
           <Reveal variant="scale" delay={120} duration={500} className="hidden sm:block lg:col-span-6">
             <div className="grid grid-cols-6 grid-rows-2 gap-3 h-[360px] md:h-[440px]">
-              <div className="col-span-4 row-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
-                <LiveDashboardMockup />
-              </div>
-              <div className="col-span-2 rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-                <LiveSupervisorMap />
-              </div>
-              <div className="col-span-2 rounded-2xl border bg-white grid place-items-center overflow-hidden transition-transform duration-300 hover:-translate-y-1"
-                style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
-                <div className="scale-75 origin-center"><LiveMobileApp /></div>
-              </div>
+              <Parallax offset={30} className="col-span-4 row-span-2">
+                <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 25px 60px -20px rgba(10,21,48,0.18)' }}>
+                  <LiveDashboardMockup />
+                </div>
+              </Parallax>
+              <Parallax offset={60} className="col-span-2">
+                <div className="rounded-2xl overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                  <LiveSupervisorMap />
+                </div>
+              </Parallax>
+              <Parallax offset={-40} className="col-span-2">
+                <div className="rounded-2xl border bg-white grid place-items-center overflow-hidden transition-transform duration-300 hover:-translate-y-1 h-full"
+                  style={{ borderColor: BRAND.line, boxShadow: '0 20px 40px -15px rgba(10,21,48,0.15)' }}>
+                  <div className="scale-75 origin-center"><LiveMobileApp /></div>
+                </div>
+              </Parallax>
             </div>
           </Reveal>
         </div>
@@ -385,14 +393,16 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
             {MODULES.map((m, i) => (
               <Reveal key={m.t} variant="up" delay={i * 35} duration={350}>
-                <div
-                  className="group rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-transparent cursor-default"
+                <motion.div
+                  whileHover={{ y: -6, scale: 1.03 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="group rounded-xl border bg-white p-4 hover:shadow-lg hover:border-transparent cursor-default"
                   style={{ borderColor: BRAND.line }}
                 >
                   <m.icon className="h-4 w-4 mb-2 transition-transform duration-200 group-hover:scale-110" style={{ color: BRAND.primary }} />
                   <div className="text-[13.5px] font-semibold">{m.t}</div>
                   <div className="text-[11.5px] mt-0.5" style={{ color: BRAND.muted }}>{m.d}</div>
-                </div>
+                </motion.div>
               </Reveal>
             ))}
           </div>
@@ -467,10 +477,10 @@ export default function LandingPage() {
 
           {/* Phones row */}
           <div className="mt-12 md:mt-14 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-6 [&>*]:scale-[0.78] [&>*]:origin-top sm:[&>*]:scale-90 lg:[&>*]:scale-100">
-            <Reveal variant="up" delay={0} duration={480} className="lg:translate-y-6"><PhoneRutero /></Reveal>
-            <Reveal variant="up" delay={90} duration={480}><PhonePOS /></Reveal>
-            <Reveal variant="up" delay={180} duration={480} className="lg:translate-y-6"><PhoneCobro /></Reveal>
-            <Reveal variant="up" delay={270} duration={480}><PhoneEntrega /></Reveal>
+            <Reveal variant="up" delay={0} duration={480} className="lg:translate-y-6"><Float amplitude={8} duration={5} delay={0}><PhoneRutero /></Float></Reveal>
+            <Reveal variant="up" delay={90} duration={480}><Float amplitude={8} duration={5.5} delay={0.4}><PhonePOS /></Float></Reveal>
+            <Reveal variant="up" delay={180} duration={480} className="lg:translate-y-6"><Float amplitude={8} duration={5.2} delay={0.8}><PhoneCobro /></Float></Reveal>
+            <Reveal variant="up" delay={270} duration={480}><Float amplitude={8} duration={5.7} delay={1.2}><PhoneEntrega /></Float></Reveal>
           </div>
 
           {/* Feature pills */}
