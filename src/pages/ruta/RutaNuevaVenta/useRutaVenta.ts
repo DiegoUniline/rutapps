@@ -228,7 +228,19 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   useEffect(() => { setBannerDismissed(false); }, [clienteId]);
 
-  const filteredClientes = clientes?.filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
+  // Data visibility: si la empresa tiene 'propios' y el usuario no tiene 'ver_todos',
+  // solo mostrar los clientes asignados a este vendedor.
+  const { seeAll: seeAllClientes, clientesVisibilidad } = useDataVisibility('clientes');
+  const clientesVisibles = useMemo(() => {
+    if (!clientes) return clientes;
+    if (seeAllClientes) return clientes;
+    if (clientesVisibilidad === 'propios' && profile?.id) {
+      return (clientes as any[]).filter(c => c.vendedor_id === profile.id);
+    }
+    return clientes;
+  }, [clientes, seeAllClientes, clientesVisibilidad, profile?.id]);
+
+  const filteredClientes = clientesVisibles?.filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
   const productosDisponibles = useMemo(() => {
     if (!productos) return [];
     if (tipoVenta === 'pedido') return productos;
