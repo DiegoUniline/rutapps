@@ -91,6 +91,24 @@ export function WhatsAppAgentSection() {
             opacity: 1;
             transform: translateY(0);
           }
+          .wa-price {
+            opacity: 0;
+            transform: translateX(-12px);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.85s;
+            box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.35);
+            animation: waPricePulse 2.2s ease-in-out infinite 1.5s;
+          }
+          .wa-in-view .wa-price {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          @keyframes waPricePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.35); }
+            50% { box-shadow: 0 0 18px 4px rgba(37, 211, 102, 0.22); }
+          }
+          .wa-price-dot {
+            box-shadow: 0 0 8px rgba(37, 211, 102, 0.6);
+          }
         `}</style>
 
         {/* glow blobs */}
@@ -147,7 +165,7 @@ export function WhatsAppAgentSection() {
               ))}
             </ul>
 
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div className="mt-7 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3">
               <Link
                 to="/signup"
                 className="group inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
@@ -155,7 +173,10 @@ export function WhatsAppAgentSection() {
               >
                 Yo lo quiero <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
-              <span className="text-[12px] text-white/55">Incluido en tu plan · Sin apps extra</span>
+              <div className="wa-price inline-flex items-center gap-2 rounded-full border border-[#25D366]/30 bg-white/10 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm">
+                <span className="wa-price-dot inline-flex h-2 w-2 rounded-full bg-[#25D366] animate-pulse" />
+                Solo $69 pesos extras al mes
+              </div>
             </div>
           </div>
 
