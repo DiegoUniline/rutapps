@@ -160,12 +160,9 @@ const navItems: NavItem[] = [
   {
     label: 'Configuración',
     icon: Settings,
-    path: '/catalogos/clasificaciones',
+    path: '/configuracion',
     highlight: 'violet',
     children: [
-      { label: 'Categorías', path: '/catalogos/clasificaciones' },
-      { label: 'Marcas', path: '/catalogos/marcas' },
-      { label: 'Unidades', path: '/catalogos/unidades' },
       { label: 'Zonas', path: '/catalogos/zonas' },
       { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
