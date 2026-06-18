@@ -6,6 +6,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import DatePresetButtons from '@/components/ruta/DatePresetButtons';
 import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
