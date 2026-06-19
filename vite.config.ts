@@ -74,9 +74,10 @@ export default defineConfig(({ mode }) => ({
           /^\/tutoriales/,
           /^\/soporte/,
         ],
-        // CRÍTICO: activa el nuevo SW inmediatamente y toma control de todas las pestañas abiertas
-        skipWaiting: true,
-        clientsClaim: true,
+        // La nueva versión queda esperando hasta que el usuario toque Actualizar.
+        // Esto evita recargas/bloqueos mientras capturan ventas, cobros o formularios.
+        skipWaiting: false,
+        clientsClaim: false,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
