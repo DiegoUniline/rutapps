@@ -189,7 +189,7 @@ export default function ComprasPage() {
     },
   });
 
-  // Build dynamic proveedor filter options from data
+  // Build dynamic proveedor / almacen filter options from data
   const proveedorOptions = useMemo(() => {
     const names = new Map<string, string>();
     for (const c of compras ?? []) {
@@ -200,10 +200,15 @@ export default function ComprasPage() {
     return Array.from(names.entries()).map(([id, nombre]) => ({ value: id, label: nombre })).sort((a, b) => a.label.localeCompare(b.label));
   }, [compras]);
 
+  const almacenOptions = useMemo(() => {
+    return (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [almacenes]);
+
   const FILTER_OPTIONS = useMemo(() => [
     ...STATIC_FILTER_OPTIONS,
     { key: 'proveedor', label: 'Proveedor', options: proveedorOptions },
-  ], [proveedorOptions]);
+    { key: 'almacen', label: 'Almacén', options: almacenOptions },
+  ], [proveedorOptions, almacenOptions]);
 
   // Apply client-side filters for condicion_pago and proveedor
   const filteredCompras = useMemo(() => {
