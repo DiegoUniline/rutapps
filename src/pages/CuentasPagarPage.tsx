@@ -102,6 +102,8 @@ export default function CuentasPagarPage() {
     return list;
   }, [cuentas, filters, desde, hasta]);
 
+  const hasFilters = (filters.status?.length > 0) || (filters.proveedor?.length > 0) || desde || hasta;
+
   const total = filteredCuentas.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
