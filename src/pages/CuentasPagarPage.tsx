@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -58,18 +59,61 @@ export default function CuentasPagarPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const { data: cuentas, isLoading } = useCuentasPagar(search, empresa?.id);
+  const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('cuentas-pagar');
 
-  const total = cuentas?.length ?? 0;
+  const { data: proveedores } = useQuery({
+    queryKey: ['proveedores', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const FILTER_OPTIONS = useMemo(() => [
+    {
+      key: 'status',
+      label: 'Estado',
+      options: [
+        { value: 'confirmada', label: 'Confirmada' },
+        { value: 'recibida', label: 'Recibida' },
+        { value: 'pagada', label: 'Pagada' },
+      ],
+    },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      options: (proveedores ?? []).map((p: any) => ({ value: p.id, label: p.nombre })),
+    },
+  ], [proveedores]);
+
+  const filteredCuentas = useMemo(() => {
+    let list = cuentas ?? [];
+    const statusArr = filters.status;
+    if (statusArr && statusArr.length > 0) list = list.filter((c: any) => statusArr.includes(c.status));
+    const provArr = filters.proveedor;
+    if (provArr && provArr.length > 0) list = list.filter((c: any) => provArr.includes(c.proveedor_id));
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
+    return list;
+  }, [cuentas, filters, desde, hasta]);
+
+  const hasFilters = (filters.status?.length > 0) || (filters.proveedor?.length > 0) || desde || hasta;
+
+  const total = filteredCuentas.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = cuentas?.slice(from - 1, to) ?? [];
+  const pageData = filteredCuentas.slice(from - 1, to);
 
-  const totalPorPagar = cuentas?.reduce((s, c: any) => s + (c.saldo_pendiente ?? 0), 0) ?? 0;
-  const totalCompras = cuentas?.reduce((s, c: any) => s + (c.total ?? 0), 0) ?? 0;
-  const conSaldo = cuentas?.filter((c: any) => (c.saldo_pendiente ?? 0) > 0).length ?? 0;
+  const totalPorPagar = filteredCuentas.reduce((s, c: any) => s + (c.saldo_pendiente ?? 0), 0);
+  const totalCompras = filteredCuentas.reduce((s, c: any) => s + (c.total ?? 0), 0);
+  const conSaldo = filteredCuentas.filter((c: any) => (c.saldo_pendiente ?? 0) > 0).length;
 
-  const exportData = (cuentas ?? []).map((c: any) => ({
+  const exportData = filteredCuentas.map((c: any) => ({
     folio: c.folio ?? '',
     proveedor: c.proveedores?.nombre ?? '',
     fecha: c.fecha,
@@ -106,6 +150,15 @@ export default function CuentasPagarPage() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar proveedor o folio..."
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); setPage(1); }}
+          dateFrom={desde}
+          dateTo={hasta}
+          onDateFromChange={val => { setDesde(val); setPage(1); }}
+          onDateToChange={val => { setHasta(val); setPage(1); }}
         />
         <ExportButton
           onExcel={() => exportToExcel({
@@ -136,9 +189,11 @@ export default function CuentasPagarPage() {
             </tr>
           </thead>
           <tbody>
-            {pageData.length === 0 && !isLoading && (
-              <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">Sin cuentas por pagar</td></tr>
-            )}
+          {pageData.length === 0 && !isLoading && (
+            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+              {hasFilters ? 'Sin cuentas con los filtros aplicados' : 'Sin cuentas por pagar'}
+            </td></tr>
+          )}
             {isLoading && (
               <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">Cargando...</td></tr>
             )}
@@ -170,6 +225,21 @@ export default function CuentasPagarPage() {
               );
             })}
           </tbody>
+          {pageData.length > 0 && (
+            <tfoot>
+              <tr className="bg-card border-t border-border font-semibold text-[12px]">
+                <td colSpan={4} className="py-2 px-3 text-muted-foreground">
+                  {total} cuentas {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totalCompras)}</td>
+                <td className="py-2 px-3 text-right tabular-nums text-success font-bold">
+                  {fmt(filteredCuentas.reduce((s, c: any) => s + ((c.total ?? 0) - (c.saldo_pendiente ?? 0)), 0))}
+                </td>
+                <td className="py-2 px-3 text-right tabular-nums text-destructive font-bold">{fmt(totalPorPagar)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </table>
         {total > 0 && (
           <OdooPagination from={from} to={to} total={total}

@@ -7,7 +7,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn, todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft,
+  Truck, ChevronRight, CreditCard, FileText, ArrowLeft,
   Banknote, Wallet, Building2, Check, AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusChip } from '@/components/StatusChip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 /* ── types ── */
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -93,20 +95,44 @@ export default function SaldosProveedorPage() {
   const [notas, setNotas] = useState('');
   const [payables, setPayables] = useState<PayableCompra[]>([]);
   const [saving, setSaving] = useState(false);
+  const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('saldos-proveedor');
 
   const { data: proveedores, isLoading } = useProveedoresSaldo();
   const { data: compras, isLoading: loadingDetalle } = useProveedorDetalle(selectedId);
 
+  const FILTER_OPTIONS = useMemo(() => [
+    { key: 'proveedor', label: 'Proveedor', options: (proveedores ?? []).map(p => ({ value: p.id, label: p.nombre })) },
+    { key: 'saldo', label: 'Saldo', options: [
+      { value: 'con', label: 'Con saldo' },
+      { value: 'sin', label: 'Sin saldo' },
+    ]},
+  ], [proveedores]);
+
   const filtered = useMemo(() => {
-    if (!proveedores) return [];
-    if (!search) return proveedores;
-    const s = search.toLowerCase();
-    return proveedores.filter(p => p.nombre.toLowerCase().includes(s));
-  }, [proveedores, search]);
+    let list = proveedores ?? [];
+    const provArr = filters.proveedor;
+    if (provArr && provArr.length > 0) list = list.filter(p => provArr.includes(p.id));
+    const saldoArr = filters.saldo;
+    if (saldoArr && saldoArr.length > 0) {
+      list = list.filter(p => {
+        const con = p.saldoPendiente > 0.01;
+        return saldoArr.includes('con') && saldoArr.includes('sin') ? true : saldoArr.includes('con') ? con : !con;
+      });
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(p => p.nombre.toLowerCase().includes(s));
+    }
+    return list;
+  }, [proveedores, filters, search]);
+
+  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0);
 
   const selected = proveedores?.find(p => p.id === selectedId);
-  const totalPendienteGlobal = proveedores?.reduce((s, p) => s + p.saldoPendiente, 0) ?? 0;
-  const provConSaldo = proveedores?.filter(p => p.saldoPendiente > 0.01).length ?? 0;
+  const totalPendienteGlobal = filtered.reduce((s, p) => s + p.saldoPendiente, 0);
+  const provConSaldo = filtered.filter(p => p.saldoPendiente > 0.01).length;
+  const totalProveedores = filtered.length;
+  const totalComprado = filtered.reduce((s, p) => s + p.totalComprado, 0);
 
   const comprasPendientes = compras?.filter(c => (c.saldo_pendiente ?? 0) > 0.01) ?? [];
   const comprasPagadas = compras?.filter(c => (c.saldo_pendiente ?? 0) <= 0.01) ?? [];
@@ -463,10 +489,14 @@ export default function SaldosProveedorPage() {
         <Truck className="h-5 w-5" /> Saldos por proveedor
       </h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
           <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase">Total comprado</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalComprado)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Proveedores con saldo</p>
@@ -474,14 +504,20 @@ export default function SaldosProveedorPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total proveedores</p>
-          <p className="text-2xl font-bold text-muted-foreground">{proveedores?.length ?? 0}</p>
+          <p className="text-2xl font-bold text-muted-foreground">{totalProveedores}</p>
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar proveedor..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={val => { setSearch(val); }}
+        placeholder="Buscar proveedor..."
+        filterOptions={FILTER_OPTIONS}
+        activeFilters={filters}
+        onToggleFilter={(key, val) => { toggleFilterValue(key, val); }}
+        onSetFilter={(key, vals) => { setFilter(key, vals); }}
+        onClearFilters={() => { clearFilters(); setSearch(''); }}
+      />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
