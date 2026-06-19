@@ -4,16 +4,15 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Receipt, Search, Plus, Trash2, Save } from 'lucide-react';
+import { Receipt, Search, Plus, Trash2, Save, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 function useGastos(search: string) {
   const { empresa } = useAuth();
@@ -38,33 +37,58 @@ export default function GastosDesktopPage() {
   const { fmt } = useCurrency();
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
+  const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
   const { data: gastos, isLoading } = useGastos(search);
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
   const [fecha, setFecha] = useState(todayInTimezone(empresa?.zona_horaria));
   const [notas, setNotas] = useState('');
 
+  const resetForm = () => {
+    setEditId(null); setConcepto(''); setMonto(''); setNotas('');
+    setFecha(todayInTimezone(empresa?.zona_horaria));
+  };
+
+  const startEdit = (g: any) => {
+    setEditId(g.id);
+    setConcepto(g.concepto ?? '');
+    setMonto(String(g.monto ?? ''));
+    setFecha(g.fecha);
+    setNotas(g.notas ?? '');
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const saveGasto = useMutation({
     mutationFn: async () => {
       if (!concepto || !monto) throw new Error('Completa concepto y monto');
-      const { error } = await supabase.from('gastos').insert({
-        empresa_id: empresa!.id,
-        user_id: user!.id,
-        vendedor_id: profile?.id ?? null,
+      const payload = {
         concepto,
         monto: parseFloat(monto),
         fecha,
         notas: notas || null,
-      });
-      if (error) throw error;
+      };
+      if (editId) {
+        const { error } = await supabase.from('gastos').update(payload).eq('id', editId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('gastos').insert({
+          ...payload,
+          empresa_id: empresa!.id,
+          user_id: user!.id,
+          vendedor_id: profile?.id ?? null,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success('Gasto registrado');
+      toast.success(editId ? 'Gasto actualizado' : 'Gasto registrado');
       qc.invalidateQueries({ queryKey: ['gastos-desktop'] });
       setShowForm(false);
-      setConcepto(''); setMonto(''); setNotas('');
+      resetForm();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -78,7 +102,17 @@ export default function GastosDesktopPage() {
       toast.success('Gasto eliminado');
       qc.invalidateQueries({ queryKey: ['gastos-desktop'] });
     },
+    onError: (err: any) => toast.error(err.message),
   });
+
+  const handleDelete = async (g: any) => {
+    if (!(await confirmDialog(`¿Eliminar gasto "${g.concepto}" por ${fmt(g.monto)}?`))) return;
+    requestPin(
+      'Eliminar gasto',
+      'Ingresa el PIN de administrador para confirmar la eliminación.',
+      () => deleteGasto.mutate(g.id),
+    );
+  };
 
   const totalGastos = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
 
@@ -89,8 +123,8 @@ export default function GastosDesktopPage() {
           <Receipt className="h-5 w-5" /> Gastos
           <HelpButton title={HELP.gastos.title} sections={HELP.gastos.sections} />
         </h1>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Nuevo gasto
+        <Button size="sm" onClick={() => { if (showForm) { setShowForm(false); resetForm(); } else { setShowForm(true); } }}>
+          {showForm ? <><X className="h-3.5 w-3.5 mr-1" /> Cerrar</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Nuevo gasto</>}
         </Button>
       </div>
 
@@ -107,7 +141,7 @@ export default function GastosDesktopPage() {
 
       {showForm && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-semibold">Nuevo gasto</h3>
+          <h3 className="text-sm font-semibold">{editId ? 'Editar gasto' : 'Nuevo gasto'}</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Input placeholder="Concepto *" value={concepto} onChange={e => setConcepto(e.target.value)} />
             <Input type="number" placeholder="Monto *" value={monto} onChange={e => setMonto(e.target.value)} />
@@ -115,9 +149,9 @@ export default function GastosDesktopPage() {
             <Input placeholder="Notas" value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button variant="outline" size="sm" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
             <Button size="sm" onClick={() => saveGasto.mutate()} disabled={saveGasto.isPending}>
-              <Save className="h-3.5 w-3.5 mr-1" /> Guardar
+              <Save className="h-3.5 w-3.5 mr-1" /> {editId ? 'Guardar cambios' : 'Guardar'}
             </Button>
           </div>
         </div>
@@ -137,21 +171,26 @@ export default function GastosDesktopPage() {
               <TableHead className="text-[11px]">Vendedor</TableHead>
               <TableHead className="text-[11px]">Notas</TableHead>
               <TableHead className="text-[11px] text-right">Monto</TableHead>
-              <TableHead className="text-[11px] w-12"></TableHead>
+              <TableHead className="text-[11px] w-20 text-center">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {gastos?.map(g => (
-              <TableRow key={g.id}>
+              <TableRow key={g.id} className={editId === g.id ? 'bg-primary/5' : ''}>
                 <TableCell className="text-[12px]">{fmtDate(g.fecha)}</TableCell>
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>
                 <TableCell className="text-right font-bold text-destructive">{fmt(g.monto)}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={async () => { if (await confirmDialog('¿Eliminar gasto?')) deleteGasto.mutate(g.id); }}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                  <div className="flex items-center justify-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar" onClick={() => startEdit(g)}>
+                      <Pencil className="h-3.5 w-3.5 text-primary" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Eliminar (requiere PIN)" onClick={() => handleDelete(g)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -171,6 +210,7 @@ export default function GastosDesktopPage() {
           )}
         </Table>
       </div>
+      <PinDialog />
     </div>
   );
 }
