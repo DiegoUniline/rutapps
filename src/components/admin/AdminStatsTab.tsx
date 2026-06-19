@@ -1005,62 +1005,123 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             <StatCard icon={AlertTriangle} label="Pendiente" value={fmtMoney(cumplimientoTotales.pendiente)} accent={cumplimientoTotales.pendiente > 0 ? 'destructive' : 'success'} />
           </div>
 
-          <ChartCard title="Detalle por empresa" subtitle="Esperado = facturas emitidas desde fin de trial · Pagado = facturas cobradas (Stripe o transferencia)" icon={CreditCard}>
-            <div className="overflow-x-auto -mx-3 md:mx-0">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/40 text-muted-foreground">
-                  <tr className="text-left">
-                    <th className="px-3 py-2 font-medium">Empresa</th>
-                    <th className="px-2 py-2 font-medium whitespace-nowrap">Fin trial</th>
-                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Meses</th>
-                    <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Facturas</th>
-                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Esperado</th>
-                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pagado</th>
-                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
-                    <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
-                    <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {cumplimientoPago.length === 0 ? (
-                    <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin empresas con facturas emitidas post-trial</td></tr>
-                  ) : cumplimientoPago.map(r => (
-                    <tr
-                      key={r.id}
-                      onClick={() => setEstadoCuentaEmpresa({ id: r.id, nombre: r.nombre })}
-                      className="hover:bg-accent/40 cursor-pointer transition-colors"
-                    >
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-foreground truncate max-w-[180px]">{r.nombre}</div>
-                        <div className="text-[10px] text-muted-foreground">{STATUS_LABELS[r.status] || r.status}</div>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">{format(new Date(r.finTrial), 'dd MMM yyyy', { locale: es })}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{r.mesesTranscurridos}</td>
-                      <td className="px-2 py-2 text-center tabular-nums">
-                        <span className="text-success font-semibold">{r.facturasPagadas}</span>
-                        <span className="text-muted-foreground">/{r.facturasEmitidas}</span>
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.esperado)}</td>
-                      <td className="px-2 py-2 text-right tabular-nums text-success">{fmtMoney(r.pagado)}</td>
-                      <td className={cn('px-2 py-2 text-right tabular-nums font-semibold', r.pendiente > 0 ? 'text-destructive' : 'text-muted-foreground')}>{fmtMoney(r.pendiente)}</td>
-                      <td className="px-2 py-2 text-center">
-                        <span className={cn(
-                          'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border',
-                          r.cumplimiento >= 95 ? 'bg-success/10 border-success/30 text-success' :
-                          r.cumplimiento >= 60 ? 'bg-yellow-500/10 border-yellow-500/30 text-warning' :
-                          'bg-destructive/10 border-destructive/30 text-destructive'
-                        )}>{fmtPct(r.cumplimiento)}</span>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-[10px] text-muted-foreground">
-                        {r.ultimoPago ? format(new Date(r.ultimoPago), 'dd MMM yyyy', { locale: es }) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <ChartCard title="Detalle por empresa" subtitle="Esperado = facturas emitidas desde fin de trial · Pagado = facturas cobradas" icon={CreditCard}>
+            {(() => {
+              const grupos: Record<string, typeof cumplimientoPago> = {};
+              cumplimientoPago.forEach(r => {
+                const k = r.status || 'sin_sub';
+                (grupos[k] = grupos[k] || []).push(r);
+              });
+              const orden = ['active', 'past_due', 'gracia', 'trial', 'suspended', 'cancelada', 'canceled', 'expired', 'sin_sub'];
+              const statusKeys = Object.keys(grupos).sort((a, b) => {
+                const ia = orden.indexOf(a); const ib = orden.indexOf(b);
+                return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+              });
+              const tabs = [{ k: 'all', label: 'Todas', rows: cumplimientoPago },
+                ...statusKeys.map(k => ({ k, label: STATUS_LABELS[k] || k, rows: grupos[k] }))];
+
+              return (
+                <Tabs defaultValue="all">
+                  <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/40 p-1">
+                    {tabs.map(t => {
+                      const pend = t.rows.filter(r => r.pendiente > 0).length;
+                      return (
+                        <TabsTrigger key={t.k} value={t.k} className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                          {t.label}
+                          <span className="ml-1.5 text-[10px] opacity-70">({t.rows.length})</span>
+                          {pend > 0 && (
+                            <span className="ml-1 inline-flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5 min-w-[16px]">
+                              {pend}
+                            </span>
+                          )}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                  {tabs.map(t => {
+                    const esperado = t.rows.reduce((s, r) => s + r.esperado, 0);
+                    const pagado = t.rows.reduce((s, r) => s + r.pagado, 0);
+                    const pendiente = t.rows.reduce((s, r) => s + r.pendiente, 0);
+                    return (
+                      <TabsContent key={t.k} value={t.k} className="mt-3 space-y-3">
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="bg-accent/30 rounded-md px-3 py-2">
+                            <div className="text-[10px] text-muted-foreground uppercase">Esperado</div>
+                            <div className="font-semibold tabular-nums">{fmtMoney(esperado)}</div>
+                          </div>
+                          <div className="bg-success/10 rounded-md px-3 py-2">
+                            <div className="text-[10px] text-muted-foreground uppercase">Pagado</div>
+                            <div className="font-semibold tabular-nums text-success">{fmtMoney(pagado)}</div>
+                          </div>
+                          <div className={cn('rounded-md px-3 py-2', pendiente > 0 ? 'bg-destructive/10' : 'bg-muted/30')}>
+                            <div className="text-[10px] text-muted-foreground uppercase">Pendiente</div>
+                            <div className={cn('font-semibold tabular-nums', pendiente > 0 ? 'text-destructive' : 'text-muted-foreground')}>{fmtMoney(pendiente)}</div>
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto -mx-3 md:mx-0">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/40 text-muted-foreground">
+                              <tr className="text-left">
+                                <th className="px-3 py-2 font-medium">Empresa</th>
+                                <th className="px-2 py-2 font-medium whitespace-nowrap">Fin trial</th>
+                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Meses</th>
+                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Facturas</th>
+                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Esperado</th>
+                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pagado</th>
+                                <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
+                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
+                                <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {t.rows.length === 0 ? (
+                                <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin empresas en este estado</td></tr>
+                              ) : t.rows.map(r => (
+                                <tr
+                                  key={r.id}
+                                  onClick={() => setEstadoCuentaEmpresa({ id: r.id, nombre: r.nombre })}
+                                  className="hover:bg-accent/40 cursor-pointer transition-colors"
+                                >
+                                  <td className="px-3 py-2">
+                                    <div className="font-medium text-foreground truncate max-w-[180px]">{r.nombre}</div>
+                                    <div className="text-[10px] text-muted-foreground">{STATUS_LABELS[r.status] || r.status}</div>
+                                  </td>
+                                  <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">{format(new Date(r.finTrial), 'dd MMM yyyy', { locale: es })}</td>
+                                  <td className="px-2 py-2 text-right tabular-nums">{r.mesesTranscurridos}</td>
+                                  <td className="px-2 py-2 text-center tabular-nums">
+                                    <span className="text-success font-semibold">{r.facturasPagadas}</span>
+                                    <span className="text-muted-foreground">/{r.facturasEmitidas}</span>
+                                  </td>
+                                  <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.esperado)}</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-success">{fmtMoney(r.pagado)}</td>
+                                  <td className={cn('px-2 py-2 text-right tabular-nums font-semibold', r.pendiente > 0 ? 'text-destructive' : 'text-muted-foreground')}>{fmtMoney(r.pendiente)}</td>
+                                  <td className="px-2 py-2 text-center">
+                                    <span className={cn(
+                                      'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                                      r.cumplimiento >= 95 ? 'bg-success/10 border-success/30 text-success' :
+                                      r.cumplimiento >= 60 ? 'bg-yellow-500/10 border-yellow-500/30 text-warning' :
+                                      'bg-destructive/10 border-destructive/30 text-destructive'
+                                    )}>{fmtPct(r.cumplimiento)}</span>
+                                  </td>
+                                  <td className="px-2 py-2 whitespace-nowrap text-[10px] text-muted-foreground">
+                                    {r.ultimoPago ? format(new Date(r.ultimoPago), 'dd MMM yyyy', { locale: es }) : '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </TabsContent>
+                    );
+                  })}
+                </Tabs>
+              );
+            })()}
           </ChartCard>
         </TabsContent>
+
+
+
 
 
 
