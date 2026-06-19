@@ -33,6 +33,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
