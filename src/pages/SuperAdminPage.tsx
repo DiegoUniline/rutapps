@@ -176,7 +176,7 @@ export default function SuperAdminPage() {
             <AdminEmpresaDetail empresaId={selectedEmpresaId} onBack={() => setSelectedEmpresaId(null)} />
           ) : (
             <>
-              {tab === 'dashboard' && <AdminStatsTab />}
+              {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
               {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
               {tab === 'invoices' && <AdminInvoicesTab />}
