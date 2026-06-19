@@ -101,18 +101,45 @@ export default function EstadoCuentaClientePage() {
   const { filters, toggleFilterValue, setFilter, clearFilters } = useListPreferences('saldos-cliente');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: clientes, isLoading } = useClientesSaldo();
+  const { data: clientes, isLoading } = useClientesSaldo(desde, hasta);
   const { data: detalle, isLoading: loadingDetalle } = useClienteDetalle(selectedId);
 
+  const filterOptions: FilterOption[] = useMemo(() => {
+    const clientesOpts = (clientes ?? [])
+      .map(c => ({ value: c.id, label: c.nombre }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [
+      { key: 'cliente', label: 'Cliente', options: clientesOpts },
+      { key: 'credito', label: 'Crédito', options: [
+        { value: 'si', label: 'Con crédito' },
+        { value: 'no', label: 'Sin crédito' },
+      ]},
+      { key: 'saldo', label: 'Saldo', options: [
+        { value: 'con', label: 'Con saldo' },
+        { value: 'sin', label: 'Sin saldo' },
+      ]},
+    ];
+  }, [clientes]);
+
   const filtered = useMemo(() => {
-    if (!clientes) return [];
-    if (!search) return clientes;
-    const s = search.toLowerCase();
-    return clientes.filter(c =>
-      c.nombre.toLowerCase().includes(s) ||
-      (c.codigo ?? '').toLowerCase().includes(s)
-    );
-  }, [clientes, search]);
+    let list = clientes ?? [];
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(c =>
+        c.nombre.toLowerCase().includes(s) ||
+        (c.codigo ?? '').toLowerCase().includes(s)
+      );
+    }
+    const clienteF = filters['cliente'] ?? [];
+    if (clienteF.length) list = list.filter(c => clienteF.includes(c.id));
+    const credF = filters['credito'] ?? [];
+    if (credF.length) list = list.filter(c => credF.includes(c.credito ? 'si' : 'no'));
+    const saldoF = filters['saldo'] ?? [];
+    if (saldoF.length) list = list.filter(c => saldoF.includes(c.saldoPendiente > 0.01 ? 'con' : 'sin'));
+    return list;
+  }, [clientes, search, filters]);
+
+
 
   const selected = clientes?.find(c => c.id === selectedId);
 
