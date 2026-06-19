@@ -501,6 +501,65 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             <StatCard icon={DollarSign} label="Ingresos este mes" value={fmtMoney(esteMes.ingresos)} accent="success" />
           </div>
 
+          {/* ── Conversión + Proyección a fin de año ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Target} label="Conversión a pago" value={fmtPct(bi.conversion)} hint={`${bi.demosPor100} de cada 100 altas`} accent="success" />
+            <StatCard icon={UserCheck} label="Activos proy. fin año" value={proyeccion.activosProy.toString()} hint={`Hoy ${aLaFecha.activos} · faltan ${proyeccion.remainingDays}d`} accent="primary" />
+            <StatCard icon={UserPlus} label="Altas proy. fin año" value={proyeccion.altasProy.toString()} hint={`YTD ${proyeccion.altasYTD}`} accent="primary" />
+            <StatCard icon={DollarSign} label="Ingresos proy. fin año" value={fmtMoney(proyeccion.ingresosProy)} hint={`YTD ${fmtMoney(proyeccion.ingresosYTD)}`} accent="success" />
+          </div>
+
+          {/* ── Tablas Altas / Bajas recientes (clic abre detalle) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartCard title="Altas recientes" subtitle="Click en una fila para ver detalle de la empresa" icon={UserPlus}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {altasRecientes.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin altas</div>
+                ) : altasRecientes.map((e: any) => (
+                  <button
+                    key={e.id}
+                    onClick={() => onSelectEmpresa?.(e.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{e.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Alta: {format(new Date(e.created_at), "dd MMM yyyy", { locale: es })}
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-card border border-primary/30 text-primary font-medium ml-3 shrink-0">
+                      {STATUS_LABELS[e.status] || e.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Bajas recientes" subtitle="Click en una fila para ver detalle de la empresa" icon={UserMinus}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {bajasRecientes.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin bajas</div>
+                ) : bajasRecientes.map((e: any) => (
+                  <button
+                    key={e.id}
+                    onClick={() => onSelectEmpresa?.(e.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{e.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Baja: {format(new Date(e.fechaBaja), "dd MMM yyyy", { locale: es })}
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-card border border-destructive/30 text-destructive font-medium ml-3 shrink-0">
+                      {STATUS_LABELS[e.status] || e.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ChartCard title="Ingresos cobrados (12 meses)" subtitle={`Stripe + Transferencia · ${fmtMoney(monthlySeries.reduce((s, m) => s + m.ingresos, 0))} total`} icon={DollarSign}>
               <ResponsiveContainer width="100%" height={240}>
