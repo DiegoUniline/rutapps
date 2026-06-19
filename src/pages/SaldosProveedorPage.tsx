@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusChip } from '@/components/StatusChip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 /* ── types ── */
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
