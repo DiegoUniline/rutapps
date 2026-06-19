@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
