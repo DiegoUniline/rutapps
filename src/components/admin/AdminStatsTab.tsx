@@ -1849,11 +1849,49 @@ function EstadoCuentaModal({
           </div>
         </div>
 
-        <div className="flex justify-between gap-2 mt-4">
+        <div className="flex flex-wrap justify-between gap-2 mt-4">
           <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
-          <Button size="sm" onClick={() => onOpenDetail(empresa.id)}>
-            Ver detalle completo de la empresa <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            {data.pendientes.length > 0 && (
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={cancelando}
+                onClick={async () => {
+                  const total = data.totalPendiente;
+                  const ok = window.confirm(
+                    `¿Cancelar ${data.pendientes.length} factura(s) pendiente(s) por ${fmtMoney2(total)} de ${empresa.nombre}?\n\n` +
+                    `Esto:\n• Anulará (void) las invoices abiertas en Stripe\n• Borrará drafts en Stripe\n• Marcará las facturas locales como 'cancelada'\n\nNo se puede revertir.`
+                  );
+                  if (!ok) return;
+                  setCancelando(true);
+                  try {
+                    const { data: res, error } = await supabase.functions.invoke('admin-cancel-empresa-pending', {
+                      body: { empresa_id: empresa.id },
+                    });
+                    if (error) throw error;
+                    if ((res as any)?.error) throw new Error((res as any).error);
+                    toast.success(
+                      `Canceladas ${(res as any)?.facturas_canceladas || 0} facturas locales · ${((res as any)?.stripe?.filter((s: any) => s.action === 'voided' || s.action === 'deleted').length) || 0} en Stripe`
+                    );
+                    await qc.invalidateQueries({ queryKey: ['admin-stats-facturas-all'] });
+                    await qc.invalidateQueries({ queryKey: ['admin-stats-stripe-invoices'] });
+                    onClose();
+                  } catch (e: any) {
+                    toast.error('Error al cancelar: ' + (e.message || 'desconocido'));
+                  } finally {
+                    setCancelando(false);
+                  }
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                {cancelando ? 'Cancelando...' : `Cancelar ${data.pendientes.length} pendientes`}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => onOpenDetail(empresa.id)}>
+              Ver detalle completo <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
