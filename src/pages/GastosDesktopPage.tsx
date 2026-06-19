@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Receipt, Search, Plus, Trash2, Save, Pencil, X } from 'lucide-react';
+import { Receipt, Search, Plus, Trash2, Save, Pencil, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
@@ -14,19 +15,34 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { confirmDialog } from '@/lib/confirm';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
-function useGastos(search: string) {
+function useGastos() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['gastos-desktop', empresa?.id, search],
+    queryKey: ['gastos-desktop', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
+      const { data, error } = await supabase
         .from('gastos')
-        .select('*, vendedores:profiles!vendedor_id(nombre)')
+        .select('*, vendedores:profiles!vendedor_id(id,nombre)')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
-      if (search) q = q.ilike('concepto', `%${search}%`);
-      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+function useVendedores() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['profiles-vendedores', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id,nombre')
+        .eq('empresa_id', empresa!.id)
+        .order('nombre');
       if (error) throw error;
       return data ?? [];
     },
@@ -38,18 +54,36 @@ export default function GastosDesktopPage() {
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
   const { requestPin, PinDialog } = usePinAuth();
+
+  // Filters
   const [search, setSearch] = useState('');
-  const { data: gastos, isLoading } = useGastos(search);
+  const [vendedorFilter, setVendedorFilter] = useState<string>('all');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+
+  const { data: gastos, isLoading } = useGastos();
+  const { data: vendedores } = useVendedores();
+
+  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
   const [fecha, setFecha] = useState(todayInTimezone(empresa?.zona_horaria));
   const [notas, setNotas] = useState('');
+  const [vendedorIdForm, setVendedorIdForm] = useState<string>('me');
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const t = setTimeout(() => setHighlightId(null), 2500);
+    return () => clearTimeout(t);
+  }, [highlightId]);
 
   const resetForm = () => {
     setEditId(null); setConcepto(''); setMonto(''); setNotas('');
     setFecha(todayInTimezone(empresa?.zona_horaria));
+    setVendedorIdForm('me');
   };
 
   const startEdit = (g: any) => {
@@ -58,6 +92,7 @@ export default function GastosDesktopPage() {
     setMonto(String(g.monto ?? ''));
     setFecha(g.fecha);
     setNotas(g.notas ?? '');
+    setVendedorIdForm(g.vendedor_id ?? 'none');
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -65,30 +100,36 @@ export default function GastosDesktopPage() {
   const saveGasto = useMutation({
     mutationFn: async () => {
       if (!concepto || !monto) throw new Error('Completa concepto y monto');
+      const vId = vendedorIdForm === 'me' ? (profile?.id ?? null)
+        : vendedorIdForm === 'none' ? null
+        : vendedorIdForm;
       const payload = {
         concepto,
         monto: parseFloat(monto),
         fecha,
         notas: notas || null,
+        vendedor_id: vId,
       };
       if (editId) {
-        const { error } = await supabase.from('gastos').update(payload).eq('id', editId);
+        const { data, error } = await supabase.from('gastos').update(payload).eq('id', editId).select('id').single();
         if (error) throw error;
+        return data?.id as string;
       } else {
-        const { error } = await supabase.from('gastos').insert({
+        const { data, error } = await supabase.from('gastos').insert({
           ...payload,
           empresa_id: empresa!.id,
           user_id: user!.id,
-          vendedor_id: profile?.id ?? null,
-        });
+        }).select('id').single();
         if (error) throw error;
+        return data?.id as string;
       }
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.success(editId ? 'Gasto actualizado' : 'Gasto registrado');
       qc.invalidateQueries({ queryKey: ['gastos-desktop'] });
       setShowForm(false);
       resetForm();
+      if (id) setHighlightId(id);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -114,7 +155,20 @@ export default function GastosDesktopPage() {
     );
   };
 
-  const totalGastos = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return (gastos ?? []).filter((g: any) => {
+      if (s && !((g.concepto ?? '').toLowerCase().includes(s) || (g.notas ?? '').toLowerCase().includes(s))) return false;
+      if (vendedorFilter === 'none' && g.vendedor_id) return false;
+      if (vendedorFilter !== 'all' && vendedorFilter !== 'none' && g.vendedor_id !== vendedorFilter) return false;
+      if (desde && g.fecha < desde) return false;
+      if (hasta && g.fecha > hasta) return false;
+      return true;
+    });
+  }, [gastos, search, vendedorFilter, desde, hasta]);
+
+  const totalGastos = filtered.reduce((s, g: any) => s + Number(g.monto ?? 0), 0);
+  const hasFilters = !!search || vendedorFilter !== 'all' || !!desde || !!hasta;
 
   return (
     <div className="p-4 space-y-4 min-h-full">
@@ -130,22 +184,32 @@ export default function GastosDesktopPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total gastos</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Total gastos {hasFilters && '(filtrado)'}</p>
           <p className="text-2xl font-bold text-destructive">{fmt(totalGastos)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
-          <p className="text-2xl font-bold text-foreground">{gastos?.length ?? 0}</p>
+          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
       </div>
 
       {showForm && (
         <div className="bg-card border border-border rounded-lg p-4 space-y-3">
           <h3 className="text-sm font-semibold">{editId ? 'Editar gasto' : 'Nuevo gasto'}</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <Input placeholder="Concepto *" value={concepto} onChange={e => setConcepto(e.target.value)} />
             <Input type="number" placeholder="Monto *" value={monto} onChange={e => setMonto(e.target.value)} />
             <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+            <Select value={vendedorIdForm} onValueChange={setVendedorIdForm}>
+              <SelectTrigger><SelectValue placeholder="Vendedor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="me">Yo ({profile?.nombre ?? 'mi usuario'})</SelectItem>
+                <SelectItem value="none">Sin vendedor</SelectItem>
+                {vendedores?.map(v => (
+                  <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input placeholder="Notas" value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2">
@@ -157,9 +221,36 @@ export default function GastosDesktopPage() {
         </div>
       )}
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar gasto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Filters bar */}
+      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
+          <Filter className="h-3 w-3" /> Filtros
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar concepto/notas..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <Select value={vendedorFilter} onValueChange={setVendedorFilter}>
+            <SelectTrigger><SelectValue placeholder="Vendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los vendedores</SelectItem>
+              <SelectItem value="none">Sin vendedor</SelectItem>
+              {vendedores?.map(v => (
+                <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input type="date" value={desde} onChange={e => setDesde(e.target.value)} placeholder="Desde" />
+          <Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} placeholder="Hasta" />
+        </div>
+        {hasFilters && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setVendedorFilter('all'); setDesde(''); setHasta(''); }}>
+              <X className="h-3.5 w-3.5 mr-1" /> Limpiar filtros
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -175,8 +266,14 @@ export default function GastosDesktopPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {gastos?.map(g => (
-              <TableRow key={g.id} className={editId === g.id ? 'bg-primary/5' : ''}>
+            {filtered.map((g: any) => (
+              <TableRow
+                key={g.id}
+                className={
+                  highlightId === g.id ? 'bg-primary/15 transition-colors' :
+                  editId === g.id ? 'bg-primary/5' : ''
+                }
+              >
                 <TableCell className="text-[12px]">{fmtDate(g.fecha)}</TableCell>
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
@@ -195,14 +292,16 @@ export default function GastosDesktopPage() {
               </TableRow>
             ))}
             {isLoading && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
-            {!isLoading && gastos?.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin gastos registrados</TableCell></TableRow>
+            {!isLoading && filtered.length === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                {hasFilters ? 'No hay gastos que coincidan con los filtros' : 'Sin gastos registrados'}
+              </TableCell></TableRow>
             )}
           </TableBody>
-          {!!gastos?.length && (
+          {!!filtered.length && (
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={4} className="text-[11px] text-muted-foreground font-semibold">Totales ({gastos.length})</TableCell>
+                <TableCell colSpan={4} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                 <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(totalGastos)}</TableCell>
                 <TableCell />
               </TableRow>
