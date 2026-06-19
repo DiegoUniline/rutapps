@@ -188,8 +188,16 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
           .order('created_at', { ascending: false })
           .range(from, to);
         if (search) q = q.or(`folio.ilike.%${search}%`);
-        if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
-        if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',').filter(Boolean);
+          if (arr.length > 1) q = q.in('status', arr as any);
+          else q = q.eq('status', statusFilter as Venta['status']);
+        }
+        if (tipoFilter && tipoFilter !== 'todos') {
+          const arr = tipoFilter.split(',').filter(Boolean);
+          if (arr.length > 1) q = q.in('tipo', arr as any);
+          else q = q.eq('tipo', tipoFilter as Venta['tipo']);
+        }
         return q;
       }) as Promise<Venta[]>;
     },
