@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       // El SW se registra manualmente desde src/pwa/registerSW.ts SOLO dentro
       // de la app autenticada. La landing pública (/, /partners, etc.) nunca
       // instala SW para que las publicaciones nuevas se vean al instante.
