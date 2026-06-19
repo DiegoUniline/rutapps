@@ -18,6 +18,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
