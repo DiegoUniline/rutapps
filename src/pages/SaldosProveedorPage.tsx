@@ -137,7 +137,7 @@ export default function SaldosProveedorPage() {
     return list;
   }, [proveedores, filters, search]);
 
-  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0);
+  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0) || (filters.condicion_pago?.length > 0) || !!desde || !!hasta;
 
   const selected = proveedores?.find(p => p.id === selectedId);
   const totalPendienteGlobal = filtered.reduce((s, p) => s + p.saldoPendiente, 0);
