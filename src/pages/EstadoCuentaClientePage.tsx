@@ -15,17 +15,20 @@ import { OdooFilterBar, FilterOption } from '@/components/OdooFilterBar';
 import { useListPreferences } from '@/hooks/useListPreferences';
 
 /* ── hooks ── */
-function useClientesSaldo() {
+function useClientesSaldo(desde: string, hasta: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['clientes-saldo-resumen', empresa?.id],
+    queryKey: ['clientes-saldo-resumen', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('ventas')
-        .select('cliente_id, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
+        .select('cliente_id, fecha, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
         .eq('empresa_id', empresa!.id)
         .neq('status', 'cancelado');
+      if (desde) q = q.gte('fecha', desde);
+      if (hasta) q = q.lte('fecha', hasta);
+      const { data, error } = await q;
       if (error) throw error;
 
       const map = new Map<string, {
