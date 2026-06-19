@@ -205,6 +205,23 @@ export default function TraspasoFormPage() {
     ),
   });
 
+  // Fetch per-warehouse stock for the destination (used in read-only view to confirm arrival)
+  const { data: stockAlmacenDestino } = useQuery({
+    queryKey: ['stock-almacen-destino', almacenDestinoId],
+    enabled: readOnly && !!almacenDestinoId,
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', almacenDestinoId)
+        .range(from, to)
+    ),
+  });
+  const stockDestinoMap = useMemo(() => {
+    const m = new Map<string, number>();
+    (stockAlmacenDestino ?? []).forEach((s: any) => m.set(s.producto_id, Number(s.cantidad) || 0));
+    return m;
+  }, [stockAlmacenDestino]);
+
   // Filtered product list: only those with stock > 0 from the selected origin
   const productosList = useMemo(() => {
     if (!allProductos) return [];
