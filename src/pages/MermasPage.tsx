@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -207,6 +207,21 @@ export default function MermasPage() {
               </TableRow>
             ))}
           </TableBody>
+          {!!(mermas ?? []).length && (() => {
+            const activas = (mermas ?? []).filter((m: any) => !m.cancelada);
+            const tc = activas.reduce((s: number, m: any) => s + (m.total_costo ?? 0), 0);
+            const tv = activas.reduce((s: number, m: any) => s + (m.total_venta ?? 0), 0);
+            return (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales activas ({activas.length})</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums text-destructive">{fmtMoney(tc)}</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">{fmtMoney(tv)}</TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              </TableFooter>
+            );
+          })()}
         </Table>
       </div>
 

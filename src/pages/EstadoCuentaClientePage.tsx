@@ -9,7 +9,7 @@ import { Search, Users, ChevronRight, CreditCard, FileText, Banknote, Download, 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 
@@ -244,6 +244,21 @@ export default function EstadoCuentaClientePage() {
                   <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin saldos pendientes 🎉</TableCell></TableRow>
                 )}
               </TableBody>
+              {ventasPendientes.length > 0 && (() => {
+                const t = ventasPendientes.reduce((s, v) => s + (v.total ?? 0), 0);
+                const p = ventasPendientes.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
+                const sp = ventasPendientes.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+                return (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({ventasPendientes.length})</TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
+                      <TableCell className="text-right font-bold text-success tabular-nums">{fmt(p)}</TableCell>
+                      <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(sp)}</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                );
+              })()}
             </Table>
           </div>
         </div>
@@ -274,6 +289,19 @@ export default function EstadoCuentaClientePage() {
                     </TableRow>
                   ))}
                 </TableBody>
+                {ventasPagadas.length > 0 && (() => {
+                  const shown = ventasPagadas.slice(0, 30);
+                  const t = shown.reduce((s, v) => s + (v.total ?? 0), 0);
+                  return (
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-[11px] text-muted-foreground font-semibold">Totales ({shown.length})</TableCell>
+                        <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableFooter>
+                  );
+                })()}
               </Table>
             </div>
           </div>
@@ -307,6 +335,14 @@ export default function EstadoCuentaClientePage() {
                   <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground text-sm">Sin pagos registrados</TableCell></TableRow>
                 )}
               </TableBody>
+              {!!(detalle?.cobros?.length) && (
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({detalle.cobros.length})</TableCell>
+                    <TableCell className="text-right font-bold text-success tabular-nums">{fmt(detalle.cobros.reduce((s, c) => s + (c.monto ?? 0), 0))}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           </div>
         </div>
@@ -380,6 +416,22 @@ export default function EstadoCuentaClientePage() {
               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
             )}
           </TableBody>
+          {filtered.length > 0 && (() => {
+            const docs = filtered.reduce((s, c) => s + c.docs, 0);
+            const tot = filtered.reduce((s, c) => s + c.totalVendido, 0);
+            const pend = filtered.reduce((s, c) => s + c.saldoPendiente, 0);
+            return (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
+                  <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(pend)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            );
+          })()}
         </Table>
       </div>
     </div>

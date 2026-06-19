@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -468,6 +468,15 @@ export default function FacturacionCfdiPage() {
                     </TableRow>
                   ))}
                 </TableBody>
+                {!!filtered.length && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">{fmt(filtered.reduce((s: number, c: any) => s + Number(c.total || 0), 0))}</TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           )}
