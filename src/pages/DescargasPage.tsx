@@ -1738,6 +1738,22 @@ export default function DescargasPage() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-border bg-card font-bold text-[13px]">
+                <td colSpan={3} className="py-2.5 px-4 text-right text-muted-foreground">
+                  Totales {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2.5 px-4 text-right">{fmt(totalEsperado)}</td>
+                <td className="py-2.5 px-4 text-right">{fmt(totalEntregado)}</td>
+                <td className={cn(
+                  "py-2.5 px-4 text-right",
+                  totalDiferencia > 0 ? "text-green-600" : totalDiferencia < 0 ? "text-destructive" : ""
+                )}>
+                  {totalDiferencia > 0 ? '+' : ''}${fmt(totalDiferencia)}
+                </td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
