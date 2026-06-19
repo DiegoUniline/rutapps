@@ -7,7 +7,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn, todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft,
+  Truck, ChevronRight, CreditCard, FileText, ArrowLeft,
   Banknote, Wallet, Building2, Check, AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
