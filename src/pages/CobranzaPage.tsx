@@ -32,6 +32,7 @@ import { Link } from 'react-router-dom';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 
 
