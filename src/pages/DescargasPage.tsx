@@ -1681,10 +1681,18 @@ export default function DescargasPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">No hay liquidaciones</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            {hasFilters ? 'No hay liquidaciones con los filtros aplicados' : 'No hay liquidaciones'}
+          </p>
+          {hasFilters ? (
+            <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Limpiar filtros
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
+            </Button>
+          )}
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
