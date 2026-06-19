@@ -96,6 +96,9 @@ function SheetActionButton({
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
   const { empresa, user, profile, overrideEmpresaId, signOut } = useAuth();
+  // Realtime: refresca stock y catálogo del POS al cambiar desde otra terminal
+  useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['pos-stock-almacen']] });
+  useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['pos-productos']] });
   const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
