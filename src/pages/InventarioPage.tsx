@@ -178,6 +178,7 @@ export default function InventarioPage() {
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
   const [showPresModal, setShowPresModal] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
@@ -188,9 +189,13 @@ export default function InventarioPage() {
   }
   // (in-cell breakdown removed; presented in modal instead)
 
-  const filteredProducts = data?.productos.filter(p =>
-    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = data?.productos.filter(p => {
+    if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.codigo.toLowerCase().includes(search.toLowerCase())) return false;
+    const total = p.stockTotal ?? 0;
+    if (stockFilter === 'con' && total <= 0) return false;
+    if (stockFilter === 'sin' && total > 0) return false;
+    return true;
+  });
 
   const handleExportExcel = useCallback(() => {
     if (!data || !filteredProducts) return;
