@@ -611,16 +611,40 @@ export function useDeleteListaPrecio() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Obtener tarifa_id antes de borrar la lista
+      const { data: lista, error: errLista } = await supabase
+        .from('lista_precios')
+        .select('tarifa_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (errLista) throw errLista;
+
       const { error } = await supabase.from('lista_precios').delete().eq('id', id);
       if (error) throw error;
+
+      // Intentar borrar la tarifa huérfana asociada. Si está referenciada por
+      // ventas / cotizaciones / clientes / productos, el FK lanzará error y
+      // simplemente la dejamos (no rompemos el flujo).
+      if (lista?.tarifa_id) {
+        const { count } = await supabase
+          .from('lista_precios')
+          .select('id', { count: 'exact', head: true })
+          .eq('tarifa_id', lista.tarifa_id);
+        if ((count ?? 0) === 0) {
+          await supabase.from('tarifas').delete().eq('id', lista.tarifa_id);
+          // ignoramos error de FK a propósito
+        }
+      }
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
     },
   });
 }
+
 
 export function useListaPrecioLineas(listaPrecioId?: string) {
   return useQuery({
