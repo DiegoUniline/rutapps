@@ -1545,14 +1545,40 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 export default function DescargasPage() {
   const { symbol: cs, fmt } = useCurrency();
   const { data: descargas, isLoading } = useDescargasListDesktop();
+  const { data: vendedores } = useVendedores();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterVendedor, setFilterVendedor] = useState<string>('all');
+  const [filterTipo, setFilterTipo] = useState<string>('all');
+  const [filterDiferencia, setFilterDiferencia] = useState<string>('all');
   const [showNew, setShowNew] = useState(false);
   const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
-  const filtered = (descargas || []).filter((d: any) =>
-    filterStatus === 'all' || d.status === filterStatus
-  );
+  const filtered = useMemo(() => {
+    return (descargas || []).filter((d: any) => {
+      const matchesStatus = filterStatus === 'all' || d.status === filterStatus;
+      const matchesVendedor = filterVendedor === 'all' || d.vendedor_id === filterVendedor;
+      const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+      const tipo = d.carga_id ? 'carga' : hasRange ? 'periodo' : 'efectivo';
+      const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
+      const dif = Number(d.diferencia_efectivo) || 0;
+      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? dif !== 0 : dif === 0);
+      return matchesStatus && matchesVendedor && matchesTipo && matchesDiferencia;
+    });
+  }, [descargas, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+
+  const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all';
+
+  const clearFilters = () => {
+    setFilterStatus('all');
+    setFilterVendedor('all');
+    setFilterTipo('all');
+    setFilterDiferencia('all');
+  };
+
+  const totalEsperado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_esperado) || 0), 0);
+  const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
+  const totalDiferencia = filtered.reduce((s, d: any) => s + (Number(d.diferencia_efectivo) || 0), 0);
 
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
