@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
