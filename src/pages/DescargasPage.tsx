@@ -1563,7 +1563,7 @@ export default function DescargasPage() {
       const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
       const dif = Number(d.diferencia_efectivo) || 0;
       const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? dif !== 0 : dif === 0);
-      return matchesStatus && matchesVendedor && matchesTipo && matchesDiferencia;
+      return matchesStatus && matchesVendedor && matchesTipo && matchesDif;
     });
   }, [descargas, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
 
