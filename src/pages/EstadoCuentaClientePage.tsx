@@ -9,7 +9,7 @@ import { Search, Users, ChevronRight, CreditCard, FileText, Banknote, Download, 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 
