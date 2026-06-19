@@ -138,7 +138,7 @@ export default function MobileLayout() {
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
             <div className="text-center">
               <p className="text-base font-bold text-foreground">Actualizando versión…</p>
-              <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+              <p className="text-sm text-muted-foreground mt-1">Preparando recarga segura</p>
             </div>
           </div>
         )}
@@ -155,7 +155,7 @@ export default function MobileLayout() {
           <Loader2 className="h-10 w-10 text-primary animate-spin" />
           <div className="text-center">
             <p className="text-base font-bold text-foreground">Actualizando versión…</p>
-            <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+            <p className="text-sm text-muted-foreground mt-1">Preparando recarga segura</p>
           </div>
         </div>
       )}
