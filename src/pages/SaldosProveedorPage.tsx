@@ -27,17 +27,21 @@ interface PayableCompra {
 }
 
 /* ── hooks ── */
-function useProveedoresSaldo() {
+function useProveedoresSaldo(desde: string, hasta: string, condicion: string[]) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['proveedores-saldo-resumen', empresa?.id],
+    queryKey: ['proveedores-saldo-resumen', empresa?.id, desde, hasta, condicion.join(',')],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('compras')
-        .select('proveedor_id, saldo_pendiente, total, status, proveedores(id, nombre)')
+        .select('proveedor_id, saldo_pendiente, total, status, fecha, condicion_pago, proveedores(id, nombre)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['confirmada', 'recibida', 'pagada'] as any);
+      if (desde) q = q.gte('fecha', desde);
+      if (hasta) q = q.lte('fecha', hasta);
+      if (condicion.length > 0) q = q.in('condicion_pago', condicion as any);
+      const { data, error } = await q;
       if (error) throw error;
       const map = new Map<string, { id: string; nombre: string; totalComprado: number; saldoPendiente: number; docs: number }>();
       (data ?? []).forEach((c: any) => {
