@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
