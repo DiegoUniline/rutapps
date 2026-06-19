@@ -593,7 +593,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
       </Card>
 
       {/* ── TABS ── */}
-      <Tabs defaultValue="panel">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto gap-1">
           {[
             { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
