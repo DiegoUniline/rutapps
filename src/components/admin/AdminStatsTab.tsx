@@ -633,7 +633,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
           />
           {alertasCount > 0 && (
             <button
-              onClick={() => (document.querySelector('[role="tab"][value="alertas"]') as HTMLElement)?.click()}
+              onClick={() => setActiveTab('alertas')}
               className="w-full flex items-center gap-3 bg-destructive/5 border border-destructive/30 rounded-lg px-4 py-2.5 hover:bg-destructive/10 transition-colors text-left"
             >
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
