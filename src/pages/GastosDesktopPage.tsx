@@ -160,6 +160,15 @@ export default function GastosDesktopPage() {
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin gastos registrados</TableCell></TableRow>
             )}
           </TableBody>
+          {!!gastos?.length && (
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={4} className="text-[11px] text-muted-foreground font-semibold">Totales ({gastos.length})</TableCell>
+                <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(totalGastos)}</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>
