@@ -489,10 +489,14 @@ export default function SaldosProveedorPage() {
         <Truck className="h-5 w-5" /> Saldos por proveedor
       </h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
           <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase">Total comprado</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalComprado)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Proveedores con saldo</p>
@@ -500,14 +504,20 @@ export default function SaldosProveedorPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total proveedores</p>
-          <p className="text-2xl font-bold text-muted-foreground">{proveedores?.length ?? 0}</p>
+          <p className="text-2xl font-bold text-muted-foreground">{totalProveedores}</p>
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar proveedor..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={val => { setSearch(val); }}
+        placeholder="Buscar proveedor..."
+        filterOptions={FILTER_OPTIONS}
+        activeFilters={filters}
+        onToggleFilter={(key, val) => { toggleFilterValue(key, val); }}
+        onSetFilter={(key, vals) => { setFilter(key, vals); }}
+        onClearFilters={() => { clearFilters(); setSearch(''); }}
+      />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
