@@ -5,6 +5,7 @@ import {
   Loader2, UserCheck, UserMinus, Calendar as CalendarIcon, Target, Activity,
   Heart, Wallet, Repeat, Zap, DollarSign, TrendingUp, CreditCard, Users, UserPlus,
   ArrowRight, LayoutDashboard, TrendingDown, BarChart3,
+  AlertTriangle, ShieldAlert, Clock, Flame, Hourglass, Bell,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -78,6 +79,7 @@ const methodLabel = (f: FacturaRow) =>
 
 export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
   const [preset, setPreset] = useState<Preset>('hoy');
+  const [activeTab, setActiveTab] = useState<string>('panel');
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date>(new Date());
 
@@ -390,6 +392,144 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     };
   }, [empresas, cobradas, aLaFecha]);
 
+  // ── MRR / ARR / Proyección MRR fin de año ──
+  const mrrAdv = useMemo(() => {
+    const mrr = (stats?.mrr || 0) / 100;
+    const arr = mrr * 12;
+    // Proyección MRR fin año: MRR actual + (netNewMRR mensual × meses restantes)
+    const monthsRemaining = Math.max(0, 12 - (new Date().getMonth() + 1));
+    const mrrFinAnio = mrr + bi.netNewMRR * monthsRemaining;
+    const arrFinAnio = mrrFinAnio * 12;
+    return { mrr, arr, mrrFinAnio, arrFinAnio };
+  }, [stats, bi]);
+
+  // ── Quick Ratio = (MRR nuevo) / (MRR perdido), proxy con altas/bajas y ARPU ──
+  const quickRatio = useMemo(() => {
+    const arpu = bi.arpu || 0;
+    const ganado = esteMes.altas * arpu;
+    const perdido = esteMes.bajas * arpu;
+    return perdido > 0 ? ganado / perdido : (ganado > 0 ? 4 : 0);
+  }, [bi, esteMes]);
+
+  // ── DSO: días promedio de cobro de facturas pagadas ──
+  const dso = useMemo(() => {
+    const diffs: number[] = [];
+    cobradas.forEach(f => {
+      if (f.fecha_emision && f.fecha_pago) {
+        const d = differenceInDays(new Date(f.fecha_pago), new Date(f.fecha_emision));
+        if (d >= 0 && d < 365) diffs.push(d);
+      }
+    });
+    return diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0;
+  }, [cobradas]);
+
+  // ── % facturas vencidas ──
+  const facturasVencidas = useMemo(() => {
+    const now = new Date().getTime();
+    const vencidas = pendientes.filter(f => f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < now);
+    const totalEmitidas = facturas.length;
+    return {
+      count: vencidas.length,
+      total: vencidas.reduce((s, f) => s + Number(f.total || 0), 0),
+      pct: totalEmitidas ? (vencidas.length / totalEmitidas) * 100 : 0,
+      items: vencidas.sort((a, b) => new Date(a.fecha_vencimiento!).getTime() - new Date(b.fecha_vencimiento!).getTime()),
+    };
+  }, [pendientes, facturas]);
+
+  // ── NRR / GRR aproximado (mensual) ──
+  const retentionAdv = useMemo(() => {
+    const arpu = bi.arpu || 0;
+    const mrrInicio = aLaFecha.activos * arpu;
+    const mrrPerdido = esteMes.bajas * arpu;
+    const grr = mrrInicio > 0 ? Math.max(0, (mrrInicio - mrrPerdido) / mrrInicio) * 100 : 100;
+    const nrr = grr; // sin expansión registrada, NRR ≈ GRR
+    return { nrr, grr };
+  }, [bi, aLaFecha, esteMes]);
+
+  // ── Trials activos ordenados por días restantes ──
+  const trialsActivos = useMemo(() => {
+    const now = new Date().getTime();
+    return empresas
+      .map(e => {
+        const trial = e.subscriptions?.find(s => s.status === 'trial');
+        if (!trial) return null;
+        const fin = trial.trial_ends_at ? new Date(trial.trial_ends_at).getTime() : null;
+        if (!fin) return null;
+        return { ...e, finTrial: fin, diasRestantes: Math.ceil((fin - now) / 86400000) };
+      })
+      .filter((x): x is any => !!x && x.diasRestantes >= 0)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes)
+      .slice(0, 20);
+  }, [empresas]);
+
+  // ── Próximas renovaciones (siguientes 7 días) ──
+  const proximasRenovaciones = useMemo(() => {
+    const now = new Date().getTime();
+    const limite = now + 7 * 86400000;
+    return empresas
+      .map(e => {
+        const sub = e.subscriptions?.find(s => s.status === 'active');
+        if (!sub) return null;
+        const fecha = sub.current_period_end || sub.fecha_vencimiento;
+        if (!fecha) return null;
+        const t = new Date(fecha).getTime();
+        if (t < now || t > limite) return null;
+        return { ...e, fechaRenov: fecha, diasRestantes: Math.ceil((t - now) / 86400000) };
+      })
+      .filter((x): x is any => !!x)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes);
+  }, [empresas]);
+
+  // ── Empresas en riesgo de churn ──
+  const enRiesgoChurn = useMemo(() => {
+    const now = new Date().getTime();
+    const risk: Array<{ id: string; nombre: string; razon: string; score: number; status: string }> = [];
+    empresas.forEach(e => {
+      const sub = e.subscriptions?.[0];
+      if (!sub) return;
+      const status = sub.status;
+      // Past_due > 7 días
+      if (status === 'past_due' || status === 'gracia') {
+        const since = sub.updated_at ? differenceInDays(new Date(), new Date(sub.updated_at)) : 0;
+        risk.push({ id: e.id, nombre: e.nombre, razon: `${status} hace ${since}d`, score: 90 + Math.min(10, since), status });
+        return;
+      }
+      // Trial por vencer en ≤3 días sin facturas pagadas
+      if (status === 'trial' && sub.trial_ends_at) {
+        const dias = Math.ceil((new Date(sub.trial_ends_at).getTime() - now) / 86400000);
+        const haPagado = cobradas.some(f => f.empresa_id === e.id);
+        if (dias >= 0 && dias <= 3 && !haPagado) {
+          risk.push({ id: e.id, nombre: e.nombre, razon: `Trial vence en ${dias}d sin pago`, score: 80 - dias * 5, status });
+        }
+      }
+      // Activa con factura vencida
+      if (status === 'active') {
+        const venc = facturas.filter(f => f.empresa_id === e.id && f.estado === 'pendiente' && f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < now);
+        if (venc.length) {
+          risk.push({ id: e.id, nombre: e.nombre, razon: `${venc.length} factura(s) vencida(s)`, score: 60 + venc.length * 5, status });
+        }
+      }
+    });
+    return risk.sort((a, b) => b.score - a.score).slice(0, 25);
+  }, [empresas, cobradas, facturas]);
+
+  // ── Pagos fallidos recientes (24h) ──
+  const pagosFallidos24h = useMemo(() => {
+    const ago = Date.now() - 24 * 3600 * 1000;
+    return stripeInvs.filter((i: any) =>
+      (i.status === 'open' && i.attempt_count > 0) || i.status === 'uncollectible'
+    ).filter((i: any) => (i.created || 0) * 1000 >= ago);
+  }, [stripeInvs]);
+
+  // ── Conteo de alertas (badge) ──
+  const alertasCount =
+    pagosFallidos24h.length +
+    trialsActivos.filter(t => t.diasRestantes <= 3).length +
+    enRiesgoChurn.filter(r => r.score >= 80).length +
+    facturasVencidas.count;
+
+
+
   const rangeLabel = preset === 'hoy' ? 'Hoy'
     : preset === 'todo' ? 'Histórico'
     : from ? `${format(from, 'dd MMM', { locale: es })} → ${format(to, 'dd MMM yyyy', { locale: es })}`
@@ -454,27 +594,35 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
       </Card>
 
       {/* ── TABS ── */}
-      <Tabs defaultValue="panel">
-        <TabsList className="grid grid-cols-5 w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto gap-1">
           {[
             { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
+            { v: 'alertas', icon: Bell, l: 'Alertas', badge: alertasCount },
+            { v: 'riesgo', icon: ShieldAlert, l: 'Riesgo' },
             { v: 'altas', icon: UserPlus, l: 'Altas' },
             { v: 'bajas', icon: UserMinus, l: 'Bajas' },
             { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
-            { v: 'salud', icon: Activity, l: 'Salud SaaS' },
+            { v: 'salud', icon: Activity, l: 'Salud' },
           ].map(t => {
             const Icon = t.icon;
             return (
               <TabsTrigger
                 key={t.v}
                 value={t.v}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                className="relative data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
               >
                 <Icon className="h-3.5 w-3.5 mr-1.5" />{t.l}
+                {(t as any).badge > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 min-w-[18px]">
+                    {(t as any).badge}
+                  </span>
+                )}
               </TabsTrigger>
             );
           })}
         </TabsList>
+
 
 
         {/* ──────────── PANEL ──────────── */}
@@ -483,6 +631,23 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             title="Resumen del negocio"
             subtitle={`Tu plataforma tiene ${aLaFecha.activos} cuentas pagando, ${esteMes.altas} altas y ${esteMes.bajas} bajas este mes.`}
           />
+          {alertasCount > 0 && (
+            <button
+              onClick={() => setActiveTab('alertas')}
+              className="w-full flex items-center gap-3 bg-destructive/5 border border-destructive/30 rounded-lg px-4 py-2.5 hover:bg-destructive/10 transition-colors text-left"
+            >
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+              <div className="flex-1 text-xs">
+                <span className="font-semibold text-destructive">{alertasCount} alertas activas</span>
+                <span className="text-muted-foreground ml-2">
+                  {pagosFallidos24h.length > 0 && `${pagosFallidos24h.length} pagos fallidos · `}
+                  {trialsActivos.filter(t => t.diasRestantes <= 3).length > 0 && `${trialsActivos.filter(t => t.diasRestantes <= 3).length} trials por vencer · `}
+                  {facturasVencidas.count > 0 && `${facturasVencidas.count} facturas vencidas`}
+                </span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
+            </button>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
             {loadingStats && (
               <div className="absolute -top-2 right-0 text-[10px] text-muted-foreground flex items-center gap-1">
@@ -609,6 +774,155 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
 
           {/* ── Facturas de Stripe (todas, agrupadas por status) ── */}
           <StripeInvoicesTable invoices={stripeInvs} loading={loadingStripeInv} />
+        </TabsContent>
+
+
+        {/* ──────────── ALERTAS ──────────── */}
+        <TabsContent value="alertas" className="space-y-4 mt-4">
+          <Story
+            title="Alertas accionables"
+            subtitle={`${alertasCount} situaciones requieren atención. Click en cualquier empresa para ver su detalle.`}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Flame} label="Pagos fallidos 24h" value={pagosFallidos24h.length.toString()} accent="destructive" />
+            <StatCard icon={Hourglass} label="Trials por vencer (≤3d)" value={trialsActivos.filter(t => t.diasRestantes <= 3).length.toString()} accent="destructive" />
+            <StatCard icon={AlertTriangle} label="Facturas vencidas" value={facturasVencidas.count.toString()} hint={fmtMoney(facturasVencidas.total)} accent="destructive" />
+            <StatCard icon={ShieldAlert} label="Riesgo churn alto" value={enRiesgoChurn.filter(r => r.score >= 80).length.toString()} accent="destructive" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartCard title="Pagos fallidos en Stripe (24h)" subtitle="Facturas con intento fallido o incobrables" icon={Flame}>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {pagosFallidos24h.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin pagos fallidos recientes</div>
+                ) : pagosFallidos24h.map((i: any) => (
+                  <div key={i.id} className="flex items-center justify-between text-xs bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{i.empresa_nombre || i.customer_name || '—'}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {i.status} · {i.attempt_count || 0} intentos · {format(new Date((i.created || 0) * 1000), 'dd MMM HH:mm', { locale: es })}
+                      </div>
+                    </div>
+                    <span className="text-destructive font-semibold ml-3 shrink-0">{fmtMoney2((i.amount_remaining || 0) / 100)}</span>
+                  </div>
+                ))}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Facturas vencidas" subtitle={`${facturasVencidas.count} facturas · ${fmtMoney(facturasVencidas.total)}`} icon={AlertTriangle}>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {facturasVencidas.items.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas vencidas</div>
+                ) : facturasVencidas.items.slice(0, 20).map((f: any) => {
+                  const diasVencida = differenceInDays(new Date(), new Date(f.fecha_vencimiento));
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => onSelectEmpresa?.(f.empresa_id)}
+                      className="w-full flex items-center justify-between text-xs bg-destructive/5 hover:bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-left transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
+                        <div className="text-[10px] text-muted-foreground">Vencida hace {diasVencida}d · {f.numero_factura || ''}</div>
+                      </div>
+                      <span className="text-destructive font-semibold ml-3 shrink-0">{fmtMoney2(Number(f.total))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </ChartCard>
+          </div>
+        </TabsContent>
+
+        {/* ──────────── RIESGO ──────────── */}
+        <TabsContent value="riesgo" className="space-y-4 mt-4">
+          <Story
+            title="Riesgo, trials y renovaciones"
+            subtitle="Detecta cuentas en peligro, trials por vencer y renovaciones próximas para actuar antes."
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={ShieldAlert} label="En riesgo de churn" value={enRiesgoChurn.length.toString()} accent="destructive" />
+            <StatCard icon={Hourglass} label="Trials activos" value={trialsActivos.length.toString()} accent="primary" />
+            <StatCard icon={Clock} label="Renueva en 7 días" value={proximasRenovaciones.length.toString()} accent="success" />
+            <StatCard icon={Target} label="Trial → Pago" value={fmtPct(bi.conversion)} accent="success" />
+          </div>
+
+          <ChartCard title="Top empresas en riesgo de churn" subtitle="Score combinando status, antigüedad de impago y facturas vencidas" icon={ShieldAlert}>
+            <div className="space-y-1.5 max-h-96 overflow-y-auto">
+              {enRiesgoChurn.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">Sin empresas en riesgo</div>
+              ) : enRiesgoChurn.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelectEmpresa?.(r.id)}
+                  className="w-full flex items-center gap-3 text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                >
+                  <div className={cn(
+                    'h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                    r.score >= 90 ? 'bg-destructive text-destructive-foreground' :
+                    r.score >= 75 ? 'bg-yellow-500 text-white' :
+                    'bg-muted text-muted-foreground'
+                  )}>{r.score}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground truncate">{r.nombre}</div>
+                    <div className="text-[10px] text-muted-foreground">{r.razon}</div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-card border border-border text-muted-foreground shrink-0">
+                    {STATUS_LABELS[r.status] || r.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ChartCard>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartCard title="Trials activos por vencer" subtitle={`${trialsActivos.length} en periodo de prueba`} icon={Hourglass}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {trialsActivos.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin trials activos</div>
+                ) : trialsActivos.map((t: any) => (
+                  <button
+                    key={t.id}
+                    onClick={() => onSelectEmpresa?.(t.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{t.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">Vence {format(new Date(t.finTrial), 'dd MMM yyyy', { locale: es })}</div>
+                    </div>
+                    <span className={cn(
+                      'text-[10px] font-semibold px-2 py-0.5 rounded-full border ml-3 shrink-0',
+                      t.diasRestantes <= 3 ? 'bg-destructive/10 border-destructive/30 text-destructive' :
+                      t.diasRestantes <= 7 ? 'bg-yellow-500/10 border-yellow-500/30 text-warning' :
+                      'bg-primary/10 border-primary/30 text-primary'
+                    )}>{t.diasRestantes}d</span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Próximas renovaciones (7 días)" subtitle="Suscripciones activas que cobran pronto" icon={Clock}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {proximasRenovaciones.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin renovaciones próximas</div>
+                ) : proximasRenovaciones.map((r: any) => (
+                  <button
+                    key={r.id}
+                    onClick={() => onSelectEmpresa?.(r.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{r.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">Renueva {format(new Date(r.fechaRenov), 'dd MMM yyyy', { locale: es })}</div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 border border-success/30 text-success ml-3 shrink-0">
+                      {r.diasRestantes}d
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+          </div>
         </TabsContent>
 
 
@@ -846,6 +1160,23 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             <StatCard icon={Activity} label="Churn mensual" value={fmtPct(bi.churn)} accent={bi.churn > 5 ? 'destructive' : 'success'} />
             <StatCard icon={Zap} label="Net New MRR" value={fmtMoney(bi.netNewMRR)} hint="Nuevo MRR del mes" accent="success" />
           </div>
+
+          {/* ── MRR / ARR / Proyecciones ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={TrendingUp} label="MRR actual" value={fmtMoney(mrrAdv.mrr)} hint="Ingreso recurrente mensual" accent="primary" />
+            <StatCard icon={DollarSign} label="ARR" value={fmtMoney(mrrAdv.arr)} hint="MRR × 12" accent="success" />
+            <StatCard icon={Target} label="MRR proy. fin año" value={fmtMoney(mrrAdv.mrrFinAnio)} hint={`ARR ${fmtMoney(mrrAdv.arrFinAnio)}`} accent="success" />
+            <StatCard icon={Zap} label="Quick Ratio" value={quickRatio.toFixed(2)} hint={quickRatio >= 4 ? 'Excelente (≥4)' : quickRatio >= 1 ? 'Sano' : 'En contracción'} accent={quickRatio >= 4 ? 'success' : quickRatio >= 1 ? 'primary' : 'destructive'} />
+          </div>
+
+          {/* ── DSO / NRR / GRR ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Clock} label="DSO" value={`${Math.round(dso)} d`} hint="Días promedio de cobro" accent={dso <= 7 ? 'success' : dso <= 30 ? 'primary' : 'destructive'} />
+            <StatCard icon={Heart} label="NRR mensual" value={fmtPct(retentionAdv.nrr)} hint="Net Revenue Retention" accent={retentionAdv.nrr >= 100 ? 'success' : 'primary'} />
+            <StatCard icon={Repeat} label="GRR mensual" value={fmtPct(retentionAdv.grr)} hint="Gross Revenue Retention" accent={retentionAdv.grr >= 95 ? 'success' : 'destructive'} />
+            <StatCard icon={AlertTriangle} label="% facturas vencidas" value={fmtPct(facturasVencidas.pct)} hint={`${facturasVencidas.count} facturas`} accent={facturasVencidas.pct < 5 ? 'success' : 'destructive'} />
+          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ChartCard title="MRR y cuentas activas (12 meses)" subtitle="Crecimiento del negocio recurrente" icon={TrendingUp}>
