@@ -521,7 +521,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
               <tbody>
                 {lineas.map((l: any, idx: number) => {
                   const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
-                  const origenId = l.almacen_origen_id ?? null;
+                  const origenId = l.almacen_origen_id ?? form.almacen_id ?? null;
                   const stock = origenId && l.producto_id
                     ? (stockLineasMap.get(`${origenId}:${l.producto_id}`) ?? 0)
                     : null;
