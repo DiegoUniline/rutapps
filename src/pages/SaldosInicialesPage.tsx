@@ -276,6 +276,20 @@ export default function SaldosInicialesPage() {
                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin saldos iniciales registrados</TableCell></TableRow>
                 )}
               </TableBody>
+              {!!saldos?.length && (() => {
+                const totOrig = saldos.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+                const totPend = saldos.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0);
+                return (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-[11px] text-muted-foreground font-semibold">Totales ({saldos.length})</TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">{fmt(totOrig)}</TableCell>
+                      <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(totPend)}</TableCell>
+                      <TableCell colSpan={2} />
+                    </TableRow>
+                  </TableFooter>
+                );
+              })()}
             </Table>
           </div>
         </TabsContent>
