@@ -101,6 +101,9 @@ export default function ProductosListPage() {
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
   const { empresa } = useAuth();
+  // Realtime: refresca productos al cambiar desde otro dispositivo (precios, stock)
+  useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['productos']] });
+  useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['productos']] });
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [bulkActivating, setBulkActivating] = useState(false);
