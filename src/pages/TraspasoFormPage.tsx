@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtNum } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
@@ -204,6 +204,23 @@ export default function TraspasoFormPage() {
         .range(from, to)
     ),
   });
+
+  // Fetch per-warehouse stock for the destination (used in read-only view to confirm arrival)
+  const { data: stockAlmacenDestino } = useQuery({
+    queryKey: ['stock-almacen-destino', almacenDestinoId],
+    enabled: readOnly && !!almacenDestinoId,
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', almacenDestinoId)
+        .range(from, to)
+    ),
+  });
+  const stockDestinoMap = useMemo(() => {
+    const m = new Map<string, number>();
+    (stockAlmacenDestino ?? []).forEach((s: any) => m.set(s.producto_id, Number(s.cantidad) || 0));
+    return m;
+  }, [stockAlmacenDestino]);
 
   // Filtered product list: only those with stock > 0 from the selected origin
   const productosList = useMemo(() => {
@@ -687,20 +704,21 @@ export default function TraspasoFormPage() {
                           <tr className="border-b border-table-border text-left">
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20">Código</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{readOnly ? 'En destino' : 'Disponible'}</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">A traspasar</th>
                           </tr>
                         </thead>
                         <tbody>
                           {readOnly ? (
-                            // Read-only: show only products that were transferred
+                            // Read-only: show only products that were transferred + actual stock at destination
                             lineas.map((l, idx) => {
                               const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
+                              const stockDest = stockDestinoMap.get(l.producto_id) ?? 0;
                               return (
                                 <tr key={l.producto_id} className="border-b border-table-border hover:bg-table-hover">
                                   <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{prod?.codigo ?? ''}</td>
                                   <td className="py-1.5 px-2 text-[12px]">{prod?.nombre ?? '—'}</td>
-                                  <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">—</td>
+                                  <td className={cn("py-1.5 px-2 text-right tabular-nums", stockDest <= 0 ? "text-destructive" : "text-foreground")}>{fmtNum(stockDest)}</td>
                                   <td className="py-1.5 px-2 text-right tabular-nums font-medium">{l.cantidad}</td>
                                 </tr>
                               );
