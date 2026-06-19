@@ -128,7 +128,11 @@ export function useProductos(search?: string, statusFilter?: string) {
           .order('nombre', { ascending: true })
           .range(from, to);
         if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-        if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',').filter(Boolean);
+          if (arr.length > 1) q = q.in('status', arr as any);
+          else q = q.eq('status', statusFilter as Producto['status']);
+        }
         return q;
       }) as Promise<Producto[]>;
     },
