@@ -526,12 +526,16 @@ export default function ComprasPage() {
               activeFilters={filters}
               onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
               onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-              onClearFilters={() => { clearFilters(); setPage(1); }}
+              onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); setPage(1); }}
               groupByOptions={GROUP_BY_OPTIONS}
               activeGroupBy={groupBy}
               onGroupByChange={setGroupBy}
               activeGroupByLevels={groupByLevels}
               onGroupByLevelChange={setGroupByLevel}
+              dateFrom={desde}
+              dateTo={hasta}
+              onDateFromChange={val => { setDesde(val); setPage(1); }}
+              onDateToChange={val => { setHasta(val); setPage(1); }}
             />
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
               <ExportButton
