@@ -83,11 +83,35 @@ const methodLabel = (f: FacturaRow) =>
   f.metodo_pago ? f.metodo_pago : 'Manual';
 
 export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
+  const qc = useQueryClient();
   const [preset, setPreset] = useState<Preset>('hoy');
   const [activeTab, setActiveTab] = useState<string>('panel');
   const [estadoCuentaEmpresa, setEstadoCuentaEmpresa] = useState<{ id: string; nombre: string } | null>(null);
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date>(new Date());
+
+  const cancelarPendientesEmpresa = async (id: string, nombre: string, pendiente: number, count: number) => {
+    const ok = window.confirm(
+      `¿Cancelar ${count} factura(s) pendiente(s) por ${fmtMoney(pendiente)} de ${nombre}?\n\n` +
+      `• Anula (void) invoices abiertas en Stripe\n• Borra drafts\n• Marca facturas locales como 'cancelada'\n\nNo se puede revertir.`
+    );
+    if (!ok) return;
+    setCancelandoId(id);
+    try {
+      const { data: res, error } = await supabase.functions.invoke('admin-cancel-empresa-pending', { body: { empresa_id: id } });
+      if (error) throw error;
+      if ((res as any)?.error) throw new Error((res as any).error);
+      toast.success(`${nombre}: ${(res as any)?.facturas_canceladas || 0} locales · ${((res as any)?.stripe?.filter((s: any) => s.action === 'voided' || s.action === 'deleted').length) || 0} en Stripe`);
+      await qc.invalidateQueries({ queryKey: ['admin-stats-facturas-all'] });
+      await qc.invalidateQueries({ queryKey: ['admin-stats-stripe-invoices'] });
+    } catch (e: any) {
+      toast.error('Error: ' + (e.message || 'desconocido'));
+    } finally {
+      setCancelandoId(null);
+    }
+  };
+
 
   const applyPreset = (p: Preset) => {
     setPreset(p);
@@ -1073,12 +1097,15 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                                 <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
                                 <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
                                 <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
+                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Acción</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                               {t.rows.length === 0 ? (
-                                <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin empresas en este estado</td></tr>
-                              ) : t.rows.map(r => (
+                                <tr><td colSpan={10} className="text-center text-muted-foreground py-6">Sin empresas en este estado</td></tr>
+                              ) : t.rows.map(r => {
+                                const pendCount = r.facturasEmitidas - r.facturasPagadas;
+                                return (
                                 <tr
                                   key={r.id}
                                   onClick={() => setEstadoCuentaEmpresa({ id: r.id, nombre: r.nombre })}
@@ -1108,11 +1135,27 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                                   <td className="px-2 py-2 whitespace-nowrap text-[10px] text-muted-foreground">
                                     {r.ultimoPago ? format(new Date(r.ultimoPago), 'dd MMM yyyy', { locale: es }) : '—'}
                                   </td>
+                                  <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    {pendCount > 0 ? (
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-7 px-2 text-[10px]"
+                                        disabled={cancelandoId === r.id}
+                                        onClick={() => cancelarPendientesEmpresa(r.id, r.nombre, r.pendiente, pendCount)}
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        {cancelandoId === r.id ? '...' : 'Cancelar'}
+                                      </Button>
+                                    ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                                  </td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
+
                       </TabsContent>
                     );
                   })}
