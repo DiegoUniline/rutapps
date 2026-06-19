@@ -93,6 +93,9 @@ export default function EstadoCuentaClientePage() {
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const { filters, toggleFilterValue, setFilter, clearFilters } = useListPreferences('saldos-cliente');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: clientes, isLoading } = useClientesSaldo();
