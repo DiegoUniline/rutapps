@@ -27,17 +27,21 @@ interface PayableCompra {
 }
 
 /* ── hooks ── */
-function useProveedoresSaldo() {
+function useProveedoresSaldo(desde: string, hasta: string, condicion: string[]) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['proveedores-saldo-resumen', empresa?.id],
+    queryKey: ['proveedores-saldo-resumen', empresa?.id, desde, hasta, condicion.join(',')],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('compras')
-        .select('proveedor_id, saldo_pendiente, total, status, proveedores(id, nombre)')
+        .select('proveedor_id, saldo_pendiente, total, status, fecha, condicion_pago, proveedores(id, nombre)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['confirmada', 'recibida', 'pagada'] as any);
+      if (desde) q = q.gte('fecha', desde);
+      if (hasta) q = q.lte('fecha', hasta);
+      if (condicion.length > 0) q = q.in('condicion_pago', condicion as any);
+      const { data, error } = await q;
       if (error) throw error;
       const map = new Map<string, { id: string; nombre: string; totalComprado: number; saldoPendiente: number; docs: number }>();
       (data ?? []).forEach((c: any) => {
@@ -96,12 +100,19 @@ export default function SaldosProveedorPage() {
   const [payables, setPayables] = useState<PayableCompra[]>([]);
   const [saving, setSaving] = useState(false);
   const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('saldos-proveedor');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const condicionFilter = filters.condicion_pago ?? [];
 
-  const { data: proveedores, isLoading } = useProveedoresSaldo();
+  const { data: proveedores, isLoading } = useProveedoresSaldo(desde, hasta, condicionFilter);
   const { data: compras, isLoading: loadingDetalle } = useProveedorDetalle(selectedId);
 
   const FILTER_OPTIONS = useMemo(() => [
     { key: 'proveedor', label: 'Proveedor', options: (proveedores ?? []).map(p => ({ value: p.id, label: p.nombre })) },
+    { key: 'condicion_pago', label: 'Condición', options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
+    ]},
     { key: 'saldo', label: 'Saldo', options: [
       { value: 'con', label: 'Con saldo' },
       { value: 'sin', label: 'Sin saldo' },
@@ -126,7 +137,7 @@ export default function SaldosProveedorPage() {
     return list;
   }, [proveedores, filters, search]);
 
-  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0);
+  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0) || (filters.condicion_pago?.length > 0) || !!desde || !!hasta;
 
   const selected = proveedores?.find(p => p.id === selectedId);
   const totalPendienteGlobal = filtered.reduce((s, p) => s + p.saldoPendiente, 0);
@@ -516,7 +527,11 @@ export default function SaldosProveedorPage() {
         activeFilters={filters}
         onToggleFilter={(key, val) => { toggleFilterValue(key, val); }}
         onSetFilter={(key, vals) => { setFilter(key, vals); }}
-        onClearFilters={() => { clearFilters(); setSearch(''); }}
+        onClearFilters={() => { clearFilters(); setSearch(''); setDesde(''); setHasta(''); }}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
       />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -544,9 +559,26 @@ export default function SaldosProveedorPage() {
             ))}
             {isLoading && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
             {!isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin proveedores con compras</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                {hasFilters ? 'Sin proveedores con los filtros aplicados' : 'Sin proveedores con compras'}
+              </TableCell></TableRow>
             )}
           </TableBody>
+          {filtered.length > 0 && (
+            <tfoot>
+              <tr className="bg-card border-t border-border font-semibold text-[12px]">
+                <td className="py-2 px-4 text-muted-foreground">
+                  {totalProveedores} proveedores {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2 px-4 text-center">
+                  {filtered.reduce((s, p) => s + p.docs, 0)}
+                </td>
+                <td className="py-2 px-4 text-right font-bold tabular-nums">{fmt(totalComprado)}</td>
+                <td className="py-2 px-4 text-right tabular-nums text-destructive font-bold">{fmt(totalPendienteGlobal)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </Table>
       </div>
     </div>
