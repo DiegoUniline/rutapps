@@ -565,7 +565,16 @@ export default function FacturacionCfdiPage() {
               variant="destructive"
               className="flex-1"
               disabled={eliminarMutation.isPending}
-              onClick={() => deletingId && eliminarMutation.mutate(deletingId)}
+              onClick={() => {
+                const id = deletingId;
+                if (!id) return;
+                setShowDelete(false);
+                requestPin(
+                  'Eliminar CFDI',
+                  'Ingresa el PIN de administrador para confirmar.',
+                  () => eliminarMutation.mutate(id),
+                );
+              }}
             >
               {eliminarMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
