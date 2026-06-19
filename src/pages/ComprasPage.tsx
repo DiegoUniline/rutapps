@@ -98,7 +98,7 @@ const DETALLE_GROUP_BY_OPTIONS = [
   { value: 'fecha_anio_mes', label: 'Año-Mes' },
 ];
 
-function useCompras(search: string, statusFilter: string, empresaId?: string) {
+function useCompras(search: string, statusFilter: string[], empresaId?: string) {
   return useQuery({
     queryKey: ['compras', search, statusFilter, empresaId],
     enabled: !!empresaId,
@@ -108,7 +108,7 @@ function useCompras(search: string, statusFilter: string, empresaId?: string) {
         .select('*, proveedores(nombre), almacenes(nombre)')
         .eq('empresa_id', empresaId!)
         .order('fecha', { ascending: false });
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
+      if (statusFilter && statusFilter.length > 0) q = q.in('status', statusFilter);
       const { data, error } = await q;
       if (error) throw error;
       let filtered = data ?? [];
