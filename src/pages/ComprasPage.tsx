@@ -150,6 +150,16 @@ export default function ComprasPage() {
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
 
+  const { data: almacenes } = useQuery({
+    queryKey: ['almacenes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Detalle query
   const { data: lineasRaw, isLoading: isLoadingLineas } = useQuery({
     queryKey: ['compra-lineas-all', empresa?.id],
