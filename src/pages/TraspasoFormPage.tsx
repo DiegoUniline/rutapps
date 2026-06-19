@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtNum } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
