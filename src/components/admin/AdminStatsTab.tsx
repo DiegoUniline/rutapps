@@ -79,6 +79,7 @@ const methodLabel = (f: FacturaRow) =>
 
 export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
   const [preset, setPreset] = useState<Preset>('hoy');
+  const [activeTab, setActiveTab] = useState<string>('panel');
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date>(new Date());
 
