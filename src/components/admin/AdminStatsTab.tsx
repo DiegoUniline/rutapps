@@ -1097,12 +1097,15 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                                 <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
                                 <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
                                 <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
+                                <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Acción</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                               {t.rows.length === 0 ? (
-                                <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin empresas en este estado</td></tr>
-                              ) : t.rows.map(r => (
+                                <tr><td colSpan={10} className="text-center text-muted-foreground py-6">Sin empresas en este estado</td></tr>
+                              ) : t.rows.map(r => {
+                                const pendCount = r.facturasEmitidas - r.facturasPagadas;
+                                return (
                                 <tr
                                   key={r.id}
                                   onClick={() => setEstadoCuentaEmpresa({ id: r.id, nombre: r.nombre })}
@@ -1132,11 +1135,27 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                                   <td className="px-2 py-2 whitespace-nowrap text-[10px] text-muted-foreground">
                                     {r.ultimoPago ? format(new Date(r.ultimoPago), 'dd MMM yyyy', { locale: es }) : '—'}
                                   </td>
+                                  <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    {pendCount > 0 ? (
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-7 px-2 text-[10px]"
+                                        disabled={cancelandoId === r.id}
+                                        onClick={() => cancelarPendientesEmpresa(r.id, r.nombre, r.pendiente, pendCount)}
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        {cancelandoId === r.id ? '...' : 'Cancelar'}
+                                      </Button>
+                                    ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                                  </td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
+
                       </TabsContent>
                     );
                   })}
