@@ -526,6 +526,64 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     ).filter((i: any) => (i.created || 0) * 1000 >= ago);
   }, [stripeInvs]);
 
+  // ── Cumplimiento de pago desde fin de trial ──
+  // Para cada empresa cuyo trial ya terminó: cuánto debió pagar (facturas emitidas
+  // desde trial_ends_at) vs cuánto realmente pagó.
+  const cumplimientoPago = useMemo(() => {
+    const now = Date.now();
+    const rows: Array<{
+      id: string; nombre: string; status: string;
+      finTrial: string; mesesTranscurridos: number;
+      facturasEmitidas: number; facturasPagadas: number;
+      esperado: number; pagado: number; pendiente: number;
+      cumplimiento: number; ultimoPago: string | null;
+    }> = [];
+    empresas.forEach(e => {
+      const sub = e.subscriptions?.[0];
+      if (!sub) return;
+      const finTrialStr = sub.trial_ends_at;
+      if (!finTrialStr) return;
+      const finTrial = new Date(finTrialStr).getTime();
+      if (finTrial > now) return; // trial aún vigente
+      // Facturas emitidas desde fin de trial
+      const facsEmp = facturas.filter(f =>
+        f.empresa_id === e.id &&
+        f.fecha_emision &&
+        new Date(f.fecha_emision).getTime() >= finTrial - 86400000 // 1 día de gracia
+      );
+      if (facsEmp.length === 0) return;
+      const pagadasEmp = facsEmp.filter(isCollected);
+      const esperado = facsEmp.reduce((s, f) => s + Number(f.total || 0), 0);
+      const pagado = pagadasEmp.reduce((s, f) => s + Number(f.total || 0), 0);
+      const pendiente = Math.max(0, esperado - pagado);
+      const mesesTrans = Math.max(0, (now - finTrial) / (30.4375 * 86400000));
+      const ultimoPago = pagadasEmp
+        .map(f => f.fecha_pago)
+        .filter(Boolean)
+        .sort()
+        .pop() || null;
+      rows.push({
+        id: e.id, nombre: e.nombre, status: sub.status,
+        finTrial: finTrialStr,
+        mesesTranscurridos: Number(mesesTrans.toFixed(1)),
+        facturasEmitidas: facsEmp.length,
+        facturasPagadas: pagadasEmp.length,
+        esperado, pagado, pendiente,
+        cumplimiento: esperado > 0 ? (pagado / esperado) * 100 : 0,
+        ultimoPago,
+      });
+    });
+    return rows.sort((a, b) => b.pendiente - a.pendiente);
+  }, [empresas, facturas]);
+
+  const cumplimientoTotales = useMemo(() => ({
+    empresas: cumplimientoPago.length,
+    esperado: cumplimientoPago.reduce((s, r) => s + r.esperado, 0),
+    pagado: cumplimientoPago.reduce((s, r) => s + r.pagado, 0),
+    pendiente: cumplimientoPago.reduce((s, r) => s + r.pendiente, 0),
+    morosos: cumplimientoPago.filter(r => r.pendiente > 0).length,
+  }), [cumplimientoPago]);
+
   // ── Conteo de alertas (badge) ──
   const alertasCount =
     pagosFallidos24h.length +
