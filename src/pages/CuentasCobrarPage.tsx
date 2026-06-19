@@ -223,6 +223,22 @@ export default function CuentasCobrarPage() {
               <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cuentas pendientes 🎉</TableCell></TableRow>
             )}
           </TableBody>
+          {!!cuentas?.length && (() => {
+            const sumTotal = cuentas.reduce((s, v) => s + (v.total ?? 0), 0);
+            const sumPagado = cuentas.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
+            const sumPend = cuentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+            return (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales ({cuentas.length})</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">{fmt(sumTotal)}</TableCell>
+                  <TableCell className="text-right font-bold text-success tabular-nums">{fmt(sumPagado)}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(sumPend)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            );
+          })()}
         </Table>
       </div>
 
