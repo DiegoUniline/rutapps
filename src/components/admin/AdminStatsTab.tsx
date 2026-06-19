@@ -391,6 +391,144 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     };
   }, [empresas, cobradas, aLaFecha]);
 
+  // ── MRR / ARR / Proyección MRR fin de año ──
+  const mrrAdv = useMemo(() => {
+    const mrr = (stats?.mrr || 0) / 100;
+    const arr = mrr * 12;
+    // Proyección MRR fin año: MRR actual + (netNewMRR mensual × meses restantes)
+    const monthsRemaining = Math.max(0, 12 - (new Date().getMonth() + 1));
+    const mrrFinAnio = mrr + bi.netNewMRR * monthsRemaining;
+    const arrFinAnio = mrrFinAnio * 12;
+    return { mrr, arr, mrrFinAnio, arrFinAnio };
+  }, [stats, bi]);
+
+  // ── Quick Ratio = (MRR nuevo) / (MRR perdido), proxy con altas/bajas y ARPU ──
+  const quickRatio = useMemo(() => {
+    const arpu = bi.arpu || 0;
+    const ganado = esteMes.altas * arpu;
+    const perdido = esteMes.bajas * arpu;
+    return perdido > 0 ? ganado / perdido : (ganado > 0 ? 4 : 0);
+  }, [bi, esteMes]);
+
+  // ── DSO: días promedio de cobro de facturas pagadas ──
+  const dso = useMemo(() => {
+    const diffs: number[] = [];
+    cobradas.forEach(f => {
+      if (f.fecha_emision && f.fecha_pago) {
+        const d = differenceInDays(new Date(f.fecha_pago), new Date(f.fecha_emision));
+        if (d >= 0 && d < 365) diffs.push(d);
+      }
+    });
+    return diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0;
+  }, [cobradas]);
+
+  // ── % facturas vencidas ──
+  const facturasVencidas = useMemo(() => {
+    const now = new Date().getTime();
+    const vencidas = pendientes.filter(f => f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < now);
+    const totalEmitidas = facturas.length;
+    return {
+      count: vencidas.length,
+      total: vencidas.reduce((s, f) => s + Number(f.total || 0), 0),
+      pct: totalEmitidas ? (vencidas.length / totalEmitidas) * 100 : 0,
+      items: vencidas.sort((a, b) => new Date(a.fecha_vencimiento!).getTime() - new Date(b.fecha_vencimiento!).getTime()),
+    };
+  }, [pendientes, facturas]);
+
+  // ── NRR / GRR aproximado (mensual) ──
+  const retentionAdv = useMemo(() => {
+    const arpu = bi.arpu || 0;
+    const mrrInicio = aLaFecha.activos * arpu;
+    const mrrPerdido = esteMes.bajas * arpu;
+    const grr = mrrInicio > 0 ? Math.max(0, (mrrInicio - mrrPerdido) / mrrInicio) * 100 : 100;
+    const nrr = grr; // sin expansión registrada, NRR ≈ GRR
+    return { nrr, grr };
+  }, [bi, aLaFecha, esteMes]);
+
+  // ── Trials activos ordenados por días restantes ──
+  const trialsActivos = useMemo(() => {
+    const now = new Date().getTime();
+    return empresas
+      .map(e => {
+        const trial = e.subscriptions?.find(s => s.status === 'trial');
+        if (!trial) return null;
+        const fin = trial.trial_ends_at ? new Date(trial.trial_ends_at).getTime() : null;
+        if (!fin) return null;
+        return { ...e, finTrial: fin, diasRestantes: Math.ceil((fin - now) / 86400000) };
+      })
+      .filter((x): x is any => !!x && x.diasRestantes >= 0)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes)
+      .slice(0, 20);
+  }, [empresas]);
+
+  // ── Próximas renovaciones (siguientes 7 días) ──
+  const proximasRenovaciones = useMemo(() => {
+    const now = new Date().getTime();
+    const limite = now + 7 * 86400000;
+    return empresas
+      .map(e => {
+        const sub = e.subscriptions?.find(s => s.status === 'active');
+        if (!sub) return null;
+        const fecha = sub.current_period_end || sub.fecha_vencimiento;
+        if (!fecha) return null;
+        const t = new Date(fecha).getTime();
+        if (t < now || t > limite) return null;
+        return { ...e, fechaRenov: fecha, diasRestantes: Math.ceil((t - now) / 86400000) };
+      })
+      .filter((x): x is any => !!x)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes);
+  }, [empresas]);
+
+  // ── Empresas en riesgo de churn ──
+  const enRiesgoChurn = useMemo(() => {
+    const now = new Date().getTime();
+    const risk: Array<{ id: string; nombre: string; razon: string; score: number; status: string }> = [];
+    empresas.forEach(e => {
+      const sub = e.subscriptions?.[0];
+      if (!sub) return;
+      const status = sub.status;
+      // Past_due > 7 días
+      if (status === 'past_due' || status === 'gracia') {
+        const since = sub.updated_at ? differenceInDays(new Date(), new Date(sub.updated_at)) : 0;
+        risk.push({ id: e.id, nombre: e.nombre, razon: `${status} hace ${since}d`, score: 90 + Math.min(10, since), status });
+        return;
+      }
+      // Trial por vencer en ≤3 días sin facturas pagadas
+      if (status === 'trial' && sub.trial_ends_at) {
+        const dias = Math.ceil((new Date(sub.trial_ends_at).getTime() - now) / 86400000);
+        const haPagado = cobradas.some(f => f.empresa_id === e.id);
+        if (dias >= 0 && dias <= 3 && !haPagado) {
+          risk.push({ id: e.id, nombre: e.nombre, razon: `Trial vence en ${dias}d sin pago`, score: 80 - dias * 5, status });
+        }
+      }
+      // Activa con factura vencida
+      if (status === 'active') {
+        const venc = facturas.filter(f => f.empresa_id === e.id && f.estado === 'pendiente' && f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < now);
+        if (venc.length) {
+          risk.push({ id: e.id, nombre: e.nombre, razon: `${venc.length} factura(s) vencida(s)`, score: 60 + venc.length * 5, status });
+        }
+      }
+    });
+    return risk.sort((a, b) => b.score - a.score).slice(0, 25);
+  }, [empresas, cobradas, facturas]);
+
+  // ── Pagos fallidos recientes (24h) ──
+  const pagosFallidos24h = useMemo(() => {
+    const ago = Date.now() - 24 * 3600 * 1000;
+    return stripeInvs.filter((i: any) =>
+      (i.status === 'open' && i.attempt_count > 0) || i.status === 'uncollectible'
+    ).filter((i: any) => (i.created || 0) * 1000 >= ago);
+  }, [stripeInvs]);
+
+  // ── Conteo de alertas (badge) ──
+  const alertasCount =
+    pagosFallidos24h.length +
+    trialsActivos.filter(t => t.diasRestantes <= 3).length +
+    enRiesgoChurn.filter(r => r.score >= 80).length +
+    facturasVencidas.count;
+
+
+
   const rangeLabel = preset === 'hoy' ? 'Hoy'
     : preset === 'todo' ? 'Histórico'
     : from ? `${format(from, 'dd MMM', { locale: es })} → ${format(to, 'dd MMM yyyy', { locale: es })}`
