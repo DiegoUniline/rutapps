@@ -287,9 +287,9 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     enabled: !!surtirAlmacenId && showSurtirDialog,
   });
 
-  // Stock per (almacen_origen_id) selected in lines — only fetch when at least one line has origen
+  // Stock per (almacen_origen_id) selected in lines — fallback to entrega.almacen_id so stock se ve sin re-seleccionar
   const lineaOrigenIds = Array.from(new Set(
-    lineas.map((l: any) => l.almacen_origen_id).filter(Boolean)
+    lineas.map((l: any) => l.almacen_origen_id ?? form.almacen_id).filter(Boolean)
   )) as string[];
   const { data: stockPorAlmacenLineas } = useQuery({
     queryKey: ['stock_almacen_lineas', lineaOrigenIds.sort().join(',')],
