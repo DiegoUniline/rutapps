@@ -95,20 +95,44 @@ export default function SaldosProveedorPage() {
   const [notas, setNotas] = useState('');
   const [payables, setPayables] = useState<PayableCompra[]>([]);
   const [saving, setSaving] = useState(false);
+  const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('saldos-proveedor');
 
   const { data: proveedores, isLoading } = useProveedoresSaldo();
   const { data: compras, isLoading: loadingDetalle } = useProveedorDetalle(selectedId);
 
+  const FILTER_OPTIONS = useMemo(() => [
+    { key: 'proveedor', label: 'Proveedor', options: (proveedores ?? []).map(p => ({ value: p.id, label: p.nombre })) },
+    { key: 'saldo', label: 'Saldo', options: [
+      { value: 'con', label: 'Con saldo' },
+      { value: 'sin', label: 'Sin saldo' },
+    ]},
+  ], [proveedores]);
+
   const filtered = useMemo(() => {
-    if (!proveedores) return [];
-    if (!search) return proveedores;
-    const s = search.toLowerCase();
-    return proveedores.filter(p => p.nombre.toLowerCase().includes(s));
-  }, [proveedores, search]);
+    let list = proveedores ?? [];
+    const provArr = filters.proveedor;
+    if (provArr && provArr.length > 0) list = list.filter(p => provArr.includes(p.id));
+    const saldoArr = filters.saldo;
+    if (saldoArr && saldoArr.length > 0) {
+      list = list.filter(p => {
+        const con = p.saldoPendiente > 0.01;
+        return saldoArr.includes('con') && saldoArr.includes('sin') ? true : saldoArr.includes('con') ? con : !con;
+      });
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(p => p.nombre.toLowerCase().includes(s));
+    }
+    return list;
+  }, [proveedores, filters, search]);
+
+  const hasFilters = (filters.proveedor?.length > 0) || (filters.saldo?.length > 0);
 
   const selected = proveedores?.find(p => p.id === selectedId);
-  const totalPendienteGlobal = proveedores?.reduce((s, p) => s + p.saldoPendiente, 0) ?? 0;
-  const provConSaldo = proveedores?.filter(p => p.saldoPendiente > 0.01).length ?? 0;
+  const totalPendienteGlobal = filtered.reduce((s, p) => s + p.saldoPendiente, 0);
+  const provConSaldo = filtered.filter(p => p.saldoPendiente > 0.01).length;
+  const totalProveedores = filtered.length;
+  const totalComprado = filtered.reduce((s, p) => s + p.totalComprado, 0);
 
   const comprasPendientes = compras?.filter(c => (c.saldo_pendiente ?? 0) > 0.01) ?? [];
   const comprasPagadas = compras?.filter(c => (c.saldo_pendiente ?? 0) <= 0.01) ?? [];
