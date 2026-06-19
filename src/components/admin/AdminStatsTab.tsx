@@ -76,7 +76,7 @@ const isCollected = (f: FacturaRow) =>
 const methodLabel = (f: FacturaRow) =>
   f.stripe_payment_intent_id ? 'Stripe' : f.metodo_pago === 'transferencia' ? 'Transferencia' : 'Otro';
 
-export default function AdminStatsTab() {
+export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
   const [preset, setPreset] = useState<Preset>('hoy');
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date>(new Date());
