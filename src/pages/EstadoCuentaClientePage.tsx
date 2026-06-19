@@ -289,6 +289,19 @@ export default function EstadoCuentaClientePage() {
                     </TableRow>
                   ))}
                 </TableBody>
+                {ventasPagadas.length > 0 && (() => {
+                  const shown = ventasPagadas.slice(0, 30);
+                  const t = shown.reduce((s, v) => s + (v.total ?? 0), 0);
+                  return (
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-[11px] text-muted-foreground font-semibold">Totales ({shown.length})</TableCell>
+                        <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    </TableFooter>
+                  );
+                })()}
               </Table>
             </div>
           </div>
