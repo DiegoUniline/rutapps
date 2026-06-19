@@ -5,13 +5,14 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { Search, Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
+import { OdooFilterBar, FilterOption } from '@/components/OdooFilterBar';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 /* ── hooks ── */
 function useClientesSaldo() {
