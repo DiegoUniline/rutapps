@@ -135,6 +135,8 @@ export default function ComprasPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const qc = useQueryClient();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
@@ -147,6 +149,16 @@ export default function ComprasPage() {
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
+
+  const { data: almacenes } = useQuery({
+    queryKey: ['almacenes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   // Detalle query
   const { data: lineasRaw, isLoading: isLoadingLineas } = useQuery({
@@ -177,7 +189,7 @@ export default function ComprasPage() {
     },
   });
 
-  // Build dynamic proveedor filter options from data
+  // Build dynamic proveedor / almacen filter options from data
   const proveedorOptions = useMemo(() => {
     const names = new Map<string, string>();
     for (const c of compras ?? []) {
@@ -188,20 +200,29 @@ export default function ComprasPage() {
     return Array.from(names.entries()).map(([id, nombre]) => ({ value: id, label: nombre })).sort((a, b) => a.label.localeCompare(b.label));
   }, [compras]);
 
+  const almacenOptions = useMemo(() => {
+    return (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [almacenes]);
+
   const FILTER_OPTIONS = useMemo(() => [
     ...STATIC_FILTER_OPTIONS,
     { key: 'proveedor', label: 'Proveedor', options: proveedorOptions },
-  ], [proveedorOptions]);
+    { key: 'almacen', label: 'Almacén', options: almacenOptions },
+  ], [proveedorOptions, almacenOptions]);
 
-  // Apply client-side filters for condicion_pago and proveedor
+  // Apply client-side filters for condicion_pago, proveedor, almacen and date range
   const filteredCompras = useMemo(() => {
     let list = compras ?? [];
     const condF = filters.condicion_pago;
     if (condF && condF.length > 0) list = list.filter((c: any) => condF.includes(c.condicion_pago));
     const provF = filters.proveedor;
     if (provF && provF.length > 0) list = list.filter((c: any) => provF.includes(c.proveedor_id));
+    const almF = filters.almacen;
+    if (almF && almF.length > 0) list = list.filter((c: any) => almF.includes(c.almacen_id));
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
     return list;
-  }, [compras, filters]);
+  }, [compras, filters, desde, hasta]);
 
   const total = filteredCompras.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
@@ -505,12 +526,16 @@ export default function ComprasPage() {
               activeFilters={filters}
               onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
               onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-              onClearFilters={() => { clearFilters(); setPage(1); }}
+              onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); setPage(1); }}
               groupByOptions={GROUP_BY_OPTIONS}
               activeGroupBy={groupBy}
               onGroupByChange={setGroupBy}
               activeGroupByLevels={groupByLevels}
               onGroupByLevelChange={setGroupByLevel}
+              dateFrom={desde}
+              dateTo={hasta}
+              onDateFromChange={val => { setDesde(val); setPage(1); }}
+              onDateToChange={val => { setHasta(val); setPage(1); }}
             />
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
               <ExportButton
