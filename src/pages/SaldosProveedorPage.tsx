@@ -100,12 +100,19 @@ export default function SaldosProveedorPage() {
   const [payables, setPayables] = useState<PayableCompra[]>([]);
   const [saving, setSaving] = useState(false);
   const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('saldos-proveedor');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const condicionFilter = filters.condicion_pago ?? [];
 
-  const { data: proveedores, isLoading } = useProveedoresSaldo();
+  const { data: proveedores, isLoading } = useProveedoresSaldo(desde, hasta, condicionFilter);
   const { data: compras, isLoading: loadingDetalle } = useProveedorDetalle(selectedId);
 
   const FILTER_OPTIONS = useMemo(() => [
     { key: 'proveedor', label: 'Proveedor', options: (proveedores ?? []).map(p => ({ value: p.id, label: p.nombre })) },
+    { key: 'condicion_pago', label: 'Condición', options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
+    ]},
     { key: 'saldo', label: 'Saldo', options: [
       { value: 'con', label: 'Con saldo' },
       { value: 'sin', label: 'Sin saldo' },
