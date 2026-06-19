@@ -35,6 +35,7 @@ import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
 import { VentasDesktopTable } from './ventas/VentasDesktopTable';
 import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 function useVendedoresForFilter() {
   const { empresa } = useAuth();
