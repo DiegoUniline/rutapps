@@ -178,6 +178,7 @@ export default function InventarioPage() {
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
   const [showPresModal, setShowPresModal] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
@@ -188,9 +189,13 @@ export default function InventarioPage() {
   }
   // (in-cell breakdown removed; presented in modal instead)
 
-  const filteredProducts = data?.productos.filter(p =>
-    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = data?.productos.filter(p => {
+    if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.codigo.toLowerCase().includes(search.toLowerCase())) return false;
+    const total = p.stockTotal ?? 0;
+    if (stockFilter === 'con' && total <= 0) return false;
+    if (stockFilter === 'sin' && total > 0) return false;
+    return true;
+  });
 
   const handleExportExcel = useCallback(() => {
     if (!data || !filteredProducts) return;
@@ -343,11 +348,28 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search + stock filter */}
       {view !== 'rutas' && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative max-w-sm flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
+            {([
+              { v: 'todos', label: 'Todos' },
+              { v: 'con', label: 'Con stock' },
+              { v: 'sin', label: 'Sin stock' },
+            ] as const).map(o => (
+              <button
+                key={o.v}
+                onClick={() => setStockFilter(o.v)}
+                className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
