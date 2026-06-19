@@ -399,7 +399,7 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
+                  <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
