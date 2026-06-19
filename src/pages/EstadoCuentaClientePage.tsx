@@ -416,6 +416,22 @@ export default function EstadoCuentaClientePage() {
               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
             )}
           </TableBody>
+          {filtered.length > 0 && (() => {
+            const docs = filtered.reduce((s, c) => s + c.docs, 0);
+            const tot = filtered.reduce((s, c) => s + c.totalVendido, 0);
+            const pend = filtered.reduce((s, c) => s + c.saldoPendiente, 0);
+            return (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
+                  <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(pend)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            );
+          })()}
         </Table>
       </div>
     </div>
