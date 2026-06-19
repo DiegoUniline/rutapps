@@ -468,6 +468,15 @@ export default function FacturacionCfdiPage() {
                     </TableRow>
                   ))}
                 </TableBody>
+                {!!filtered.length && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">{fmt(filtered.reduce((s: number, c: any) => s + Number(c.total || 0), 0))}</TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           )}
