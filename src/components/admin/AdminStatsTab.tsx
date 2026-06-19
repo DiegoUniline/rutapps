@@ -776,6 +776,155 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
         </TabsContent>
 
 
+        {/* ──────────── ALERTAS ──────────── */}
+        <TabsContent value="alertas" className="space-y-4 mt-4">
+          <Story
+            title="Alertas accionables"
+            subtitle={`${alertasCount} situaciones requieren atención. Click en cualquier empresa para ver su detalle.`}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Flame} label="Pagos fallidos 24h" value={pagosFallidos24h.length.toString()} accent="destructive" />
+            <StatCard icon={Hourglass} label="Trials por vencer (≤3d)" value={trialsActivos.filter(t => t.diasRestantes <= 3).length.toString()} accent="destructive" />
+            <StatCard icon={AlertTriangle} label="Facturas vencidas" value={facturasVencidas.count.toString()} hint={fmtMoney(facturasVencidas.total)} accent="destructive" />
+            <StatCard icon={ShieldAlert} label="Riesgo churn alto" value={enRiesgoChurn.filter(r => r.score >= 80).length.toString()} accent="destructive" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartCard title="Pagos fallidos en Stripe (24h)" subtitle="Facturas con intento fallido o incobrables" icon={Flame}>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {pagosFallidos24h.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin pagos fallidos recientes</div>
+                ) : pagosFallidos24h.map((i: any) => (
+                  <div key={i.id} className="flex items-center justify-between text-xs bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{i.empresa_nombre || i.customer_name || '—'}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {i.status} · {i.attempt_count || 0} intentos · {format(new Date((i.created || 0) * 1000), 'dd MMM HH:mm', { locale: es })}
+                      </div>
+                    </div>
+                    <span className="text-destructive font-semibold ml-3 shrink-0">{fmtMoney2((i.amount_remaining || 0) / 100)}</span>
+                  </div>
+                ))}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Facturas vencidas" subtitle={`${facturasVencidas.count} facturas · ${fmtMoney(facturasVencidas.total)}`} icon={AlertTriangle}>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {facturasVencidas.items.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin facturas vencidas</div>
+                ) : facturasVencidas.items.slice(0, 20).map((f: any) => {
+                  const diasVencida = differenceInDays(new Date(), new Date(f.fecha_vencimiento));
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => onSelectEmpresa?.(f.empresa_id)}
+                      className="w-full flex items-center justify-between text-xs bg-destructive/5 hover:bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-left transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
+                        <div className="text-[10px] text-muted-foreground">Vencida hace {diasVencida}d · {f.numero_factura || ''}</div>
+                      </div>
+                      <span className="text-destructive font-semibold ml-3 shrink-0">{fmtMoney2(Number(f.total))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </ChartCard>
+          </div>
+        </TabsContent>
+
+        {/* ──────────── RIESGO ──────────── */}
+        <TabsContent value="riesgo" className="space-y-4 mt-4">
+          <Story
+            title="Riesgo, trials y renovaciones"
+            subtitle="Detecta cuentas en peligro, trials por vencer y renovaciones próximas para actuar antes."
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={ShieldAlert} label="En riesgo de churn" value={enRiesgoChurn.length.toString()} accent="destructive" />
+            <StatCard icon={Hourglass} label="Trials activos" value={trialsActivos.length.toString()} accent="primary" />
+            <StatCard icon={Clock} label="Renueva en 7 días" value={proximasRenovaciones.length.toString()} accent="success" />
+            <StatCard icon={Target} label="Trial → Pago" value={fmtPct(bi.conversion)} accent="success" />
+          </div>
+
+          <ChartCard title="Top empresas en riesgo de churn" subtitle="Score combinando status, antigüedad de impago y facturas vencidas" icon={ShieldAlert}>
+            <div className="space-y-1.5 max-h-96 overflow-y-auto">
+              {enRiesgoChurn.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">Sin empresas en riesgo</div>
+              ) : enRiesgoChurn.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelectEmpresa?.(r.id)}
+                  className="w-full flex items-center gap-3 text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                >
+                  <div className={cn(
+                    'h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                    r.score >= 90 ? 'bg-destructive text-destructive-foreground' :
+                    r.score >= 75 ? 'bg-yellow-500 text-white' :
+                    'bg-muted text-muted-foreground'
+                  )}>{r.score}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-foreground truncate">{r.nombre}</div>
+                    <div className="text-[10px] text-muted-foreground">{r.razon}</div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-card border border-border text-muted-foreground shrink-0">
+                    {STATUS_LABELS[r.status] || r.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ChartCard>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartCard title="Trials activos por vencer" subtitle={`${trialsActivos.length} en periodo de prueba`} icon={Hourglass}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {trialsActivos.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin trials activos</div>
+                ) : trialsActivos.map((t: any) => (
+                  <button
+                    key={t.id}
+                    onClick={() => onSelectEmpresa?.(t.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{t.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">Vence {format(new Date(t.finTrial), 'dd MMM yyyy', { locale: es })}</div>
+                    </div>
+                    <span className={cn(
+                      'text-[10px] font-semibold px-2 py-0.5 rounded-full border ml-3 shrink-0',
+                      t.diasRestantes <= 3 ? 'bg-destructive/10 border-destructive/30 text-destructive' :
+                      t.diasRestantes <= 7 ? 'bg-yellow-500/10 border-yellow-500/30 text-warning' :
+                      'bg-primary/10 border-primary/30 text-primary'
+                    )}>{t.diasRestantes}d</span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+
+            <ChartCard title="Próximas renovaciones (7 días)" subtitle="Suscripciones activas que cobran pronto" icon={Clock}>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {proximasRenovaciones.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-4 text-center">Sin renovaciones próximas</div>
+                ) : proximasRenovaciones.map((r: any) => (
+                  <button
+                    key={r.id}
+                    onClick={() => onSelectEmpresa?.(r.id)}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-foreground truncate">{r.nombre}</div>
+                      <div className="text-[10px] text-muted-foreground">Renueva {format(new Date(r.fechaRenov), 'dd MMM yyyy', { locale: es })}</div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 border border-success/30 text-success ml-3 shrink-0">
+                      {r.diasRestantes}d
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </ChartCard>
+          </div>
+        </TabsContent>
+
+
         {/* ──────────── ALTAS ──────────── */}
         <TabsContent value="altas" className="space-y-4 mt-4">
           <Story
