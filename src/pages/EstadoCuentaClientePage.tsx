@@ -335,6 +335,14 @@ export default function EstadoCuentaClientePage() {
                   <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground text-sm">Sin pagos registrados</TableCell></TableRow>
                 )}
               </TableBody>
+              {!!(detalle?.cobros?.length) && (
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({detalle.cobros.length})</TableCell>
+                    <TableCell className="text-right font-bold text-success tabular-nums">{fmt(detalle.cobros.reduce((s, c) => s + (c.monto ?? 0), 0))}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           </div>
         </div>
