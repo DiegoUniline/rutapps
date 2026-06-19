@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   ComposedChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -80,6 +81,7 @@ const methodLabel = (f: FacturaRow) =>
 export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
   const [preset, setPreset] = useState<Preset>('hoy');
   const [activeTab, setActiveTab] = useState<string>('panel');
+  const [estadoCuentaEmpresa, setEstadoCuentaEmpresa] = useState<{ id: string; nombre: string } | null>(null);
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date>(new Date());
 
@@ -821,7 +823,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                   return (
                     <button
                       key={f.id}
-                      onClick={() => onSelectEmpresa?.(f.empresa_id)}
+                      onClick={() => setEstadoCuentaEmpresa({ id: f.empresa_id, nombre: f.empresas?.nombre || '—' })}
                       className="w-full flex items-center justify-between text-xs bg-destructive/5 hover:bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-left transition-colors"
                     >
                       <div className="min-w-0 flex-1">
@@ -1133,7 +1135,11 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             ) : (
               <div className="space-y-1 max-h-80 overflow-y-auto">
                 {pendientes.map((f: any) => (
-                  <div key={f.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+                  <button
+                    key={f.id}
+                    onClick={() => setEstadoCuentaEmpresa({ id: f.empresa_id, nombre: f.empresas?.nombre || '—' })}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
                       <div className="text-[10px] text-muted-foreground">
@@ -1144,7 +1150,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                       </div>
                     </div>
                     <span className="font-semibold text-destructive ml-3 shrink-0">{fmtMoney2(Number(f.total))}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -1224,6 +1230,14 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
           </ChartCard>
         </TabsContent>
       </Tabs>
+
+      {/* ── Modal: Estado de cuenta de empresa ── */}
+      <EstadoCuentaModal
+        empresa={estadoCuentaEmpresa}
+        facturas={facturas}
+        onClose={() => setEstadoCuentaEmpresa(null)}
+        onOpenDetail={(id) => { setEstadoCuentaEmpresa(null); onSelectEmpresa?.(id); }}
+      />
     </div>
   );
 }
@@ -1499,5 +1513,149 @@ function StripeInvoicesTable({ invoices, loading }: { invoices: any[]; loading: 
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─────────── Modal: Estado de cuenta de empresa ───────────
+function EstadoCuentaModal({
+  empresa,
+  facturas,
+  onClose,
+  onOpenDetail,
+}: {
+  empresa: { id: string; nombre: string } | null;
+  facturas: FacturaRow[];
+  onClose: () => void;
+  onOpenDetail: (id: string) => void;
+}) {
+  const data = useMemo(() => {
+    if (!empresa) return null;
+    const all = facturas
+      .filter(f => f.empresa_id === empresa.id)
+      .sort((a, b) => {
+        const da = new Date(a.fecha_emision || 0).getTime();
+        const db = new Date(b.fecha_emision || 0).getTime();
+        return db - da;
+      });
+    const cobradas = all.filter(isCollected);
+    const pendientes = all.filter(f => f.estado === 'pendiente');
+    const totalCobrado = cobradas.reduce((s, f) => s + Number(f.total || 0), 0);
+    const totalPendiente = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
+    const ultimoPago = cobradas
+      .filter(f => f.fecha_pago)
+      .sort((a, b) => new Date(b.fecha_pago!).getTime() - new Date(a.fecha_pago!).getTime())[0];
+    const pagosTransfer = cobradas.filter(f => f.metodo_pago === 'transferencia').length;
+    const pagosStripe = cobradas.filter(f => !!f.stripe_payment_intent_id).length;
+    return { all, cobradas, pendientes, totalCobrado, totalPendiente, ultimoPago, pagosTransfer, pagosStripe };
+  }, [empresa, facturas]);
+
+  if (!empresa || !data) return null;
+
+  return (
+    <Dialog open={!!empresa} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-primary" /> Estado de cuenta — {empresa.nombre}
+          </DialogTitle>
+          <DialogDescription>
+            Historial completo de facturas, pagos y métodos para entender la situación.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Resumen */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+          <div className="border border-success/30 bg-success/5 rounded-lg p-3">
+            <div className="text-[10px] uppercase text-muted-foreground font-semibold">Cobrado</div>
+            <div className="text-lg font-bold text-success">{fmtMoney2(data.totalCobrado)}</div>
+            <div className="text-[10px] text-muted-foreground">{data.cobradas.length} pagos</div>
+          </div>
+          <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-3">
+            <div className="text-[10px] uppercase text-muted-foreground font-semibold">Pendiente</div>
+            <div className="text-lg font-bold text-destructive">{fmtMoney2(data.totalPendiente)}</div>
+            <div className="text-[10px] text-muted-foreground">{data.pendientes.length} facturas</div>
+          </div>
+          <div className="border border-primary/30 bg-primary/5 rounded-lg p-3">
+            <div className="text-[10px] uppercase text-muted-foreground font-semibold">Último pago</div>
+            <div className="text-sm font-bold text-foreground">
+              {data.ultimoPago?.fecha_pago ? format(new Date(data.ultimoPago.fecha_pago), 'dd MMM yyyy', { locale: es }) : '—'}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {data.ultimoPago ? `${fmtMoney2(Number(data.ultimoPago.total))} · ${methodLabel(data.ultimoPago)}` : 'Sin pagos'}
+            </div>
+          </div>
+          <div className="border border-border bg-card rounded-lg p-3">
+            <div className="text-[10px] uppercase text-muted-foreground font-semibold">Métodos usados</div>
+            <div className="text-sm font-bold text-foreground">{data.pagosStripe} Stripe</div>
+            <div className="text-[10px] text-muted-foreground">{data.pagosTransfer} Transferencia</div>
+          </div>
+        </div>
+
+        {/* Tabla cronológica */}
+        <div className="mt-4">
+          <div className="text-xs font-semibold text-foreground mb-1.5">Movimientos ({data.all.length})</div>
+          <div className="overflow-x-auto border border-border rounded-lg">
+            <table className="w-full text-[11px]">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="text-left px-2 py-1.5 font-semibold">Folio</th>
+                  <th className="text-left px-2 py-1.5 font-semibold">Concepto</th>
+                  <th className="text-left px-2 py-1.5 font-semibold">Emitida</th>
+                  <th className="text-left px-2 py-1.5 font-semibold">Vence</th>
+                  <th className="text-left px-2 py-1.5 font-semibold">Pagada</th>
+                  <th className="text-left px-2 py-1.5 font-semibold">Método</th>
+                  <th className="text-right px-2 py-1.5 font-semibold">Total</th>
+                  <th className="text-center px-2 py-1.5 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.all.length === 0 && (
+                  <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Sin facturas</td></tr>
+                )}
+                {data.all.map(f => {
+                  const pagada = isCollected(f);
+                  const vencida = !pagada && f.fecha_vencimiento && new Date(f.fecha_vencimiento).getTime() < Date.now();
+                  return (
+                    <tr key={f.id} className="border-t border-border hover:bg-accent/30">
+                      <td className="px-2 py-1.5 font-mono text-[10px]">{f.numero_factura || f.id.slice(0, 8)}</td>
+                      <td className="px-2 py-1.5 truncate max-w-[160px]">{f.concepto || 'Suscripción'}</td>
+                      <td className="px-2 py-1.5">{f.fecha_emision ? format(new Date(f.fecha_emision), 'dd/MM/yy', { locale: es }) : '—'}</td>
+                      <td className="px-2 py-1.5">{f.fecha_vencimiento ? format(new Date(f.fecha_vencimiento), 'dd/MM/yy', { locale: es }) : '—'}</td>
+                      <td className="px-2 py-1.5">{f.fecha_pago ? format(new Date(f.fecha_pago), 'dd/MM/yy', { locale: es }) : '—'}</td>
+                      <td className="px-2 py-1.5">
+                        {pagada ? (
+                          <span className={cn(
+                            'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                            f.stripe_payment_intent_id ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'
+                          )}>{methodLabel(f)}</span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-semibold">{fmtMoney2(Number(f.total))}</td>
+                      <td className="px-2 py-1.5 text-center">
+                        <span className={cn(
+                          'text-[10px] font-semibold px-2 py-0.5 rounded-full border',
+                          pagada ? 'bg-success/10 border-success/30 text-success'
+                          : vencida ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                          : 'bg-yellow-500/10 border-yellow-500/30 text-warning'
+                        )}>
+                          {pagada ? 'Pagada' : vencida ? 'Vencida' : f.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex justify-between gap-2 mt-4">
+          <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
+          <Button size="sm" onClick={() => onOpenDetail(empresa.id)}>
+            Ver detalle completo de la empresa <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
