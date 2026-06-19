@@ -1160,6 +1160,23 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             <StatCard icon={Zap} label="Net New MRR" value={fmtMoney(bi.netNewMRR)} hint="Nuevo MRR del mes" accent="success" />
           </div>
 
+          {/* ── MRR / ARR / Proyecciones ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={TrendingUp} label="MRR actual" value={fmtMoney(mrrAdv.mrr)} hint="Ingreso recurrente mensual" accent="primary" />
+            <StatCard icon={DollarSign} label="ARR" value={fmtMoney(mrrAdv.arr)} hint="MRR × 12" accent="success" />
+            <StatCard icon={Target} label="MRR proy. fin año" value={fmtMoney(mrrAdv.mrrFinAnio)} hint={`ARR ${fmtMoney(mrrAdv.arrFinAnio)}`} accent="success" />
+            <StatCard icon={Zap} label="Quick Ratio" value={quickRatio.toFixed(2)} hint={quickRatio >= 4 ? 'Excelente (≥4)' : quickRatio >= 1 ? 'Sano' : 'En contracción'} accent={quickRatio >= 4 ? 'success' : quickRatio >= 1 ? 'primary' : 'destructive'} />
+          </div>
+
+          {/* ── DSO / NRR / GRR ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Clock} label="DSO" value={`${Math.round(dso)} d`} hint="Días promedio de cobro" accent={dso <= 7 ? 'success' : dso <= 30 ? 'primary' : 'destructive'} />
+            <StatCard icon={Heart} label="NRR mensual" value={fmtPct(retentionAdv.nrr)} hint="Net Revenue Retention" accent={retentionAdv.nrr >= 100 ? 'success' : 'primary'} />
+            <StatCard icon={Repeat} label="GRR mensual" value={fmtPct(retentionAdv.grr)} hint="Gross Revenue Retention" accent={retentionAdv.grr >= 95 ? 'success' : 'destructive'} />
+            <StatCard icon={AlertTriangle} label="% facturas vencidas" value={fmtPct(facturasVencidas.pct)} hint={`${facturasVencidas.count} facturas`} accent={facturasVencidas.pct < 5 ? 'success' : 'destructive'} />
+          </div>
+
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ChartCard title="MRR y cuentas activas (12 meses)" subtitle="Crecimiento del negocio recurrente" icon={TrendingUp}>
               <ResponsiveContainer width="100%" height={260}>
