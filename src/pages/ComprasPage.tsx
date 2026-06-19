@@ -147,7 +147,7 @@ export default function ComprasPage() {
   const [desdeD, setDesdeD] = useState('');
   const [hastaD, setHastaD] = useState('');
 
-  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
+  const statusFilter = filters.status ?? [];
   const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
 
   const { data: almacenes } = useQuery({
