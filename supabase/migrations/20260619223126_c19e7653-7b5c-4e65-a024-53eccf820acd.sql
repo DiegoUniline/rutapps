@@ -1,0 +1,1 @@
+UPDATE public.subscriptions SET max_usuarios = COALESCE(max_usuarios,0) + 10, es_manual = true, updated_at = now() WHERE empresa_id = '41cdb6df-40c0-4a95-89de-a54bf8eba0de';
