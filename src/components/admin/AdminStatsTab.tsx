@@ -823,7 +823,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                   return (
                     <button
                       key={f.id}
-                      onClick={() => onSelectEmpresa?.(f.empresa_id)}
+                      onClick={() => setEstadoCuentaEmpresa({ id: f.empresa_id, nombre: f.empresas?.nombre || '—' })}
                       className="w-full flex items-center justify-between text-xs bg-destructive/5 hover:bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-left transition-colors"
                     >
                       <div className="min-w-0 flex-1">
