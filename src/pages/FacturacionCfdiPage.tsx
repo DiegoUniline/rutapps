@@ -597,7 +597,14 @@ export default function FacturacionCfdiPage() {
           </DialogHeader>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
-            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkDelete}>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={() => {
+              setShowBulkDelete(false);
+              requestPin(
+                'Eliminar CFDIs',
+                `Ingresa el PIN de administrador para eliminar ${selectedDeletable.length} CFDI(s).`,
+                () => runBulkDelete(),
+              );
+            }}>
               {bulkProcessing ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
           </div>
