@@ -704,7 +704,7 @@ export default function TraspasoFormPage() {
                           <tr className="border-b border-table-border text-left">
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20">Código</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{readOnly ? 'En destino' : 'Disponible'}</th>
                             <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">A traspasar</th>
                           </tr>
                         </thead>
