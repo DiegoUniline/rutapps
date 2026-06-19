@@ -399,7 +399,7 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
+                  <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
@@ -459,8 +459,8 @@ export default function InventarioPage() {
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
                       return (
-                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive")}>{fmtNum(qty)}</span> : '—'}
+                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-destructive" : u.tipo === 'ruta' ? "text-warning" : "")}>
+                          <span className={cn(qty <= 0 && "text-destructive")}>{fmtNum(qty)}</span>
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
