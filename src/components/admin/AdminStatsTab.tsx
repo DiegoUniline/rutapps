@@ -594,26 +594,34 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
 
       {/* ── TABS ── */}
       <Tabs defaultValue="panel">
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto gap-1">
           {[
             { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
+            { v: 'alertas', icon: Bell, l: 'Alertas', badge: alertasCount },
+            { v: 'riesgo', icon: ShieldAlert, l: 'Riesgo' },
             { v: 'altas', icon: UserPlus, l: 'Altas' },
             { v: 'bajas', icon: UserMinus, l: 'Bajas' },
             { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
-            { v: 'salud', icon: Activity, l: 'Salud SaaS' },
+            { v: 'salud', icon: Activity, l: 'Salud' },
           ].map(t => {
             const Icon = t.icon;
             return (
               <TabsTrigger
                 key={t.v}
                 value={t.v}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                className="relative data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
               >
                 <Icon className="h-3.5 w-3.5 mr-1.5" />{t.l}
+                {(t as any).badge > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center text-[9px] font-bold bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 min-w-[18px]">
+                    {(t as any).badge}
+                  </span>
+                )}
               </TabsTrigger>
             );
           })}
         </TabsList>
+
 
 
         {/* ──────────── PANEL ──────────── */}
