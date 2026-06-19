@@ -801,9 +801,17 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
   );
 }
 
+import { useReconnectRefresh } from "@/hooks/useReconnectRefresh";
+
+function ReconnectRefreshMount() {
+  useReconnectRefresh();
+  return null;
+}
+
 const App = () => (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
+      <ReconnectRefreshMount />
       <ErrorModalProvider>
         <TooltipProvider>
           <Sonner position="top-right" />
