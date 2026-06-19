@@ -348,11 +348,28 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search + stock filter */}
       {view !== 'rutas' && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative max-w-sm flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
+            {([
+              { v: 'todos', label: 'Todos' },
+              { v: 'con', label: 'Con stock' },
+              { v: 'sin', label: 'Sin stock' },
+            ] as const).map(o => (
+              <button
+                key={o.v}
+                onClick={() => setStockFilter(o.v)}
+                className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
