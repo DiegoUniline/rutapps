@@ -73,10 +73,12 @@ const fmtCents = (cents: number) => fmtMoney2((cents || 0) / 100);
 const fmtPct = (n: number) => `${(n || 0).toFixed(1)}%`;
 
 const isCollected = (f: FacturaRow) =>
-  f.estado === 'pagada' && (!!f.stripe_payment_intent_id || f.metodo_pago === 'transferencia');
+  f.estado === 'pagada' && !!f.fecha_pago;
 
 const methodLabel = (f: FacturaRow) =>
-  f.stripe_payment_intent_id ? 'Stripe' : f.metodo_pago === 'transferencia' ? 'Transferencia' : 'Otro';
+  f.stripe_payment_intent_id ? 'Stripe' :
+  f.metodo_pago === 'transferencia' ? 'Transferencia' :
+  f.metodo_pago ? f.metodo_pago : 'Manual';
 
 export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void } = {}) {
   const [preset, setPreset] = useState<Preset>('hoy');
