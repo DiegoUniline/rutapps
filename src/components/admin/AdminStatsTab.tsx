@@ -343,6 +343,53 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
       .slice(0, 15);
   }, [empresas]);
 
+  // ── Altas recientes ──
+  const altasRecientes = useMemo(() => {
+    return [...empresas]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 15)
+      .map(e => ({
+        ...e,
+        status: e.subscriptions?.[0]?.status || 'sin_sub',
+      }));
+  }, [empresas]);
+
+  // ── Proyección a fin de año (lineal, basada en YTD) ──
+  const proyeccion = useMemo(() => {
+    const now = new Date();
+    const yStart = startOfYear(now).getTime();
+    const yEnd = endOfYear(now).getTime();
+    const totalDaysYear = Math.max(1, Math.round((yEnd - yStart) / 86400000) + 1);
+    const elapsedDays = Math.max(1, Math.round((now.getTime() - yStart) / 86400000) + 1);
+    const remainingDays = Math.max(0, totalDaysYear - elapsedDays);
+
+    const altasYTD = empresas.filter(e => new Date(e.created_at).getTime() >= yStart).length;
+    const bajasYTD = empresas.filter(e =>
+      e.subscriptions?.some(s => BAJA_STATUSES.includes(s.status) && new Date(bajaDate(s)).getTime() >= yStart)
+    ).length;
+    const ingresosYTD = cobradas
+      .filter(f => f.fecha_pago && new Date(f.fecha_pago).getTime() >= yStart)
+      .reduce((s, f) => s + Number(f.total || 0), 0);
+
+    const altasPorDia = altasYTD / elapsedDays;
+    const bajasPorDia = bajasYTD / elapsedDays;
+    const ingresosPorDia = ingresosYTD / elapsedDays;
+
+    const altasProy = altasYTD + altasPorDia * remainingDays;
+    const bajasProy = bajasYTD + bajasPorDia * remainingDays;
+    const ingresosProy = ingresosYTD + ingresosPorDia * remainingDays;
+    const activosProy = aLaFecha.activos + (altasPorDia - bajasPorDia) * remainingDays;
+
+    return {
+      altasYTD, bajasYTD, ingresosYTD,
+      altasProy: Math.round(altasProy),
+      bajasProy: Math.round(bajasProy),
+      activosProy: Math.max(0, Math.round(activosProy)),
+      ingresosProy,
+      elapsedDays, remainingDays,
+    };
+  }, [empresas, cobradas, aLaFecha]);
+
   const rangeLabel = preset === 'hoy' ? 'Hoy'
     : preset === 'todo' ? 'Histórico'
     : from ? `${format(from, 'dd MMM', { locale: es })} → ${format(to, 'dd MMM yyyy', { locale: es })}`
