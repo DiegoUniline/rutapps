@@ -409,10 +409,20 @@ export default function EstadoCuentaClientePage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar cliente..."
+        filterOptions={filterOptions}
+        activeFilters={filters}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
+        onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
+      />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
