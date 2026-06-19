@@ -6,17 +6,19 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // === Auto-bump de versión en cada build/dev ===
-// Lee src/version.ts, incrementa el patch (1.0.0 → 1.0.1) y reescribe el archivo.
+// Lee src/version.ts, incrementa el patch diario (YYYY.MM.DD.N) y reescribe el archivo.
 // Se ejecuta una sola vez al arrancar Vite (evita loops de HMR).
 function bumpAppVersion(): string {
   const versionPath = path.resolve(__dirname, "src/version.ts");
   try {
     const content = fs.readFileSync(versionPath, "utf-8");
-    const match = content.match(/APP_VERSION\s*=\s*['"](\d+)\.(\d+)\.(\d+)['"]/);
-    if (!match) return "0.0.0";
-    const [, maj, min, patch] = match;
-    const next = `${maj}.${min}.${Number(patch) + 1}`;
-    const buildDate = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const today = new Date().toISOString().slice(0, 10);
+    const todayVersionPrefix = today.replace(/-/g, ".");
+    const match = content.match(/APP_VERSION\s*=\s*['"](\d{4})\.(\d{2})\.(\d{2})\.(\d+)['"]/);
+    const currentPrefix = match ? `${match[1]}.${match[2]}.${match[3]}` : "";
+    const nextPatch = currentPrefix === todayVersionPrefix ? Number(match?.[4] ?? 0) + 1 : 1;
+    const next = `${todayVersionPrefix}.${nextPatch}`;
+    const buildDate = today;
     const newContent =
       `// App version – auto-bumped on every build by vite.config.ts\n` +
       `export const APP_VERSION = '${next}';\n` +
