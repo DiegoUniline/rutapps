@@ -1230,6 +1230,14 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
           </ChartCard>
         </TabsContent>
       </Tabs>
+
+      {/* ── Modal: Estado de cuenta de empresa ── */}
+      <EstadoCuentaModal
+        empresa={estadoCuentaEmpresa}
+        facturas={facturas}
+        onClose={() => setEstadoCuentaEmpresa(null)}
+        onOpenDetail={(id) => { setEstadoCuentaEmpresa(null); onSelectEmpresa?.(id); }}
+      />
     </div>
   );
 }
