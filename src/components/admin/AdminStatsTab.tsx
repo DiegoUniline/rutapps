@@ -1726,6 +1726,8 @@ function EstadoCuentaModal({
   onClose: () => void;
   onOpenDetail: (id: string) => void;
 }) {
+  const qc = useQueryClient();
+  const [cancelando, setCancelando] = useState(false);
   const data = useMemo(() => {
     if (!empresa) return null;
     const all = facturas
