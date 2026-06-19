@@ -189,9 +189,11 @@ export default function CuentasPagarPage() {
             </tr>
           </thead>
           <tbody>
-            {pageData.length === 0 && !isLoading && (
-              <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">Sin cuentas por pagar</td></tr>
-            )}
+          {pageData.length === 0 && !isLoading && (
+            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+              {hasFilters ? 'Sin cuentas con los filtros aplicados' : 'Sin cuentas por pagar'}
+            </td></tr>
+          )}
             {isLoading && (
               <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">Cargando...</td></tr>
             )}
