@@ -51,6 +51,7 @@ export default function FacturacionCfdiPage() {
   const isSuperAdmin = useIsSuperAdmin();
   const { fmt } = useCurrency();
   const navigate = useNavigate();
+  const { requestPin, PinDialog } = usePinAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showTimbrar, setShowTimbrar] = useState(false);
