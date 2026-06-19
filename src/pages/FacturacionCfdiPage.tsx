@@ -628,6 +628,7 @@ export default function FacturacionCfdiPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <PinDialog />
     </div>
   );
 }
