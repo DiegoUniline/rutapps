@@ -225,6 +225,21 @@ export default function CuentasPagarPage() {
               );
             })}
           </tbody>
+          {pageData.length > 0 && (
+            <tfoot>
+              <tr className="bg-card border-t border-border font-semibold text-[12px]">
+                <td colSpan={4} className="py-2 px-3 text-muted-foreground">
+                  {total} cuentas {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(totalCompras)}</td>
+                <td className="py-2 px-3 text-right tabular-nums text-success font-bold">
+                  {fmt(filteredCuentas.reduce((s, c: any) => s + ((c.total ?? 0) - (c.saldo_pendiente ?? 0)), 0))}
+                </td>
+                <td className="py-2 px-3 text-right tabular-nums text-destructive font-bold">{fmt(totalPorPagar)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </table>
         {total > 0 && (
           <OdooPagination from={from} to={to} total={total}
