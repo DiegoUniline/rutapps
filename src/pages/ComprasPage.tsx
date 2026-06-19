@@ -135,6 +135,8 @@ export default function ComprasPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const qc = useQueryClient();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
