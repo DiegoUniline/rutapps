@@ -59,18 +59,59 @@ export default function CuentasPagarPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const { data: cuentas, isLoading } = useCuentasPagar(search, empresa?.id);
+  const { filters, setFilter, toggleFilterValue, clearFilters } = useListPreferences('cuentas-pagar');
 
-  const total = cuentas?.length ?? 0;
+  const { data: proveedores } = useQuery({
+    queryKey: ['proveedores', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('proveedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const FILTER_OPTIONS = useMemo(() => [
+    {
+      key: 'status',
+      label: 'Estado',
+      options: [
+        { value: 'confirmada', label: 'Confirmada' },
+        { value: 'recibida', label: 'Recibida' },
+        { value: 'pagada', label: 'Pagada' },
+      ],
+    },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      options: (proveedores ?? []).map((p: any) => ({ value: p.id, label: p.nombre })),
+    },
+  ], [proveedores]);
+
+  const filteredCuentas = useMemo(() => {
+    let list = cuentas ?? [];
+    const statusArr = filters.status;
+    if (statusArr && statusArr.length > 0) list = list.filter((c: any) => statusArr.includes(c.status));
+    const provArr = filters.proveedor;
+    if (provArr && provArr.length > 0) list = list.filter((c: any) => provArr.includes(c.proveedor_id));
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
+    return list;
+  }, [cuentas, filters, desde, hasta]);
+
+  const total = filteredCuentas.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = cuentas?.slice(from - 1, to) ?? [];
+  const pageData = filteredCuentas.slice(from - 1, to);
 
-  const totalPorPagar = cuentas?.reduce((s, c: any) => s + (c.saldo_pendiente ?? 0), 0) ?? 0;
-  const totalCompras = cuentas?.reduce((s, c: any) => s + (c.total ?? 0), 0) ?? 0;
-  const conSaldo = cuentas?.filter((c: any) => (c.saldo_pendiente ?? 0) > 0).length ?? 0;
+  const totalPorPagar = filteredCuentas.reduce((s, c: any) => s + (c.saldo_pendiente ?? 0), 0);
+  const totalCompras = filteredCuentas.reduce((s, c: any) => s + (c.total ?? 0), 0);
+  const conSaldo = filteredCuentas.filter((c: any) => (c.saldo_pendiente ?? 0) > 0).length;
 
-  const exportData = (cuentas ?? []).map((c: any) => ({
+  const exportData = filteredCuentas.map((c: any) => ({
     folio: c.folio ?? '',
     proveedor: c.proveedores?.nombre ?? '',
     fecha: c.fecha,
