@@ -527,7 +527,11 @@ export default function SaldosProveedorPage() {
         activeFilters={filters}
         onToggleFilter={(key, val) => { toggleFilterValue(key, val); }}
         onSetFilter={(key, vals) => { setFilter(key, vals); }}
-        onClearFilters={() => { clearFilters(); setSearch(''); }}
+        onClearFilters={() => { clearFilters(); setSearch(''); setDesde(''); setHasta(''); }}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
       />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
