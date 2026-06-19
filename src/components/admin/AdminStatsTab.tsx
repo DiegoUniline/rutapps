@@ -526,6 +526,64 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     ).filter((i: any) => (i.created || 0) * 1000 >= ago);
   }, [stripeInvs]);
 
+  // ── Cumplimiento de pago desde fin de trial ──
+  // Para cada empresa cuyo trial ya terminó: cuánto debió pagar (facturas emitidas
+  // desde trial_ends_at) vs cuánto realmente pagó.
+  const cumplimientoPago = useMemo(() => {
+    const now = Date.now();
+    const rows: Array<{
+      id: string; nombre: string; status: string;
+      finTrial: string; mesesTranscurridos: number;
+      facturasEmitidas: number; facturasPagadas: number;
+      esperado: number; pagado: number; pendiente: number;
+      cumplimiento: number; ultimoPago: string | null;
+    }> = [];
+    empresas.forEach(e => {
+      const sub = e.subscriptions?.[0];
+      if (!sub) return;
+      const finTrialStr = sub.trial_ends_at;
+      if (!finTrialStr) return;
+      const finTrial = new Date(finTrialStr).getTime();
+      if (finTrial > now) return; // trial aún vigente
+      // Facturas emitidas desde fin de trial
+      const facsEmp = facturas.filter(f =>
+        f.empresa_id === e.id &&
+        f.fecha_emision &&
+        new Date(f.fecha_emision).getTime() >= finTrial - 86400000 // 1 día de gracia
+      );
+      if (facsEmp.length === 0) return;
+      const pagadasEmp = facsEmp.filter(isCollected);
+      const esperado = facsEmp.reduce((s, f) => s + Number(f.total || 0), 0);
+      const pagado = pagadasEmp.reduce((s, f) => s + Number(f.total || 0), 0);
+      const pendiente = Math.max(0, esperado - pagado);
+      const mesesTrans = Math.max(0, (now - finTrial) / (30.4375 * 86400000));
+      const ultimoPago = pagadasEmp
+        .map(f => f.fecha_pago)
+        .filter(Boolean)
+        .sort()
+        .pop() || null;
+      rows.push({
+        id: e.id, nombre: e.nombre, status: sub.status,
+        finTrial: finTrialStr,
+        mesesTranscurridos: Number(mesesTrans.toFixed(1)),
+        facturasEmitidas: facsEmp.length,
+        facturasPagadas: pagadasEmp.length,
+        esperado, pagado, pendiente,
+        cumplimiento: esperado > 0 ? (pagado / esperado) * 100 : 0,
+        ultimoPago,
+      });
+    });
+    return rows.sort((a, b) => b.pendiente - a.pendiente);
+  }, [empresas, facturas]);
+
+  const cumplimientoTotales = useMemo(() => ({
+    empresas: cumplimientoPago.length,
+    esperado: cumplimientoPago.reduce((s, r) => s + r.esperado, 0),
+    pagado: cumplimientoPago.reduce((s, r) => s + r.pagado, 0),
+    pendiente: cumplimientoPago.reduce((s, r) => s + r.pendiente, 0),
+    morosos: cumplimientoPago.filter(r => r.pendiente > 0).length,
+  }), [cumplimientoPago]);
+
   // ── Conteo de alertas (badge) ──
   const alertasCount =
     pagosFallidos24h.length +
@@ -600,11 +658,12 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
 
       {/* ── TABS ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto gap-1">
+        <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full h-auto gap-1">
           {[
             { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
             { v: 'alertas', icon: Bell, l: 'Alertas', badge: alertasCount },
             { v: 'riesgo', icon: ShieldAlert, l: 'Riesgo' },
+            { v: 'cumplimiento', icon: CreditCard, l: 'Cumplimiento', badge: cumplimientoTotales.morosos },
             { v: 'altas', icon: UserPlus, l: 'Altas' },
             { v: 'bajas', icon: UserMinus, l: 'Bajas' },
             { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
@@ -929,6 +988,80 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             </ChartCard>
           </div>
         </TabsContent>
+
+
+        {/* ──────────── CUMPLIMIENTO ──────────── */}
+        <TabsContent value="cumplimiento" className="space-y-4 mt-4">
+          <Story
+            title="Cumplimiento de pago post-trial"
+            subtitle={`Desde el fin de su prueba, ${cumplimientoTotales.empresas} empresas debieron pagar ${fmtMoney(cumplimientoTotales.esperado)}. Han pagado ${fmtMoney(cumplimientoTotales.pagado)} (${cumplimientoTotales.esperado > 0 ? fmtPct((cumplimientoTotales.pagado / cumplimientoTotales.esperado) * 100) : '0%'}). Faltan ${fmtMoney(cumplimientoTotales.pendiente)} de ${cumplimientoTotales.morosos} morosos.`}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={Users} label="Empresas con cobro" value={cumplimientoTotales.empresas.toString()} accent="primary" />
+            <StatCard icon={Target} label="Esperado total" value={fmtMoney(cumplimientoTotales.esperado)} accent="primary" />
+            <StatCard icon={Wallet} label="Pagado real" value={fmtMoney(cumplimientoTotales.pagado)} accent="success" />
+            <StatCard icon={AlertTriangle} label="Pendiente" value={fmtMoney(cumplimientoTotales.pendiente)} accent={cumplimientoTotales.pendiente > 0 ? 'destructive' : 'success'} />
+          </div>
+
+          <ChartCard title="Detalle por empresa" subtitle="Esperado = facturas emitidas desde fin de trial · Pagado = facturas cobradas (Stripe o transferencia)" icon={CreditCard}>
+            <div className="overflow-x-auto -mx-3 md:mx-0">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40 text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-medium">Empresa</th>
+                    <th className="px-2 py-2 font-medium whitespace-nowrap">Fin trial</th>
+                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Meses</th>
+                    <th className="px-2 py-2 font-medium text-center whitespace-nowrap">Facturas</th>
+                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Esperado</th>
+                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pagado</th>
+                    <th className="px-2 py-2 font-medium text-right whitespace-nowrap">Pendiente</th>
+                    <th className="px-2 py-2 font-medium text-center whitespace-nowrap">% Cumpl.</th>
+                    <th className="px-2 py-2 font-medium whitespace-nowrap">Último pago</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {cumplimientoPago.length === 0 ? (
+                    <tr><td colSpan={9} className="text-center text-muted-foreground py-6">Sin empresas con facturas emitidas post-trial</td></tr>
+                  ) : cumplimientoPago.map(r => (
+                    <tr
+                      key={r.id}
+                      onClick={() => setEstadoCuentaEmpresa({ id: r.id, nombre: r.nombre })}
+                      className="hover:bg-accent/40 cursor-pointer transition-colors"
+                    >
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-foreground truncate max-w-[180px]">{r.nombre}</div>
+                        <div className="text-[10px] text-muted-foreground">{STATUS_LABELS[r.status] || r.status}</div>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">{format(new Date(r.finTrial), 'dd MMM yyyy', { locale: es })}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{r.mesesTranscurridos}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">
+                        <span className="text-success font-semibold">{r.facturasPagadas}</span>
+                        <span className="text-muted-foreground">/{r.facturasEmitidas}</span>
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums">{fmtMoney(r.esperado)}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-success">{fmtMoney(r.pagado)}</td>
+                      <td className={cn('px-2 py-2 text-right tabular-nums font-semibold', r.pendiente > 0 ? 'text-destructive' : 'text-muted-foreground')}>{fmtMoney(r.pendiente)}</td>
+                      <td className="px-2 py-2 text-center">
+                        <span className={cn(
+                          'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                          r.cumplimiento >= 95 ? 'bg-success/10 border-success/30 text-success' :
+                          r.cumplimiento >= 60 ? 'bg-yellow-500/10 border-yellow-500/30 text-warning' :
+                          'bg-destructive/10 border-destructive/30 text-destructive'
+                        )}>{fmtPct(r.cumplimiento)}</span>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-[10px] text-muted-foreground">
+                        {r.ultimoPago ? format(new Date(r.ultimoPago), 'dd MMM yyyy', { locale: es }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ChartCard>
+        </TabsContent>
+
+
+
 
 
         {/* ──────────── ALTAS ──────────── */}
