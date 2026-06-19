@@ -29,7 +29,9 @@ export async function sendDocumentWhatsApp(params: {
     }
 
     // 2. Upload to Storage
-    const path = `whatsapp/${Date.now()}-${fileName}`;
+    // Path debe iniciar con empresa_id para cumplir la RLS de storage.objects (empresa-assets)
+    const safeName = fileName.replace(/[^\w.\-]+/g, '_');
+    const path = `${empresaId}/whatsapp/${Date.now()}-${safeName}`;
     storagePath = path;
     const { error: upErr } = await supabase.storage
       .from('empresa-assets')
