@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
