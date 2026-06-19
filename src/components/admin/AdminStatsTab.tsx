@@ -658,11 +658,12 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
 
       {/* ── TABS ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 md:grid-cols-7 w-full h-auto gap-1">
+        <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full h-auto gap-1">
           {[
             { v: 'panel', icon: LayoutDashboard, l: 'Panel' },
             { v: 'alertas', icon: Bell, l: 'Alertas', badge: alertasCount },
             { v: 'riesgo', icon: ShieldAlert, l: 'Riesgo' },
+            { v: 'cumplimiento', icon: CreditCard, l: 'Cumplimiento', badge: cumplimientoTotales.morosos },
             { v: 'altas', icon: UserPlus, l: 'Altas' },
             { v: 'bajas', icon: UserMinus, l: 'Bajas' },
             { v: 'ingresos', icon: DollarSign, l: 'Ingresos' },
