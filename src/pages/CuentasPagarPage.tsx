@@ -148,6 +148,15 @@ export default function CuentasPagarPage() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar proveedor o folio..."
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); setPage(1); }}
+          dateFrom={desde}
+          dateTo={hasta}
+          onDateFromChange={val => { setDesde(val); setPage(1); }}
+          onDateToChange={val => { setHasta(val); setPage(1); }}
         />
         <ExportButton
           onExcel={() => exportToExcel({
