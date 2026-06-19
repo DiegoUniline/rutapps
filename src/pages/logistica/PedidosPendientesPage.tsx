@@ -359,6 +359,15 @@ export default function PedidosPendientesPage() {
                 );
               })}
             </TableBody>
+            {filtered.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={7} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
+                  <TableCell className="text-right font-bold font-mono tabular-nums">{fmtCurrency(filtered.reduce((s: number, p: any) => s + (p.total ?? 0), 0))}</TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
       )}
