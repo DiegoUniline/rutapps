@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { CreditCard, Search, Banknote, Plus, Upload, Trash2 } from 'lucide-react';
+import { CreditCard, Banknote, Plus, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn, fmtDate } from '@/lib/utils';
@@ -17,6 +16,8 @@ import { ClienteLink } from '@/components/links/EntityLinks';
 import SaldoInicialModal from '@/components/SaldoInicialModal';
 import SaldoInicialImportDialog from '@/components/SaldoInicialImportDialog';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
+import { OdooFilterBar, FilterOption } from '@/components/OdooFilterBar';
+import { useListPreferences } from '@/hooks/useListPreferences';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,32 +31,32 @@ import {
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
-function useCuentasCobrar(search: string) {
+function useCuentasCobrar() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['cuentas-cobrar', empresa?.id, search],
+    queryKey: ['cuentas-cobrar', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
+      const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
+        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .gt('saldo_pendiente', 0)
         .neq('status', 'cancelado')
         .order('fecha', { ascending: true });
-      const { data, error } = await q;
       if (error) throw error;
-      let filtered = data ?? [];
-      if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(v =>
-          (v.folio ?? '').toLowerCase().includes(s) ||
-          ((v.clientes as any)?.nombre ?? '').toLowerCase().includes(s)
-        );
-      }
-      return filtered;
+      return data ?? [];
     },
   });
+}
+
+function antiguedadBucket(fecha: string): { value: string; label: string } {
+  const dias = Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000);
+  if (dias <= 15) return { value: 'corriente', label: 'Corriente' };
+  if (dias <= 30) return { value: 'd30', label: '16-30 días' };
+  if (dias <= 60) return { value: 'd60', label: '31-60 días' };
+  if (dias <= 90) return { value: 'd90', label: '61-90 días' };
+  return { value: 'masD90', label: '+90 días' };
 }
 
 export default function CuentasCobrarPage() {
@@ -65,8 +66,10 @@ export default function CuentasCobrarPage() {
   const qc = useQueryClient();
   const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
-  const { data: cuentas, isLoading } = useCuentasCobrar(search);
-  // Realtime: refresca CxC cuando cambian ventas o cobros desde otro dispositivo
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const { filters, toggleFilterValue, setFilter, clearFilters } = useListPreferences('cuentas-cobrar');
+  const { data: cuentas, isLoading } = useCuentasCobrar();
   useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['cuentas-cobrar']] });
   useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['cuentas-cobrar'], ['saldos-iniciales']] });
   const [showModal, setShowModal] = useState(false);
@@ -87,12 +90,94 @@ export default function CuentasCobrarPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const totalPendiente = cuentas?.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
-  const totalVentas = cuentas?.reduce((s, v) => s + (v.total ?? 0), 0) ?? 0;
+  const filterOptions: FilterOption[] = useMemo(() => {
+    const clientesMap = new Map<string, string>();
+    const vendedoresMap = new Map<string, string>();
+    const condicionesSet = new Set<string>();
+    (cuentas ?? []).forEach(v => {
+      const cId = (v as any).cliente_id ?? (v.clientes as any)?.id;
+      const cNombre = (v.clientes as any)?.nombre;
+      if (cId && cNombre) clientesMap.set(cId, cNombre);
+      const vId = (v as any).vendedor_id;
+      const vNombre = (v.vendedores as any)?.nombre;
+      if (vId && vNombre) vendedoresMap.set(vId, vNombre);
+      if (v.condicion_pago) condicionesSet.add(v.condicion_pago);
+    });
+    return [
+      {
+        key: 'cliente',
+        label: 'Cliente',
+        options: Array.from(clientesMap.entries())
+          .map(([value, label]) => ({ value, label }))
+          .sort((a, b) => a.label.localeCompare(b.label)),
+      },
+      {
+        key: 'vendedor',
+        label: 'Vendedor',
+        options: Array.from(vendedoresMap.entries())
+          .map(([value, label]) => ({ value, label }))
+          .sort((a, b) => a.label.localeCompare(b.label)),
+      },
+      {
+        key: 'condicion_pago',
+        label: 'Condición',
+        options: Array.from(condicionesSet).map(v => ({ value: v, label: v })),
+      },
+      {
+        key: 'antiguedad',
+        label: 'Antigüedad',
+        options: [
+          { value: 'corriente', label: 'Corriente' },
+          { value: 'd30', label: '16-30 días' },
+          { value: 'd60', label: '31-60 días' },
+          { value: 'd90', label: '61-90 días' },
+          { value: 'masD90', label: '+90 días' },
+        ],
+      },
+      {
+        key: 'tipo',
+        label: 'Tipo',
+        options: [
+          { value: 'saldo_inicial', label: 'Saldo inicial' },
+          { value: 'venta', label: 'Venta' },
+        ],
+      },
+    ];
+  }, [cuentas]);
+
+  const filtered = useMemo(() => {
+    let list = cuentas ?? [];
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(v =>
+        (v.folio ?? '').toLowerCase().includes(s) ||
+        ((v.clientes as any)?.nombre ?? '').toLowerCase().includes(s)
+      );
+    }
+    const clienteF = filters['cliente'] ?? [];
+    if (clienteF.length) list = list.filter(v => clienteF.includes(((v as any).cliente_id ?? (v.clientes as any)?.id) ?? ''));
+    const vendedorF = filters['vendedor'] ?? [];
+    if (vendedorF.length) list = list.filter(v => vendedorF.includes((v as any).vendedor_id ?? ''));
+    const condF = filters['condicion_pago'] ?? [];
+    if (condF.length) list = list.filter(v => condF.includes(v.condicion_pago ?? ''));
+    const antigF = filters['antiguedad'] ?? [];
+    if (antigF.length) list = list.filter(v => antigF.includes(antiguedadBucket(v.fecha).value));
+    const tipoF = filters['tipo'] ?? [];
+    if (tipoF.length) list = list.filter(v => {
+      const tipo = v.es_saldo_inicial ? 'saldo_inicial' : 'venta';
+      return tipoF.includes(tipo);
+    });
+    if (desde) list = list.filter(v => v.fecha >= desde);
+    if (hasta) list = list.filter(v => v.fecha <= hasta);
+    return list;
+  }, [cuentas, search, filters, desde, hasta]);
+
+  const totalPendiente = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  const totalVentas = filtered.reduce((s, v) => s + (v.total ?? 0), 0);
 
   const today = new Date();
   const aging = { corriente: 0, d30: 0, d60: 0, d90: 0, masD90: 0 };
-  cuentas?.forEach(v => {
+  filtered.forEach(v => {
     const dias = Math.floor((today.getTime() - new Date(v.fecha).getTime()) / 86400000);
     const saldo = v.saldo_pendiente ?? 0;
     if (dias <= 15) aging.corriente += saldo;
@@ -131,7 +216,7 @@ export default function CuentasCobrarPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Documentos</p>
-          <p className="text-2xl font-bold text-foreground">{cuentas?.length ?? 0}</p>
+          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
@@ -162,10 +247,20 @@ export default function CuentasCobrarPage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar por folio o cliente..."
+        filterOptions={filterOptions}
+        activeFilters={filters}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
+        onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
+      />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
@@ -183,7 +278,7 @@ export default function CuentasCobrarPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {cuentas?.map(v => {
+            {filtered.map(v => {
               const pagado = (v.total ?? 0) - (v.saldo_pendiente ?? 0);
               const esSaldo = v.es_saldo_inicial === true;
               const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
@@ -221,18 +316,18 @@ export default function CuentasCobrarPage() {
               );
             })}
             {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
-            {!isLoading && cuentas?.length === 0 && (
+            {!isLoading && filtered.length === 0 && (
               <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cuentas pendientes 🎉</TableCell></TableRow>
             )}
           </TableBody>
-          {!!cuentas?.length && (() => {
-            const sumTotal = cuentas.reduce((s, v) => s + (v.total ?? 0), 0);
-            const sumPagado = cuentas.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
-            const sumPend = cuentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+          {!!filtered.length && (() => {
+            const sumTotal = filtered.reduce((s, v) => s + (v.total ?? 0), 0);
+            const sumPagado = filtered.reduce((s, v) => s + ((v.total ?? 0) - (v.saldo_pendiente ?? 0)), 0);
+            const sumPend = filtered.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
             return (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales ({cuentas.length})</TableCell>
+                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmt(sumTotal)}</TableCell>
                   <TableCell className="text-right font-bold text-success tabular-nums">{fmt(sumPagado)}</TableCell>
                   <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(sumPend)}</TableCell>
