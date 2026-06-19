@@ -168,6 +168,8 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
     }
   };
   const { empresa } = useAuth();
+  // Realtime: refresca lista al cambiar clientes desde otro dispositivo
+  useRealtimeInvalidate({ table: 'clientes', empresaId: empresa?.id, queryKeys: [['clientes'], ['clientes-page']] });
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
