@@ -5,6 +5,7 @@ import {
   Loader2, UserCheck, UserMinus, Calendar as CalendarIcon, Target, Activity,
   Heart, Wallet, Repeat, Zap, DollarSign, TrendingUp, CreditCard, Users, UserPlus,
   ArrowRight, LayoutDashboard, TrendingDown, BarChart3,
+  AlertTriangle, ShieldAlert, Clock, Flame, Hourglass, Bell,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
