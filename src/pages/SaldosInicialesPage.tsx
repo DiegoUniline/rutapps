@@ -34,6 +34,7 @@ export default function SaldosInicialesPage() {
   const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const qc = useQueryClient();
+  const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
