@@ -210,15 +210,19 @@ export default function ComprasPage() {
     { key: 'almacen', label: 'Almacén', options: almacenOptions },
   ], [proveedorOptions, almacenOptions]);
 
-  // Apply client-side filters for condicion_pago and proveedor
+  // Apply client-side filters for condicion_pago, proveedor, almacen and date range
   const filteredCompras = useMemo(() => {
     let list = compras ?? [];
     const condF = filters.condicion_pago;
     if (condF && condF.length > 0) list = list.filter((c: any) => condF.includes(c.condicion_pago));
     const provF = filters.proveedor;
     if (provF && provF.length > 0) list = list.filter((c: any) => provF.includes(c.proveedor_id));
+    const almF = filters.almacen;
+    if (almF && almF.length > 0) list = list.filter((c: any) => almF.includes(c.almacen_id));
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
     return list;
-  }, [compras, filters]);
+  }, [compras, filters, desde, hasta]);
 
   const total = filteredCompras.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
