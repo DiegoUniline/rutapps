@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -6,6 +6,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -1544,14 +1545,40 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 export default function DescargasPage() {
   const { symbol: cs, fmt } = useCurrency();
   const { data: descargas, isLoading } = useDescargasListDesktop();
+  const { data: vendedores } = useVendedores();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterVendedor, setFilterVendedor] = useState<string>('all');
+  const [filterTipo, setFilterTipo] = useState<string>('all');
+  const [filterDiferencia, setFilterDiferencia] = useState<string>('all');
   const [showNew, setShowNew] = useState(false);
   const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
-  const filtered = (descargas || []).filter((d: any) =>
-    filterStatus === 'all' || d.status === filterStatus
-  );
+  const filtered = useMemo(() => {
+    return (descargas || []).filter((d: any) => {
+      const matchesStatus = filterStatus === 'all' || d.status === filterStatus;
+      const matchesVendedor = filterVendedor === 'all' || d.vendedor_id === filterVendedor;
+      const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+      const tipo = d.carga_id ? 'carga' : hasRange ? 'periodo' : 'efectivo';
+      const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
+      const dif = Number(d.diferencia_efectivo) || 0;
+      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? dif !== 0 : dif === 0);
+      return matchesStatus && matchesVendedor && matchesTipo && matchesDif;
+    });
+  }, [descargas, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+
+  const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all';
+
+  const clearFilters = () => {
+    setFilterStatus('all');
+    setFilterVendedor('all');
+    setFilterTipo('all');
+    setFilterDiferencia('all');
+  };
+
+  const totalEsperado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_esperado) || 0), 0);
+  const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
+  const totalDiferencia = filtered.reduce((s, d: any) => s + (Number(d.diferencia_efectivo) || 0), 0);
 
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
@@ -1565,29 +1592,87 @@ export default function DescargasPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <PackageCheck className="h-5 w-5" /> Liquidar Ruta
-          <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
-        </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
-              <button
-                key={s}
-                onClick={() => setFilterStatus(s)}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {s === 'all' ? 'Todas' : STATUS_MAP[s]?.label || s}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <PackageCheck className="h-5 w-5" /> Liquidar Ruta
+            <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
+          </h1>
           <Button size="sm" onClick={() => setShowNew(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Nueva liquidación
           </Button>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[200px] max-w-[260px]">
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Vendedor</label>
+            <SearchableSelect
+              options={[{ value: 'all', label: 'Todos' }, ...(vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }))]}
+              value={filterVendedor}
+              onChange={setFilterVendedor}
+              placeholder="Todos..."
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Tipo</label>
+            <div className="flex gap-1">
+              {['all', 'carga', 'periodo', 'efectivo'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setFilterTipo(t)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterTipo === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t === 'all' ? 'Todos' : t === 'carga' ? 'Carga' : t === 'periodo' ? 'Periodo' : 'Efectivo'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Status</label>
+            <div className="flex gap-1">
+              {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterStatus === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {s === 'all' ? 'Todos' : STATUS_MAP[s]?.label || s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Diferencia</label>
+            <div className="flex gap-1">
+              {['all', 'con', 'sin'].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setFilterDiferencia(d)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterDiferencia === d ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {d === 'all' ? 'Todas' : d === 'con' ? 'Con dif.' : 'Sin dif.'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-[34px]">
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Limpiar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1596,10 +1681,18 @@ export default function DescargasPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">No hay liquidaciones</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            {hasFilters ? 'No hay liquidaciones con los filtros aplicados' : 'No hay liquidaciones'}
+          </p>
+          {hasFilters ? (
+            <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Limpiar filtros
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
+            </Button>
+          )}
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -1653,6 +1746,22 @@ export default function DescargasPage() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-border bg-card font-bold text-[13px]">
+                <td colSpan={3} className="py-2.5 px-4 text-right text-muted-foreground">
+                  Totales {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2.5 px-4 text-right">{fmt(totalEsperado)}</td>
+                <td className="py-2.5 px-4 text-right">{fmt(totalEntregado)}</td>
+                <td className={cn(
+                  "py-2.5 px-4 text-right",
+                  totalDiferencia > 0 ? "text-green-600" : totalDiferencia < 0 ? "text-destructive" : ""
+                )}>
+                  {totalDiferencia > 0 ? '+' : ''}${fmt(totalDiferencia)}
+                </td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
