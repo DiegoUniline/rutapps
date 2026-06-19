@@ -5,26 +5,30 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { Search, Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Users, ChevronRight, CreditCard, FileText, Banknote, Download, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
+import { OdooFilterBar, FilterOption } from '@/components/OdooFilterBar';
+import { useListPreferences } from '@/hooks/useListPreferences';
 
 /* ── hooks ── */
-function useClientesSaldo() {
+function useClientesSaldo(desde: string, hasta: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['clientes-saldo-resumen', empresa?.id],
+    queryKey: ['clientes-saldo-resumen', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('ventas')
-        .select('cliente_id, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
+        .select('cliente_id, fecha, saldo_pendiente, total, clientes(id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion)')
         .eq('empresa_id', empresa!.id)
         .neq('status', 'cancelado');
+      if (desde) q = q.gte('fecha', desde);
+      if (hasta) q = q.lte('fecha', hasta);
+      const { data, error } = await q;
       if (error) throw error;
 
       const map = new Map<string, {
@@ -92,20 +96,50 @@ export default function EstadoCuentaClientePage() {
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const { filters, toggleFilterValue, setFilter, clearFilters } = useListPreferences('saldos-cliente');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: clientes, isLoading } = useClientesSaldo();
+  const { data: clientes, isLoading } = useClientesSaldo(desde, hasta);
   const { data: detalle, isLoading: loadingDetalle } = useClienteDetalle(selectedId);
 
+  const filterOptions: FilterOption[] = useMemo(() => {
+    const clientesOpts = (clientes ?? [])
+      .map(c => ({ value: c.id, label: c.nombre }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [
+      { key: 'cliente', label: 'Cliente', options: clientesOpts },
+      { key: 'credito', label: 'Crédito', options: [
+        { value: 'si', label: 'Con crédito' },
+        { value: 'no', label: 'Sin crédito' },
+      ]},
+      { key: 'saldo', label: 'Saldo', options: [
+        { value: 'con', label: 'Con saldo' },
+        { value: 'sin', label: 'Sin saldo' },
+      ]},
+    ];
+  }, [clientes]);
+
   const filtered = useMemo(() => {
-    if (!clientes) return [];
-    if (!search) return clientes;
-    const s = search.toLowerCase();
-    return clientes.filter(c =>
-      c.nombre.toLowerCase().includes(s) ||
-      (c.codigo ?? '').toLowerCase().includes(s)
-    );
-  }, [clientes, search]);
+    let list = clientes ?? [];
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(c =>
+        c.nombre.toLowerCase().includes(s) ||
+        (c.codigo ?? '').toLowerCase().includes(s)
+      );
+    }
+    const clienteF = filters['cliente'] ?? [];
+    if (clienteF.length) list = list.filter(c => clienteF.includes(c.id));
+    const credF = filters['credito'] ?? [];
+    if (credF.length) list = list.filter(c => credF.includes(c.credito ? 'si' : 'no'));
+    const saldoF = filters['saldo'] ?? [];
+    if (saldoF.length) list = list.filter(c => saldoF.includes(c.saldoPendiente > 0.01 ? 'con' : 'sin'));
+    return list;
+  }, [clientes, search, filters]);
+
+
 
   const selected = clientes?.find(c => c.id === selectedId);
 
@@ -375,10 +409,20 @@ export default function EstadoCuentaClientePage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar cliente..."
+        filterOptions={filterOptions}
+        activeFilters={filters}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
+        onClearFilters={() => { clearFilters(); setDesde(''); setHasta(''); }}
+      />
 
       <div className="bg-card border border-border rounded overflow-x-auto">
         <Table>
