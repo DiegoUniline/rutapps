@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import {
   format, subDays, eachDayOfInterval, startOfMonth, endOfMonth,
-  startOfYear, differenceInDays, subMonths, eachMonthOfInterval,
+  startOfYear, endOfYear, differenceInDays, subMonths, eachMonthOfInterval,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
