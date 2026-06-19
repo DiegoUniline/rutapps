@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Upload, Download, FileSpreadsheet, Link2, AlertCircle, CheckCircle2,
-  Loader2, X, Search, Trash2, Plus, History,
+  Loader2, X, Search, Trash2, Plus, History, Zap, ArrowRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,10 +56,12 @@ export default function HomologacionCatalogoPage() {
       <Tabs defaultValue="importar">
         <TabsList>
           <TabsTrigger value="importar"><Upload className="h-3.5 w-3.5 mr-1" />Nueva importación</TabsTrigger>
+          <TabsTrigger value="vincular"><Zap className="h-3.5 w-3.5 mr-1" />Vincular rápido</TabsTrigger>
           <TabsTrigger value="equivalencias"><Link2 className="h-3.5 w-3.5 mr-1" />Equivalencias</TabsTrigger>
           <TabsTrigger value="historial"><History className="h-3.5 w-3.5 mr-1" />Historial</TabsTrigger>
         </TabsList>
         <TabsContent value="importar" className="mt-4"><ImportTab /></TabsContent>
+        <TabsContent value="vincular" className="mt-4"><VincularRapidoTab /></TabsContent>
         <TabsContent value="equivalencias" className="mt-4"><EquivalenciasTab /></TabsContent>
         <TabsContent value="historial" className="mt-4"><HistorialTab /></TabsContent>
       </Tabs>
