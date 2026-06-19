@@ -710,14 +710,15 @@ export default function TraspasoFormPage() {
                         </thead>
                         <tbody>
                           {readOnly ? (
-                            // Read-only: show only products that were transferred
+                            // Read-only: show only products that were transferred + actual stock at destination
                             lineas.map((l, idx) => {
                               const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
+                              const stockDest = stockDestinoMap.get(l.producto_id) ?? 0;
                               return (
                                 <tr key={l.producto_id} className="border-b border-table-border hover:bg-table-hover">
                                   <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{prod?.codigo ?? ''}</td>
                                   <td className="py-1.5 px-2 text-[12px]">{prod?.nombre ?? '—'}</td>
-                                  <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">—</td>
+                                  <td className={cn("py-1.5 px-2 text-right tabular-nums", stockDest <= 0 ? "text-destructive" : "text-foreground")}>{fmtNum(stockDest)}</td>
                                   <td className="py-1.5 px-2 text-right tabular-nums font-medium">{l.cantidad}</td>
                                 </tr>
                               );
