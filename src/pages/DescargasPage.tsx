@@ -1592,29 +1592,87 @@ export default function DescargasPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <PackageCheck className="h-5 w-5" /> Liquidar Ruta
-          <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
-        </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
-              <button
-                key={s}
-                onClick={() => setFilterStatus(s)}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {s === 'all' ? 'Todas' : STATUS_MAP[s]?.label || s}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <PackageCheck className="h-5 w-5" /> Liquidar Ruta
+            <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
+          </h1>
           <Button size="sm" onClick={() => setShowNew(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Nueva liquidación
           </Button>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[200px] max-w-[260px]">
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Vendedor</label>
+            <SearchableSelect
+              options={[{ value: 'all', label: 'Todos' }, ...(vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }))]}
+              value={filterVendedor}
+              onChange={setFilterVendedor}
+              placeholder="Todos..."
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Tipo</label>
+            <div className="flex gap-1">
+              {['all', 'carga', 'periodo', 'efectivo'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setFilterTipo(t)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterTipo === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t === 'all' ? 'Todos' : t === 'carga' ? 'Carga' : t === 'periodo' ? 'Periodo' : 'Efectivo'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Status</label>
+            <div className="flex gap-1">
+              {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterStatus === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {s === 'all' ? 'Todos' : STATUS_MAP[s]?.label || s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Diferencia</label>
+            <div className="flex gap-1">
+              {['all', 'con', 'sin'].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setFilterDiferencia(d)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterDiferencia === d ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {d === 'all' ? 'Todas' : d === 'con' ? 'Con dif.' : 'Sin dif.'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-[34px]">
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Limpiar
+            </Button>
+          )}
         </div>
       </div>
 
