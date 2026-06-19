@@ -458,6 +458,194 @@ function ExportButtons({ rows, fileName }: { rows: MatchedRow[]; fileName: strin
 }
 
 // ═══════════════════════════════════════════
+// TAB: VINCULAR RÁPIDO (mass linking)
+// ═══════════════════════════════════════════
+function VincularRapidoTab() {
+  const { empresa, user } = useAuth();
+  const qc = useQueryClient();
+  const [qExt, setQExt] = useState('');
+  const [qProd, setQProd] = useState('');
+  const [selectedExt, setSelectedExt] = useState<{ codigo: string; descripcion: string } | null>(null);
+
+  // Códigos externos sin equivalencia (distinct) desde import_job_lineas
+  const { data: externos = [], isLoading: lExt } = useQuery({
+    queryKey: ['vincular-externos-pendientes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const [lineas, equivs] = await Promise.all([
+        fetchAllPages<any>((from, to) =>
+          supabase.from('import_job_lineas')
+            .select('codigo_externo, descripcion_externa')
+            .eq('empresa_id', empresa!.id)
+            .not('codigo_externo', 'is', null)
+            .range(from, to) as any
+        ),
+        fetchAllPages<any>((from, to) =>
+          supabase.from('producto_equivalencias')
+            .select('codigo_externo')
+            .eq('empresa_id', empresa!.id)
+            .range(from, to) as any
+        ),
+      ]);
+      const yaVinculados = new Set(equivs.map((e: any) => (e.codigo_externo || '').toLowerCase().trim()));
+      const seen = new Map<string, { codigo: string; descripcion: string; n: number }>();
+      for (const l of lineas) {
+        const c = (l.codigo_externo || '').trim();
+        if (!c) continue;
+        const key = c.toLowerCase();
+        if (yaVinculados.has(key)) continue;
+        const prev = seen.get(key);
+        if (prev) prev.n += 1;
+        else seen.set(key, { codigo: c, descripcion: l.descripcion_externa || '', n: 1 });
+      }
+      return Array.from(seen.values()).sort((a, b) => a.codigo.localeCompare(b.codigo));
+    },
+  });
+
+  // Productos del catálogo
+  const { data: productos = [], isLoading: lProd } = useQuery({
+    queryKey: ['vincular-productos', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      return fetchAllPages<any>((from, to) =>
+        supabase.from('productos')
+          .select('id, codigo, nombre')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo')
+          .order('nombre')
+          .range(from, to) as any
+      );
+    },
+  });
+
+  const link = useMutation({
+    mutationFn: async ({ codigo, productoId }: { codigo: string; productoId: string }) => {
+      const { error } = await supabase.from('producto_equivalencias').upsert({
+        empresa_id: empresa!.id,
+        producto_id: productoId,
+        codigo_externo: codigo,
+        sistema_origen: null,
+        created_by: user?.id ?? null,
+      } as any, { onConflict: 'empresa_id,codigo_externo,sistema_origen', ignoreDuplicates: false });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Vinculado');
+      setSelectedExt(null);
+      setQProd('');
+      qc.invalidateQueries({ queryKey: ['vincular-externos-pendientes'] });
+      qc.invalidateQueries({ queryKey: ['producto_equivalencias'] });
+    },
+    onError: (e: any) => toast.error(e.message || 'Error'),
+  });
+
+  const extFiltered = useMemo(() => {
+    const s = qExt.toLowerCase().trim();
+    if (!s) return externos;
+    return externos.filter((e: any) =>
+      e.codigo.toLowerCase().includes(s) || (e.descripcion || '').toLowerCase().includes(s)
+    );
+  }, [externos, qExt]);
+
+  const prodFiltered = useMemo(() => {
+    const s = qProd.toLowerCase().trim();
+    if (!s) return productos;
+    return productos.filter((p: any) =>
+      (p.codigo || '').toLowerCase().includes(s) || (p.nombre || '').toLowerCase().includes(s)
+    );
+  }, [productos, qProd]);
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-foreground">
+        <p className="font-medium flex items-center gap-1.5">
+          <Zap className="h-3.5 w-3.5 text-primary" /> Vinculación rápida
+        </p>
+        <p className="text-muted-foreground mt-1">
+          1. Selecciona un código externo en la izquierda. 2. Haz clic en el producto interno que le corresponde. La equivalencia se guarda al instante.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Códigos externos pendientes */}
+        <div className="bg-card border border-border rounded-lg flex flex-col" style={{ height: '70vh' }}>
+          <div className="p-3 border-b border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Códigos externos pendientes</h3>
+              <span className="text-[11px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground">{extFiltered.length}</span>
+            </div>
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={qExt} onChange={e => setQExt(e.target.value)}
+                placeholder="Buscar código o descripción…"
+                className="w-full pl-7 input-odoo text-sm" />
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {lExt && <div className="py-6 text-center text-muted-foreground text-xs">Cargando…</div>}
+            {!lExt && extFiltered.length === 0 && (
+              <div className="py-6 text-center text-muted-foreground text-xs">Sin códigos pendientes.</div>
+            )}
+            {extFiltered.map(e => {
+              const sel = selectedExt?.codigo === e.codigo;
+              return (
+                <button key={e.codigo}
+                  onClick={() => setSelectedExt(sel ? null : e)}
+                  className={`block w-full text-left px-3 py-2 border-b border-border/50 hover:bg-secondary/50 transition-colors ${sel ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}>
+                  <div className="font-mono text-xs font-semibold">{e.codigo}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{e.descripcion || '—'}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Productos del catálogo */}
+        <div className="bg-card border border-border rounded-lg flex flex-col" style={{ height: '70vh' }}>
+          <div className="p-3 border-b border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Productos de tu catálogo</h3>
+              <span className="text-[11px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground">{prodFiltered.length}</span>
+            </div>
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={qProd} onChange={e => setQProd(e.target.value)}
+                placeholder={selectedExt ? `Buscar producto para "${selectedExt.codigo}"…` : 'Selecciona primero un código externo'}
+                disabled={!selectedExt}
+                className="w-full pl-7 input-odoo text-sm disabled:opacity-50" />
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {!selectedExt && (
+              <div className="py-10 text-center text-muted-foreground text-xs px-4">
+                <ArrowRight className="h-5 w-5 mx-auto mb-2 opacity-50 rotate-180" />
+                Selecciona un código externo en la lista de la izquierda para empezar.
+              </div>
+            )}
+            {selectedExt && lProd && <div className="py-6 text-center text-muted-foreground text-xs">Cargando…</div>}
+            {selectedExt && !lProd && prodFiltered.length === 0 && (
+              <div className="py-6 text-center text-muted-foreground text-xs">Sin productos.</div>
+            )}
+            {selectedExt && prodFiltered.slice(0, 500).map((p: any) => (
+              <button key={p.id}
+                disabled={link.isPending}
+                onClick={() => link.mutate({ codigo: selectedExt.codigo, productoId: p.id })}
+                className="block w-full text-left px-3 py-2 border-b border-border/50 hover:bg-success/10 hover:border-l-4 hover:border-l-success transition-colors disabled:opacity-50">
+                <div className="text-xs font-medium">{p.nombre}</div>
+                <div className="font-mono text-[11px] text-muted-foreground">{p.codigo || 'sin código'}</div>
+              </button>
+            ))}
+            {selectedExt && prodFiltered.length > 500 && (
+              <div className="py-2 text-center text-[11px] text-muted-foreground">Mostrando 500 — refina la búsqueda</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
 // TAB: EQUIVALENCIAS
 // ═══════════════════════════════════════════
 function EquivalenciasTab() {
