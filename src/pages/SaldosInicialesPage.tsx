@@ -407,12 +407,25 @@ export default function SaldosInicialesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && deleteMut.mutate(deleteId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={() => {
+                const id = deleteId;
+                if (!id) return;
+                setDeleteId(null);
+                requestPin(
+                  'Eliminar saldo inicial',
+                  'Ingresa el PIN de administrador para confirmar.',
+                  () => deleteMut.mutate(id),
+                );
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <PinDialog />
     </div>
   );
 }
