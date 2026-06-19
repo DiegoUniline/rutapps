@@ -630,6 +630,23 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             title="Resumen del negocio"
             subtitle={`Tu plataforma tiene ${aLaFecha.activos} cuentas pagando, ${esteMes.altas} altas y ${esteMes.bajas} bajas este mes.`}
           />
+          {alertasCount > 0 && (
+            <button
+              onClick={() => (document.querySelector('[role="tab"][value="alertas"]') as HTMLElement)?.click()}
+              className="w-full flex items-center gap-3 bg-destructive/5 border border-destructive/30 rounded-lg px-4 py-2.5 hover:bg-destructive/10 transition-colors text-left"
+            >
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+              <div className="flex-1 text-xs">
+                <span className="font-semibold text-destructive">{alertasCount} alertas activas</span>
+                <span className="text-muted-foreground ml-2">
+                  {pagosFallidos24h.length > 0 && `${pagosFallidos24h.length} pagos fallidos · `}
+                  {trialsActivos.filter(t => t.diasRestantes <= 3).length > 0 && `${trialsActivos.filter(t => t.diasRestantes <= 3).length} trials por vencer · `}
+                  {facturasVencidas.count > 0 && `${facturasVencidas.count} facturas vencidas`}
+                </span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-destructive shrink-0" />
+            </button>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
             {loadingStats && (
               <div className="absolute -top-2 right-0 text-[10px] text-muted-foreground flex items-center gap-1">
