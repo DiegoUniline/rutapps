@@ -1135,7 +1135,11 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
             ) : (
               <div className="space-y-1 max-h-80 overflow-y-auto">
                 {pendientes.map((f: any) => (
-                  <div key={f.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-2">
+                  <button
+                    key={f.id}
+                    onClick={() => setEstadoCuentaEmpresa({ id: f.empresa_id, nombre: f.empresas?.nombre || '—' })}
+                    className="w-full flex items-center justify-between text-xs bg-accent/30 hover:bg-accent rounded-lg px-3 py-2 text-left transition-colors"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-foreground truncate">{f.empresas?.nombre || '—'}</div>
                       <div className="text-[10px] text-muted-foreground">
@@ -1146,7 +1150,7 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
                       </div>
                     </div>
                     <span className="font-semibold text-destructive ml-3 shrink-0">{fmtMoney2(Number(f.total))}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
