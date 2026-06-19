@@ -136,8 +136,11 @@ export default function AdminStatsTab({ onSelectEmpresa }: { onSelectEmpresa?: (
     },
   });
   const facturas = facturasAll || [];
-  const pendientes = facturas.filter(f => f.estado === 'pendiente');
   const cobradas = facturas.filter(isCollected);
+  // Empresas que realmente usaron la app = al menos un pago real
+  const empresasQueUsaron = new Set(cobradas.map(f => f.empresa_id));
+  // Pendientes solo de empresas que ya pagaron alguna vez (excluye trials caducados que nunca usaron)
+  const pendientes = facturas.filter(f => f.estado === 'pendiente' && empresasQueUsaron.has(f.empresa_id));
   const totalPendientesLocal = pendientes.reduce((s, f) => s + Number(f.total || 0), 0);
 
   // ── Stripe invoices (todas, agrupadas por status) ──
