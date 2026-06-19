@@ -1,46 +1,103 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { RotateCcw } from 'lucide-react';
-import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { RotateCcw, Filter, X, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OdooPagination } from '@/components/OdooPagination';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
+
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
+const MOTIVOS = ['no_vendido','dañado','caducado','error_pedido','otro'];
+const ACCIONES = ['reposicion','nota_credito','descuento_venta','devolucion_dinero'];
 
 export default function DevolucionesListPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
+
   const [search, setSearch] = useState('');
+  const [clienteFilter, setClienteFilter] = useState<string>('all');
+  const [vendedorFilter, setVendedorFilter] = useState<string>('all');
+  const [motivoFilter, setMotivoFilter] = useState<string>('all');
+  const [accionFilter, setAccionFilter] = useState<string>('all');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['devoluciones-list', empresa?.id, search, page],
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['devoluciones-list-all', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = (supabase as any)
+      const { data } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))', { count: 'exact' })
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
-
-      if (search) {
-        q = q.or(`clientes.nombre.ilike.%${search}%,ventas.folio.ilike.%${search}%`);
-      }
-
-      const { data, count } = await q;
-      return { rows: data ?? [], total: count ?? 0 };
+        .order('fecha', { ascending: false });
+      return data ?? [];
     },
   });
 
-  const rows = data?.rows ?? [];
-  const total = data?.total ?? 0;
+  const { clientes, vendedores } = useMemo(() => {
+    const cm = new Map<string, string>();
+    const vm = new Map<string, string>();
+    for (const r of rows as any[]) {
+      if (r.cliente_id && r.clientes?.nombre) cm.set(r.cliente_id, r.clientes.nombre);
+      if (r.vendedor_id && r.vendedores?.nombre) vm.set(r.vendedor_id, r.vendedores.nombre);
+    }
+    return {
+      clientes: [...cm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+      vendedores: [...vm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+    };
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return (rows as any[]).filter(d => {
+      const lineas = d.devolucion_lineas ?? [];
+      if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
+      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter) return false;
+      if (desde && d.fecha < desde) return false;
+      if (hasta && d.fecha > hasta) return false;
+      if (motivoFilter !== 'all' && !lineas.some((l: any) => l.motivo === motivoFilter)) return false;
+      if (accionFilter !== 'all' && !lineas.some((l: any) => l.accion === accionFilter)) return false;
+      if (s) {
+        const haystack = [
+          d.clientes?.nombre,
+          d.vendedores?.nombre,
+          d.ventas?.folio,
+          d.notas,
+          ...lineas.map((l: any) => l.productos?.nombre),
+          ...lineas.map((l: any) => l.productos?.codigo),
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [rows, search, clienteFilter, vendedorFilter, motivoFilter, accionFilter, desde, hasta]);
+
+  const total = filtered.length;
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const totalUds = filtered.reduce((s, d: any) =>
+    s + (d.devolucion_lineas ?? []).reduce((ss: number, l: any) => ss + (Number(l.cantidad) || 0), 0), 0);
+  const totalCredito = filtered.reduce((s, d: any) =>
+    s + (d.devolucion_lineas ?? []).reduce((ss: number, l: any) => ss + (Number(l.monto_credito) || 0), 0), 0);
+
+  const hasFilters = !!search || clienteFilter !== 'all' || vendedorFilter !== 'all' ||
+    motivoFilter !== 'all' || accionFilter !== 'all' || !!desde || !!hasta;
+
+  const clearFilters = () => {
+    setSearch(''); setClienteFilter('all'); setVendedorFilter('all');
+    setMotivoFilter('all'); setAccionFilter('all'); setDesde(''); setHasta('');
+    setPage(1);
+  };
 
   return (
     <div className="p-4 space-y-4 max-w-[1200px]">
@@ -50,7 +107,61 @@ export default function DevolucionesListPage() {
         </h1>
       </div>
 
-      <OdooFilterBar search={search} onSearchChange={val => { setSearch(val); setPage(1); }} placeholder="Buscar por cliente o folio..." />
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
+          <Filter className="h-3 w-3" /> Filtros
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar cliente, folio, producto, notas..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          </div>
+          <Select value={clienteFilter} onValueChange={v => { setClienteFilter(v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Cliente" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los clientes</SelectItem>
+              {clientes.map(([id, nombre]) => (
+                <SelectItem key={id} value={id}>{nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={vendedorFilter} onValueChange={v => { setVendedorFilter(v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Vendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los vendedores</SelectItem>
+              {vendedores.map(([id, nombre]) => (
+                <SelectItem key={id} value={id}>{nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <Select value={motivoFilter} onValueChange={v => { setMotivoFilter(v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Motivo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los motivos</SelectItem>
+              {MOTIVOS.map(m => <SelectItem key={m} value={m}>{MOTIVO_LABELS[m]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={accionFilter} onValueChange={v => { setAccionFilter(v); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="Acción" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las acciones</SelectItem>
+              {ACCIONES.map(a => <SelectItem key={a} value={a}>{ACCION_LABELS[a]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input type="date" value={desde} onChange={e => { setDesde(e.target.value); setPage(1); }} />
+          <Input type="date" value={hasta} onChange={e => { setHasta(e.target.value); setPage(1); }} />
+        </div>
+        {hasFilters && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5 mr-1" /> Limpiar filtros
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="bg-card border border-border rounded-md overflow-hidden">
         <table className="w-full text-[12px]">
@@ -71,13 +182,15 @@ export default function DevolucionesListPage() {
             {isLoading && (
               <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
             )}
-            {!isLoading && rows.length === 0 && (
-              <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">No hay devoluciones registradas</td></tr>
+            {!isLoading && paged.length === 0 && (
+              <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">
+                {hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}
+              </td></tr>
             )}
-            {rows.map((d: any) => {
+            {paged.map((d: any) => {
               const lineas = d.devolucion_lineas ?? [];
-              const totalUds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
-              const totalCredito = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
+              const tUds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+              const tCred = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
               const motivos = [...new Set(lineas.map((l: any) => l.motivo))];
               const acciones = [...new Set(lineas.map((l: any) => l.accion))];
               const productosText = lineas.map((l: any) => `${l.productos?.nombre ?? '?'} (${l.cantidad})`).join(', ');
@@ -93,7 +206,7 @@ export default function DevolucionesListPage() {
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="py-2 px-3 max-w-[200px] truncate text-muted-foreground" title={productosText}>{productosText || '—'}</td>
-                  <td className="py-2 px-3 text-right font-semibold">{totalUds}</td>
+                  <td className="py-2 px-3 text-right font-semibold">{tUds}</td>
                   <td className="py-2 px-3">
                     {motivos.map((m: string) => (
                       <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium capitalize mr-1">
@@ -109,12 +222,22 @@ export default function DevolucionesListPage() {
                     ))}
                   </td>
                   <td className="py-2 px-3 text-right font-semibold">
-                    {totalCredito > 0 ? <span className="text-destructive">{fmt(totalCredito)}</span> : '—'}
+                    {tCred > 0 ? <span className="text-destructive">{fmt(tCred)}</span> : '—'}
                   </td>
                 </tr>
               );
             })}
           </tbody>
+          {!!filtered.length && (
+            <tfoot>
+              <tr className="border-t-2 border-border bg-muted/30 font-bold">
+                <td colSpan={5} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
+                <td className="py-2 px-3 text-right tabular-nums">{totalUds}</td>
+                <td colSpan={2}></td>
+                <td className="py-2 px-3 text-right text-destructive tabular-nums">{fmt(totalCredito)}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
