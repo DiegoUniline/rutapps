@@ -19,6 +19,7 @@ import {
   getBackupTimestamp, getBackupItemCount, backupSyncQueueToStorage,
 } from '@/lib/offlineBackup';
 import { getSyncDiagnostics, formatBytes, requestPersistentStorage, type SyncDiagnostics } from '@/lib/syncDiagnostics';
+import { refreshAppVersion } from '@/lib/appUpdate';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
@@ -603,21 +604,8 @@ export default function RutaSincronizarPage() {
             <button
               onClick={async () => {
                 try {
-                  // Unregister all service workers
-                  const registrations = await navigator.serviceWorker?.getRegistrations();
-                  if (registrations) {
-                    for (const reg of registrations) {
-                      if (reg.waiting) {
-                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                      }
-                      await reg.unregister();
-                    }
-                  }
-                  // Clear caches
-                  const cacheNames = await caches.keys();
-                  await Promise.all(cacheNames.map(name => caches.delete(name)));
                   toast.success('Aplicación actualizada, recargando...');
-                  setTimeout(() => window.location.reload(), 600);
+                  await refreshAppVersion();
                 } catch (err: any) {
                   // Fallback: just reload
                   window.location.reload();

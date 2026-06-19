@@ -19,6 +19,7 @@ import { useRutaStore } from '@/stores/rutaStore';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
+import { refreshAppVersion } from '@/lib/appUpdate';
 
 // Rutas que REQUIEREN jornada activa (acciones que mueven dinero/inventario).
 // Todo lo demás (clientes, ventas list, stock, mapa, perfil...) se puede ver sin jornada.
@@ -120,17 +121,8 @@ export default function MobileLayout() {
     if (!isOnline) return;
     setIsUpdating(true);
     try {
-      if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-      }
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      }
       setSwUpdateAvailable(false);
-      await new Promise(r => setTimeout(r, 1200));
-      window.location.reload();
+      await refreshAppVersion();
     } catch {
       await new Promise(r => setTimeout(r, 800));
       window.location.reload();
@@ -146,7 +138,7 @@ export default function MobileLayout() {
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
             <div className="text-center">
               <p className="text-base font-bold text-foreground">Actualizando versión…</p>
-              <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+              <p className="text-sm text-muted-foreground mt-1">Preparando recarga segura</p>
             </div>
           </div>
         )}
@@ -163,7 +155,7 @@ export default function MobileLayout() {
           <Loader2 className="h-10 w-10 text-primary animate-spin" />
           <div className="text-center">
             <p className="text-base font-bold text-foreground">Actualizando versión…</p>
-            <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+            <p className="text-sm text-muted-foreground mt-1">Preparando recarga segura</p>
           </div>
         </div>
       )}

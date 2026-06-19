@@ -22,6 +22,7 @@ import { fmtDate, fmtDateLongMx } from '@/lib/utils';
 import CostoSimuladorCard from '@/components/suscripcion/CostoSimuladorCard';
 import DatosFiscalesCard from '@/components/suscripcion/DatosFiscalesCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { refreshAppVersion } from '@/lib/appUpdate';
 
 interface SubPlanRow {
   id: string;
@@ -754,21 +755,12 @@ export default function MiSuscripcionPage() {
           onClick={async () => {
             try {
               toast.loading('Sincronizando app...', { id: 'sync-app' });
-              const registrations = await navigator.serviceWorker?.getRegistrations();
-              if (registrations) {
-                for (const reg of registrations) {
-                  if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                  await reg.unregister();
-                }
-              }
-              const cacheNames = await caches.keys();
-              await Promise.all(cacheNames.map(n => caches.delete(n)));
               // Limpiar cache local de suscripción
               Object.keys(localStorage)
                 .filter(k => k.startsWith('uniline_subscription_state'))
                 .forEach(k => localStorage.removeItem(k));
               toast.success('App actualizada, recargando...', { id: 'sync-app' });
-              setTimeout(() => window.location.reload(), 600);
+              await refreshAppVersion();
             } catch {
               window.location.reload();
             }

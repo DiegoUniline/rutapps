@@ -6,6 +6,7 @@
 // rely on the host CDN's cache headers so new deploys appear immediately.
 
 let registered = false;
+let controllerListenerAttached = false;
 
 function isRefusedContext(): boolean {
   if (!import.meta.env.PROD) return true;
@@ -46,6 +47,17 @@ async function unregisterAppSW() {
   }
 }
 
+async function clearAppShellCaches() {
+  if (!("caches" in window)) return;
+  try {
+    const names = await caches.keys();
+    const toDelete = names.filter((n) => /precache-v\d+|workbox-|html-pages|static-assets/.test(n));
+    await Promise.all(toDelete.map((n) => caches.delete(n)));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Register the PWA service worker. Safe to call multiple times.
  * Refuses to register in dev, Lovable preview, iframes, or with ?sw=off.
@@ -63,26 +75,27 @@ export async function registerAppSW() {
 
   try {
     const { registerSW } = await import("virtual:pwa-register");
+    const { notifyAppUpdateAvailable } = await import('@/lib/appUpdate');
     const updateSW = registerSW({
-      immediate: true,
+      immediate: false,
       onNeedRefresh() {
-        // autoUpdate handles activation; controllerchange triggers reload below.
+        notifyAppUpdateAvailable();
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
         // Check for updates periodically while the app is open.
-        setInterval(() => registration.update().catch(() => {}), 60_000);
+        setInterval(() => registration.update().catch(() => {}), 10 * 60_000);
       },
     });
 
-    // When a new SW takes control after publish, reload once to pick up the
-    // latest assets without forcing the user to clear cache.
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
+    // If a new worker takes control after the user accepts the update, remove
+    // only the app-shell caches. Do not auto-reload here; active forms/POS stay usable.
+    if (!controllerListenerAttached) {
+      controllerListenerAttached = true;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        clearAppShellCaches().catch(() => {});
+      });
+    }
 
     void updateSW;
   } catch (err) {
