@@ -18,6 +18,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -171,6 +172,9 @@ export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
   const { data: presentaciones = [] } = useAllPresentaciones();
   const { empresa } = useAuth();
+  // Realtime: refresca inventario al cambiar stock o productos desde otro dispositivo
+  useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['inventario-dashboard']] });
+  useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['inventario-dashboard']] });
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');

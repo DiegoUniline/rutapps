@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
@@ -57,11 +58,15 @@ function useCuentasCobrar(search: string) {
 }
 
 export default function CuentasCobrarPage() {
+  const { empresa } = useAuth();
   const { fmt } = useCurrency();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
+  // Realtime: refresca CxC cuando cambian ventas o cobros desde otro dispositivo
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['cuentas-cobrar']] });
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['cuentas-cobrar'], ['saldos-iniciales']] });
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);

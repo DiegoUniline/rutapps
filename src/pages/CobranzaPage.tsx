@@ -32,6 +32,7 @@ import { Link } from 'react-router-dom';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 
 
@@ -102,6 +103,9 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
 
 export default function CobranzaPage() {
   const { empresa } = useAuth();
+  // Realtime: refresca cobranza al haber pagos o cambios de ventas en otro dispositivo
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['cobros-desktop'], ['cxc'], ['saldos']] });
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['cobros-desktop'], ['cxc'], ['saldos']] });
   const isMobile = useIsMobile();
   const { fmt: fmtC } = useCurrency();
   const qc = useQueryClient();
