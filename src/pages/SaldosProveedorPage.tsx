@@ -559,9 +559,26 @@ export default function SaldosProveedorPage() {
             ))}
             {isLoading && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
             {!isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin proveedores con compras</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                {hasFilters ? 'Sin proveedores con los filtros aplicados' : 'Sin proveedores con compras'}
+              </TableCell></TableRow>
             )}
           </TableBody>
+          {filtered.length > 0 && (
+            <tfoot>
+              <tr className="bg-card border-t border-border font-semibold text-[12px]">
+                <td className="py-2 px-4 text-muted-foreground">
+                  {totalProveedores} proveedores {hasFilters && <span className="text-[10px] font-normal">(filtrado)</span>}
+                </td>
+                <td className="py-2 px-4 text-center">
+                  {filtered.reduce((s, p) => s + p.docs, 0)}
+                </td>
+                <td className="py-2 px-4 text-right font-bold tabular-nums">{fmt(totalComprado)}</td>
+                <td className="py-2 px-4 text-right tabular-nums text-destructive font-bold">{fmt(totalPendienteGlobal)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </Table>
       </div>
     </div>
