@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
+import { usePinAuth } from '@/hooks/usePinAuth';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
 // FacturacionAvanzadaTab fue movido a /facturacion-cfdi/avanzado como vistas
@@ -50,6 +51,7 @@ export default function FacturacionCfdiPage() {
   const isSuperAdmin = useIsSuperAdmin();
   const { fmt } = useCurrency();
   const navigate = useNavigate();
+  const { requestPin, PinDialog } = usePinAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showTimbrar, setShowTimbrar] = useState(false);
@@ -563,7 +565,16 @@ export default function FacturacionCfdiPage() {
               variant="destructive"
               className="flex-1"
               disabled={eliminarMutation.isPending}
-              onClick={() => deletingId && eliminarMutation.mutate(deletingId)}
+              onClick={() => {
+                const id = deletingId;
+                if (!id) return;
+                setShowDelete(false);
+                requestPin(
+                  'Eliminar CFDI',
+                  'Ingresa el PIN de administrador para confirmar.',
+                  () => eliminarMutation.mutate(id),
+                );
+              }}
             >
               {eliminarMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
@@ -586,7 +597,14 @@ export default function FacturacionCfdiPage() {
           </DialogHeader>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowBulkDelete(false)}>Cancelar</Button>
-            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={runBulkDelete}>
+            <Button variant="destructive" className="flex-1" disabled={bulkProcessing} onClick={() => {
+              setShowBulkDelete(false);
+              requestPin(
+                'Eliminar CFDIs',
+                `Ingresa el PIN de administrador para eliminar ${selectedDeletable.length} CFDI(s).`,
+                () => runBulkDelete(),
+              );
+            }}>
               {bulkProcessing ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
           </div>
@@ -610,6 +628,7 @@ export default function FacturacionCfdiPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <PinDialog />
     </div>
   );
 }

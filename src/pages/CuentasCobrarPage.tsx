@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
@@ -62,6 +63,7 @@ export default function CuentasCobrarPage() {
   const { fmt } = useCurrency();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
   // Realtime: refresca CxC cuando cambian ventas o cobros desde otro dispositivo
@@ -255,12 +257,25 @@ export default function CuentasCobrarPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && deleteMut.mutate(deleteId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={() => {
+                const id = deleteId;
+                if (!id) return;
+                setDeleteId(null);
+                requestPin(
+                  'Eliminar saldo inicial',
+                  'Ingresa el PIN de administrador para confirmar.',
+                  () => deleteMut.mutate(id),
+                );
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <PinDialog />
     </div>
   );
 }
