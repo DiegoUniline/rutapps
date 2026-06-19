@@ -207,6 +207,21 @@ export default function MermasPage() {
               </TableRow>
             ))}
           </TableBody>
+          {!!(mermas ?? []).length && (() => {
+            const activas = (mermas ?? []).filter((m: any) => !m.cancelada);
+            const tc = activas.reduce((s: number, m: any) => s + (m.total_costo ?? 0), 0);
+            const tv = activas.reduce((s: number, m: any) => s + (m.total_venta ?? 0), 0);
+            return (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-[11px] text-muted-foreground font-semibold">Totales activas ({activas.length})</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums text-destructive">{fmtMoney(tc)}</TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">{fmtMoney(tv)}</TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              </TableFooter>
+            );
+          })()}
         </Table>
       </div>
 
