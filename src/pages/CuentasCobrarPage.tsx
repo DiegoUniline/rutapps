@@ -63,6 +63,7 @@ export default function CuentasCobrarPage() {
   const { fmt } = useCurrency();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { requestPin, PinDialog } = usePinAuth();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
   // Realtime: refresca CxC cuando cambian ventas o cobros desde otro dispositivo
