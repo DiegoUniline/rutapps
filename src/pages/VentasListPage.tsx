@@ -56,6 +56,10 @@ function getNumericPageSize(ps: PageSizeOption): number {
 
 export default function VentasListPage() {
   const { empresa } = useAuth();
+  // Realtime: refresca lista al haber cambios en ventas/entregas/cobros (otro dispositivo)
+  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['ventas']] });
+  useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['entregas']] });
+  useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['cxc'], ['saldos']] });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
