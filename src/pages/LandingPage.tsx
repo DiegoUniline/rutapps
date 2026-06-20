@@ -226,7 +226,9 @@ export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [currency, setCurrency] = useState(CURRENCIES[0]);
-  
+  const [scrolled, setScrolled] = useState(false);
+  const [glow, setGlow] = useState({ x: 50, y: 30, visible: false });
+
   const [searchParams] = useSearchParams();
   useFacebookPixel();
   useLenis();
@@ -240,6 +242,13 @@ export default function LandingPage() {
     import('@/pwa/registerSW').then(({ ensureNoSWForPublicPage }) => ensureNoSWForPublicPage());
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="min-h-[100dvh] bg-white overflow-x-hidden antialiased"
       style={{ color: BRAND.ink, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
@@ -250,23 +259,26 @@ export default function LandingPage() {
         jsonLd={LANDING_JSON_LD}
       />
 
-      {/* NAV */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 h-14 overflow-hidden">
+      {/* NAV — glass + shrink on scroll */}
+      <nav
+        className={`fixed top-0 inset-x-0 z-50 border-b backdrop-blur-xl transition-all duration-300 ${scrolled ? 'bg-white/75 shadow-[0_8px_30px_-15px_rgba(10,21,48,0.18)]' : 'bg-white/60'}`}
+        style={{ borderColor: scrolled ? 'rgba(238,240,245,0.9)' : 'transparent', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+      >
+          <div className={`max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 transition-all duration-300 overflow-hidden ${scrolled ? 'h-12' : 'h-14'}`}>
           <Link to="/" className="flex min-w-0 items-center gap-2">
-            <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
+            <img src={rutappLogo.url} alt="Rutapp" className={`w-auto rounded-md transition-all duration-300 ${scrolled ? 'h-7' : 'h-8'}`} />
             <span className="text-[15px] font-bold tracking-tight max-[340px]:hidden">Rutapp</span>
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
-            <a href="#modulos">Módulos</a>
-            <a href="#movil">Móvil</a>
-            <a href="#ia" className="inline-flex items-center gap-1">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
-            <a href="#precios">Precios</a>
-            <Link to="/partners">Partners</Link>
+            <a href="#modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</a>
+            <a href="#movil" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Móvil</a>
+            <a href="#ia" className="inline-flex items-center gap-1 transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
+            <a href="#precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</a>
+            <Link to="/partners" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Partners</Link>
           </div>
           <div className="hidden md:flex items-center gap-2">
-            <Link to="/login" className="px-3 py-1.5 text-[13px] font-medium" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
-            <Link to="/signup" className="px-3.5 py-1.5 text-[13px] font-semibold text-white rounded-lg inline-flex items-center gap-1"
+            <Link to="/login" className="px-3 py-1.5 text-[13px] font-medium transition-colors" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
+            <Link to="/signup" className="px-3.5 py-1.5 text-[13px] font-semibold text-white rounded-lg inline-flex items-center gap-1 transition-all duration-200 hover:scale-[1.04] hover:shadow-lg"
               style={{ background: BRAND.ink }}>
               Empezar <ArrowRight className="h-3 w-3" />
             </Link>
@@ -280,7 +292,7 @@ export default function LandingPage() {
           </div>
         </div>
         {mobileMenu && (
-          <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm" style={{ borderColor: BRAND.line }}>
+          <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm animate-[fade-in_0.25s_ease-out]" style={{ borderColor: BRAND.line }}>
             {[['#modulos', 'Módulos'], ['#movil', 'Móvil'], ['#ia', 'IA'], ['#precios', 'Precios']].map(([h, l]) => (
               <a key={h} href={h} onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>{l}</a>
             ))}
@@ -290,9 +302,37 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO — side-by-side, edge-to-edge on desktop */}
-      <section className="relative overflow-hidden pb-12 px-4 sm:px-6 lg:px-8 xl:px-10" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
-        <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
-          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
+      <section
+        className="relative overflow-hidden pb-12 px-4 sm:px-6 lg:px-8 xl:px-10"
+        style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setGlow({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100, visible: true });
+        }}
+        onMouseLeave={() => setGlow(g => ({ ...g, visible: false }))}
+      >
+        {/* Breathing brand glow */}
+        <div
+          className="absolute inset-x-0 top-0 h-[620px] -z-10 animate-breathe-glow pointer-events-none will-change-transform"
+          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }}
+        />
+        {/* Secondary warm accent breathing */}
+        <div
+          className="absolute -z-10 right-[-10%] top-[8%] h-[420px] w-[420px] rounded-full blur-3xl opacity-30 animate-breathe-glow pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${BRAND.accent}55, transparent 70%)`, animationDelay: '1.5s' }}
+        />
+        {/* Cursor-follow glow (desktop) */}
+        <div
+          className="absolute -z-10 pointer-events-none transition-opacity duration-500 hidden md:block"
+          style={{
+            opacity: glow.visible ? 0.55 : 0,
+            left: `${glow.x}%`, top: `${glow.y}%`,
+            width: 520, height: 520, transform: 'translate(-50%, -50%)',
+            background: `radial-gradient(circle, ${BRAND.primary}33 0%, transparent 60%)`,
+            filter: 'blur(20px)',
+          }}
+        />
+
         <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           <div className="lg:col-span-5 xl:col-span-5">
             <Reveal variant="up" duration={350}>
@@ -324,10 +364,10 @@ export default function LandingPage() {
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
                 <button
                   onClick={() => setSimulatorOpen(true)}
-                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95"
-                  style={{ background: BRAND.primary, boxShadow: `0 10px 30px -10px ${BRAND.primary}80` }}
+                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 animate-pulse-cta"
+                  style={{ background: BRAND.primary }}
                 >
-                  <Sparkles className="h-4 w-4" /> Probar venta móvil ahora
+                  <Sparkles className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" /> Probar venta móvil ahora
                 </button>
                 <Link to="/signup" className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold rounded-lg inline-flex items-center gap-2 border bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   style={{ borderColor: BRAND.line, color: BRAND.ink }}>
@@ -690,26 +730,32 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      {/* CTA — el gran final */}
+      <section className="px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative">
         <Reveal variant="scale" duration={500} className="max-w-[1280px] mx-auto block">
-          <div className="relative rounded-2xl overflow-hidden p-8 md:p-12 text-center" style={{ background: BRAND.ink }}>
-            <div className="absolute inset-0 opacity-50"
-              style={{ background: `radial-gradient(50% 70% at 50% 0%, ${BRAND.primary}66, transparent), radial-gradient(40% 60% at 80% 100%, ${BRAND.accent}40, transparent)` }} />
+          <div className="relative rounded-3xl overflow-hidden p-10 md:p-16 text-center"
+            style={{ background: `linear-gradient(135deg, ${BRAND.ink} 0%, #122550 55%, ${BRAND.ink} 100%)` }}>
+            {/* Breathing aura */}
+            <div className="absolute inset-0 opacity-70 animate-breathe-glow pointer-events-none"
+              style={{ background: `radial-gradient(55% 75% at 50% 0%, ${BRAND.primary}80, transparent 60%), radial-gradient(45% 70% at 85% 100%, ${BRAND.accent}55, transparent 65%)` }} />
+            {/* Subtle grid texture */}
+            <div className="absolute inset-0 opacity-[0.08] pointer-events-none"
+              style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
             <div className="relative">
-              <h2 className="text-[26px] md:text-[38px] font-semibold tracking-tight text-white leading-tight" style={{ letterSpacing: '-0.025em' }}>
+              <Sparkles className="h-7 w-7 mx-auto mb-4 text-white/80 animate-float-slow" />
+              <h2 className="text-[28px] md:text-[44px] font-semibold tracking-tight text-white leading-[1.05]" style={{ letterSpacing: '-0.03em' }}>
                 ¿Listo para controlar tu distribuidora?
               </h2>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
-                <Link to="/signup" className="w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-[14px] text-white inline-flex items-center justify-center gap-2"
-                  style={{ background: BRAND.primary, boxShadow: `0 15px 40px -10px ${BRAND.primary}` }}>
-                  Solicitar demo <ArrowRight className="h-4 w-4" />
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link to="/signup" className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white inline-flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.04] hover:-translate-y-0.5 animate-pulse-cta"
+                  style={{ background: BRAND.primary }}>
+                  Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <Link to="/login" className="w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-[14px] text-white border border-white/15">
+                <Link to="/login" className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white border border-white/15 backdrop-blur-sm bg-white/5 transition-all duration-200 hover:bg-white/10 hover:-translate-y-0.5">
                   Iniciar sesión
                 </Link>
               </div>
-              <p className="mt-4 text-[12px] text-white/50">7 días gratis · sin tarjeta</p>
+              <p className="mt-5 text-[12.5px] text-white/55">7 días gratis · sin tarjeta</p>
             </div>
           </div>
         </Reveal>
