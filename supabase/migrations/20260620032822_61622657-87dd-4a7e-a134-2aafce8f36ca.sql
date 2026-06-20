@@ -1,0 +1,1 @@
+DELETE FROM public.entregas WHERE id='18f03187-63d0-41ac-98ca-cded49f06080' AND (SELECT COUNT(*) FROM public.entrega_lineas WHERE entrega_id='18f03187-63d0-41ac-98ca-cded49f06080') = 0;
