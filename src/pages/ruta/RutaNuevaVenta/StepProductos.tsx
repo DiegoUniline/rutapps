@@ -10,6 +10,7 @@ import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
+import { useApartadoAlmacenes, useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 
 interface Props {
   clienteNombre: string;
@@ -48,6 +49,10 @@ interface Props {
   resetItemToSuggested: (pid: string) => void;
   /** True if user can change prices (else "ojito" stays read-only) */
   canChangePrice: boolean;
+  // Apartado de stock en pedidos
+  apartadoActivoPedido: boolean;
+  pedidoAlmacenId: string | null;
+  setPedidoAlmacenId: (id: string | null) => void;
 }
 
 export function StepProductos(props: Props) {
