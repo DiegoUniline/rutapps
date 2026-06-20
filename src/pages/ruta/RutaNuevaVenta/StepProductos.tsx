@@ -265,14 +265,14 @@ export function StepProductos(props: Props) {
                     )}
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
                       const disp = disponibleMap?.get(p.id) ?? 0;
-                      const color = disp > 0 ? 'text-green-600' : disp === 0 ? 'text-muted-foreground' : 'text-destructive';
+                      const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';
                       return (
-                        <>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className={`text-[10px] font-medium ${color}`}>Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</span>
-                        </>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${bg}`}>
+                          Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}
+                        </span>
                       );
                     })()}
+
                   </div>
                   <div className="flex items-center gap-1.5 mt-px">
                     <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
