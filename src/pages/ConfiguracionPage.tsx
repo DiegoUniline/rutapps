@@ -294,7 +294,7 @@ function ChangePasswordCard() {
 
 export default function ConfiguracionPage() {
   const { fmt } = useCurrency();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const qc = useQueryClient();
   const { data: config, isLoading } = useEmpresaConfig();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -857,7 +857,7 @@ export default function ConfiguracionPage() {
       </Button>
 
       {/* Mi Suscripción — solo super admin */}
-      {(useAuth().user?.email === 'diego.leon@uniline.mx') && (
+      {(user?.email === 'diego.leon@uniline.mx') && (
         <div className="max-w-xl">
           <SubscriptionCard />
         </div>
