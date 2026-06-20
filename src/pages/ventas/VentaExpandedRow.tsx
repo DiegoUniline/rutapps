@@ -12,6 +12,7 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 
 interface Props {
   venta: any;
@@ -43,6 +44,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingWa, setGeneratingWa] = useState(false);
   const [printingTicket, setPrintingTicket] = useState(false);
+  const [cobroOpen, setCobroOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +181,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                   WhatsApp
                 </Button>
                 {venta.status !== 'borrador' && (venta.saldo_pendiente ?? 0) > 0 && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate('/ventas/cobranza', { state: { clienteId: venta.cliente_id, ventaId: venta.id } })}>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => setCobroOpen(true)}>
                     <Banknote className="h-3 w-3" /> Cobrar
                   </Button>
                 )}
@@ -336,6 +338,19 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
               tipo="venta"
               pdfBlob={waPdfBlob}
               pdfFileName={waPdfName}
+            />
+          </td>
+        </tr>
+      )}
+
+      {cobroOpen && (
+        <tr className="hidden">
+          <td>
+            <VentaCobroQuickModal
+              open={cobroOpen}
+              onClose={() => setCobroOpen(false)}
+              venta={venta}
+              fmt={fmt}
             />
           </td>
         </tr>
