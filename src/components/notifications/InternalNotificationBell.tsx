@@ -38,7 +38,8 @@ export default function InternalNotificationBell() {
 
   const handleClick = (n: InternalNotification) => {
     if (!readSet.has(n.id)) markRead(n.id);
-    if (n.link) navigate(n.link);
+    const link = getDetailLink(n);
+    if (link) navigate(link);
   };
 
   return (
