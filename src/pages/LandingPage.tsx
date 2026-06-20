@@ -259,23 +259,26 @@ export default function LandingPage() {
         jsonLd={LANDING_JSON_LD}
       />
 
-      {/* NAV */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-xl border-b" style={{ borderColor: BRAND.line, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 h-14 overflow-hidden">
+      {/* NAV — glass + shrink on scroll */}
+      <nav
+        className={`fixed top-0 inset-x-0 z-50 border-b backdrop-blur-xl transition-all duration-300 ${scrolled ? 'bg-white/75 shadow-[0_8px_30px_-15px_rgba(10,21,48,0.18)]' : 'bg-white/60'}`}
+        style={{ borderColor: scrolled ? 'rgba(238,240,245,0.9)' : 'transparent', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+      >
+          <div className={`max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-5 transition-all duration-300 overflow-hidden ${scrolled ? 'h-12' : 'h-14'}`}>
           <Link to="/" className="flex min-w-0 items-center gap-2">
-            <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
+            <img src={rutappLogo.url} alt="Rutapp" className={`w-auto rounded-md transition-all duration-300 ${scrolled ? 'h-7' : 'h-8'}`} />
             <span className="text-[15px] font-bold tracking-tight max-[340px]:hidden">Rutapp</span>
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
-            <a href="#modulos">Módulos</a>
-            <a href="#movil">Móvil</a>
-            <a href="#ia" className="inline-flex items-center gap-1">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
-            <a href="#precios">Precios</a>
-            <Link to="/partners">Partners</Link>
+            <a href="#modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</a>
+            <a href="#movil" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Móvil</a>
+            <a href="#ia" className="inline-flex items-center gap-1 transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
+            <a href="#precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</a>
+            <Link to="/partners" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Partners</Link>
           </div>
           <div className="hidden md:flex items-center gap-2">
-            <Link to="/login" className="px-3 py-1.5 text-[13px] font-medium" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
-            <Link to="/signup" className="px-3.5 py-1.5 text-[13px] font-semibold text-white rounded-lg inline-flex items-center gap-1"
+            <Link to="/login" className="px-3 py-1.5 text-[13px] font-medium transition-colors" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
+            <Link to="/signup" className="px-3.5 py-1.5 text-[13px] font-semibold text-white rounded-lg inline-flex items-center gap-1 transition-all duration-200 hover:scale-[1.04] hover:shadow-lg"
               style={{ background: BRAND.ink }}>
               Empezar <ArrowRight className="h-3 w-3" />
             </Link>
@@ -289,7 +292,7 @@ export default function LandingPage() {
           </div>
         </div>
         {mobileMenu && (
-          <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm" style={{ borderColor: BRAND.line }}>
+          <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm animate-[fade-in_0.25s_ease-out]" style={{ borderColor: BRAND.line }}>
             {[['#modulos', 'Módulos'], ['#movil', 'Móvil'], ['#ia', 'IA'], ['#precios', 'Precios']].map(([h, l]) => (
               <a key={h} href={h} onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>{l}</a>
             ))}
@@ -299,9 +302,37 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO — side-by-side, edge-to-edge on desktop */}
-      <section className="relative overflow-hidden pb-12 px-4 sm:px-6 lg:px-8 xl:px-10" style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}>
-        <div className="absolute inset-x-0 top-0 h-[520px] -z-10"
-          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }} />
+      <section
+        className="relative overflow-hidden pb-12 px-4 sm:px-6 lg:px-8 xl:px-10"
+        style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setGlow({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100, visible: true });
+        }}
+        onMouseLeave={() => setGlow(g => ({ ...g, visible: false }))}
+      >
+        {/* Breathing brand glow */}
+        <div
+          className="absolute inset-x-0 top-0 h-[620px] -z-10 animate-breathe-glow pointer-events-none will-change-transform"
+          style={{ background: `radial-gradient(65% 55% at 50% 0%, ${BRAND.primarySoft} 0%, transparent 65%)` }}
+        />
+        {/* Secondary warm accent breathing */}
+        <div
+          className="absolute -z-10 right-[-10%] top-[8%] h-[420px] w-[420px] rounded-full blur-3xl opacity-30 animate-breathe-glow pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${BRAND.accent}55, transparent 70%)`, animationDelay: '1.5s' }}
+        />
+        {/* Cursor-follow glow (desktop) */}
+        <div
+          className="absolute -z-10 pointer-events-none transition-opacity duration-500 hidden md:block"
+          style={{
+            opacity: glow.visible ? 0.55 : 0,
+            left: `${glow.x}%`, top: `${glow.y}%`,
+            width: 520, height: 520, transform: 'translate(-50%, -50%)',
+            background: `radial-gradient(circle, ${BRAND.primary}33 0%, transparent 60%)`,
+            filter: 'blur(20px)',
+          }}
+        />
+
         <div className="max-w-[1440px] mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           <div className="lg:col-span-5 xl:col-span-5">
             <Reveal variant="up" duration={350}>
