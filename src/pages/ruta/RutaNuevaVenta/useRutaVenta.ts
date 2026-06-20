@@ -368,6 +368,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     setCart(prev => prev.map(c => c.producto_id === productoId && !!c.es_cambio === match ? { ...c, cantidad: capped } : c));
   };
 
+  const apartadoActivoPedido = tipoVenta === 'pedido' && !!(empresa as any)?.apartar_stock_pedidos;
+
   const addToCart = (p: any, esCambio = false) => {
     const maxQty = esCambio ? Infinity : getMaxQty(p.id);
     const existing = cart.find(c => c.producto_id === p.id && c.es_cambio === esCambio);
@@ -378,7 +380,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     } else {
       if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
       const pf = resolvePricingFull(p);
-      setCart([...cart, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, precio_unitario: esCambio ? 0 : pf.unitPrice, cantidad: 1, unidad: 'pz', unidad_id: p.unidad_venta_id ?? undefined, tiene_iva: esCambio ? false : (p.tiene_iva ?? false), iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0), tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false), ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0), es_cambio: esCambio, precio_unitario_sin_redondeo: esCambio ? 0 : pf.rawUnitPrice, precio_display_sin_redondeo: esCambio ? 0 : pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo }]);
+      const almacenLinea = apartadoActivoPedido && !esCambio ? pedidoAlmacenId : null;
+      setCart([...cart, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, precio_unitario: esCambio ? 0 : pf.unitPrice, cantidad: 1, unidad: 'pz', unidad_id: p.unidad_venta_id ?? undefined, tiene_iva: esCambio ? false : (p.tiene_iva ?? false), iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0), tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false), ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0), es_cambio: esCambio, precio_unitario_sin_redondeo: esCambio ? 0 : pf.rawUnitPrice, precio_display_sin_redondeo: esCambio ? 0 : pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo, almacen_id: almacenLinea }]);
     }
   };
 
