@@ -369,6 +369,18 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   };
 
   const apartadoActivoPedido = tipoVenta === 'pedido' && !!(empresa as any)?.apartar_stock_pedidos;
+  const apartadoAlmacenesIds = ((empresa as any)?.apartado_almacenes_ids ?? []) as string[];
+
+  // Default pedidoAlmacenId al primer almacén habilitado cuando aplica
+  useEffect(() => {
+    if (!apartadoActivoPedido) { if (pedidoAlmacenId !== null) setPedidoAlmacenId(null); return; }
+    if (apartadoAlmacenesIds.length === 0) return;
+    if (!pedidoAlmacenId || !apartadoAlmacenesIds.includes(pedidoAlmacenId)) {
+      setPedidoAlmacenId(apartadoAlmacenesIds[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apartadoActivoPedido, apartadoAlmacenesIds.join(',')]);
+
 
   const addToCart = (p: any, esCambio = false) => {
     const maxQty = esCambio ? Infinity : getMaxQty(p.id);
