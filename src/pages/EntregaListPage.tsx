@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -47,6 +47,7 @@ export default function EntregaListPage() {
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string } | null>(null);
 
   // Always fetch ALL entregas (no status filter) so counts are correct
   const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
@@ -251,9 +252,13 @@ export default function EntregaListPage() {
     mutationFn: async () => {
       let saltadas = 0;
       const errores: string[] = [];
-      for (const entrega of selectedEntregas) {
+      const total = selectedEntregas.length;
+      setCargarProgress({ current: 0, total });
+      for (let i = 0; i < selectedEntregas.length; i++) {
+        const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
         const folio = (entrega as any).folio || eid.slice(0, 8);
+        setCargarProgress({ current: i, total, folio });
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         const pedidoId = (entrega as any).pedido_id;
         let almOrigen = (entrega as any).almacen_id as string | null;
@@ -354,7 +359,19 @@ export default function EntregaListPage() {
       setSelectedIds(new Set());
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
+
+  // Bloquear recargar/cerrar mientras se cargan entregas
+  useEffect(() => {
+    if (!cargarProgress) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [cargarProgress]);
 
   const handleBulkCargar = () => {
     if (bulkCargarMut.isPending) return;
@@ -363,6 +380,36 @@ export default function EntregaListPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
+      {cargarProgress && (
+        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary animate-pulse" />
+              <h3 className="text-[14px] font-semibold text-foreground">Cargando camión…</h3>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-muted-foreground">
+                  {Math.min(cargarProgress.current + 1, cargarProgress.total)} de {cargarProgress.total}
+                  {cargarProgress.folio ? ` · ${cargarProgress.folio}` : ''}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {Math.round((cargarProgress.current / Math.max(cargarProgress.total, 1)) * 100)}%
+                </span>
+              </div>
+              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(cargarProgress.current / Math.max(cargarProgress.total, 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-destructive font-medium leading-snug">
+              ⚠️ No recargues ni salgas de esta pantalla hasta que termine.
+            </p>
+          </div>
+        </div>
+      )}
       <PedidosTabs />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
