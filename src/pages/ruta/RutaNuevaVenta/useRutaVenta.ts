@@ -38,6 +38,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
+  // Apartado de stock en pedidos (solo si empresa.apartar_stock_pedidos === true)
+  const [pedidoAlmacenId, setPedidoAlmacenId] = useState<string | null>(null);
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
   const [notas, setNotas] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
