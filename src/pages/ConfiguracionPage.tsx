@@ -857,7 +857,7 @@ export default function ConfiguracionPage() {
       </Button>
 
       {/* Mi Suscripción — solo super admin */}
-      {(useAuth().user?.email === 'diego.leon@uniline.mx') && (
+      {(user?.email === 'diego.leon@uniline.mx') && (
         <div className="max-w-xl">
           <SubscriptionCard />
         </div>
