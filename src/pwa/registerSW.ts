@@ -75,16 +75,61 @@ export async function registerAppSW() {
 
   try {
     const { registerSW } = await import("virtual:pwa-register");
-    const { notifyAppUpdateAvailable } = await import('@/lib/appUpdate');
+    const { notifyAppUpdateAvailable, refreshAppVersion } = await import('@/lib/appUpdate');
+
+    // Auto-apply the update when it's safe (no input focused, no open modal/dialog,
+    // no dirty form). Otherwise notify and try again later. This way published
+    // changes appear without users needing to Ctrl+Shift+R.
+    const isSafeToReload = (): boolean => {
+      try {
+        const ae = document.activeElement as HTMLElement | null;
+        if (ae) {
+          const tag = ae.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+          if (ae.isContentEditable) return false;
+        }
+        // Any open Radix dialog / sheet / popover means the user is mid-task.
+        if (document.querySelector('[role="dialog"][data-state="open"], [data-state="open"][role="alertdialog"]')) {
+          return false;
+        }
+        // Mobile route view: never auto-reload (they may be offline capturing sales).
+        if (location.pathname.startsWith('/ruta')) return false;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    let autoApplyTimer: number | null = null;
+    const scheduleAutoApply = () => {
+      if (autoApplyTimer != null) return;
+      const tick = () => {
+        autoApplyTimer = null;
+        if (isSafeToReload()) {
+          refreshAppVersion().catch(() => {});
+        } else {
+          // Try again in 30s while still showing the manual prompt as fallback.
+          autoApplyTimer = window.setTimeout(tick, 30_000);
+        }
+      };
+      autoApplyTimer = window.setTimeout(tick, 2_000);
+    };
+
     const updateSW = registerSW({
       immediate: false,
       onNeedRefresh() {
         notifyAppUpdateAvailable();
+        scheduleAutoApply();
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
-        // Check for updates periodically while the app is open.
-        setInterval(() => registration.update().catch(() => {}), 10 * 60_000);
+        // Check for updates more often so a fresh deploy is picked up quickly.
+        setInterval(() => registration.update().catch(() => {}), 60_000);
+        // Also check when the tab regains focus.
+        window.addEventListener('focus', () => registration.update().catch(() => {}));
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') registration.update().catch(() => {});
+        });
       },
     });
 
