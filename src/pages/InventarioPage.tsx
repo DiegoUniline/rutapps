@@ -25,7 +25,7 @@ type ViewMode = 'resumen' | 'almacen' | 'rutas';
 function useInventarioData() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['inventario-dashboard', empresa?.id],
+    queryKey: ['inventario-dashboard', empresa?.id, !!(empresa as any)?.apartar_stock_pedidos],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eid = empresa!.id;
@@ -183,6 +183,9 @@ function useInventarioData() {
         totales,
         almacenes: almacenes ?? [],
         stockAlmacenMap,
+        apartadoMap,
+        apartadoAlmacenesIds,
+        apartarFlag,
       };
     },
   });
