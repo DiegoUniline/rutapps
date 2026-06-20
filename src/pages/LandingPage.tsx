@@ -226,7 +226,9 @@ export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [currency, setCurrency] = useState(CURRENCIES[0]);
-  
+  const [scrolled, setScrolled] = useState(false);
+  const [glow, setGlow] = useState({ x: 50, y: 30, visible: false });
+
   const [searchParams] = useSearchParams();
   useFacebookPixel();
   useLenis();
@@ -238,6 +240,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     import('@/pwa/registerSW').then(({ ensureNoSWForPublicPage }) => ensureNoSWForPublicPage());
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
