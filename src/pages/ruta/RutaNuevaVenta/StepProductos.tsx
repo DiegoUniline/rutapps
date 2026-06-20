@@ -176,9 +176,24 @@ export function StepProductos(props: Props) {
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </select>
-          <p className="text-[10px] text-muted-foreground mt-1">Los productos que agregues se apartarán de este almacén. Cambia el selector para apartar de otro.</p>
+          <div className="flex gap-1.5 mt-2">
+            {([
+              { k: 'con', label: 'Con stock' },
+              { k: 'sin', label: 'Sin stock' },
+              { k: 'todos', label: 'Todos' },
+            ] as const).map(opt => (
+              <button
+                key={opt.k}
+                onClick={() => setStockFilter(opt.k)}
+                className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all active:scale-95 ${stockFilter === opt.k ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-muted-foreground'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
       {cambioItems.length > 0 && (
         <div className="mx-3 mb-1.5 bg-accent/40 rounded-lg px-3 py-2">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
