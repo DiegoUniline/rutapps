@@ -470,6 +470,11 @@ export default function InventarioPage() {
                     <span className={cn("ml-1 text-[9px] px-1 py-0.5 rounded", u.tipo === 'ruta' ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary")}>
                       {u.tipo === 'ruta' ? 'Ruta' : 'Almacén'}
                     </span>
+                    {u.apartadoOn && (
+                      <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300" title="Apartado activo para pedidos">
+                        Apart.
+                      </span>
+                    )}
                   </TableHead>
                 ))}
                 <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
