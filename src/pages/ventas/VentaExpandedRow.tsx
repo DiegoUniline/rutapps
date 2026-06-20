@@ -44,6 +44,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingWa, setGeneratingWa] = useState(false);
   const [printingTicket, setPrintingTicket] = useState(false);
+  const [cobroOpen, setCobroOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
