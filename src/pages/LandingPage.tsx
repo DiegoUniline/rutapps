@@ -633,18 +633,25 @@ export default function LandingPage() {
             </h2>
             <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
           </div>
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="text-[12px]" style={{ color: BRAND.muted }}>Ver precios en:</span>
-            <select
-              value={currency.code}
-              onChange={(e) => setCurrency(CURRENCIES.find(c => c.code === e.target.value) ?? CURRENCIES[0])}
-              className="text-[13px] font-medium px-3 py-1.5 rounded-lg bg-white border outline-none cursor-pointer"
-              style={{ borderColor: BRAND.line, color: BRAND.ink }}
-            >
-              {CURRENCIES.map(c => (
-                <option key={c.code} value={c.code}>{c.label}</option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mb-8">
+            {CURRENCIES.map(c => {
+              const active = c.code === currency.code;
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => setCurrency(c)}
+                  className="text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-all"
+                  style={{
+                    background: active ? BRAND.primary : '#fff',
+                    color: active ? '#fff' : BRAND.ink2,
+                    borderColor: active ? BRAND.primary : BRAND.line,
+                  }}
+                >
+                  {c.label.split(' ')[0]} {c.code}
+                </button>
+              );
+            })}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PLANS.map((p, i) => (
