@@ -250,23 +250,107 @@ export default function EntregaListPage() {
   const bulkCargarMut = useMutation({
     mutationFn: async () => {
       let saltadas = 0;
+      const errores: string[] = [];
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
+        const folio = (entrega as any).folio || eid.slice(0, 8);
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
-        if (!vendId) continue;
-        // Idempotencia: re-leer status; si ya está cargado/entregado/hecho, saltar
-        const { data: fresh } = await supabase.from('entregas').select('status').eq('id', eid).maybeSingle();
-        if (!fresh || (fresh.status as string) === 'cargado' || (fresh.status as string) === 'entregado' || (fresh.status as string) === 'hecho') { saltadas++; continue; }
-        // El trigger de BD (trg_apply_entrega_cargado_inventory) hace SALIDA del origen y ENTRADA al destino
-        await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
+        const pedidoId = (entrega as any).pedido_id;
+        let almOrigen = (entrega as any).almacen_id as string | null;
+
+        if (!vendId) { errores.push(`${folio}: sin vendedor de ruta asignado`); continue; }
+
+        // Idempotencia: re-leer status
+        const { data: fresh } = await supabase.from('entregas').select('status, almacen_id').eq('id', eid).maybeSingle();
+        if (!fresh) { errores.push(`${folio}: no encontrada`); continue; }
+        if (['cargado', 'entregado', 'hecho'].includes(fresh.status as string)) { saltadas++; continue; }
+        almOrigen = almOrigen || (fresh as any).almacen_id;
+
+        // Verificar perfil de vendedor con almacén
+        const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendId).maybeSingle();
+        if (!prof?.almacen_id) { errores.push(`${folio}: el vendedor de ruta no tiene almacén asignado en su perfil`); continue; }
+
+        // Asegurar que existen líneas surtidas. Si no, intentar seedearlas desde el pedido.
+        const { data: lineas } = await supabase
+          .from('entrega_lineas')
+          .select('id, hecho, cantidad_pedida, cantidad_entregada, almacen_origen_id, producto_id')
+          .eq('entrega_id', eid);
+
+        const lineasHechas = (lineas ?? []).filter((l: any) => l.hecho && Number(l.cantidad_entregada) > 0);
+
+        if (lineasHechas.length === 0) {
+          if (!pedidoId) { errores.push(`${folio}: sin líneas surtidas y sin pedido para regenerar`); continue; }
+          if (!almOrigen) { errores.push(`${folio}: falta almacén origen. Surte la entrega manualmente antes de cargar.`); continue; }
+
+          let toSurtir: { id: string; producto_id: string; cantidad_pedida: number }[] = [];
+
+          if (!lineas || lineas.length === 0) {
+            const { data: vLineas, error: vErr } = await supabase
+              .from('venta_lineas')
+              .select('producto_id, cantidad, unidad_id')
+              .eq('venta_id', pedidoId);
+            if (vErr) { errores.push(`${folio}: ${vErr.message}`); continue; }
+            if (!vLineas || vLineas.length === 0) { errores.push(`${folio}: el pedido no tiene productos`); continue; }
+
+            const { data: insertadas, error: insErr } = await supabase
+              .from('entrega_lineas')
+              .insert(vLineas.map((l: any) => ({
+                entrega_id: eid,
+                producto_id: l.producto_id,
+                unidad_id: l.unidad_id ?? null,
+                cantidad_pedida: Number(l.cantidad) || 0,
+                cantidad_entregada: 0,
+                hecho: false,
+              })) as any)
+              .select('id, producto_id, cantidad_pedida');
+            if (insErr) { errores.push(`${folio}: no se pudieron crear líneas (${insErr.message})`); continue; }
+            toSurtir = (insertadas ?? []).map((l: any) => ({ id: l.id, producto_id: l.producto_id, cantidad_pedida: Number(l.cantidad_pedida) || 0 }));
+          } else {
+            toSurtir = lineas
+              .filter((l: any) => !l.hecho || Number(l.cantidad_entregada) <= 0)
+              .map((l: any) => ({ id: l.id, producto_id: l.producto_id, cantidad_pedida: Number(l.cantidad_pedida) || 0 }));
+          }
+
+          let surtirError: string | null = null;
+          for (const l of toSurtir) {
+            if (l.cantidad_pedida <= 0) continue;
+            const { error: rpcErr } = await supabase.rpc('surtir_linea_entrega', {
+              p_linea_id: l.id,
+              p_producto_id: l.producto_id,
+              p_almacen_origen_id: almOrigen,
+              p_cantidad_surtida: l.cantidad_pedida,
+              p_entrega_id: eid,
+              p_empresa_id: empresa!.id,
+              p_user_id: user?.id,
+            });
+            if (rpcErr) { surtirError = rpcErr.message; break; }
+          }
+          if (surtirError) { errores.push(`${folio}: ${surtirError}`); continue; }
+        }
+
+        // El trigger de BD aplica entrada al almacén destino del vendedor
+        const { error: updErr } = await supabase
+          .from('entregas')
+          .update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any)
+          .eq('id', eid);
+        if (updErr) { errores.push(`${folio}: ${updErr.message}`); continue; }
       }
-      return { saltadas };
+      return { saltadas, errores };
     },
-    onSuccess: ({ saltadas }) => {
-      const ok = selectedEntregas.length - saltadas;
-      toast.success(`${ok} entrega(s) cargadas${saltadas ? ` · ${saltadas} ya estaban cargadas` : ''}`);
+    onSuccess: ({ saltadas, errores }) => {
+      const ok = selectedEntregas.length - saltadas - errores.length;
+      if (ok > 0) {
+        toast.success(`${ok} entrega(s) cargadas${saltadas ? ` · ${saltadas} ya estaban cargadas` : ''}`);
+      } else if (saltadas > 0 && errores.length === 0) {
+        toast.info(`${saltadas} entrega(s) ya estaban cargadas`);
+      }
+      if (errores.length > 0) {
+        toast.error(`No se pudieron cargar ${errores.length}: ${errores.slice(0, 3).join(' · ')}${errores.length > 3 ? '…' : ''}`, { duration: 9000 });
+      }
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
       setSelectedIds(new Set());
     },
     onError: (err: any) => toast.error(err.message),
