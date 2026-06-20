@@ -268,12 +268,13 @@ export default function EntregaListPage() {
       let saltadas = 0;
       const errores: string[] = [];
       const total = selectedEntregas.length;
-      setCargarProgress({ current: 0, total });
+      const title = 'Cargando camión…';
+      setCargarProgress({ current: 0, total, title });
       for (let i = 0; i < selectedEntregas.length; i++) {
         const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
         const folio = (entrega as any).folio || eid.slice(0, 8);
-        setCargarProgress({ current: i, total, folio });
+        setCargarProgress({ current: i, total, folio, title });
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         const pedidoId = (entrega as any).pedido_id;
         let almOrigen = (entrega as any).almacen_id as string | null;
