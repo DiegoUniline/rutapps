@@ -557,6 +557,73 @@ export default function InventarioPage() {
         );
       })()}
 
+      {/* Demanda view — Almacén General: consolida almacenes con apartado activo */}
+      {view === 'demanda' && data && (() => {
+        const apartIds = new Set(data.apartadoAlmacenesIds ?? []);
+        const almacenesDemanda = (data.almacenes ?? []).filter(a => apartIds.has(a.id));
+        const getStock = (prodId: string) =>
+          almacenesDemanda.reduce((s, a) => s + (data.stockAlmacenMap[a.id]?.[prodId] ?? 0), 0);
+        const getDemanda = (prodId: string) =>
+          almacenesDemanda.reduce((s, a) => s + (data.apartadoMap?.[a.id]?.[prodId] ?? 0), 0);
+
+        if (almacenesDemanda.length === 0) {
+          return (
+            <div className="bg-card border border-border rounded p-8 text-center text-sm text-muted-foreground">
+              No hay almacenes con apartado de stock activo. Actívalo en Configuración → Empresa.
+            </div>
+          );
+        }
+
+        const totStock = (filteredProducts ?? []).reduce((s, p) => s + getStock(p.id), 0);
+        const totDem = (filteredProducts ?? []).reduce((s, p) => s + getDemanda(p.id), 0);
+        const totDisp = totStock - totDem;
+
+        return (
+          <div className="bg-card border border-border rounded overflow-x-auto">
+            <div className="px-3 py-2 border-b border-border bg-primary/5 text-[12px] text-muted-foreground">
+              <strong className="text-foreground">Almacén General</strong> · consolidado de {almacenesDemanda.length} almacén(es) con demanda activa: {almacenesDemanda.map(a => a.nombre).join(', ')}
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px]">Código</TableHead>
+                  <TableHead className="text-[11px]">Producto</TableHead>
+                  <TableHead className="text-[11px] text-center">Ud.</TableHead>
+                  <TableHead className="text-[11px] text-center font-bold">Stock</TableHead>
+                  <TableHead className="text-[11px] text-center font-bold">Demanda</TableHead>
+                  <TableHead className="text-[11px] text-center font-bold">Disponible</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts?.map(p => {
+                  const stock = getStock(p.id);
+                  const dem = getDemanda(p.id);
+                  const disp = stock - dem;
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
+                      <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
+                      <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
+                      <TableCell className={cn("text-center font-bold", stock <= 0 && "text-destructive")}>{fmtNum(stock)}</TableCell>
+                      <TableCell className={cn("text-center font-bold", dem > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>{fmtNum(dem)}</TableCell>
+                      <TableCell className={cn("text-center font-bold", disp > 0 ? "text-green-600 dark:text-green-400" : disp === 0 ? "text-muted-foreground" : "text-destructive")}>{fmtNum(disp)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredProducts && filteredProducts.length > 0 && (
+                  <TableRow className="bg-card font-bold">
+                    <TableCell colSpan={3}>Totales</TableCell>
+                    <TableCell className="text-center">{fmtNum(totStock)}</TableCell>
+                    <TableCell className="text-center text-amber-600 dark:text-amber-400">{fmtNum(totDem)}</TableCell>
+                    <TableCell className={cn("text-center", totDisp > 0 ? "text-green-600 dark:text-green-400" : totDisp === 0 ? "text-muted-foreground" : "text-destructive")}>{fmtNum(totDisp)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        );
+      })()}
+
       {/* Rutas view */}
       {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
