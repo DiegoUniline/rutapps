@@ -57,10 +57,16 @@ export default function InternalNotificationBell() {
               </span>
             )}
           </div>
-          {unreadCount > 0 && (
-            <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => markAllRead()}>
+          {notifications.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1"
+              disabled={unreadCount === 0}
+              onClick={() => markAllRead()}
+            >
               <CheckCheck className="h-3.5 w-3.5" />
-              Marcar todas
+              Marcar todas como leídas
             </Button>
           )}
         </div>
