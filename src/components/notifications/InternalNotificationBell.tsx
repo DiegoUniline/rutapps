@@ -13,7 +13,11 @@ const TIPO_META: Record<string, { icon: any; color: string; bg: string }> = {
   cobro:       { icon: DollarSign,    color: 'text-success',     bg: 'bg-success/10' },
   devolucion:  { icon: Undo2,         color: 'text-warning',     bg: 'bg-warning/10' },
   entrega:     { icon: Truck,         color: 'text-info',        bg: 'bg-info/10' },
-  stock_bajo:  { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
+  stock_bajo:        { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
+  compra_por_vencer: { icon: AlertTriangle, color: 'text-warning',     bg: 'bg-warning/10' },
+  compra_vencida:    { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
+  cuenta_por_vencer: { icon: AlertTriangle, color: 'text-warning',     bg: 'bg-warning/10' },
+  cuenta_vencida:    { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
 
 export default function InternalNotificationBell() {
