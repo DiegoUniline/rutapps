@@ -47,7 +47,7 @@ export default function EntregaListPage() {
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string } | null>(null);
+  const [cargarProgress, setCargarProgress] = useState<{ current: number; total: number; folio?: string; title?: string } | null>(null);
 
   // Always fetch ALL entregas (no status filter) so counts are correct
   const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
@@ -128,10 +128,16 @@ export default function EntregaListPage() {
       if (!almacenId) throw new Error('Selecciona un almacén origen');
 
       const today = todayLocal();
+      const total = selectedEntregas.length;
+      const title = vendedorRutaId ? 'Surtiendo y asignando entregas…' : 'Surtiendo entregas…';
+      setCargarProgress({ current: 0, total, title });
 
-      for (const entrega of selectedEntregas) {
+      for (let i = 0; i < selectedEntregas.length; i++) {
+        const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
         const estatus = (entrega as any).status;
+        const folio = (entrega as any).folio || eid.slice(0, 8);
+        setCargarProgress({ current: i, total, folio, title });
 
         // If borrador → surtir (deduct stock atomically via RPC, mark lines, set surtido)
         if (estatus === 'borrador') {
@@ -199,6 +205,7 @@ export default function EntregaListPage() {
       setVendedorRutaId('');
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
 
   // Helper: get vendedor's almacen_id from profiles
@@ -226,8 +233,15 @@ export default function EntregaListPage() {
       const almDestinoId = await getVendedorAlmacen(vendedorRutaId);
       if (cargarTambien && !almDestinoId) throw new Error('El vendedor no tiene almacén asignado');
 
-      for (const entrega of selectedEntregas) {
+      const total = selectedEntregas.length;
+      const title = cargarTambien ? 'Asignando y cargando entregas…' : 'Asignando entregas a ruta…';
+      setCargarProgress({ current: 0, total, title });
+
+      for (let i = 0; i < selectedEntregas.length; i++) {
+        const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
+        const folio = (entrega as any).folio || eid.slice(0, 8);
+        setCargarProgress({ current: i, total, folio, title });
         await supabase.from('entregas').update({
           status: 'asignado',
           vendedor_ruta_id: vendedorRutaId,
@@ -246,6 +260,7 @@ export default function EntregaListPage() {
       setSelectedIds(new Set()); setShowAsignarDialog(false); setVendedorRutaId('');
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
 
   const bulkCargarMut = useMutation({
@@ -253,12 +268,13 @@ export default function EntregaListPage() {
       let saltadas = 0;
       const errores: string[] = [];
       const total = selectedEntregas.length;
-      setCargarProgress({ current: 0, total });
+      const title = 'Cargando camión…';
+      setCargarProgress({ current: 0, total, title });
       for (let i = 0; i < selectedEntregas.length; i++) {
         const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
         const folio = (entrega as any).folio || eid.slice(0, 8);
-        setCargarProgress({ current: i, total, folio });
+        setCargarProgress({ current: i, total, folio, title });
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         const pedidoId = (entrega as any).pedido_id;
         let almOrigen = (entrega as any).almacen_id as string | null;
@@ -385,7 +401,7 @@ export default function EntregaListPage() {
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-primary animate-pulse" />
-              <h3 className="text-[14px] font-semibold text-foreground">Cargando camión…</h3>
+              <h3 className="text-[14px] font-semibold text-foreground">{cargarProgress.title || 'Procesando entregas…'}</h3>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[12px]">
