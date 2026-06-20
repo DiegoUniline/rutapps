@@ -308,6 +308,9 @@ export default function InventarioPage() {
   const tabs: { key: ViewMode; label: string; icon: React.ElementType }[] = [
     { key: 'resumen', label: 'Stock Total', icon: Package },
     { key: 'almacen', label: 'Ubicaciones', icon: Warehouse },
+    ...(data?.apartarFlag && (data?.apartadoAlmacenesIds?.length ?? 0) > 0
+      ? [{ key: 'demanda' as ViewMode, label: 'Almacén General (Demanda)', icon: Boxes }]
+      : []),
     { key: 'rutas', label: 'Rutas activas', icon: Truck },
   ];
 
