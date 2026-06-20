@@ -69,7 +69,7 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
                       <FileText className="h-3.5 w-3.5 mr-2" /> Ver detalle
                     </DropdownMenuItem>
                     {v.status !== 'borrador' && v.saldo_pendiente > 0 && (
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/cobranza`); }}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/cobranza`, { state: { clienteId: v.cliente_id, ventaId: v.id } }); }}>
                         <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
                       </DropdownMenuItem>
                     )}
