@@ -128,10 +128,16 @@ export default function EntregaListPage() {
       if (!almacenId) throw new Error('Selecciona un almacén origen');
 
       const today = todayLocal();
+      const total = selectedEntregas.length;
+      const title = vendedorRutaId ? 'Surtiendo y asignando entregas…' : 'Surtiendo entregas…';
+      setCargarProgress({ current: 0, total, title });
 
-      for (const entrega of selectedEntregas) {
+      for (let i = 0; i < selectedEntregas.length; i++) {
+        const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
         const estatus = (entrega as any).status;
+        const folio = (entrega as any).folio || eid.slice(0, 8);
+        setCargarProgress({ current: i, total, folio, title });
 
         // If borrador → surtir (deduct stock atomically via RPC, mark lines, set surtido)
         if (estatus === 'borrador') {
@@ -199,6 +205,7 @@ export default function EntregaListPage() {
       setVendedorRutaId('');
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
 
   // Helper: get vendedor's almacen_id from profiles
