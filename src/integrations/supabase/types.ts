@@ -3622,6 +3622,74 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_notification_reads: {
+        Row: {
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "internal_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          link: string | null
+          metadata: Json | null
+          tipo: string
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          link?: string | null
+          metadata?: Json | null
+          tipo: string
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          link?: string | null
+          metadata?: Json | null
+          tipo?: string
+          title?: string
+        }
+        Relationships: []
+      }
       lista_precios: {
         Row: {
           activa: boolean
@@ -8176,6 +8244,7 @@ export type Database = {
       }
     }
     Functions: {
+      _inotif_cliente_nombre: { Args: { _id: string }; Returns: string }
       _mover_stock_entre_almacenes: {
         Args: {
           p_almacen_destino: string
@@ -8434,6 +8503,7 @@ export type Database = {
         }
         Returns: string
       }
+      purge_internal_notifications: { Args: never; Returns: undefined }
       purge_old_gps_history: { Args: never; Returns: undefined }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
       read_email_batch: {
