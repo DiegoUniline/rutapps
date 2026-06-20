@@ -730,26 +730,32 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      {/* CTA — el gran final */}
+      <section className="px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative">
         <Reveal variant="scale" duration={500} className="max-w-[1280px] mx-auto block">
-          <div className="relative rounded-2xl overflow-hidden p-8 md:p-12 text-center" style={{ background: BRAND.ink }}>
-            <div className="absolute inset-0 opacity-50"
-              style={{ background: `radial-gradient(50% 70% at 50% 0%, ${BRAND.primary}66, transparent), radial-gradient(40% 60% at 80% 100%, ${BRAND.accent}40, transparent)` }} />
+          <div className="relative rounded-3xl overflow-hidden p-10 md:p-16 text-center"
+            style={{ background: `linear-gradient(135deg, ${BRAND.ink} 0%, #122550 55%, ${BRAND.ink} 100%)` }}>
+            {/* Breathing aura */}
+            <div className="absolute inset-0 opacity-70 animate-breathe-glow pointer-events-none"
+              style={{ background: `radial-gradient(55% 75% at 50% 0%, ${BRAND.primary}80, transparent 60%), radial-gradient(45% 70% at 85% 100%, ${BRAND.accent}55, transparent 65%)` }} />
+            {/* Subtle grid texture */}
+            <div className="absolute inset-0 opacity-[0.08] pointer-events-none"
+              style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
             <div className="relative">
-              <h2 className="text-[26px] md:text-[38px] font-semibold tracking-tight text-white leading-tight" style={{ letterSpacing: '-0.025em' }}>
+              <Sparkles className="h-7 w-7 mx-auto mb-4 text-white/80 animate-float-slow" />
+              <h2 className="text-[28px] md:text-[44px] font-semibold tracking-tight text-white leading-[1.05]" style={{ letterSpacing: '-0.03em' }}>
                 ¿Listo para controlar tu distribuidora?
               </h2>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
-                <Link to="/signup" className="w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-[14px] text-white inline-flex items-center justify-center gap-2"
-                  style={{ background: BRAND.primary, boxShadow: `0 15px 40px -10px ${BRAND.primary}` }}>
-                  Solicitar demo <ArrowRight className="h-4 w-4" />
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link to="/signup" className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white inline-flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.04] hover:-translate-y-0.5 animate-pulse-cta"
+                  style={{ background: BRAND.primary }}>
+                  Solicitar demo <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-                <Link to="/login" className="w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-[14px] text-white border border-white/15">
+                <Link to="/login" className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-[14.5px] text-white border border-white/15 backdrop-blur-sm bg-white/5 transition-all duration-200 hover:bg-white/10 hover:-translate-y-0.5">
                   Iniciar sesión
                 </Link>
               </div>
-              <p className="mt-4 text-[12px] text-white/50">7 días gratis · sin tarjeta</p>
+              <p className="mt-5 text-[12.5px] text-white/55">7 días gratis · sin tarjeta</p>
             </div>
           </div>
         </Reveal>
