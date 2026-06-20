@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOverrideEmpresaIdRaw(overrideId);
       try {
         const { data } = await supabase.from('empresas')
-          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids')
           .eq('id', overrideId)
           .maybeSingle();
         if (data) {
