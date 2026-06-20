@@ -73,6 +73,8 @@ export function StepProductos(props: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
+  const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>('con');
+
 
   // Wrap addToCart: if producto es_granel, abrir selector en lugar de añadir directo
   const handleAdd = (p: any, esCambio?: boolean) => {
@@ -174,9 +176,24 @@ export function StepProductos(props: Props) {
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </select>
-          <p className="text-[10px] text-muted-foreground mt-1">Los productos que agregues se apartarán de este almacén. Cambia el selector para apartar de otro.</p>
+          <div className="flex gap-1.5 mt-2">
+            {([
+              { k: 'con', label: 'Con stock' },
+              { k: 'sin', label: 'Sin stock' },
+              { k: 'todos', label: 'Todos' },
+            ] as const).map(opt => (
+              <button
+                key={opt.k}
+                onClick={() => setStockFilter(opt.k)}
+                className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all active:scale-95 ${stockFilter === opt.k ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-muted-foreground'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
       {cambioItems.length > 0 && (
         <div className="mx-3 mb-1.5 bg-accent/40 rounded-lg px-3 py-2">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
@@ -213,7 +230,12 @@ export function StepProductos(props: Props) {
             )}
           </div>
         )}
-        {filteredProductos?.map(p => {
+        {filteredProductos?.filter(p => {
+          if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
+          if (stockFilter === 'todos') return true;
+          const disp = disponibleMap?.get(p.id) ?? 0;
+          return stockFilter === 'con' ? disp > 0 : disp <= 0;
+        }).map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
           // Show real stock, not Infinity (which appears when vender_sin_stock is enabled)
@@ -243,14 +265,14 @@ export function StepProductos(props: Props) {
                     )}
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
                       const disp = disponibleMap?.get(p.id) ?? 0;
-                      const color = disp > 0 ? 'text-green-600' : disp === 0 ? 'text-muted-foreground' : 'text-destructive';
+                      const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';
                       return (
-                        <>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className={`text-[10px] font-medium ${color}`}>Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</span>
-                        </>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${bg}`}>
+                          Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}
+                        </span>
                       );
                     })()}
+
                   </div>
                   <div className="flex items-center gap-1.5 mt-px">
                     <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
