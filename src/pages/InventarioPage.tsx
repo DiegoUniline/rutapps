@@ -58,12 +58,32 @@ function useInventarioData() {
           .range(from, to)
       );
 
+      // Per-warehouse apartado (solo si empresa.apartar_stock_pedidos = true)
+      const apartarFlag = !!(empresa as any)?.apartar_stock_pedidos;
+      const apartadoData = apartarFlag
+        ? await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('stock_apartado')
+              .select('almacen_id, producto_id, cantidad')
+              .eq('empresa_id', eid)
+              .range(from, to)
+          )
+        : [];
+
       // Build stock_almacen map: almacen_id -> producto_id -> cantidad
       const stockAlmacenMap: Record<string, Record<string, number>> = {};
       for (const sa of (stockAlmacenData ?? [])) {
         if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
+      // Build apartado map: almacen_id -> producto_id -> cantidad (suma)
+      const apartadoMap: Record<string, Record<string, number>> = {};
+      for (const ap of (apartadoData ?? [])) {
+        if (!apartadoMap[ap.almacen_id]) apartadoMap[ap.almacen_id] = {};
+        apartadoMap[ap.almacen_id][ap.producto_id] =
+          (apartadoMap[ap.almacen_id][ap.producto_id] ?? 0) + (Number(ap.cantidad) || 0);
+      }
+      const apartadoAlmacenesIds: string[] = (((empresa as any)?.apartado_almacenes_ids) ?? []) as string[];
       const hasWarehouseStock = (stockAlmacenData?.length ?? 0) > 0;
 
       const getStockByTipo = (productoId: string, tipo: 'almacen' | 'ruta') => {
