@@ -230,7 +230,12 @@ export function StepProductos(props: Props) {
             )}
           </div>
         )}
-        {filteredProductos?.map(p => {
+        {filteredProductos?.filter(p => {
+          if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
+          if (stockFilter === 'todos') return true;
+          const disp = disponibleMap?.get(p.id) ?? 0;
+          return stockFilter === 'con' ? disp > 0 : disp <= 0;
+        }).map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
           // Show real stock, not Infinity (which appears when vender_sin_stock is enabled)
