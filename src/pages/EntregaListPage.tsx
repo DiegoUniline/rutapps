@@ -359,7 +359,19 @@ export default function EntregaListPage() {
       setSelectedIds(new Set());
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
+
+  // Bloquear recargar/cerrar mientras se cargan entregas
+  useEffect(() => {
+    if (!cargarProgress) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [cargarProgress]);
 
   const handleBulkCargar = () => {
     if (bulkCargarMut.isPending) return;
