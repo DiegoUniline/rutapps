@@ -911,5 +911,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     descuentoExtraTipo, setDescuentoExtraTipo,
     descuentoExtraValor, setDescuentoExtraValor,
     descuentoExtraMotivo, setDescuentoExtraMotivo,
+    // Apartado de stock en pedidos
+    apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
   };
 }
