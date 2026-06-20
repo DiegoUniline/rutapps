@@ -179,6 +179,8 @@ export interface Empresa {
   moneda?: string;
   zona_horaria?: string;
   owner_user_id?: string;
+  apartar_stock_pedidos?: boolean;
+  apartado_almacenes_ids?: string[];
 }
 
 export interface Gasto {
