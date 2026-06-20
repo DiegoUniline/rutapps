@@ -342,6 +342,19 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           </td>
         </tr>
       )}
+
+      {cobroOpen && (
+        <tr className="hidden">
+          <td>
+            <VentaCobroQuickModal
+              open={cobroOpen}
+              onClose={() => setCobroOpen(false)}
+              venta={venta}
+              fmt={fmt}
+            />
+          </td>
+        </tr>
+      )}
     </>
   );
 }
