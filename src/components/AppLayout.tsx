@@ -914,7 +914,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <RefreshCw className="h-3.5 w-3.5" />
             Sincronizar
           </button>
+          <InternalNotificationBell />
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
+
         </div>
         <Breadcrumb />
         <main className="flex-1">
