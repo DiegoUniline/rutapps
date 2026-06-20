@@ -401,7 +401,7 @@ export default function EntregaListPage() {
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-primary animate-pulse" />
-              <h3 className="text-[14px] font-semibold text-foreground">Cargando camión…</h3>
+              <h3 className="text-[14px] font-semibold text-foreground">{cargarProgress.title || 'Procesando entregas…'}</h3>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[12px]">
