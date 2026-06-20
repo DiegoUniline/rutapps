@@ -204,9 +204,28 @@ const PLANS = [
 
 const fmtMX = (n: number) => `$${n.toLocaleString('es-MX')}`;
 
+// Tasas aproximadas desde 1 MXN — el cliente puede ver el precio en su moneda local.
+const CURRENCIES: { code: string; label: string; symbol: string; rate: number; locale: string; decimals: number }[] = [
+  { code: 'MXN', label: '🇲🇽 Peso mexicano',   symbol: '$',   rate: 1,       locale: 'es-MX', decimals: 0 },
+  { code: 'USD', label: '🇺🇸 Dólar (USD)',      symbol: '$',   rate: 0.055,   locale: 'en-US', decimals: 2 },
+  { code: 'EUR', label: '🇪🇺 Euro',             symbol: '€',   rate: 0.051,   locale: 'es-ES', decimals: 2 },
+  { code: 'GTQ', label: '🇬🇹 Quetzal',          symbol: 'Q',   rate: 0.43,    locale: 'es-GT', decimals: 2 },
+  { code: 'CLP', label: '🇨🇱 Peso chileno',     symbol: '$',   rate: 51,      locale: 'es-CL', decimals: 0 },
+  { code: 'ARS', label: '🇦🇷 Peso argentino',   symbol: '$',   rate: 55,      locale: 'es-AR', decimals: 0 },
+  { code: 'COP', label: '🇨🇴 Peso colombiano',  symbol: '$',   rate: 230,     locale: 'es-CO', decimals: 0 },
+  { code: 'PEN', label: '🇵🇪 Sol peruano',      symbol: 'S/',  rate: 0.20,    locale: 'es-PE', decimals: 2 },
+  { code: 'BOB', label: '🇧🇴 Boliviano',        symbol: 'Bs',  rate: 0.38,    locale: 'es-BO', decimals: 2 },
+];
+
+const fmtCur = (mxn: number, c: typeof CURRENCIES[number]) => {
+  const v = mxn * c.rate;
+  return `${c.symbol}${v.toLocaleString(c.locale, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals })}`;
+};
+
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const [currency, setCurrency] = useState(CURRENCIES[0]);
   
   const [searchParams] = useSearchParams();
   useFacebookPixel();
@@ -607,12 +626,25 @@ export default function LandingPage() {
       {/* PRICING */}
       <section id="precios" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
         <div className="max-w-[1280px] mx-auto">
-          <div className="text-center mb-10">
+          <div className="text-center mb-6">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Precios</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
               Simple. Sin sorpresas.
             </h2>
             <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <span className="text-[12px]" style={{ color: BRAND.muted }}>Ver precios en:</span>
+            <select
+              value={currency.code}
+              onChange={(e) => setCurrency(CURRENCIES.find(c => c.code === e.target.value) ?? CURRENCIES[0])}
+              className="text-[13px] font-medium px-3 py-1.5 rounded-lg bg-white border outline-none cursor-pointer"
+              style={{ borderColor: BRAND.line, color: BRAND.ink }}
+            >
+              {CURRENCIES.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PLANS.map((p, i) => (
@@ -629,10 +661,10 @@ export default function LandingPage() {
                 )}
                 <h3 className="text-[18px] font-semibold">{p.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-[36px] font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{fmtMX(p.price)}</span>
-                  <span className="text-[13px]" style={{ color: BRAND.muted }}>/mes</span>
+                  <span className="text-[36px] font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{fmtCur(p.price, currency)}</span>
+                  <span className="text-[13px]" style={{ color: BRAND.muted }}>{currency.code} /mes</span>
                 </div>
-                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios · extra $300/mes</p>
+                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios · extra {fmtCur(300, currency)}/mes</p>
                 <Link to="/signup" className="mt-5 w-full text-center px-4 py-2.5 rounded-lg font-semibold text-[13.5px] text-white"
                   style={{ background: p.popular ? BRAND.primary : BRAND.ink }}>
                   Empezar gratis
