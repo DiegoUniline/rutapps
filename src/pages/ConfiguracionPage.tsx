@@ -423,6 +423,8 @@ export default function ConfiguracionPage() {
         requiere_jornada_ruta: requiereJornadaRuta,
         requiere_jornada_desde: requiereJornadaRuta ? (requiereJornadaDesde || null) : null,
         jornada_permite_sin_vehiculo: permiteSinVehiculo,
+        apartar_stock_pedidos: apartarStockPedidos,
+        apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
