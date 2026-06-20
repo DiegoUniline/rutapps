@@ -225,6 +225,7 @@ const fmtCur = (mxn: number, c: typeof CURRENCIES[number]) => {
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const [currency, setCurrency] = useState(CURRENCIES[0]);
   
   const [searchParams] = useSearchParams();
   useFacebookPixel();
