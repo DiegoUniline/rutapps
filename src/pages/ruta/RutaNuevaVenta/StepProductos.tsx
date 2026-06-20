@@ -73,6 +73,8 @@ export function StepProductos(props: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
+  const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>('con');
+
 
   // Wrap addToCart: if producto es_granel, abrir selector en lugar de añadir directo
   const handleAdd = (p: any, esCambio?: boolean) => {
