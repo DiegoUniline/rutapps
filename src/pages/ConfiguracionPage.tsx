@@ -294,7 +294,7 @@ function ChangePasswordCard() {
 
 export default function ConfiguracionPage() {
   const { fmt } = useCurrency();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
   const qc = useQueryClient();
   const { data: config, isLoading } = useEmpresaConfig();
   const fileRef = useRef<HTMLInputElement>(null);
