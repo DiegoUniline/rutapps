@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
+import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
