@@ -45,6 +45,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const [generatingWa, setGeneratingWa] = useState(false);
   const [printingTicket, setPrintingTicket] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +74,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
     }
     load();
     return () => { cancelled = true; };
-  }, [venta.id, venta.tarifa_id]);
+  }, [venta.id, venta.tarifa_id, reloadKey]);
 
   const clienteNombre = venta.clientes?.nombre || (venta.cliente_id ? '—' : 'Público en general');
   const eId = empresaId || venta.empresa_id;
