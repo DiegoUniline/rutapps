@@ -179,7 +179,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                   WhatsApp
                 </Button>
                 {venta.status !== 'borrador' && (venta.saldo_pendiente ?? 0) > 0 && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate('/cobranza')}>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate('/ventas/cobranza', { state: { clienteId: venta.cliente_id, ventaId: venta.id } })}>
                     <Banknote className="h-3 w-3" /> Cobrar
                   </Button>
                 )}
