@@ -422,6 +422,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       presentacion_factor: presentacion?.factor_base ?? null,
       paquetes,
       precio_manual: !!presentacion?.id || presentacion === null,
+      almacen_id: apartadoActivoPedido ? pedidoAlmacenId : null,
     };
     if (existingIdx >= 0) setCart(cart.map((c, i) => i === existingIdx ? { ...c, ...lineBase } : c));
     else setCart([...cart, lineBase]);
