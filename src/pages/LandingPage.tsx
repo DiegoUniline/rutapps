@@ -625,12 +625,25 @@ export default function LandingPage() {
       {/* PRICING */}
       <section id="precios" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
         <div className="max-w-[1280px] mx-auto">
-          <div className="text-center mb-10">
+          <div className="text-center mb-6">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Precios</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
               Simple. Sin sorpresas.
             </h2>
             <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <span className="text-[12px]" style={{ color: BRAND.muted }}>Ver precios en:</span>
+            <select
+              value={currency.code}
+              onChange={(e) => setCurrency(CURRENCIES.find(c => c.code === e.target.value) ?? CURRENCIES[0])}
+              className="text-[13px] font-medium px-3 py-1.5 rounded-lg bg-white border outline-none cursor-pointer"
+              style={{ borderColor: BRAND.line, color: BRAND.ink }}
+            >
+              {CURRENCIES.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PLANS.map((p, i) => (
