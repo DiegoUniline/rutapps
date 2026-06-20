@@ -162,6 +162,21 @@ export function StepProductos(props: Props) {
           <ScanLine className="h-4.5 w-4.5" />
         </button>
       </div>
+      {apartadoActivoPedido && (apartadoAlmacenes?.length ?? 0) > 0 && (
+        <div className="px-3 pb-1.5">
+          <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Almacén del pedido</label>
+          <select
+            value={pedidoAlmacenId ?? ''}
+            onChange={(e) => setPedidoAlmacenId(e.target.value || null)}
+            className="w-full bg-accent/60 rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+          >
+            {(apartadoAlmacenes ?? []).map((a: any) => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
+            ))}
+          </select>
+          <p className="text-[10px] text-muted-foreground mt-1">Los productos que agregues se apartarán de este almacén. Cambia el selector para apartar de otro.</p>
+        </div>
+      )}
       {cambioItems.length > 0 && (
         <div className="mx-3 mb-1.5 bg-accent/40 rounded-lg px-3 py-2">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
