@@ -244,6 +244,7 @@ export interface VentaLinea {
   notas?: string;
   facturado?: boolean;
   factura_cfdi_id?: string;
+  almacen_id?: string | null;
   created_at: string;
   // joined
   productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; iva_pct?: number; ieps_pct?: number; unidad_venta_id: string | null; codigo_sat?: string; udem_sat_id?: string };
