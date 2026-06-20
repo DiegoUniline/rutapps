@@ -1,41 +1,61 @@
-## Problema
+## Resumen
+Función opcional por empresa para apartar stock al generar pedidos (vista móvil), con selector de almacén por línea y múltiples almacenes habilitados en Configuración. Con el flag apagado, cero cambios.
 
-En `/ruta/gastos`, al registrar un gasto el listado no refleja el nuevo registro al instante. Hay que recargar la vista para verlo.
+## 1. Base de datos (1 migración)
 
-## Causa
+**`empresas`** — nuevas columnas:
+- `apartar_stock_pedidos boolean not null default false`
+- `apartado_almacenes_ids uuid[] not null default '{}'` — almacenes habilitados para apartar/consultar en pedidos móviles.
 
-`RutaGastos.tsx` usa `useOfflineQuery('gastos', ...)`. El flujo de `refetch()` después del insert:
+**`venta_lineas`** — nueva columna:
+- `almacen_id uuid null references almacenes(id)` — almacén del que saldrá esa línea (solo se usa cuando el pedido se generó con el flag ON).
 
-1. `queueOperation` escribe el registro en IndexedDB y lo encola para sync.
-2. `loadData` lee IndexedDB → muestra el nuevo gasto.
-3. Si hay conexión, **inmediatamente** consulta al servidor con `fetchAllPages` y **sobrescribe** el estado con `serverData`. Como la cola aún no terminó de sincronizar (o el realtime del servidor todavía no propaga), el `serverData` no incluye el nuevo registro y el gasto recién creado “desaparece” visualmente hasta el siguiente refresh manual.
+**Nueva tabla `stock_apartado`**
+- `id, empresa_id, venta_id, venta_linea_id (unique), producto_id, almacen_id, cantidad, created_at`
+- Index `(empresa_id, almacen_id, producto_id)`
+- RLS por `empresa_id`, GRANT a authenticated + service_role.
 
-Además, no hay suscripción Realtime para `gastos`, por lo que cambios hechos desde otros dispositivos (ej. desktop) tampoco se ven al instante.
+**Función `fn_disponible_almacen(producto_id, almacen_id) → numeric`**
+- `stock_almacen.cantidad − COALESCE(SUM(stock_apartado.cantidad), 0)`
+- `stable`, `security definer`, scope por `empresa_id` del producto.
 
-## Solución
+**Triggers (DB-authoritative, idempotentes):**
+1. **Insert/update `venta_lineas`** en venta con `tipo='pedido'` y empresa con flag ON → upsert en `stock_apartado` con la cantidad y `almacen_id` de la línea. No deduce stock.
+2. **Delete `venta_lineas`** o **cancelación** de venta tipo pedido → borra filas correspondientes en `stock_apartado`.
+3. **Insert `entrega_lineas`** → consume del `stock_apartado` (decrementa o borra) y deduce de `stock_almacen` del almacén de la línea. Si entrega < apartado, el remanente queda apartado.
+4. Conversión pedido→venta_directa o entrega total → al cerrar la venta, libera cualquier `stock_apartado` remanente.
 
-1. **Habilitar Realtime en `gastos`** vía migración:
-   ```sql
-   ALTER PUBLICATION supabase_realtime ADD TABLE public.gastos;
-   ALTER TABLE public.gastos REPLICA IDENTITY FULL;
-   ```
+Permite negativos: no hay CHECK que bloquee.
 
-2. **Suscribir `RutaGastos.tsx` a cambios Realtime** filtrados por `empresa_id`, y en cada evento llamar `refetch()` (que ya re-lee IndexedDB + servidor). Esto refleja inserts/updates/deletes de cualquier origen.
+## 2. Frontend — Configuración Empresa
 
-3. **Evitar el “parpadeo a vacío” tras insertar**: en `useOfflineQuery`, no sobrescribir `data` con `serverData` cuando:
-   - el fetch al servidor falla, o
-   - `serverData.length === 0` pero IndexedDB tiene registros locales (potencialmente pendientes de sync).
+Nueva subsección "Inventario / Pedidos" en `src/pages/configuracion/...`:
+- Toggle "Apartar stock al generar pedidos".
+- Multi-select de almacenes (visible solo si toggle ON, requerido al guardar).
 
-   Mantener los datos locales hasta que el servidor confirme un set no vacío o el sync queue procese los pendientes (`uniline:sync-complete` ya dispara refetch).
+## 3. Frontend — Vista móvil de Pedido
 
-4. **Forzar refetch tras sync exitoso**: ya existe el listener `uniline:sync-complete` — verificar que `syncQueue` emite ese evento tras subir el gasto (sí lo hace en el flujo actual).
+`src/pages/ruta/RutaNuevaVenta/...` (paso productos cuando `tipo='pedido'` y `empresa.apartar_stock_pedidos`):
+- Selector de almacén arriba del listado, opciones = `empresa.apartado_almacenes_ids`, default = primero.
+- Badge "Disponible: X" por producto vía `fn_disponible_almacen(producto_id, almacen_actual)`.
+- Sin filtrar por stock (sobreventa permitida).
+- Cada `CartItem` guarda su `almacen_id`. Cambiar el selector solo afecta nuevas líneas; las ya agregadas conservan su almacén original (editable desde la línea).
+- Al guardar, cada `venta_lineas.almacen_id` se persiste; el trigger crea el apartado.
 
-## Archivos a tocar
+## 4. Lo que NO se toca
+- Pantalla de Ventas (desktop y móvil).
+- POS, cotizaciones, venta directa, entregas existentes.
+- Empresas con flag OFF: cero cambios; los triggers no actúan porque chequean el flag de la empresa.
 
-- Nueva migración `supabase/migrations/*_realtime_gastos.sql`
-- `src/pages/ruta/RutaGastos.tsx` — agregar `useEffect` con `supabase.channel('gastos-ruta').on('postgres_changes', { event: '*', schema: 'public', table: 'gastos', filter: 'empresa_id=eq.<id>' }, refetch).subscribe()` con cleanup.
-- `src/hooks/useOfflineData.ts` — no sobrescribir con `serverData` vacío si hay `hasLocalData`.
+## 5. Edge cases
+- Editar pedido: trigger reescribe el apartado de la línea modificada.
+- Entrega parcial: deduce stock real solo de lo entregado; resta del apartado en la misma cantidad.
+- Cancelar pedido: borra todos los apartados de esa venta.
+- Apagar el flag mientras hay pedidos abiertos: los apartados existentes se respetan hasta entregarse o cancelarse (los triggers siguen funcionando si la línea ya tiene `almacen_id`).
 
-## Alcance
+## Detalles técnicos
+- Hook nuevo `useDisponiblePorAlmacen(producto_ids, almacen_id)` con React Query, key `['disponible', empresaId, almacenId, ...ids]`, invalida en realtime sobre `stock_apartado` y `stock_almacen`.
+- `requireEmpresa` y filtros `empresa_id` en todas las queries nuevas.
+- Tipos TS regenerados tras migración; agregar `almacen_id` opcional a `VentaLinea` y `CartItem`.
 
-Sólo afecta la vista móvil `/ruta/gastos` y el hook genérico `useOfflineQuery` (mejora silenciosa para todas las vistas offline-first).
+¿Procedo con la migración primero?

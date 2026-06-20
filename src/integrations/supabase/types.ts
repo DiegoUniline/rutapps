@@ -3036,6 +3036,8 @@ export type Database = {
       }
       empresas: {
         Row: {
+          apartado_almacenes_ids: string[]
+          apartar_stock_pedidos: boolean
           ciudad: string | null
           clientes_visibilidad: string
           colonia: string | null
@@ -3075,6 +3077,8 @@ export type Database = {
           zona_horaria: string
         }
         Insert: {
+          apartado_almacenes_ids?: string[]
+          apartar_stock_pedidos?: boolean
           ciudad?: string | null
           clientes_visibilidad?: string
           colonia?: string | null
@@ -3114,6 +3118,8 @@ export type Database = {
           zona_horaria?: string
         }
         Update: {
+          apartado_almacenes_ids?: string[]
+          apartar_stock_pedidos?: boolean
           ciudad?: string | null
           clientes_visibilidad?: string
           colonia?: string | null
@@ -6107,6 +6113,57 @@ export type Database = {
           },
         ]
       }
+      stock_apartado: {
+        Row: {
+          almacen_id: string
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          id: string
+          producto_id: string
+          updated_at: string
+          venta_id: string
+          venta_linea_id: string
+        }
+        Insert: {
+          almacen_id: string
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          producto_id: string
+          updated_at?: string
+          venta_id: string
+          venta_linea_id: string
+        }
+        Update: {
+          almacen_id?: string
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          producto_id?: string
+          updated_at?: string
+          venta_id?: string
+          venta_linea_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_apartado_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_apartado_venta_linea_id_fkey"
+            columns: ["venta_linea_id"]
+            isOneToOne: true
+            referencedRelation: "venta_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_camion: {
         Row: {
           cantidad_actual: number
@@ -7320,6 +7377,7 @@ export type Database = {
       }
       venta_lineas: {
         Row: {
+          almacen_id: string | null
           cantidad: number
           created_at: string
           descripcion: string | null
@@ -7347,6 +7405,7 @@ export type Database = {
           venta_id: string
         }
         Insert: {
+          almacen_id?: string | null
           cantidad?: number
           created_at?: string
           descripcion?: string | null
@@ -7374,6 +7433,7 @@ export type Database = {
           venta_id: string
         }
         Update: {
+          almacen_id?: string | null
           cantidad?: number
           created_at?: string
           descripcion?: string | null
@@ -7401,6 +7461,13 @@ export type Database = {
           venta_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "venta_lineas_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "venta_lineas_factura_cfdi_id_fkey"
             columns: ["factura_cfdi_id"]
@@ -8222,6 +8289,10 @@ export type Database = {
         Returns: number
       }
       ensure_almacen_mermas: { Args: { _empresa_id: string }; Returns: string }
+      fn_disponible_almacen: {
+        Args: { p_almacen_id: string; p_producto_id: string }
+        Returns: number
+      }
       fn_recalc_venta_saldo: {
         Args: { p_venta_id: string }
         Returns: undefined
