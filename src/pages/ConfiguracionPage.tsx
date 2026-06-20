@@ -784,6 +784,64 @@ export default function ConfiguracionPage() {
               </div>
             )}
           </div>
+
+          {/* Apartado de stock en pedidos */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Building2 className="h-4 w-4" /> Apartado de stock en pedidos
+            </h3>
+            <div className="flex items-start justify-between gap-4 py-2">
+              <div className="flex-1">
+                <div className="text-[13px] font-medium text-foreground">
+                  Apartar stock al generar pedidos
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Cuando esté activo, al generar un pedido desde la app móvil se mostrará un selector de almacén y el stock se reservará (no se descontará) hasta que se haga la entrega. Si está apagado, la app funciona igual que hoy.
+                </p>
+              </div>
+              <Switch checked={apartarStockPedidos} onCheckedChange={setApartarStockPedidos} />
+            </div>
+
+            {apartarStockPedidos && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-2">
+                  Almacenes habilitados para apartar
+                </label>
+                <p className="text-[11px] text-muted-foreground mb-3">
+                  Selecciona los almacenes de los que se podrá consultar y apartar stock al crear pedidos en la app móvil.
+                </p>
+                {(almacenesEmpresa?.length ?? 0) === 0 ? (
+                  <p className="text-[12px] text-muted-foreground italic">No tienes almacenes registrados.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-64 overflow-auto">
+                    {(almacenesEmpresa ?? []).map((a: any) => {
+                      const checked = apartadoAlmacenesIds.includes(a.id);
+                      return (
+                        <label key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent/50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) setApartadoAlmacenesIds(prev => [...prev, a.id]);
+                              else setApartadoAlmacenesIds(prev => prev.filter(id => id !== a.id));
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-[13px] text-foreground">{a.nombre}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {apartarStockPedidos && apartadoAlmacenesIds.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-2 flex items-start gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>Selecciona al menos un almacén para que los vendedores puedan apartar stock.</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
