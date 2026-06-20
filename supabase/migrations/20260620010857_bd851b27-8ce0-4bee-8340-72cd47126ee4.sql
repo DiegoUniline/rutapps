@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.fn_disponible_almacen(uuid, uuid) FROM anon, PUBLIC;

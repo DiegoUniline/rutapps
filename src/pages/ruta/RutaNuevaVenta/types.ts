@@ -32,6 +32,8 @@ export interface CartItem {
   presentacion_factor?: number | null;
   /** # de paquetes capturado por el usuario (la cantidad real va en `cantidad`, en unidad base) */
   paquetes?: number | null;
+  /** Almacén del que saldrá esta línea (solo pedidos con flag de apartado ON) */
+  almacen_id?: string | null;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';

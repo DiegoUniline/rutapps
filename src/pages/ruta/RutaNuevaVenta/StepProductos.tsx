@@ -10,6 +10,7 @@ import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
+import { useApartadoAlmacenes, useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
 
 interface Props {
   clienteNombre: string;
@@ -48,6 +49,10 @@ interface Props {
   resetItemToSuggested: (pid: string) => void;
   /** True if user can change prices (else "ojito" stays read-only) */
   canChangePrice: boolean;
+  // Apartado de stock en pedidos
+  apartadoActivoPedido: boolean;
+  pedidoAlmacenId: string | null;
+  setPedidoAlmacenId: (id: string | null) => void;
 }
 
 export function StepProductos(props: Props) {
@@ -59,9 +64,12 @@ export function StepProductos(props: Props) {
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     canChangePrice,
+    apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
   } = props;
   const { symbol: s } = useCurrency();
   const { data: allPresentaciones } = useAllPresentaciones();
+  const { data: apartadoAlmacenes } = useApartadoAlmacenes();
+  const { data: disponibleMap } = useDisponiblePorAlmacen(apartadoActivoPedido ? pedidoAlmacenId : null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
@@ -154,6 +162,21 @@ export function StepProductos(props: Props) {
           <ScanLine className="h-4.5 w-4.5" />
         </button>
       </div>
+      {apartadoActivoPedido && (apartadoAlmacenes?.length ?? 0) > 0 && (
+        <div className="px-3 pb-1.5">
+          <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Almacén del pedido</label>
+          <select
+            value={pedidoAlmacenId ?? ''}
+            onChange={(e) => setPedidoAlmacenId(e.target.value || null)}
+            className="w-full bg-accent/60 rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+          >
+            {(apartadoAlmacenes ?? []).map((a: any) => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
+            ))}
+          </select>
+          <p className="text-[10px] text-muted-foreground mt-1">Los productos que agregues se apartarán de este almacén. Cambia el selector para apartar de otro.</p>
+        </div>
+      )}
       {cambioItems.length > 0 && (
         <div className="mx-3 mb-1.5 bg-accent/40 rounded-lg px-3 py-2">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
@@ -218,6 +241,16 @@ export function StepProductos(props: Props) {
                         <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                       </>
                     )}
+                    {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
+                      const disp = disponibleMap?.get(p.id) ?? 0;
+                      const color = disp > 0 ? 'text-green-600' : disp === 0 ? 'text-muted-foreground' : 'text-destructive';
+                      return (
+                        <>
+                          <span className="text-[10px] text-muted-foreground">·</span>
+                          <span className={`text-[10px] font-medium ${color}`}>Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-1.5 mt-px">
                     <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
