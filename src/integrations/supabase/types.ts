@@ -3653,6 +3653,7 @@ export type Database = {
           body: string | null
           created_at: string
           created_by: string | null
+          dedupe_key: string | null
           empresa_id: string
           entity_id: string | null
           entity_type: string | null
@@ -3666,6 +3667,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           empresa_id: string
           entity_id?: string | null
           entity_type?: string | null
@@ -3679,6 +3681,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           empresa_id?: string
           entity_id?: string | null
           entity_type?: string | null
