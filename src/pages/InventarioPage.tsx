@@ -20,7 +20,7 @@ import InventarioPresentacionesModal from '@/components/InventarioPresentaciones
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
-type ViewMode = 'resumen' | 'almacen' | 'rutas';
+type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda';
 
 function useInventarioData() {
   const { empresa } = useAuth();
