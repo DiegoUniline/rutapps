@@ -64,9 +64,12 @@ export function StepProductos(props: Props) {
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     canChangePrice,
+    apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
   } = props;
   const { symbol: s } = useCurrency();
   const { data: allPresentaciones } = useAllPresentaciones();
+  const { data: apartadoAlmacenes } = useApartadoAlmacenes();
+  const { data: disponibleMap } = useDisponiblePorAlmacen(apartadoActivoPedido ? pedidoAlmacenId : null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
