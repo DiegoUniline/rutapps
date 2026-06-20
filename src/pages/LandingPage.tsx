@@ -661,10 +661,10 @@ export default function LandingPage() {
                 )}
                 <h3 className="text-[18px] font-semibold">{p.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-[36px] font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{fmtMX(p.price)}</span>
-                  <span className="text-[13px]" style={{ color: BRAND.muted }}>/mes</span>
+                  <span className="text-[36px] font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{fmtCur(p.price, currency)}</span>
+                  <span className="text-[13px]" style={{ color: BRAND.muted }}>{currency.code} /mes</span>
                 </div>
-                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios · extra $300/mes</p>
+                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios · extra {fmtCur(300, currency)}/mes</p>
                 <Link to="/signup" className="mt-5 w-full text-center px-4 py-2.5 rounded-lg font-semibold text-[13.5px] text-white"
                   style={{ background: p.popular ? BRAND.primary : BRAND.ink }}>
                   Empezar gratis
