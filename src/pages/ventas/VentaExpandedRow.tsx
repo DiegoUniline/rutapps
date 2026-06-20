@@ -12,6 +12,7 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
+import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 
 interface Props {
   venta: any;
