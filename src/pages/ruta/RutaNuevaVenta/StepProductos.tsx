@@ -241,6 +241,16 @@ export function StepProductos(props: Props) {
                         <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                       </>
                     )}
+                    {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
+                      const disp = disponibleMap?.get(p.id) ?? 0;
+                      const color = disp > 0 ? 'text-green-600' : disp === 0 ? 'text-muted-foreground' : 'text-destructive';
+                      return (
+                        <>
+                          <span className="text-[10px] text-muted-foreground">·</span>
+                          <span className={`text-[10px] font-medium ${color}`}>Disp: {disp.toLocaleString('es-MX', { maximumFractionDigits: 2 })}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-1.5 mt-px">
                     <p className={`text-[13px] font-bold ${isManual ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
