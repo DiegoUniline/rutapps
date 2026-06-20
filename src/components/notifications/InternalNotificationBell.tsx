@@ -20,13 +20,26 @@ const TIPO_META: Record<string, { icon: any; color: string; bg: string }> = {
   cuenta_vencida:    { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
 
+function getDetailLink(n: InternalNotification): string | null {
+  if (n.entity_type && n.entity_id) {
+    switch (n.entity_type) {
+      case 'venta': return `/ventas/${n.entity_id}`;
+      case 'entrega': return `/logistica/entregas/${n.entity_id}`;
+      case 'producto': return `/productos/${n.entity_id}`;
+      case 'compra': return `/almacen/compras/${n.entity_id}`;
+    }
+  }
+  return n.link;
+}
+
 export default function InternalNotificationBell() {
   const navigate = useNavigate();
   const { notifications, readSet, unreadCount, loading, markRead, markAllRead } = useInternalNotifications(50);
 
   const handleClick = (n: InternalNotification) => {
     if (!readSet.has(n.id)) markRead(n.id);
-    if (n.link) navigate(n.link);
+    const link = getDetailLink(n);
+    if (link) navigate(link);
   };
 
   return (
@@ -57,10 +70,16 @@ export default function InternalNotificationBell() {
               </span>
             )}
           </div>
-          {unreadCount > 0 && (
-            <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => markAllRead()}>
+          {notifications.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1"
+              disabled={unreadCount === 0}
+              onClick={() => markAllRead()}
+            >
               <CheckCheck className="h-3.5 w-3.5" />
-              Marcar todas
+              Marcar todas como leídas
             </Button>
           )}
         </div>
