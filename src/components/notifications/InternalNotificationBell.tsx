@@ -20,6 +20,18 @@ const TIPO_META: Record<string, { icon: any; color: string; bg: string }> = {
   cuenta_vencida:    { icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
 
+function getDetailLink(n: InternalNotification): string | null {
+  if (n.entity_type && n.entity_id) {
+    switch (n.entity_type) {
+      case 'venta': return `/ventas/${n.entity_id}`;
+      case 'entrega': return `/logistica/entregas/${n.entity_id}`;
+      case 'producto': return `/productos/${n.entity_id}`;
+      case 'compra': return `/almacen/compras/${n.entity_id}`;
+    }
+  }
+  return n.link;
+}
+
 export default function InternalNotificationBell() {
   const navigate = useNavigate();
   const { notifications, readSet, unreadCount, loading, markRead, markAllRead } = useInternalNotifications(50);
