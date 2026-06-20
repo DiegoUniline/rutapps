@@ -25,7 +25,7 @@ type ViewMode = 'resumen' | 'almacen' | 'rutas';
 function useInventarioData() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['inventario-dashboard', empresa?.id],
+    queryKey: ['inventario-dashboard', empresa?.id, !!(empresa as any)?.apartar_stock_pedidos],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eid = empresa!.id;
@@ -58,12 +58,32 @@ function useInventarioData() {
           .range(from, to)
       );
 
+      // Per-warehouse apartado (solo si empresa.apartar_stock_pedidos = true)
+      const apartarFlag = !!(empresa as any)?.apartar_stock_pedidos;
+      const apartadoData = apartarFlag
+        ? await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('stock_apartado')
+              .select('almacen_id, producto_id, cantidad')
+              .eq('empresa_id', eid)
+              .range(from, to)
+          )
+        : [];
+
       // Build stock_almacen map: almacen_id -> producto_id -> cantidad
       const stockAlmacenMap: Record<string, Record<string, number>> = {};
       for (const sa of (stockAlmacenData ?? [])) {
         if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
+      // Build apartado map: almacen_id -> producto_id -> cantidad (suma)
+      const apartadoMap: Record<string, Record<string, number>> = {};
+      for (const ap of (apartadoData ?? [])) {
+        if (!apartadoMap[ap.almacen_id]) apartadoMap[ap.almacen_id] = {};
+        apartadoMap[ap.almacen_id][ap.producto_id] =
+          (apartadoMap[ap.almacen_id][ap.producto_id] ?? 0) + (Number(ap.cantidad) || 0);
+      }
+      const apartadoAlmacenesIds: string[] = (((empresa as any)?.apartado_almacenes_ids) ?? []) as string[];
       const hasWarehouseStock = (stockAlmacenData?.length ?? 0) > 0;
 
       const getStockByTipo = (productoId: string, tipo: 'almacen' | 'ruta') => {
@@ -163,6 +183,9 @@ function useInventarioData() {
         totales,
         almacenes: almacenes ?? [],
         stockAlmacenMap,
+        apartadoMap,
+        apartadoAlmacenesIds,
+        apartarFlag,
       };
     },
   });
@@ -175,6 +198,7 @@ export default function InventarioPage() {
   // Realtime: refresca inventario al cambiar stock o productos desde otro dispositivo
   useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['inventario-dashboard']] });
   useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['inventario-dashboard']] });
+  useRealtimeInvalidate({ table: 'stock_apartado', empresaId: empresa?.id, queryKeys: [['inventario-dashboard']] });
   const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
@@ -420,12 +444,16 @@ export default function InventarioPage() {
       {/* Almacen view */}
       {view === 'almacen' && data && (() => {
         // Only almacenes (includes tipo almacen and tipo ruta)
+        const apartadoAlmacenesIds = data.apartadoAlmacenesIds ?? [];
+        const apartarFlagOn = !!data.apartarFlag;
         const ubicaciones = (data.almacenes ?? []).map(a => ({
           id: a.id,
           nombre: a.nombre,
           tipo: ((a as any).tipo ?? 'almacen') as 'almacen' | 'ruta',
           icon: ((a as any).tipo === 'ruta' ? Truck : Warehouse) as typeof Warehouse,
           getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
+          getApartado: (prodId: string) => (data.apartadoMap?.[a.id]?.[prodId] ?? 0),
+          apartadoOn: apartarFlagOn && apartadoAlmacenesIds.includes(a.id),
         }));
 
         return (
@@ -442,6 +470,11 @@ export default function InventarioPage() {
                     <span className={cn("ml-1 text-[9px] px-1 py-0.5 rounded", u.tipo === 'ruta' ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary")}>
                       {u.tipo === 'ruta' ? 'Ruta' : 'Almacén'}
                     </span>
+                    {u.apartadoOn && (
+                      <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300" title="Apartado activo para pedidos">
+                        Apart.
+                      </span>
+                    )}
                   </TableHead>
                 ))}
                 <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
@@ -458,9 +491,23 @@ export default function InventarioPage() {
                     <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
+                      const apart = u.apartadoOn ? u.getApartado(p.id) : 0;
+                      const disp = qty - apart;
                       return (
-                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-destructive" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          <span className={cn(qty <= 0 && "text-destructive")}>{fmtNum(qty)}</span>
+                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell align-top", qty <= 0 ? "text-destructive" : u.tipo === 'ruta' ? "text-warning" : "")}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className={cn(qty <= 0 && "text-destructive")}>{fmtNum(qty)}</span>
+                            {u.apartadoOn && apart > 0 && (
+                              <div className="flex gap-1 flex-wrap justify-center">
+                                <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300" title="Apartado por pedidos">
+                                  Apart: {fmtNum(apart)}
+                                </span>
+                                <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", disp > 0 ? "bg-green-500/15 text-green-700 dark:text-green-300" : disp === 0 ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive")} title="Disponible para venta">
+                                  Disp: {fmtNum(disp)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
