@@ -380,6 +380,36 @@ export default function EntregaListPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
+      {cargarProgress && (
+        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary animate-pulse" />
+              <h3 className="text-[14px] font-semibold text-foreground">Cargando camión…</h3>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-muted-foreground">
+                  {Math.min(cargarProgress.current + 1, cargarProgress.total)} de {cargarProgress.total}
+                  {cargarProgress.folio ? ` · ${cargarProgress.folio}` : ''}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {Math.round((cargarProgress.current / Math.max(cargarProgress.total, 1)) * 100)}%
+                </span>
+              </div>
+              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(cargarProgress.current / Math.max(cargarProgress.total, 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-destructive font-medium leading-snug">
+              ⚠️ No recargues ni salgas de esta pantalla hasta que termine.
+            </p>
+          </div>
+        </div>
+      )}
       <PedidosTabs />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
