@@ -326,6 +326,22 @@ export default function ConfiguracionPage() {
     }
   }, [empresaId, initializedForId]);
 
+  // Lista de almacenes de la empresa (para el multi-select de apartado)
+  const { data: almacenesEmpresa } = useQuery({
+    queryKey: ['almacenes-empresa-config', empresaId],
+    enabled: !!empresaId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('almacenes')
+        .select('id, nombre')
+        .eq('empresa_id', empresaId!)
+        .order('nombre');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+
   const configId = config?.id;
   useEffect(() => {
     if (!config || initialized) return;
