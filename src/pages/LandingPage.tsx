@@ -204,6 +204,24 @@ const PLANS = [
 
 const fmtMX = (n: number) => `$${n.toLocaleString('es-MX')}`;
 
+// Tasas aproximadas desde 1 MXN — el cliente puede ver el precio en su moneda local.
+const CURRENCIES: { code: string; label: string; symbol: string; rate: number; locale: string; decimals: number }[] = [
+  { code: 'MXN', label: '🇲🇽 Peso mexicano',   symbol: '$',   rate: 1,       locale: 'es-MX', decimals: 0 },
+  { code: 'USD', label: '🇺🇸 Dólar (USD)',      symbol: '$',   rate: 0.055,   locale: 'en-US', decimals: 2 },
+  { code: 'EUR', label: '🇪🇺 Euro',             symbol: '€',   rate: 0.051,   locale: 'es-ES', decimals: 2 },
+  { code: 'GTQ', label: '🇬🇹 Quetzal',          symbol: 'Q',   rate: 0.43,    locale: 'es-GT', decimals: 2 },
+  { code: 'CLP', label: '🇨🇱 Peso chileno',     symbol: '$',   rate: 51,      locale: 'es-CL', decimals: 0 },
+  { code: 'ARS', label: '🇦🇷 Peso argentino',   symbol: '$',   rate: 55,      locale: 'es-AR', decimals: 0 },
+  { code: 'COP', label: '🇨🇴 Peso colombiano',  symbol: '$',   rate: 230,     locale: 'es-CO', decimals: 0 },
+  { code: 'PEN', label: '🇵🇪 Sol peruano',      symbol: 'S/',  rate: 0.20,    locale: 'es-PE', decimals: 2 },
+  { code: 'BOB', label: '🇧🇴 Boliviano',        symbol: 'Bs',  rate: 0.38,    locale: 'es-BO', decimals: 2 },
+];
+
+const fmtCur = (mxn: number, c: typeof CURRENCIES[number]) => {
+  const v = mxn * c.rate;
+  return `${c.symbol}${v.toLocaleString(c.locale, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals })}`;
+};
+
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
