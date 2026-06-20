@@ -371,6 +371,8 @@ export default function ConfiguracionPage() {
     setRequiereJornadaRuta(!!(config as any).requiere_jornada_ruta);
     setRequiereJornadaDesde(((config as any).requiere_jornada_desde as string | null) ?? '');
     setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
+    setApartarStockPedidos(!!(config as any).apartar_stock_pedidos);
+    setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
