@@ -364,8 +364,8 @@ export default function LandingPage() {
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
                 <button
                   onClick={() => setSimulatorOpen(true)}
-                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 animate-pulse-cta"
-                  style={{ background: BRAND.primary }}
+                  className="group w-full sm:w-auto justify-center px-5 py-3 text-[14px] font-semibold text-white rounded-lg inline-flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+                  style={{ background: BRAND.primary, boxShadow: `0 12px 30px -10px ${BRAND.primary}99` }}
                 >
                   <Sparkles className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" /> Probar venta móvil ahora
                 </button>
