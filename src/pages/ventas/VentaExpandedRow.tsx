@@ -352,6 +352,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
               onClose={() => setCobroOpen(false)}
               venta={venta}
               fmt={fmt}
+              onSuccess={() => setReloadKey(k => k + 1)}
             />
           </td>
         </tr>
