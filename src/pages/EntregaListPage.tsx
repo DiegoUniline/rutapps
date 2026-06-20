@@ -233,8 +233,15 @@ export default function EntregaListPage() {
       const almDestinoId = await getVendedorAlmacen(vendedorRutaId);
       if (cargarTambien && !almDestinoId) throw new Error('El vendedor no tiene almacén asignado');
 
-      for (const entrega of selectedEntregas) {
+      const total = selectedEntregas.length;
+      const title = cargarTambien ? 'Asignando y cargando entregas…' : 'Asignando entregas a ruta…';
+      setCargarProgress({ current: 0, total, title });
+
+      for (let i = 0; i < selectedEntregas.length; i++) {
+        const entrega = selectedEntregas[i];
         const eid = (entrega as any).id;
+        const folio = (entrega as any).folio || eid.slice(0, 8);
+        setCargarProgress({ current: i, total, folio, title });
         await supabase.from('entregas').update({
           status: 'asignado',
           vendedor_ruta_id: vendedorRutaId,
@@ -253,6 +260,7 @@ export default function EntregaListPage() {
       setSelectedIds(new Set()); setShowAsignarDialog(false); setVendedorRutaId('');
     },
     onError: (err: any) => toast.error(err.message),
+    onSettled: () => setCargarProgress(null),
   });
 
   const bulkCargarMut = useMutation({
