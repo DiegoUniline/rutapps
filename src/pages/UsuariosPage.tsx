@@ -102,6 +102,7 @@ export default function UsuariosPage() {
           onSetPassword={(uid, name) => { usuarios.setPasswordModal({ userId: uid, nombre: name }); usuarios.setNewPassword(''); }}
           onArchive={handleArchive}
           onReactivate={handleReactivate}
+          onForceSignOut={handleForceSignOut}
         />
       )}
 
