@@ -43,7 +43,7 @@ function Field({ label, value, icon: Icon, action }: { label: string; value?: Re
 export default function RutaClienteDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, empresa } = useAuth();
   const { hasPermisoMovil } = usePermisos();
   const { clientesVisibilidad } = useDataVisibility('clientes');
 
