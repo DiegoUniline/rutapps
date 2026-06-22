@@ -36,7 +36,7 @@ export default function UsuariosTab({
   profiles, userRoles, authUsers, roles, almacenes,
   activeUsers, maxUsuarios, availableSlots, ownerUserId,
   showArchived, setShowArchived,
-  onNewUser, onEditUser, onSetPassword, onArchive, onReactivate,
+  onNewUser, onEditUser, onSetPassword, onArchive, onReactivate, onForceSignOut,
 }: Props) {
   const visibleProfiles = showArchived
     ? profiles
