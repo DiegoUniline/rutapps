@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
@@ -15,7 +15,6 @@ import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
-import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 /* ─── Voice Navigation ─── */
@@ -64,7 +63,6 @@ interface Stop {
 
 function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user, empresa, profile, overrideVendedorId } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
