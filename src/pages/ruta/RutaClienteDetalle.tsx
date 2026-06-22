@@ -54,7 +54,7 @@ export default function RutaClienteDetalle() {
   const { data: cliente, isLoading } = useCliente(id);
   const { data: zonas } = useZonas();
   const { data: cobradores } = useCobradores();
-  const { data: listas } = useAllListasPrecios();
+  const { data: listas } = useAllListasPrecios(empresa?.id);
   const saveMut = useSaveCliente();
   const deleteMut = useDeleteCliente();
 
