@@ -548,6 +548,7 @@ function AppRoutes() {
         <Route path="/ruta/entregas/:id" element={<RutaEntregaDetalle />} />
         <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
         <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
+        <Route path="/ruta/clientes/:id" element={<RutaClienteDetalle />} />
         <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
