@@ -479,6 +479,55 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "sign-out-user") {
+      const { user_id } = params;
+      if (!user_id) {
+        return new Response(JSON.stringify({ error: "user_id requerido" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!(await callerIsAdmin())) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (user_id === caller.id) {
+        return new Response(JSON.stringify({ error: "No puedes cerrar tu propia sesión desde aquí" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Verify target belongs to same empresa (super admin bypass)
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        const { data: targetProfile } = await adminClient
+          .from("profiles").select("empresa_id").eq("user_id", user_id).single();
+        if (targetProfile?.empresa_id !== empresaId) {
+          return new Response(JSON.stringify({ error: "No autorizado" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      // Revoke all refresh tokens / sessions for this user (gotrue admin endpoint)
+      const resp = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user_id}/logout`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRoleKey}`,
+          "apikey": serviceRoleKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scope: "global" }),
+      });
+      if (!resp.ok && resp.status !== 204) {
+        const text = await resp.text();
+        return new Response(JSON.stringify({ ok: false, error: text || `Error ${resp.status}` }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
