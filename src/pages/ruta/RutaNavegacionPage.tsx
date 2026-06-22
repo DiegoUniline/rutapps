@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
+import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 /* ─── Voice Navigation ─── */
 const speak = (text: string) => {
@@ -47,13 +48,6 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, '');
 }
 
-const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-function getDiaFromDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return DIAS[d.getDay()];
-}
-
 interface Stop {
   id: string;
   nombre: string;
@@ -76,7 +70,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
-  const filterDia = getDiaFromDate(filterDate);
+  const filterDia = diaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
 
   // Super-admin: override read from global context (set in MobileLayout bar)
@@ -173,7 +167,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         } else if (clientesVisibilidad === 'propios' && profile?.id) {
           if (c.vendedor_id !== profile.id) return false;
         }
-        return c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng;
+        return clienteTieneDia(c, filterDia) && c.gps_lat && c.gps_lng;
       });
     },
   });
@@ -255,6 +249,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
+        (e.fecha ?? '').slice(0, 10) === filterDate &&
         (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
         !attendedClientIds.has(e.cliente_id)
       )
