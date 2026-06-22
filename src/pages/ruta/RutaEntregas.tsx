@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { fmtDate, cn } from '@/lib/utils';
+import { fmtDate, cn, todayLocal } from '@/lib/utils';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
+import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 type StatusFilter = 'todos' | 'pendientes' | 'hecho' | 'no_entregado';
 
@@ -72,7 +74,10 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
 export default function RutaEntregas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const vendedorId = profile?.id;
+  const today = todayLocal();
+  const diaHoy = diaFromDate(today);
   const [filter, setFilter] = useState<StatusFilter>('todos');
 
   const { data: allEntregas } = useOfflineQuery('entregas', {
@@ -140,6 +145,20 @@ export default function RutaEntregas() {
     no_entregado: entregas.filter((e: any) => e.status === 'no_entregado').length,
   }), [entregas]);
 
+  const paradasNavegablesHoy = useMemo(() => {
+    const entregasHoy = entregas.filter((e: any) =>
+      (e.status === 'cargado' || e.status === 'en_ruta') &&
+      (e.fecha ?? '').slice(0, 10) === today &&
+      !!e._cliente?.gps_lat && !!e._cliente?.gps_lng
+    ).length;
+    const clientesHoy = (clientes ?? []).filter((c: any) => {
+      if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy)) return false;
+      if (clientesVisibilidad === 'propios' && vendedorId) return c.vendedor_id === vendedorId;
+      return true;
+    }).length;
+    return entregasHoy + clientesHoy;
+  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId]);
+
   const visible = useMemo(() => {
     let list: any[] = entregas;
     if (filter === 'pendientes') list = list.filter(e => e.status === 'cargado' || e.status === 'en_ruta');
@@ -165,7 +184,7 @@ export default function RutaEntregas() {
         <Truck className="h-5 w-5 text-primary" />
         <h1 className="text-[18px] font-bold text-foreground">Entregas</h1>
         <Badge variant="secondary" className="text-[11px]">{counts.pendientes} pendientes</Badge>
-        {counts.pendientes > 0 && (
+        {paradasNavegablesHoy > 0 && (
           <Button
             size="sm"
             className="ml-auto rounded-xl gap-1.5 text-[11px] bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90"

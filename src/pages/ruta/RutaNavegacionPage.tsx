@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -16,7 +15,7 @@ import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 import { useClienteOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
-import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
+import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 /* ─── Voice Navigation ─── */
 const speak = (text: string) => {
@@ -47,13 +46,6 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, '');
 }
 
-const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-function getDiaFromDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return DIAS[d.getDay()];
-}
-
 interface Stop {
   id: string;
   nombre: string;
@@ -71,12 +63,11 @@ interface Stop {
 
 function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user, empresa, profile, overrideVendedorId } = useAuth();
   const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
-  const filterDia = getDiaFromDate(filterDate);
+  const filterDia = diaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
 
   // Super-admin: override read from global context (set in MobileLayout bar)
@@ -173,57 +164,13 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         } else if (clientesVisibilidad === 'propios' && profile?.id) {
           if (c.vendedor_id !== profile.id) return false;
         }
-        return c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng;
+        return clienteTieneDia(c, filterDia) && c.gps_lat && c.gps_lng;
       });
     },
   });
 
   // Saved optimization order (same source the desktop map uses)
   const { ordenMap } = useClienteOrdenRuta(vendedorId, filterDia);
-
-  // Fetch visitas of the filter date (clients already attended: sale, order, or no-sale)
-  const { data: visitasHoy } = useQuery({
-    queryKey: ['nav-visitas', empresa?.id, filterDate],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('visitas')
-        .select('cliente_id')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', `${filterDate}T00:00:00`)
-        .lte('fecha', `${filterDate}T23:59:59`);
-      return data ?? [];
-    },
-    staleTime: 15_000,
-  });
-
-  // Also fetch ventas of the date as a safety net (in case visita wasn't recorded)
-  const { data: ventasHoy } = useQuery({
-    queryKey: ['nav-ventas', empresa?.id, filterDate, vendedorId],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('cliente_id')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', `${filterDate}T00:00:00`)
-        .lte('fecha', `${filterDate}T23:59:59`)
-        .neq('status', 'cancelado');
-      return data ?? [];
-    },
-    staleTime: 15_000,
-  });
-
-  // Realtime: reemplaza los refetchInterval de visitas/ventas.
-  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['nav-visitas', empresa?.id, filterDate]] });
-  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['nav-ventas', empresa?.id, filterDate, vendedorId]] });
-
-  const attendedClientIds = useMemo(() => {
-    const s = new Set<string>();
-    visitasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
-    ventasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
-    return s;
-  }, [visitasHoy, ventasHoy]);
 
   // Fetch entregas
   const { data: allEntregas, refetch: refetchEntregas } = useOfflineQuery('entregas', {
@@ -239,7 +186,6 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
     const clientStops: Stop[] = (clientesData ?? [])
-      .filter(c => !attendedClientIds.has(c.id))
       .map((c, i) => {
         const ord = ordenMap.get(c.id);
         return {
@@ -255,8 +201,8 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
-        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
-        !attendedClientIds.has(e.cliente_id)
+        (e.fecha ?? '').slice(0, 10) === filterDate &&
+        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
       )
       .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
       .map((e: any) => {
@@ -282,7 +228,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       return a.orden - b.orden;
     });
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds, ordenMap]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, ordenMap, filterDate]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;

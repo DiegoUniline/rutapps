@@ -17,9 +17,9 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
 // localStorage as offline fallback
 const VISITED_KEY = () => `rutapp_visited_${todayLocal()}`;
@@ -45,7 +45,8 @@ export default function RutaClientes() {
   const { hasPermisoMovil } = usePermisos();
   const canCrearCliente = hasPermisoMovil('ruta.cliente_crear');
   const [search, setSearch] = useState('');
-  const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
+  const diaHoy = diaFromDate(todayLocal());
+  const [diaFiltro, setDiaFiltro] = useState<string>(diaHoy);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
@@ -169,6 +170,7 @@ export default function RutaClientes() {
   const clientes = isSAOverride ? saRes.data : offlineRes.data;
   const isLoading = isSAOverride ? saRes.isLoading : offlineRes.isLoading;
   const refetch = isSAOverride ? saRes.refetch : offlineRes.refetch;
+  const { data: allEntregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   // Read the SAME table the desktop "Mapa de Clientes" writes to
   // so mobile shows literally the same numbering the supervisor optimized.
@@ -194,8 +196,7 @@ export default function RutaClientes() {
     }
     if (modo === 'visitas') {
       if (visited.has(c.id)) return false;
-      if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
-      return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
+      return clienteTieneDia(c, diaFiltro);
     }
     if (modo === 'visitados') {
       return visited.has(c.id);
@@ -215,9 +216,20 @@ export default function RutaClientes() {
   const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
   const pendientesCount = myClientes.filter((c: any) => {
     if (visited.has(c.id)) return false;
-    if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
-    return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
+    return clienteTieneDia(c, diaFiltro);
   }).length;
+  const clienteById = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
+  const paradasNavegablesCount = useMemo(() => {
+    const clientesDelDia = myClientes.filter((c: any) => c.gps_lat && c.gps_lng && clienteTieneDia(c, diaFiltro)).length;
+    const entregasDelDia = (allEntregas ?? []).filter((e: any) => {
+      const cliente = clienteById.get(e.cliente_id) as any;
+      return (e.status === 'cargado' || e.status === 'en_ruta')
+        && (e.fecha ?? '').slice(0, 10) === todayStr
+        && (e.vendedor_ruta_id ? e.vendedor_ruta_id === effectiveVendedorId : e.vendedor_id === effectiveVendedorId)
+        && !!cliente?.gps_lat && !!cliente?.gps_lng;
+    }).length;
+    return clientesDelDia + entregasDelDia;
+  }, [myClientes, allEntregas, clienteById, diaFiltro, todayStr, effectiveVendedorId]);
 
   const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
     if (!filtered || !empresa?.id) return;
@@ -249,7 +261,7 @@ export default function RutaClientes() {
         <div className="flex items-center gap-2">
           <h1 className="text-[18px] font-bold text-foreground">Clientes</h1>
           <Badge variant="secondary" className="text-[11px]">{pendientesCount} pendientes</Badge>
-          {pendientesCount > 0 && (
+          {paradasNavegablesCount > 0 && (
             <button
               onClick={() => navigate('/ruta/navegacion')}
               className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-brand-orange px-2.5 py-1 text-[11px] font-semibold text-brand-orange-foreground shadow-sm hover:bg-brand-orange/90"
@@ -304,7 +316,7 @@ export default function RutaClientes() {
         {modo === 'visitas' && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {DIAS.map(d => {
-              const count = myClientes.filter((c: any) => c.dia_visita?.some((dv: string) => dv.toLowerCase() === d.toLowerCase())).length;
+              const count = myClientes.filter((c: any) => clienteTieneDia(c, d)).length;
               return (
                 <button
                   key={d}
@@ -399,7 +411,7 @@ export default function RutaClientes() {
                       {c.dia_visita.map((d: string) => (
                         <span key={d} className={cn(
                           "text-[9px] px-1 py-px rounded-full font-medium capitalize",
-                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
+                          clienteTieneDia({ dia_visita: [d] }, diaHoy) ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
                         )}>
                           {d.slice(0, 3)}
                         </span>
