@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -175,50 +174,6 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   // Saved optimization order (same source the desktop map uses)
   const { ordenMap } = useClienteOrdenRuta(vendedorId, filterDia);
 
-  // Fetch visitas of the filter date (clients already attended: sale, order, or no-sale)
-  const { data: visitasHoy } = useQuery({
-    queryKey: ['nav-visitas', empresa?.id, filterDate],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('visitas')
-        .select('cliente_id')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', `${filterDate}T00:00:00`)
-        .lte('fecha', `${filterDate}T23:59:59`);
-      return data ?? [];
-    },
-    staleTime: 15_000,
-  });
-
-  // Also fetch ventas of the date as a safety net (in case visita wasn't recorded)
-  const { data: ventasHoy } = useQuery({
-    queryKey: ['nav-ventas', empresa?.id, filterDate, vendedorId],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('cliente_id')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', `${filterDate}T00:00:00`)
-        .lte('fecha', `${filterDate}T23:59:59`)
-        .neq('status', 'cancelado');
-      return data ?? [];
-    },
-    staleTime: 15_000,
-  });
-
-  // Realtime: reemplaza los refetchInterval de visitas/ventas.
-  useRealtimeInvalidate({ table: 'visitas', empresaId: empresa?.id, queryKeys: [['nav-visitas', empresa?.id, filterDate]] });
-  useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['nav-ventas', empresa?.id, filterDate, vendedorId]] });
-
-  const attendedClientIds = useMemo(() => {
-    const s = new Set<string>();
-    visitasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
-    ventasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
-    return s;
-  }, [visitasHoy, ventasHoy]);
-
   // Fetch entregas
   const { data: allEntregas, refetch: refetchEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
@@ -233,7 +188,6 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
     const clientStops: Stop[] = (clientesData ?? [])
-      .filter(c => !attendedClientIds.has(c.id))
       .map((c, i) => {
         const ord = ordenMap.get(c.id);
         return {
@@ -250,8 +204,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
         (e.fecha ?? '').slice(0, 10) === filterDate &&
-        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId) &&
-        !attendedClientIds.has(e.cliente_id)
+        (e.vendedor_ruta_id ? e.vendedor_ruta_id === vendedorId : e.vendedor_id === vendedorId)
       )
       .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
       .map((e: any) => {
@@ -277,7 +230,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       return a.orden - b.orden;
     });
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds, ordenMap]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, ordenMap, filterDate]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
