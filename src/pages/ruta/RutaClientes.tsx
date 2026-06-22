@@ -446,6 +446,10 @@ export default function RutaClientes() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[160px]">
+                    <DropdownMenuItem onClick={() => navigate(`/ruta/clientes/${c.id}`)}>
+                      <Info className="h-4 w-4 mr-2" />
+                      Ver datos
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => captureGps(c)} disabled={capturingGpsId === c.id}>
                       {capturingGpsId === c.id
                         ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
