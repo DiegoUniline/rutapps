@@ -1,4 +1,4 @@
-import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProfileUser, AuthUser, UserRole, Almacen } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
@@ -20,6 +20,7 @@ interface Props {
   onSetPassword: (userId: string, nombre: string) => void;
   onArchive: (p: ProfileUser, email?: string) => void;
   onReactivate: (p: ProfileUser) => void;
+  onForceSignOut: (p: ProfileUser) => void;
 }
 
 const estadoBadge = (estado: string) => {
@@ -35,7 +36,7 @@ export default function UsuariosTab({
   profiles, userRoles, authUsers, roles, almacenes,
   activeUsers, maxUsuarios, availableSlots, ownerUserId,
   showArchived, setShowArchived,
-  onNewUser, onEditUser, onSetPassword, onArchive, onReactivate,
+  onNewUser, onEditUser, onSetPassword, onArchive, onReactivate, onForceSignOut,
 }: Props) {
   const visibleProfiles = showArchived
     ? profiles
@@ -117,6 +118,15 @@ export default function UsuariosTab({
                     <div className="flex items-center gap-1">
                       <button onClick={() => onEditUser(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => onSetPassword(p.user_id, p.nombre || authUser?.email || '')} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
+                      {!isOwnerUser && p.estado === 'activo' && (
+                        <button
+                          onClick={() => onForceSignOut(p)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-amber-600"
+                          title="Cerrar sesión del usuario (lo expulsa de todos sus dispositivos)"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       {!isOwnerUser && p.estado === 'activo' && (
                         <button
                           onClick={() => onArchive(p, authUser?.email)}
