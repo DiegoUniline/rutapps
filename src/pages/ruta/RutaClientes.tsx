@@ -17,9 +17,9 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
 import { useClienteOrdenRuta, swapOrdenRuta, useInvalidateOrdenRuta } from '@/hooks/useClienteOrdenRuta';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { clienteTieneDia, diaFromDate } from '@/lib/rutaDays';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
 // localStorage as offline fallback
 const VISITED_KEY = () => `rutapp_visited_${todayLocal()}`;
@@ -45,7 +45,8 @@ export default function RutaClientes() {
   const { hasPermisoMovil } = usePermisos();
   const canCrearCliente = hasPermisoMovil('ruta.cliente_crear');
   const [search, setSearch] = useState('');
-  const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
+  const diaHoy = diaFromDate(todayLocal());
+  const [diaFiltro, setDiaFiltro] = useState<string>(diaHoy);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
@@ -194,8 +195,7 @@ export default function RutaClientes() {
     }
     if (modo === 'visitas') {
       if (visited.has(c.id)) return false;
-      if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
-      return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
+      return clienteTieneDia(c, diaFiltro);
     }
     if (modo === 'visitados') {
       return visited.has(c.id);
@@ -215,8 +215,7 @@ export default function RutaClientes() {
   const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
   const pendientesCount = myClientes.filter((c: any) => {
     if (visited.has(c.id)) return false;
-    if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
-    return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
+    return clienteTieneDia(c, diaFiltro);
   }).length;
 
   const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
@@ -304,7 +303,7 @@ export default function RutaClientes() {
         {modo === 'visitas' && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {DIAS.map(d => {
-              const count = myClientes.filter((c: any) => c.dia_visita?.some((dv: string) => dv.toLowerCase() === d.toLowerCase())).length;
+              const count = myClientes.filter((c: any) => clienteTieneDia(c, d)).length;
               return (
                 <button
                   key={d}
@@ -399,7 +398,7 @@ export default function RutaClientes() {
                       {c.dia_visita.map((d: string) => (
                         <span key={d} className={cn(
                           "text-[9px] px-1 py-px rounded-full font-medium capitalize",
-                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
+                          clienteTieneDia({ dia_visita: [d] }, diaHoy) ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
                         )}>
                           {d.slice(0, 3)}
                         </span>
