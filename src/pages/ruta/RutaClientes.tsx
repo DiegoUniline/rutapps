@@ -170,6 +170,7 @@ export default function RutaClientes() {
   const clientes = isSAOverride ? saRes.data : offlineRes.data;
   const isLoading = isSAOverride ? saRes.isLoading : offlineRes.isLoading;
   const refetch = isSAOverride ? saRes.refetch : offlineRes.refetch;
+  const { data: allEntregas } = useOfflineQuery('entregas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   // Read the SAME table the desktop "Mapa de Clientes" writes to
   // so mobile shows literally the same numbering the supervisor optimized.
@@ -217,6 +218,18 @@ export default function RutaClientes() {
     if (visited.has(c.id)) return false;
     return clienteTieneDia(c, diaFiltro);
   }).length;
+  const clienteById = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
+  const paradasNavegablesCount = useMemo(() => {
+    const clientesDelDia = myClientes.filter((c: any) => c.gps_lat && c.gps_lng && clienteTieneDia(c, diaFiltro)).length;
+    const entregasDelDia = (allEntregas ?? []).filter((e: any) => {
+      const cliente = clienteById.get(e.cliente_id) as any;
+      return (e.status === 'cargado' || e.status === 'en_ruta')
+        && (e.fecha ?? '').slice(0, 10) === todayStr
+        && (e.vendedor_ruta_id ? e.vendedor_ruta_id === effectiveVendedorId : e.vendedor_id === effectiveVendedorId)
+        && !!cliente?.gps_lat && !!cliente?.gps_lng;
+    }).length;
+    return clientesDelDia + entregasDelDia;
+  }, [myClientes, allEntregas, clienteById, diaFiltro, todayStr, effectiveVendedorId]);
 
   const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
     if (!filtered || !empresa?.id) return;
@@ -248,7 +261,7 @@ export default function RutaClientes() {
         <div className="flex items-center gap-2">
           <h1 className="text-[18px] font-bold text-foreground">Clientes</h1>
           <Badge variant="secondary" className="text-[11px]">{pendientesCount} pendientes</Badge>
-          {pendientesCount > 0 && (
+          {paradasNavegablesCount > 0 && (
             <button
               onClick={() => navigate('/ruta/navegacion')}
               className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-brand-orange px-2.5 py-1 text-[11px] font-semibold text-brand-orange-foreground shadow-sm hover:bg-brand-orange/90"
