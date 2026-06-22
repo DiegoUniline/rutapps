@@ -20,6 +20,7 @@ interface Props {
   onSetPassword: (userId: string, nombre: string) => void;
   onArchive: (p: ProfileUser, email?: string) => void;
   onReactivate: (p: ProfileUser) => void;
+  onForceSignOut: (p: ProfileUser) => void;
 }
 
 const estadoBadge = (estado: string) => {
