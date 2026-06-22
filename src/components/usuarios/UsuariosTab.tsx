@@ -120,6 +120,15 @@ export default function UsuariosTab({
                       <button onClick={() => onSetPassword(p.user_id, p.nombre || authUser?.email || '')} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
                       {!isOwnerUser && p.estado === 'activo' && (
                         <button
+                          onClick={() => onForceSignOut(p)}
+                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-amber-600"
+                          title="Cerrar sesión del usuario (lo expulsa de todos sus dispositivos)"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!isOwnerUser && p.estado === 'activo' && (
+                        <button
                           onClick={() => onArchive(p, authUser?.email)}
                           className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive"
                           title="Archivar usuario"
