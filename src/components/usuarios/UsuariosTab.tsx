@@ -1,4 +1,4 @@
-import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Edit2, KeyRound, Archive, RotateCcw, AlertTriangle, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProfileUser, AuthUser, UserRole, Almacen } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
