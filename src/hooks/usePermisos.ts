@@ -271,6 +271,7 @@ export const MODULOS_MOVIL: ModuloMovilDef[] = [
   // Clientes
   { id: 'ruta.cliente_crear', label: 'Crear cliente nuevo', group: 'Clientes' },
   { id: 'ruta.cliente_editar', label: 'Editar cliente', group: 'Clientes' },
+  { id: 'ruta.cliente_eliminar', label: 'Eliminar cliente', group: 'Clientes', description: 'Permite dar de baja (marcar inactivo) a un cliente desde la app móvil' },
   { id: 'ruta.cliente_credito', label: 'Asignar límite de crédito', group: 'Clientes' },
   // Otros
   { id: 'ruta.gastos', label: 'Registrar gastos (menú Más)', group: 'Otros' },

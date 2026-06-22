@@ -174,6 +174,7 @@ import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
 import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
 import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
+import RutaClienteDetalle from "@/pages/ruta/RutaClienteDetalle";
 import RutaIniciarPage from "@/pages/ruta/RutaIniciarPage";
 const VehiculosPage = lazy(() => import("@/pages/VehiculosPage"));
 const JornadasRutaPage = lazy(() => import("@/pages/JornadasRutaPage"));
@@ -547,6 +548,7 @@ function AppRoutes() {
         <Route path="/ruta/entregas/:id" element={<RutaEntregaDetalle />} />
         <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
         <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
+        <Route path="/ruta/clientes/:id" element={<RutaClienteDetalle />} />
         <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
@@ -611,6 +613,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/entregas/:id" element={<RutaEntregaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
       <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
+      <Route path="/ruta/clientes/:id" element={<RutaClienteDetalle />} />
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
       <Route path="/ruta/descarga" element={<RutaDescarga />} />
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />

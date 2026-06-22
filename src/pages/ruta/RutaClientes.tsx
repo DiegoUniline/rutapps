@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus, Info } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
@@ -446,6 +446,10 @@ export default function RutaClientes() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[160px]">
+                    <DropdownMenuItem onClick={() => navigate(`/ruta/clientes/${c.id}`)}>
+                      <Info className="h-4 w-4 mr-2" />
+                      Ver datos
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => captureGps(c)} disabled={capturingGpsId === c.id}>
                       {capturingGpsId === c.id
                         ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
