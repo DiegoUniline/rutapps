@@ -45,6 +45,19 @@ export default function UsuariosPage() {
   const activeRoles = rolesHook.roles.filter(r => r.activo !== false);
 
   const handleArchive = (p: ProfileUser, email?: string) => setArchiveTarget({ user: p, email });
+  const handleForceSignOut = async (p: ProfileUser) => {
+    if (!await confirmDialog(`¿Cerrar la sesión de ${p.nombre || 'este usuario'}? Será expulsado de todos sus dispositivos y tendrá que volver a iniciar sesión.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'sign-out-user', user_id: p.user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Sesión cerrada. El usuario deberá iniciar sesión nuevamente.');
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo cerrar la sesión');
+    }
+  };
   const handleReactivate = async (p: ProfileUser) => {
     if (!await confirmDialog(`¿Reactivar a ${p.nombre || 'este usuario'}? Volverá a contar para el límite del plan.`)) return;
     try {
