@@ -431,6 +431,30 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* VIDEO — Mira qué y cómo es Rutapp */}
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="text-center mb-8">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Video</span>
+            <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.025em', color: BRAND.ink }}>
+              Mira qué y cómo es <span style={{ color: BRAND.primary }}>Rutapp</span>
+            </h2>
+            <p className="mt-3 text-[14px] md:text-[15px]" style={{ color: BRAND.muted }}>
+              En pocos minutos descubre cómo funciona y por qué cientos de distribuidoras ya lo usan.
+            </p>
+          </div>
+          <div className="relative w-full overflow-hidden rounded-2xl shadow-xl border" style={{ borderColor: BRAND.line, aspectRatio: '16 / 9' }}>
+            <iframe
+              src="https://www.youtube.com/embed/0pkauD3ZBYI?rel=0"
+              title="Mira qué y cómo es Rutapp"
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      </section>
+
       {/* MODULES — bento dense */}
       <section id="modulos" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
         <div className="max-w-[1440px] mx-auto">
