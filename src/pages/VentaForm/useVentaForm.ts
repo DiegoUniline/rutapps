@@ -21,8 +21,8 @@ const COL_COUNT = 4;
 
 export function emptyVenta(): Partial<Venta> {
   return {
-    tipo: 'pedido', status: 'borrador', condicion_pago: 'por_definir',
-    fecha: todayLocal(), entrega_inmediata: false,
+    tipo: 'venta_directa', status: 'borrador', condicion_pago: 'por_definir',
+    fecha: todayLocal(), entrega_inmediata: true,
     subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,
   };
 }
