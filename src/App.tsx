@@ -827,6 +827,7 @@ const App = () => (
               <AppRoutes />
               <FacturaPendienteModal />
               <PWAUpdatePrompt />
+              <BroadcastListener />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
