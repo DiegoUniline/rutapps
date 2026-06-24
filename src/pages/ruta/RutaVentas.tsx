@@ -40,18 +40,15 @@ export default function RutaVentas() {
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  const clientesPermitidos = useMemo(() => {
-    if (!limitarPorClientesPropios) return null;
-    return new Set(((clientes ?? []) as any[])
-      .filter((c: any) => c.vendedor_id === vendedorId)
-      .map((c: any) => c.id));
-  }, [clientes, limitarPorClientesPropios, vendedorId]);
-
   const ventasVisibles = useMemo(() => {
     const list = (ventas ?? []) as any[];
-    if (!clientesPermitidos) return list;
-    return list.filter(v => v.cliente_id && clientesPermitidos.has(v.cliente_id));
-  }, [ventas, clientesPermitidos]);
+    if (!limitarPorClientesPropios) return list;
+    // Mostrar SOLO las ventas que YO hice (sin importar a qué cliente).
+    // Antes filtrábamos por cliente.vendedor_id, lo que hacía que una venta
+    // hecha por mí a un cliente de otro vendedor desapareciera de mi lista.
+    return list.filter(v => v.vendedor_id === vendedorId);
+  }, [ventas, limitarPorClientesPropios, vendedorId]);
+
 
   // Cuentas por cobrar (ignora filtro de fechas para no esconder vencidas)
   const porCobrar = useMemo(() => {
