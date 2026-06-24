@@ -146,6 +146,80 @@ export default function KardexPage() {
     fechaHasta || undefined,
   );
 
+  const { data: refInfo } = useKardexReferencias(rows);
+
+  // Helper: build "Origen / Destino" cell content for a row
+  const getOrigenDestino = (row: any): { origen: string; destino: string } => {
+    const refTipo = row.referencia_tipo;
+    const refId = row.referencia_id;
+    const almNombre = (id?: string | null) =>
+      id ? (refInfo?.almacenes?.[id] ?? '—') : '—';
+
+    // Ventas / cancelaciones: salida del almacén → cliente
+    if (refTipo === 'venta' || refTipo === 'venta_ruta') {
+      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
+      return {
+        origen: almacenSel?.nombre ?? '—',
+        destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
+      };
+    }
+    if (refTipo === 'cancelacion_venta') {
+      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
+      return {
+        origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Compras: proveedor → almacén
+    if (refTipo === 'compra') {
+      const prov = refId ? refInfo?.compraProveedor?.[refId] : undefined;
+      return {
+        origen: prov ? `Prov: ${prov.nombre}` : 'Proveedor',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Entregas: almacén → cliente
+    if (refTipo === 'entrega') {
+      const ent = refId ? refInfo?.entregaCliente?.[refId] : undefined;
+      return {
+        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
+      };
+    }
+    // Traspasos: usar almacenes origen/destino
+    if (refTipo === 'traspaso') {
+      return {
+        origen: almNombre(row.almacen_origen_id),
+        destino: almNombre(row.almacen_destino_id),
+      };
+    }
+    // Devoluciones: cliente → almacén
+    if (refTipo === 'devolucion') {
+      return {
+        origen: 'Cliente',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Carga / Descarga
+    if (refTipo === 'carga') {
+      return {
+        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        destino: 'Camión',
+      };
+    }
+    if (refTipo === 'descarga') {
+      return {
+        origen: 'Camión',
+        destino: almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—'),
+      };
+    }
+    // Genérico: usar las columnas del movimiento si existen
+    return {
+      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : '—',
+      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : '—',
+    };
+  };
+
   const filtered = useMemo(() => {
     let list = [...rows].reverse();
     if (filterTipo.startsWith('ref:')) {
