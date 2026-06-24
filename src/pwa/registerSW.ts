@@ -123,13 +123,23 @@ export async function registerAppSW() {
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
-        // Check for updates more often so a fresh deploy is picked up quickly.
-        setInterval(() => registration.update().catch(() => {}), 60_000);
-        // Also check when the tab regains focus.
-        window.addEventListener('focus', () => registration.update().catch(() => {}));
+        const check = () => registration.update().catch(() => {});
+        // Polling: setInterval gets throttled/paused on mobile background,
+        // so we keep it short AND add several event-driven triggers below.
+        setInterval(check, 30_000);
+        window.addEventListener('focus', check);
+        window.addEventListener('online', check);
+        // pageshow fires when the PWA is brought back from the bfcache on
+        // mobile (the common "reopen the app icon" path on iOS/Android).
+        window.addEventListener('pageshow', check);
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') registration.update().catch(() => {});
+          if (document.visibilityState === 'visible') check();
         });
+        // Allow any component to force a check (e.g. the mobile sync button,
+        // route changes, the "Eye" version button).
+        window.addEventListener('uniline:check-sw-update', check);
+        // Expose for ad-hoc debugging.
+        (window as any).__checkSWUpdate = check;
       },
     });
 
