@@ -112,6 +112,14 @@ export default function KardexPage() {
     [almacenes, almacenId],
   );
 
+  // Sync product search input label when productoId is set externally (e.g. back navigation)
+  useEffect(() => {
+    if (productoSel && !productoSearch) {
+      setProductoSearch(`${productoSel.codigo} · ${productoSel.nombre}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productoSel?.id]);
+
   // Real current stock from stock_almacen
   const { data: stockActual } = useQuery({
     queryKey: ['stock-almacen-kardex', empresa?.id, almacenId, productoId],
