@@ -343,17 +343,10 @@ export default function KardexPage() {
         </div>
       </div>
 
-      {/* Empty state */}
-      {(!almacenId || !productoId) && (
-        <div className="bg-accent/30 border border-border rounded-lg p-10 text-center text-sm text-muted-foreground">
-          Selecciona un almacén y un producto para ver el kardex.
-        </div>
-      )}
-
-      {/* Kardex view */}
-      {almacenId && productoId && (
-        <>
-          {/* Header summary */}
+      {/* Kardex view - siempre visible, se filtra conforme se selecciona */}
+      <>
+        {/* Header summary: solo cuando hay producto + almacén (saldo corrido tiene sentido) */}
+        {almacenId && productoId && (
           <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-lg p-3">
             <div className="min-w-0">
               <div className="text-base font-semibold truncate">{productoSel?.nombre}</div>
@@ -377,6 +370,14 @@ export default function KardexPage() {
               )}
             </div>
           </div>
+        )}
+
+        {!almacenId && !productoId && (
+          <div className="text-[12px] text-muted-foreground px-1">
+            Mostrando todos los movimientos de la empresa. Selecciona almacén o producto para filtrar.
+          </div>
+        )}
+
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
