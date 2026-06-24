@@ -538,3 +538,25 @@ table tbody td {
   border-right: 1px solid hsl(var(--border));
 }
 table tbody td:last-child { border-right: none; }
+
+/* ============================================================
+ * Tamaño homogéneo global para TODAS las tablas del sistema.
+ * Misma tipografía, padding y alto de fila en cualquier módulo.
+ * ============================================================ */
+table {
+  font-size: 13px;
+  line-height: 1.35;
+}
+table thead th {
+  height: 40px;
+  padding: 8px 12px !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  white-space: nowrap;
+}
+table tbody td {
+  height: 44px;
+  padding: 8px 12px !important;
+  vertical-align: middle;
+}
