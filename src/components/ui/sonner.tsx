@@ -11,6 +11,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       duration={2000}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      style={{
+        // Respeta el área segura del móvil (notch/barra de estado) para que
+        // los toasts no queden tapados por la barra superior.
+        ['--safe-area-inset-top' as any]: 'env(safe-area-inset-top, 0px)',
+        top: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+      } as React.CSSProperties}
       toastOptions={{
         classNames: {
           toast:
@@ -22,6 +28,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
+
   );
 };
 
