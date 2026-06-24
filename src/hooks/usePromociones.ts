@@ -56,19 +56,46 @@ export function usePromocionesActivas() {
     enabled: !!empresaId,
     queryFn: async () => {
       const today = todayInTimezone(empresa?.zona_horaria);
-      const { data, error } = await supabase
-        .from('promociones')
-        .select('*')
-        .eq('empresa_id', empresaId!)
-        .eq('activa', true)
-        .or(`vigencia_inicio.is.null,vigencia_inicio.lte.${today}`)
-        .or(`vigencia_fin.is.null,vigencia_fin.gte.${today}`)
-        .order('prioridad', { ascending: false });
-      if (error) throw error;
-      return data as Promocion[];
+
+      // Helper: filter list by today's vigencia + activa flag
+      const filterVigentes = (list: any[]): Promocion[] => (list || []).filter((p: any) => {
+        if (!p.activa) return false;
+        const ini = p.vigencia_inicio;
+        const fin = p.vigencia_fin;
+        if (ini && ini > today) return false;
+        if (fin && fin < today) return false;
+        return true;
+      }).sort((a: any, b: any) => (b.prioridad ?? 0) - (a.prioridad ?? 0)) as Promocion[];
+
+      // Try server first
+      try {
+        const { data, error } = await supabase
+          .from('promociones')
+          .select('*')
+          .eq('empresa_id', empresaId!)
+          .eq('activa', true)
+          .or(`vigencia_inicio.is.null,vigencia_inicio.lte.${today}`)
+          .or(`vigencia_fin.is.null,vigencia_fin.gte.${today}`)
+          .order('prioridad', { ascending: false });
+        if (!error && data) {
+          // Cache for offline use
+          try {
+            const all = await supabase.from('promociones').select('*').eq('empresa_id', empresaId!);
+            if (all.data) await offlineDb.promociones.bulkPut(all.data);
+          } catch { /* ignore */ }
+          return data as Promocion[];
+        }
+      } catch { /* offline / network error → fall through */ }
+
+      // Offline fallback: read from IndexedDB
+      try {
+        const cached = await offlineDb.promociones.where('empresa_id').equals(empresaId!).toArray();
+        return filterVigentes(cached);
+      } catch { return [] as Promocion[]; }
     },
   });
 }
+
 
 export function useSavePromocion() {
   const qc = useQueryClient();
