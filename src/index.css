@@ -479,3 +479,45 @@ table th {
     scrollbar-width: none;
   }
 }
+
+/* ============================================================
+ * Global Column Resizer & Hider
+ * Aplicado a TODAS las <table> del proyecto.
+ * Excluir con data-no-resize / data-no-hide.
+ * ============================================================ */
+table th { position: relative; }
+table th::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  user-select: none;
+}
+table th:hover::after { background: hsl(var(--border)); }
+
+/* Estado oculto via GlobalColumnHider */
+.umo-col-hidden { display: none !important; }
+
+/* Menú contextual del hider */
+.lov-col-menu {
+  position: fixed;
+  z-index: 9999;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 180px;
+  padding: 4px;
+}
+.lov-col-menu-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  user-select: none;
+}
+.lov-col-menu-item:hover { background: hsl(var(--accent)); }
