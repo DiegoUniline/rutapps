@@ -22,7 +22,7 @@ import { confirmDialog } from '@/lib/confirm';
 export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
-  const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [tab, setTab] = useState<'usuarios' | 'bajas' | 'roles'>('usuarios');
   const [showArchived, setShowArchived] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<{ user: ProfileUser; email?: string } | null>(null);
   const usuarios = useUsuarios();
