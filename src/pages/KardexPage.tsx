@@ -156,23 +156,43 @@ export default function KardexPage() {
           </div>
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase">Producto</label>
-            <div className="flex gap-2 mt-1">
+            <div className="relative mt-1">
               <Input
                 placeholder="Buscar por nombre o código..."
-                className="h-9 text-sm flex-1"
+                className="h-9 text-sm"
                 value={productoSearch}
-                onChange={e => setProductoSearch(e.target.value)}
+                onChange={e => { setProductoSearch(e.target.value); setProductoDropdownOpen(true); }}
+                onFocus={() => setProductoDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setProductoDropdownOpen(false), 150)}
               />
-              <select
-                className="h-9 text-sm border border-border rounded px-2 bg-background flex-1 min-w-0"
-                value={productoId}
-                onChange={e => setProductoId(e.target.value)}
-              >
-                <option value="">— Selecciona producto —</option>
-                {productosFiltered.map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.codigo} · {p.nombre}</option>
-                ))}
-              </select>
+              {productoDropdownOpen && productosFiltered.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto bg-popover border border-border rounded-md shadow-lg">
+                  {productosFiltered.map((p: any) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setProductoId(p.id);
+                        setProductoSearch(`${p.codigo} · ${p.nombre}`);
+                        setProductoDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm hover:bg-accent border-b border-border/40 last:border-0",
+                        productoId === p.id && "bg-accent"
+                      )}
+                    >
+                      <div className="font-medium truncate">{p.nombre}</div>
+                      <div className="text-[11px] text-muted-foreground">{p.codigo}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {productoDropdownOpen && productoSearch.trim() && productosFiltered.length === 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-popover border border-border rounded-md shadow-lg p-3 text-sm text-muted-foreground">
+                  Sin resultados
+                </div>
+              )}
             </div>
           </div>
         </div>
