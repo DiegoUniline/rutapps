@@ -44,6 +44,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
   { key: 'notifications', label: 'Historial', icon: Bell },
+  { key: 'broadcast', label: 'Mensajes en vivo', icon: Megaphone },
   { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
   { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
   { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
