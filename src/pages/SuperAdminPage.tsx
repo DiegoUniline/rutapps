@@ -191,6 +191,7 @@ export default function SuperAdminPage() {
               {tab === 'whatsapp' && <AdminWhatsAppTab />}
               {tab === 'wa_bot' && <AdminWaBotTab />}
               {tab === 'notifications' && <AdminNotificationsTab />}
+              {tab === 'broadcast' && <AdminBroadcastTab />}
               {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
               {tab === 'anuncios' && <AdminAnunciosTab />}
               {tab === 'publicidad' && <AdminPublicidadTab />}
