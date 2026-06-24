@@ -38,6 +38,7 @@ export default function CotizacionesListPage() {
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<CotizacionEstado | 'todas'>('todas');
   const [toDelete, setToDelete] = useState<Cotizacion | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
