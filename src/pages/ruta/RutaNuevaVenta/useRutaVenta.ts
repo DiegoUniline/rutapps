@@ -82,12 +82,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const cId = clienteId || urlClienteId;
     const gps = await captureGps();
     await queueOperation('visitas', 'insert', {
-      id: crypto.randomUUID(), empresa_id: empresa.id, cliente_id: cId, user_id: user.id,
-      vendedor_id: profile?.id ?? null, tipo,
+      id: crypto.randomUUID(), empresa_id: empresa.id, cliente_id: cId, user_id: user.id, tipo,
       motivo: opts?.motivo || null, notas: opts?.notasVisita || null,
       gps_lat: gps?.lat ?? null, gps_lng: gps?.lng ?? null,
       venta_id: opts?.ventaId || null, fecha: new Date().toISOString(), created_at: new Date().toISOString(),
     });
+
 
   };
 
