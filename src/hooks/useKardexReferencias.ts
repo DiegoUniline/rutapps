@@ -8,11 +8,13 @@ export interface KardexRefInfo {
   compraProveedor?: Record<string, { nombre: string; folio?: string | null }>;
   entregaCliente?: Record<string, { nombre: string }>;
   almacenes?: Record<string, string>; // id -> nombre
+  productos?: Record<string, { nombre: string; codigo?: string | null }>;
+  usuarios?: Record<string, string>; // user_id -> nombre
 }
 
 /**
- * Fetches contextual info (cliente/proveedor/almacen names) for kardex rows
- * so we can show origen/destino in the table.
+ * Fetches contextual info (cliente/proveedor/almacen/producto/usuario names)
+ * for kardex rows so we can show origen/destino, producto and usuario.
  */
 export function useKardexReferencias(rows: any[] | undefined) {
   const { empresa } = useAuth();
@@ -22,7 +24,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       'kardex-referencias',
       empresa?.id,
       // stable hash of refs
-      (rows ?? []).map(r => `${r.referencia_tipo}:${r.referencia_id}`).join('|'),
+      (rows ?? []).map(r => `${r.referencia_tipo}:${r.referencia_id}:${r.producto_id}:${r.user_id}`).join('|'),
     ],
     enabled: !!empresa?.id && !!rows && rows.length > 0,
     queryFn: async (): Promise<KardexRefInfo> => {
@@ -30,18 +32,23 @@ export function useKardexReferencias(rows: any[] | undefined) {
       const compraIds = new Set<string>();
       const entregaIds = new Set<string>();
       const almacenIds = new Set<string>();
+      const productoIds = new Set<string>();
+      const userIds = new Set<string>();
 
       for (const r of rows ?? []) {
-        if (!r.referencia_id) continue;
-        if (['venta', 'venta_ruta', 'cancelacion_venta'].includes(r.referencia_tipo)) {
-          ventaIds.add(r.referencia_id);
-        } else if (r.referencia_tipo === 'compra') {
-          compraIds.add(r.referencia_id);
-        } else if (r.referencia_tipo === 'entrega') {
-          entregaIds.add(r.referencia_id);
+        if (r.referencia_id) {
+          if (['venta', 'venta_ruta', 'cancelacion_venta'].includes(r.referencia_tipo)) {
+            ventaIds.add(r.referencia_id);
+          } else if (r.referencia_tipo === 'compra') {
+            compraIds.add(r.referencia_id);
+          } else if (r.referencia_tipo === 'entrega') {
+            entregaIds.add(r.referencia_id);
+          }
         }
         if (r.almacen_origen_id) almacenIds.add(r.almacen_origen_id);
         if (r.almacen_destino_id) almacenIds.add(r.almacen_destino_id);
+        if (r.producto_id) productoIds.add(r.producto_id);
+        if (r.user_id) userIds.add(r.user_id);
       }
 
       const result: KardexRefInfo = {
@@ -49,6 +56,8 @@ export function useKardexReferencias(rows: any[] | undefined) {
         compraProveedor: {},
         entregaCliente: {},
         almacenes: {},
+        productos: {},
+        usuarios: {},
       };
 
       const tasks: Promise<any>[] = [];
