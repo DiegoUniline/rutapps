@@ -243,9 +243,9 @@ export default function KardexPage() {
   const cuadra = stockActual !== undefined && Math.abs(saldoFinal - (stockActual ?? 0)) < 0.001;
 
   const handleExportCSV = () => {
-    if (!productoSel || !almacenSel) return;
+    if (filtered.length === 0) return;
     const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
-    const header = 'Fecha,Producto,Tipo,Referencia,Origen,Destino,Entrada,Salida,Saldo,Notas';
+    const header = 'Fecha,Producto,Codigo,Tipo,Referencia,Origen,Destino,Usuario,Entrada,Salida,Saldo,Notas';
     const csvRows = filtered.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-MX');
       const tipo = REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo ?? '';
@@ -253,16 +253,22 @@ export default function KardexPage() {
       const salida = r.delta < 0 ? Math.abs(r.delta) : '';
       const notas = r.notas ?? '';
       const od = getOrigenDestino(r);
+      const prodInfo = r.producto_id
+        ? (refInfo?.productos?.[r.producto_id] ?? (r.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
+        : null;
+      const usuario = r.user_id ? (refInfo?.usuarios?.[r.user_id] ?? '') : '';
       return [
         esc(fecha),
-        esc(productoSel.nombre ?? ''),
+        esc(prodInfo?.nombre ?? ''),
+        esc(prodInfo?.codigo ?? ''),
         esc(tipo),
         esc(r.referencia_id ?? ''),
         esc(od.origen),
         esc(od.destino),
+        esc(usuario),
         entrada,
         salida,
-        r.saldo,
+        almacenId && productoId ? r.saldo : '',
         esc(notas),
       ].join(',');
     });
@@ -270,10 +276,14 @@ export default function KardexPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `kardex_${productoSel.nombre.replace(/\s+/g, '_')}_${almacenSel.nombre.replace(/\s+/g, '_')}.csv`;
+    const fileName = productoSel && almacenSel
+      ? `kardex_${productoSel.nombre.replace(/\s+/g, '_')}_${almacenSel.nombre.replace(/\s+/g, '_')}.csv`
+      : `movimientos_inventario.csv`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
