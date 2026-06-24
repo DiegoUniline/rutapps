@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
