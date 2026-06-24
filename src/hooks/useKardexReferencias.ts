@@ -148,10 +148,10 @@ export function useKardexReferencias(rows: any[] | undefined) {
           (async () => {
             const { data } = await supabase
               .from('profiles')
-              .select('id, full_name, email')
-              .in('id', Array.from(userIds));
+              .select('user_id, nombre')
+              .in('user_id', Array.from(userIds));
             (data ?? []).forEach((u: any) => {
-              result.usuarios![u.id] = u.full_name || u.email || u.id.slice(0, 8);
+              if (u.user_id) result.usuarios![u.user_id] = u.nombre || u.user_id.slice(0, 8);
             });
           })()
         );
