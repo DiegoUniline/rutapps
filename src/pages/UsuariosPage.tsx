@@ -84,6 +84,14 @@ export default function UsuariosPage() {
 
       <div className="flex gap-1 border-b border-border">
         <button onClick={() => setTab('usuarios')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === 'usuarios' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>Usuarios</button>
+        <button onClick={() => setTab('bajas')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5", tab === 'bajas' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+          Dados de baja
+          {usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length > 0 && (
+            <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full font-semibold">
+              {usuarios.profiles.filter(p => p.estado === 'baja' || p.estado === 'archivado').length}
+            </span>
+          )}
+        </button>
         <button onClick={() => setTab('roles')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", tab === 'roles' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>Roles y Permisos</button>
       </div>
 
@@ -104,6 +112,15 @@ export default function UsuariosPage() {
           onArchive={handleArchive}
           onReactivate={handleReactivate}
           onForceSignOut={handleForceSignOut}
+        />
+      )}
+
+      {tab === 'bajas' && (
+        <UsuariosBajaTab
+          profiles={usuarios.profiles}
+          authUsers={usuarios.authUsers}
+          ownerUserId={empresa?.owner_user_id}
+          onReactivate={handleReactivate}
         />
       )}
 
