@@ -560,3 +560,17 @@ table tbody td {
   padding: 4px 8px !important;
   vertical-align: middle;
 }
+
+/* Controles dentro de celdas no deben estirar la fila */
+table tbody td > button,
+table tbody td > a > button,
+table tbody td .inline-flex {
+  max-height: 26px;
+}
+table tbody td button[class*="h-10"],
+table tbody td button[class*="h-9"] {
+  height: 26px !important;
+  width: 26px !important;
+  min-height: 0 !important;
+}
+table tbody td svg { flex-shrink: 0; }
