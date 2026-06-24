@@ -348,8 +348,30 @@ export default function KardexPage() {
                           </span>
                         </td>
                         <td className="py-1.5 px-3 text-[12px]">
-                          {REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—'}
-                          {row.referencia_id && <span className="text-muted-foreground ml-1 text-[10px]">#{row.referencia_id.slice(0, 8)}</span>}
+                          {(() => {
+                            const label = REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—';
+                            const route = getReferenciaRoute(row.referencia_tipo, row.referencia_id);
+                            const shortId = row.referencia_id ? `#${row.referencia_id.slice(0, 8)}` : '';
+                            if (route) {
+                              return (
+                                <Link
+                                  to={route}
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  title="Abrir detalle"
+                                >
+                                  {label}
+                                  {shortId && <span className="text-muted-foreground text-[10px]">{shortId}</span>}
+                                  <ExternalLink className="h-3 w-3 opacity-60" />
+                                </Link>
+                              );
+                            }
+                            return (
+                              <>
+                                {label}
+                                {shortId && <span className="text-muted-foreground ml-1 text-[10px]">{shortId}</span>}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
