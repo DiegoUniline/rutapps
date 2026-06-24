@@ -52,7 +52,9 @@ const COLUMN_SELECTS: Record<string, string> = {
   tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
   stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
   producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
+  lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
 };
+
 
 // Friendly names for UI display
 export const TABLE_LABELS: Record<string, string> = {
