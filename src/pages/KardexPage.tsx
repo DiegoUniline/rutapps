@@ -7,8 +7,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Download, Search, BookOpen } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Download, Search, BookOpen, ExternalLink } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 const REFERENCIA_LABELS: Record<string, string> = {
   ajuste: 'Ajuste inventario',
@@ -31,6 +32,36 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
   salida: { label: 'Salida', icon: ArrowUpCircle, color: 'text-destructive' },
   transferencia: { label: 'Transferencia', icon: RefreshCw, color: 'text-primary' },
 };
+
+function getReferenciaRoute(tipo: string | null, id: string | null): string | null {
+  if (!tipo || !id) return null;
+  switch (tipo) {
+    case 'venta':
+    case 'venta_ruta':
+    case 'cancelacion_venta':
+      return `/ventas/${id}`;
+    case 'compra':
+      return `/almacen/compras/${id}`;
+    case 'traspaso':
+      return `/almacen/traspasos/${id}`;
+    case 'entrega':
+      return `/entregas/${id}`;
+    case 'auditoria':
+      return `/almacen/auditorias/${id}/resultados`;
+    case 'ajuste':
+      return `/almacen/ajustes`;
+    case 'conteo':
+      return `/almacen/conteos`;
+    case 'descarga':
+      return `/almacen/descargas`;
+    case 'devolucion':
+      return `/ventas/devoluciones`;
+    case 'merma':
+      return `/almacen/mermas`;
+    default:
+      return null;
+  }
+}
 
 export default function KardexPage() {
   const { empresa } = useAuth();
@@ -317,8 +348,30 @@ export default function KardexPage() {
                           </span>
                         </td>
                         <td className="py-1.5 px-3 text-[12px]">
-                          {REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—'}
-                          {row.referencia_id && <span className="text-muted-foreground ml-1 text-[10px]">#{row.referencia_id.slice(0, 8)}</span>}
+                          {(() => {
+                            const label = REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—';
+                            const route = getReferenciaRoute(row.referencia_tipo, row.referencia_id);
+                            const shortId = row.referencia_id ? `#${row.referencia_id.slice(0, 8)}` : '';
+                            if (route) {
+                              return (
+                                <Link
+                                  to={route}
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  title="Abrir detalle"
+                                >
+                                  {label}
+                                  {shortId && <span className="text-muted-foreground text-[10px]">{shortId}</span>}
+                                  <ExternalLink className="h-3 w-3 opacity-60" />
+                                </Link>
+                              );
+                            }
+                            return (
+                              <>
+                                {label}
+                                {shortId && <span className="text-muted-foreground ml-1 text-[10px]">{shortId}</span>}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
