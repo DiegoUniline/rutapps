@@ -172,7 +172,8 @@ export async function downloadAllData(
 
       try {
         const cacheEntry = await offlineDb.cacheTimestamps.get(table);
-        const lastTableSync = (!forceFullSync && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
+        const skipDelta = NO_DELTA_TABLES.has(table);
+        const lastTableSync = (!forceFullSync && !skipDelta && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
 
         const selectStr = COLUMN_SELECTS[table] || '*';
 
