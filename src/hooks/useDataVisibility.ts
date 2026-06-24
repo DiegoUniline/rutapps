@@ -53,8 +53,9 @@ export function useDataVisibility(modulo: string) {
   });
 
   const seeAll = hasPermiso(modulo, 'ver_todos');
-  // Default to 'propios' when no config is available (safer offline behavior)
-  const clientesVisibilidad = ((empresaConfig as any)?.clientes_visibilidad as 'todos' | 'propios' | undefined) ?? 'propios';
+  // Use cached/server value; only default to 'todos' when truly unknown
+  const clientesVisibilidad = ((empresaConfig as any)?.clientes_visibilidad as 'todos' | 'propios' | undefined) ?? 'todos';
+
 
   return {
     seeAll,
