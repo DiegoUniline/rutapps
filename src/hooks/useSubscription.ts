@@ -118,7 +118,8 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       daysLeft,
       isBlocked,
       isSuperAdmin,
-      maxUsuarios: isSuperAdmin ? 999 : sub.max_usuarios,
+      // En modo "ver como otra empresa", respetar el límite real de esa empresa.
+      maxUsuarios: isSuperAdmin && !isOverride ? 999 : sub.max_usuarios,
     };
     writeCache(userId, empresaId, state);
     return state;
