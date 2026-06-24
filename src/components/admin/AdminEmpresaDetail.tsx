@@ -31,6 +31,7 @@ import { confirmDialog } from '@/lib/confirm';
 interface Props {
   empresaId: string;
   onBack: () => void;
+  initialTab?: 'usuarios' | 'facturas' | 'pagos' | 'historial';
 }
 
 const STATUS_MAP: Record<string, { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -89,7 +90,7 @@ function estadoFacturaBadge(estado: string) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${x.cls}`}>{x.l}</span>;
 }
 
-export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
+export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'usuarios' }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [empresa, setEmpresa] = useState<any>(null);
@@ -784,7 +785,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       </div>
 
       {/* ── Tabs ───────────────────────────────────────── */}
-      <Tabs defaultValue="usuarios" className="space-y-4">
+      <Tabs defaultValue={initialTab} className="space-y-4">
         <div className="-mx-3 sm:mx-0 overflow-x-auto">
           <TabsList className="border border-border/60 p-1 h-auto bg-muted/30 w-max min-w-full mx-3 sm:mx-0">
             <TabsTrigger value="usuarios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -12,6 +12,7 @@ import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
 import AdminEmpresaDetail from '@/components/admin/AdminEmpresaDetail';
 import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
+import AdminPagosTab from '@/components/admin/AdminPagosTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
@@ -27,7 +28,7 @@ import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
 
 type TabKey =
-  | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'whatsapp'
+  | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
   | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
 
@@ -36,6 +37,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'empresas', label: 'Empresas', icon: Building2 },
   { key: 'subscriptions', label: 'Suscripciones', icon: CreditCard },
   { key: 'invoices', label: 'Facturas', icon: Receipt },
+  { key: 'pagos', label: 'Pagos', icon: Wallet },
   { key: 'partners', label: 'Partners', icon: Handshake },
   { key: 'control', label: 'Control', icon: ShieldCheck },
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
@@ -114,6 +116,7 @@ export default function SuperAdminPage() {
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
+  const [selectedEmpresaTab, setSelectedEmpresaTab] = useState<'usuarios' | 'facturas' | 'pagos' | 'historial'>('usuarios');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>(() => {
     const saved = sessionStorage.getItem('sa-tab') as TabKey | null;
@@ -173,13 +176,14 @@ export default function SuperAdminPage() {
         {/* Content */}
         <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 max-w-full md:max-w-[1400px] overflow-x-hidden">
           {selectedEmpresaId ? (
-            <AdminEmpresaDetail empresaId={selectedEmpresaId} onBack={() => setSelectedEmpresaId(null)} />
+            <AdminEmpresaDetail empresaId={selectedEmpresaId} initialTab={selectedEmpresaTab} onBack={() => setSelectedEmpresaId(null)} />
           ) : (
             <>
-              {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
-              {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
+              {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
+              {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
               {tab === 'invoices' && <AdminInvoicesTab />}
+              {tab === 'pagos' && <AdminPagosTab onSelectEmpresa={(id, t) => { setSelectedEmpresaTab(t || 'pagos'); setSelectedEmpresaId(id); }} />}
               {tab === 'partners' && <PartnersInlineTab />}
               {tab === 'control' && <ControlPage />}
               {tab === 'whatsapp' && <AdminWhatsAppTab />}
