@@ -34,7 +34,9 @@ const TABLES_TO_CACHE = [
   'tarifa_lineas',
   'stock_almacen',
   'producto_presentaciones',
+  'lista_precios',
 ] as const;
+
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
