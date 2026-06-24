@@ -261,7 +261,7 @@ export default function KardexPage() {
       const prodInfo = r.producto_id
         ? (refInfo?.productos?.[r.producto_id] ?? (r.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
         : null;
-      const usuario = r.user_id ? (refInfo?.usuarios?.[r.user_id] ?? '') : '';
+      const usuario = r.user_id ? (refInfo?.usuarios?.[r.user_id] ?? 'Usuario eliminado') : 'Sistema';
       return [
         esc(fecha),
         esc(prodInfo?.nombre ?? ''),
