@@ -1198,7 +1198,45 @@ export default function SupervisorDashboardPage() {
                       </div>
                     )}
                   </div>
+                  {/* Visitas (incluye "sin compra") */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-primary" /> Visitas ({filteredVisitas.length})
+                    </h3>
+                    {filteredVisitas.length === 0 ? <EmptyBlock text="Sin visitas registradas." /> : (
+                      <div className="space-y-1">
+                        {filteredVisitas.slice(0, 15).map((v: any) => {
+                          const sid = (vendedores ?? []).find((i) => i.user_id === v.user_id)?.id;
+                          const vendedorNombre = sid ? (sellerNameMap.get(sid) ?? '—') : '—';
+                          const clienteNombre = v.clientes?.nombre || 'Sin cliente';
+                          const tipoLabel = v.tipo === 'sin_compra' ? 'Sin compra' : v.tipo === 'pedido' ? 'Pedido' : v.tipo === 'venta' ? 'Venta' : v.tipo;
+                          const hora = v.created_at ? new Date(v.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
+                          const motivoTxt = v.tipo === 'sin_compra' ? (v.motivo || 'Sin motivo') : null;
+                          return (
+                            <div key={v.id} className={cn(
+                              "flex items-center gap-2 rounded-lg border p-2",
+                              v.tipo === 'sin_compra' ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-card/50",
+                            )}>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-medium text-foreground truncate">{clienteNombre}</p>
+                                <p className="text-[9px] text-muted-foreground truncate">
+                                  {vendedorNombre} · {tipoLabel}{motivoTxt ? ` · ${motivoTxt}` : ''}{hora ? ` · ${hora}` : ''}
+                                </p>
+                              </div>
+                              <span className={cn(
+                                "text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0",
+                                v.tipo === 'sin_compra' ? "bg-amber-500/15 text-amber-700" : "bg-primary/10 text-primary",
+                              )}>
+                                {v.tipo === 'sin_compra' ? '⚠' : '✓'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
               </ScrollArea>
             </TabsContent>
 
