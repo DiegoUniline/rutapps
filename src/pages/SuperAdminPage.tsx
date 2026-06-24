@@ -12,6 +12,7 @@ import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
 import AdminEmpresaDetail from '@/components/admin/AdminEmpresaDetail';
 import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
+import AdminPagosTab from '@/components/admin/AdminPagosTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
