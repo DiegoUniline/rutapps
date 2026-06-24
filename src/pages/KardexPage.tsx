@@ -508,15 +508,20 @@ export default function KardexPage() {
                             <span className="truncate font-medium">{od.destino}</span>
                           </div>
                         </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[160px]">
+                          <span className="truncate block" title={usuario}>{usuario}</span>
+                        </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-destructive">
                           {row.delta < 0 ? fmtNum(Math.abs(row.delta)) : ''}
                         </td>
-                        <td className="py-1.5 px-3 text-right tabular-nums text-[12px] font-semibold">
-                          {fmtNum(row.saldo)}
-                        </td>
+                        {almacenId && productoId && (
+                          <td className="py-1.5 px-3 text-right tabular-nums text-[12px] font-semibold">
+                            {fmtNum(row.saldo)}
+                          </td>
+                        )}
                         <td className="py-1.5 px-3 text-[11px] text-muted-foreground max-w-[260px] truncate">
                           {row.notas ?? ''}
                         </td>
