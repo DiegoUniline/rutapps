@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import { Switch } from '@/components/ui/switch';
@@ -190,6 +191,19 @@ export default function MobileLayout() {
             title={isOnline ? "Actualizar app" : "Sin conexión"}
           >
             <RefreshCw className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => {
+              toast.info(`Versión ${APP_VERSION}`, {
+                description: `Compilada el ${APP_BUILD_DATE}`,
+                duration: 5000,
+              });
+            }}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            title="Ver versión instalada"
+            aria-label="Ver versión instalada"
+          >
+            <Eye className="h-5 w-5" />
           </button>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
