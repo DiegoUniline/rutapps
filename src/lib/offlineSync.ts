@@ -85,7 +85,9 @@ export const TABLE_LABELS: Record<string, string> = {
   tarifa_lineas: 'Reglas de tarifa',
   stock_almacen: 'Stock por almacén',
   producto_presentaciones: 'Presentaciones de productos',
+  lista_precios: 'Listas de precios',
 };
+
 
 // Tables that have empresa_id for filtering
 const TABLES_WITH_EMPRESA = new Set([
