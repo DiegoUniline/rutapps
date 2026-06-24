@@ -55,67 +55,67 @@ export function useKardexReferencias(rows: any[] | undefined) {
 
       if (ventaIds.size) {
         tasks.push(
-          supabase
-            .from('ventas')
-            .select('id, folio, cliente:clientes(nombre)')
-            .eq('empresa_id', empresa!.id)
-            .in('id', Array.from(ventaIds))
-            .then(({ data }) => {
-              (data ?? []).forEach((v: any) => {
-                result.ventaCliente![v.id] = {
-                  nombre: v.cliente?.nombre ?? '—',
-                  folio: v.folio,
-                };
-              });
-            })
+          (async () => {
+            const { data } = await supabase
+              .from('ventas')
+              .select('id, folio, cliente:clientes(nombre)')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(ventaIds));
+            (data ?? []).forEach((v: any) => {
+              result.ventaCliente![v.id] = {
+                nombre: v.cliente?.nombre ?? '—',
+                folio: v.folio,
+              };
+            });
+          })()
         );
       }
 
       if (compraIds.size) {
         tasks.push(
-          supabase
-            .from('compras')
-            .select('id, folio, proveedor:proveedores(nombre)')
-            .eq('empresa_id', empresa!.id)
-            .in('id', Array.from(compraIds))
-            .then(({ data }) => {
-              (data ?? []).forEach((c: any) => {
-                result.compraProveedor![c.id] = {
-                  nombre: c.proveedor?.nombre ?? '—',
-                  folio: c.folio,
-                };
-              });
-            })
+          (async () => {
+            const { data } = await supabase
+              .from('compras')
+              .select('id, folio, proveedor:proveedores(nombre)')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(compraIds));
+            (data ?? []).forEach((c: any) => {
+              result.compraProveedor![c.id] = {
+                nombre: c.proveedor?.nombre ?? '—',
+                folio: c.folio,
+              };
+            });
+          })()
         );
       }
 
       if (entregaIds.size) {
         tasks.push(
-          supabase
-            .from('entregas')
-            .select('id, cliente:clientes(nombre)')
-            .eq('empresa_id', empresa!.id)
-            .in('id', Array.from(entregaIds))
-            .then(({ data }) => {
-              (data ?? []).forEach((e: any) => {
-                result.entregaCliente![e.id] = { nombre: e.cliente?.nombre ?? '—' };
-              });
-            })
+          (async () => {
+            const { data } = await supabase
+              .from('entregas')
+              .select('id, cliente:clientes(nombre)')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(entregaIds));
+            (data ?? []).forEach((e: any) => {
+              result.entregaCliente![e.id] = { nombre: e.cliente?.nombre ?? '—' };
+            });
+          })()
         );
       }
 
       if (almacenIds.size) {
         tasks.push(
-          supabase
-            .from('almacenes')
-            .select('id, nombre')
-            .eq('empresa_id', empresa!.id)
-            .in('id', Array.from(almacenIds))
-            .then(({ data }) => {
-              (data ?? []).forEach((a: any) => {
-                result.almacenes![a.id] = a.nombre;
-              });
-            })
+          (async () => {
+            const { data } = await supabase
+              .from('almacenes')
+              .select('id, nombre')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(almacenIds));
+            (data ?? []).forEach((a: any) => {
+              result.almacenes![a.id] = a.nombre;
+            });
+          })()
         );
       }
 
