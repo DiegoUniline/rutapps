@@ -107,6 +107,24 @@ const RECENT_TABLES = new Set([
   'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas', 'visitas',
 ]);
 
+// Tables where delta-by-created_at misses real changes (admin edits / UPDATE-in-place
+// or DELETE+INSERT cycles that leave stale rows in IndexedDB). Always full-refresh
+// these — they're small and critical for operational correctness on mobile.
+const NO_DELTA_TABLES = new Set([
+  'cargas',
+  'carga_lineas',
+  'entregas',
+  'entrega_lineas',
+  'descarga_ruta',
+  'descarga_ruta_lineas',
+  'stock_almacen',
+  'producto_presentaciones',
+  'tarifas',
+  'tarifa_lineas',
+  'lista_precios',
+  'promociones',
+]);
+
 export interface SyncProgress {
   table: string;
   label: string;
