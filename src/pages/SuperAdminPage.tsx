@@ -176,13 +176,14 @@ export default function SuperAdminPage() {
         {/* Content */}
         <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 max-w-full md:max-w-[1400px] overflow-x-hidden">
           {selectedEmpresaId ? (
-            <AdminEmpresaDetail empresaId={selectedEmpresaId} onBack={() => setSelectedEmpresaId(null)} />
+            <AdminEmpresaDetail empresaId={selectedEmpresaId} initialTab={selectedEmpresaTab} onBack={() => setSelectedEmpresaId(null)} />
           ) : (
             <>
               {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
               {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
               {tab === 'invoices' && <AdminInvoicesTab />}
+              {tab === 'pagos' && <AdminPagosTab onSelectEmpresa={(id, t) => { setSelectedEmpresaTab(t || 'pagos'); setSelectedEmpresaId(id); }} />}
               {tab === 'partners' && <PartnersInlineTab />}
               {tab === 'control' && <ControlPage />}
               {tab === 'whatsapp' && <AdminWhatsAppTab />}
