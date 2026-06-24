@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
+import { useKardexReferencias } from '@/hooks/useKardexReferencias';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
