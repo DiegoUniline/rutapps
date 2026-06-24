@@ -31,6 +31,7 @@ import { confirmDialog } from '@/lib/confirm';
 interface Props {
   empresaId: string;
   onBack: () => void;
+  initialTab?: 'usuarios' | 'facturas' | 'pagos' | 'historial';
 }
 
 const STATUS_MAP: Record<string, { l: string; v: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
