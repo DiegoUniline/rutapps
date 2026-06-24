@@ -432,17 +432,20 @@ export default function KardexPage() {
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
-                  <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
+                  {almacenId && productoId && (
+                    <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
+                  )}
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
@@ -450,6 +453,10 @@ export default function KardexPage() {
                     const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
                     const od = getOrigenDestino(row);
+                    const prodInfo = row.producto_id
+                      ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
+                      : null;
+                    const usuario = row.user_id ? (refInfo?.usuarios?.[row.user_id] ?? '—') : '—';
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
@@ -459,8 +466,8 @@ export default function KardexPage() {
                           </span>
                         </td>
                         <td className="py-1.5 px-3 text-[12px] max-w-[200px]">
-                          <div className="truncate font-medium" title={productoSel?.nombre}>{productoSel?.nombre}</div>
-                          <div className="text-[10px] text-muted-foreground truncate">{productoSel?.codigo}</div>
+                          <div className="truncate font-medium" title={prodInfo?.nombre ?? ''}>{prodInfo?.nombre ?? '—'}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{prodInfo?.codigo ?? ''}</div>
                         </td>
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
