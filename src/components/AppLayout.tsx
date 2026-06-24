@@ -13,8 +13,12 @@ import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert, PlayCircle, LifeBuoy,
-  Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent
+  Tag, ClipboardList, Star, ShoppingBag, ScanBarcode, Percent, Home, Truck, Wallet
 } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
