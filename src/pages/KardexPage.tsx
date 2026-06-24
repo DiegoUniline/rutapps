@@ -32,6 +32,36 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
   transferencia: { label: 'Transferencia', icon: RefreshCw, color: 'text-primary' },
 };
 
+function getReferenciaRoute(tipo: string | null, id: string | null): string | null {
+  if (!tipo || !id) return null;
+  switch (tipo) {
+    case 'venta':
+    case 'venta_ruta':
+    case 'cancelacion_venta':
+      return `/ventas/${id}`;
+    case 'compra':
+      return `/almacen/compras/${id}`;
+    case 'traspaso':
+      return `/almacen/traspasos/${id}`;
+    case 'entrega':
+      return `/entregas/${id}`;
+    case 'auditoria':
+      return `/almacen/auditorias/${id}/resultados`;
+    case 'ajuste':
+      return `/almacen/ajustes`;
+    case 'conteo':
+      return `/almacen/conteos`;
+    case 'descarga':
+      return `/almacen/descargas`;
+    case 'devolucion':
+      return `/ventas/devoluciones`;
+    case 'merma':
+      return `/almacen/mermas`;
+    default:
+      return null;
+  }
+}
+
 export default function KardexPage() {
   const { empresa } = useAuth();
   const { data: almacenes } = useAlmacenes({ includeMermas: true });
