@@ -45,183 +45,138 @@ interface NavItem {
   highlight?: 'amber' | 'green' | 'cyan' | 'violet' | 'teal' | 'pink'; // alternate accent color (distinct from primary)
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// SIDEBAR — Solo módulos de USO DIARIO (alta frecuencia)
+// Patrón: Stripe / Linear / Shopify Admin / HubSpot
+// 7 destinos directos, sin acordeones. Las sub-vistas viven como tabs internos.
+// ──────────────────────────────────────────────────────────────────────────────
 const navItems: NavItem[] = [
-  // ── Operación diaria ──
-  { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
+  { label: 'Dashboard',  icon: Home,         path: '/dashboard',       accent: true },
+  { label: 'POS',        icon: ScanBarcode,  path: '/pos',             highlight: 'green' },
+  { label: 'Ventas',     icon: ShoppingCart, path: '/ventas',          highlight: 'green' },
+  { label: 'Logística',  icon: Truck,        path: '/logistica/pedidos', highlight: 'cyan' },
+  { label: 'Cobranza',   icon: Wallet,       path: '/ventas/cobranza', highlight: 'amber' },
+  { label: 'Clientes',   icon: Users,        path: '/clientes',        highlight: 'violet' },
+  { label: 'Reportes',   icon: BarChart3,    path: '/reportes' },
+];
 
-  // ── Ventas (Ingresos · verde) ──
+// ──────────────────────────────────────────────────────────────────────────────
+// TOPBAR — Módulos de USO SEMANAL/OCASIONAL (baja frecuencia)
+// 3 dropdowns agrupados por dominio. Permisos se aplican por path con PATH_MODULE_MAP.
+// ──────────────────────────────────────────────────────────────────────────────
+interface TopNavLink { label: string; path: string; superAdminOnly?: boolean }
+interface TopNavSection { label: string; items: TopNavLink[] }
+interface TopNavGroup { label: string; icon: React.ElementType; sections: TopNavSection[] }
+
+const topNavGroups: TopNavGroup[] = [
   {
-    label: 'Ventas',
-    icon: ShoppingCart,
-    path: '/ventas',
-    highlight: 'green',
-    children: [
-      { label: 'Ventas', path: '/ventas' },
-      { label: 'Cotizaciones', path: '/cotizaciones' },
-      { label: 'Supervisor', path: '/supervisor' },
-      { label: 'Cobranza · CxC · Saldos', path: '/ventas/cobranza' },
-      { label: 'Promociones', path: '/ventas/promociones' },
-      { label: 'Devoluciones', path: '/ventas/devoluciones' },
-      { label: 'Liquidar Ruta', path: '/almacen/descargas' },
-      { label: 'Comisiones', path: '/comisiones' },
-      { label: 'Reporte diario', path: '/ventas/reporte-diario' },
+    label: 'Operación',
+    icon: Warehouse,
+    sections: [
+      {
+        label: 'Compras y proveedores',
+        items: [
+          { label: 'Órdenes de compra',   path: '/almacen/compras' },
+          { label: 'Compras sugeridas',   path: '/almacen/compras/sugeridas' },
+          { label: 'Cuentas por pagar',   path: '/finanzas/por-pagar' },
+          { label: 'Proveedores',         path: '/proveedores' },
+        ],
+      },
+      {
+        label: 'Almacén',
+        items: [
+          { label: 'Inventario',          path: '/almacen/inventario' },
+          { label: 'Inteligencia',        path: '/almacen/inteligencia' },
+          { label: 'Traspasos',           path: '/almacen/traspasos' },
+          { label: 'Ajustes y conteos',   path: '/almacen/ajustes' },
+          { label: 'Almacenes',           path: '/almacen/almacenes' },
+        ],
+      },
+      {
+        label: 'Ventas avanzado',
+        items: [
+          { label: 'Cotizaciones',        path: '/cotizaciones' },
+          { label: 'Promociones',         path: '/ventas/promociones' },
+          { label: 'Devoluciones',        path: '/ventas/devoluciones' },
+          { label: 'Liquidar ruta',       path: '/almacen/descargas' },
+          { label: 'Comisiones',          path: '/comisiones' },
+          { label: 'Gastos',              path: '/finanzas/gastos' },
+          { label: 'Aplicar pagos',       path: '/finanzas/aplicar-pagos' },
+          { label: 'Reporte diario',      path: '/ventas/reporte-diario' },
+          { label: 'Supervisor',          path: '/supervisor' },
+          { label: 'Monitor de rutas',    path: '/logistica/monitor' },
+          { label: 'Mapa de clientes',    path: '/ventas/mapa-clientes' },
+          { label: 'Mapa de entregas',    path: '/ventas/mapa-ventas' },
+        ],
+      },
     ],
   },
-
-  // ── POS (Ingresos · verde) ──
-  {
-    label: 'Punto de venta', icon: ScanBarcode, path: '/pos', highlight: 'green',
-    children: [
-      { label: 'Abrir caja (POS)', path: '/pos' },
-      { label: 'Caja · Turnos · Cortes · Gastos', path: '/pos/admin?tab=turnos' },
-    ],
-  },
-
-  // ── Compras (Egresos · rosa) ──
-  {
-    label: 'Compras',
-    icon: ShoppingBag,
-    path: '/almacen/compras',
-    highlight: 'pink',
-    children: [
-      { label: 'Órdenes de compra', path: '/almacen/compras' },
-      { label: 'Compras sugeridas', path: '/almacen/compras/sugeridas' },
-      { label: 'Pagos · CxP · Saldos proveedor', path: '/finanzas/por-pagar' },
-      { label: 'Proveedores', path: '/proveedores' },
-    ],
-  },
-
-  // ── Logística (Operaciones · cyan) ──
-  {
-    label: 'Logística',
-    icon: MapPin,
-    path: '/logistica',
-    highlight: 'cyan',
-    children: [
-      { label: 'Pedidos · Pendientes · Entregas', path: '/logistica/pedidos' },
-      { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
-      { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
-      { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
-      { label: 'Reportes', path: '/logistica/reportes' },
-    ],
-  },
-
-  // ── Catálogos (Datos maestros · violeta) ──
   {
     label: 'Catálogos',
     icon: Package,
-    path: '/productos',
-    highlight: 'violet',
-    children: [
-      { label: 'Productos', path: '/productos' },
-      { label: 'Listas de precios', path: '/listas-precio' },
-      { label: 'Categorías', path: '/catalogos/clasificaciones' },
-      { label: 'Marcas', path: '/catalogos/marcas' },
-      { label: 'Unidades', path: '/catalogos/unidades' },
-      { label: 'Proveedores', path: '/proveedores' },
+    sections: [
+      {
+        label: 'Productos',
+        items: [
+          { label: 'Productos',           path: '/productos' },
+          { label: 'Listas de precios',   path: '/listas-precio' },
+          { label: 'Categorías',          path: '/catalogos/clasificaciones' },
+          { label: 'Marcas',              path: '/catalogos/marcas' },
+          { label: 'Unidades',            path: '/catalogos/unidades' },
+        ],
+      },
+      {
+        label: 'Territorio y mapeo',
+        items: [
+          { label: 'Zonas',               path: '/catalogos/zonas' },
+          { label: 'Homologación',        path: '/configuracion/homologacion' },
+          { label: 'Proveedores',         path: '/proveedores' },
+        ],
+      },
     ],
   },
-
-
-
-  // ── Almacén (Operaciones · cyan) ──
-  {
-    label: 'Almacén',
-    icon: Warehouse,
-    path: '/almacen',
-    highlight: 'cyan',
-    children: [
-      { label: 'Inventario', path: '/almacen/inventario' },
-      { label: 'Inteligencia', path: '/almacen/inteligencia' },
-      { label: 'Traspasos', path: '/almacen/traspasos' },
-      { label: 'Control · Ajustes · Conteos · Mermas', path: '/almacen/ajustes' },
-      { label: 'Almacenes', path: '/almacen/almacenes' },
-    ],
-  },
-
-  // ── Finanzas (Fiscal · ámbar) ──
-  {
-    label: 'Finanzas',
-    icon: DollarSign,
-    path: '/finanzas',
-    highlight: 'amber',
-    children: [
-      { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
-      { label: 'Gastos', path: '/finanzas/gastos' },
-    ],
-  },
-
-  // ── Reportes ──
-  {
-    label: 'Reportes',
-    icon: BarChart3,
-    path: '/reportes',
-    children: [
-      { label: 'Generales', path: '/reportes' },
-      { label: 'Personalizados', path: '/reportes/personalizados' },
-    ],
-  },
-
-  // ── Configuración (Datos maestros · violeta) ──
   {
     label: 'Configuración',
     icon: Settings,
-    path: '/configuracion',
-    highlight: 'violet',
-    children: [
-      { label: 'Zonas', path: '/catalogos/zonas' },
-      { label: 'Vehículos', path: '/configuracion/vehiculos' },
-      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
-      { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-      { label: 'Bot WhatsApp ✨', path: '/configuracion/wa-bot' },
-      { label: 'General', path: '/configuracion' },
+    sections: [
+      {
+        label: 'Equipo',
+        items: [
+          { label: 'Usuarios y permisos', path: '/administracion/usuarios' },
+          { label: 'Metas',               path: '/administracion/metas' },
+          { label: 'Avance de metas',     path: '/administracion/metas/seguimiento' },
+          { label: 'Vehículos',           path: '/configuracion/vehiculos' },
+        ],
+      },
+      {
+        label: 'Fiscal y finanzas',
+        items: [
+          { label: 'Facturación CFDI',    path: '/facturacion-cfdi', superAdminOnly: true },
+          { label: 'Saldos iniciales',    path: '/configuracion/saldos-iniciales' },
+          { label: 'Control · Auditoría', path: '/control' },
+          { label: 'Mi suscripción',      path: '/mi-suscripcion' },
+        ],
+      },
+      {
+        label: 'Comunicación e integraciones',
+        items: [
+          { label: 'WhatsApp',            path: '/configuracion/whatsapp' },
+          { label: 'Bot WhatsApp',        path: '/configuracion/wa-bot' },
+          { label: 'Configuración general', path: '/configuracion' },
+        ],
+      },
+      {
+        label: 'Ayuda',
+        items: [
+          { label: 'Tutoriales',          path: '/tutoriales' },
+          { label: 'Actualizaciones',     path: '/actualizaciones' },
+          { label: 'Soporte',             path: '/soporte' },
+        ],
+      },
     ],
   },
-
-
-
-
-  {
-    label: 'Facturación',
-    icon: FileText,
-    path: '/facturacion-cfdi',
-    highlight: 'amber',
-    children: [
-      { label: 'Facturas', path: '/facturacion-cfdi' },
-      { label: 'Complementos de Pago', path: '/facturacion-cfdi/avanzado/pagos' },
-      { label: 'Factura Global', path: '/facturacion-cfdi/avanzado/global' },
-      { label: 'Descarga Masiva', path: '/facturacion-cfdi/avanzado/masiva' },
-      { label: 'Reenvío por Correo', path: '/facturacion-cfdi/avanzado/correo' },
-      { label: 'Validar RFC', path: '/facturacion-cfdi/avanzado/rfc' },
-      { label: 'Sustituir CFDI', path: '/facturacion-cfdi/avanzado/sustituir' },
-    ],
-  },
-
-
-  {
-    label: 'Administración',
-    icon: Shield,
-    path: '/administracion/usuarios',
-    highlight: 'violet',
-    children: [
-      // Equipo y objetivos
-      { label: 'Usuarios', path: '/administracion/usuarios' },
-      { label: 'Metas', path: '/administracion/metas' },
-      { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
-      // Operación
-      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
-      { label: 'Control', path: '/control' },
-      // Cuenta
-
-      { label: 'Mi suscripción', path: '/mi-suscripcion' },
-      { label: 'Tutoriales', path: '/tutoriales' },
-    ],
-  },
-
-  { label: 'Actualizaciones', icon: Sparkles, path: '/actualizaciones', highlight: 'cyan' },
-  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
-
 ];
+
 
 const mobileBottomTabs = [
   { label: 'Inicio', icon: BarChart3, path: '/dashboard' },
