@@ -40,15 +40,36 @@ export default function PlanSimuladorCard({ activeUsers, isTrial }: Props) {
   useEffect(() => {
     (async () => {
       if (!empresa?.id) return;
-      const { data: sub } = await supabase.from('subscriptions').select('plan_id').eq('empresa_id', empresa.id).maybeSingle();
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('plan_id, current_period_start, current_period_end')
+        .eq('empresa_id', empresa.id)
+        .maybeSingle();
       const cols = 'id,nombre,precio_por_usuario,precio_base,usuarios_incluidos,precio_extra_usuario,slug,meses';
-      if (!sub?.plan_id) {
-        const { data: ps } = await supabase.from('subscription_plans').select(cols).eq('activo', true).order('orden').limit(1);
-        setCurrentPlan((ps?.[0] as Plan) || null);
+      if (sub?.plan_id) {
+        const { data } = await supabase.from('subscription_plans').select(cols).eq('id', sub.plan_id).maybeSingle();
+        setCurrentPlan((data as Plan) || null);
         return;
       }
-      const { data } = await supabase.from('subscription_plans').select(cols).eq('id', sub.plan_id).maybeSingle();
-      setCurrentPlan((data as Plan) || null);
+      // Sin plan_id explícito: inferir periodicidad por la duración del ciclo actual
+      // de Stripe (current_period_end - current_period_start) en lugar de caer al
+      // primer plan activo por orden (eso mostraba "Semestral" para suscripciones
+      // mensuales reales). Default razonable: Mensual.
+      let inferredMonths = 1;
+      if (sub?.current_period_start && sub?.current_period_end) {
+        const ms = new Date(sub.current_period_end).getTime() - new Date(sub.current_period_start).getTime();
+        const days = ms / (1000 * 60 * 60 * 24);
+        if (days >= 330) inferredMonths = 12;
+        else if (days >= 150) inferredMonths = 6;
+        else inferredMonths = 1;
+      }
+      const { data: ps } = await supabase
+        .from('subscription_plans')
+        .select(cols)
+        .eq('meses', inferredMonths)
+        .order('orden')
+        .limit(1);
+      setCurrentPlan((ps?.[0] as Plan) || null);
     })();
   }, [empresa?.id]);
 

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { confirmDialog } from '@/lib/confirm';
 
-interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; avatar_url: string | null; }
+interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; avatar_url: string | null; archivado_en?: string | null; archivado_por?: string | null; archivado_motivo?: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
 interface Almacen { id: string; nombre: string; }
 interface Vendedor { id: string; nombre: string; }
@@ -72,7 +72,7 @@ export function useUsuarios() {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
     const [pr, ur, a, em] = await Promise.all([
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url, archivado_en, archivado_por, archivado_motivo').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
       supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id }),
