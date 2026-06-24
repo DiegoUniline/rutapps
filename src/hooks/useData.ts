@@ -518,15 +518,29 @@ export function useAllListasPrecios(empresaId?: string) {
     queryKey: ['lista_precios_all', empresaId],
     staleTime: CATALOG_STALE,
     enabled: !!empresaId,
+    // Run queryFn even when React Query thinks we're offline — we have a cache fallback.
+    networkMode: 'always',
     queryFn: async () => {
-      // Try server first
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.lista_precios.where('empresa_id').equals(empresaId!).toArray();
+          return cached as ListaPrecio[];
+        } catch { return [] as ListaPrecio[]; }
+      };
+
+      // Offline: skip network (would hang) and use cache directly.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const cached = await readCache();
+        if (cached.length > 0) return cached;
+      }
+
       try {
         const { data, error } = await supabase.from('lista_precios')
           .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
           .eq('empresa_id', empresaId!)
           .order('nombre');
         if (!error && data) {
-          // Cache offline so it's available next time without signal
           try {
             const { offlineDb } = await import('@/lib/offlineDb');
             await offlineDb.lista_precios.bulkPut(data);
@@ -535,14 +549,10 @@ export function useAllListasPrecios(empresaId?: string) {
         }
         if (error) throw error;
       } catch (err) {
-        // Offline fallback
-        try {
-          const { offlineDb } = await import('@/lib/offlineDb');
-          const cached = await offlineDb.lista_precios.where('empresa_id').equals(empresaId!).toArray();
-          if (cached.length > 0) return cached as ListaPrecio[];
-        } catch { /* ignore */ }
+        const cached = await readCache();
+        if (cached.length > 0) return cached;
         console.error('Error fetching lista_precios:', err);
-        throw err;
+        // Degrade gracefully instead of throwing — empty array keeps UI usable.
       }
       return [] as ListaPrecio[];
     },
