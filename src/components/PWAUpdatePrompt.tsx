@@ -36,8 +36,10 @@ export default function PWAUpdatePrompt() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md"
+      className="fixed left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
     >
+
       <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-background shadow-2xl shadow-primary/10 px-4 py-3 animate-in slide-in-from-bottom-4 fade-in">
         <div className="shrink-0 h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
           <Sparkles className="h-5 w-5" />
