@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
+import { useKardexReferencias } from '@/hooks/useKardexReferencias';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
@@ -145,6 +146,80 @@ export default function KardexPage() {
     fechaHasta || undefined,
   );
 
+  const { data: refInfo } = useKardexReferencias(rows);
+
+  // Helper: build "Origen / Destino" cell content for a row
+  const getOrigenDestino = (row: any): { origen: string; destino: string } => {
+    const refTipo = row.referencia_tipo;
+    const refId = row.referencia_id;
+    const almNombre = (id?: string | null) =>
+      id ? (refInfo?.almacenes?.[id] ?? '—') : '—';
+
+    // Ventas / cancelaciones: salida del almacén → cliente
+    if (refTipo === 'venta' || refTipo === 'venta_ruta') {
+      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
+      return {
+        origen: almacenSel?.nombre ?? '—',
+        destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
+      };
+    }
+    if (refTipo === 'cancelacion_venta') {
+      const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
+      return {
+        origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Compras: proveedor → almacén
+    if (refTipo === 'compra') {
+      const prov = refId ? refInfo?.compraProveedor?.[refId] : undefined;
+      return {
+        origen: prov ? `Prov: ${prov.nombre}` : 'Proveedor',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Entregas: almacén → cliente
+    if (refTipo === 'entrega') {
+      const ent = refId ? refInfo?.entregaCliente?.[refId] : undefined;
+      return {
+        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
+      };
+    }
+    // Traspasos: usar almacenes origen/destino
+    if (refTipo === 'traspaso') {
+      return {
+        origen: almNombre(row.almacen_origen_id),
+        destino: almNombre(row.almacen_destino_id),
+      };
+    }
+    // Devoluciones: cliente → almacén
+    if (refTipo === 'devolucion') {
+      return {
+        origen: 'Cliente',
+        destino: almacenSel?.nombre ?? '—',
+      };
+    }
+    // Carga / Descarga
+    if (refTipo === 'carga') {
+      return {
+        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        destino: 'Camión',
+      };
+    }
+    if (refTipo === 'descarga') {
+      return {
+        origen: 'Camión',
+        destino: almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—'),
+      };
+    }
+    // Genérico: usar las columnas del movimiento si existen
+    return {
+      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : '—',
+      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : '—',
+    };
+  };
+
   const filtered = useMemo(() => {
     let list = [...rows].reverse();
     if (filterTipo.startsWith('ref:')) {
@@ -169,14 +244,27 @@ export default function KardexPage() {
 
   const handleExportCSV = () => {
     if (!productoSel || !almacenSel) return;
-    const header = 'Fecha,Tipo,Referencia,Entrada,Salida,Saldo,Notas';
+    const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const header = 'Fecha,Producto,Tipo,Referencia,Origen,Destino,Entrada,Salida,Saldo,Notas';
     const csvRows = filtered.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-MX');
       const tipo = REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo ?? '';
       const entrada = r.delta > 0 ? r.delta : '';
       const salida = r.delta < 0 ? Math.abs(r.delta) : '';
-      const notas = (r.notas ?? '').replace(/,/g, ' ');
-      return `${fecha},${tipo},${r.referencia_id ?? ''},${entrada},${salida},${r.saldo},${notas}`;
+      const notas = r.notas ?? '';
+      const od = getOrigenDestino(r);
+      return [
+        esc(fecha),
+        esc(productoSel.nombre ?? ''),
+        esc(tipo),
+        esc(r.referencia_id ?? ''),
+        esc(od.origen),
+        esc(od.destino),
+        entrada,
+        salida,
+        r.saldo,
+        esc(notas),
+      ].join(',');
     });
     const blob = new Blob([header + '\n' + csvRows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -339,8 +427,10 @@ export default function KardexPage() {
               <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b border-border">
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
                   <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
@@ -349,15 +439,16 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
                   filtered.map(row => {
                     const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
+                    const od = getOrigenDestino(row);
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
@@ -365,6 +456,10 @@ export default function KardexPage() {
                           <span className="text-muted-foreground ml-1 text-[10px]">
                             {new Date(row.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                        </td>
+                        <td className="py-1.5 px-3 text-[12px] max-w-[200px]">
+                          <div className="truncate font-medium" title={productoSel?.nombre}>{productoSel?.nombre}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{productoSel?.codigo}</div>
                         </td>
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
@@ -397,6 +492,13 @@ export default function KardexPage() {
                               </>
                             );
                           })()}
+                        </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[260px]">
+                          <div className="flex items-center gap-1 truncate" title={`${od.origen} → ${od.destino}`}>
+                            <span className="truncate">{od.origen}</span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="truncate font-medium">{od.destino}</span>
+                          </div>
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
