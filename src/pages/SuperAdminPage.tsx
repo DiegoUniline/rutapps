@@ -116,6 +116,7 @@ export default function SuperAdminPage() {
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
+  const [selectedEmpresaTab, setSelectedEmpresaTab] = useState<'usuarios' | 'facturas' | 'pagos' | 'historial'>('usuarios');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>(() => {
     const saved = sessionStorage.getItem('sa-tab') as TabKey | null;
