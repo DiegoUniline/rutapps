@@ -14,8 +14,22 @@ export interface KardexUbicacionRow {
   cantidad: number;
   delta: number;
   saldo: number;
+  producto_id: string | null;
+  user_id: string | null;
+  almacen_origen_id: string | null;
+  almacen_destino_id: string | null;
+  vendedor_destino_id: string | null;
 }
 
+/**
+ * Fetches inventory movements. All parameters are optional:
+ *   - productoId + ubicacionId  → kardex con saldo corrido (vista clásica)
+ *   - solo productoId          → todos los movimientos del producto en cualquier ubicación
+ *   - solo ubicacionId         → todos los movimientos en esa ubicación
+ *   - ninguno                  → todos los movimientos de la empresa
+ *
+ * El saldo corrido solo se calcula cuando hay productoId + ubicacionId.
+ */
 export function useKardexUbicacion(
   productoId: string | null,
   ubicacionId: string | null,
@@ -27,29 +41,30 @@ export function useKardexUbicacion(
 
   const query = useQuery({
     queryKey: ['kardex-ubicacion', productoId, ubicacionId, ubicacionTipo, empresa?.id, fechaDesde, fechaHasta],
-    enabled: !!productoId && !!ubicacionId && !!empresa?.id,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('movimientos_inventario')
-        .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, almacen_origen_id, almacen_destino_id, vendedor_destino_id')
-        .eq('producto_id', productoId!)
+        .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id')
         .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(2000);
 
+      if (productoId) q = q.eq('producto_id', productoId);
       if (fechaDesde) q = q.gte('fecha', fechaDesde);
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
-      if (ubicacionTipo === 'almacen') {
-        // Only fetch movements relevant to THIS almacen's perspective:
-        // - tipo=salida WHERE almacen_origen = this (stock left here)
-        // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
-        // This prevents double-counting traspasos/entregas that have both columns set
-        q = q.or(
-          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-        );
-      } else {
-        // For camion/vendedor: all movements linked to this vendedor
-        q = q.eq('vendedor_destino_id', ubicacionId!);
+      if (ubicacionId) {
+        if (ubicacionTipo === 'almacen') {
+          // Only fetch movements relevant to THIS almacen's perspective:
+          // - tipo=salida WHERE almacen_origen = this (stock left here)
+          // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
+          q = q.or(
+            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+          );
+        } else {
+          q = q.eq('vendedor_destino_id', ubicacionId);
+        }
       }
 
       const { data, error } = await q;
@@ -60,21 +75,26 @@ export function useKardexUbicacion(
 
   const rows = useMemo<KardexUbicacionRow[]>(() => {
     if (!query.data) return [];
+    // Saldo corrido solo cuando hay producto + ubicacion
+    const computeSaldo = !!productoId && !!ubicacionId;
     let saldo = 0;
     return query.data.map((m: any) => {
       let delta = 0;
       if (ubicacionTipo === 'almacen') {
-        // After the filtered query, the logic is simple:
-        // tipo='entrada' means stock arrived at this almacen → +
-        // tipo='salida' means stock left this almacen → -
-        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
+        if (ubicacionId) {
+          // entrada/salida relative to the selected almacen (filtered above)
+          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
+        } else {
+          // global view: signo "natural" del movimiento
+          delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
+        }
       } else {
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
-      saldo += delta;
-      return { ...m, delta, saldo };
+      if (computeSaldo) saldo += delta;
+      return { ...m, delta, saldo: computeSaldo ? saldo : 0 };
     });
-  }, [query.data, ubicacionId, ubicacionTipo]);
+  }, [query.data, ubicacionId, ubicacionTipo, productoId]);
 
   return { ...query, rows };
 }

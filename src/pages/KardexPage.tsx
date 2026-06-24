@@ -153,13 +153,17 @@ export default function KardexPage() {
     const refTipo = row.referencia_tipo;
     const refId = row.referencia_id;
     const almNombre = (id?: string | null) =>
-      id ? (refInfo?.almacenes?.[id] ?? '—') : '—';
+      id ? (refInfo?.almacenes?.[id] ?? '—') : '';
+    // Para movimientos donde sólo conocemos un lado: usamos el almacén que
+    // venga en la fila, o el almacén seleccionado como fallback.
+    const almOrigen = almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—');
+    const almDestino = almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—');
 
     // Ventas / cancelaciones: salida del almacén → cliente
     if (refTipo === 'venta' || refTipo === 'venta_ruta') {
       const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
       return {
-        origen: almacenSel?.nombre ?? '—',
+        origen: almOrigen,
         destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
       };
     }
@@ -167,7 +171,7 @@ export default function KardexPage() {
       const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
       return {
         origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Compras: proveedor → almacén
@@ -175,50 +179,51 @@ export default function KardexPage() {
       const prov = refId ? refInfo?.compraProveedor?.[refId] : undefined;
       return {
         origen: prov ? `Prov: ${prov.nombre}` : 'Proveedor',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Entregas: almacén → cliente
     if (refTipo === 'entrega') {
       const ent = refId ? refInfo?.entregaCliente?.[refId] : undefined;
       return {
-        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        origen: almOrigen,
         destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
       };
     }
     // Traspasos: usar almacenes origen/destino
     if (refTipo === 'traspaso') {
       return {
-        origen: almNombre(row.almacen_origen_id),
-        destino: almNombre(row.almacen_destino_id),
+        origen: almNombre(row.almacen_origen_id) || '—',
+        destino: almNombre(row.almacen_destino_id) || '—',
       };
     }
     // Devoluciones: cliente → almacén
     if (refTipo === 'devolucion') {
       return {
         origen: 'Cliente',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Carga / Descarga
     if (refTipo === 'carga') {
       return {
-        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        origen: almOrigen,
         destino: 'Camión',
       };
     }
     if (refTipo === 'descarga') {
       return {
         origen: 'Camión',
-        destino: almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—'),
+        destino: almDestino,
       };
     }
-    // Genérico: usar las columnas del movimiento si existen
+    // Genérico
     return {
-      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : '—',
-      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : '—',
+      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : (row.tipo === 'entrada' ? '—' : almOrigen),
+      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : (row.tipo === 'salida' ? '—' : almDestino),
     };
   };
+
 
   const filtered = useMemo(() => {
     let list = [...rows].reverse();
@@ -243,9 +248,9 @@ export default function KardexPage() {
   const cuadra = stockActual !== undefined && Math.abs(saldoFinal - (stockActual ?? 0)) < 0.001;
 
   const handleExportCSV = () => {
-    if (!productoSel || !almacenSel) return;
+    if (filtered.length === 0) return;
     const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
-    const header = 'Fecha,Producto,Tipo,Referencia,Origen,Destino,Entrada,Salida,Saldo,Notas';
+    const header = 'Fecha,Producto,Codigo,Tipo,Referencia,Origen,Destino,Usuario,Entrada,Salida,Saldo,Notas';
     const csvRows = filtered.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-MX');
       const tipo = REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo ?? '';
@@ -253,16 +258,22 @@ export default function KardexPage() {
       const salida = r.delta < 0 ? Math.abs(r.delta) : '';
       const notas = r.notas ?? '';
       const od = getOrigenDestino(r);
+      const prodInfo = r.producto_id
+        ? (refInfo?.productos?.[r.producto_id] ?? (r.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
+        : null;
+      const usuario = r.user_id ? (refInfo?.usuarios?.[r.user_id] ?? '') : '';
       return [
         esc(fecha),
-        esc(productoSel.nombre ?? ''),
+        esc(prodInfo?.nombre ?? ''),
+        esc(prodInfo?.codigo ?? ''),
         esc(tipo),
         esc(r.referencia_id ?? ''),
         esc(od.origen),
         esc(od.destino),
+        esc(usuario),
         entrada,
         salida,
-        r.saldo,
+        almacenId && productoId ? r.saldo : '',
         esc(notas),
       ].join(',');
     });
@@ -270,10 +281,14 @@ export default function KardexPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `kardex_${productoSel.nombre.replace(/\s+/g, '_')}_${almacenSel.nombre.replace(/\s+/g, '_')}.csv`;
+    const fileName = productoSel && almacenSel
+      ? `kardex_${productoSel.nombre.replace(/\s+/g, '_')}_${almacenSel.nombre.replace(/\s+/g, '_')}.csv`
+      : `movimientos_inventario.csv`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -343,17 +358,10 @@ export default function KardexPage() {
         </div>
       </div>
 
-      {/* Empty state */}
-      {(!almacenId || !productoId) && (
-        <div className="bg-accent/30 border border-border rounded-lg p-10 text-center text-sm text-muted-foreground">
-          Selecciona un almacén y un producto para ver el kardex.
-        </div>
-      )}
-
-      {/* Kardex view */}
-      {almacenId && productoId && (
-        <>
-          {/* Header summary */}
+      {/* Kardex view - siempre visible, se filtra conforme se selecciona */}
+      <>
+        {/* Header summary: solo cuando hay producto + almacén (saldo corrido tiene sentido) */}
+        {almacenId && productoId && (
           <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-lg p-3">
             <div className="min-w-0">
               <div className="text-base font-semibold truncate">{productoSel?.nombre}</div>
@@ -377,6 +385,14 @@ export default function KardexPage() {
               )}
             </div>
           </div>
+        )}
+
+        {!almacenId && !productoId && (
+          <div className="text-[12px] text-muted-foreground px-1">
+            Mostrando todos los movimientos de la empresa. Selecciona almacén o producto para filtrar.
+          </div>
+        )}
+
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
@@ -431,17 +447,20 @@ export default function KardexPage() {
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
-                  <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
+                  {almacenId && productoId && (
+                    <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
+                  )}
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Notas</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
@@ -449,6 +468,10 @@ export default function KardexPage() {
                     const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
                     const od = getOrigenDestino(row);
+                    const prodInfo = row.producto_id
+                      ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
+                      : null;
+                    const usuario = row.user_id ? (refInfo?.usuarios?.[row.user_id] ?? '—') : '—';
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
@@ -458,8 +481,8 @@ export default function KardexPage() {
                           </span>
                         </td>
                         <td className="py-1.5 px-3 text-[12px] max-w-[200px]">
-                          <div className="truncate font-medium" title={productoSel?.nombre}>{productoSel?.nombre}</div>
-                          <div className="text-[10px] text-muted-foreground truncate">{productoSel?.codigo}</div>
+                          <div className="truncate font-medium" title={prodInfo?.nombre ?? ''}>{prodInfo?.nombre ?? '—'}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{prodInfo?.codigo ?? ''}</div>
                         </td>
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
@@ -500,15 +523,20 @@ export default function KardexPage() {
                             <span className="truncate font-medium">{od.destino}</span>
                           </div>
                         </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[160px]">
+                          <span className="truncate block" title={usuario}>{usuario}</span>
+                        </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-destructive">
                           {row.delta < 0 ? fmtNum(Math.abs(row.delta)) : ''}
                         </td>
-                        <td className="py-1.5 px-3 text-right tabular-nums text-[12px] font-semibold">
-                          {fmtNum(row.saldo)}
-                        </td>
+                        {almacenId && productoId && (
+                          <td className="py-1.5 px-3 text-right tabular-nums text-[12px] font-semibold">
+                            {fmtNum(row.saldo)}
+                          </td>
+                        )}
                         <td className="py-1.5 px-3 text-[11px] text-muted-foreground max-w-[260px] truncate">
                           {row.notas ?? ''}
                         </td>
@@ -519,8 +547,7 @@ export default function KardexPage() {
               </tbody>
             </table>
           </div>
-        </>
-      )}
+      </>
     </div>
   );
 }
