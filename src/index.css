@@ -523,42 +523,52 @@ table th:hover::after { background: hsl(var(--border)); }
 .lov-col-menu-item:hover { background: hsl(var(--accent)); }
 
 /* ============================================================
- * Encabezados de tabla globales: fondo blanco, texto negro,
- * con divisores verticales visibles entre columnas.
- * ============================================================ */
-table thead th {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border-right: 1px solid hsl(var(--border));
-}
-table thead th:last-child { border-right: none; }
-
-/* Líneas verticales entre celdas del cuerpo también */
-table tbody td {
-  border-right: 1px solid hsl(var(--border));
-}
-table tbody td:last-child { border-right: none; }
-
-/* ============================================================
- * Tamaño homogéneo global para TODAS las tablas del sistema.
- * Misma tipografía, padding y alto de fila en cualquier módulo.
+ * Tablas globales estilo Odoo (list view).
+ * Aplica a TODAS las <table> del sistema.
+ * Excluir con data-no-odoo en el <table>.
  * ============================================================ */
 table {
-  font-size: 11.5px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
   line-height: 1.25;
 }
+
+/* Header: gris claro, texto gris, sin divisores verticales */
 table thead th {
-  height: 30px !important;
-  padding: 4px 8px !important;
-  font-size: 11px;
-  font-weight: 600;
+  background-color: #f8f9fa !important;
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  font-size: 11.5px;
   text-transform: none;
   white-space: nowrap;
+  text-align: left;
+  height: 32px !important;
+  padding: 6px 12px !important;
+  border-bottom: 1px solid #cfd2d6 !important;
+  border-right: none !important;
+  border-left: 1px solid transparent;
 }
+
+/* Body: solo línea horizontal tenue, sin divisores verticales en reposo */
 table tbody td {
   height: 32px !important;
-  padding: 4px 8px !important;
+  padding: 6px 12px !important;
   vertical-align: middle;
+  white-space: nowrap;
+  border-bottom: 1px solid #ededed !important;
+  border-right: none !important;
+  border-left: 1px solid transparent;
+  transition: background .12s ease, border-color .12s ease;
+}
+
+/* Hover: oscurece fila y revela divisores verticales sólo en esa fila */
+table tbody tr:hover td {
+  background-color: #f1f5fd;
+  border-left: 1px solid #e0e0e0;
+}
+table tbody tr:hover td:first-child {
+  border-left: 1px solid transparent;
 }
 
 /* Controles dentro de celdas no deben estirar la fila */
@@ -574,3 +584,9 @@ table tbody td button[class*="h-9"] {
   min-height: 0 !important;
 }
 table tbody td svg { flex-shrink: 0; }
+
+/* Opt-out global */
+table[data-no-odoo] thead th,
+table[data-no-odoo] tbody td {
+  all: revert;
+}
