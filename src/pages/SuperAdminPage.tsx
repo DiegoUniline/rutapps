@@ -26,11 +26,12 @@ import AdminPosTab from '@/components/admin/AdminPosTab';
 import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
 import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
+import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
-  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
+  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast';
 
 const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -43,6 +44,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
   { key: 'notifications', label: 'Historial', icon: Bell },
+  { key: 'broadcast', label: 'Mensajes en vivo', icon: Megaphone },
   { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
   { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
   { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
@@ -189,6 +191,7 @@ export default function SuperAdminPage() {
               {tab === 'whatsapp' && <AdminWhatsAppTab />}
               {tab === 'wa_bot' && <AdminWaBotTab />}
               {tab === 'notifications' && <AdminNotificationsTab />}
+              {tab === 'broadcast' && <AdminBroadcastTab />}
               {tab === 'payment_requests' && <AdminPaymentRequestsTab />}
               {tab === 'anuncios' && <AdminAnunciosTab />}
               {tab === 'publicidad' && <AdminPublicidadTab />}

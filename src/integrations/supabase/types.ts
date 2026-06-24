@@ -422,6 +422,56 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_messages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          mensaje: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mensaje: string
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mensaje?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      broadcast_reads: {
+        Row: {
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caja_movimientos: {
         Row: {
           created_at: string

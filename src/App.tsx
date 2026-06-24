@@ -25,6 +25,7 @@ import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
+import BroadcastListener from "@/components/BroadcastListener";
 
 
 // Lazy-loaded pages
@@ -826,6 +827,7 @@ const App = () => (
               <AppRoutes />
               <FacturaPendienteModal />
               <PWAUpdatePrompt />
+              <BroadcastListener />
             </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>

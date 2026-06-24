@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
+import BroadcastBell from '@/components/BroadcastBell';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import SandboxBanner from '@/components/SandboxBanner';
@@ -916,6 +917,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Sincronizar
           </button>
           <InternalNotificationBell />
+          <BroadcastBell />
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
 
         </div>
