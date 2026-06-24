@@ -26,6 +26,8 @@ import { showAppError } from "@/lib/globalError";
 import { usePartner } from "@/hooks/usePartner";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 import BroadcastListener from "@/components/BroadcastListener";
+import GlobalColumnResizer from "@/components/global/GlobalColumnResizer";
+import GlobalColumnHider from "@/components/global/GlobalColumnHider";
 
 
 // Lazy-loaded pages
@@ -823,6 +825,8 @@ const App = () => (
         <TooltipProvider>
           <Sonner position="top-right" />
           <AuthProvider>
+            <GlobalColumnResizer />
+            <GlobalColumnHider />
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
