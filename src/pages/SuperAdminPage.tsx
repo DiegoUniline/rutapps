@@ -179,8 +179,8 @@ export default function SuperAdminPage() {
             <AdminEmpresaDetail empresaId={selectedEmpresaId} initialTab={selectedEmpresaTab} onBack={() => setSelectedEmpresaId(null)} />
           ) : (
             <>
-              {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
-              {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} />}
+              {tab === 'dashboard' && <AdminStatsTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
+              {tab === 'empresas' && <AdminEmpresasTab onSelectEmpresa={(id) => { setSelectedEmpresaTab('usuarios'); setSelectedEmpresaId(id); }} />}
               {tab === 'subscriptions' && <AdminSubscriptionsTab />}
               {tab === 'invoices' && <AdminInvoicesTab />}
               {tab === 'pagos' && <AdminPagosTab onSelectEmpresa={(id, t) => { setSelectedEmpresaTab(t || 'pagos'); setSelectedEmpresaId(id); }} />}
