@@ -40,6 +40,7 @@ export default function KardexPage() {
   const [almacenId, setAlmacenId] = useState<string>('');
   const [productoId, setProductoId] = useState<string>('');
   const [productoSearch, setProductoSearch] = useState('');
+  const [productoDropdownOpen, setProductoDropdownOpen] = useState(false);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
