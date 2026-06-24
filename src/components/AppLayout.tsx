@@ -128,6 +128,7 @@ const navItems: NavItem[] = [
     highlight: 'cyan',
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
+      { label: 'Kardex', path: '/almacen/kardex' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
       { label: 'Control · Ajustes · Conteos · Mermas', path: '/almacen/ajustes' },
