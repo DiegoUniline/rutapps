@@ -1,61 +1,116 @@
-## Resumen
-Función opcional por empresa para apartar stock al generar pedidos (vista móvil), con selector de almacén por línea y múltiples almacenes habilitados en Configuración. Con el flag apagado, cero cambios.
 
-## 1. Base de datos (1 migración)
+# Reorganización de Navegación — RUTAPP
 
-**`empresas`** — nuevas columnas:
-- `apartar_stock_pedidos boolean not null default false`
-- `apartado_almacenes_ids uuid[] not null default '{}'` — almacenes habilitados para apartar/consultar en pedidos móviles.
+Análisis como Senior Product Designer. El sidebar actual tiene **14 grupos** con submenús anidados de hasta 9 items. Eso es ruido cognitivo: el usuario operativo (vendedor de ruta, cajera POS, supervisor) recorre los mismos 5–6 módulos todo el día y nunca toca los otros 30+.
 
-**`venta_lineas`** — nueva columna:
-- `almacen_id uuid null references almacenes(id)` — almacén del que saldrá esa línea (solo se usa cuando el pedido se generó con el flag ON).
+## 1. Clasificación de módulos por frecuencia de uso real
 
-**Nueva tabla `stock_apartado`**
-- `id, empresa_id, venta_id, venta_linea_id (unique), producto_id, almacen_id, cantidad, created_at`
-- Index `(empresa_id, almacen_id, producto_id)`
-- RLS por `empresa_id`, GRANT a authenticated + service_role.
+### 🟢 Uso DIARIO — múltiples veces al día → **Sidebar fijo**
+- **Dashboard** — pantalla de aterrizaje, KPIs del día
+- **Punto de Venta (POS)** — caja activa todo el día
+- **Ventas** (incluye Cotizaciones como tab) — captura constante de pedidos
+- **Logística** (Pedidos · Pendientes · Entregas · Jornadas · Mapas)
+- **Cobranza** (CxC, aplicar pagos, saldos cliente)
+- **Clientes**
+- **Reportes** (generales + personalizados + reporte diario)
 
-**Función `fn_disponible_almacen(producto_id, almacen_id) → numeric`**
-- `stock_almacen.cantidad − COALESCE(SUM(stock_apartado.cantidad), 0)`
-- `stable`, `security definer`, scope por `empresa_id` del producto.
+### 🟡 Uso SEMANAL — 1–3 veces/semana → **Topbar "Operación"**
+- Compras (órdenes, sugeridas, CxP, proveedores)
+- Almacén (inventario, traspasos, ajustes, conteos)
+- Promociones
+- Devoluciones
+- Liquidar ruta / Descargas
+- Comisiones
+- Gastos
+- Supervisor / Monitor de rutas
 
-**Triggers (DB-authoritative, idempotentes):**
-1. **Insert/update `venta_lineas`** en venta con `tipo='pedido'` y empresa con flag ON → upsert en `stock_apartado` con la cantidad y `almacen_id` de la línea. No deduce stock.
-2. **Delete `venta_lineas`** o **cancelación** de venta tipo pedido → borra filas correspondientes en `stock_apartado`.
-3. **Insert `entrega_lineas`** → consume del `stock_apartado` (decrementa o borra) y deduce de `stock_almacen` del almacén de la línea. Si entrega < apartado, el remanente queda apartado.
-4. Conversión pedido→venta_directa o entrega total → al cerrar la venta, libera cualquier `stock_apartado` remanente.
+### 🔵 Uso OCASIONAL — quincenal/mensual → **Topbar "Configuración"**
+- Catálogos (Productos, Listas de precios, Categorías, Marcas, Unidades, Zonas)
+- Proveedores
+- Usuarios · Roles · Permisos
+- Metas y seguimiento
+- Vehículos · Almacenes
+- WhatsApp · Bot WA
+- Homologación de catálogo
+- Facturación CFDI (+ avanzado)
+- Saldos iniciales · Control · Auditoría
+- Configuración general
+- Mi suscripción · Tutoriales · Soporte · Actualizaciones
 
-Permite negativos: no hay CHECK que bloquee.
+---
 
-## 2. Frontend — Configuración Empresa
+## 2. Nuevo layout
 
-Nueva subsección "Inventario / Pedidos" en `src/pages/configuracion/...`:
-- Toggle "Apartar stock al generar pedidos".
-- Multi-select de almacenes (visible solo si toggle ON, requerido al guardar).
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│  RUTAPP  [⌘K Buscar]      Operación ▾  Catálogos ▾  Config ▾   🔔 👤│ ← Topbar
+├────────────┬─────────────────────────────────────────────────────────┤
+│ 🏠 Inicio  │                                                         │
+│ 🛒 POS     │                                                         │
+│ 💵 Ventas  │              CONTENIDO                                  │
+│ 🚚 Logística│                                                        │
+│ 💰 Cobranza│                                                         │
+│ 👥 Clientes│                                                         │
+│ 📊 Reportes│                                                         │
+│            │                                                         │
+│ ⭐ Favoritos│                                                        │
+│ ─────────  │                                                         │
+│ v2026.06.x │                                                         │
+└────────────┴─────────────────────────────────────────────────────────┘
+```
 
-## 3. Frontend — Vista móvil de Pedido
+### Sidebar (7 items + favoritos)
+- Sin acordeones. Cada item es un destino directo; las sub-vistas viven como **tabs internos** de su página (ya existen en Ventas, Logística, Reportes, etc.).
+- Conserva la marca de color por dominio (verde ingresos, cyan operaciones, ámbar finanzas) en el ícono — visual ya implementado, solo se reduce el set.
+- Colapsable a íconos (estado actual).
 
-`src/pages/ruta/RutaNuevaVenta/...` (paso productos cuando `tipo='pedido'` y `empresa.apartar_stock_pedidos`):
-- Selector de almacén arriba del listado, opciones = `empresa.apartado_almacenes_ids`, default = primero.
-- Badge "Disponible: X" por producto vía `fn_disponible_almacen(producto_id, almacen_actual)`.
-- Sin filtrar por stock (sobreventa permitida).
-- Cada `CartItem` guarda su `almacen_id`. Cambiar el selector solo afecta nuevas líneas; las ya agregadas conservan su almacén original (editable desde la línea).
-- Al guardar, cada `venta_lineas.almacen_id` se persiste; el trigger crea el apartado.
+### Topbar (3 menús de baja frecuencia, estilo Stripe)
+1. **Operación ▾** — Compras, Almacén, Promociones, Devoluciones, Gastos, Liquidar Ruta, Comisiones, Supervisor.
+2. **Catálogos ▾** — Productos, Listas de precios, Categorías, Marcas, Unidades, Zonas, Proveedores, Homologación.
+3. **Configuración ▾** — Usuarios, Metas, Vehículos, Almacenes, WhatsApp, Bot WA, Facturación CFDI, Saldos iniciales, Control, Auditoría, General, Mi suscripción, Tutoriales, Soporte.
 
-## 4. Lo que NO se toca
-- Pantalla de Ventas (desktop y móvil).
-- POS, cotizaciones, venta directa, entregas existentes.
-- Empresas con flag OFF: cero cambios; los triggers no actúan porque chequean el flag de la empresa.
+Cada menú es un `DropdownMenu` con secciones agrupadas (header gris + items). Estilo Stripe/Linear: tipografía pequeña, denso, 1 nivel.
 
-## 5. Edge cases
-- Editar pedido: trigger reescribe el apartado de la línea modificada.
-- Entrega parcial: deduce stock real solo de lo entregado; resta del apartado en la misma cantidad.
-- Cancelar pedido: borra todos los apartados de esa venta.
-- Apagar el flag mientras hay pedidos abiertos: los apartados existentes se respetan hasta entregarse o cancelarse (los triggers siguen funcionando si la línea ya tiene `almacen_id`).
+### Mobile
+La `MobileLayout` ya tiene la lógica correcta (5 tabs bottom + "Más"). Se ajusta el contenido de "Más" para reflejar la nueva taxonomía.
 
-## Detalles técnicos
-- Hook nuevo `useDisponiblePorAlmacen(producto_ids, almacen_id)` con React Query, key `['disponible', empresaId, almacenId, ...ids]`, invalida en realtime sobre `stock_apartado` y `stock_almacen`.
-- `requireEmpresa` y filtros `empresa_id` en todas las queries nuevas.
-- Tipos TS regenerados tras migración; agregar `almacen_id` opcional a `VentaLinea` y `CartItem`.
+---
 
-¿Procedo con la migración primero?
+## 3. Justificación UX (resumen)
+
+| Cambio | Por qué |
+|---|---|
+| 14 → 7 items en sidebar | Ley de Hick: tiempo de decisión escala con log(opciones). |
+| Eliminar acordeones de nivel 2 | Doble navegación duplica clics; las páginas ya usan tabs internas. |
+| Mover Catálogos al topbar | Se editan al onboarding y luego raras veces. No deben competir con ventas. |
+| Configuración fuera del sidebar | Patrón validado: Stripe, Linear, HubSpot, Shopify Admin. |
+| Cobranza promovida a top-level | Es trabajo diario, hoy está enterrada bajo "Ventas". |
+| POS top-level | Es la pantalla de mayor uso por hora. |
+| Reportes top-level | Consultado diariamente por dueños/supervisores. |
+
+---
+
+## 4. Alcance técnico
+
+**Archivo principal:** `src/components/AppLayout.tsx`
+- Reescribir `navItems` con los 7 destinos directos (sin `children`).
+- Añadir un componente `<TopNavMenus />` en el header que renderice los 3 `DropdownMenu` con la taxonomía nueva.
+- Conservar: PermissionGuard, filtrado por `PATH_MODULE_MAP`, favoritos, command palette (⌘K), superadmin selector, banners.
+- No tocar rutas (`App.tsx`), no tocar permisos, no tocar lógica de negocio. Solo capa de presentación de navegación.
+
+**Mobile:** ajuste menor a `MobileLayout.tsx` (`ALL_MORE_ITEMS`) — agregar Cobranza y Reportes como tabs principales del bottom nav del modo "clásico".
+
+**No se cambia:**
+- Rutas, permisos, tablas, edge functions.
+- Páginas internas (siguen con sus tabs).
+- Versión: bump a `2026.06.24.1`.
+
+---
+
+## 5. Riesgos / mitigaciones
+
+- **Usuarios acostumbrados al sidebar viejo** → Command Palette (⌘K) ya existe y resuelve búsqueda directa de cualquier ruta. Favoritos preserva atajos personales.
+- **Permisos** → cada link en topbar se filtra con `hasModulo()` igual que hoy.
+- **Super admin** → conserva su selector de empresa y módulos extra (Facturación, Partners, DB Health) dentro de "Configuración ▾".
+
+¿Confirmas para implementar?
