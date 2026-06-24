@@ -493,6 +493,13 @@ export default function KardexPage() {
                             );
                           })()}
                         </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[260px]">
+                          <div className="flex items-center gap-1 truncate" title={`${od.origen} → ${od.destino}`}>
+                            <span className="truncate">{od.origen}</span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="truncate font-medium">{od.destino}</span>
+                          </div>
+                        </td>
                         <td className="py-1.5 px-3 text-right tabular-nums text-[12px] text-green-600">
                           {row.delta > 0 ? fmtNum(row.delta) : ''}
                         </td>
