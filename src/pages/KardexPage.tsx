@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';
 import { useKardexUbicacion } from '@/hooks/useKardexUbicacion';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownCircle, ArrowUpCircle, RefreshCw, Download, Search, BookOpen, ExternalLink } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const REFERENCIA_LABELS: Record<string, string> = {
   ajuste: 'Ajuste inventario',
@@ -68,14 +68,31 @@ export default function KardexPage() {
   const { data: almacenes } = useAlmacenes({ includeMermas: true });
   const { data: productos } = useProductosForSelect();
 
-  const [almacenId, setAlmacenId] = useState<string>('');
-  const [productoId, setProductoId] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const updateParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set(key, value); else next.delete(key);
+      return next;
+    }, { replace: true });
+  };
+
+  const almacenId = searchParams.get('alm') ?? '';
+  const productoId = searchParams.get('prod') ?? '';
+  const fechaDesde = searchParams.get('fd') ?? '';
+  const fechaHasta = searchParams.get('fh') ?? '';
+  const filterTipo = searchParams.get('ft') ?? 'todos';
+  const search = searchParams.get('q') ?? '';
+
+  const setAlmacenId = (v: string) => updateParam('alm', v);
+  const setProductoId = (v: string) => updateParam('prod', v);
+  const setFechaDesde = (v: string) => updateParam('fd', v);
+  const setFechaHasta = (v: string) => updateParam('fh', v);
+  const setFilterTipo = (v: string) => updateParam('ft', v === 'todos' ? '' : v);
+  const setSearch = (v: string) => updateParam('q', v);
+
   const [productoSearch, setProductoSearch] = useState('');
   const [productoDropdownOpen, setProductoDropdownOpen] = useState(false);
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
-  const [filterTipo, setFilterTipo] = useState('todos');
-  const [search, setSearch] = useState('');
 
   const productosFiltered = useMemo(() => {
     const list = productos ?? [];
@@ -94,6 +111,14 @@ export default function KardexPage() {
     () => (almacenes ?? []).find((a: any) => a.id === almacenId),
     [almacenes, almacenId],
   );
+
+  // Sync product search input label when productoId is set externally (e.g. back navigation)
+  useEffect(() => {
+    if (productoSel && !productoSearch) {
+      setProductoSearch(`${productoSel.codigo} · ${productoSel.nombre}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productoSel?.id]);
 
   // Real current stock from stock_almacen
   const { data: stockActual } = useQuery({
