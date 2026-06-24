@@ -521,3 +521,20 @@ table th:hover::after { background: hsl(var(--border)); }
   user-select: none;
 }
 .lov-col-menu-item:hover { background: hsl(var(--accent)); }
+
+/* ============================================================
+ * Encabezados de tabla globales: fondo blanco, texto negro,
+ * con divisores verticales visibles entre columnas.
+ * ============================================================ */
+table thead th {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-right: 1px solid hsl(var(--border));
+}
+table thead th:last-child { border-right: none; }
+
+/* Líneas verticales entre celdas del cuerpo también */
+table tbody td {
+  border-right: 1px solid hsl(var(--border));
+}
+table tbody td:last-child { border-right: none; }
