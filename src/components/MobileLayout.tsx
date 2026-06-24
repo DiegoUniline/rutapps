@@ -118,6 +118,14 @@ export default function MobileLayout() {
     return () => window.removeEventListener('uniline:sw-update-available', handler);
   }, []);
 
+  // En móvil, los setInterval del SW se pausan al cerrar la app. Forzamos un
+  // chequeo de actualización en cada cambio de ruta para que la nueva versión
+  // se detecte en cuanto el usuario navega tras reabrir la app.
+  useEffect(() => {
+    if (!isOnline) return;
+    window.dispatchEvent(new Event('uniline:check-sw-update'));
+  }, [location.pathname, isOnline]);
+
   const forceUpdate = async () => {
     if (!isOnline) return;
     setIsUpdating(true);
