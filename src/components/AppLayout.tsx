@@ -179,12 +179,81 @@ const topNavGroups: TopNavGroup[] = [
 
 
 const mobileBottomTabs = [
-  { label: 'Inicio', icon: BarChart3, path: '/dashboard' },
+  { label: 'Inicio', icon: Home, path: '/dashboard' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
+  { label: 'Cobranza', icon: Wallet, path: '/ventas/cobranza' },
   { label: 'Clientes', icon: Users, path: '/clientes' },
-  { label: 'Almacén', icon: Warehouse, path: '/almacen/inventario' },
-  { label: 'Ajustes', icon: Settings, path: '/configuracion' },
+  { label: 'Más', icon: Menu, path: '/configuracion' },
 ];
+
+/** Topbar dropdown menus — low-frequency modules (Stripe / Linear pattern) */
+function TopNavMenus({ isSuperAdmin, hasModulo, userEmail, isOwner }: {
+  isSuperAdmin: boolean;
+  hasModulo: (m: string) => boolean;
+  userEmail?: string | null;
+  isOwner?: boolean;
+}) {
+  const location = useLocation();
+  const isSuperAdminUser = isSuperAdminEmail(userEmail);
+  const isBillingOwner = isSuperAdminUser || !!isOwner;
+
+  const canSee = (link: TopNavLink) => {
+    if (link.superAdminOnly && !isSuperAdminUser) return false;
+    if (link.path === '/mi-suscripcion' && !isBillingOwner) return false;
+    if (isSuperAdmin) return true;
+    const modulo = PATH_MODULE_MAP[link.path] ?? '';
+    if (!modulo) return true; // generic pages (tutoriales, soporte, etc.)
+    return hasModulo(modulo);
+  };
+
+  return (
+    <div className="hidden md:flex items-center gap-0.5 mr-auto">
+      {topNavGroups.map(group => {
+        const visibleSections = group.sections
+          .map(s => ({ ...s, items: s.items.filter(canSee) }))
+          .filter(s => s.items.length > 0);
+        if (visibleSections.length === 0) return null;
+        const isActive = visibleSections.some(s =>
+          s.items.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'))
+        );
+        return (
+          <DropdownMenu key={group.label}>
+            <DropdownMenuTrigger
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium transition-colors outline-none",
+                isActive
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              )}
+            >
+              <group.icon className="h-3.5 w-3.5" />
+              {group.label}
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64 max-h-[70vh] overflow-y-auto">
+              {visibleSections.map((section, si) => (
+                <div key={section.label}>
+                  {si > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 py-1.5">
+                    {section.label}
+                  </DropdownMenuLabel>
+                  {section.items.map(item => (
+                    <DropdownMenuItem key={item.path} asChild>
+                      <Link to={item.path} className="text-[13px] cursor-pointer">
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      })}
+    </div>
+  );
+}
+
 
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean, userEmail?: string | null, isOwner?: boolean) {
