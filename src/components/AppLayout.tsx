@@ -929,7 +929,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <SuperAdminEmpresaSelector />
-        <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0 gap-2">
+        <div className="h-11 flex items-center px-4 border-b border-border bg-card shrink-0 gap-2">
+          <TopNavMenus
+            isSuperAdmin={isSuperAdmin}
+            hasModulo={hasModulo}
+            userEmail={user?.email}
+            isOwner={!!empresa?.owner_user_id && empresa.owner_user_id === user?.id}
+          />
           <button
             onClick={applySwUpdate}
             className={cn(
