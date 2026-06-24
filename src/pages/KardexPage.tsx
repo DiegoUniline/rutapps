@@ -153,13 +153,17 @@ export default function KardexPage() {
     const refTipo = row.referencia_tipo;
     const refId = row.referencia_id;
     const almNombre = (id?: string | null) =>
-      id ? (refInfo?.almacenes?.[id] ?? '—') : '—';
+      id ? (refInfo?.almacenes?.[id] ?? '—') : '';
+    // Para movimientos donde sólo conocemos un lado: usamos el almacén que
+    // venga en la fila, o el almacén seleccionado como fallback.
+    const almOrigen = almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—');
+    const almDestino = almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—');
 
     // Ventas / cancelaciones: salida del almacén → cliente
     if (refTipo === 'venta' || refTipo === 'venta_ruta') {
       const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
       return {
-        origen: almacenSel?.nombre ?? '—',
+        origen: almOrigen,
         destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
       };
     }
@@ -167,7 +171,7 @@ export default function KardexPage() {
       const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
       return {
         origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Compras: proveedor → almacén
@@ -175,50 +179,51 @@ export default function KardexPage() {
       const prov = refId ? refInfo?.compraProveedor?.[refId] : undefined;
       return {
         origen: prov ? `Prov: ${prov.nombre}` : 'Proveedor',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Entregas: almacén → cliente
     if (refTipo === 'entrega') {
       const ent = refId ? refInfo?.entregaCliente?.[refId] : undefined;
       return {
-        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        origen: almOrigen,
         destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
       };
     }
     // Traspasos: usar almacenes origen/destino
     if (refTipo === 'traspaso') {
       return {
-        origen: almNombre(row.almacen_origen_id),
-        destino: almNombre(row.almacen_destino_id),
+        origen: almNombre(row.almacen_origen_id) || '—',
+        destino: almNombre(row.almacen_destino_id) || '—',
       };
     }
     // Devoluciones: cliente → almacén
     if (refTipo === 'devolucion') {
       return {
         origen: 'Cliente',
-        destino: almacenSel?.nombre ?? '—',
+        destino: almDestino,
       };
     }
     // Carga / Descarga
     if (refTipo === 'carga') {
       return {
-        origen: almNombre(row.almacen_origen_id) || (almacenSel?.nombre ?? '—'),
+        origen: almOrigen,
         destino: 'Camión',
       };
     }
     if (refTipo === 'descarga') {
       return {
         origen: 'Camión',
-        destino: almNombre(row.almacen_destino_id) || (almacenSel?.nombre ?? '—'),
+        destino: almDestino,
       };
     }
-    // Genérico: usar las columnas del movimiento si existen
+    // Genérico
     return {
-      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : '—',
-      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : '—',
+      origen: row.almacen_origen_id ? almNombre(row.almacen_origen_id) : (row.tipo === 'entrada' ? '—' : almOrigen),
+      destino: row.almacen_destino_id ? almNombre(row.almacen_destino_id) : (row.tipo === 'salida' ? '—' : almDestino),
     };
   };
+
 
   const filtered = useMemo(() => {
     let list = [...rows].reverse();
