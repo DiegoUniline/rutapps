@@ -28,7 +28,7 @@ import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
 
 type TabKey =
-  | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'whatsapp'
+  | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
   | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot';
 
