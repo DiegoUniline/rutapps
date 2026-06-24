@@ -520,8 +520,7 @@ export default function KardexPage() {
               </tbody>
             </table>
           </div>
-        </>
-      )}
+      </>
     </div>
   );
 }
