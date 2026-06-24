@@ -2,17 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
+import { offlineDb } from '@/lib/offlineDb';
 
 /**
  * Determines if the current user should see only their own records
  * or all records for a given module.
  *
- * Returns:
- *  - `seeAll`: true if user has ver_todos permission for the module
- *  - `profileId`: the user's profile.id (same as vendedor/cobrador id)
- *  - `userId`: auth user id (for filtering by creator)
- *  - `clientesVisibilidad`: empresa-level setting ('todos' | 'propios')
- *  - `loading`: true while data is loading
+ * OFFLINE BEHAVIOR: reads `empresas.clientes_visibilidad` from IndexedDB
+ * first (instant), then refreshes from Supabase if online and caches it.
+ * If no value is found anywhere, defaults to 'propios' (safer) — this
+ * prevents the offline app from leaking all clients/ventas when the
+ * config can't be fetched.
  */
 export function useDataVisibility(modulo: string) {
   const { user, empresa, profile } = useAuth();
@@ -23,17 +23,39 @@ export function useDataVisibility(modulo: string) {
     enabled: !!empresa?.id,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('empresas')
-        .select('clientes_visibilidad')
-        .eq('id', empresa!.id)
-        .single();
-      return data;
+      // 1) Read IndexedDB first (always available, even offline)
+      let cached: any = null;
+      try {
+        cached = await offlineDb.empresas.get(empresa!.id);
+      } catch { /* ignore */ }
+
+      // 2) Try server; if it fails (offline), keep cached
+      try {
+        const { data, error } = await supabase
+          .from('empresas')
+          .select('clientes_visibilidad')
+          .eq('id', empresa!.id)
+          .single();
+        if (!error && data) {
+          // Persist into IndexedDB so next offline read has the latest
+          try {
+            const merged = { ...(cached || { id: empresa!.id }), clientes_visibilidad: (data as any).clientes_visibilidad };
+            await offlineDb.empresas.put(merged);
+          } catch { /* ignore */ }
+          return data;
+        }
+      } catch { /* offline / network error */ }
+
+      // 3) Fallback to cached value
+      if (cached) return { clientes_visibilidad: cached.clientes_visibilidad };
+      return null;
     },
   });
 
   const seeAll = hasPermiso(modulo, 'ver_todos');
-  const clientesVisibilidad = (empresaConfig as any)?.clientes_visibilidad ?? 'todos';
+  // Use cached/server value; only default to 'todos' when truly unknown
+  const clientesVisibilidad = ((empresaConfig as any)?.clientes_visibilidad as 'todos' | 'propios' | undefined) ?? 'todos';
+
 
   return {
     seeAll,

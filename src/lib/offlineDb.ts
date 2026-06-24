@@ -45,6 +45,8 @@ class OfflineDatabase extends Dexie {
   tarifas!: Table;
   stock_almacen!: Table;
   producto_presentaciones!: Table;
+  lista_precios!: Table;
+  listas!: Table;
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
@@ -82,8 +84,14 @@ class OfflineDatabase extends Dexie {
       syncQueue: '++id, table, createdAt',
       cacheTimestamps: 'table',
     });
+    // v8: cache lista_precios + listas for offline client creation
+    this.version(8).stores({
+      lista_precios: 'id, empresa_id, tarifa_id, es_principal, activa',
+      listas: 'id, empresa_id',
+    });
   }
 }
+
 
 export const offlineDb = new OfflineDatabase();
 

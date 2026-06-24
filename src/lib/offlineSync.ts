@@ -34,7 +34,9 @@ const TABLES_TO_CACHE = [
   'tarifa_lineas',
   'stock_almacen',
   'producto_presentaciones',
+  'lista_precios',
 ] as const;
+
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
@@ -50,7 +52,9 @@ const COLUMN_SELECTS: Record<string, string> = {
   tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
   stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
   producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
+  lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
 };
+
 
 // Friendly names for UI display
 export const TABLE_LABELS: Record<string, string> = {
@@ -81,7 +85,9 @@ export const TABLE_LABELS: Record<string, string> = {
   tarifa_lineas: 'Reglas de tarifa',
   stock_almacen: 'Stock por almacén',
   producto_presentaciones: 'Presentaciones de productos',
+  lista_precios: 'Listas de precios',
 };
+
 
 // Tables that have empresa_id for filtering
 const TABLES_WITH_EMPRESA = new Set([
@@ -91,7 +97,9 @@ const TABLES_WITH_EMPRESA = new Set([
   'tarifas',
   'stock_almacen',
   'producto_presentaciones',
+  'lista_precios',
 ]);
+
 
 // Tables limited to recent data
 const RECENT_TABLES = new Set([

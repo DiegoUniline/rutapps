@@ -519,15 +519,36 @@ export function useAllListasPrecios(empresaId?: string) {
     staleTime: CATALOG_STALE,
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase.from('lista_precios')
-        .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
-        .eq('empresa_id', empresaId!)
-        .order('nombre');
-      if (error) { console.error('Error fetching lista_precios:', error); throw error; }
-      return data as ListaPrecio[];
+      // Try server first
+      try {
+        const { data, error } = await supabase.from('lista_precios')
+          .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
+          .eq('empresa_id', empresaId!)
+          .order('nombre');
+        if (!error && data) {
+          // Cache offline so it's available next time without signal
+          try {
+            const { offlineDb } = await import('@/lib/offlineDb');
+            await offlineDb.lista_precios.bulkPut(data);
+          } catch { /* ignore */ }
+          return data as ListaPrecio[];
+        }
+        if (error) throw error;
+      } catch (err) {
+        // Offline fallback
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.lista_precios.where('empresa_id').equals(empresaId!).toArray();
+          if (cached.length > 0) return cached as ListaPrecio[];
+        } catch { /* ignore */ }
+        console.error('Error fetching lista_precios:', err);
+        throw err;
+      }
+      return [] as ListaPrecio[];
     },
   });
 }
+
 
 export function useListasPrecioByTarifa(tarifaId?: string) {
   return useQuery({

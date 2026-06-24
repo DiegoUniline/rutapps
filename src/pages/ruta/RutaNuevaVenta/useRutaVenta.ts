@@ -87,6 +87,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       gps_lat: gps?.lat ?? null, gps_lng: gps?.lng ?? null,
       venta_id: opts?.ventaId || null, fecha: new Date().toISOString(), created_at: new Date().toISOString(),
     });
+
+
   };
 
   const entregaInmediata = tipoVenta === 'venta_directa';
