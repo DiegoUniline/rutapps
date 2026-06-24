@@ -472,7 +472,7 @@ export default function KardexPage() {
                       ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
                       : null;
                     const usuario = row.user_id
-                      ? (refInfo?.usuarios?.[row.user_id] ?? 'Usuario eliminado')
+                      ? (refInfo?.usuarios?.[row.user_id] ?? `ID ${row.user_id.slice(0, 8)}`)
                       : 'Sistema';
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
