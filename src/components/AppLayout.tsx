@@ -916,6 +916,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Sincronizar
           </button>
           <InternalNotificationBell />
+          <BroadcastBell />
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
 
         </div>
