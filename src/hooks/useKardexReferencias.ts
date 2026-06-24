@@ -144,14 +144,20 @@ export function useKardexReferencias(rows: any[] | undefined) {
       }
 
       if (userIds.size) {
+        const ids = Array.from(userIds);
         tasks.push(
           (async () => {
-            const { data } = await supabase
-              .from('profiles')
-              .select('user_id, nombre')
-              .in('user_id', Array.from(userIds));
-            (data ?? []).forEach((u: any) => {
-              if (u.user_id) result.usuarios![u.user_id] = u.nombre || u.user_id.slice(0, 8);
+            // movimientos_inventario.user_id puede contener auth.users.id O profiles.id
+            // según el origen del movimiento. Buscamos por ambos.
+            const [byUser, byId] = await Promise.all([
+              supabase.from('profiles').select('user_id, id, nombre').in('user_id', ids),
+              supabase.from('profiles').select('user_id, id, nombre').in('id', ids),
+            ]);
+            (byUser.data ?? []).forEach((u: any) => {
+              if (u.nombre) result.usuarios![u.user_id] = u.nombre;
+            });
+            (byId.data ?? []).forEach((u: any) => {
+              if (u.nombre) result.usuarios![u.id] = u.nombre;
             });
           })()
         );
