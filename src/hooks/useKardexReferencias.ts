@@ -128,6 +128,36 @@ export function useKardexReferencias(rows: any[] | undefined) {
         );
       }
 
+      if (productoIds.size) {
+        tasks.push(
+          (async () => {
+            const { data } = await supabase
+              .from('productos')
+              .select('id, nombre, codigo')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(productoIds));
+            (data ?? []).forEach((p: any) => {
+              result.productos![p.id] = { nombre: p.nombre, codigo: p.codigo };
+            });
+          })()
+        );
+      }
+
+      if (userIds.size) {
+        tasks.push(
+          (async () => {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .in('id', Array.from(userIds));
+            (data ?? []).forEach((u: any) => {
+              result.usuarios![u.id] = u.full_name || u.email || u.id.slice(0, 8);
+            });
+          })()
+        );
+      }
+
+
       await Promise.all(tasks);
       return result;
     },
