@@ -97,7 +97,9 @@ const TABLES_WITH_EMPRESA = new Set([
   'tarifas',
   'stock_almacen',
   'producto_presentaciones',
+  'lista_precios',
 ]);
+
 
 // Tables limited to recent data
 const RECENT_TABLES = new Set([
