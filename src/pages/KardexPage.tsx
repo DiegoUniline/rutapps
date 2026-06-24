@@ -427,8 +427,10 @@ export default function KardexPage() {
               <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b border-border">
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
                   <th className="text-right text-[11px] font-semibold px-3 py-2 text-muted-foreground">Saldo</th>
@@ -437,15 +439,16 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
                   filtered.map(row => {
                     const cfg = TIPO_CONFIG[row.tipo] ?? TIPO_CONFIG.entrada;
                     const Icon = cfg.icon;
+                    const od = getOrigenDestino(row);
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
@@ -453,6 +456,10 @@ export default function KardexPage() {
                           <span className="text-muted-foreground ml-1 text-[10px]">
                             {new Date(row.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                        </td>
+                        <td className="py-1.5 px-3 text-[12px] max-w-[200px]">
+                          <div className="truncate font-medium" title={productoSel?.nombre}>{productoSel?.nombre}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{productoSel?.codigo}</div>
                         </td>
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
