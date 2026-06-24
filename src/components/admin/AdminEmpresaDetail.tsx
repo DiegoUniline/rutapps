@@ -90,7 +90,7 @@ function estadoFacturaBadge(estado: string) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${x.cls}`}>{x.l}</span>;
 }
 
-export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
+export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'usuarios' }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [empresa, setEmpresa] = useState<any>(null);
