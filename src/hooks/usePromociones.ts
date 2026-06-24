@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { todayInTimezone } from '@/lib/utils';
+import { offlineDb } from '@/lib/offlineDb';
+
 
 export interface Promocion {
   id: string;
