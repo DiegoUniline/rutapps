@@ -26,6 +26,7 @@ import AdminPosTab from '@/components/admin/AdminPosTab';
 import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
 import PartnersInlineTab from '@/components/admin/PartnersInlineTab';
 import ControlPage from '@/pages/ControlPage';
+import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
