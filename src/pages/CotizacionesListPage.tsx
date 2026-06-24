@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useMemo, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCotizaciones, useDeleteCotizacion, type Cotizacion, type CotizacionEstado } from '@/hooks/useCotizaciones';
 import { formatCurrency } from '@/lib/currency';
-import { Plus, Trash2, FileText, Send, ShoppingCart, Search } from 'lucide-react';
+import { Plus, Trash2, FileText, Send, ShoppingCart, Search, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { CotizacionExpandedRow } from '@/pages/cotizaciones/CotizacionExpandedRow';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -36,6 +38,7 @@ export default function CotizacionesListPage() {
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<CotizacionEstado | 'todas'>('todas');
   const [toDelete, setToDelete] = useState<Cotizacion | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,46 +98,65 @@ export default function CotizacionesListPage() {
                 <th className="text-left px-3 py-2">Vence</th>
                 <th className="text-left px-3 py-2">Estado</th>
                 <th className="text-right px-3 py-2">Acciones</th>
+                <th className="w-8"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">Cargando…</td></tr>
+                <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Cargando…</td></tr>
               )}
               {!isLoading && list.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">
+                <tr><td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
                   Sin cotizaciones
                 </td></tr>
               )}
-              {list.map(c => (
-                <tr
-                  key={c.id}
-                  className="border-t border-border hover:bg-muted/30 cursor-pointer"
-                  onClick={() => navigate(`/cotizaciones/${c.id}`)}
-                >
-                  <td className="px-3 py-2 font-medium">{c.folio}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.fecha)}</td>
-                  <td className="px-3 py-2">{c.clientes?.nombre || 'Sin cliente'}</td>
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(c.total, c.moneda)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.vence_at)}</td>
-                  <td className="px-3 py-2">
-                    <Badge className={ESTADO_STYLES[c.estado] || 'bg-muted'}>{c.estado}</Badge>
-                    {c.enviada_wa_at && <Send className="inline ml-1 h-3 w-3 text-blue-500" />}
-                    {c.venta_id && <ShoppingCart className="inline ml-1 h-3 w-3 text-emerald-600" />}
-                  </td>
-                  <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost" size="icon"
-                      onClick={() => setToDelete(c)}
-                      disabled={c.estado === 'convertida'}
-                      title={c.estado === 'convertida' ? 'No se puede eliminar (ya convertida)' : 'Eliminar'}
+              {list.map(c => {
+                const isExpanded = expandedId === c.id;
+                return (
+                  <Fragment key={c.id}>
+                    <tr
+                      className={cn(
+                        "border-t border-border cursor-pointer transition-colors",
+                        isExpanded ? "bg-primary/5" : "hover:bg-muted/30"
+                      )}
+                      onClick={() => setExpandedId(isExpanded ? null : c.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+                      <td className="px-3 py-2 font-medium">{c.folio}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.fecha)}</td>
+                      <td className="px-3 py-2">{c.clientes?.nombre || 'Sin cliente'}</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(c.total, c.moneda)}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{fmtDate(c.vence_at)}</td>
+                      <td className="px-3 py-2">
+                        <Badge className={ESTADO_STYLES[c.estado] || 'bg-muted'}>{c.estado}</Badge>
+                        {c.enviada_wa_at && <Send className="inline ml-1 h-3 w-3 text-blue-500" />}
+                        {c.venta_id && <ShoppingCart className="inline ml-1 h-3 w-3 text-emerald-600" />}
+                      </td>
+                      <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost" size="icon"
+                          onClick={() => setToDelete(c)}
+                          disabled={c.estado === 'convertida'}
+                          title={c.estado === 'convertida' ? 'No se puede eliminar (ya convertida)' : 'Eliminar'}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                      <td className="px-2 py-2 text-center w-8">
+                        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform inline", isExpanded && "rotate-180")} />
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <CotizacionExpandedRow
+                        cotizacion={c}
+                        colSpan={8}
+                        estadoClass={ESTADO_STYLES[c.estado] || 'bg-muted'}
+                        onCollapse={() => setExpandedId(null)}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
