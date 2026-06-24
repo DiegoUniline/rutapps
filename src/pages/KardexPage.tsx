@@ -244,14 +244,27 @@ export default function KardexPage() {
 
   const handleExportCSV = () => {
     if (!productoSel || !almacenSel) return;
-    const header = 'Fecha,Tipo,Referencia,Entrada,Salida,Saldo,Notas';
+    const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const header = 'Fecha,Producto,Tipo,Referencia,Origen,Destino,Entrada,Salida,Saldo,Notas';
     const csvRows = filtered.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-MX');
       const tipo = REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo ?? '';
       const entrada = r.delta > 0 ? r.delta : '';
       const salida = r.delta < 0 ? Math.abs(r.delta) : '';
-      const notas = (r.notas ?? '').replace(/,/g, ' ');
-      return `${fecha},${tipo},${r.referencia_id ?? ''},${entrada},${salida},${r.saldo},${notas}`;
+      const notas = r.notas ?? '';
+      const od = getOrigenDestino(r);
+      return [
+        esc(fecha),
+        esc(productoSel.nombre ?? ''),
+        esc(tipo),
+        esc(r.referencia_id ?? ''),
+        esc(od.origen),
+        esc(od.destino),
+        entrada,
+        salida,
+        r.saldo,
+        esc(notas),
+      ].join(',');
     });
     const blob = new Blob([header + '\n' + csvRows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
