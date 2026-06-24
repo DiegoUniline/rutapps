@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useMemo, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCotizaciones, useDeleteCotizacion, type Cotizacion, type CotizacionEstado } from '@/hooks/useCotizaciones';
 import { formatCurrency } from '@/lib/currency';
-import { Plus, Trash2, FileText, Send, ShoppingCart, Search } from 'lucide-react';
+import { Plus, Trash2, FileText, Send, ShoppingCart, Search, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { CotizacionExpandedRow } from '@/pages/cotizaciones/CotizacionExpandedRow';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
