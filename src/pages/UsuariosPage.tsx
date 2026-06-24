@@ -10,6 +10,7 @@ import { useRoles } from '@/hooks/useRoles';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import UsuariosTab from '@/components/usuarios/UsuariosTab';
+import UsuariosBajaTab from '@/components/usuarios/UsuariosBajaTab';
 import PlanSimuladorCard from '@/components/usuarios/PlanSimuladorCard';
 import RolesTab from '@/components/usuarios/RolesTab';
 import EditUserModal from '@/components/usuarios/modals/EditUserModal';
