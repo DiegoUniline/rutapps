@@ -471,7 +471,9 @@ export default function KardexPage() {
                     const prodInfo = row.producto_id
                       ? (refInfo?.productos?.[row.producto_id] ?? (row.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
                       : null;
-                    const usuario = row.user_id ? (refInfo?.usuarios?.[row.user_id] ?? '—') : '—';
+                    const usuario = row.user_id
+                      ? (refInfo?.usuarios?.[row.user_id] ?? 'Usuario eliminado')
+                      : 'Sistema';
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
