@@ -523,16 +523,13 @@ export default function PartnersLandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-100 py-8 px-6 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} Rutapp · <Link to="/" className="hover:underline">Inicio</Link> · <Link to="/terminos" className="hover:underline">Términos</Link>
-      </footer>
-
       {/* Floating WhatsApp */}
       <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"
          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xl hover:scale-110 transition"
          aria-label="WhatsApp">
         <MessageCircle className="h-7 w-7" />
       </a>
-    </div>
+      </div>
+    </MarketingShell>
   );
 }
