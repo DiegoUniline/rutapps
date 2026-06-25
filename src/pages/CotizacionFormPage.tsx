@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import SearchableSelect from '@/components/SearchableSelect';
+import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { buildCotizacionPdf, buildCotizacionWhatsappMessage, cotizacionPublicUrl } from '@/lib/cotizacionPdf';
 import { VentaLineasTab } from './VentaForm/VentaLineasTab';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
