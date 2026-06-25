@@ -672,7 +672,7 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.1}>
             <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-              <img src="/src/assets/landing/offline-vendedor.jpg" alt="Vendedor usando Rutapp sin internet" className="w-full h-auto" loading="lazy"/>
+              <img src={offlineImg} alt="Vendedor usando Rutapp sin internet" className="w-full h-auto" loading="lazy"/>
             </div>
           </Reveal>
         </div>
@@ -683,7 +683,7 @@ export default function LandingPage() {
         <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 gap-10 items-center">
           <Reveal>
             <div className="rounded-2xl overflow-hidden border order-2 md:order-1" style={{ borderColor: BRAND.line }}>
-              <img src="/src/assets/landing/vendedor-ticket-calle.jpg" alt="Vendedor imprimiendo ticket en la calle" className="w-full h-auto" loading="lazy"/>
+              <img src={papelImg} alt="Vendedor imprimiendo ticket en la calle" className="w-full h-auto" loading="lazy"/>
             </div>
           </Reveal>
           <Reveal delay={0.1}>
@@ -730,7 +730,7 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.1}>
             <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-              <img src="/src/assets/landing/tienda-online.jpg" alt="Tienda en línea Rutapp" className="w-full h-auto" loading="lazy"/>
+              <img src={tiendaImg} alt="Tienda en línea Rutapp" className="w-full h-auto" loading="lazy"/>
             </div>
           </Reveal>
         </div>
