@@ -277,7 +277,7 @@ export default function LandingV2Page() {
         <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-white text-center">
           {[
             { end: 1200, suffix: "+", label: "Empresas activas" },
-            { end: 4.8, decimals: 1, suffix: "M", prefix: "$", label: "Vendidos al mes" },
+            { end: 4, suffix: "", label: "Países" },
             { end: 99.9, decimals: 1, suffix: "%", label: "Uptime ruta offline" },
             { end: 32, suffix: "%", label: "Menos faltantes con IA" },
           ].map((s) => (
