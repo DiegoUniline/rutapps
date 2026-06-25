@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,12 +54,8 @@ export default function JornadasRutaPage() {
 
       <Card className="p-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="text-xs text-muted-foreground">Desde</label>
-          <Input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="w-44" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Hasta</label>
-          <Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="w-44" />
+          <label className="text-xs text-muted-foreground">Rango de fechas</label>
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         <div className="ml-auto text-sm text-muted-foreground">
           {sesiones.length} jornada{sesiones.length !== 1 ? 's' : ''}

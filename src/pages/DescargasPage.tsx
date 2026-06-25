@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -1310,13 +1311,9 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
               placeholder="Selecciona usuario..."
             />
           </div>
-          <div>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Desde</label>
-            <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Hasta</label>
-            <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+          <div className="col-span-2">
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Rango de fechas</label>
+            <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); }} />
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
@@ -700,12 +701,7 @@ export default function SupervisorDashboardPage() {
           )}
           <Badge variant="secondary" className="text-[11px]">{diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1)}</Badge>
           <div className="flex items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
-            <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
-            <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
-            <span className="text-[10px] text-muted-foreground">—</span>
-            <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
+            <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
             {isRangeMode && (
               <button onClick={() => { setDesde(today); setHasta(today); }}
                 className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0">Hoy</button>

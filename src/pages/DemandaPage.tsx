@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import React, { useState, useMemo, Fragment } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -846,12 +847,8 @@ export default function DemandaPage() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-[11px] text-muted-foreground">Desde</Label>
-          <Input type="date" className="h-9 w-[150px]" value={desde} onChange={e => setDesde(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-[11px] text-muted-foreground">Hasta</Label>
-          <Input type="date" className="h-9 w-[150px]" value={hasta} onChange={e => setHasta(e.target.value)} />
+          <Label className="text-[11px] text-muted-foreground">Rango de fechas</Label>
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-[11px] text-muted-foreground">Vendedor</Label>

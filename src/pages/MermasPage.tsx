@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -141,12 +142,8 @@ export default function MermasPage() {
       {/* Filtros */}
       <div className="flex flex-wrap gap-2 items-end bg-card border rounded-lg p-3">
         <div>
-          <Label className="text-xs">Desde</Label>
-          <Input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="w-40" />
-        </div>
-        <div>
-          <Label className="text-xs">Hasta</Label>
-          <Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="w-40" />
+          <Label className="text-xs">Rango de fechas</Label>
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         {(desde || hasta) && (
           <Button variant="ghost" size="sm" onClick={() => { setDesde(''); setHasta(''); }}>

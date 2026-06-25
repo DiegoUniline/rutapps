@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
@@ -299,9 +300,7 @@ export default function ReportesPage() {
           <HelpButton title={HELP.reportes.title} sections={HELP.reportes.sections} />
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
-          <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input-odoo text-[13px] w-36" />
-          <span className="text-muted-foreground text-[13px]">a</span>
-          <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input-odoo text-[13px] w-36" />
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
 
           {/* Vendedor multi-select */}
           <Popover>

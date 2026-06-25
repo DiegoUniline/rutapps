@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -520,9 +521,7 @@ function FiltersBar({
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="h-9 pl-8 text-xs" />
       </div>
-      <Input type="date" value={from} onChange={(e) => onFrom(e.target.value)} className="h-9 w-[150px] text-xs" />
-      <span className="text-xs text-muted-foreground">a</span>
-      <Input type="date" value={to} onChange={(e) => onTo(e.target.value)} className="h-9 w-[150px] text-xs" />
+      <DateRangePicker from={from} to={to} onChange={(f, t) => { onFrom(f); onTo(t); }} />
       {extra}
       {hasFilters && (
         <Button size="sm" variant="ghost" onClick={() => { onSearch(''); onFrom(''); onTo(''); }} className="h-9 gap-1 text-xs">

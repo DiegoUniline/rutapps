@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -119,10 +120,7 @@ export default function ComisionesVolumenTab({ onAfterGenerar }: { onAfterGenera
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded p-2">
         <Calendar className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Del</span>
-        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={desde} onChange={e => setDesde(e.target.value)} />
-        <span className="text-xs text-muted-foreground">al</span>
-        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={hasta} onChange={e => setHasta(e.target.value)} />
+        <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         <div className="h-6 w-px bg-border mx-1" />
         <button onClick={() => setPreset('semana')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Semana</button>
         <button onClick={() => setPreset('quincena')} className="px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded">Quincena</button>
