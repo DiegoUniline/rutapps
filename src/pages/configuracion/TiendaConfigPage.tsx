@@ -222,6 +222,43 @@ export default function TiendaConfigPage() {
         </Field>
       </Section>
 
+      <Section title="Beneficios que se muestran en la tienda">
+        <p className="text-sm text-gray-600 -mt-2">Activa solo los que realmente ofreces. Edita el texto para que coincida con tu negocio.</p>
+        <div className="space-y-3">
+          {cfg.beneficios.map((b, i) => (
+            <div key={i} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+              <div className="flex items-center justify-between gap-3">
+                <label className="inline-flex items-center gap-2 font-semibold">
+                  <input type="checkbox" checked={b.enabled} onChange={(e) => {
+                    const next = [...cfg.beneficios]; next[i] = { ...b, enabled: e.target.checked }; setCfg({ ...cfg, beneficios: next });
+                  }} className="h-4 w-4" />
+                  <span className={b.enabled ? "text-green-700" : "text-gray-500"}>{b.enabled ? "Activo" : "Oculto"}</span>
+                </label>
+                <select className="input" style={{ width: 180 }} value={b.icon} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, icon: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }}>
+                  {ICON_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input className="input" placeholder="Título" value={b.title} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, title: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }} />
+                <input className="input" placeholder="Detalle" value={b.subtitle} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, subtitle: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button onClick={() => setCfg({ ...cfg, beneficios: [...cfg.beneficios, { icon: "award", title: "Nuevo beneficio", subtitle: "Descripción", enabled: true }] })} className="px-3 py-1.5 text-sm bg-white border rounded">+ Agregar beneficio</button>
+          {cfg.beneficios.length > 0 && (
+            <button onClick={() => setCfg({ ...cfg, beneficios: cfg.beneficios.slice(0, -1) })} className="px-3 py-1.5 text-sm bg-white border rounded text-red-600">– Quitar último</button>
+          )}
+        </div>
+      </Section>
+
       <div className="flex justify-end gap-3">
         <button onClick={save} disabled={saving} className="px-6 py-2.5 bg-primary text-white rounded-lg font-semibold disabled:opacity-50 flex items-center gap-2">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
