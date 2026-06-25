@@ -201,7 +201,7 @@ export default function GastosDesktopPage() {
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <Input placeholder="Concepto *" value={concepto} onChange={e => setConcepto(e.target.value)} />
             <Input type="number" placeholder="Monto *" value={monto} onChange={e => setMonto(e.target.value)} />
-            <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+            <SingleDatePicker value={fecha} onChange={iso => setFecha(iso)} />
             <Select value={vendedorIdForm} onValueChange={setVendedorIdForm}>
               <SelectTrigger><SelectValue placeholder="Vendedor" /></SelectTrigger>
               <SelectContent>
