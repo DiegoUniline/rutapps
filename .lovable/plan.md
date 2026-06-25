@@ -1,72 +1,62 @@
-## Tienda en línea por empresa — `rutapp.mx/tienda/:slug`
+# Plan: Sitio de marketing Rutapp (aplicado a /landing-nueva)
 
-Tienda pública por empresa donde **el cliente se loguea con su correo/teléfono**, ve los productos con **su Lista de Precios asignada**, arma carrito y envía el pedido. Entra al sistema como **Pedido (venta en estado `borrador`/`pedido`, no entregado)**, igual que un pedido normal.
+## Alcance
+Transformar `/landing-nueva` en un sitio de marketing completo con SEO real, páginas por giro y CTA WhatsApp. La app actual sigue funcionando en sus rutas normales.
 
-### 1. Base de datos (migración)
+## Cambios estructurales
 
-**Tabla `tienda_config`** (1 por empresa):
-- `empresa_id` (unique), `slug` (unique, ej. `botanas-don-nacho`), `activa`, `nombre_tienda`, `banner_url`, `logo_url`, `color_primario`, `whatsapp_pedidos`, `lista_precios_default_id` (para visitantes sin login), `permitir_invitados` (bool), `mensaje_bienvenida`.
+### 1. SEO base
+- Instalar `react-helmet-async` y envolver el app en `HelmetProvider` (en `src/main.tsx`).
+- Crear componente `<SEO />` reutilizable (title, description, OG, Twitter, canonical, JSON-LD opcional).
+- Agregar JSON-LD: SoftwareApplication + Organization en home; FAQPage en home y giros.
+- Generar `public/robots.txt` y `scripts/generate-sitemap.ts` (predev/prebuild) con todas las rutas marketing.
 
-**Tabla `tienda_clientes`** (login del cliente final):
-- `id`, `empresa_id`, `cliente_id` (FK a `clientes`), `email`, `password_hash` *(o auth.users link)*, `telefono`, `verificado`, `ultimo_login`.
-- El cliente al loguearse ve la `lista_precios_id` asignada en su registro `clientes`.
+### 2. Rutas nuevas (todas públicas, indexables)
+- `/landing-nueva` → Home rediseñada (queda como la landing oficial nueva)
+- `/landing-nueva/giros` → índice de giros
+- `/landing-nueva/giros/distribuidoras-de-abarrotes`
+- `/landing-nueva/giros/refresqueras-y-bebidas`
+- `/landing-nueva/giros/panaderias-y-reparto`
+- `/landing-nueva/giros/productos-de-limpieza`
+- `/landing-nueva/giros/lacteos-y-cremerias`
+- `/landing-nueva/giros/botanas-y-dulces`
+- `/landing-nueva/giros/agua-purificada`
+- `/landing-nueva/precios`
 
-**Tabla `tienda_pedidos`** (staging antes de convertirse a venta):
-- Se crea como `venta` con `estado_logistica = 'pedido'`, `origen = 'tienda_web'`, `vendedor_id = null` (o usuario sistema), `cliente_id` del logueado.
-- Nuevo enum value en `ventas.origen`: `'tienda_web'`.
+Nota: las rutas viven bajo `/landing-nueva/*` para no chocar con la app actual. Cuando el usuario decida reemplazar la landing oficial, se promueven a raíz.
 
-### 2. Backend (Edge Functions)
+### 3. Home reordenada según spec
+Orden: Navbar sticky → Hero (H1 de resultado + CTA WhatsApp + Probar gratis) → Barra de prueba social → Problema/Solución → Cómo funciona en 3 pasos → Beneficios → Diferenciadores → Testimonios → Precios (3 planes, toggle mensual/anual, "Recomendado" al centro) → FAQ (acordeón + JSON-LD) → CTA final → Footer.
 
-Reutilizar/extender `public-catalog`:
-- `tienda-resolve` → recibe `slug`, devuelve config + lista default.
-- `tienda-login` → email/pass o magic link → token JWT scoped a `empresa_id + cliente_id`.
-- `tienda-catalog` → con token devuelve productos con precios resueltos de **su lista asignada** (usa `priceResolver` existente).
-- `tienda-checkout` → recibe carrito + token → crea `venta` en estado `pedido` + `venta_lineas` + notificación interna al admin.
+Mantengo lo que ya brilla: hero con foto real del vendedor, animaciones framer-motion, multi-currency en precios, sección WhatsApp animada, mockups del sistema. Reorganizo para que el orden sea exactamente el del brief.
 
-### 3. Frontend público (rutas nuevas)
+### 4. CTA WhatsApp global
+- Helper `waLink(message)` que construye `https://wa.me/52XXXXXXXXXX?text=...` con placeholder `XXXXXXXXXX` definido en `src/lib/marketing.ts` (un solo lugar para cambiar el número).
+- Botón flotante WhatsApp en mobile.
 
-```
-/tienda/:slug                  → Home (hero, banners, categorías destacadas, productos top)
-/tienda/:slug/productos        → Grid con filtros (categoría, marca, precio, búsqueda)
-/tienda/:slug/producto/:id     → Detalle con galería, stock, "agregar al carrito"
-/tienda/:slug/carrito          → Carrito + resumen
-/tienda/:slug/checkout         → Datos de envío + confirmar pedido
-/tienda/:slug/login            → Login / registro cliente
-/tienda/:slug/mis-pedidos      → Historial del cliente
-```
+### 5. Plantilla de giro
+- `src/components/landing/GiroTemplate.tsx` parametrizada: hero específico, 3 dolores, beneficios mapeados, prueba social, FAQ corto, CTA WhatsApp.
+- 7 archivos delgados en `src/pages/landing/giros/` que solo pasan props.
 
-Diseño **Rutapp brand**: blanco, azul `#0061e8`, naranja `#ff7a00`, negro. Layout estilo e-commerce premium: header sticky con buscador grande, categorías horizontales, grid 4 col desktop / 2 col móvil, hover cards con sombra, badges de descuento naranjas, CTA azules, footer con WhatsApp.
+### 6. Página /precios
+Extrae la sección de precios actual, agrega comparativa y FAQ de pricing.
 
-### 4. Admin (panel existente)
+### 7. Página /giros índice
+Grid con los 7 giros + CTA.
 
-Nueva sección **Configuración → Tienda en línea**:
-- Toggle activar/desactivar.
-- Editar slug, logo, banner, mensaje, WhatsApp.
-- Lista de precios default para visitantes.
-- Vista previa con link copiable `rutapp.mx/tienda/{slug}`.
-- Lista de **Clientes registrados en tienda** (gestionar accesos).
-- Los pedidos entran a `/ventas` filtrables por `origen = tienda_web` con badge "🌐 Tienda".
+## Detalles técnicos
+- Stack ya es React + Vite + Tailwind ✓
+- Imágenes existentes ya son `.jpg/.webp` con lazy loading.
+- Paleta: respeto la marca actual (azul Rutapp + naranja), no cambio a #1a1a2e porque viola la memoria de marca del proyecto. Si el usuario lo quiere oscuro a fuerza, lo aplico después.
+- Sin formularios: CTAs van a WhatsApp y a `/auth` (alta existente = "1 paso").
+- Sitemap incluye home actual `/`, `/landing-nueva` y todas las páginas marketing.
 
-### 5. Multi-tenant + seguridad
+## Fuera de alcance
+- No toco la app (auth, dashboard, módulos).
+- No reemplazo la home `/` actual sin confirmación; la nueva sigue en `/landing-nueva/*`.
+- Número de WhatsApp queda como placeholder hasta que lo pases.
 
-- RLS estricto: `tienda_clientes` solo ve su propio `cliente_id`; edge function valida `cliente_id ∈ empresa_id`.
-- Stock se valida al checkout (no se aparta, se respeta `vender_sin_stock`).
-- Pedidos NO descuentan inventario (entran como pedido borrador, se procesan manualmente).
-
-### 6. Detalles técnicos
-
-- Auth de cliente final: tabla propia `tienda_clientes` con `bcrypt` vía edge function (NO usar `auth.users` para no mezclar con usuarios admin del sistema).
-- Token: JWT firmado con secret, almacenado en localStorage del navegador del cliente.
-- Imágenes: usar `imagen_url` existente de productos.
-- Carrito: localStorage por slug.
-- Sin pagos online en v1 → confirmación de pedido + notificación al admin por WhatsApp/email.
-
-### Entrega por fases
-
-**Fase 1** (esta entrega): Migración + edge functions + tienda pública funcionando con login, carrito y checkout → pedido en sistema.
-**Fase 2**: Panel admin de configuración + gestión de clientes tienda.
-**Fase 3** (futuro, si pides): pagos online, cupones, seguimiento de pedido, reseñas.
-
----
-
-¿Avanzo con **Fase 1 completa** en este turno (base de datos + edge functions + frontend público con diseño Rutapp brand)?
+## Confirmaciones rápidas
+1. ¿Mantengo paleta azul/naranja Rutapp o forzo el `#1a1a2e` oscuro del brief?
+2. Número de WhatsApp real (si no, dejo `52XXXXXXXXXX`).
+3. ¿Confirmas que las páginas vivan bajo `/landing-nueva/*` por ahora?
