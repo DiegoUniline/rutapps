@@ -40,6 +40,7 @@ import {
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
 
 import imgPapel from "@/assets/landing/papel-vendedor.jpg";
+import imgTicketCalle from "@/assets/landing/vendedor-ticket-calle.jpg";
 import imgHeroReal from "@/assets/landing/hero-vendedor-real.jpg";
 import imgVentas from "@/assets/landing/mod-ventas.jpg";
 import imgCobranza from "@/assets/landing/mod-cobranza.jpg";
@@ -277,7 +278,7 @@ export default function LandingV2Page() {
         <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-white text-center">
           {[
             { end: 1200, suffix: "+", label: "Empresas activas" },
-            { end: 4.8, decimals: 1, suffix: "M", prefix: "$", label: "Vendidos al mes" },
+            { end: 4, suffix: "", label: "Países" },
             { end: 99.9, decimals: 1, suffix: "%", label: "Uptime ruta offline" },
             { end: 32, suffix: "%", label: "Menos faltantes con IA" },
           ].map((s) => (
@@ -292,10 +293,11 @@ export default function LandingV2Page() {
               >
                 <Counter
                   end={s.end}
-                  prefix={s.prefix}
+                  prefix={(s as any).prefix}
                   suffix={s.suffix}
                   decimals={s.decimals ?? 0}
                 />
+
               </div>
               <div className="mt-2 text-[12.5px] uppercase tracking-wider text-white/70">
                 {s.label}
@@ -323,52 +325,103 @@ export default function LandingV2Page() {
 
 
 
+      {/* VIDEO — Rutapp en 5 segundos */}
+      <section className="relative overflow-hidden" style={{ background: "#fff" }}>
+        <div className="mx-auto max-w-5xl px-4 py-16 md:py-20">
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-8">
+            <SectionLabel><Sparkles className="h-3 w-3" /> Mira Rutapp en acción</SectionLabel>
+            <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+              Así trabajan los vendedores con Rutapp.
+            </h2>
+            <p className="mt-3 text-[15px] md:text-[16px]" style={{ color: BRAND.ink2 }}>
+              Toman el pedido, cobran e imprimen el ticket en la calle. Sin papel, sin recaptura.
+            </p>
+          </motion.div>
+          <motion.div {...fadeUp} className="relative rounded-2xl overflow-hidden border shadow-2xl" style={{ borderColor: BRAND.line }}>
+            <video
+              src="/__l5e/assets-v1/c1379738-d741-44b3-8620-5ee88e4ca64a/rutapp-demo.mp4"
+              poster={imgTicketCalle}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-auto block"
+            />
+            <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.primary }}>
+              ▶ Real, no maqueta
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* 2. ADIÓS AL PAPEL */}
       <section className="border-y" style={{ background: BRAND.surface, borderColor: BRAND.line }}>
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-20 grid md:grid-cols-2 gap-12 items-center">
-          <motion.div {...fadeUp} className="relative">
-            <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-              <img src={imgPapel} alt="Vendedor anotando pedidos en papel" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
-            </div>
-            <div className="absolute -top-3 -left-3 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white shadow-lg" style={{ background: "#dc2626" }}>
-              😩 Así NO
-            </div>
-          </motion.div>
-          <motion.div {...fadeUp}>
-            <SectionLabel>Lo que te está costando dinero hoy</SectionLabel>
-            <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
-              Cada día sin control es dinero que se te escapa.
+        <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <motion.div {...fadeUp} className="text-center max-w-3xl mx-auto">
+            <SectionLabel><Receipt className="h-3 w-3" /> Adiós al papel</SectionLabel>
+            <h2 className="mt-3 text-[30px] md:text-[44px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+              Deja las notas de papel.{" "}
+              <span className="relative inline-block">
+                Mejor imprime tickets.
+                <span className="absolute left-0 right-0 -bottom-1 h-1.5 rounded-full" style={{ background: `linear-gradient(90deg, ${BRAND.primary}, ${BRAND.accent})` }} />
+              </span>
             </h2>
             <p className="mt-4 text-[15px] md:text-[17px]" style={{ color: BRAND.ink2 }}>
-              El vendedor en zona sin señal, mercancía que desaparece sin explicación, precios que nadie respeta, y al final del mes nadie sabe cuánto se ganó de verdad. ¿Te suena?
+              Tu vendedor imprime un ticket profesional directo desde el celular, en plena calle, con impresora térmica Bluetooth. El cliente se va con su comprobante, tú con la venta registrada.
             </p>
-            <ul className="mt-6 grid sm:grid-cols-2 gap-3">
-              {[
-                ["Pedidos en papel", "Se pierden, se mojan, se traspapelean.", FileText],
-                ["Ventas que se caen sin señal", "El sistema de siempre no sirve fuera de oficina.", WifiOff],
-                ["Recaptura en oficina", "Doble trabajo, doble error, doble costo.", RefreshCw],
-                ["Robo hormiga", "Producto que sale del almacén y nadie sabe a dónde fue.", ShieldAlert],
-                ["No conoces tu utilidad real", "Vendes mucho pero al final del mes no queda nada.", PiggyBank],
-                ["Descuentos sin control", "Cada vendedor regala precios y nadie revisa.", Percent],
-                ["Sobrecompras y faltantes", "Compras lo que no se vende y te falta lo que sí.", TrendingDown],
-                ["Cobranza olvidada", "Clientes que deben hace meses y nadie los persigue.", Clock],
-                ["Inventario que no cuadra", "El sistema dice una cosa, el almacén otra.", ClipboardX],
-                ["Tickets sin folio ni control", "No hay forma de auditar nada después.", Receipt],
-              ].map(([t, d, Icon]: any) => (
-                <li key={t} className="flex gap-3 rounded-xl bg-white p-4 border" style={{ borderColor: BRAND.line }}>
-                  <Icon className="h-5 w-5 shrink-0 mt-0.5" style={{ color: BRAND.accent }} />
-                  <div>
-                    <div className="text-[14px] font-semibold">{t}</div>
-                    <div className="text-[13px]" style={{ color: BRAND.ink2 }}>{d}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
           </motion.div>
 
+          <div className="mt-12 grid lg:grid-cols-2 gap-10 items-center">
+            <motion.div {...fadeUp} className="relative">
+              <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
+                <img src={imgTicketCalle} alt="Vendedor imprimiendo ticket en la calle con impresora térmica Bluetooth conectada a Rutapp" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={960} />
+              </div>
+              <div className="absolute -top-3 -left-3 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white shadow-lg" style={{ background: BRAND.primary }}>
+                ✓ Así SÍ
+              </div>
+              <div className="absolute -bottom-3 -right-3 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+                🖨️ Ticket en 3 segundos
+              </div>
+            </motion.div>
+
+            <motion.div {...fadeUp}>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white mb-4" style={{ background: "#dc2626" }}>
+                😩 Lo que te está costando dinero
+              </div>
+              <h3 className="text-[22px] md:text-[28px] font-bold tracking-tight" style={{ letterSpacing: "-0.02em" }}>
+                Cada día sin control es dinero que se te escapa.
+              </h3>
+              <p className="mt-3 text-[14.5px] md:text-[16px]" style={{ color: BRAND.ink2 }}>
+                Vendedores sin señal, mercancía que desaparece, precios que nadie respeta. Al cierre, nadie sabe cuánto se ganó de verdad.
+              </p>
+
+              <ul className="mt-6 grid sm:grid-cols-2 gap-2.5">
+                {[
+                  ["Pedidos en papel", "Se pierden, se mojan, se traspapelean.", FileText],
+                  ["Ventas sin señal", "El sistema clásico no sirve en calle.", WifiOff],
+                  ["Recaptura en oficina", "Doble trabajo, doble error.", RefreshCw],
+                  ["Robo hormiga", "Producto que sale y nadie sabe a dónde.", ShieldAlert],
+                  ["Utilidad real desconocida", "Vendes mucho y no queda nada.", PiggyBank],
+                  ["Descuentos sin control", "Cada vendedor regala precio.", Percent],
+                  ["Sobrecompras y faltantes", "Compras lo que no se vende.", TrendingDown],
+                  ["Cobranza olvidada", "Clientes que deben hace meses.", Clock],
+                  ["Inventario que no cuadra", "Sistema dice una cosa, almacén otra.", ClipboardX],
+                  ["Tickets sin folio", "No hay forma de auditar nada.", Receipt],
+                ].map(([t, d, Icon]: any) => (
+                  <li key={t} className="flex gap-2.5 rounded-lg bg-white p-3 border" style={{ borderColor: BRAND.line }}>
+                    <Icon className="h-4.5 w-4.5 shrink-0 mt-0.5" style={{ color: BRAND.accent }} />
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold leading-tight">{t}</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: BRAND.ink2 }}>{d}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </div>
         </div>
       </section>
+
 
       {/* 3. LO QUE NADIE TIENE */}
       <section id="unicas" className="mx-auto max-w-6xl px-4 py-16 md:py-24">
