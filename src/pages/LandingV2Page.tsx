@@ -57,6 +57,9 @@ import {
   TiendaScreen, ComprasIAScreen, SupervisorScreen,
 } from "@/components/landing/SystemMocks";
 import { Counter } from "@/components/landing/Counter";
+import { WhatsAppAgentSection } from "@/components/landing/WhatsAppAgentSection";
+import { Parallax, Float } from "@/components/landing/Parallax";
+import { Reveal } from "@/components/landing/Reveal";
 
 const BRAND = {
   primary: "#0060e8",
