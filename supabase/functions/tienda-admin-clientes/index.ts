@@ -22,31 +22,63 @@ Deno.serve(async (req) => {
     if (uErr || !userData?.user) return json({ error: "Sesión inválida" }, 401);
     const userId = userData.user.id;
 
+    const body = await req.json().catch(() => ({}));
+    const action = body.action as string;
+
     const { data: profile } = await admin
       .from("profiles")
       .select("empresa_id, super_admin_override_empresa_id")
       .eq("id", userId)
       .maybeSingle();
-    const empresaId = (profile as any)?.super_admin_override_empresa_id ?? profile?.empresa_id;
+
+    let empresaId: string | null =
+      (profile as any)?.super_admin_override_empresa_id ?? profile?.empresa_id ?? null;
+
+    if (!empresaId) {
+      const { data: sa } = await admin
+        .from("super_admins")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (sa && body.empresa_id) empresaId = String(body.empresa_id);
+    }
+
     if (!empresaId) return json({ error: "Sin empresa" }, 403);
-
-
-    const body = await req.json();
-    const action = body.action as string;
 
     if (action === "list") {
       const search = (body.search ?? "").toString().trim();
-      let q = admin
-        .from("tienda_clientes")
-        .select("id, cliente_id, email, telefono, verificado, ultimo_login, created_at, clientes(nombre)")
+      // Show ALL clientes of the empresa, with their tienda access if any
+      let cq = admin
+        .from("clientes")
+        .select("id, nombre, email, telefono")
         .eq("empresa_id", empresaId)
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (search) q = q.ilike("email", `%${search}%`);
-      const { data, error } = await q;
-      if (error) return json({ error: error.message }, 500);
-      return json({ items: data ?? [] });
+        .order("nombre")
+        .limit(1000);
+      if (search) cq = cq.or(`nombre.ilike.%${search}%,email.ilike.%${search}%`);
+      const { data: clientes, error: cErr } = await cq;
+      if (cErr) return json({ error: cErr.message }, 500);
+
+      const ids = (clientes ?? []).map((c: any) => c.id);
+      const { data: accesos } = ids.length
+        ? await admin
+            .from("tienda_clientes")
+            .select("id, cliente_id, email, telefono, verificado, ultimo_login, created_at")
+            .eq("empresa_id", empresaId)
+            .in("cliente_id", ids)
+        : { data: [] as any[] };
+      const byCli: Record<string, any> = {};
+      (accesos ?? []).forEach((a: any) => { byCli[a.cliente_id] = a; });
+
+      const items = (clientes ?? []).map((c: any) => ({
+        cliente_id: c.id,
+        cliente_nombre: c.nombre,
+        cliente_email: c.email,
+        cliente_telefono: c.telefono,
+        acceso: byCli[c.id] ?? null,
+      }));
+      return json({ items });
     }
+
 
     if (action === "reset_password") {
       const { tienda_cliente_id, password_nuevo } = body;
