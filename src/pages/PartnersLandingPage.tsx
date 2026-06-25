@@ -15,6 +15,7 @@ import heroImg from '@/assets/partners-hero.jpg';
 import dashboardImg from '@/assets/partners-dashboard.jpg';
 import couponImg from '@/assets/partners-coupon.jpg';
 import { Seo } from '@/components/seo/Seo';
+import { MarketingShell } from '@/components/marketing/MarketingShell';
 
 const WHATSAPP_URL = 'https://wa.me/5213171035768?text=' + encodeURIComponent('Hola, quiero ser partner de Rutapp');
 
@@ -93,28 +94,14 @@ export default function PartnersLandingPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] text-gray-900 bg-white">
+    <MarketingShell>
+      <div className="text-gray-900 bg-white -mt-16">
       <Seo
         title="Programa de Partners · Rutapp"
         description="Únete al programa de partners de Rutapp: comisiones recurrentes, cupones personalizados y dashboard de ventas para socios e integradores."
         path="/partners"
       />
-      {/* Nav */}
-      <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-white/80 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-8 w-8 rounded-lg" />
-            <span className="text-xl font-black tracking-tight" style={{ color: PRIMARY }}>Rutapp</span>
-            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full text-white font-bold" style={{ background: ACCENT }}>PARTNERS</span>
-          </Link>
-          <div className="flex items-center gap-2 md:gap-3">
-            <Link to="/" className="hidden sm:inline text-sm text-gray-600 hover:text-gray-900">Inicio</Link>
-            <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900">Iniciar sesión</Link>
-            <a href="#aplicar" className="px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-md hover:shadow-lg transition"
-               style={{ background: PRIMARY }}>Unirme</a>
-          </div>
-        </div>
-      </nav>
+
 
       {/* Hero con banner AI */}
       <section className="relative pt-24 pb-20 px-6 overflow-hidden">
@@ -536,16 +523,13 @@ export default function PartnersLandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-100 py-8 px-6 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} Rutapp · <Link to="/" className="hover:underline">Inicio</Link> · <Link to="/terminos" className="hover:underline">Términos</Link>
-      </footer>
-
       {/* Floating WhatsApp */}
       <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"
          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xl hover:scale-110 transition"
          aria-label="WhatsApp">
         <MessageCircle className="h-7 w-7" />
       </a>
-    </div>
+      </div>
+    </MarketingShell>
   );
 }
