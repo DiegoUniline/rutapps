@@ -29,6 +29,13 @@ import {
   Award,
   Zap,
   Eye,
+  ShieldAlert,
+  PiggyBank,
+  Percent,
+  Clock,
+  ClipboardX,
+  TrendingDown,
+  Receipt,
 } from "lucide-react";
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
 
@@ -307,29 +314,37 @@ export default function LandingV2Page() {
             </div>
           </motion.div>
           <motion.div {...fadeUp}>
-            <SectionLabel>Adiós al papel</SectionLabel>
+            <SectionLabel>Lo que te está costando dinero hoy</SectionLabel>
             <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
-              Cada pedido en papel es dinero que se cae.
+              Cada día sin control es dinero que se te escapa.
             </h2>
             <p className="mt-4 text-[15px] md:text-[17px]" style={{ color: BRAND.ink2 }}>
-              El vendedor anda en zona sin señal, anota pedidos a mano, llega a la oficina a recapturar todo, alguien comete un error y el cliente no recibe lo que pidió. La venta se pierde. Otra vez.
+              El vendedor en zona sin señal, mercancía que desaparece sin explicación, precios que nadie respeta, y al final del mes nadie sabe cuánto se ganó de verdad. ¿Te suena?
             </p>
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-6 grid sm:grid-cols-2 gap-3">
               {[
                 ["Pedidos en papel", "Se pierden, se mojan, se traspapelean.", FileText],
-                ["Ventas que se caen", "Sin señal, el sistema de siempre no sirve.", WifiOff],
-                ["Recaptura en oficina", "Doble trabajo, doble error.", RefreshCw],
+                ["Ventas que se caen sin señal", "El sistema de siempre no sirve fuera de oficina.", WifiOff],
+                ["Recaptura en oficina", "Doble trabajo, doble error, doble costo.", RefreshCw],
+                ["Robo hormiga", "Producto que sale del almacén y nadie sabe a dónde fue.", ShieldAlert],
+                ["No conoces tu utilidad real", "Vendes mucho pero al final del mes no queda nada.", PiggyBank],
+                ["Descuentos sin control", "Cada vendedor regala precios y nadie revisa.", Percent],
+                ["Sobrecompras y faltantes", "Compras lo que no se vende y te falta lo que sí.", TrendingDown],
+                ["Cobranza olvidada", "Clientes que deben hace meses y nadie los persigue.", Clock],
+                ["Inventario que no cuadra", "El sistema dice una cosa, el almacén otra.", ClipboardX],
+                ["Tickets sin folio ni control", "No hay forma de auditar nada después.", Receipt],
               ].map(([t, d, Icon]: any) => (
                 <li key={t} className="flex gap-3 rounded-xl bg-white p-4 border" style={{ borderColor: BRAND.line }}>
                   <Icon className="h-5 w-5 shrink-0 mt-0.5" style={{ color: BRAND.accent }} />
                   <div>
-                    <div className="text-[14.5px] font-semibold">{t}</div>
-                    <div className="text-[13.5px]" style={{ color: BRAND.ink2 }}>{d}</div>
+                    <div className="text-[14px] font-semibold">{t}</div>
+                    <div className="text-[13px]" style={{ color: BRAND.ink2 }}>{d}</div>
                   </div>
                 </li>
               ))}
             </ul>
           </motion.div>
+
         </div>
       </section>
 
