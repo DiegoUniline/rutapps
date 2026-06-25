@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Store, ExternalLink, Copy, Check } from "lucide-react";
+import { Loader2, Store, ExternalLink, Copy, Check, Upload, ImageIcon } from "lucide-react";
+import { compressImage } from "@/lib/imageCompressor";
 
 interface TiendaConfig {
   id?: string;
@@ -56,10 +57,13 @@ export default function TiendaConfigPage() {
   const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
   const [cfg, setCfg] = useState<TiendaConfig | null>(null);
+  const [empresa, setEmpresa] = useState<{ nombre: string; logo_url: string | null } | null>(null);
   const [listas, setListas] = useState<ListaPrecio[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -68,15 +72,17 @@ export default function TiendaConfigPage() {
       const [{ data: existing }, { data: lp }, { data: emp }] = await Promise.all([
         supabase.from("tienda_config").select("*").eq("empresa_id", empresaId).maybeSingle(),
         supabase.from("lista_precios").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
-        supabase.from("empresas").select("nombre").eq("id", empresaId).maybeSingle(),
+        supabase.from("empresas").select("nombre, logo_url").eq("id", empresaId).maybeSingle(),
       ]);
       setListas(lp ?? []);
+      setEmpresa(emp ?? null);
+      const autoSlug = slugify(emp?.nombre ?? "mi-tienda");
       if (existing) {
-        setCfg({ ...(existing as any), beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
+        setCfg({ ...(existing as any), slug: (existing as any).slug || autoSlug, beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
       } else {
         setCfg({
           empresa_id: empresaId,
-          slug: slugify(emp?.nombre ?? "mi-tienda"),
+          slug: autoSlug,
           activa: false,
           nombre_tienda: emp?.nombre ?? "Mi Tienda",
           banner_url: null,
@@ -93,6 +99,26 @@ export default function TiendaConfigPage() {
       setLoading(false);
     })();
   }, [empresaId]);
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresaId || !cfg) return;
+    setUploadingBanner(true);
+    try {
+      const compressed = await compressImage(file, { maxWidth: 1920, maxHeight: 600, quality: 0.82, outputType: "image/webp" });
+      const path = `${empresaId}/tienda/banner.webp`;
+      const { error: upErr } = await supabase.storage.from("empresa-assets").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(path);
+      setCfg({ ...cfg, banner_url: urlData.publicUrl + "?t=" + Date.now() });
+      toast.success("Banner cargado");
+    } catch (err: any) {
+      toast.error("Error al subir banner: " + err.message);
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+    }
+  };
 
   const save = async () => {
     if (!cfg) return;
@@ -164,13 +190,14 @@ export default function TiendaConfigPage() {
             </span>
           </label>
         </Field>
-        <Field label="Slug de la URL *">
+        <Field label="URL de la tienda (no editable)">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">rutapp.mx/tienda/</span>
-            <input className="input flex-1" value={cfg.slug} onChange={(e) => setCfg({ ...cfg, slug: e.target.value })} onBlur={(e) => setCfg({ ...cfg, slug: slugify(e.target.value) })} />
+            <input className="input flex-1 bg-gray-100 cursor-not-allowed" value={cfg.slug} readOnly />
           </div>
+          <div className="text-xs text-gray-500 mt-1">Se genera automáticamente con el nombre de tu empresa. Para cambiarlo, modifica el nombre en Configuración → Empresa.</div>
         </Field>
-        <Field label="Nombre de la tienda *">
+        <Field label="Nombre visible de la tienda *">
           <input className="input" value={cfg.nombre_tienda} onChange={(e) => setCfg({ ...cfg, nombre_tienda: e.target.value })} />
         </Field>
         <Field label="Mensaje de bienvenida">
@@ -178,12 +205,38 @@ export default function TiendaConfigPage() {
         </Field>
       </Section>
 
-      <Section title="Marca">
-        <Field label="Logo (URL)">
-          <input className="input" value={cfg.logo_url ?? ""} onChange={(e) => setCfg({ ...cfg, logo_url: e.target.value || null })} placeholder="https://…" />
+      <Section title="Marca e imágenes">
+        <Field label="Logo">
+          <div className="flex items-center gap-3">
+            {empresa?.logo_url ? (
+              <img src={empresa.logo_url} alt="Logo" className="h-16 w-16 rounded border object-contain bg-white" />
+            ) : (
+              <div className="h-16 w-16 rounded border bg-gray-50 flex items-center justify-center text-gray-400">
+                <ImageIcon className="h-6 w-6" />
+              </div>
+            )}
+            <div className="text-sm text-gray-600">
+              Se usa el logo de tu empresa. Para cambiarlo ve a <strong>Configuración → Empresa</strong>.
+            </div>
+          </div>
         </Field>
-        <Field label="Banner / portada (URL)">
-          <input className="input" value={cfg.banner_url ?? ""} onChange={(e) => setCfg({ ...cfg, banner_url: e.target.value || null })} placeholder="https://…" />
+        <Field label="Banner / portada (1920×600 recomendado)">
+          <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
+          {cfg.banner_url && (
+            <div className="mb-2 rounded-lg overflow-hidden border bg-gray-50" style={{ aspectRatio: "1920 / 600" }}>
+              <img src={cfg.banner_url} alt="Banner" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner} className="px-3 py-2 bg-white border rounded hover:bg-gray-50 text-sm flex items-center gap-2 disabled:opacity-50">
+              {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {cfg.banner_url ? "Cambiar banner" : "Subir banner"}
+            </button>
+            {cfg.banner_url && (
+              <button type="button" onClick={() => setCfg({ ...cfg, banner_url: null })} className="px-3 py-2 bg-white border rounded text-sm text-red-600 hover:bg-red-50">Quitar</button>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Se convierte automáticamente a WebP optimizado. Tamaño ideal: 1920×600 px.</div>
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Color primario">

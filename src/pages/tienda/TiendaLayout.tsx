@@ -1,14 +1,66 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart, Search, User, LogOut, Package } from "lucide-react";
 import { useTienda } from "@/tienda/TiendaContext";
 import "@/tienda/tienda.css";
+
+function useTiendaPWA(t: ReturnType<typeof useTienda>) {
+  useEffect(() => {
+    if (!t.config || !t.slug) return;
+    const icon = t.config.logo_url || t.empresa?.logo_url || "/favicon.ico";
+    const color = t.config.color_primario || "#0061e8";
+    const manifest = {
+      name: t.config.nombre_tienda,
+      short_name: t.config.nombre_tienda.slice(0, 12),
+      description: `Tienda en línea de ${t.config.nombre_tienda}`,
+      start_url: `/tienda/${t.slug}`,
+      scope: `/tienda/${t.slug}`,
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: color,
+      icons: [
+        { src: icon, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: icon, sizes: "512x512", type: "image/png", purpose: "any" },
+      ],
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const url = URL.createObjectURL(blob);
+    const prev = document.querySelector('link[rel="manifest"]')?.cloneNode(true) as HTMLLinkElement | null;
+    document.querySelectorAll('link[rel="manifest"]').forEach((n) => n.remove());
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = url;
+    link.setAttribute("data-tienda", "1");
+    document.head.appendChild(link);
+
+    const theme = document.querySelector('meta[name="theme-color"]') || document.createElement("meta");
+    theme.setAttribute("name", "theme-color");
+    theme.setAttribute("content", color);
+    if (!theme.parentNode) document.head.appendChild(theme);
+
+    const apple = document.createElement("link");
+    apple.rel = "apple-touch-icon";
+    apple.href = icon;
+    apple.setAttribute("data-tienda", "1");
+    document.head.appendChild(apple);
+
+    document.title = t.config.nombre_tienda;
+
+    return () => {
+      URL.revokeObjectURL(url);
+      document.querySelectorAll('link[data-tienda="1"]').forEach((n) => n.remove());
+      if (prev) document.head.appendChild(prev);
+    };
+  }, [t.config, t.slug, t.empresa?.logo_url]);
+}
 
 export default function TiendaLayout({ children }: { children: ReactNode }) {
   const t = useTienda();
   const nav = useNavigate();
   const loc = useLocation();
   const base = `/tienda/${t.slug}`;
+  useTiendaPWA(t);
+
 
   if (t.loadingConfig) return <div className="tienda-root"><div className="tienda-loading">Cargando tienda…</div></div>;
   if (t.configError || !t.config) return (
