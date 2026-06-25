@@ -273,10 +273,10 @@ export default function LandingPage() {
             <span className="text-[15px] font-bold tracking-tight max-[340px]:hidden">Rutapp</span>
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
-            <a href="#modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</a>
-            <a href="#movil" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Móvil</a>
+            <Link to="/modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</Link>
+            <Link to="/precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</Link>
+            <Link to="/giros" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Giros</Link>
             <a href="#ia" className="inline-flex items-center gap-1 transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
-            <a href="#precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</a>
             <Link to="/partners" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Partners</Link>
           </div>
           <div className="hidden md:flex items-center gap-2">
