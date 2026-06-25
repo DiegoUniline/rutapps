@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, Children } from 'react';
 import { Search, ChevronDown, Layers, X, Check, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 
 export interface FilterOption {
   key: string;
