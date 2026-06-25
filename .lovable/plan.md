@@ -1,106 +1,72 @@
-# Plan offline 100% — 6 puntos por fases
+## Tienda en línea por empresa — `rutapp.mx/tienda/:slug`
 
-Voy a implementar uno a la vez, validando cada uno antes de pasar al siguiente. Te aviso al terminar cada fase y subo la versión (`2026.06.25.13` → `.18`).
+Tienda pública por empresa donde **el cliente se loguea con su correo/teléfono**, ve los productos con **su Lista de Precios asignada**, arma carrito y envía el pedido. Entra al sistema como **Pedido (venta en estado `borrador`/`pedido`, no entregado)**, igual que un pedido normal.
 
----
+### 1. Base de datos (migración)
 
-## Fase 1 — Pantalla "Pendientes de sincronizar" (punto 2)
+**Tabla `tienda_config`** (1 por empresa):
+- `empresa_id` (unique), `slug` (unique, ej. `botanas-don-nacho`), `activa`, `nombre_tienda`, `banner_url`, `logo_url`, `color_primario`, `whatsapp_pedidos`, `lista_precios_default_id` (para visitantes sin login), `permitir_invitados` (bool), `mensaje_bienvenida`.
 
-**Qué hace:** muestra al usuario qué operaciones tiene encoladas y permite actuar.
+**Tabla `tienda_clientes`** (login del cliente final):
+- `id`, `empresa_id`, `cliente_id` (FK a `clientes`), `email`, `password_hash` *(o auth.users link)*, `telefono`, `verificado`, `ultimo_login`.
+- El cliente al loguearse ve la `lista_precios_id` asignada en su registro `clientes`.
 
-**Entregables:**
-- Nueva ruta `/ruta/pendientes` (móvil) y acceso desde menú móvil.
-- Tabla con: tipo (Venta / Cobro / Entrega / Cliente / Visita), folio o referencia, fecha de creación, estado (pendiente / reintentando / **fallida**), # de intentos, último error.
-- Acciones por fila: **Reintentar ahora**, **Descartar**.
-- Acción global: **Reintentar todo**.
-- Badge con contador en el header móvil cuando hay ≥1 pendiente o falla.
-- Hook `usePendingQueue()` que lee de `syncQueue` en IndexedDB y se refresca cada 3s.
+**Tabla `tienda_pedidos`** (staging antes de convertirse a venta):
+- Se crea como `venta` con `estado_logistica = 'pedido'`, `origen = 'tienda_web'`, `vendedor_id = null` (o usuario sistema), `cliente_id` del logueado.
+- Nuevo enum value en `ventas.origen`: `'tienda_web'`.
 
-**Cambios técnicos:**
-- `src/lib/syncQueue.ts`: agregar campos `status: 'pending'|'retrying'|'failed'`, `attempts`, `lastError`, `lastAttemptAt`. Backoff exponencial (1s, 5s, 30s, 5m) y marcar `failed` a los 5 intentos.
-- `src/pages/PendientesSincronizarPage.tsx` (nueva).
-- `src/components/PendingBadge.tsx` para el header.
+### 2. Backend (Edge Functions)
 
----
+Reutilizar/extender `public-catalog`:
+- `tienda-resolve` → recibe `slug`, devuelve config + lista default.
+- `tienda-login` → email/pass o magic link → token JWT scoped a `empresa_id + cliente_id`.
+- `tienda-catalog` → con token devuelve productos con precios resueltos de **su lista asignada** (usa `priceResolver` existente).
+- `tienda-checkout` → recibe carrito + token → crea `venta` en estado `pedido` + `venta_lineas` + notificación interna al admin.
 
-## Fase 2 — Indicador de frescura por tabla (punto 7)
+### 3. Frontend público (rutas nuevas)
 
-**Qué hace:** el usuario ve "Stock actualizado hace 2h", "Clientes actualizados hace 5m", etc.
+```
+/tienda/:slug                  → Home (hero, banners, categorías destacadas, productos top)
+/tienda/:slug/productos        → Grid con filtros (categoría, marca, precio, búsqueda)
+/tienda/:slug/producto/:id     → Detalle con galería, stock, "agregar al carrito"
+/tienda/:slug/carrito          → Carrito + resumen
+/tienda/:slug/checkout         → Datos de envío + confirmar pedido
+/tienda/:slug/login            → Login / registro cliente
+/tienda/:slug/mis-pedidos      → Historial del cliente
+```
 
-**Entregables:**
-- Tabla `sync_meta` en IndexedDB (`{ table, lastSyncAt, rowCount }`).
-- `offlineSync.ts` escribe ahí al terminar cada tabla.
-- Componente `<FreshnessIndicator table="stock_almacen" />` reutilizable (texto + color: verde <1h, amarillo <6h, rojo >6h).
-- Sección en `SyncCloudButton` que muestra el detalle por tabla expandible.
-- En cabecera de Stock, Cargas, Clientes y Productos: chip de frescura visible.
+Diseño **Rutapp brand**: blanco, azul `#0061e8`, naranja `#ff7a00`, negro. Layout estilo e-commerce premium: header sticky con buscador grande, categorías horizontales, grid 4 col desktop / 2 col móvil, hover cards con sombra, badges de descuento naranjas, CTA azules, footer con WhatsApp.
 
----
+### 4. Admin (panel existente)
 
-## Fase 3 — Promociones offline al 100% (punto 5)
+Nueva sección **Configuración → Tienda en línea**:
+- Toggle activar/desactivar.
+- Editar slug, logo, banner, mensaje, WhatsApp.
+- Lista de precios default para visitantes.
+- Vista previa con link copiable `rutapp.mx/tienda/{slug}`.
+- Lista de **Clientes registrados en tienda** (gestionar accesos).
+- Los pedidos entran a `/ventas` filtrables por `origen = tienda_web` con badge "🌐 Tienda".
 
-**Qué hace:** el motor de promociones funciona idéntico con o sin internet.
+### 5. Multi-tenant + seguridad
 
-**Entregables:**
-- Agregar `promociones` y `promocion_aplicada` a `MOBILE_QUICK_SYNC_TABLES` y `NO_DELTA_TABLES`.
-- Hook `usePromocionesOffline()` con fallback IndexedDB.
-- Refactor de `promotionEngine.ts` para aceptar promociones desde cache.
-- Test manual documentado: aplicar 3 promos típicas online vs offline y comparar totales.
+- RLS estricto: `tienda_clientes` solo ve su propio `cliente_id`; edge function valida `cliente_id ∈ empresa_id`.
+- Stock se valida al checkout (no se aparta, se respeta `vender_sin_stock`).
+- Pedidos NO descuentan inventario (entran como pedido borrador, se procesan manualmente).
 
----
+### 6. Detalles técnicos
 
-## Fase 4 — Ticket térmico 100% desde IndexedDB (punto 6)
+- Auth de cliente final: tabla propia `tienda_clientes` con `bcrypt` vía edge function (NO usar `auth.users` para no mezclar con usuarios admin del sistema).
+- Token: JWT firmado con secret, almacenado en localStorage del navegador del cliente.
+- Imágenes: usar `imagen_url` existente de productos.
+- Carrito: localStorage por slug.
+- Sin pagos online en v1 → confirmación de pedido + notificación al admin por WhatsApp/email.
 
-**Qué hace:** el ticket impreso es idéntico online/offline.
+### Entrega por fases
 
-**Entregables:**
-- Auditar `ThermalTicket` y `useTicketData`: identificar campos que hoy se piden al servidor (saldo anterior, saldo nuevo, datos de empresa, datos de cliente extendidos).
-- Calcular `saldo_anterior` y `saldo_nuevo` desde IndexedDB usando cobros y ventas locales del cliente.
-- Cachear `empresa` completa (logo, RFC, dirección) en IndexedDB.
-- Fallback explícito en cada `useQuery` del ticket con `networkMode: 'always'` + try/catch.
-- Marcar visualmente en el ticket "⚠ Datos offline — saldo puede actualizarse al sincronizar" cuando se imprime sin conexión.
-
----
-
-## Fase 5 — Crear clientes/productos offline robusto (punto 4)
-
-**Qué hace:** crear cliente offline con foto + GPS + tarifa sobrevive sin conexión.
-
-**Entregables:**
-- `src/lib/offlineClientes.ts`:
-  - Foto: comprimir a base64 con Canvas y guardar en IndexedDB; al subir, convertir a Blob y subir a Storage.
-  - GPS: usar última posición de `vendedor_ubicaciones` cacheada si `getCurrentPosition` falla.
-  - Tarifa: tomar tarifa por defecto desde IndexedDB.
-- Encolar en `syncQueue` con dependencias: primero `clientes.insert`, luego `storage.upload` con el ID local mapeado al real.
-- Mismo patrón para productos con foto.
-- Test: crear cliente offline → reconectar → validar que aparezca con foto, GPS y tarifa correctos.
+**Fase 1** (esta entrega): Migración + edge functions + tienda pública funcionando con login, carrito y checkout → pedido en sistema.
+**Fase 2**: Panel admin de configuración + gestión de clientes tienda.
+**Fase 3** (futuro, si pides): pagos online, cupones, seguimiento de pedido, reseñas.
 
 ---
 
-## Fase 6 — Purge periódico de IndexedDB (punto 8)
-
-**Qué hace:** mantiene la app ligera borrando históricos viejos.
-
-**Entregables:**
-- `src/lib/offlinePurge.ts` con reglas:
-  - `ventas` y `venta_lineas`: borrar > 6 meses (configurable).
-  - `cobros` y `cobro_aplicaciones`: borrar > 6 meses.
-  - `movimientos_inventario` y `kardex`: borrar > 3 meses.
-  - `visitas`: borrar > 3 meses.
-  - **Nunca** borrar pendientes en `syncQueue`.
-- Ejecutar al arranque si pasaron >7 días desde el último purge.
-- Mostrar en Settings → Offline: "Último purge", "Próximo purge", botón "Limpiar ahora".
-- Logging del espacio liberado.
-
----
-
-## Orden y validación
-
-Ejecuto Fase 1 completa, te muestro, y sigo con la 2, etc. Cada fase es independiente y no rompe la anterior. Versionado:
-- F1: `2026.06.25.13`
-- F2: `2026.06.25.14`
-- F3: `2026.06.25.15`
-- F4: `2026.06.25.16`
-- F5: `2026.06.25.17`
-- F6: `2026.06.25.18`
-
-¿Arranco con la Fase 1?
+¿Avanzo con **Fase 1 completa** en este turno (base de datos + edge functions + frontend público con diseño Rutapp brand)?

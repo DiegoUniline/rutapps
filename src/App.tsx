@@ -234,7 +234,34 @@ function PageLoader() {
 
 const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
 
+// Tienda en línea (público)
+const TiendaHomePage = lazy(() => import("@/pages/tienda/TiendaHomePage"));
+const TiendaProductosPage = lazy(() => import("@/pages/tienda/TiendaProductosPage"));
+const TiendaCarritoPage = lazy(() => import("@/pages/tienda/TiendaCarritoPage"));
+const TiendaLoginPage = lazy(() => import("@/pages/tienda/TiendaLoginPage"));
+const TiendaMisPedidosPage = lazy(() => import("@/pages/tienda/TiendaMisPedidosPage"));
+const TiendaConfigPage = lazy(() => import("@/pages/configuracion/TiendaConfigPage"));
+
+function TiendaPublicRoutes() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/tienda/:slug" element={<TiendaHomePage />} />
+        <Route path="/tienda/:slug/productos" element={<TiendaProductosPage />} />
+        <Route path="/tienda/:slug/carrito" element={<TiendaCarritoPage />} />
+        <Route path="/tienda/:slug/login" element={<TiendaLoginPage />} />
+        <Route path="/tienda/:slug/mis-pedidos" element={<TiendaMisPedidosPage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
 function AppRoutes() {
+  // Tienda en línea pública: siempre disponible sin importar auth/loading
+  const _loc = useLocation();
+  if (_loc.pathname.startsWith("/tienda/")) {
+    return <TiendaPublicRoutes />;
+  }
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
@@ -782,6 +809,7 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/administracion/metas/seguimiento" element={<MetasSeguimientoPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
       <Route path="/configuracion/homologacion" element={<HomologacionCatalogoPage />} />
+      <Route path="/configuracion/tienda" element={<TiendaConfigPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
       {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
