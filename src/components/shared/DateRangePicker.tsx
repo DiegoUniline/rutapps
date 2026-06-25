@@ -126,9 +126,9 @@ export function DateRangePicker({
     <div className={cn('inline-flex items-center gap-1', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-2 font-normal">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            <span className={cn(!hasValue && 'text-muted-foreground')}>{buttonLabel}</span>
+          <Button variant="default" size="sm" className="h-9 gap-2 font-normal bg-primary text-primary-foreground hover:bg-primary/90">
+            <CalendarIcon className="h-4 w-4" />
+            <span>{buttonLabel}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
