@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         id: p.id,
         nombre: p.nombre,
         sku: p.codigo,
-        descripcion: null,
+        descripcion: p.notas,
         categoria: cMap.get(p.clasificacion_id) ?? null,
         marca: mMap.get(p.marca_id) ?? null,
         imagen_url: p.imagen_url,
