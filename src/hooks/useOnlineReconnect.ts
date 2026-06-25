@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { offlineDb } from '@/lib/offlineDb';
-import { downloadAllData } from '@/lib/offlineSync';
+import { downloadAllData, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { processSyncQueue } from '@/lib/syncQueue';
 import { hasRealConnection } from '@/lib/connectivity';
 
@@ -39,7 +39,7 @@ export function useOnlineReconnect() {
         await processSyncQueue().catch((e) => console.warn('[reconnect] push failed', e));
 
         // 2) Pull critical fresh data
-        await downloadAllData(empresa.id, false).catch((e) => console.warn('[reconnect] pull failed', e));
+        await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES }).catch((e) => console.warn('[reconnect] pull failed', e));
 
         // 3) Detect new/changed carga lines
         const afterRows = await offlineDb.carga_lineas.toArray();

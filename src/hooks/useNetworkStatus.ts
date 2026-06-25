@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPendingCount, processSyncQueue } from '@/lib/syncQueue';
-import { downloadAllData, getLastSyncTime, isCacheStale } from '@/lib/offlineSync';
+import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
+type SyncNowResult = { ok: boolean; rowsDownloaded: number; pendingCount: number; reason?: string };
+let activeSyncPromise: Promise<SyncNowResult> | null = null;
+let lastGlobalSyncAt = 0;
 
 export function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState(true);
@@ -62,10 +65,7 @@ export function useNetworkStatus() {
     const refresh = async () => {
       const count = await getPendingCount();
       setPendingCount(count);
-      if (count === 0 && isOnline && empresa?.id) {
-        const isVerified = await verifySyncedItems(empresa.id);
-        setVerified(isVerified);
-      } else {
+      if (count > 0 || !isOnline) {
         setVerified(false);
       }
     };
@@ -99,36 +99,62 @@ export function useNetworkStatus() {
   }, [autoSync, isOnline, empresa?.id, dataSaver]);
 
   // Full sync
-  const syncNow = useCallback(async () => {
-    if (!empresa?.id) return;
+  const syncNow = useCallback(async (): Promise<SyncNowResult> => {
+    if (!empresa?.id) return { ok: false, rowsDownloaded: 0, pendingCount, reason: 'Sin empresa activa' };
+    const now = Date.now();
+    if (activeSyncPromise) {
+      setIsSyncing(true);
+      try {
+        return await activeSyncPromise;
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+    if (now - lastGlobalSyncAt < 4000) return { ok: true, rowsDownloaded: lastSyncRows, pendingCount };
+    lastGlobalSyncAt = now;
     setIsSyncing(true);
-    try {
+    activeSyncPromise = (async () => {
       const online = await hasRealConnection();
       setIsOnline(online);
-      if (!online) return;
+      if (!online) return { ok: false, rowsDownloaded: 0, pendingCount, reason: 'Sin conexión real' };
 
       const result = await processSyncQueue();
       console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
-      const { rowsDownloaded } = await downloadAllData(empresa.id);
-      setLastSyncRows(rowsDownloaded);
+      const { rowsDownloaded } = await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES });
       const count = await getPendingCount();
+      return {
+        ok: result.failed === 0,
+        rowsDownloaded,
+        pendingCount: count,
+        reason: result.failed > 0 ? `${result.failed} cambios quedaron pendientes` : undefined,
+      };
+    })();
+
+    try {
+      const syncResult = await activeSyncPromise;
+      const { rowsDownloaded, pendingCount: count } = syncResult;
+      setLastSyncRows(rowsDownloaded);
       setPendingCount(count);
       const time = await getLastSyncTime();
       setLastSync(time);
       
       if (count === 0) {
-        const isVerified = await verifySyncedItems(empresa.id);
-        setVerified(isVerified);
+        verifySyncedItems(empresa.id)
+          .then(setVerified)
+          .catch(() => setVerified(false));
       }
 
       // Notify all useOfflineQuery hooks to refetch (folios, server-generated fields)
       window.dispatchEvent(new Event('uniline:sync-complete'));
+      return syncResult;
     } catch (err) {
       console.error('Sync error:', err);
+      return { ok: false, rowsDownloaded: 0, pendingCount, reason: err instanceof Error ? err.message : 'Error de sincronización' };
     } finally {
+      activeSyncPromise = null;
       setIsSyncing(false);
     }
-  }, [empresa?.id]);
+  }, [empresa?.id, pendingCount]);
 
   // Initial data download if cache is stale (respects autoSync & data saver)
   useEffect(() => {

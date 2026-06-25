@@ -189,21 +189,22 @@ export default function MobileLayout() {
           </label>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={forceUpdate}
-            disabled={!isOnline}
-            className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
-              !isOnline
-                ? "text-muted-foreground/40 cursor-not-allowed"
-                : swUpdateAvailable
-                  ? "text-primary animate-pulse hover:text-primary/80"
-                  : "text-muted-foreground hover:text-foreground"
-            )}
-            title={isOnline ? "Actualizar app" : "Sin conexión"}
-          >
-            <RefreshCw className="h-5 w-5" />
-          </button>
+          {swUpdateAvailable && (
+            <button
+              onClick={forceUpdate}
+              disabled={!isOnline}
+              className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
+                !isOnline
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-primary animate-pulse hover:text-primary/80"
+              )}
+              title={isOnline ? "Instalar actualización" : "Sin conexión"}
+              aria-label="Instalar actualización"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={() => {
               toast.info(`Versión ${APP_VERSION}`, {
