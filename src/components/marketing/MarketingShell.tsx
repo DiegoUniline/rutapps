@@ -15,10 +15,12 @@ export function MarketingShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const NAV = [
+  const NAV: { to: string; label: string; isNew?: boolean }[] = [
+    { to: '/', label: 'Inicio' },
     { to: '/modulos', label: 'Módulos' },
     { to: '/precios', label: 'Precios' },
     { to: '/giros', label: 'Giros' },
+    { to: '/modulos#ia', label: 'IA', isNew: true },
     { to: '/partners', label: 'Partners' },
   ];
 
