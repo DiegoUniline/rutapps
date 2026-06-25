@@ -160,7 +160,7 @@ export default function TiendaConfigPage() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 w-full space-y-6">
       <div className="flex items-center gap-3">
         <Store className="h-7 w-7 text-primary" />
         <div>
