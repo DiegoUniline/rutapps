@@ -11,6 +11,7 @@ import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion'
 import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
+import { newLocalId } from '@/lib/localId';
 import {
   fetchMyProfileWithFallback,
   fetchCargaActivaWithFallback,
