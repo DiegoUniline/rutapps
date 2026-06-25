@@ -38,7 +38,10 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
             {NAV.map(n => (
-              <Link key={n.to} to={n.to} className="transition-colors hover:text-[#0060e8]">{n.label}</Link>
+              <Link key={n.to} to={n.to} className="inline-flex items-center gap-1 transition-colors hover:text-[#0060e8]">
+                {n.label}
+                {n.isNew && <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span>}
+              </Link>
             ))}
           </div>
           <div className="hidden md:flex items-center gap-2">
