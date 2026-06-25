@@ -133,17 +133,18 @@ export default function TiendaClientesAdmin() {
                     {r.cliente_nombre}
                     {r.cliente_email && <div className="text-xs text-gray-500">{r.cliente_email}</div>}
                   </td>
-                  <td className="p-2">{a?.registrado ? a.email : <span className="text-gray-400">Sin registrarse aún</span>}</td>
+                  <td className="p-2">{a?.registrado ? a.email : (r.cliente_email || <span className="text-gray-400">Sin correo</span>)}</td>
                   <td className="p-2">{a?.ultimo_login ? new Date(a.ultimo_login).toLocaleString("es-MX") : <span className="text-gray-400">Nunca</span>}</td>
                   <td className="p-2">
                     {r.bloqueado && <span className="text-red-600 font-semibold">Bloqueado</span>}
                     {!r.bloqueado && a?.registrado && <span className="text-green-700 font-semibold">Registrado</span>}
-                    {!r.bloqueado && !a?.registrado && <span className="text-blue-700 font-semibold">Acceso libre</span>}
+                    {!r.bloqueado && !a?.registrado && r.cliente_email && <span className="text-blue-700 font-semibold">Acceso (contraseña 123456)</span>}
+                    {!r.bloqueado && !a?.registrado && !r.cliente_email && <span className="text-gray-500 font-semibold">Falta correo</span>}
                   </td>
                   <td className="p-2 text-right">
                     <div className="flex gap-1 justify-end">
-                      {a?.registrado && !r.bloqueado && (
-                        <button onClick={() => setResetFor(r)} title="Resetear contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
+                      {!r.bloqueado && r.cliente_email && (
+                        <button onClick={() => setResetFor(r)} title="Cambiar contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
                           <KeyRound className="h-4 w-4" />
                         </button>
                       )}
@@ -163,7 +164,7 @@ export default function TiendaClientesAdmin() {
         </table>
       </div>
 
-      {resetFor && resetFor.acceso && <ResetPasswordModal row={resetFor} acceso={resetFor.acceso} empresaId={empresaId} onClose={() => setResetFor(null)} />}
+      {resetFor && <ResetPasswordModal row={resetFor} empresaId={empresaId} onClose={() => setResetFor(null)} />}
     </div>
   );
 }
