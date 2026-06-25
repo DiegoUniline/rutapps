@@ -515,6 +515,53 @@ export default function LandingV2Page() {
         </div>
       </section>
 
+      {/* 9.5 CAPTURAS DEL SISTEMA */}
+      <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
+        <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto">
+          <SectionLabel><Eye className="h-3 w-3" /> Capturas del sistema</SectionLabel>
+          <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+            Así se ve Rutapp por dentro.
+          </h2>
+          <p className="mt-4 text-[15px] md:text-[17px]" style={{ color: BRAND.ink2 }}>
+            Pantallas reales del sistema. POS rápido, Kardex granular y compras sugeridas por IA.
+          </p>
+        </motion.div>
+        <div className="mt-12 space-y-10">
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="order-2 md:order-1">
+              <SectionLabel>POS · Punto de venta</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">Cobra en segundos, con o sin internet.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Promociones 2x1 automáticas, lista de precios por cliente, lector de código de barras y recibo térmico al instante.
+              </p>
+            </div>
+            <div className="order-1 md:order-2"><POSScreen /></div>
+          </motion.div>
+
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div><KardexScreen /></div>
+            <div>
+              <SectionLabel>Kardex granular</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">Cada movimiento, rastreable.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Ventas, compras, traspasos, devoluciones y conteos físicos — con folio y saldo después de cada movimiento. Auditas en segundos.
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="order-2 md:order-1">
+              <SectionLabel><Brain className="h-3 w-3" /> Compras con IA</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">La IA te dice qué comprar y cuánto.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Analiza 90 días de venta, estacionalidad y stock. Te genera la OC sugerida por proveedor con cantidad óptima. Adiós a sobrecompras y faltantes.
+              </p>
+            </div>
+            <div className="order-1 md:order-2"><ComprasIAScreen /></div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* 10. COMPARATIVA */}
       <section className="mx-auto max-w-5xl px-4 py-16 md:py-20">
         <motion.h2 {...fadeUp} className="text-[28px] md:text-[40px] font-bold tracking-tight text-center" style={{ letterSpacing: "-0.03em" }}>
