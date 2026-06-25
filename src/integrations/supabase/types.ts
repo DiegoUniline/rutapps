@@ -6852,6 +6852,7 @@ export type Database = {
         Row: {
           activa: boolean
           banner_url: string | null
+          beneficios: Json
           color_primario: string | null
           color_secundario: string | null
           created_at: string
@@ -6869,6 +6870,7 @@ export type Database = {
         Insert: {
           activa?: boolean
           banner_url?: string | null
+          beneficios?: Json
           color_primario?: string | null
           color_secundario?: string | null
           created_at?: string
@@ -6886,6 +6888,7 @@ export type Database = {
         Update: {
           activa?: boolean
           banner_url?: string | null
+          beneficios?: Json
           color_primario?: string | null
           color_secundario?: string | null
           created_at?: string
