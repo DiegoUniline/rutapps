@@ -493,52 +493,12 @@ export default function LandingPage() {
 
         <WhatsAppAgentSection />
 
-        {/* ZIGZAG — los módulos más chidos, con visual real */}
-        <div className="max-w-[1440px] mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
-          {[
-            { name: 'Ventas', kicker: 'POS + Rutero', idx: 0 },
-            { name: 'Cobranza', kicker: 'FIFO multi-folio', idx: 1 },
-            { name: 'Logística', kicker: 'Surtido y carga', idx: 3 },
-            { name: 'Compras', kicker: 'Sugerencias con IA', idx: 4 },
-            { name: 'Reportes', kicker: 'Dashboard ejecutivo', idx: 8 },
-            { name: 'IA', kicker: 'Asesor Rutapp', idx: 9 },
-          ].map((row, i) => {
-            const m = MODULES[row.idx];
-            const Icon = m.icon;
-            const flip = i % 2 === 1;
-            return (
-              <div key={row.name} className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
-                {/* Text side */}
-                <Reveal variant={flip ? 'right' : 'left'} duration={460}>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-[0.14em]"
-                    style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
-                    <Icon className="h-3 w-3" /> {row.kicker}
-                  </div>
-                  <h3 className="mt-3 text-[24px] md:text-[32px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.022em', color: BRAND.ink }}>
-                    {m.star.t}
-                  </h3>
-                  <p className="mt-3 text-[14.5px] leading-relaxed" style={{ color: BRAND.ink2 }}>
-                    {m.star.d}
-                  </p>
-                  <div className="mt-5 grid sm:grid-cols-2 gap-2">
-                    {m.features.slice(0, 4).map(f => (
-                      <div key={f} className="flex items-start gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
-                        <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" strokeWidth={3} style={{ color: BRAND.primary }} />
-                        <span>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-5 text-[13px] italic border-l-2 pl-3" style={{ color: BRAND.ink, borderColor: BRAND.accent }}>
-                    "{m.why}"
-                  </div>
-                </Reveal>
-                {/* Visual side */}
-                <Reveal variant={flip ? 'left' : 'right'} delay={80} duration={500}>
-                  <ModuleVisual name={row.name} />
-                </Reveal>
-              </div>
-            );
-          })}
+        {/* CTA a página de módulos */}
+        <div className="max-w-[1440px] mx-auto mt-10 text-center">
+          <Link to="/modulos" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-[13.5px] border bg-white hover:shadow-md transition-all"
+            style={{ borderColor: BRAND.line, color: BRAND.ink }}>
+            Ver los 10 módulos a detalle <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
 
