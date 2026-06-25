@@ -35,7 +35,7 @@ export default function ModulosPage() {
             const Icon = m.icon;
             const flip = i % 2 === 1;
             return (
-              <article key={m.slug} className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
+              <article id={m.slug} key={m.slug} className={`scroll-mt-24 grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-[0.14em]"
                     style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
@@ -57,8 +57,8 @@ export default function ModulosPage() {
                     "{m.why}"
                   </div>
                 </div>
-                <div className="rounded-2xl border p-8 grid place-items-center aspect-[4/3]" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
-                  <Icon className="h-24 w-24" style={{ color: BRAND.primary, opacity: 0.5 }} strokeWidth={1.2} />
+                <div className="rounded-2xl border p-4 md:p-6" style={{ borderColor: BRAND.line, background: BRAND.surface }}>
+                  <ModuleVisual name={m.t} />
                 </div>
               </article>
             );
