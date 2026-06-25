@@ -356,7 +356,24 @@ export default function KardexPage() {
             </div>
           </div>
         </div>
+        {(almacenId || productoId) && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[12px]"
+              onClick={() => {
+                setAlmacenId('');
+                setProductoId('');
+                setProductoSearch('');
+              }}
+            >
+              Limpiar selección
+            </Button>
+          </div>
+        )}
       </div>
+
 
       {/* Kardex view - siempre visible, se filtra conforme se selecciona */}
       <>
