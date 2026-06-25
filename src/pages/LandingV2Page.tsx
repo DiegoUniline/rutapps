@@ -248,24 +248,31 @@ export default function LandingV2Page() {
 
           <motion.div {...fadeUp} className="relative">
             {/* Real vendor photo — protagonista */}
-            <div className="relative">
-              <div className="rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: BRAND.line }}>
-                <img
-                  src={imgHeroReal}
-                  alt="Vendedor real usando Rutapp en su celular en una tienda de abarrotes"
-                  width={1280}
-                  height={960}
-                  className="w-full h-auto object-cover aspect-[4/3]"
-                />
+            <Parallax offset={30} className="rounded-3xl">
+              <div className="relative">
+                <div className="rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: BRAND.line }}>
+                  <img
+                    src={imgHeroReal}
+                    alt="Vendedor real usando Rutapp en su celular en una tienda de abarrotes"
+                    width={1280}
+                    height={960}
+                    className="w-full h-auto object-cover aspect-[4/3]"
+                  />
+                </div>
+                <Float amplitude={8} duration={5} className="absolute top-3 right-3 z-30">
+                  <div className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+                    Hoy +$12,480
+                  </div>
+                </Float>
+                <Float amplitude={6} duration={6} delay={0.6} className="absolute bottom-3 left-3 z-30">
+                  <div className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg backdrop-blur" style={{ background: `${BRAND.primary}ee` }}>
+                    <span className="inline-flex items-center gap-1"><WifiOff className="h-3 w-3" /> Sin señal · funcionando</span>
+                  </div>
+                </Float>
               </div>
-              <div className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
-                Hoy +$12,480
-              </div>
-              <div className="absolute bottom-3 left-3 z-30 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg backdrop-blur" style={{ background: `${BRAND.primary}ee` }}>
-                <span className="inline-flex items-center gap-1"><WifiOff className="h-3 w-3" /> Sin señal · funcionando</span>
-              </div>
-            </div>
+            </Parallax>
           </motion.div>
+
 
         </div>
       </section>
