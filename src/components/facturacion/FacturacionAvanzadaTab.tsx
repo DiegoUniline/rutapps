@@ -361,7 +361,6 @@ export function FacturaGlobalSection() {
             <Label>Año</Label>
             <Input value={year} onChange={e => setYear(e.target.value)} />
           </div>
-          <div>
           <div className="col-span-2">
             <Label>Rango de fechas</Label>
             <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); }} />
