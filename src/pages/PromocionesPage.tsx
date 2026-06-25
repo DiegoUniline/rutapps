@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -375,12 +376,12 @@ export default function PromocionesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Vigencia inicio</Label>
-                  <Input type="date" value={editing.vigencia_inicio || ''} onChange={e => setEditing({ ...editing, vigencia_inicio: e.target.value || null })} />
+                  <div><SingleDatePicker value={editing.vigencia_inicio || ''} onChange={iso => setEditing({ ...editing, vigencia_inicio: iso || null })} /></div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = aplica desde hoy</p>
                 </div>
                 <div>
                   <Label>Vigencia fin</Label>
-                  <Input type="date" value={editing.vigencia_fin || ''} onChange={e => setEditing({ ...editing, vigencia_fin: e.target.value || null })} />
+                  <div><SingleDatePicker value={editing.vigencia_fin || ''} onChange={iso => setEditing({ ...editing, vigencia_fin: iso || null })} /></div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = sin fecha límite</p>
                 </div>
               </div>

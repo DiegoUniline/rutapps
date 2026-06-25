@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import SearchableSelect from '@/components/SearchableSelect';
+import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { Loader2 } from 'lucide-react';
 import { todayInTimezone } from '@/lib/utils';
 
@@ -107,7 +108,7 @@ export default function SaldoInicialModal({ open, onOpenChange }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+            <div><SingleDatePicker value={fecha} onChange={iso => setFecha(iso)} /></div>
           </div>
           <div className="space-y-1.5">
             <Label>Concepto</Label>
