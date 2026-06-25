@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
+import TiendaOrdersBell from '@/components/notifications/TiendaOrdersBell';
 import BroadcastBell from '@/components/BroadcastBell';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
@@ -750,6 +751,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
+            <TiendaOrdersBell />
             <button
               onClick={() => setPaletteOpen(true)}
               className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
@@ -917,6 +919,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <RefreshCw className="h-3.5 w-3.5" />
             Sincronizar
           </button>
+          <TiendaOrdersBell />
           <InternalNotificationBell />
           <BroadcastBell />
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
