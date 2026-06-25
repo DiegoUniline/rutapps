@@ -174,7 +174,7 @@ export function useVentaDetalle() {
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
       // Generar id local del cobro para encolar offline; cuando esté online, supabase asigna real
-      const localCobroId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+      const localCobroId = newLocalId();
       const cobroPayload = {
         empresa_id: empresa.id,
         cliente_id: clienteId,
