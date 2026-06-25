@@ -7,6 +7,7 @@ import { hasRealConnection } from './connectivity';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
+let activeProcessPromise: Promise<{ success: number; failed: number }> | null = null;
 
 // Exponential backoff delay
 function getRetryDelay(retries: number): number {
@@ -68,6 +69,15 @@ export async function queueOperation(
 
 // Process all pending items in the sync queue
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
+  if (activeProcessPromise) return activeProcessPromise;
+
+  activeProcessPromise = processSyncQueueInternal().finally(() => {
+    activeProcessPromise = null;
+  });
+  return activeProcessPromise;
+}
+
+async function processSyncQueueInternal(): Promise<{ success: number; failed: number }> {
   // Backup before processing as safety net
   await backupSyncQueueToStorage();
   
