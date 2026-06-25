@@ -91,6 +91,11 @@ class OfflineDatabase extends Dexie {
       lista_precios: 'id, empresa_id, tarifa_id, es_principal, activa',
       listas: 'id, empresa_id',
     });
+    // v9: cache cotizaciones for offline list view
+    this.version(9).stores({
+      cotizaciones: 'id, empresa_id, cliente_id, vendedor_id, estado, fecha, created_at',
+      cotizacion_lineas: 'id, cotizacion_id, producto_id',
+    });
   }
 }
 
