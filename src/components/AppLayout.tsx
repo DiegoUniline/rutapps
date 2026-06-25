@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
+import TiendaOrdersBell from '@/components/notifications/TiendaOrdersBell';
 import BroadcastBell from '@/components/BroadcastBell';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
