@@ -172,6 +172,7 @@ const navItems: NavItem[] = [
       { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
       { label: 'Bot WhatsApp ✨', path: '/configuracion/wa-bot' },
+      { label: 'Tienda en línea 🛒', path: '/configuracion/tienda' },
       { label: 'General', path: '/configuracion' },
     ],
   },
