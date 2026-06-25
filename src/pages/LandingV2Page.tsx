@@ -881,10 +881,11 @@ export default function LandingV2Page() {
             <span className="font-semibold" style={{ color: BRAND.ink }}>Rutapp</span>
             <span>· © {new Date().getFullYear()}</span>
           </div>
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-5 justify-center">
             <Link to="/login">Iniciar sesión</Link>
             <Link to="/signup">Probar gratis</Link>
-            <a href="#precios">Precios</a>
+            <Link to="/landing-nueva/giros">Giros</Link>
+            <Link to="/landing-nueva/precios">Precios</Link>
           </div>
         </div>
       </footer>
