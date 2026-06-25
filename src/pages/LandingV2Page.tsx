@@ -209,6 +209,71 @@ function ModuloCard({ m, i }: { m: Modulo; i: number }) {
   );
 }
 
+function PreciosSection() {
+  const [m, setM] = useState(monedas[0]);
+  return (
+    <section id="precios" className="mx-auto max-w-6xl px-4 py-16 md:py-24">
+      <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto">
+        <SectionLabel>Precios</SectionLabel>
+        <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+          Simple. Sin sorpresas.
+        </h2>
+        <p className="mt-3 text-[14px]" style={{ color: BRAND.ink2 }}>
+          7 días gratis · cancela cuando quieras · sin tarjeta al registrarte.
+        </p>
+        {/* Multi-moneda switcher */}
+        <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-1 p-1 rounded-full border bg-white shadow-sm" style={{ borderColor: BRAND.line }}>
+          <span className="px-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: BRAND.muted }}>Ver en</span>
+          {monedas.map((mo) => {
+            const active = mo.code === m.code;
+            return (
+              <button key={mo.code} onClick={() => setM(mo)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${active ? "text-white" : ""}`}
+                style={active ? { background: BRAND.primary } : { color: BRAND.ink2 }}>
+                <span>{mo.flag}</span>{mo.code}
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+      <div className="mt-12 grid md:grid-cols-3 gap-5">
+        {planes.map((p, i) => (
+          <motion.div key={p.nombre} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.08 }}
+            className={`relative rounded-2xl p-7 border bg-white ${p.popular ? "shadow-xl md:scale-[1.03]" : ""}`}
+            style={{ borderColor: p.popular ? BRAND.primary : BRAND.line }}>
+            {p.popular && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: BRAND.accent }}>
+                ⭐ Más popular
+              </div>
+            )}
+            <h3 className="text-[18px] font-bold">{p.nombre}</h3>
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-[36px] font-bold tracking-tight transition-all" style={{ color: BRAND.ink }}>
+                {fmtMoneda(p.precioMXN, m.rate, m.symbol, m.code)}
+              </span>
+              <span className="text-[13px]" style={{ color: BRAND.muted }}>{m.suffix}/mes</span>
+            </div>
+            <p className="mt-1 text-[13px]" style={{ color: BRAND.ink2 }}>
+              {p.usuarios} · extra {fmtMoneda(p.extraMXN, m.rate, m.symbol, m.code)}/mes
+            </p>
+            <Link to="/signup" className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[13.5px] font-semibold text-white"
+              style={{ background: p.popular ? BRAND.primary : BRAND.ink }}>
+              Empezar 7 días gratis
+            </Link>
+          </motion.div>
+        ))}
+      </div>
+      <motion.p {...fadeUp} className="mt-8 text-center text-[13px]" style={{ color: BRAND.ink2 }}>
+        Todos incluyen: acceso completo · app móvil offline · IA · soporte por WhatsApp · tienda en línea.<br />
+        Agente AI por WhatsApp: <b>+{fmtMoneda(69, m.rate, m.symbol, m.code)} {m.suffix}/mes</b>.
+      </motion.p>
+      <p className="mt-3 text-center text-[11px]" style={{ color: BRAND.muted }}>
+        * Tipo de cambio referencial. El cobro se realiza en MXN.
+      </p>
+    </section>
+  );
+}
+
 export default function LandingV2Page() {
   return (
     <div className="min-h-screen font-[Lato] antialiased" style={{ background: "#fff", color: BRAND.ink }}>
