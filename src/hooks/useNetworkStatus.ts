@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPendingCount, processSyncQueue } from '@/lib/syncQueue';
-import { downloadAllData, getLastSyncTime, isCacheStale } from '@/lib/offlineSync';
+import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
+let activeSyncPromise: Promise<{ rowsDownloaded: number; pendingCount: number }> | null = null;
+let lastGlobalSyncAt = 0;
 
 export function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState(true);
@@ -101,17 +103,34 @@ export function useNetworkStatus() {
   // Full sync
   const syncNow = useCallback(async () => {
     if (!empresa?.id) return;
+    const now = Date.now();
+    if (activeSyncPromise) {
+      setIsSyncing(true);
+      try {
+        await activeSyncPromise;
+      } finally {
+        setIsSyncing(false);
+      }
+      return;
+    }
+    if (now - lastGlobalSyncAt < 4000) return;
+    lastGlobalSyncAt = now;
     setIsSyncing(true);
-    try {
+    activeSyncPromise = (async () => {
       const online = await hasRealConnection();
       setIsOnline(online);
-      if (!online) return;
+      if (!online) return { rowsDownloaded: 0, pendingCount };
 
       const result = await processSyncQueue();
       console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
-      const { rowsDownloaded } = await downloadAllData(empresa.id);
-      setLastSyncRows(rowsDownloaded);
+      const { rowsDownloaded } = await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES });
       const count = await getPendingCount();
+      return { rowsDownloaded, pendingCount: count };
+    })();
+
+    try {
+      const { rowsDownloaded, pendingCount: count } = await activeSyncPromise;
+      setLastSyncRows(rowsDownloaded);
       setPendingCount(count);
       const time = await getLastSyncTime();
       setLastSync(time);
@@ -126,9 +145,10 @@ export function useNetworkStatus() {
     } catch (err) {
       console.error('Sync error:', err);
     } finally {
+      activeSyncPromise = null;
       setIsSyncing(false);
     }
-  }, [empresa?.id]);
+  }, [empresa?.id, pendingCount]);
 
   // Initial data download if cache is stale (respects autoSync & data saver)
   useEffect(() => {
