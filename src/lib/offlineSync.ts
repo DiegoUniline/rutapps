@@ -104,6 +104,8 @@ const TABLES_WITH_EMPRESA = new Set([
   'stock_almacen',
   'producto_presentaciones',
   'lista_precios',
+  'zonas',
+  'almacenes',
 ]);
 
 
