@@ -406,9 +406,10 @@ export default function LandingV2Page() {
               "Tienes un analista trabajando 24/7 sin contratarlo."
             </p>
           </motion.div>
-          <motion.div {...fadeUp} className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-            <img src={imgAIAnalisis} alt="IA analizando datos de ventas" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
+          <motion.div {...fadeUp}>
+            <DashboardScreen />
           </motion.div>
+
         </div>
       </section>
 
