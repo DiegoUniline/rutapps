@@ -376,7 +376,7 @@ export default function PromocionesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Vigencia inicio</Label>
-                  <Input type="date" value={editing.vigencia_inicio || ''} onChange={e => setEditing({ ...editing, vigencia_inicio: e.target.value || null })} />
+                  <div><SingleDatePicker value={editing.vigencia_inicio || ''} onChange={iso => setEditing({ ...editing, vigencia_inicio: iso || null })} /></div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = aplica desde hoy</p>
                 </div>
                 <div>
