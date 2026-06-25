@@ -381,7 +381,7 @@ export default function PromocionesPage() {
                 </div>
                 <div>
                   <Label>Vigencia fin</Label>
-                  <Input type="date" value={editing.vigencia_fin || ''} onChange={e => setEditing({ ...editing, vigencia_fin: e.target.value || null })} />
+                  <div><SingleDatePicker value={editing.vigencia_fin || ''} onChange={iso => setEditing({ ...editing, vigencia_fin: iso || null })} /></div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = sin fecha límite</p>
                 </div>
               </div>
