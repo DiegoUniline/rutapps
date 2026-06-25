@@ -479,19 +479,12 @@ export default function LandingV2Page() {
             </div>
           </motion.div>
           <motion.div {...fadeUp} className="order-1 md:order-2 relative">
-            <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-              <img src={imgTienda} alt="Cliente comprando en la tienda en línea" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
-            </div>
-            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+            <TiendaScreen />
+            <div className="absolute -top-3 -right-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg z-10" style={{ background: BRAND.accent }}>
               ⚡ Abierto 24/7
             </div>
-            <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur rounded-xl p-3 flex items-center justify-between shadow-lg border" style={{ borderColor: BRAND.line }}>
-              <div className="inline-flex items-center gap-2 text-[12.5px] font-medium">
-                <ShoppingBag className="h-4 w-4" style={{ color: BRAND.primary }} /> Pedido entró como venta
-              </div>
-              <span className="text-[12px] font-bold" style={{ color: BRAND.primary }}>+$1,240</span>
-            </div>
           </motion.div>
+
         </div>
       </section>
 
