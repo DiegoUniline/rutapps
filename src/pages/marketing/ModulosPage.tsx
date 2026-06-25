@@ -3,6 +3,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { Seo } from '@/components/seo/Seo';
 import { BRAND, MODULES } from '@/lib/marketing-content';
+import { ModuleVisual } from '@/components/landing/ModuleVisuals';
 
 export default function ModulosPage() {
   return (
