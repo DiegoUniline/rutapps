@@ -40,6 +40,7 @@ import {
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
 
 import imgPapel from "@/assets/landing/papel-vendedor.jpg";
+import imgTicketCalle from "@/assets/landing/vendedor-ticket-calle.jpg";
 import imgHeroReal from "@/assets/landing/hero-vendedor-real.jpg";
 import imgVentas from "@/assets/landing/mod-ventas.jpg";
 import imgCobranza from "@/assets/landing/mod-cobranza.jpg";
