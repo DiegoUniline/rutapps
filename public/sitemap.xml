@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://rutapp.mx/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://rutapp.mx/partners</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/precios</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/distribuidoras-de-abarrotes</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/refresqueras-y-bebidas</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/panaderias-y-reparto</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/productos-de-limpieza</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/lacteos-y-cremerias</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/botanas-y-dulces</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/landing-nueva/giros/agua-purificada</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://rutapp.mx/partners</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://rutapp.mx/tutoriales</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://rutapp.mx/login</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://rutapp.mx/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://rutapp.mx/login</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://rutapp.mx/terminos</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <url><loc>https://rutapp.mx/privacidad</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
 </urlset>

@@ -274,9 +274,38 @@ function PreciosSection() {
   );
 }
 
+import { SEO } from "@/components/landing/SEO";
+
+const LANDING_JSONLD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Rutapp",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, Android, iOS",
+    description: "ERP de venta en ruta, preventa y reparto con CFDI 4.0 y funcionamiento offline.",
+    offers: { "@type": "Offer", price: "499", priceCurrency: "MXN" },
+    aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "150" },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Rutapp",
+    url: "https://rutapp.mx",
+    logo: "https://rutapp.mx/pwa-512x512.png",
+    sameAs: [],
+  },
+];
+
 export default function LandingV2Page() {
   return (
     <div className="min-h-screen font-[Lato] antialiased" style={{ background: "#fff", color: BRAND.ink }}>
+      <SEO
+        title="Rutapp — Venta en ruta sin papel, aunque no haya señal"
+        description="ERP de preventa y reparto para PyMEs: cobranza, entrega, inventario en camión, CFDI 4.0 y funcionamiento offline. Sin hardware, sin instalar nada."
+        path="/landing-nueva"
+        jsonLd={LANDING_JSONLD}
+      />
       {/* NAV */}
       <header className="sticky top-0 z-50 border-b backdrop-blur bg-white/85" style={{ borderColor: BRAND.line }}>
         <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
