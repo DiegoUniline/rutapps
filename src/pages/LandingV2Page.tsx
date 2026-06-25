@@ -313,12 +313,13 @@ export default function LandingV2Page() {
             <img src={rutappLogo.url} alt="Rutapp" className="h-8 w-auto rounded-md" />
             <span className="text-[15px] font-bold tracking-tight">Rutapp</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium" style={{ color: BRAND.ink2 }}>
+          <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium" style={{ color: BRAND.ink2 }}>
             <a href="#unicas">Lo que nadie tiene</a>
             <a href="#modulos">Módulos</a>
             <a href="#ia">IA</a>
             <a href="#tienda">Tienda</a>
-            <a href="#precios">Precios</a>
+            <Link to="/landing-nueva/giros">Giros</Link>
+            <Link to="/landing-nueva/precios">Precios</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/login" className="px-3 py-1.5 text-[13px] font-medium hidden sm:inline" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
@@ -880,10 +881,11 @@ export default function LandingV2Page() {
             <span className="font-semibold" style={{ color: BRAND.ink }}>Rutapp</span>
             <span>· © {new Date().getFullYear()}</span>
           </div>
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-5 justify-center">
             <Link to="/login">Iniciar sesión</Link>
             <Link to="/signup">Probar gratis</Link>
-            <a href="#precios">Precios</a>
+            <Link to="/landing-nueva/giros">Giros</Link>
+            <Link to="/landing-nueva/precios">Precios</Link>
           </div>
         </div>
       </footer>
