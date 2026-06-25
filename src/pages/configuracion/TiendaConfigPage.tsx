@@ -18,9 +18,30 @@ interface TiendaConfig {
   lista_precios_default_id: string | null;
   permitir_invitados: boolean;
   mensaje_bienvenida: string | null;
+  beneficios: Beneficio[];
 }
 
-interface ListaPrecio { id: string; nombre: string; }
+interface Beneficio { icon: string; title: string; subtitle: string; enabled: boolean; }
+
+const ICON_OPTIONS = [
+  { v: "truck", label: "🚚 Envío" },
+  { v: "tag", label: "🏷️ Precio" },
+  { v: "shield", label: "🛡️ Seguridad" },
+  { v: "headphones", label: "🎧 Soporte" },
+  { v: "award", label: "🏆 Calidad" },
+  { v: "clock", label: "⏰ Rapidez" },
+  { v: "card", label: "💳 Pagos" },
+  { v: "gift", label: "🎁 Promos" },
+  { v: "package", label: "📦 Empaque" },
+  { v: "phone", label: "📞 Teléfono" },
+];
+
+const DEFAULT_BENEFICIOS: Beneficio[] = [
+  { icon: "truck", title: "Envío rápido", subtitle: "A toda la zona", enabled: true },
+  { icon: "tag", title: "Mejores precios", subtitle: "Mayoreo y menudeo", enabled: true },
+  { icon: "shield", title: "Compra segura", subtitle: "Pedidos garantizados", enabled: true },
+  { icon: "headphones", title: "Soporte directo", subtitle: "WhatsApp y teléfono", enabled: true },
+];
 
 const slugify = (s: string) => s
   .toLowerCase()
