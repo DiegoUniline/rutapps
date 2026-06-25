@@ -90,6 +90,8 @@ export const TABLE_LABELS: Record<string, string> = {
   stock_almacen: 'Stock por almacén',
   producto_presentaciones: 'Presentaciones de productos',
   lista_precios: 'Listas de precios',
+  zonas: 'Zonas',
+  almacenes: 'Almacenes',
 };
 
 
