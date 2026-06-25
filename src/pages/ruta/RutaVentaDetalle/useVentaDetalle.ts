@@ -170,19 +170,39 @@ export function useVentaDetalle() {
     setSaving(true);
     try {
       if (!empresa?.id) throw new Error('Sin empresa');
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: roundMoney(totalACobrar), metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(empresa.zona_horaria) }).select('id').single();
-      if (cobroErr) throw cobroErr;
+      const online = typeof navigator === 'undefined' || navigator.onLine;
+
+      // Generar id local del cobro para encolar offline; cuando esté online, supabase asigna real
+      const localCobroId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+      const cobroPayload = {
+        empresa_id: empresa.id,
+        cliente_id: clienteId,
+        user_id: user.id,
+        monto: roundMoney(totalACobrar),
+        metodo_pago: metodoPago,
+        referencia: referenciaPago || null,
+        fecha: todayInTimezone(empresa.zona_horaria),
+      };
+
+      let cobroId: string;
+      if (online) {
+        const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert(cobroPayload).select('id').single();
+        if (cobroErr) throw cobroErr;
+        cobroId = cobro.id;
+      } else {
+        cobroId = localCobroId;
+        await queueOperation('cobros', 'insert', { id: cobroId, ...cobroPayload });
+      }
+
       const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
       const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
 
       // Apply to current sale
       if (montoAplicarActual > 0) {
-        aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
+        aplicaciones.push({ cobro_id: cobroId, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
         const newSaldo = roundMoney(saldoActual - montoAplicarActual);
-        // Status update is still our responsibility (borrador -> confirmado on liquidation).
-        // saldo_pendiente will be recalculated by DB trigger trg_recalc_venta_saldo.
         if (newSaldo <= 0.01 && venta.status === 'borrador') {
-          if (navigator.onLine) {
+          if (online) {
             await supabase.from('ventas').update({ status: 'confirmado' as const }).eq('id', venta.id);
           } else {
             await queueOperation('ventas', 'update', { id: venta.id, status: 'confirmado' });
@@ -194,18 +214,27 @@ export function useVentaDetalle() {
       // Apply to other pending sales
       for (const cuenta of cuentasPendientes) {
         if (cuenta.montoAplicar > 0) {
-          aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
+          aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
           const newSaldo = roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar);
-          // saldo_pendiente recalculated by DB trigger.
           ticketApps.push({ folio: cuenta.folio ?? '—', monto: roundMoney(cuenta.montoAplicar), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
         }
       }
 
-      if (aplicaciones.length > 0) { const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones); if (appErr) throw appErr; }
+      if (aplicaciones.length > 0) {
+        if (online) {
+          const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
+          if (appErr) throw appErr;
+        } else {
+          for (const ap of aplicaciones) {
+            const apId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}-${Math.random()}`;
+            await queueOperation('cobro_aplicaciones', 'insert', { id: apId, ...ap });
+          }
+        }
+      }
 
       // Recibo automático (sólo si hay conexión)
-      if (navigator.onLine) {
-        import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobro.id, empresa.id));
+      if (online) {
+        import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
       }
 
       const ventasLiquidadas = [
@@ -215,25 +244,27 @@ export function useVentaDetalle() {
           .map(cuenta => cuenta.id),
       ];
 
-      for (const ventaId of ventasLiquidadas) {
-        const { data: entregasVenta, error: entregasErr } = await supabase
-          .from('entregas')
-          .select('id, status')
-          .eq('pedido_id', ventaId)
-          .limit(10);
-        if (entregasErr) throw entregasErr;
+      if (online) {
+        for (const ventaId of ventasLiquidadas) {
+          const { data: entregasVenta, error: entregasErr } = await supabase
+            .from('entregas')
+            .select('id, status')
+            .eq('pedido_id', ventaId)
+            .limit(10);
+          if (entregasErr) throw entregasErr;
 
-        const entregasPendientes = (entregasVenta ?? []).filter((entrega: any) => ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(entrega.status));
-        if (entregasPendientes.length === 1) {
-          await marcarEntregaHechaYSincronizarPedido(entregasPendientes[0].id, ventaId);
-        } else if ((entregasVenta ?? []).length > 0 && entregasPendientes.length === 0) {
-          await marcarEntregaHechaYSincronizarPedido((entregasVenta ?? [])[0].id, ventaId);
+          const entregasPendientes = (entregasVenta ?? []).filter((entrega: any) => ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(entrega.status));
+          if (entregasPendientes.length === 1) {
+            await marcarEntregaHechaYSincronizarPedido(entregasPendientes[0].id, ventaId);
+          } else if ((entregasVenta ?? []).length > 0 && entregasPendientes.length === 0) {
+            await marcarEntregaHechaYSincronizarPedido((entregasVenta ?? [])[0].id, ventaId);
+          }
         }
       }
 
       setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');
-      toast.success('¡Cobro registrado!');
+      toast.success(online ? '¡Cobro registrado!' : 'Cobro guardado localmente, se sincronizará');
       ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes', 'ruta-entrega-detalle', 'ruta-entrega-venta', 'entregas', 'entregas-list', 'ruta-entregas', 'logistica-pedidos'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
