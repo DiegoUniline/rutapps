@@ -39,6 +39,8 @@ export default function CotizacionesListPage() {
   const del = useDeleteCotizacion();
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<CotizacionEstado | 'todas'>('todas');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [toDelete, setToDelete] = useState<Cotizacion | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -46,13 +48,14 @@ export default function CotizacionesListPage() {
     const q = search.trim().toLowerCase();
     return (data ?? []).filter(c => {
       if (estadoFilter !== 'todas' && c.estado !== estadoFilter) return false;
+      if ((dateFrom || dateTo) && !isDateInRangeISO(c.fecha, dateFrom, dateTo)) return false;
       if (!q) return true;
       return (
         (c.folio || '').toLowerCase().includes(q) ||
         (c.clientes?.nombre || '').toLowerCase().includes(q)
       );
     });
-  }, [data, search, estadoFilter]);
+  }, [data, search, estadoFilter, dateFrom, dateTo]);
 
   return (
     <div className="p-4 space-y-3 min-h-full">
