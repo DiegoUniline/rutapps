@@ -73,7 +73,7 @@ const CHILD_IN_CHUNK_SIZE = 80;
 const COLUMN_SELECTS: Record<string, string> = {
   clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,requiere_factura,foto_url,foto_fachada_url,created_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
   productos: 'id,empresa_id,codigo,clave_alterna,nombre,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,almacenes,proveedor_preferido_id,created_at',
-  venta_lineas: 'id,venta_id,producto_id,cantidad,precio_unitario,descuento_porcentaje,subtotal,iva,ieps,total,notas,unidad_id,facturado,created_at',
+  venta_lineas: 'id,venta_id,producto_id,descripcion,cantidad,unidad_id,precio_unitario,descuento_pct,subtotal,iva_pct,ieps_pct,iva_monto,ieps_monto,total,notas,facturado,almacen_id,presentacion_id,presentacion_nombre,presentacion_factor,paquetes,lista_precio_id,precio_manual,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
   cobro_aplicaciones: 'id,cobro_id,venta_id,monto_aplicado,created_at',
   devolucion_lineas: 'id,devolucion_id,producto_id,cantidad,motivo,notas,created_at',
@@ -81,7 +81,7 @@ const COLUMN_SELECTS: Record<string, string> = {
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
   tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',
   tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
-  stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
+  stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at',
   producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
   lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
   zonas: 'id,empresa_id,nombre,activo,created_at',
