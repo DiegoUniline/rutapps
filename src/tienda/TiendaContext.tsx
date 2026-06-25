@@ -15,6 +15,14 @@ export interface TiendaConfig {
   lista_precios_default_id: string | null;
   permitir_invitados: boolean;
   mensaje_bienvenida: string | null;
+  beneficios?: Beneficio[] | null;
+}
+
+export interface Beneficio {
+  icon: string;
+  title: string;
+  subtitle: string;
+  enabled: boolean;
 }
 
 export interface TiendaEmpresa {
