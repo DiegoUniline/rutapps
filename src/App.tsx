@@ -89,6 +89,7 @@ const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const WhatsAppBotPage = lazy(() => import("@/pages/WhatsAppBotPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const LandingV2Page = lazy(() => import("@/pages/LandingV2Page"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
@@ -391,6 +392,7 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/landing-nueva" element={<LandingV2Page />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
