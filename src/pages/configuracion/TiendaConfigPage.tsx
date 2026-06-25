@@ -18,6 +18,7 @@ interface TiendaConfig {
   whatsapp_pedidos: string | null;
   lista_precios_default_id: string | null;
   permitir_invitados: boolean;
+  usar_lista_cliente: boolean;
   mensaje_bienvenida: string | null;
   beneficios: Beneficio[];
 }
@@ -92,6 +93,7 @@ export default function TiendaConfigPage() {
           whatsapp_pedidos: null,
           lista_precios_default_id: null,
           permitir_invitados: true,
+          usar_lista_cliente: true,
           mensaje_bienvenida: null,
           beneficios: DEFAULT_BENEFICIOS,
         });
