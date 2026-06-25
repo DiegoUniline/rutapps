@@ -227,7 +227,7 @@ export function useVentaDetalle() {
           if (appErr) throw appErr;
         } else {
           for (const ap of aplicaciones) {
-            const apId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}-${Math.random()}`;
+            const apId = newLocalId();
             await queueOperation('cobro_aplicaciones', 'insert', { id: apId, ...ap });
           }
         }
