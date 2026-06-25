@@ -9,7 +9,10 @@ export interface SyncQueueItem {
   keyValue: string;
   createdAt: number;
   retries: number;
+  lastError?: string;
+  lastAttemptAt?: number;
 }
+
 
 export interface CacheTimestamp {
   table: string;
