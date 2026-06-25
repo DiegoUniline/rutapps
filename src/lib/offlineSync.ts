@@ -210,7 +210,7 @@ async function getScopedParentIds(table: CacheTable, empresaId: string): Promise
       ? query.eq('id', empresaId)
       : query.eq('empresa_id', empresaId);
   }
-  const { data, error } = await withTimeout(query.range(0, 4999), `${scope.parentTable} ids`);
+  const { data, error } = await withTimeout<any>(query.range(0, 4999), `${scope.parentTable} ids`);
   if (error) throw error;
   return Array.from(new Set(((data || []) as any[]).map(row => row?.id).filter(Boolean)));
 }
@@ -345,7 +345,7 @@ async function downloadAllDataInternal(
           let hasMore = true;
 
           while (hasMore) {
-            const { data, error } = await withTimeout(
+            const { data, error } = await withTimeout<any>(
               buildQuery(parentChunk).range(from, from + pageSize - 1),
               `${table} ${from + 1}-${from + pageSize}`,
             );
