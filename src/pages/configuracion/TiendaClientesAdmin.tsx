@@ -2,16 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2, KeyRound, UserPlus, Search, ShieldOff, ShieldCheck, X } from "lucide-react";
+import { Loader2, KeyRound, Search, ShieldOff, ShieldCheck, X } from "lucide-react";
 
 interface Acceso {
   id: string;
-  cliente_id: string;
   email: string;
   telefono: string | null;
   verificado: boolean;
   ultimo_login: string | null;
   created_at: string;
+  registrado: boolean;
 }
 
 interface Row {
@@ -20,6 +20,7 @@ interface Row {
   cliente_email: string | null;
   cliente_telefono: string | null;
   acceso: Acceso | null;
+  bloqueado: boolean;
 }
 
 async function callAdmin(action: string, payload: Record<string, unknown> = {}, empresaIdFallback?: string | null) {
@@ -45,8 +46,7 @@ export default function TiendaClientesAdmin() {
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"todos" | "con" | "sin">("todos");
-  const [assignFor, setAssignFor] = useState<Row | null>(null);
+  const [filter, setFilter] = useState<"todos" | "activos" | "bloqueados" | "registrados">("todos");
   const [resetFor, setResetFor] = useState<Row | null>(null);
 
   const load = useCallback(async () => {
@@ -60,14 +60,27 @@ export default function TiendaClientesAdmin() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = items.filter((r) =>
-    filter === "todos" ? true : filter === "con" ? !!r.acceso : !r.acceso
-  );
+  const filtered = items.filter((r) => {
+    if (filter === "todos") return true;
+    if (filter === "bloqueados") return r.bloqueado;
+    if (filter === "activos") return !r.bloqueado;
+    if (filter === "registrados") return !!r.acceso?.registrado && !r.bloqueado;
+    return true;
+  });
 
   const stats = {
     total: items.length,
-    con: items.filter((i) => i.acceso).length,
-    sin: items.filter((i) => !i.acceso).length,
+    activos: items.filter((i) => !i.bloqueado).length,
+    bloqueados: items.filter((i) => i.bloqueado).length,
+    registrados: items.filter((i) => i.acceso?.registrado && !i.bloqueado).length,
+  };
+
+  const toggleBlock = async (r: Row) => {
+    try {
+      await callAdmin(r.bloqueado ? "unblock" : "block", { cliente_id: r.cliente_id }, empresaId);
+      toast.success(r.bloqueado ? "Acceso restaurado" : "Cliente bloqueado");
+      load();
+    } catch (e) { toast.error((e as Error).message); }
   };
 
   return (
@@ -75,7 +88,7 @@ export default function TiendaClientesAdmin() {
       <div>
         <h2 className="font-bold text-lg">Clientes con acceso a la tienda</h2>
         <p className="text-sm text-gray-600">
-          Aquí están <strong>todos</strong> tus clientes. Asigna acceso, resetea contraseñas o bloquea cuentas.
+          <strong>Todos</strong> tus clientes tienen acceso automáticamente. Bloquea los que no quieras que entren a la tienda.
         </p>
       </div>
 
@@ -84,11 +97,12 @@ export default function TiendaClientesAdmin() {
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="input pl-9" placeholder="Buscar por nombre o correo…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className="flex gap-1 border rounded p-0.5 bg-gray-50">
+        <div className="flex gap-1 border rounded p-0.5 bg-gray-50 flex-wrap">
           {([
             ["todos", `Todos (${stats.total})`],
-            ["con", `Con acceso (${stats.con})`],
-            ["sin", `Sin acceso (${stats.sin})`],
+            ["activos", `Con acceso (${stats.activos})`],
+            ["registrados", `Ya registrados (${stats.registrados})`],
+            ["bloqueados", `Bloqueados (${stats.bloqueados})`],
           ] as const).map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)} className={`px-3 py-1.5 text-xs font-semibold rounded ${filter === v ? "bg-white shadow text-primary" : "text-gray-600"}`}>
               {l}
@@ -119,40 +133,27 @@ export default function TiendaClientesAdmin() {
                     {r.cliente_nombre}
                     {r.cliente_email && <div className="text-xs text-gray-500">{r.cliente_email}</div>}
                   </td>
-                  <td className="p-2">{a ? a.email : <span className="text-gray-400">—</span>}</td>
+                  <td className="p-2">{a?.registrado ? a.email : <span className="text-gray-400">Sin registrarse aún</span>}</td>
                   <td className="p-2">{a?.ultimo_login ? new Date(a.ultimo_login).toLocaleString("es-MX") : <span className="text-gray-400">Nunca</span>}</td>
                   <td className="p-2">
-                    {!a && <span className="text-gray-500">Sin acceso</span>}
-                    {a && a.verificado && <span className="text-green-700 font-semibold">Activo</span>}
-                    {a && !a.verificado && <span className="text-red-600 font-semibold">Bloqueado</span>}
+                    {r.bloqueado && <span className="text-red-600 font-semibold">Bloqueado</span>}
+                    {!r.bloqueado && a?.registrado && <span className="text-green-700 font-semibold">Registrado</span>}
+                    {!r.bloqueado && !a?.registrado && <span className="text-blue-700 font-semibold">Acceso libre</span>}
                   </td>
                   <td className="p-2 text-right">
                     <div className="flex gap-1 justify-end">
-                      {!a && (
-                        <button onClick={() => setAssignFor(r)} className="px-2 py-1 text-xs bg-primary text-white rounded inline-flex items-center gap-1">
-                          <UserPlus className="h-3.5 w-3.5" /> Dar acceso
+                      {a?.registrado && !r.bloqueado && (
+                        <button onClick={() => setResetFor(r)} title="Resetear contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
+                          <KeyRound className="h-4 w-4" />
                         </button>
                       )}
-                      {a && (
-                        <>
-                          <button onClick={() => setResetFor(r)} title="Resetear contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
-                            <KeyRound className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await callAdmin(a.verificado ? "deactivate" : "activate", { tienda_cliente_id: a.id }, empresaId);
-                                toast.success(a.verificado ? "Acceso bloqueado" : "Acceso reactivado");
-                                load();
-                              } catch (e) { toast.error((e as Error).message); }
-                            }}
-                            title={a.verificado ? "Bloquear" : "Reactivar"}
-                            className="p-1.5 hover:bg-gray-100 rounded"
-                          >
-                            {a.verificado ? <ShieldOff className="h-4 w-4 text-red-600" /> : <ShieldCheck className="h-4 w-4 text-green-700" />}
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => toggleBlock(r)}
+                        title={r.bloqueado ? "Restaurar acceso" : "Bloquear acceso"}
+                        className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${r.bloqueado ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
+                      >
+                        {r.bloqueado ? <><ShieldCheck className="h-3.5 w-3.5" /> Restaurar</> : <><ShieldOff className="h-3.5 w-3.5" /> Bloquear</>}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -162,62 +163,7 @@ export default function TiendaClientesAdmin() {
         </table>
       </div>
 
-      {assignFor && <AssignAccessModal row={assignFor} empresaId={empresaId} onClose={() => setAssignFor(null)} onSaved={() => { setAssignFor(null); load(); }} />}
       {resetFor && resetFor.acceso && <ResetPasswordModal row={resetFor} acceso={resetFor.acceso} empresaId={empresaId} onClose={() => setResetFor(null)} />}
-    </div>
-  );
-}
-
-function AssignAccessModal({ row, empresaId, onClose, onSaved }: { row: Row; empresaId: string | null; onClose: () => void; onSaved: () => void }) {
-  const [email, setEmail] = useState(row.cliente_email ?? "");
-  const [password, setPassword] = useState(genPwd());
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) { toast.error("Correo obligatorio"); return; }
-    if (password.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
-    setSaving(true);
-    try {
-      await callAdmin("create_login", { cliente_id: row.cliente_id, email, password }, empresaId);
-      toast.success("Acceso creado. Comparte la contraseña con el cliente.");
-      onSaved();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center">
-          <h3 className="font-bold text-lg">Dar acceso a la tienda</h3>
-          <button onClick={onClose}><X className="h-5 w-5" /></button>
-        </div>
-        <div className="text-sm bg-gray-50 p-2 rounded">
-          <div><strong>{row.cliente_nombre}</strong></div>
-          {row.cliente_telefono && <div className="text-gray-600">{row.cliente_telefono}</div>}
-        </div>
-        <form onSubmit={submit} className="space-y-3">
-          <div>
-            <label className="text-sm font-semibold block mb-1">Correo de acceso *</label>
-            <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-semibold block mb-1">Contraseña inicial * (mín. 6)</label>
-            <div className="flex gap-2">
-              <input className="input flex-1" type="text" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-              <button type="button" onClick={() => setPassword(genPwd())} className="px-3 py-2 border rounded text-sm">Generar</button>
-            </div>
-            <div className="text-xs text-gray-500 mt-1">El cliente podrá cambiarla desde su cuenta.</div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-3 py-2 border rounded">Cancelar</button>
-            <button disabled={saving} className="px-4 py-2 bg-primary text-white rounded font-semibold disabled:opacity-50">
-              {saving ? "Guardando…" : "Crear acceso"}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }
@@ -270,4 +216,3 @@ function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acc
     </div>
   );
 }
-
