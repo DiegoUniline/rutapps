@@ -517,8 +517,8 @@ export default function CotizacionFormPage() {
         <div className="space-y-3">
           <div>
             <Label className="label-odoo">Fecha</Label>
-            <Input type="date" value={form.fecha ?? ''} disabled={readOnly}
-              onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
+            <div><SingleDatePicker value={form.fecha ?? ''} disabled={readOnly}
+              onChange={(iso) => setForm({ ...form, fecha: iso })} /></div>
           </div>
           <div>
             <Label className="label-odoo">Vigencia (días)</Label>
