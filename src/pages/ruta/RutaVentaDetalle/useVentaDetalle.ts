@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { queueOperation } from '@/lib/syncQueue';
+import { newLocalId } from '@/lib/localId';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenta } from '@/hooks/useVentas';
