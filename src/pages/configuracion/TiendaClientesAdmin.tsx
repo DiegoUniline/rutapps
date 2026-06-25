@@ -88,7 +88,7 @@ export default function TiendaClientesAdmin() {
       <div>
         <h2 className="font-bold text-lg">Clientes con acceso a la tienda</h2>
         <p className="text-sm text-gray-600">
-          <strong>Todos</strong> tus clientes tienen acceso automáticamente. Bloquea los que no quieras que entren a la tienda.
+          <strong>Todos</strong> tus clientes tienen acceso automáticamente. Contraseña inicial por defecto: <code className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-xs">123456</code>. Cada cliente puede cambiarla desde la tienda. Bloquea los que no quieras que entren.
         </p>
       </div>
 
