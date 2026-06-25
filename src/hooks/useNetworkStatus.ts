@@ -7,7 +7,8 @@ import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataS
 import { hasRealConnection } from '@/lib/connectivity';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
-let activeSyncPromise: Promise<{ rowsDownloaded: number; pendingCount: number }> | null = null;
+type SyncNowResult = { ok: boolean; rowsDownloaded: number; pendingCount: number; reason?: string };
+let activeSyncPromise: Promise<SyncNowResult> | null = null;
 let lastGlobalSyncAt = 0;
 
 export function useNetworkStatus() {
@@ -98,35 +99,40 @@ export function useNetworkStatus() {
   }, [autoSync, isOnline, empresa?.id, dataSaver]);
 
   // Full sync
-  const syncNow = useCallback(async () => {
-    if (!empresa?.id) return;
+  const syncNow = useCallback(async (): Promise<SyncNowResult> => {
+    if (!empresa?.id) return { ok: false, rowsDownloaded: 0, pendingCount, reason: 'Sin empresa activa' };
     const now = Date.now();
     if (activeSyncPromise) {
       setIsSyncing(true);
       try {
-        await activeSyncPromise;
+        return await activeSyncPromise;
       } finally {
         setIsSyncing(false);
       }
-      return;
     }
-    if (now - lastGlobalSyncAt < 4000) return;
+    if (now - lastGlobalSyncAt < 4000) return { ok: true, rowsDownloaded: lastSyncRows, pendingCount };
     lastGlobalSyncAt = now;
     setIsSyncing(true);
     activeSyncPromise = (async () => {
       const online = await hasRealConnection();
       setIsOnline(online);
-      if (!online) return { rowsDownloaded: 0, pendingCount };
+      if (!online) return { ok: false, rowsDownloaded: 0, pendingCount, reason: 'Sin conexión real' };
 
       const result = await processSyncQueue();
       console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
       const { rowsDownloaded } = await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES });
       const count = await getPendingCount();
-      return { rowsDownloaded, pendingCount: count };
+      return {
+        ok: result.failed === 0,
+        rowsDownloaded,
+        pendingCount: count,
+        reason: result.failed > 0 ? `${result.failed} cambios quedaron pendientes` : undefined,
+      };
     })();
 
     try {
-      const { rowsDownloaded, pendingCount: count } = await activeSyncPromise;
+      const syncResult = await activeSyncPromise;
+      const { rowsDownloaded, pendingCount: count } = syncResult;
       setLastSyncRows(rowsDownloaded);
       setPendingCount(count);
       const time = await getLastSyncTime();
@@ -140,8 +146,10 @@ export function useNetworkStatus() {
 
       // Notify all useOfflineQuery hooks to refetch (folios, server-generated fields)
       window.dispatchEvent(new Event('uniline:sync-complete'));
+      return syncResult;
     } catch (err) {
       console.error('Sync error:', err);
+      return { ok: false, rowsDownloaded: 0, pendingCount, reason: err instanceof Error ? err.message : 'Error de sincronización' };
     } finally {
       activeSyncPromise = null;
       setIsSyncing(false);
