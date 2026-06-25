@@ -135,16 +135,21 @@ export default function RutaDescarga() {
   };
 
   const submitMutation = useMutation({
+    networkMode: 'always',
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
-      // Validate route session closing if active
+      const online = typeof navigator === 'undefined' || navigator.onLine;
+
+      // Validate route session closing if active.
+      // Offline: la foto del odómetro requiere subir al storage; permitimos cerrar la liquidación
+      // sin cerrar la sesión de ruta — se cerrará manualmente al recuperar conexión.
       if (sesionActiva) {
         const km = parseFloat(kmFin);
         if (!Number.isFinite(km) || km < sesionActiva.km_inicio) {
           throw new Error(`KM final debe ser mayor o igual a ${sesionActiva.km_inicio}`);
         }
-        if (!fotoFin) throw new Error('Toma la foto del odómetro final');
+        if (online && !fotoFin) throw new Error('Toma la foto del odómetro final');
       }
 
       const diferencia = totalEfectivo - efectivoEsperado;
@@ -160,39 +165,39 @@ export default function RutaDescarga() {
         notas: notas || null,
         fecha_inicio: today,
         fecha_fin: today,
+        fecha: today,
+        status: 'pendiente',
       };
+      if (cargaActiva) insertData.carga_id = cargaActiva.id;
 
-      if (cargaActiva) {
-        insertData.carga_id = cargaActiva.id;
-      }
+      if (online) {
+        const { error } = await supabase.from('descarga_ruta').insert(insertData).select().single();
+        if (error) throw error;
 
-      const { data: descarga, error } = await supabase
-        .from('descarga_ruta')
-        .insert(insertData)
-        .select()
-        .single();
-      if (error) throw error;
-
-      // Close route session
-      if (sesionActiva && fotoFin) {
-        setUploading(true);
-        try {
-          const fotoUrl = await uploadOdometroFoto(fotoFin, empresa!.id, 'fin');
-          await cerrarSesion.mutateAsync({
-            id: sesionActiva.id,
-            km_fin: parseFloat(kmFin),
-            lat_fin: coords?.lat ?? null,
-            lng_fin: coords?.lng ?? null,
-            foto_fin_url: fotoUrl,
-            notas_fin: notas || null,
-          });
-        } finally {
-          setUploading(false);
+        // Close route session (requires foto upload — only online)
+        if (sesionActiva && fotoFin) {
+          setUploading(true);
+          try {
+            const fotoUrl = await uploadOdometroFoto(fotoFin, empresa!.id, 'fin');
+            await cerrarSesion.mutateAsync({
+              id: sesionActiva.id,
+              km_fin: parseFloat(kmFin),
+              lat_fin: coords?.lat ?? null,
+              lng_fin: coords?.lng ?? null,
+              foto_fin_url: fotoUrl,
+              notas_fin: notas || null,
+            });
+          } finally { setUploading(false); }
         }
+      } else {
+        // Offline: encolar con id sintético; al sincronizar se hace upsert.
+        const localId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+        await queueOperation('descarga_ruta', 'insert', { id: localId, ...insertData });
       }
     },
     onSuccess: () => {
-      toast.success('Liquidación enviada ✓');
+      const online = typeof navigator === 'undefined' || navigator.onLine;
+      toast.success(online ? 'Liquidación enviada ✓' : 'Liquidación guardada localmente, se sincronizará');
       qc.invalidateQueries({ queryKey: ['mi-descarga-hoy'] });
       qc.invalidateQueries({ queryKey: ['descargas'] });
       qc.invalidateQueries({ queryKey: ['ruta-sesion-activa'] });
