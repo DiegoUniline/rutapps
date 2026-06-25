@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         .from("tarifa_lineas")
         .select("aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id")
         .eq("tarifa_id", tarifaId)
-        .eq("lista_precio_id", listaPrecioId);
+        .or(`lista_precio_id.eq.${listaPrecioId},lista_precio_id.is.null`);
       rules = (tr ?? []) as Rule[];
     }
 
