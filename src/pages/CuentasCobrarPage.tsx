@@ -36,16 +36,38 @@ function useCuentasCobrar() {
   return useQuery({
     queryKey: ['cuentas-cobrar', empresa?.id],
     enabled: !!empresa?.id,
+    networkMode: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .gt('saldo_pendiente', 0)
-        .neq('status', 'cancelado')
-        .order('fecha', { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const ventas = await offlineDb.ventas
+            .where('empresa_id').equals(empresa!.id).toArray();
+          return (ventas as any[])
+            .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.status !== 'cancelado')
+            .sort((a, b) => (a.fecha ?? '').localeCompare(b.fecha ?? ''));
+        } catch { return [] as any[]; }
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return await readCache();
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, cliente_id, vendedor_id, clientes(id, nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .gt('saldo_pendiente', 0)
+          .neq('status', 'cancelado')
+          .order('fecha', { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+      } catch (err) {
+        const cached = await readCache();
+        if (cached.length > 0) return cached;
+        throw err;
+      }
     },
   });
 }

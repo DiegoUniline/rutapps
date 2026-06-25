@@ -36,58 +36,7 @@ import { VentasDesktopTable } from './ventas/VentasDesktopTable';
 import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
-
-function useVendedoresForFilter() {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['vendedores-filter', empresa?.id],
-    enabled: !!empresa?.id,
-    staleTime: 60_000,
-    // Run queryFn even when React Query thinks we're offline — we have an IndexedDB fallback.
-    networkMode: 'always',
-    queryFn: async () => {
-      const readCache = async () => {
-        try {
-          const { offlineDb } = await import('@/lib/offlineDb');
-          const cached = await offlineDb.profiles
-            .where('empresa_id').equals(empresa!.id).toArray();
-          return (cached as any[])
-            .filter(p => !p.estado || p.estado === 'activo')
-            .map(p => ({ id: p.id, nombre: p.nombre ?? '' }))
-            .sort((a, b) => a.nombre.localeCompare(b.nombre));
-        } catch { return [] as { id: string; nombre: string }[]; }
-      };
-
-      // Offline: skip network (would hang) and use cache directly.
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        const cached = await readCache();
-        if (cached.length > 0) return cached;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, nombre, user_id, empresa_id, almacen_id, telefono, estado, pin_code, avatar_url')
-          .eq('empresa_id', empresa!.id)
-          .eq('estado', 'activo')
-          .order('nombre');
-        if (!error && data) {
-          try {
-            const { offlineDb } = await import('@/lib/offlineDb');
-            await offlineDb.profiles.bulkPut(data as any);
-          } catch { /* ignore */ }
-          return data.map(p => ({ id: p.id, nombre: p.nombre ?? '' })) as { id: string; nombre: string }[];
-        }
-        if (error) throw error;
-      } catch (err) {
-        const cached = await readCache();
-        if (cached.length > 0) return cached;
-        console.error('Error fetching vendedores:', err);
-      }
-      return [] as { id: string; nombre: string }[];
-    },
-  });
-}
+import { useVendedoresForFilter } from '@/hooks/useFilterOptions';
 
 function getNumericPageSize(ps: PageSizeOption): number {
   return ps === 'all' ? 10000 : ps;

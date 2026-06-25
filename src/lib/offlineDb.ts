@@ -31,6 +31,8 @@ class OfflineDatabase extends Dexie {
   devoluciones!: Table;
   devolucion_lineas!: Table;
   profiles!: Table;
+  cotizaciones!: Table;
+  cotizacion_lineas!: Table;
   empresas!: Table;
   cliente_pedido_sugerido!: Table;
   unidades!: Table;
@@ -88,6 +90,11 @@ class OfflineDatabase extends Dexie {
     this.version(8).stores({
       lista_precios: 'id, empresa_id, tarifa_id, es_principal, activa',
       listas: 'id, empresa_id',
+    });
+    // v9: cache cotizaciones for offline list view
+    this.version(9).stores({
+      cotizaciones: 'id, empresa_id, cliente_id, vendedor_id, estado, fecha, created_at',
+      cotizacion_lineas: 'id, cotizacion_id, producto_id',
     });
   }
 }
