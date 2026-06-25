@@ -31,7 +31,7 @@ import {
   Eye,
 } from "lucide-react";
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
-import imgOffline from "@/assets/landing/offline-vendedor.jpg";
+
 import imgPapel from "@/assets/landing/papel-vendedor.jpg";
 import imgVentas from "@/assets/landing/mod-ventas.jpg";
 import imgCobranza from "@/assets/landing/mod-cobranza.jpg";
