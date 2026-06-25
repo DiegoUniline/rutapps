@@ -646,6 +646,93 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* OFFLINE — Funciona sin internet */}
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.ink }}>
+        <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 gap-10 items-center">
+          <Reveal>
+            <div className="text-white">
+              <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] px-3 py-1 rounded-full" style={{ background: 'rgba(254,140,26,0.15)', color: BRAND.accent }}>
+                <WifiOff className="h-3.5 w-3.5" /> Sin internet
+              </span>
+              <h2 className="mt-3 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
+                Funciona aunque no haya señal.
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: '#b8c4dd' }}>
+                Tu vendedor vende, cobra e imprime tickets en zonas sin red. Todo se guarda en el celular y se sincroniza solo cuando vuelve la conexión. Cero pedidos perdidos.
+              </p>
+              <ul className="mt-5 space-y-2.5 text-[14px]" style={{ color: '#dde4f3' }}>
+                {['Ventas, cobros y entregas 100% offline','Cola de sincronización visible en pantalla','Auto-sync al recuperar señal','Tickets térmicos por Bluetooth sin internet'].map(x => (
+                  <li key={x} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: BRAND.accent }} strokeWidth={3}/>{x}</li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+              <img src="/src/assets/landing/offline-vendedor.jpg" alt="Vendedor usando Rutapp sin internet" className="w-full h-auto" loading="lazy"/>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ADIÓS AL PAPEL */}
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+        <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 gap-10 items-center">
+          <Reveal>
+            <div className="rounded-2xl overflow-hidden border order-2 md:order-1" style={{ borderColor: BRAND.line }}>
+              <img src="/src/assets/landing/vendedor-ticket-calle.jpg" alt="Vendedor imprimiendo ticket en la calle" className="w-full h-auto" loading="lazy"/>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="order-1 md:order-2">
+              <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] px-3 py-1 rounded-full" style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
+                <FileText className="h-3.5 w-3.5" /> Adiós al papel
+              </span>
+              <h2 className="mt-3 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
+                Olvídate de la nota de papel.
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: BRAND.ink2 }}>
+                Cero recapturas en oficina. El vendedor toma el pedido, cobra e imprime el ticket en la calle. Todo entra al sistema en tiempo real, sin errores de transcripción.
+              </p>
+              <ul className="mt-5 space-y-2.5 text-[14px]" style={{ color: BRAND.ink2 }}>
+                {['Ticket térmico Bluetooth desde el celular','Sin recapturar pedidos a mano','Inventario y cobranza al instante','Cliente firma o confirma en pantalla'].map(x => (
+                  <li key={x} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: BRAND.primary }} strokeWidth={3}/>{x}</li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* TIENDA EN LÍNEA */}
+      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
+        <div className="max-w-[1280px] mx-auto grid md:grid-cols-2 gap-10 items-center">
+          <Reveal>
+            <div>
+              <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] px-3 py-1 rounded-full" style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
+                <ShoppingCart className="h-3.5 w-3.5" /> Tienda en línea
+              </span>
+              <h2 className="mt-3 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
+                Tu propia tienda online. Sin desarrollar nada.
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: BRAND.ink2 }}>
+                Activas tu tienda con un clic. Tus clientes entran con su usuario, ven los precios de su lista asignada y mandan pedidos directo al sistema. Te llega notificación con campanita en tiempo real.
+              </p>
+              <ul className="mt-5 space-y-2.5 text-[14px]" style={{ color: BRAND.ink2 }}>
+                {['Catálogo con tus precios personalizados por cliente','Pedidos entran como borrador para que los autorices','Notificación instantánea de nuevos pedidos','Logo, banner y URL propia (rutapp.mx/tienda/tu-marca)'].map(x => (
+                  <li key={x} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: BRAND.primary }} strokeWidth={3}/>{x}</li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
+              <img src="/src/assets/landing/tienda-online.jpg" alt="Tienda en línea Rutapp" className="w-full h-auto" loading="lazy"/>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* COMPARE — compact table */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20">
         <div className="max-w-[1280px] mx-auto">
