@@ -216,17 +216,8 @@ export default function RutaDashboard() {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2 py-2 min-w-0">
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-[10px] text-muted-foreground shrink-0">Desde</span>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="flex-1 bg-transparent text-[11px] focus:outline-none min-w-0 w-full" />
-          </label>
-          <label className="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2 py-2 min-w-0">
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-[10px] text-muted-foreground shrink-0">Hasta</span>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} className="flex-1 bg-transparent text-[11px] focus:outline-none min-w-0 w-full" />
-          </label>
+        <div>
+          <DateRangePicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
         </div>
         <div className="flex gap-1 flex-wrap">
           {([

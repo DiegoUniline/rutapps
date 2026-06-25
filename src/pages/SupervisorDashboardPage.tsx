@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';

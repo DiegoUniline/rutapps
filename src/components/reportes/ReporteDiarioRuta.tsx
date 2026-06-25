@@ -533,13 +533,9 @@ export default function ReporteDiarioRuta() {
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-40">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Fecha inicio</label>
-          <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
-        </div>
-        <div className="w-40">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Fecha fin</label>
-          <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Rango de fechas</label>
+          <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); }} />
         </div>
         <div className="w-56">
           <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Usuario</label>

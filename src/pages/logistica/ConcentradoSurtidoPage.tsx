@@ -287,12 +287,8 @@ export default function ConcentradoSurtidoPage() {
       {/* Filtros */}
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap items-end gap-3">
         <div className="space-y-1">
-          <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Desde</Label>
-          <Input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="h-9 w-[150px]" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Hasta</Label>
-          <Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="h-9 w-[150px]" />
+          <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Rango de fechas</Label>
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => { const t = todayLocal(); setDesde(t); setHasta(t); }}>Hoy</Button>

@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
