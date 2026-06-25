@@ -66,6 +66,8 @@ export default function TiendaConfigPage() {
   const [copied, setCopied] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<"general" | "marca" | "precios" | "beneficios" | "clientes">("general");
+
 
   useEffect(() => {
     if (!empresaId) return;
