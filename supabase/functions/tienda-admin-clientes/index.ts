@@ -159,25 +159,64 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    if (action === "reset_password") {
-      const { tienda_cliente_id, password_nuevo } = body;
-      if (!tienda_cliente_id || !password_nuevo || String(password_nuevo).length < 6) {
+    if (action === "reset_password" || action === "set_password") {
+      const { tienda_cliente_id, cliente_id, password_nuevo } = body;
+      if (!password_nuevo || String(password_nuevo).length < 6) {
         return json({ error: "La nueva contraseña debe tener al menos 6 caracteres" }, 400);
       }
-      const { data: tc } = await admin
-        .from("tienda_clientes")
-        .select("id, empresa_id, password_hash")
-        .eq("id", tienda_cliente_id)
-        .maybeSingle();
-      if (!tc || tc.empresa_id !== empresaId) return json({ error: "No encontrado" }, 404);
-      if (tc.password_hash === BLOCKED_HASH) return json({ error: "Este cliente no se ha registrado todavía" }, 400);
-
       const password_hash = await hashPassword(password_nuevo);
-      const { error } = await admin
+
+      // Update path: existing tienda_clientes row
+      if (tienda_cliente_id) {
+        const { data: tc } = await admin
+          .from("tienda_clientes")
+          .select("id, empresa_id, password_hash")
+          .eq("id", tienda_cliente_id)
+          .maybeSingle();
+        if (!tc || tc.empresa_id !== empresaId) return json({ error: "No encontrado" }, 404);
+        const { error } = await admin
+          .from("tienda_clientes")
+          .update({ password_hash, verificado: true })
+          .eq("id", tienda_cliente_id);
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true });
+      }
+
+      // Upsert path: by cliente_id (auto-provision row if needed)
+      if (!cliente_id) return json({ error: "cliente_id requerido" }, 400);
+      const { data: cli } = await admin
+        .from("clientes")
+        .select("id, empresa_id, email, telefono")
+        .eq("id", cliente_id)
+        .maybeSingle();
+      if (!cli || cli.empresa_id !== empresaId) return json({ error: "Cliente no encontrado" }, 404);
+      if (!cli.email) return json({ error: "Este cliente no tiene correo. Agrégalo primero en su ficha." }, 400);
+      const emailNorm = String(cli.email).toLowerCase().trim();
+
+      const { data: existing } = await admin
         .from("tienda_clientes")
-        .update({ password_hash })
-        .eq("id", tienda_cliente_id);
-      if (error) return json({ error: error.message }, 500);
+        .select("id")
+        .eq("empresa_id", empresaId)
+        .eq("cliente_id", cli.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await admin
+          .from("tienda_clientes")
+          .update({ password_hash, email: emailNorm, telefono: cli.telefono ?? null, verificado: true })
+          .eq("id", existing.id);
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const { error } = await admin.from("tienda_clientes").insert({
+          empresa_id: empresaId,
+          cliente_id: cli.id,
+          email: emailNorm,
+          password_hash,
+          telefono: cli.telefono ?? null,
+          verificado: true,
+        });
+        if (error) return json({ error: error.message }, 500);
+      }
       return json({ ok: true });
     }
 
