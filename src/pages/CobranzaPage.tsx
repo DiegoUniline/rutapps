@@ -41,31 +41,48 @@ function useCobros() {
   return useQuery({
     queryKey: ['cobros-desktop', empresa?.id],
     enabled: !!empresa?.id,
+    networkMode: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cobros')
-        .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.cobros
+            .where('empresa_id').equals(empresa!.id).toArray();
+          return cached as any[];
+        } catch { return [] as any[]; }
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const cached = await readCache();
+        return cached;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('cobros')
+          .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
+          .eq('empresa_id', empresa!.id)
+          .order('fecha', { ascending: false });
+        if (error) throw error;
+        return data ?? [];
+      } catch (err) {
+        const cached = await readCache();
+        if (cached.length > 0) return cached;
+        throw err;
+      }
     },
   });
 }
 
+// Re-exported shared hook (offline-first) for filter dropdowns.
+import { useVendedoresForFilter as useVendedoresFilter } from '@/hooks/useFilterOptions';
 function useVendedores() {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['vendedores-cobranza', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, nombre')
-        .eq('empresa_id', empresa!.id);
-      return data ?? [];
-    },
-  });
+  const q = useVendedoresFilter();
+  // CobranzaPage expects records with user_id+nombre; map accordingly.
+  return {
+    ...q,
+    data: (q.data ?? []).map(v => ({ user_id: v.user_id ?? v.id, nombre: v.nombre })),
+  };
 }
 
 function buildCobroMessage(cobro: any, fmtMoney: (n: number) => string) {
