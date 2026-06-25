@@ -292,10 +292,11 @@ export default function LandingV2Page() {
               >
                 <Counter
                   end={s.end}
-                  prefix={s.prefix}
+                  prefix={(s as any).prefix}
                   suffix={s.suffix}
                   decimals={s.decimals ?? 0}
                 />
+
               </div>
               <div className="mt-2 text-[12.5px] uppercase tracking-wider text-white/70">
                 {s.label}
