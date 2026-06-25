@@ -6794,6 +6794,129 @@ export type Database = {
           },
         ]
       }
+      tienda_clientes: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          email: string
+          empresa_id: string
+          id: string
+          password_hash: string
+          telefono: string | null
+          ultimo_login: string | null
+          updated_at: string
+          verificado: boolean
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          email: string
+          empresa_id: string
+          id?: string
+          password_hash: string
+          telefono?: string | null
+          ultimo_login?: string | null
+          updated_at?: string
+          verificado?: boolean
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          email?: string
+          empresa_id?: string
+          id?: string
+          password_hash?: string
+          telefono?: string | null
+          ultimo_login?: string | null
+          updated_at?: string
+          verificado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tienda_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tienda_clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tienda_config: {
+        Row: {
+          activa: boolean
+          banner_url: string | null
+          color_primario: string | null
+          color_secundario: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          lista_precios_default_id: string | null
+          logo_url: string | null
+          mensaje_bienvenida: string | null
+          nombre_tienda: string
+          permitir_invitados: boolean
+          slug: string
+          updated_at: string
+          whatsapp_pedidos: string | null
+        }
+        Insert: {
+          activa?: boolean
+          banner_url?: string | null
+          color_primario?: string | null
+          color_secundario?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lista_precios_default_id?: string | null
+          logo_url?: string | null
+          mensaje_bienvenida?: string | null
+          nombre_tienda: string
+          permitir_invitados?: boolean
+          slug: string
+          updated_at?: string
+          whatsapp_pedidos?: string | null
+        }
+        Update: {
+          activa?: boolean
+          banner_url?: string | null
+          color_primario?: string | null
+          color_secundario?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lista_precios_default_id?: string | null
+          logo_url?: string | null
+          mensaje_bienvenida?: string | null
+          nombre_tienda?: string
+          permitir_invitados?: boolean
+          slug?: string
+          updated_at?: string
+          whatsapp_pedidos?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tienda_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tienda_config_lista_precios_default_id_fkey"
+            columns: ["lista_precios_default_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timbres_movimientos: {
         Row: {
           cantidad: number
