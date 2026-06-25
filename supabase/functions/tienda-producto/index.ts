@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg } = await supabase
       .from("tienda_config")
-      .select("empresa_id, activa, lista_precios_default_id")
+      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente")
       .eq("slug", slug)
       .maybeSingle();
     if (!cfg || !cfg.activa) return json({ error: "Tienda no disponible" }, 404);
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
           .select("lista_precio_id")
           .eq("id", payload.cliente_id)
           .maybeSingle();
-        if (cli?.lista_precio_id) listaPrecioId = cli.lista_precio_id;
+        if (cfg.usar_lista_cliente !== false && cli?.lista_precio_id) listaPrecioId = cli.lista_precio_id;
       }
     }
 
