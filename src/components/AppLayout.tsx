@@ -918,6 +918,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <RefreshCw className="h-3.5 w-3.5" />
             Sincronizar
           </button>
+          <TiendaOrdersBell />
           <InternalNotificationBell />
           <BroadcastBell />
           <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
