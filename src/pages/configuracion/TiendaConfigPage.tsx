@@ -205,12 +205,38 @@ export default function TiendaConfigPage() {
         </Field>
       </Section>
 
-      <Section title="Marca">
-        <Field label="Logo (URL)">
-          <input className="input" value={cfg.logo_url ?? ""} onChange={(e) => setCfg({ ...cfg, logo_url: e.target.value || null })} placeholder="https://…" />
+      <Section title="Marca e imágenes">
+        <Field label="Logo">
+          <div className="flex items-center gap-3">
+            {empresa?.logo_url ? (
+              <img src={empresa.logo_url} alt="Logo" className="h-16 w-16 rounded border object-contain bg-white" />
+            ) : (
+              <div className="h-16 w-16 rounded border bg-gray-50 flex items-center justify-center text-gray-400">
+                <ImageIcon className="h-6 w-6" />
+              </div>
+            )}
+            <div className="text-sm text-gray-600">
+              Se usa el logo de tu empresa. Para cambiarlo ve a <strong>Configuración → Empresa</strong>.
+            </div>
+          </div>
         </Field>
-        <Field label="Banner / portada (URL)">
-          <input className="input" value={cfg.banner_url ?? ""} onChange={(e) => setCfg({ ...cfg, banner_url: e.target.value || null })} placeholder="https://…" />
+        <Field label="Banner / portada (1920×600 recomendado)">
+          <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" />
+          {cfg.banner_url && (
+            <div className="mb-2 rounded-lg overflow-hidden border bg-gray-50" style={{ aspectRatio: "1920 / 600" }}>
+              <img src={cfg.banner_url} alt="Banner" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner} className="px-3 py-2 bg-white border rounded hover:bg-gray-50 text-sm flex items-center gap-2 disabled:opacity-50">
+              {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {cfg.banner_url ? "Cambiar banner" : "Subir banner"}
+            </button>
+            {cfg.banner_url && (
+              <button type="button" onClick={() => setCfg({ ...cfg, banner_url: null })} className="px-3 py-2 bg-white border rounded text-sm text-red-600 hover:bg-red-50">Quitar</button>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Se convierte automáticamente a WebP optimizado. Tamaño ideal: 1920×600 px.</div>
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Color primario">
