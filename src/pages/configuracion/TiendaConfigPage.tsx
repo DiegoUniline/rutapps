@@ -43,6 +43,8 @@ const DEFAULT_BENEFICIOS: Beneficio[] = [
   { icon: "headphones", title: "Soporte directo", subtitle: "WhatsApp y teléfono", enabled: true },
 ];
 
+interface ListaPrecio { id: string; nombre: string; }
+
 const slugify = (s: string) => s
   .toLowerCase()
   .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
