@@ -81,7 +81,7 @@ const COLUMN_SELECTS: Record<string, string> = {
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
   tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',
   tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
-  stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
+  stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at',
   producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
   lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
   zonas: 'id,empresa_id,nombre,activo,created_at',
