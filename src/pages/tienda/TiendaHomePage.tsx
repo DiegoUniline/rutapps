@@ -175,6 +175,7 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
   const cur = moneda ?? t.empresa?.moneda ?? "MXN";
   const tieneDescuento = p.precio_base && p.precio < p.precio_base;
   const pct = tieneDescuento ? Math.round(((p.precio_base - p.precio) / p.precio_base) * 100) : 0;
+  const detalleHref = `/tienda/${t.slug}/producto/${p.id}`;
   return (
     <div className="tienda-card">
       {(highlight || tieneDescuento) && (
@@ -182,15 +183,16 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
           {highlight === "nuevo" ? "Nuevo" : tieneDescuento ? `-${pct}%` : "Oferta"}
         </div>
       )}
-      <div
+      <Link
+        to={detalleHref}
         className="tienda-card-img"
         style={p.imagen_url ? { backgroundImage: `url(${p.imagen_url})` } : {}}
       >
         {!p.imagen_url && <div className="tienda-card-img-placeholder">📦</div>}
-      </div>
+      </Link>
       <div className="tienda-card-body">
         {p.marca && <div className="tienda-card-brand">{p.marca}</div>}
-        <div className="tienda-card-name">{p.nombre}</div>
+        <Link to={detalleHref} className="tienda-card-name" style={{ color: "inherit", textDecoration: "none" }}>{p.nombre}</Link>
         <div className="tienda-card-price">
           {formatMoney(p.precio, cur)}
           {p.unidad_venta && <small> / {p.unidad_venta}</small>}
