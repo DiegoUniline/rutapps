@@ -10,6 +10,13 @@ import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion';
 import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
+import { queueOperation } from '@/lib/syncQueue';
+import {
+  fetchMyProfileWithFallback,
+  fetchCargaActivaWithFallback,
+  fetchDescargaFinancialsWithFallback,
+  fetchExistingDescargaWithFallback,
+} from '@/lib/offlineEntrega';
 
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
