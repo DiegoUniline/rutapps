@@ -42,7 +42,7 @@ TIENDA EN LÍNEA (NUEVO — promo 2026):
 - Activarla: [Configuración → Tienda en línea](/configuracion/tienda). Tabs: General (activar, banner, beneficios), Lista de precios (cuál mostrar o usar la del cliente logueado), Clientes (acceso, reset de contraseña 🔑).
 - Acceso clientes: TODOS los clientes de la empresa pueden entrar por default con su correo + contraseña inicial **123456** (la cambian en /tienda/{slug}/cambiar-password). El admin puede bloquear clientes específicos.
 - Pedidos: llegan como **Pedido** (no venta directa) y aparecen en la **campanita 🛍️ TiendaOrdersBell** arriba en el header; al hacer clic abre /ventas/:id.
-- Precios: respetan tarifa asignada al cliente + reglas globales + impuestos. Si `usar_lista_cliente` está activo, el cliente ve sus precios; si no, todos ven la lista configurada.
+- Precios: respetan tarifa asignada al cliente + reglas globales + impuestos. Si 'usar_lista_cliente' está activo, el cliente ve sus precios; si no, todos ven la lista configurada.
 
 App móvil (vendedor en ruta): /ruta · /ruta/carga · /ruta/cobros · /ruta/entregas · /ruta/mapa · /ruta/navegacion · /ruta/sincronizar · /ruta/iniciar · /ruta/devolucion · /ruta/descarga. Catálogo público: /catalogo/:token.
 
