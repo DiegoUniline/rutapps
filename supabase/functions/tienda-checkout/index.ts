@@ -120,10 +120,12 @@ Deno.serve(async (req) => {
     // Internal notification
     await supabase.from("internal_notifications").insert({
       empresa_id: cfg.empresa_id,
-      titulo: "Nuevo pedido desde tu tienda en línea",
-      mensaje: `${cliente.nombre} acaba de enviar el pedido ${folio} por ${round(total)}`,
+      title: "Nuevo pedido desde tu tienda en línea",
+      body: `${cliente.nombre} acaba de enviar el pedido ${folio} por ${round(total)}`,
       tipo: "info",
       link: `/ventas/${venta.id}`,
+      entity_type: "venta",
+      entity_id: venta.id,
     }).then(() => {}).catch(() => {});
 
     return json({ ok: true, folio: venta.folio, venta_id: venta.id });
