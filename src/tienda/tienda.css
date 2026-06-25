@@ -393,3 +393,225 @@
 
 .tx-skeleton { background: linear-gradient(90deg, #eef0f3 0%, #f7f8fa 50%, #eef0f3 100%); background-size: 200% 100%; animation: tx-shimmer 1.2s infinite; border-radius: 8px; }
 @keyframes tx-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ============================================
+   MOBILE RESPONSIVE - Tienda en línea
+   ============================================ */
+
+/* Tablets and below */
+@media (max-width: 1024px) {
+  .tienda-header-main { padding: 10px 12px; gap: 10px; }
+  .tienda-container { padding: 16px 12px; }
+  .tienda-products { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  /* Header */
+  .tienda-header-top {
+    font-size: 11px; padding: 5px 10px; gap: 6px;
+  }
+  .tienda-header-top span:first-child {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;
+  }
+  .tienda-header-main {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "logo actions"
+      "search search";
+    gap: 8px; padding: 8px 10px;
+  }
+  .tienda-logo { grid-area: logo; min-width: 0; }
+  .tienda-logo img { height: 30px; }
+  .tienda-logo-text {
+    font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 60vw;
+  }
+  .tienda-header-actions { grid-area: actions; gap: 4px; }
+  .tienda-search {
+    grid-area: search; flex-basis: auto; order: unset; max-width: 100%;
+  }
+  .tienda-search input { padding: 9px 12px 9px 36px; font-size: 14px; }
+
+  /* Hide labels in header buttons, keep icons; keep Carrito visible w/ badge */
+  .tienda-header-actions .tienda-btn {
+    padding: 8px 10px; font-size: 13px;
+  }
+  .tienda-header-actions .tienda-btn-ghost,
+  .tienda-header-actions .tienda-btn-outline {
+    padding: 8px; gap: 0;
+  }
+  .tienda-header-actions .tienda-btn-ghost > span,
+  .tienda-header-actions .tienda-btn-outline > span,
+  .tienda-header-actions .tienda-btn-primary > span:not(.tienda-cart-badge) {
+    display: none;
+  }
+
+  /* Nav chips */
+  .tienda-nav {
+    padding: 6px 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tienda-nav::-webkit-scrollbar { display: none; }
+  .tienda-nav-chip { padding: 6px 12px; font-size: 12px; }
+
+  /* Containers */
+  .tienda-container { padding: 12px 10px; }
+  .tienda-section-title { font-size: 17px; margin: 18px 0 12px; }
+
+  /* Hero */
+  .tx-hero {
+    min-height: 220px; padding: 24px 18px; border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .tx-hero-shade {
+    background: linear-gradient(180deg, rgba(0,0,0,.65) 0%, rgba(0,0,0,.35) 100%);
+  }
+  .tx-hero h1 { font-size: 24px; }
+  .tx-hero p { font-size: 13px; margin-bottom: 16px; }
+  .tx-hero-eyebrow { font-size: 10px; padding: 4px 10px; margin-bottom: 10px; }
+  .tx-hero-cta .tienda-btn { padding: 10px 14px; font-size: 13px; flex: 1; }
+
+  /* Benefits */
+  .tx-benefits {
+    grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px;
+    margin-bottom: 18px; border-radius: 12px;
+  }
+  .tx-benefit { gap: 8px; padding: 4px; }
+  .tx-benefit > svg { width: 20px; height: 20px; }
+  .tx-benefit strong { font-size: 12px; }
+  .tx-benefit span { font-size: 10px; }
+
+  /* Categories */
+  .tx-categories { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tx-cat-tile {
+    aspect-ratio: 4/3; padding: 10px; font-size: 14px; border-radius: 12px;
+  }
+
+  /* Promo banner */
+  .tx-promo-banner {
+    padding: 18px; border-radius: 12px; margin: 24px 0 4px;
+    flex-direction: column; align-items: flex-start; gap: 12px;
+  }
+  .tx-promo-banner h3 { font-size: 17px; }
+  .tx-promo-banner p { font-size: 13px; }
+  .tx-promo-banner .tienda-btn { width: 100%; justify-content: center; }
+
+  /* Section heads */
+  .tx-section-head { margin: 22px 0 10px; }
+  .tx-section-head h2 { font-size: 17px; }
+  .tx-link { font-size: 12px; }
+
+  /* Products grid - 2 columns on phones */
+  .tienda-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  }
+  .tienda-card { border-radius: 10px; }
+  .tienda-card-body { padding: 8px 10px 10px; gap: 4px; }
+  .tienda-card-brand { font-size: 10px; }
+  .tienda-card-name {
+    font-size: 12px; min-height: 32px; line-height: 1.25;
+  }
+  .tienda-card-price { font-size: 16px; }
+  .tienda-card-price small { font-size: 10px; }
+  .tienda-card-stock { font-size: 10px; }
+  .tienda-card-actions .tienda-btn {
+    padding: 8px 6px; font-size: 12px;
+  }
+  .tienda-card-actions .tienda-btn svg { width: 14px; height: 14px; }
+  .tx-badge { font-size: 9px; padding: 3px 7px; top: 6px; left: 6px; }
+
+  /* Filters sidebar - collapse to top */
+  .tienda-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tienda-sidebar {
+    position: static; padding: 12px; border-radius: 10px;
+    max-height: 50vh; overflow-y: auto;
+  }
+  .tienda-filter-group { margin-bottom: 12px; }
+  .tienda-filter-list { max-height: 160px; }
+
+  /* Cart */
+  .tienda-cart-page { grid-template-columns: 1fr; gap: 14px; }
+  .tienda-cart-row {
+    grid-template-columns: 64px 1fr;
+    grid-template-areas:
+      "img info"
+      "img qty";
+    gap: 10px; padding: 12px;
+  }
+  .tienda-cart-row img { grid-area: img; width: 64px; height: 64px; }
+  .tienda-cart-row > div:nth-child(2) { grid-area: info; min-width: 0; }
+  .tienda-cart-row .name {
+    font-size: 13px; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .tienda-cart-row .price { font-size: 12px; }
+  .tienda-cart-row .tienda-qty { grid-area: qty; justify-self: start; }
+  .tienda-cart-summary {
+    position: sticky; bottom: 0; top: auto;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+    padding: 16px;
+  }
+  .tienda-cart-summary .line { font-size: 13px; }
+  .tienda-cart-summary .total { font-size: 18px; }
+
+  /* Pedidos */
+  .tienda-pedido-row {
+    grid-template-columns: 1fr auto;
+    gap: 8px; padding: 12px; font-size: 13px;
+  }
+
+  /* PDP */
+  .tx-pdp { padding: 14px; border-radius: 12px; gap: 14px; }
+  .tx-pdp-title { font-size: 20px; }
+  .tx-pdp-price { font-size: 24px; }
+  .tx-pdp-price small { font-size: 12px; }
+  .tx-pdp-qty-row { gap: 8px; }
+  .tx-pdp-qty-row .tienda-btn { flex: 1; min-width: 0; }
+  .tx-pdp-perks { padding: 10px; font-size: 12px; }
+  .tx-back-btn { font-size: 13px; padding: 4px 0; }
+
+  /* Auth */
+  .tienda-auth-card {
+    margin: 16px 10px; padding: 22px 18px; border-radius: 12px;
+  }
+  .tienda-auth-card h2 { font-size: 20px; }
+
+  /* Footer */
+  .tienda-footer { padding: 22px 14px; margin-top: 30px; font-size: 12px; }
+
+  /* Touch targets */
+  .tienda-btn { min-height: 40px; }
+  .tienda-qty button { width: 36px; height: 36px; font-size: 18px; }
+  .tienda-qty input { width: 44px; height: 36px; }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .tienda-logo-text { font-size: 13px; max-width: 50vw; }
+  .tienda-logo img { height: 26px; }
+  .tx-hero h1 { font-size: 20px; }
+  .tienda-card-price { font-size: 15px; }
+  .tienda-card-name { font-size: 11px; }
+  .tx-categories { gap: 8px; }
+  .tx-cat-tile { font-size: 12px; padding: 8px; }
+}
+
+/* Landscape phones: reduce hero further */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 480px) {
+  .tx-hero { min-height: 180px; padding: 18px; }
+  .tx-hero h1 { font-size: 22px; }
+}
+
+/* Safe area for iOS notches */
+@supports (padding: max(0px)) {
+  .tienda-header { padding-top: env(safe-area-inset-top); }
+  .tienda-footer { padding-bottom: max(22px, env(safe-area-inset-bottom)); }
+  .tienda-cart-summary {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
