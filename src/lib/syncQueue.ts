@@ -110,6 +110,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
 
       const newRetries = (item.retries ?? 0) + 1;
+      const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
 
       if (isConflict && item.operation === 'insert') {
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
@@ -121,6 +122,8 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
           createdAt: Date.now() + 1000, // bump forward so it's last
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       } else if (isNotFound || newRetries >= MAX_RETRIES) {
         // Dead letter: keep in queue but mark with high retries
@@ -128,15 +131,20 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         await offlineDb.syncQueue.update(item.id!, {
           retries: MAX_RETRIES + 1,
           createdAt: Date.now(),
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       } else {
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
           createdAt: Date.now(), // Reset timestamp for backoff calculation
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       }
       failed++;
     }
+
   }
 
   // Clear backup if everything succeeded
