@@ -45,13 +45,13 @@ export default function TiendaAnnouncementModal() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden border-2 border-primary/30 [&>button.absolute]:hidden">
+      <DialogContent className="max-w-2xl p-0 border-2 border-primary/30 max-h-[90vh] overflow-y-auto">
         {/* Hero image */}
         <div className="w-full bg-gradient-to-br from-blue-50 to-orange-50">
           <img
             src={anuncioImg}
             alt="Tienda en línea gratis 2026"
-            className="w-full h-auto block"
+            className="w-full h-auto block max-h-[28vh] sm:max-h-[40vh] object-cover"
             width={1280}
             height={768}
           />
