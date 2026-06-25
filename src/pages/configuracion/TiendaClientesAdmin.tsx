@@ -226,100 +226,15 @@ function genPwd() {
   return Math.random().toString(36).slice(-8);
 }
 
-
-function CreateAccessModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [q, setQ] = useState("");
-  const [opts, setOpts] = useState<ClienteOpt[]>([]);
-  const [sel, setSel] = useState<ClienteOpt | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [searching, setSearching] = useState(false);
-
-  useEffect(() => {
-    if (q.length < 2) { setOpts([]); return; }
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await callAdmin("buscar_clientes", { search: q });
-        setOpts(r.items ?? []);
-      } catch { /* ignore */ }
-      finally { setSearching(false); }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const pick = (c: ClienteOpt) => {
-    setSel(c); setQ(c.nombre); setOpts([]);
-    if (c.email) setEmail(c.email);
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sel) { toast.error("Selecciona un cliente"); return; }
-    if (password.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
-    setSaving(true);
-    try {
-      await callAdmin("create_login", { cliente_id: sel.id, email, password });
-      toast.success("Acceso creado. Comparte la contraseña con el cliente.");
-      onSaved();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center">
-          <h3 className="font-bold text-lg">Crear acceso a tienda</h3>
-          <button onClick={onClose}><X className="h-5 w-5" /></button>
-        </div>
-        <form onSubmit={submit} className="space-y-3">
-          <div>
-            <label className="text-sm font-semibold block mb-1">Cliente *</label>
-            <input className="input" placeholder="Buscar por nombre o correo…" value={q} onChange={(e) => { setQ(e.target.value); setSel(null); }} />
-            {searching && <div className="text-xs text-gray-400 mt-1">Buscando…</div>}
-            {opts.length > 0 && (
-              <div className="border rounded mt-1 max-h-48 overflow-y-auto bg-white">
-                {opts.map((c) => (
-                  <button type="button" key={c.id} onClick={() => pick(c)} className="block w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0">
-                    <div className="font-medium">{c.nombre}</div>
-                    {c.email && <div className="text-xs text-gray-500">{c.email}</div>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="text-sm font-semibold block mb-1">Correo *</label>
-            <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-semibold block mb-1">Contraseña inicial * (mín. 6)</label>
-            <input className="input" type="text" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-            <div className="text-xs text-gray-500 mt-1">El cliente podrá cambiarla desde su cuenta.</div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-3 py-2 border rounded">Cancelar</button>
-            <button disabled={saving || !sel} className="px-4 py-2 bg-primary text-white rounded font-semibold disabled:opacity-50">
-              {saving ? "Guardando…" : "Crear acceso"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ResetPasswordModal({ tc, onClose }: { tc: TC; onClose: () => void }) {
-  const [pwd, setPwd] = useState("");
+function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acceso: Acceso; empresaId: string | null; onClose: () => void }) {
+  const [pwd, setPwd] = useState(genPwd());
   const [saving, setSaving] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pwd.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
     setSaving(true);
     try {
-      await callAdmin("reset_password", { tienda_cliente_id: tc.id, password_nuevo: pwd });
+      await callAdmin("reset_password", { tienda_cliente_id: acceso.id, password_nuevo: pwd }, empresaId);
       toast.success("Contraseña actualizada. Compártela con el cliente.");
       onClose();
     } catch (e) { toast.error((e as Error).message); }
@@ -333,13 +248,16 @@ function ResetPasswordModal({ tc, onClose }: { tc: TC; onClose: () => void }) {
           <button onClick={onClose}><X className="h-5 w-5" /></button>
         </div>
         <div className="text-sm bg-gray-50 p-2 rounded">
-          <div><strong>{tc.clientes?.nombre}</strong></div>
-          <div className="text-gray-600">{tc.email}</div>
+          <div><strong>{row.cliente_nombre}</strong></div>
+          <div className="text-gray-600">{acceso.email}</div>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label className="text-sm font-semibold block mb-1">Nueva contraseña (mín. 6)</label>
-            <input className="input" type="text" required minLength={6} value={pwd} onChange={(e) => setPwd(e.target.value)} autoFocus />
+            <div className="flex gap-2">
+              <input className="input flex-1" type="text" required minLength={6} value={pwd} onChange={(e) => setPwd(e.target.value)} autoFocus />
+              <button type="button" onClick={() => setPwd(genPwd())} className="px-3 py-2 border rounded text-sm">Generar</button>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-3 py-2 border rounded">Cancelar</button>
@@ -352,3 +270,4 @@ function ResetPasswordModal({ tc, onClose }: { tc: TC; onClose: () => void }) {
     </div>
   );
 }
+
