@@ -19,6 +19,9 @@ import { WhatsAppAgentSection } from '@/components/landing/WhatsAppAgentSection'
 import { Parallax, Float } from '@/components/landing/Parallax';
 import { motion } from 'motion/react';
 import { useLenis } from '@/hooks/useLenis';
+import offlineImg from '@/assets/landing/offline-vendedor.jpg';
+import papelImg from '@/assets/landing/vendedor-ticket-calle.jpg';
+import tiendaImg from '@/assets/landing/tienda-online.jpg';
 
 
 const BRAND = {
