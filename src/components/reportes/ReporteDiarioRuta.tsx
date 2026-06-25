@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
