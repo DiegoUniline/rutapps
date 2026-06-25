@@ -98,6 +98,8 @@ export function useSaveCliente() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   return useMutation({
+    networkMode: 'always',
+
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
       const clean = pickColumns(cliente, CLIENTE_COLUMNS);
 
