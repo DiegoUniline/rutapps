@@ -24,14 +24,17 @@ Deno.serve(async (req) => {
 
     const normalEmail = String(email).toLowerCase().trim();
 
-    // Check existing tienda_clientes
+    // Check existing tienda_clientes by email
     const { data: existing } = await supabase
       .from("tienda_clientes")
-      .select("id")
+      .select("id, verificado, password_hash")
       .eq("empresa_id", cfg.empresa_id)
       .eq("email", normalEmail)
       .maybeSingle();
-    if (existing) return json({ error: "Este correo ya está registrado en esta tienda" }, 409);
+    if (existing) {
+      if (existing.verificado === false) return json({ error: "Tu acceso a esta tienda fue bloqueado." }, 403);
+      return json({ error: "Este correo ya está registrado en esta tienda" }, 409);
+    }
 
     // Find or create cliente in CRM
     let clienteId: string | null = null;
@@ -57,6 +60,21 @@ Deno.serve(async (req) => {
         .single();
       if (cliErr || !nuevoCli) return json({ error: "No se pudo crear el cliente: " + (cliErr?.message ?? "") }, 500);
       clienteId = nuevoCli.id;
+    }
+
+    // If this cliente was blocked (by cliente_id), reject
+    const { data: blockedByCli } = await supabase
+      .from("tienda_clientes")
+      .select("id, verificado")
+      .eq("empresa_id", cfg.empresa_id)
+      .eq("cliente_id", clienteId!)
+      .maybeSingle();
+    if (blockedByCli && blockedByCli.verificado === false) {
+      return json({ error: "Tu acceso a esta tienda fue bloqueado." }, 403);
+    }
+    // If a placeholder block row existed but somehow verificado=true (shouldn't), remove it before insert to avoid unique conflict
+    if (blockedByCli) {
+      await supabase.from("tienda_clientes").delete().eq("id", blockedByCli.id);
     }
 
     const password_hash = await hashPassword(password);
