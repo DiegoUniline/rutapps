@@ -98,6 +98,11 @@ class OfflineDatabase extends Dexie {
       cotizaciones: 'id, empresa_id, cliente_id, vendedor_id, estado, fecha, created_at',
       cotizacion_lineas: 'id, cotizacion_id, producto_id',
     });
+    // v10: cache zonas + almacenes for offline client/entrega forms
+    this.version(10).stores({
+      zonas: 'id, empresa_id, activo',
+      almacenes: 'id, empresa_id, activo, es_merma',
+    });
   }
 }
 
