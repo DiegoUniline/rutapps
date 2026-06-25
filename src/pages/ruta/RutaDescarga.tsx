@@ -66,31 +66,16 @@ export default function RutaDescarga() {
   // Get user's profile id (profile.id IS the vendedor_id now)
   const { data: myProfile } = useQuery({
     queryKey: ['mi-profile-vendedor', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      return data;
-    },
+    networkMode: 'always',
+    queryFn: () => fetchMyProfileWithFallback(user!.id),
     enabled: !!user?.id,
   });
 
   // Get active carga
   const { data: cargaActiva } = useQuery({
-    queryKey: ['mi-carga-activa-descarga'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('cargas')
-        .select('id, fecha, vendedor_id')
-        .eq('empresa_id', empresa!.id)
-        .in('status', ['en_ruta', 'completada'])
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
+    queryKey: ['mi-carga-activa-descarga', empresa?.id],
+    networkMode: 'always',
+    queryFn: () => fetchCargaActivaWithFallback(empresa!.id),
     enabled: !!empresa?.id,
   });
 
