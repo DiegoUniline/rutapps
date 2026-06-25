@@ -88,7 +88,7 @@ export default function TiendaClientesAdmin() {
       <div>
         <h2 className="font-bold text-lg">Clientes con acceso a la tienda</h2>
         <p className="text-sm text-gray-600">
-          <strong>Todos</strong> tus clientes tienen acceso automáticamente. Bloquea los que no quieras que entren a la tienda.
+          <strong>Todos</strong> tus clientes tienen acceso automáticamente. Contraseña inicial por defecto: <code className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-xs">123456</code>. Cada cliente puede cambiarla desde la tienda. Bloquea los que no quieras que entren.
         </p>
       </div>
 
@@ -133,17 +133,18 @@ export default function TiendaClientesAdmin() {
                     {r.cliente_nombre}
                     {r.cliente_email && <div className="text-xs text-gray-500">{r.cliente_email}</div>}
                   </td>
-                  <td className="p-2">{a?.registrado ? a.email : <span className="text-gray-400">Sin registrarse aún</span>}</td>
+                  <td className="p-2">{a?.registrado ? a.email : (r.cliente_email || <span className="text-gray-400">Sin correo</span>)}</td>
                   <td className="p-2">{a?.ultimo_login ? new Date(a.ultimo_login).toLocaleString("es-MX") : <span className="text-gray-400">Nunca</span>}</td>
                   <td className="p-2">
                     {r.bloqueado && <span className="text-red-600 font-semibold">Bloqueado</span>}
                     {!r.bloqueado && a?.registrado && <span className="text-green-700 font-semibold">Registrado</span>}
-                    {!r.bloqueado && !a?.registrado && <span className="text-blue-700 font-semibold">Acceso libre</span>}
+                    {!r.bloqueado && !a?.registrado && r.cliente_email && <span className="text-blue-700 font-semibold">Acceso (contraseña 123456)</span>}
+                    {!r.bloqueado && !a?.registrado && !r.cliente_email && <span className="text-gray-500 font-semibold">Falta correo</span>}
                   </td>
                   <td className="p-2 text-right">
                     <div className="flex gap-1 justify-end">
-                      {a?.registrado && !r.bloqueado && (
-                        <button onClick={() => setResetFor(r)} title="Resetear contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
+                      {!r.bloqueado && r.cliente_email && (
+                        <button onClick={() => setResetFor(r)} title="Cambiar contraseña" className="p-1.5 hover:bg-gray-100 rounded text-blue-700">
                           <KeyRound className="h-4 w-4" />
                         </button>
                       )}
@@ -163,7 +164,7 @@ export default function TiendaClientesAdmin() {
         </table>
       </div>
 
-      {resetFor && resetFor.acceso && <ResetPasswordModal row={resetFor} acceso={resetFor.acceso} empresaId={empresaId} onClose={() => setResetFor(null)} />}
+      {resetFor && <ResetPasswordModal row={resetFor} empresaId={empresaId} onClose={() => setResetFor(null)} />}
     </div>
   );
 }
@@ -172,7 +173,7 @@ function genPwd() {
   return Math.random().toString(36).slice(-8);
 }
 
-function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acceso: Acceso; empresaId: string | null; onClose: () => void }) {
+function ResetPasswordModal({ row, empresaId, onClose }: { row: Row; empresaId: string | null; onClose: () => void }) {
   const [pwd, setPwd] = useState(genPwd());
   const [saving, setSaving] = useState(false);
   const submit = async (e: React.FormEvent) => {
@@ -180,7 +181,11 @@ function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acc
     if (pwd.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
     setSaving(true);
     try {
-      await callAdmin("reset_password", { tienda_cliente_id: acceso.id, password_nuevo: pwd }, empresaId);
+      if (row.acceso?.id) {
+        await callAdmin("reset_password", { tienda_cliente_id: row.acceso.id, password_nuevo: pwd }, empresaId);
+      } else {
+        await callAdmin("set_password", { cliente_id: row.cliente_id, password_nuevo: pwd }, empresaId);
+      }
       toast.success("Contraseña actualizada. Compártela con el cliente.");
       onClose();
     } catch (e) { toast.error((e as Error).message); }
@@ -190,12 +195,12 @@ function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acc
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-lg w-full max-w-sm p-5 space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="font-bold text-lg">Resetear contraseña</h3>
+          <h3 className="font-bold text-lg">Cambiar contraseña</h3>
           <button onClick={onClose}><X className="h-5 w-5" /></button>
         </div>
         <div className="text-sm bg-gray-50 p-2 rounded">
           <div><strong>{row.cliente_nombre}</strong></div>
-          <div className="text-gray-600">{acceso.email}</div>
+          <div className="text-gray-600">{row.acceso?.email || row.cliente_email}</div>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
