@@ -255,6 +255,46 @@ export default function LandingV2Page() {
         </div>
       </section>
 
+      {/* STATS BAND — animated counters */}
+      <section className="relative overflow-hidden" style={{ background: BRAND.ink }}>
+        <div
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{
+            background: `radial-gradient(45% 80% at 20% 50%, ${BRAND.primary}55 0%, transparent 60%), radial-gradient(40% 80% at 85% 50%, ${BRAND.accent}40 0%, transparent 60%)`,
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-white text-center">
+          {[
+            { end: 1200, suffix: "+", label: "Empresas activas" },
+            { end: 4.8, decimals: 1, suffix: "M", prefix: "$", label: "Vendidos al mes" },
+            { end: 99.9, decimals: 1, suffix: "%", label: "Uptime ruta offline" },
+            { end: 32, suffix: "%", label: "Menos faltantes con IA" },
+          ].map((s) => (
+            <motion.div
+              key={s.label}
+              {...fadeUp}
+              className="flex flex-col items-center"
+            >
+              <div
+                className="text-[34px] md:text-[48px] font-bold leading-none tracking-tight"
+                style={{ letterSpacing: "-0.035em" }}
+              >
+                <Counter
+                  end={s.end}
+                  prefix={s.prefix}
+                  suffix={s.suffix}
+                  decimals={s.decimals ?? 0}
+                />
+              </div>
+              <div className="mt-2 text-[12.5px] uppercase tracking-wider text-white/70">
+                {s.label}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+
       {/* 2. ADIÓS AL PAPEL */}
       <section className="border-y" style={{ background: BRAND.surface, borderColor: BRAND.line }}>
         <div className="mx-auto max-w-6xl px-4 py-16 md:py-20 grid md:grid-cols-2 gap-12 items-center">
