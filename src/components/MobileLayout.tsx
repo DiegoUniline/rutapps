@@ -91,6 +91,9 @@ export default function MobileLayout() {
   // Aviso al cerrar/recargar si hay cambios sin sincronizar
   useUnloadGuard(pendingCount);
 
+  // Auto-sync al reconectar y avisar de nuevas cargas
+  useOnlineReconnect();
+
   // Pedir storage persistente una sola vez al montar la app móvil
   useEffect(() => { requestPersistentStorage().catch(() => {}); }, []);
 
