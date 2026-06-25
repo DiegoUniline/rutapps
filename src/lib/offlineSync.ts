@@ -39,6 +39,35 @@ const TABLES_TO_CACHE = [
   'almacenes',
 ] as const;
 
+type CacheTable = typeof TABLES_TO_CACHE[number];
+
+export const MOBILE_QUICK_SYNC_TABLES: readonly CacheTable[] = [
+  'empresas',
+  'profiles',
+  'clientes',
+  'productos',
+  'cargas',
+  'carga_lineas',
+  'stock_almacen',
+  'ventas',
+  'venta_lineas',
+  'cobros',
+  'cobro_aplicaciones',
+  'promociones',
+  'tarifas',
+  'tarifa_lineas',
+  'lista_precios',
+  'producto_presentaciones',
+  'entregas',
+  'entrega_lineas',
+  'descarga_ruta',
+  'descarga_ruta_lineas',
+  'visitas',
+];
+
+const PAGE_TIMEOUT_MS = 18000;
+const CHILD_IN_CHUNK_SIZE = 80;
+
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
@@ -133,6 +162,59 @@ const NO_DELTA_TABLES = new Set([
   'promociones',
 ]);
 
+const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreignKey: string }>> = {
+  carga_lineas: { parentTable: 'cargas', foreignKey: 'carga_id' },
+  venta_lineas: { parentTable: 'ventas', foreignKey: 'venta_id' },
+  cobro_aplicaciones: { parentTable: 'cobros', foreignKey: 'cobro_id' },
+  devolucion_lineas: { parentTable: 'devoluciones', foreignKey: 'devolucion_id' },
+  descarga_ruta_lineas: { parentTable: 'descarga_ruta', foreignKey: 'descarga_id' },
+  entrega_lineas: { parentTable: 'entregas', foreignKey: 'entrega_id' },
+  tarifa_lineas: { parentTable: 'tarifas', foreignKey: 'tarifa_id' },
+  cliente_pedido_sugerido: { parentTable: 'clientes', foreignKey: 'cliente_id' },
+};
+
+const activeDownloads = new Map<string, Promise<DownloadResult>>();
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} tardó demasiado; se reintentará en la próxima sincronización`)), PAGE_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function getScopedParentIds(table: CacheTable, empresaId: string): Promise<string[] | null> {
+  const scope = CHILD_SCOPES[table];
+  if (!scope) return null;
+
+  const localParentTable = getOfflineTable(scope.parentTable);
+  const localRows = localParentTable ? await localParentTable.toArray().catch(() => []) : [];
+  const localIds = localRows.map((row: any) => row?.id).filter(Boolean) as string[];
+  if (localIds.length > 0) return Array.from(new Set(localIds));
+
+  let query = (supabase.from as any)(scope.parentTable).select('id');
+  if (TABLES_WITH_EMPRESA.has(scope.parentTable)) {
+    query = scope.parentTable === 'empresas'
+      ? query.eq('id', empresaId)
+      : query.eq('empresa_id', empresaId);
+  }
+  const { data, error } = await withTimeout(query.range(0, 4999), `${scope.parentTable} ids`);
+  if (error) throw error;
+  return Array.from(new Set(((data || []) as any[]).map(row => row?.id).filter(Boolean)));
+}
+
 export interface SyncProgress {
   table: string;
   label: string;
@@ -146,6 +228,10 @@ export interface DownloadResult {
   tableResults: SyncProgress[];
 }
 
+interface DownloadOptions {
+  tables?: readonly CacheTable[];
+}
+
 /**
  * Download all data with progress reporting.
  * forceFullSync = true ignores delta timestamps and re-downloads everything.
@@ -154,11 +240,29 @@ export async function downloadAllData(
   empresaId: string,
   forceFullSync = false,
   onProgress?: (progress: SyncProgress[]) => void,
+  options?: DownloadOptions,
+): Promise<DownloadResult> {
+  const tablesToCache = (options?.tables?.length ? options.tables : TABLES_TO_CACHE) as readonly CacheTable[];
+  const lockKey = `${empresaId}:${forceFullSync ? 'full' : 'delta'}:${tablesToCache.join(',')}`;
+  const active = activeDownloads.get(lockKey);
+  if (active) return active;
+
+  const task = downloadAllDataInternal(empresaId, forceFullSync, onProgress, tablesToCache)
+    .finally(() => activeDownloads.delete(lockKey));
+  activeDownloads.set(lockKey, task);
+  return task;
+}
+
+async function downloadAllDataInternal(
+  empresaId: string,
+  forceFullSync: boolean,
+  onProgress: ((progress: SyncProgress[]) => void) | undefined,
+  tablesToCache: readonly CacheTable[],
 ): Promise<DownloadResult> {
   let totalRows = 0;
 
   // Initialize progress
-  const progress: SyncProgress[] = TABLES_TO_CACHE.map(table => ({
+  const progress: SyncProgress[] = tablesToCache.map(table => ({
     table,
     label: TABLE_LABELS[table] || table,
     status: 'waiting',
@@ -170,11 +274,11 @@ export async function downloadAllData(
 
   // Process tables sequentially for progress visibility (parallel within batches)
   const BATCH_SIZE = 4;
-  for (let i = 0; i < TABLES_TO_CACHE.length; i += BATCH_SIZE) {
-    const batch = TABLES_TO_CACHE.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < tablesToCache.length; i += BATCH_SIZE) {
+    const batch = tablesToCache.slice(i, i + BATCH_SIZE);
 
     await Promise.all(batch.map(async (table) => {
-      const idx = TABLES_TO_CACHE.indexOf(table);
+      const idx = tablesToCache.indexOf(table);
       progress[idx].status = 'downloading';
       notify();
 
@@ -188,7 +292,20 @@ export async function downloadAllData(
         // Builder factory: rebuild the query each page so supabase-js doesn't
         // reuse a consumed PostgrestFilterBuilder (which causes only the first
         // 1000 rows to be returned).
-        const buildQuery = () => {
+        const parentIds = await getScopedParentIds(table, empresaId);
+        const parentChunks = parentIds ? chunk(parentIds, CHILD_IN_CHUNK_SIZE) : [null];
+
+        if (parentIds && parentIds.length === 0) {
+          const localTable = getOfflineTable(table);
+          if (localTable && !lastTableSync) await localTable.clear();
+          await offlineDb.cacheTimestamps.put({ table, lastSync: Date.now() });
+          progress[idx].status = 'done';
+          progress[idx].rowCount = 0;
+          notify();
+          return;
+        }
+
+        const buildQuery = (parentChunk: string[] | null) => {
           let q = (supabase.from as any)(table).select(selectStr);
 
           if (TABLES_WITH_EMPRESA.has(table)) {
@@ -197,6 +314,11 @@ export async function downloadAllData(
             } else {
               q = q.eq('empresa_id', empresaId);
             }
+          }
+
+          const childScope = CHILD_SCOPES[table];
+          if (childScope && parentChunk && parentChunk.length > 0) {
+            q = q.in(childScope.foreignKey, parentChunk);
           }
 
           if (RECENT_TABLES.has(table) && !lastTableSync) {
@@ -216,24 +338,30 @@ export async function downloadAllData(
 
         // Paginate
         let allData: any[] = [];
-        let from = 0;
         const pageSize = 1000;
-        let hasMore = true;
 
-        while (hasMore) {
-          const { data, error } = await buildQuery().range(from, from + pageSize - 1);
-          if (error) {
-            console.error(`Error downloading ${table}:`, error);
-            break;
-          }
-          if (data && data.length > 0) {
-            allData = allData.concat(data);
-            from += pageSize;
-            hasMore = data.length === pageSize;
-            progress[idx].rowCount = allData.length;
-            notify();
-          } else {
-            hasMore = false;
+        for (const parentChunk of parentChunks) {
+          let from = 0;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await withTimeout(
+              buildQuery(parentChunk).range(from, from + pageSize - 1),
+              `${table} ${from + 1}-${from + pageSize}`,
+            );
+            if (error) {
+              console.error(`Error downloading ${table}:`, error);
+              break;
+            }
+            if (data && data.length > 0) {
+              allData = allData.concat(data);
+              from += pageSize;
+              hasMore = data.length === pageSize;
+              progress[idx].rowCount = allData.length;
+              notify();
+            } else {
+              hasMore = false;
+            }
           }
         }
 
