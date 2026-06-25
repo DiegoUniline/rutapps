@@ -59,6 +59,8 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   const nav = useNavigate();
   const loc = useLocation();
   const base = `/tienda/${t.slug}`;
+  useTiendaPWA(t);
+
 
   if (t.loadingConfig) return <div className="tienda-root"><div className="tienda-loading">Cargando tienda…</div></div>;
   if (t.configError || !t.config) return (
