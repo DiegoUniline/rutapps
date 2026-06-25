@@ -390,3 +390,6 @@
 .tx-pdp-desc { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
 .tx-pdp-desc h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111; }
 .tx-pdp-desc p { color: #4b5563; line-height: 1.6; white-space: pre-wrap; }
+
+.tx-skeleton { background: linear-gradient(90deg, #eef0f3 0%, #f7f8fa 50%, #eef0f3 100%); background-size: 200% 100%; animation: tx-shimmer 1.2s infinite; border-radius: 8px; }
+@keyframes tx-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
