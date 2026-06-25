@@ -31,6 +31,8 @@ class OfflineDatabase extends Dexie {
   devoluciones!: Table;
   devolucion_lineas!: Table;
   profiles!: Table;
+  cotizaciones!: Table;
+  cotizacion_lineas!: Table;
   empresas!: Table;
   cliente_pedido_sugerido!: Table;
   unidades!: Table;
