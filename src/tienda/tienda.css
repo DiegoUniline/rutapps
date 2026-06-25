@@ -224,6 +224,97 @@
 
 .tienda-loading { display: flex; align-items: center; justify-content: center; padding: 80px 0; color: #666; }
 
+/* ===== Enhanced Home (tx-*) ===== */
+.tx-hero {
+  position: relative; border-radius: 20px; overflow: hidden;
+  min-height: 360px; padding: 56px 48px; margin-bottom: 24px;
+  background-size: cover; background-position: center;
+  display: flex; align-items: center; color: #fff;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.25);
+}
+.tx-hero-shade {
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 70%);
+}
+.tx-hero-content { position: relative; z-index: 1; max-width: 560px; }
+.tx-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,.25);
+}
+.tx-hero h1 { font-size: 44px; font-weight: 900; line-height: 1.05; margin: 0 0 14px; letter-spacing: -0.03em; text-shadow: 0 2px 14px rgba(0,0,0,.3); }
+.tx-hero p { font-size: 17px; opacity: 0.95; margin: 0 0 24px; max-width: 480px; }
+.tx-hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.tx-hero-cta .tienda-btn { padding: 12px 20px; font-size: 15px; }
+
+.tx-benefits {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  background: #fff; border-radius: 14px; padding: 16px;
+  margin-bottom: 28px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.tx-benefit { display: flex; align-items: center; gap: 12px; padding: 6px; }
+.tx-benefit > svg { flex: 0 0 auto; color: var(--tienda-primary); }
+.tx-benefit > div { display: flex; flex-direction: column; line-height: 1.2; }
+.tx-benefit strong { font-size: 14px; color: #1a1a1a; }
+.tx-benefit span { font-size: 12px; color: #777; }
+
+.tx-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 32px 0 14px;
+}
+.tx-section-head h2 { font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+.tx-link {
+  font-size: 13px; font-weight: 700; color: var(--tienda-primary);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+}
+.tx-link:hover { text-decoration: underline; }
+
+.tx-categories {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+.tx-cat-tile {
+  position: relative; aspect-ratio: 16/10; border-radius: 14px; overflow: hidden;
+  background-size: cover; background-position: center;
+  text-decoration: none; color: #fff; display: flex; align-items: flex-end;
+  padding: 16px; font-weight: 800; font-size: 18px;
+  transition: transform 180ms, box-shadow 180ms;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+.tx-cat-tile:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(0,0,0,.18); }
+.tx-cat-tile span { text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+
+.tx-promo-banner {
+  margin: 36px 0 8px; padding: 28px 32px; border-radius: 16px;
+  background: linear-gradient(120deg, var(--tienda-primary), color-mix(in srgb, var(--tienda-secondary) 80%, #000));
+  color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,.25);
+}
+.tx-promo-banner h3 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+.tx-promo-banner p { margin: 0; opacity: 0.92; font-size: 14px; }
+
+.tienda-card { position: relative; }
+.tx-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+  color: #fff; text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+.tx-badge-sale { background: #ff3b30; }
+.tx-badge-new { background: #1a8754; }
+.tx-price-old { font-size: 12px; color: #999; text-decoration: line-through; margin-top: -2px; }
+
+@media (max-width: 900px) {
+  .tx-hero { padding: 32px 22px; min-height: 260px; border-radius: 14px; }
+  .tx-hero h1 { font-size: 30px; }
+  .tx-hero p { font-size: 14px; }
+  .tx-benefits { grid-template-columns: repeat(2, 1fr); }
+  .tx-categories { grid-template-columns: repeat(2, 1fr); }
+  .tx-promo-banner { flex-direction: column; align-items: flex-start; padding: 22px; }
+}
+
 @media (max-width: 900px) {
   .tienda-grid { grid-template-columns: 1fr; }
   .tienda-sidebar { position: static; }
