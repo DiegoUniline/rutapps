@@ -938,6 +938,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NotificationRuntime overlaysOnly />
       <PendingInvoiceModal />
       <PublicidadPopup />
+      <TiendaAnnouncementModal />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
       </Suspense>
