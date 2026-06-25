@@ -173,7 +173,7 @@ function genPwd() {
   return Math.random().toString(36).slice(-8);
 }
 
-function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acceso: Acceso; empresaId: string | null; onClose: () => void }) {
+function ResetPasswordModal({ row, empresaId, onClose }: { row: Row; empresaId: string | null; onClose: () => void }) {
   const [pwd, setPwd] = useState(genPwd());
   const [saving, setSaving] = useState(false);
   const submit = async (e: React.FormEvent) => {
@@ -181,7 +181,11 @@ function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acc
     if (pwd.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
     setSaving(true);
     try {
-      await callAdmin("reset_password", { tienda_cliente_id: acceso.id, password_nuevo: pwd }, empresaId);
+      if (row.acceso?.id) {
+        await callAdmin("reset_password", { tienda_cliente_id: row.acceso.id, password_nuevo: pwd }, empresaId);
+      } else {
+        await callAdmin("set_password", { cliente_id: row.cliente_id, password_nuevo: pwd }, empresaId);
+      }
       toast.success("Contraseña actualizada. Compártela con el cliente.");
       onClose();
     } catch (e) { toast.error((e as Error).message); }
@@ -191,12 +195,12 @@ function ResetPasswordModal({ row, acceso, empresaId, onClose }: { row: Row; acc
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-lg w-full max-w-sm p-5 space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="font-bold text-lg">Resetear contraseña</h3>
+          <h3 className="font-bold text-lg">Cambiar contraseña</h3>
           <button onClick={onClose}><X className="h-5 w-5" /></button>
         </div>
         <div className="text-sm bg-gray-50 p-2 rounded">
           <div><strong>{row.cliente_nombre}</strong></div>
-          <div className="text-gray-600">{acceso.email}</div>
+          <div className="text-gray-600">{row.acceso?.email || row.cliente_email}</div>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
