@@ -2,8 +2,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, hashPassword } from "../_shared/tiendaAuth.ts";
 
 // Admin endpoint to manage tienda customer logins.
-// Auth: Bearer = caller's Supabase JWT (user must belong to empresa_id from their profile).
-// Actions: list, reset_password, create_login, deactivate, activate
+// Model: ALL clientes of the empresa have access by default.
+// Admin can BLOCK a specific cliente (creates/updates a tienda_clientes row with verificado=false).
+// Admin can RESET PASSWORD only for clientes that have already self-registered.
+
+const BLOCKED_HASH = "BLOCKED$NO_LOGIN";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -47,13 +50,12 @@ Deno.serve(async (req) => {
 
     if (action === "list") {
       const search = (body.search ?? "").toString().trim();
-      // Show ALL clientes of the empresa, with their tienda access if any
       let cq = admin
         .from("clientes")
         .select("id, nombre, email, telefono")
         .eq("empresa_id", empresaId)
         .order("nombre")
-        .limit(1000);
+        .limit(2000);
       if (search) cq = cq.or(`nombre.ilike.%${search}%,email.ilike.%${search}%`);
       const { data: clientes, error: cErr } = await cq;
       if (cErr) return json({ error: cErr.message }, 500);
@@ -62,36 +64,113 @@ Deno.serve(async (req) => {
       const { data: accesos } = ids.length
         ? await admin
             .from("tienda_clientes")
-            .select("id, cliente_id, email, telefono, verificado, ultimo_login, created_at")
+            .select("id, cliente_id, email, telefono, verificado, ultimo_login, password_hash, created_at")
             .eq("empresa_id", empresaId)
             .in("cliente_id", ids)
         : { data: [] as any[] };
       const byCli: Record<string, any> = {};
       (accesos ?? []).forEach((a: any) => { byCli[a.cliente_id] = a; });
 
-      const items = (clientes ?? []).map((c: any) => ({
-        cliente_id: c.id,
-        cliente_nombre: c.nombre,
-        cliente_email: c.email,
-        cliente_telefono: c.telefono,
-        acceso: byCli[c.id] ?? null,
-      }));
+      const items = (clientes ?? []).map((c: any) => {
+        const a = byCli[c.id];
+        const registrado = !!a && a.password_hash !== BLOCKED_HASH;
+        const bloqueado = !!a && a.verificado === false;
+        return {
+          cliente_id: c.id,
+          cliente_nombre: c.nombre,
+          cliente_email: c.email,
+          cliente_telefono: c.telefono,
+          acceso: a
+            ? {
+                id: a.id,
+                email: a.email,
+                telefono: a.telefono,
+                verificado: a.verificado,
+                ultimo_login: a.ultimo_login,
+                created_at: a.created_at,
+                registrado,
+              }
+            : null,
+          bloqueado,
+        };
+      });
       return json({ items });
     }
 
+    if (action === "block") {
+      const { cliente_id } = body;
+      if (!cliente_id) return json({ error: "cliente_id requerido" }, 400);
+      const { data: cli } = await admin
+        .from("clientes")
+        .select("id, empresa_id, email, telefono")
+        .eq("id", cliente_id)
+        .maybeSingle();
+      if (!cli || cli.empresa_id !== empresaId) return json({ error: "Cliente no encontrado" }, 404);
+
+      const { data: existing } = await admin
+        .from("tienda_clientes")
+        .select("id")
+        .eq("empresa_id", empresaId)
+        .eq("cliente_id", cliente_id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await admin
+          .from("tienda_clientes")
+          .update({ verificado: false })
+          .eq("id", existing.id);
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const placeholderEmail = (cli.email && String(cli.email).toLowerCase().trim()) || `blocked-${cliente_id}@no-login.local`;
+        const { error } = await admin.from("tienda_clientes").insert({
+          empresa_id: empresaId,
+          cliente_id: cli.id,
+          email: placeholderEmail,
+          password_hash: BLOCKED_HASH,
+          telefono: cli.telefono ?? null,
+          verificado: false,
+        });
+        if (error) return json({ error: error.message }, 500);
+      }
+      return json({ ok: true });
+    }
+
+    if (action === "unblock") {
+      const { cliente_id } = body;
+      if (!cliente_id) return json({ error: "cliente_id requerido" }, 400);
+      const { data: tc } = await admin
+        .from("tienda_clientes")
+        .select("id, password_hash")
+        .eq("empresa_id", empresaId)
+        .eq("cliente_id", cliente_id)
+        .maybeSingle();
+      if (!tc) return json({ ok: true }); // ya tenía acceso por defecto
+      if (tc.password_hash === BLOCKED_HASH) {
+        // Was just a block marker → remove so the cliente can self-register normally
+        const { error } = await admin.from("tienda_clientes").delete().eq("id", tc.id);
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const { error } = await admin
+          .from("tienda_clientes")
+          .update({ verificado: true })
+          .eq("id", tc.id);
+        if (error) return json({ error: error.message }, 500);
+      }
+      return json({ ok: true });
+    }
 
     if (action === "reset_password") {
       const { tienda_cliente_id, password_nuevo } = body;
       if (!tienda_cliente_id || !password_nuevo || String(password_nuevo).length < 6) {
         return json({ error: "La nueva contraseña debe tener al menos 6 caracteres" }, 400);
       }
-      // Ensure record belongs to this empresa
       const { data: tc } = await admin
         .from("tienda_clientes")
-        .select("id, empresa_id")
+        .select("id, empresa_id, password_hash")
         .eq("id", tienda_cliente_id)
         .maybeSingle();
       if (!tc || tc.empresa_id !== empresaId) return json({ error: "No encontrado" }, 404);
+      if (tc.password_hash === BLOCKED_HASH) return json({ error: "Este cliente no se ha registrado todavía" }, 400);
 
       const password_hash = await hashPassword(password_nuevo);
       const { error } = await admin
@@ -100,69 +179,6 @@ Deno.serve(async (req) => {
         .eq("id", tienda_cliente_id);
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true });
-    }
-
-    if (action === "create_login") {
-      const { cliente_id, email, password } = body;
-      if (!cliente_id || !email || !password || String(password).length < 6) {
-        return json({ error: "Cliente, correo y contraseña (mín. 6) son obligatorios" }, 400);
-      }
-      const normalEmail = String(email).toLowerCase().trim();
-      const { data: cli } = await admin
-        .from("clientes")
-        .select("id, empresa_id, nombre, telefono")
-        .eq("id", cliente_id)
-        .maybeSingle();
-      if (!cli || cli.empresa_id !== empresaId) return json({ error: "Cliente no encontrado" }, 404);
-
-      const { data: exists } = await admin
-        .from("tienda_clientes")
-        .select("id")
-        .eq("empresa_id", empresaId)
-        .eq("email", normalEmail)
-        .maybeSingle();
-      if (exists) return json({ error: "Ese correo ya tiene acceso" }, 409);
-
-      const password_hash = await hashPassword(password);
-      const { error } = await admin.from("tienda_clientes").insert({
-        empresa_id: empresaId,
-        cliente_id: cli.id,
-        email: normalEmail,
-        password_hash,
-        telefono: cli.telefono ?? null,
-        verificado: true,
-      });
-      if (error) return json({ error: error.message }, 500);
-      return json({ ok: true });
-    }
-
-    if (action === "deactivate" || action === "activate") {
-      const { tienda_cliente_id } = body;
-      const { data: tc } = await admin
-        .from("tienda_clientes")
-        .select("id, empresa_id")
-        .eq("id", tienda_cliente_id)
-        .maybeSingle();
-      if (!tc || tc.empresa_id !== empresaId) return json({ error: "No encontrado" }, 404);
-      const { error } = await admin
-        .from("tienda_clientes")
-        .update({ verificado: action === "activate" })
-        .eq("id", tienda_cliente_id);
-      if (error) return json({ error: error.message }, 500);
-      return json({ ok: true });
-    }
-
-    if (action === "buscar_clientes") {
-      const search = (body.search ?? "").toString().trim();
-      if (search.length < 2) return json({ items: [] });
-      const { data, error } = await admin
-        .from("clientes")
-        .select("id, nombre, email, telefono")
-        .eq("empresa_id", empresaId)
-        .or(`nombre.ilike.%${search}%,email.ilike.%${search}%`)
-        .limit(20);
-      if (error) return json({ error: error.message }, 500);
-      return json({ items: data ?? [] });
     }
 
     return json({ error: "Acción no soportada" }, 400);
