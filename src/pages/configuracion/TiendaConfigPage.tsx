@@ -72,7 +72,7 @@ export default function TiendaConfigPage() {
       ]);
       setListas(lp ?? []);
       if (existing) {
-        setCfg(existing as TiendaConfig);
+        setCfg({ ...(existing as any), beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
       } else {
         setCfg({
           empresa_id: empresaId,
@@ -87,6 +87,7 @@ export default function TiendaConfigPage() {
           lista_precios_default_id: null,
           permitir_invitados: true,
           mensaje_bienvenida: null,
+          beneficios: DEFAULT_BENEFICIOS,
         });
       }
       setLoading(false);
