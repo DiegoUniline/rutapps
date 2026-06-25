@@ -809,6 +809,7 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/administracion/metas/seguimiento" element={<MetasSeguimientoPage />} />
       <Route path="/configuracion/vehiculos" element={<VehiculosPage />} />
       <Route path="/configuracion/homologacion" element={<HomologacionCatalogoPage />} />
+      <Route path="/configuracion/tienda" element={<TiendaConfigPage />} />
       <Route path="/logistica/jornadas" element={<JornadasRutaPage />} />
       {isBillingOwner && <Route path="/facturacion" element={<FacturacionPage />} />}
       {isBillingOwner && <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />}
