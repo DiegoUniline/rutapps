@@ -207,17 +207,25 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
 export function useVenta(id?: string) {
   return useQuery({
     queryKey: ['venta', id],
+    networkMode: 'always',
     queryFn: async () => {
-      // Try server first
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(nombre, abreviatura)), unidades(nombre, abreviatura))')
-        .eq('id', id!)
-        .maybeSingle();
-      if (error) throw error;
-      if (data) return data as Venta;
+      // Try server first (only if online). Any network error falls back to IndexedDB.
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from('ventas')
+            .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, unidad_venta_id, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(nombre, abreviatura)), unidades(nombre, abreviatura))')
+            .eq('id', id!)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) return data as Venta;
+        } catch (err) {
+          // Network/fetch error: fall through to local cache
+          console.warn('[useVenta] server fetch failed, trying offline cache:', err);
+        }
+      }
 
-      // Fallback: try local IndexedDB (sale not yet synced)
+      // Fallback: try local IndexedDB (offline, or sale not yet synced)
       try {
         const { getOfflineTable } = await import('@/lib/offlineDb');
         const table = getOfflineTable('ventas');
