@@ -101,7 +101,7 @@ export default function TiendaConfigPage() {
       return;
     }
     setSaving(true);
-    const payload = { ...cfg, slug: slugify(cfg.slug) };
+    const payload: any = { ...cfg, slug: slugify(cfg.slug) };
     const { data, error } = cfg.id
       ? await supabase.from("tienda_config").update(payload).eq("id", cfg.id).select().single()
       : await supabase.from("tienda_config").insert(payload).select().single();
@@ -110,7 +110,7 @@ export default function TiendaConfigPage() {
       toast.error(error.message.includes("duplicate") ? "Ese slug ya está en uso" : error.message);
       return;
     }
-    setCfg(data as TiendaConfig);
+    setCfg({ ...(data as any), beneficios: (data as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
     toast.success("Configuración guardada");
   };
 
