@@ -241,6 +241,7 @@ const TiendaProductoPage = lazy(() => import("@/pages/tienda/TiendaProductoPage"
 const TiendaCarritoPage = lazy(() => import("@/pages/tienda/TiendaCarritoPage"));
 const TiendaLoginPage = lazy(() => import("@/pages/tienda/TiendaLoginPage"));
 const TiendaMisPedidosPage = lazy(() => import("@/pages/tienda/TiendaMisPedidosPage"));
+const TiendaCambiarPasswordPage = lazy(() => import("@/pages/tienda/TiendaCambiarPasswordPage"));
 const TiendaConfigPage = lazy(() => import("@/pages/configuracion/TiendaConfigPage"));
 
 function TiendaPublicRoutes() {
@@ -253,6 +254,7 @@ function TiendaPublicRoutes() {
         <Route path="/tienda/:slug/carrito" element={<TiendaCarritoPage />} />
         <Route path="/tienda/:slug/login" element={<TiendaLoginPage />} />
         <Route path="/tienda/:slug/mis-pedidos" element={<TiendaMisPedidosPage />} />
+        <Route path="/tienda/:slug/cambiar-password" element={<TiendaCambiarPasswordPage />} />
       </Routes>
     </Suspense>
   );

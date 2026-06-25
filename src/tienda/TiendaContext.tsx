@@ -16,6 +16,7 @@ export interface TiendaConfig {
   permitir_invitados: boolean;
   mensaje_bienvenida: string | null;
   beneficios?: Beneficio[] | null;
+  usar_lista_cliente?: boolean;
 }
 
 export interface Beneficio {

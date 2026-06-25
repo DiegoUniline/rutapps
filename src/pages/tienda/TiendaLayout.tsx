@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Package } from "lucide-react";
+import { ShoppingCart, Search, User, LogOut, Package, KeyRound } from "lucide-react";
 import { useTienda } from "@/tienda/TiendaContext";
 import "@/tienda/tienda.css";
 
@@ -109,6 +109,9 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
               <>
                 <Link to={`${base}/mis-pedidos`} className="tienda-btn tienda-btn-ghost">
                   <Package size={16} /> Mis pedidos
+                </Link>
+                <Link to={`${base}/cambiar-password`} className="tienda-btn tienda-btn-ghost" title="Cambiar contraseña">
+                  <KeyRound size={16} />
                 </Link>
                 <button onClick={() => { t.logout(); nav(base); }} className="tienda-btn tienda-btn-ghost" title="Cerrar sesión">
                   <LogOut size={16} />
