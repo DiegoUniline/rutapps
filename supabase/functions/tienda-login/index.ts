@@ -25,11 +25,12 @@ Deno.serve(async (req) => {
     const normalEmail = String(email).toLowerCase().trim();
     const { data: tc } = await supabase
       .from("tienda_clientes")
-      .select("id, cliente_id, password_hash")
+      .select("id, cliente_id, password_hash, verificado")
       .eq("empresa_id", cfg.empresa_id)
       .eq("email", normalEmail)
       .maybeSingle();
     if (!tc) return json({ error: "Correo o contraseña incorrectos" }, 401);
+    if (tc.verificado === false) return json({ error: "Tu acceso a esta tienda fue bloqueado. Contacta al proveedor." }, 403);
 
     const ok = await verifyPassword(password, tc.password_hash);
     if (!ok) return json({ error: "Correo o contraseña incorrectos" }, 401);
