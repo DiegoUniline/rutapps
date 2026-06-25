@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, verifyToken } from "../_shared/tiendaAuth.ts";
+import { resolveNetPrice, type Rule, type Prod } from "../_shared/tiendaPricing.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -20,7 +21,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg } = await supabase
       .from("tienda_config")
-      .select("empresa_id, activa")
+      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente")
       .eq("slug", slug)
       .maybeSingle();
     if (!cfg || cfg.empresa_id !== payload.empresa_id || !cfg.activa) {
@@ -29,16 +30,40 @@ Deno.serve(async (req) => {
 
     const { data: cliente } = await supabase
       .from("clientes")
-      .select("id, nombre, tarifa_id")
+      .select("id, nombre, tarifa_id, lista_precio_id")
       .eq("id", payload.cliente_id)
       .maybeSingle();
     if (!cliente) return json({ error: "Cliente no encontrado" }, 404);
+
+    // Resolve which lista_precios to apply (same logic as tienda-catalog)
+    let listaPrecioId: string | null = cfg.lista_precios_default_id;
+    if (cfg.usar_lista_cliente !== false && cliente.lista_precio_id) {
+      listaPrecioId = cliente.lista_precio_id;
+    }
+    let tarifaId: string | null = null;
+    if (listaPrecioId) {
+      const { data: lp } = await supabase
+        .from("lista_precios")
+        .select("tarifa_id")
+        .eq("id", listaPrecioId)
+        .maybeSingle();
+      if (lp) tarifaId = lp.tarifa_id;
+    }
+    let rules: Rule[] = [];
+    if (tarifaId && listaPrecioId) {
+      const { data: tr } = await supabase
+        .from("tarifa_lineas")
+        .select("aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id")
+        .eq("tarifa_id", tarifaId)
+        .eq("lista_precio_id", listaPrecioId);
+      rules = (tr ?? []) as Rule[];
+    }
 
     // Re-validate products on server (don't trust prices client side)
     const prodIds = items.map((i: any) => i.producto_id);
     const { data: prods } = await supabase
       .from("productos")
-      .select("id, nombre, tiene_iva, iva_pct, tiene_ieps, ieps_pct")
+      .select("id, nombre, precio_principal, costo, clasificacion_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio")
       .eq("empresa_id", cfg.empresa_id)
       .in("id", prodIds);
     if (!prods || prods.length === 0) return json({ error: "Productos inválidos" }, 400);
@@ -53,9 +78,11 @@ Deno.serve(async (req) => {
       const p: any = prodMap.get(item.producto_id);
       if (!p) continue;
       const cantidad = Number(item.cantidad) || 0;
-      const precio = Number(item.precio_unitario) || 0;
-      if (cantidad <= 0 || precio < 0) continue;
-      const sub = precio * cantidad;
+      if (cantidad <= 0) continue;
+
+      // Server-side authoritative price — ignore client-supplied precio
+      const precioNeto = resolveNetPrice(rules, p as Prod, listaPrecioId);
+      const sub = precioNeto * cantidad;
       const ieps_m = p.tiene_ieps ? sub * (Number(p.ieps_pct) / 100) : 0;
       const iva_m = p.tiene_iva ? (sub + ieps_m) * (Number(p.iva_pct) / 100) : 0;
       subtotal += sub;
@@ -65,7 +92,7 @@ Deno.serve(async (req) => {
         producto_id: p.id,
         descripcion: p.nombre,
         cantidad,
-        precio_unitario: precio,
+        precio_unitario: precioNeto,
         descuento_pct: 0,
         subtotal: sub,
         iva_pct: p.tiene_iva ? p.iva_pct : 0,
@@ -79,7 +106,6 @@ Deno.serve(async (req) => {
     const total = subtotal + iva_total + ieps_total;
     const round = (n: number) => Math.round(n * 100) / 100;
 
-    // Folio
     const folio = `WEB-${Date.now().toString().slice(-8)}`;
 
     const { data: venta, error: vErr } = await supabase
@@ -117,7 +143,6 @@ Deno.serve(async (req) => {
       return json({ error: "No se pudieron guardar las líneas: " + lErr.message }, 500);
     }
 
-    // Internal notification
     await supabase.from("internal_notifications").insert({
       empresa_id: cfg.empresa_id,
       title: "Nuevo pedido desde tu tienda en línea",
