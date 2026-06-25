@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Store, ExternalLink, Copy, Check, Upload, ImageIcon } from "lucide-react";
 import { compressImage } from "@/lib/imageCompressor";
+import TiendaClientesAdmin from "./TiendaClientesAdmin";
 
 interface TiendaConfig {
   id?: string;
@@ -263,19 +264,33 @@ export default function TiendaConfigPage() {
             {listas.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
           </select>
           <div className="text-xs text-gray-500 mt-1">
-            A los clientes ya registrados se les aplica automáticamente la lista que tengan asignada en su ficha.
+            Esta lista se usa para invitados y clientes sin lista asignada en su ficha.
           </div>
+        </Field>
+        <Field label="¿Qué precios ve cada cliente cuando inicia sesión?">
+          <label className="inline-flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={cfg.usar_lista_cliente} onChange={(e) => setCfg({ ...cfg, usar_lista_cliente: e.target.checked })} />
+            <span>
+              <strong>Mostrar la lista asignada al cliente</strong> (recomendado)
+              <div className="text-xs text-gray-500">Si lo apagas, todos los clientes verán siempre la lista por defecto de arriba, aunque tengan otra asignada.</div>
+            </span>
+          </label>
         </Field>
         <Field label="WhatsApp para pedidos (opcional)">
           <input className="input" value={cfg.whatsapp_pedidos ?? ""} onChange={(e) => setCfg({ ...cfg, whatsapp_pedidos: e.target.value || null })} placeholder="+52 81 1234 5678" />
         </Field>
-        <Field label="Acceso">
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={cfg.permitir_invitados} onChange={(e) => setCfg({ ...cfg, permitir_invitados: e.target.checked })} />
-            Permitir explorar productos sin iniciar sesión
-          </label>
+        <Field label="Acceso a la tienda">
+          <div className="space-y-2">
+            <label className="inline-flex items-start gap-2">
+              <input type="checkbox" className="mt-1" checked={cfg.permitir_invitados} onChange={(e) => setCfg({ ...cfg, permitir_invitados: e.target.checked })} />
+              <span>Permitir explorar productos sin iniciar sesión<div className="text-xs text-gray-500">Para hacer un pedido siempre será necesario iniciar sesión.</div></span>
+            </label>
+          </div>
         </Field>
       </Section>
+
+      <TiendaClientesAdmin />
+
 
       <Section title="Beneficios que se muestran en la tienda">
         <p className="text-sm text-gray-600 -mt-2">Activa solo los que realmente ofreces. Edita el texto para que coincida con tu negocio.</p>
