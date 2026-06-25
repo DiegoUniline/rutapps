@@ -311,7 +311,25 @@ export default function LandingV2Page() {
             </motion.div>
           ))}
         </div>
+        {/* Países */}
+        <div className="relative border-t border-white/10">
+          <div className="mx-auto max-w-6xl px-4 py-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-white/85">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-white/55">Ya nos usan en</span>
+            {[
+              { f: "🇲🇽", n: "México" },
+              { f: "🇵🇪", n: "Perú" },
+              { f: "🇨🇴", n: "Colombia" },
+              { f: "🇨🇱", n: "Chile" },
+            ].map((c) => (
+              <span key={c.n} className="inline-flex items-center gap-2 text-[14px] font-medium">
+                <span className="text-[20px] leading-none">{c.f}</span> {c.n}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
+
+
 
 
       {/* 2. ADIÓS AL PAPEL */}
