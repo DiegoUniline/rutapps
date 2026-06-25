@@ -296,9 +296,10 @@ export default function LandingPage() {
         </div>
         {mobileMenu && (
           <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm animate-[fade-in_0.25s_ease-out]" style={{ borderColor: BRAND.line }}>
-            {[['#modulos', 'Módulos'], ['#movil', 'Móvil'], ['#ia', 'IA'], ['#precios', 'Precios']].map(([h, l]) => (
-              <a key={h} href={h} onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>{l}</a>
-            ))}
+            <Link to="/modulos" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Módulos</Link>
+            <Link to="/precios" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Precios</Link>
+            <Link to="/giros" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Giros</Link>
+            <a href="#ia" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>IA</a>
             <Link to="/login" className="block font-medium" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
           </div>
         )}
