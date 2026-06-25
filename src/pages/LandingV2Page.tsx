@@ -43,6 +43,10 @@ import imgTienda from "@/assets/landing/tienda-online.jpg";
 import imgAIAnalisis from "@/assets/landing/ai-analisis.jpg";
 import imgWhatsapp from "@/assets/landing/whatsapp-ai.jpg";
 import imgMapa from "@/assets/landing/supervisor-mapa.jpg";
+import {
+  MobileVentasScreen, DashboardScreen, POSScreen, KardexScreen,
+  TiendaScreen, ComprasIAScreen, SupervisorScreen,
+} from "@/components/landing/SystemMocks";
 
 const BRAND = {
   primary: "#0060e8",
