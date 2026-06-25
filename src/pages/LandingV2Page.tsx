@@ -29,6 +29,13 @@ import {
   Award,
   Zap,
   Eye,
+  ShieldAlert,
+  PiggyBank,
+  Percent,
+  Clock,
+  ClipboardX,
+  TrendingDown,
+  Receipt,
 } from "lucide-react";
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
 
