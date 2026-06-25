@@ -106,44 +106,15 @@ export default function RutaDescarga() {
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
-    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id],
-    queryFn: async () => {
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      // Check by carga_id
-      if (cargaActiva?.id) {
-        const { data } = await supabase
-          .from('descarga_ruta')
-          .select('id, status')
-          .eq('carga_id', cargaActiva.id)
-          .limit(1)
-          .maybeSingle();
-        if (data) return data;
-      }
-      // Check by vendedor + date overlap
-      const vendedorId = cargaActiva?.vendedor_id || myProfile?.id;
-      if (vendedorId) {
-        const { data } = await supabase
-          .from('descarga_ruta')
-          .select('id, status')
-          .eq('vendedor_id', vendedorId)
-          .lte('fecha_inicio', today)
-          .gte('fecha_fin', today)
-          .limit(1)
-          .maybeSingle();
-        if (data) return data;
-      }
-      // Also check by fecha field
-      const { data } = await supabase
-        .from('descarga_ruta')
-        .select('id, status')
-        .eq('user_id', user!.id)
-        .eq('fecha', today)
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
+    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id, today],
+    networkMode: 'always',
     enabled: !!user?.id,
+    queryFn: () => fetchExistingDescargaWithFallback({
+      cargaId: cargaActiva?.id ?? null,
+      vendedorId: cargaActiva?.vendedor_id ?? myProfile?.id ?? null,
+      userId: user!.id,
+      today,
+    }),
   });
 
   // Calculate effective total from bill/coin counter
