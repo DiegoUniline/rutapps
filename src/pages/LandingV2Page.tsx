@@ -508,9 +508,10 @@ export default function LandingV2Page() {
               ))}
             </div>
           </motion.div>
-          <motion.div {...fadeUp} className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-            <img src={imgMapa} alt="Supervisor viendo rutas en mapa" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
+          <motion.div {...fadeUp}>
+            <SupervisorScreen />
           </motion.div>
+
         </div>
       </section>
 
