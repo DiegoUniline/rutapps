@@ -561,6 +561,8 @@ function AppRoutes() {
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
         <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
         <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+        <Route path="/ruta/pendientes" element={<PendientesSincronizarPage />} />
+
         <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
