@@ -192,7 +192,19 @@ export default function RutaEntregaDetalle() {
 
       // Marcar la entrega como hecha (solo si no lo está ya)
       if (entrega.status !== 'hecho') {
-        await marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now);
+        if (navigator.onLine) {
+          await marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now);
+        } else {
+          // Offline: encolar update de entregas. El trigger del servidor reconciliará
+          // inventario y status del pedido cuando sincronice.
+          await queueOperation('entregas', 'update', {
+            id: id!,
+            status: 'hecho',
+            validado_at: now,
+            fecha_entrega: now,
+          });
+          toast.message('Sin conexión: entrega marcada localmente, se sincronizará');
+        }
       }
 
       toast.success('¡Entrega completada!');
