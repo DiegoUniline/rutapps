@@ -15,6 +15,7 @@ import heroImg from '@/assets/partners-hero.jpg';
 import dashboardImg from '@/assets/partners-dashboard.jpg';
 import couponImg from '@/assets/partners-coupon.jpg';
 import { Seo } from '@/components/seo/Seo';
+import { MarketingShell } from '@/components/marketing/MarketingShell';
 
 const WHATSAPP_URL = 'https://wa.me/5213171035768?text=' + encodeURIComponent('Hola, quiero ser partner de Rutapp');
 
