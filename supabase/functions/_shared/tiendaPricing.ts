@@ -100,3 +100,28 @@ export function resolvePrice(rules: Rule[], prod: Prod, listaId: string | null):
   const gross = round2(neto * taxMultiplier(prod));
   return round2(applyRedondeo(gross, rule.redondeo ?? "ninguno"));
 }
+
+/**
+ * Returns the NET (pre-tax) unit price — used when persisting venta_lineas
+ * so the existing tax math (subtotal + IEPS + IVA) lines up with what the
+ * customer saw on the storefront.
+ */
+export function resolveNetPrice(rules: Rule[], prod: Prod, listaId: string | null): number {
+  if (prod.usa_listas_precio === false) return round2(prod.precio_principal);
+
+  const rule = findRule(rules, prod, listaId);
+  if (!rule) return round2(prod.precio_principal);
+
+  const raw = rawRulePrice(rule, prod);
+  if (raw == null) return round2(prod.precio_principal);
+
+  let neto = raw;
+  if (rule.base_precio === "con_impuestos") {
+    const div = taxMultiplier(prod);
+    neto = div > 0 ? raw / div : raw;
+  }
+  // Apply redondeo on gross, then back-out to net so that the gross matches what was shown
+  const grossRounded = applyRedondeo(round2(neto * taxMultiplier(prod)), rule.redondeo ?? "ninguno");
+  const div = taxMultiplier(prod);
+  return round2(div > 0 ? grossRounded / div : grossRounded);
+}
