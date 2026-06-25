@@ -47,6 +47,7 @@ import {
   MobileVentasScreen, DashboardScreen, POSScreen, KardexScreen,
   TiendaScreen, ComprasIAScreen, SupervisorScreen,
 } from "@/components/landing/SystemMocks";
+import { Counter } from "@/components/landing/Counter";
 
 const BRAND = {
   primary: "#0060e8",
