@@ -63,18 +63,16 @@ Deno.serve(async (req) => {
       ieps_total += ieps_m;
       lineas.push({
         producto_id: p.id,
+        descripcion: p.nombre,
         cantidad,
         precio_unitario: precio,
-        precio_sin_impuestos: precio,
         descuento_pct: 0,
-        descuento_monto: 0,
         subtotal: sub,
         iva_pct: p.tiene_iva ? p.iva_pct : 0,
         iva_monto: iva_m,
         ieps_pct: p.tiene_ieps ? p.ieps_pct : 0,
         ieps_monto: ieps_m,
         total: sub + iva_m + ieps_m,
-        nombre_snapshot: p.nombre,
       });
     }
 
