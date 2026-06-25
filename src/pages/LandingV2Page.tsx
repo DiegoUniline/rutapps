@@ -337,19 +337,14 @@ export default function LandingV2Page() {
               Toman el pedido, cobran e imprimen el ticket en la calle. Sin papel, sin recaptura.
             </p>
           </motion.div>
-          <motion.div {...fadeUp} className="relative rounded-2xl overflow-hidden border shadow-2xl" style={{ borderColor: BRAND.line }}>
-            <video
-              src="/__l5e/assets-v1/c1379738-d741-44b3-8620-5ee88e4ca64a/rutapp-demo.mp4"
-              poster={imgTicketCalle}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-auto block"
+          <motion.div {...fadeUp} className="relative rounded-2xl overflow-hidden border shadow-2xl aspect-video bg-black" style={{ borderColor: BRAND.line }}>
+            <iframe
+              src="https://www.youtube.com/embed/0pkauD3ZBYI?rel=0"
+              title="¿Qué es Rutapp?"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
             />
-            <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.primary }}>
-              ▶ Real, no maqueta
-            </div>
           </motion.div>
         </div>
       </section>
