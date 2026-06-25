@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import SearchableSelect from '@/components/SearchableSelect';
+import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { Loader2 } from 'lucide-react';
 import { todayInTimezone } from '@/lib/utils';
 
