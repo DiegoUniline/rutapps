@@ -22,6 +22,7 @@ import TiendaOrdersBell from '@/components/notifications/TiendaOrdersBell';
 import BroadcastBell from '@/components/BroadcastBell';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
+import TiendaAnnouncementModal from '@/components/TiendaAnnouncementModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
