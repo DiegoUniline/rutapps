@@ -91,6 +91,8 @@ export default function MobileLayout() {
   const [isUpdating, setIsUpdating] = useState(false);
   const isOnline = !useRutaStore(state => state.isOffline);
   const { pendingCount } = useNetworkStatus();
+  const { total: queueTotal, failed: queueFailed } = usePendingQueue(5000);
+
 
   // Aviso al cerrar/recargar si hay cambios sin sincronizar
   useUnloadGuard(pendingCount);
