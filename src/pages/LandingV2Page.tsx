@@ -210,7 +210,7 @@ function ModuloCard({ m, i }: { m: Modulo; i: number }) {
 }
 
 function PreciosSection() {
-  const [m, setM] = useState(monedas[0]);
+  const [m, setM] = useState<(typeof monedas)[number]>(monedas[0]);
   return (
     <section id="precios" className="mx-auto max-w-6xl px-4 py-16 md:py-24">
       <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto">
