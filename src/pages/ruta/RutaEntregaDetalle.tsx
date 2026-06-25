@@ -68,15 +68,12 @@ export default function RutaEntregaDetalle() {
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
     enabled: !!id,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('entregas')
-        .select(`*, clientes(id, nombre, telefono, direccion, colonia, credito, limite_credito, dias_credito), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), entrega_lineas(*, productos(id, codigo, nombre, precio_principal))`)
-        .eq('id', id!)
-        .single();
-      if (error) throw error;
+      const data = await fetchEntregaWithFallback(id!);
+      if (!data) throw new Error('Entrega no encontrada');
       return data;
     },
   });
@@ -85,34 +82,20 @@ export default function RutaEntregaDetalle() {
   const { data: venta } = useQuery({
     queryKey: ['ruta-entrega-venta', pedidoId],
     enabled: !!pedidoId,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select(`*, venta_lineas(*, productos(id, codigo, nombre), unidades:unidad_id(nombre, abreviatura)), clientes(id, nombre, telefono), vendedores:profiles!vendedor_id(nombre), venta_promociones(*)`)
-        .eq('id', pedidoId!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: async () => fetchVentaForEntregaWithFallback(pedidoId!),
   });
 
   const clienteId = (entrega as any)?.cliente_id;
   const { data: otrasPendientes } = useQuery({
     queryKey: ['ruta-entrega-cuentas', clienteId],
     enabled: !!clienteId,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
-    queryFn: async () => {
-      const { data } = await supabase.from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .gt('saldo_pendiente', 0)
-        .in('status', ['borrador', 'confirmado', 'entregado', 'facturado'])
-        .order('fecha', { ascending: true });
-      return data ?? [];
-    },
+    queryFn: async () => fetchOtrasPendientesWithFallback(clienteId!),
   });
 
   // Auto-marcar como entregado si la venta ya fue cobrada totalmente
