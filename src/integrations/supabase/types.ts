@@ -6865,6 +6865,7 @@ export type Database = {
           permitir_invitados: boolean
           slug: string
           updated_at: string
+          usar_lista_cliente: boolean
           whatsapp_pedidos: string | null
         }
         Insert: {
@@ -6883,6 +6884,7 @@ export type Database = {
           permitir_invitados?: boolean
           slug: string
           updated_at?: string
+          usar_lista_cliente?: boolean
           whatsapp_pedidos?: string | null
         }
         Update: {
@@ -6901,6 +6903,7 @@ export type Database = {
           permitir_invitados?: boolean
           slug?: string
           updated_at?: string
+          usar_lista_cliente?: boolean
           whatsapp_pedidos?: string | null
         }
         Relationships: [
