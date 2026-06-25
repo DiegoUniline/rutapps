@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes, useProductosForSelect } from '@/hooks/useData';

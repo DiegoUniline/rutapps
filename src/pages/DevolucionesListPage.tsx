@@ -1,3 +1,4 @@
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
