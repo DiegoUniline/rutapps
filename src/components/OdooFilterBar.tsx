@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, Children } from 'react';
 import { Search, ChevronDown, Layers, X, Check, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 
 export interface FilterOption {
   key: string;
@@ -235,22 +236,11 @@ export function OdooFilterBar({
             {/* Dates first */}
             <ResponsiveFilterCard label="Fecha" isMobile={isMobile}>
               {onDateFromChange && onDateToChange && (
-                <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
-                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <input
-                    type="date"
-                    value={dateFrom ?? ''}
-                    onChange={e => onDateFromChange(e.target.value)}
-                    className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
-                  />
-                  <span className="text-[11px] text-muted-foreground">al</span>
-                  <input
-                    type="date"
-                    value={dateTo ?? ''}
-                    onChange={e => onDateToChange(e.target.value)}
-                    className="px-2 py-1 text-[12px] rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 w-[130px]"
-                  />
-                </div>
+                <DateRangePicker
+                  from={dateFrom ?? ''}
+                  to={dateTo ?? ''}
+                  onChange={(f, t) => { onDateFromChange(f); onDateToChange(t); }}
+                />
               )}
             </ResponsiveFilterCard>
 
