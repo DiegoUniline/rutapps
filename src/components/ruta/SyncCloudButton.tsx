@@ -48,7 +48,13 @@ export default function SyncCloudButton() {
     setTapped(true);
     toast('Sincronizando...', { icon: '🔄', duration: 1500 });
     syncNow()
-      .then(() => toast.success('✓ Sincronizado'))
+      .then((result) => {
+        if (!result?.ok) {
+          toast.warning(result?.reason || 'Sincronización incompleta');
+          return;
+        }
+        toast.success('✓ Sincronizado');
+      })
       .catch(() => toast.error('Error al sincronizar'));
   }, [isOnline, isSyncing, syncNow]);
 
