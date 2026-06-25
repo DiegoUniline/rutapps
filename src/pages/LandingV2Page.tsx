@@ -40,6 +40,7 @@ import {
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
 
 import imgPapel from "@/assets/landing/papel-vendedor.jpg";
+import imgHeroReal from "@/assets/landing/hero-vendedor-real.jpg";
 import imgVentas from "@/assets/landing/mod-ventas.jpg";
 import imgCobranza from "@/assets/landing/mod-cobranza.jpg";
 import imgInventario from "@/assets/landing/mod-inventario.jpg";
@@ -242,20 +243,31 @@ export default function LandingV2Page() {
           </motion.div>
 
           <motion.div {...fadeUp} className="relative">
-            {/* Phone mock + dashboard mock side by side */}
+            {/* Real vendor photo with phone mock overlay */}
             <div className="relative">
-              <div className="hidden sm:block absolute -left-4 -top-4 right-20 z-0">
-                <DashboardScreen />
+              <div className="rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: BRAND.line }}>
+                <img
+                  src={imgHeroReal}
+                  alt="Vendedor real usando Rutapp en ruta con su celular"
+                  width={1280}
+                  height={960}
+                  className="w-full h-auto object-cover aspect-[4/3]"
+                />
               </div>
-              <div className="relative z-10 sm:ml-auto sm:-mr-4 sm:mt-24">
+              {/* Floating phone mock */}
+              <div className="hidden md:block absolute -bottom-8 -left-8 w-[220px] z-20 drop-shadow-2xl">
                 <MobileVentasScreen />
               </div>
-              <div className="hidden sm:block absolute -top-3 -right-3 z-20 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+              {/* Floating dashboard mini */}
+              <div className="hidden lg:block absolute -top-6 -right-6 w-[260px] z-20 rounded-xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line, background: "#fff" }}>
+                <DashboardScreen />
+              </div>
+              <div className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
                 Hoy +$12,480
               </div>
-            </div>
-            <div className="sm:hidden mt-4">
-              <DashboardScreen />
+              <div className="absolute bottom-3 right-3 z-30 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg backdrop-blur" style={{ background: `${BRAND.primary}ee` }}>
+                <span className="inline-flex items-center gap-1"><WifiOff className="h-3 w-3" /> Sin señal · funcionando</span>
+              </div>
             </div>
           </motion.div>
 
