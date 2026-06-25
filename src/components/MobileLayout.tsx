@@ -47,9 +47,11 @@ const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
+  { label: 'Pendientes', icon: Inbox, path: '/ruta/pendientes', permiso: null as string | null },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
 ];
+
 
 export default function MobileLayout() {
   const navigate = useNavigate();
