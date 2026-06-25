@@ -234,22 +234,23 @@ export default function LandingV2Page() {
           </motion.div>
 
           <motion.div {...fadeUp} className="relative">
-            <div className="relative rounded-2xl overflow-hidden border bg-white shadow-2xl" style={{ borderColor: BRAND.line }}>
-              <img src={imgOffline} alt="Vendedor en ruta con Rutapp" className="w-full h-auto object-cover aspect-[4/5]" width={1280} height={896} />
-              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 flex-wrap">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-white shadow-md border" style={{ borderColor: BRAND.line, color: BRAND.ink }}>
-                  <WifiOff className="h-3 w-3 text-red-500" /> Sin señal · Pedido guardado
-                </div>
-                <div className="px-2.5 py-1.5 rounded-full text-[11px] font-bold text-white shadow-md" style={{ background: BRAND.accent }}>
-                  Hoy +$12,480
-                </div>
+            {/* Phone mock + dashboard mock side by side */}
+            <div className="relative">
+              <div className="hidden sm:block absolute -left-4 -top-4 right-20 z-0">
+                <DashboardScreen />
               </div>
-              <div className="absolute bottom-4 left-4 right-4 px-3 py-2.5 rounded-lg bg-white shadow-md border flex items-center gap-2" style={{ borderColor: BRAND.line }}>
-                <RefreshCw className="h-4 w-4" style={{ color: BRAND.primary }} />
-                <span className="text-[12px] font-medium" style={{ color: BRAND.ink2 }}>Se sincroniza al volver la señal</span>
+              <div className="relative z-10 sm:ml-auto sm:-mr-4 sm:mt-24">
+                <MobileVentasScreen />
+              </div>
+              <div className="hidden sm:block absolute -top-3 -right-3 z-20 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+                Hoy +$12,480
               </div>
             </div>
+            <div className="sm:hidden mt-4">
+              <DashboardScreen />
+            </div>
           </motion.div>
+
         </div>
       </section>
 
