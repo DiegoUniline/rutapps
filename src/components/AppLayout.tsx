@@ -751,6 +751,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
+            <TiendaOrdersBell />
             <button
               onClick={() => setPaletteOpen(true)}
               className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
