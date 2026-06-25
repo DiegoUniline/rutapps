@@ -628,6 +628,8 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
       <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
       <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+      <Route path="/ruta/pendientes" element={<PendientesSincronizarPage />} />
+
       <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
 
       {/* Desktop POS */}
