@@ -549,48 +549,11 @@ export default function LandingV2Page() {
         </div>
       </section>
 
-      {/* 7. AGENTE AI WHATSAPP */}
-      <section className="relative overflow-hidden" style={{ background: BRAND.ink, color: "#fff" }}>
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
-          <motion.div {...fadeUp}>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-white/15 bg-white/5">
-              <MessageCircle className="h-3 w-3" /> WhatsApp · IA
-            </div>
-            <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
-              Pídele reportes a tu negocio. Por WhatsApp.
-            </h2>
-            <p className="mt-4 text-[15px] md:text-[17px] text-white/75">
-              Tu Agente AI vive en WhatsApp. Le escribes "ventas de hoy" o "cobranza de la semana" y te responde al instante.
-            </p>
-            <ul className="mt-6 space-y-3 text-[14px] text-white/85">
-              <li className="flex gap-2"><Check className="h-5 w-5 shrink-0" style={{ color: BRAND.accent }} /> Chatea en lenguaje natural.</li>
-              <li className="flex gap-2"><Check className="h-5 w-5 shrink-0" style={{ color: BRAND.accent }} /> Reportes automáticos diarios o programados.</li>
-              <li className="flex gap-2"><Check className="h-5 w-5 shrink-0" style={{ color: BRAND.accent }} /> Entiende ventas, cobranza, inventario y rutas.</li>
-            </ul>
-            <div className="mt-7 flex flex-col sm:flex-row gap-3 items-start">
-              <Link to="/signup" className="inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white" style={{ background: BRAND.accent }}>
-                Yo lo quiero <ArrowRight className="h-4 w-4" />
-              </Link>
-              <div className="text-[13px] text-white/70 self-center">Solo <b className="text-white">$69 MXN</b> extra al mes.</div>
-            </div>
-          </motion.div>
-          <motion.div {...fadeUp} className="grid gap-4">
-            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl">
-              <img src={imgWhatsapp} alt="Dueño de tienda recibiendo reportes por WhatsApp" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1024} height={768} />
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-              <div className="space-y-2.5 text-[13.5px]">
-                <div className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm px-3.5 py-2.5 bg-[#005c4b] text-white">
-                  Mándame las ventas de hoy 📊
-                </div>
-                <div className="max-w-[88%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-white/10 text-white">
-                  <b>💰 $48,250 MXN</b> · 🧾 23 tickets · 👥 18 clientes. Subiendo 12% vs ayer ↑
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+      {/* 7. AGENTE AI WHATSAPP — animated */}
+      <section className="mx-auto max-w-6xl px-4">
+        <WhatsAppAgentSection />
       </section>
+
 
       {/* 8. TIENDA EN LÍNEA */}
       <section id="tienda" className="mx-auto max-w-6xl px-4 py-16 md:py-24">
