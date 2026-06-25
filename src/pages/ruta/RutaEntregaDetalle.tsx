@@ -12,6 +12,8 @@ import { toPng } from 'html-to-image';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
+import { fetchEntregaWithFallback, fetchVentaForEntregaWithFallback, fetchOtrasPendientesWithFallback } from '@/lib/offlineEntrega';
+import { queueOperation } from '@/lib/syncQueue';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
@@ -66,15 +68,12 @@ export default function RutaEntregaDetalle() {
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
     enabled: !!id,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('entregas')
-        .select(`*, clientes(id, nombre, telefono, direccion, colonia, credito, limite_credito, dias_credito), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), entrega_lineas(*, productos(id, codigo, nombre, precio_principal))`)
-        .eq('id', id!)
-        .single();
-      if (error) throw error;
+      const data = await fetchEntregaWithFallback(id!);
+      if (!data) throw new Error('Entrega no encontrada');
       return data;
     },
   });
@@ -83,34 +82,20 @@ export default function RutaEntregaDetalle() {
   const { data: venta } = useQuery({
     queryKey: ['ruta-entrega-venta', pedidoId],
     enabled: !!pedidoId,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select(`*, venta_lineas(*, productos(id, codigo, nombre), unidades:unidad_id(nombre, abreviatura)), clientes(id, nombre, telefono), vendedores:profiles!vendedor_id(nombre), venta_promociones(*)`)
-        .eq('id', pedidoId!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: async () => fetchVentaForEntregaWithFallback(pedidoId!),
   });
 
   const clienteId = (entrega as any)?.cliente_id;
   const { data: otrasPendientes } = useQuery({
     queryKey: ['ruta-entrega-cuentas', clienteId],
     enabled: !!clienteId,
+    networkMode: 'always',
     refetchOnWindowFocus: true,
     staleTime: 0,
-    queryFn: async () => {
-      const { data } = await supabase.from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .gt('saldo_pendiente', 0)
-        .in('status', ['borrador', 'confirmado', 'entregado', 'facturado'])
-        .order('fecha', { ascending: true });
-      return data ?? [];
-    },
+    queryFn: async () => fetchOtrasPendientesWithFallback(clienteId!),
   });
 
   // Auto-marcar como entregado si la venta ya fue cobrada totalmente
@@ -121,7 +106,7 @@ export default function RutaEntregaDetalle() {
     const saldo = (venta as any).saldo_pendiente ?? 0;
     const condicion = (venta as any).condicion_pago;
     // Solo auto-marcar si está en estados activos de ruta y saldo está en 0 (contado/pagado)
-    if (saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
+    if (navigator.onLine && saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
       autoMarkedRef.current = true;
       const now = new Date().toISOString();
       marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now)
@@ -207,7 +192,19 @@ export default function RutaEntregaDetalle() {
 
       // Marcar la entrega como hecha (solo si no lo está ya)
       if (entrega.status !== 'hecho') {
-        await marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now);
+        if (navigator.onLine) {
+          await marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now);
+        } else {
+          // Offline: encolar update de entregas. El trigger del servidor reconciliará
+          // inventario y status del pedido cuando sincronice.
+          await queueOperation('entregas', 'update', {
+            id: id!,
+            status: 'hecho',
+            validado_at: now,
+            fecha_entrega: now,
+          });
+          toast.message('Sin conexión: entrega marcada localmente, se sincronizará');
+        }
       }
 
       toast.success('¡Entrega completada!');
@@ -235,16 +232,21 @@ export default function RutaEntregaDetalle() {
       const now = new Date().toISOString();
       const nuevaNota = `No entregado: ${motivo}`;
       const notasFinales = entrega.notas ? `${entrega.notas}\n${nuevaNota}` : nuevaNota;
-      const { error } = await supabase.from('entregas')
-        .update({
-          status: 'no_entregado',
-          motivo_no_entrega: motivo,
-          notas: notasFinales,
-          fecha_entrega: now,
-          validado_at: now,
-        } as any)
-        .eq('id', id!);
-      if (error) throw error;
+      const payload = {
+        id: id!,
+        status: 'no_entregado',
+        motivo_no_entrega: motivo,
+        notas: notasFinales,
+        fecha_entrega: now,
+        validado_at: now,
+      };
+      if (navigator.onLine) {
+        const { error } = await supabase.from('entregas').update(payload as any).eq('id', id!);
+        if (error) throw error;
+      } else {
+        await queueOperation('entregas', 'update', payload);
+        toast.message('Sin conexión: guardado localmente, se sincronizará');
+      }
       toast.success('Entrega marcada como no entregada');
       setShowNoEntregadoModal(false);
       setMotivoSeleccionado('');
@@ -259,10 +261,14 @@ export default function RutaEntregaDetalle() {
     if (!nuevaFecha) { toast.error('Selecciona una fecha'); return; }
     setSavingReprog(true);
     try {
-      const { error } = await supabase.from('entregas')
-        .update({ fecha: nuevaFecha } as any)
-        .eq('id', id!);
-      if (error) throw error;
+      const payload = { id: id!, fecha: nuevaFecha };
+      if (navigator.onLine) {
+        const { error } = await supabase.from('entregas').update({ fecha: nuevaFecha } as any).eq('id', id!);
+        if (error) throw error;
+      } else {
+        await queueOperation('entregas', 'update', payload);
+        toast.message('Sin conexión: reprogramada localmente, se sincronizará');
+      }
       toast.success('Entrega reprogramada');
       setShowReprogramarModal(false);
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
