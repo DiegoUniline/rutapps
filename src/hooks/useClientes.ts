@@ -100,6 +100,32 @@ export function useSaveCliente() {
   return useMutation({
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
       const clean = pickColumns(cliente, CLIENTE_COLUMNS);
+
+      // Offline-first: si no hay red, encolar la operación en IndexedDB
+      // para que se sincronice cuando vuelva la conexión.
+      const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (isOffline) {
+        const { queueOperation } = await import('@/lib/syncQueue');
+        if (cliente.id) {
+          const record: any = { ...clean, id: cliente.id, empresa_id: empresa?.id };
+          await queueOperation('clientes', 'update', record, 'id');
+          return { id: cliente.id };
+        } else {
+          if (!empresa?.id) throw new Error('Sin empresa');
+          // UUID local con fallback para entornos sin crypto.randomUUID
+          const newId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = (Math.random() * 16) | 0;
+                const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+              });
+          const record: any = { ...clean, id: newId, empresa_id: empresa.id, status: (clean as any).status || 'activo' };
+          await queueOperation('clientes', 'insert', record, 'id');
+          return { id: newId };
+        }
+      }
+
       delete (clean as any).id;
       if (cliente.id) {
         const { data, error } = await supabase.from('clientes').update(clean as any).eq('id', cliente.id).select('id').single();
@@ -132,6 +158,7 @@ export function useSaveCliente() {
     },
   });
 }
+
 
 export function useDeleteCliente() {
   const qc = useQueryClient();
