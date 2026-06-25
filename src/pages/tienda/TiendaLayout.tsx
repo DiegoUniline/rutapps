@@ -113,10 +113,6 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
                 <Link to={`${base}/cambiar-password`} className="tienda-btn tienda-btn-ghost" title="Cambiar contraseña">
                   <KeyRound size={16} />
                 </Link>
-                <span style={{ display: "none" }}></span>
-                <Link to={`${base}/mis-pedidos`} className="tienda-btn tienda-btn-ghost" style={{ display: "none" }}>
-                  <Package size={16} /> Mis pedidos
-                </Link>
                 <button onClick={() => { t.logout(); nav(base); }} className="tienda-btn tienda-btn-ghost" title="Cerrar sesión">
                   <LogOut size={16} />
                 </button>
