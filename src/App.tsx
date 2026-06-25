@@ -234,6 +234,28 @@ function PageLoader() {
 
 const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
 
+// Tienda en línea (público)
+const TiendaHomePage = lazy(() => import("@/pages/tienda/TiendaHomePage"));
+const TiendaProductosPage = lazy(() => import("@/pages/tienda/TiendaProductosPage"));
+const TiendaCarritoPage = lazy(() => import("@/pages/tienda/TiendaCarritoPage"));
+const TiendaLoginPage = lazy(() => import("@/pages/tienda/TiendaLoginPage"));
+const TiendaMisPedidosPage = lazy(() => import("@/pages/tienda/TiendaMisPedidosPage"));
+const TiendaConfigPage = lazy(() => import("@/pages/configuracion/TiendaConfigPage"));
+
+function TiendaPublicRoutes() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/tienda/:slug" element={<TiendaHomePage />} />
+        <Route path="/tienda/:slug/productos" element={<TiendaProductosPage />} />
+        <Route path="/tienda/:slug/carrito" element={<TiendaCarritoPage />} />
+        <Route path="/tienda/:slug/login" element={<TiendaLoginPage />} />
+        <Route path="/tienda/:slug/mis-pedidos" element={<TiendaMisPedidosPage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
 function AppRoutes() {
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
