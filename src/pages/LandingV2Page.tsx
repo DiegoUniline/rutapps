@@ -31,7 +31,7 @@ import {
   Eye,
 } from "lucide-react";
 import rutappLogo from "@/assets/rutapp-logo.jpeg.asset.json";
-import imgOffline from "@/assets/landing/offline-vendedor.jpg";
+
 import imgPapel from "@/assets/landing/papel-vendedor.jpg";
 import imgVentas from "@/assets/landing/mod-ventas.jpg";
 import imgCobranza from "@/assets/landing/mod-cobranza.jpg";
@@ -43,6 +43,10 @@ import imgTienda from "@/assets/landing/tienda-online.jpg";
 import imgAIAnalisis from "@/assets/landing/ai-analisis.jpg";
 import imgWhatsapp from "@/assets/landing/whatsapp-ai.jpg";
 import imgMapa from "@/assets/landing/supervisor-mapa.jpg";
+import {
+  MobileVentasScreen, DashboardScreen, POSScreen, KardexScreen,
+  TiendaScreen, ComprasIAScreen, SupervisorScreen,
+} from "@/components/landing/SystemMocks";
 
 const BRAND = {
   primary: "#0060e8",
@@ -230,22 +234,23 @@ export default function LandingV2Page() {
           </motion.div>
 
           <motion.div {...fadeUp} className="relative">
-            <div className="relative rounded-2xl overflow-hidden border bg-white shadow-2xl" style={{ borderColor: BRAND.line }}>
-              <img src={imgOffline} alt="Vendedor en ruta con Rutapp" className="w-full h-auto object-cover aspect-[4/5]" width={1280} height={896} />
-              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 flex-wrap">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold bg-white shadow-md border" style={{ borderColor: BRAND.line, color: BRAND.ink }}>
-                  <WifiOff className="h-3 w-3 text-red-500" /> Sin señal · Pedido guardado
-                </div>
-                <div className="px-2.5 py-1.5 rounded-full text-[11px] font-bold text-white shadow-md" style={{ background: BRAND.accent }}>
-                  Hoy +$12,480
-                </div>
+            {/* Phone mock + dashboard mock side by side */}
+            <div className="relative">
+              <div className="hidden sm:block absolute -left-4 -top-4 right-20 z-0">
+                <DashboardScreen />
               </div>
-              <div className="absolute bottom-4 left-4 right-4 px-3 py-2.5 rounded-lg bg-white shadow-md border flex items-center gap-2" style={{ borderColor: BRAND.line }}>
-                <RefreshCw className="h-4 w-4" style={{ color: BRAND.primary }} />
-                <span className="text-[12px] font-medium" style={{ color: BRAND.ink2 }}>Se sincroniza al volver la señal</span>
+              <div className="relative z-10 sm:ml-auto sm:-mr-4 sm:mt-24">
+                <MobileVentasScreen />
+              </div>
+              <div className="hidden sm:block absolute -top-3 -right-3 z-20 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+                Hoy +$12,480
               </div>
             </div>
+            <div className="sm:hidden mt-4">
+              <DashboardScreen />
+            </div>
           </motion.div>
+
         </div>
       </section>
 
@@ -401,9 +406,10 @@ export default function LandingV2Page() {
               "Tienes un analista trabajando 24/7 sin contratarlo."
             </p>
           </motion.div>
-          <motion.div {...fadeUp} className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-            <img src={imgAIAnalisis} alt="IA analizando datos de ventas" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
+          <motion.div {...fadeUp}>
+            <DashboardScreen />
           </motion.div>
+
         </div>
       </section>
 
@@ -473,19 +479,12 @@ export default function LandingV2Page() {
             </div>
           </motion.div>
           <motion.div {...fadeUp} className="order-1 md:order-2 relative">
-            <div className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-              <img src={imgTienda} alt="Cliente comprando en la tienda en línea" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
-            </div>
-            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg" style={{ background: BRAND.accent }}>
+            <TiendaScreen />
+            <div className="absolute -top-3 -right-3 px-3 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg z-10" style={{ background: BRAND.accent }}>
               ⚡ Abierto 24/7
             </div>
-            <div className="absolute bottom-3 left-3 right-3 bg-white/95 backdrop-blur rounded-xl p-3 flex items-center justify-between shadow-lg border" style={{ borderColor: BRAND.line }}>
-              <div className="inline-flex items-center gap-2 text-[12.5px] font-medium">
-                <ShoppingBag className="h-4 w-4" style={{ color: BRAND.primary }} /> Pedido entró como venta
-              </div>
-              <span className="text-[12px] font-bold" style={{ color: BRAND.primary }}>+$1,240</span>
-            </div>
           </motion.div>
+
         </div>
       </section>
 
@@ -509,8 +508,56 @@ export default function LandingV2Page() {
               ))}
             </div>
           </motion.div>
-          <motion.div {...fadeUp} className="rounded-2xl overflow-hidden border shadow-xl" style={{ borderColor: BRAND.line }}>
-            <img src={imgMapa} alt="Supervisor viendo rutas en mapa" loading="lazy" className="w-full h-auto object-cover aspect-[4/3]" width={1280} height={896} />
+          <motion.div {...fadeUp}>
+            <SupervisorScreen />
+          </motion.div>
+
+        </div>
+      </section>
+
+      {/* 9.5 CAPTURAS DEL SISTEMA */}
+      <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
+        <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto">
+          <SectionLabel><Eye className="h-3 w-3" /> Capturas del sistema</SectionLabel>
+          <h2 className="mt-3 text-[28px] md:text-[40px] font-bold tracking-tight" style={{ letterSpacing: "-0.03em" }}>
+            Así se ve Rutapp por dentro.
+          </h2>
+          <p className="mt-4 text-[15px] md:text-[17px]" style={{ color: BRAND.ink2 }}>
+            Pantallas reales del sistema. POS rápido, Kardex granular y compras sugeridas por IA.
+          </p>
+        </motion.div>
+        <div className="mt-12 space-y-10">
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="order-2 md:order-1">
+              <SectionLabel>POS · Punto de venta</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">Cobra en segundos, con o sin internet.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Promociones 2x1 automáticas, lista de precios por cliente, lector de código de barras y recibo térmico al instante.
+              </p>
+            </div>
+            <div className="order-1 md:order-2"><POSScreen /></div>
+          </motion.div>
+
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div><KardexScreen /></div>
+            <div>
+              <SectionLabel>Kardex granular</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">Cada movimiento, rastreable.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Ventas, compras, traspasos, devoluciones y conteos físicos — con folio y saldo después de cada movimiento. Auditas en segundos.
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div {...fadeUp} className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="order-2 md:order-1">
+              <SectionLabel><Brain className="h-3 w-3" /> Compras con IA</SectionLabel>
+              <h3 className="mt-2 text-[22px] font-bold">La IA te dice qué comprar y cuánto.</h3>
+              <p className="mt-2 text-[14px]" style={{ color: BRAND.ink2 }}>
+                Analiza 90 días de venta, estacionalidad y stock. Te genera la OC sugerida por proveedor con cantidad óptima. Adiós a sobrecompras y faltantes.
+              </p>
+            </div>
+            <div className="order-1 md:order-2"><ComprasIAScreen /></div>
           </motion.div>
         </div>
       </section>
