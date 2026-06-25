@@ -107,7 +107,7 @@ export default function SaldoInicialModal({ open, onOpenChange }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+            <div><SingleDatePicker value={fecha} onChange={iso => setFecha(iso)} /></div>
           </div>
           <div className="space-y-1.5">
             <Label>Concepto</Label>
