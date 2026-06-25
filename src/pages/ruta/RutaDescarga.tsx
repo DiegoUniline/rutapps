@@ -192,7 +192,7 @@ export default function RutaDescarga() {
         }
       } else {
         // Offline: encolar con id sintético; al sincronizar se hace upsert.
-        const localId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+        const localId = newLocalId();
         await queueOperation('descarga_ruta', 'insert', { id: localId, ...insertData });
       }
     },
