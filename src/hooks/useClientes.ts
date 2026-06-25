@@ -159,19 +159,92 @@ export function useDeleteCliente() {
   });
 }
 
-// Catalog hooks with staleTime
+// Catalog hooks with offline-first fallback (IndexedDB) — selectors in
+// móvil deben llenarse incluso sin red.
+async function readProfilesCache(empresaId: string) {
+  try {
+    const { offlineDb } = await import('@/lib/offlineDb');
+    const cached = await offlineDb.profiles.where('empresa_id').equals(empresaId).toArray();
+    return (cached as any[])
+      .filter(p => !p.estado || p.estado === 'activo')
+      .map(p => ({ id: p.id, nombre: p.nombre }))
+      .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || '')));
+  } catch { return []; }
+}
+
 export function useZonas() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['zonas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Zona[]; }});
+  return useQuery({
+    queryKey: ['zonas', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    networkMode: 'always',
+    queryFn: async () => {
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.zonas.where('empresa_id').equals(empresa!.id).toArray();
+          return (cached as any[]).filter(z => z.activo !== false).map(z => ({ id: z.id, nombre: z.nombre })) as Zona[];
+        } catch { return [] as Zona[]; }
+      };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const c = await readCache(); if (c.length) return c;
+      }
+      try {
+        const { data, error } = await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+        if (error) throw error;
+        return (data || []) as Zona[];
+      } catch {
+        return await readCache();
+      }
+    },
+  });
 }
+
 export function useVendedores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['vendedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Vendedor[]; }});
+  return useQuery({
+    queryKey: ['vendedores', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    networkMode: 'always',
+    queryFn: async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const c = await readProfilesCache(empresa!.id); if (c.length) return c as Vendedor[];
+      }
+      try {
+        const { data, error } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+        if (error) throw error;
+        return (data || []) as Vendedor[];
+      } catch {
+        return (await readProfilesCache(empresa!.id)) as Vendedor[];
+      }
+    },
+  });
 }
+
 export function useCobradores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Cobrador[]; }});
+  return useQuery({
+    queryKey: ['cobradores', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    networkMode: 'always',
+    queryFn: async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const c = await readProfilesCache(empresa!.id); if (c.length) return c as Cobrador[];
+      }
+      try {
+        const { data, error } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+        if (error) throw error;
+        return (data || []) as Cobrador[];
+      } catch {
+        return (await readProfilesCache(empresa!.id)) as Cobrador[];
+      }
+    },
+  });
 }
+
 
 // Pedido sugerido per client
 export function usePedidoSugerido(clienteId?: string) {

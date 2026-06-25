@@ -35,6 +35,8 @@ const TABLES_TO_CACHE = [
   'stock_almacen',
   'producto_presentaciones',
   'lista_precios',
+  'zonas',
+  'almacenes',
 ] as const;
 
 
@@ -53,6 +55,8 @@ const COLUMN_SELECTS: Record<string, string> = {
   stock_almacen: 'id,empresa_id,almacen_id,producto_id,cantidad,updated_at,created_at',
   producto_presentaciones: 'id,empresa_id,producto_id,nombre,factor_base,precio_especial,codigo_barras,es_principal_stock,orden,activo,created_at',
   lista_precios: 'id,empresa_id,tarifa_id,nombre,es_principal,activa,share_token,share_activo,created_at',
+  zonas: 'id,empresa_id,nombre,activo,created_at',
+  almacenes: 'id,empresa_id,nombre,activo,es_merma,created_at',
 };
 
 
@@ -86,6 +90,8 @@ export const TABLE_LABELS: Record<string, string> = {
   stock_almacen: 'Stock por almacén',
   producto_presentaciones: 'Presentaciones de productos',
   lista_precios: 'Listas de precios',
+  zonas: 'Zonas',
+  almacenes: 'Almacenes',
 };
 
 
@@ -98,6 +104,8 @@ const TABLES_WITH_EMPRESA = new Set([
   'stock_almacen',
   'producto_presentaciones',
   'lista_precios',
+  'zonas',
+  'almacenes',
 ]);
 
 

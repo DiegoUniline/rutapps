@@ -49,6 +49,8 @@ class OfflineDatabase extends Dexie {
   producto_presentaciones!: Table;
   lista_precios!: Table;
   listas!: Table;
+  zonas!: Table;
+  almacenes!: Table;
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
@@ -95,6 +97,11 @@ class OfflineDatabase extends Dexie {
     this.version(9).stores({
       cotizaciones: 'id, empresa_id, cliente_id, vendedor_id, estado, fecha, created_at',
       cotizacion_lineas: 'id, cotizacion_id, producto_id',
+    });
+    // v10: cache zonas + almacenes for offline client/entrega forms
+    this.version(10).stores({
+      zonas: 'id, empresa_id, activo',
+      almacenes: 'id, empresa_id, activo, es_merma',
     });
   }
 }
