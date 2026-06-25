@@ -90,14 +90,40 @@ export function useCotizaciones() {
   return useQuery({
     queryKey: ['cotizaciones', empresa?.id],
     enabled: !!empresa?.id,
+    networkMode: 'always',
     queryFn: async () => {
-      const rows = await fetchAllPages((from, to) =>
-        supabase.from('cotizaciones').select(SELECT_LIST)
-          .eq('empresa_id', empresa!.id)
-          .order('created_at', { ascending: false })
-          .range(from, to)
-      );
-      return rows as unknown as Cotizacion[];
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.cotizaciones
+            .where('empresa_id').equals(empresa!.id).toArray();
+          return (cached as any[]).sort((a, b) =>
+            (b.created_at ?? '').localeCompare(a.created_at ?? '')
+          ) as unknown as Cotizacion[];
+        } catch { return [] as Cotizacion[]; }
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return await readCache();
+      }
+
+      try {
+        const rows = await fetchAllPages((from, to) =>
+          supabase.from('cotizaciones').select(SELECT_LIST)
+            .eq('empresa_id', empresa!.id)
+            .order('created_at', { ascending: false })
+            .range(from, to)
+        );
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          if (rows.length) await offlineDb.cotizaciones.bulkPut(rows as any);
+        } catch { /* ignore */ }
+        return rows as unknown as Cotizacion[];
+      } catch (err) {
+        const cached = await readCache();
+        if (cached.length > 0) return cached;
+        throw err;
+      }
     },
   });
 }
