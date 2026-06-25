@@ -137,10 +137,28 @@ const asesores = [
 ];
 
 const planes = [
-  { nombre: "Individual", precio: "$450", usuarios: "1 usuario", extra: "extra $300/mes", popular: false },
-  { nombre: "Equipo", precio: "$900", usuarios: "3 usuarios", extra: "extra $300/mes", popular: true },
-  { nombre: "Empresa", precio: "$1,500", usuarios: "5 usuarios", extra: "extra $300/mes", popular: false },
+  { nombre: "Individual", precioMXN: 450, extraMXN: 300, usuarios: "1 usuario", popular: false },
+  { nombre: "Equipo", precioMXN: 900, extraMXN: 300, usuarios: "3 usuarios", popular: true },
+  { nombre: "Empresa", precioMXN: 1500, extraMXN: 300, usuarios: "5 usuarios", popular: false },
 ];
+
+// Multi-moneda: tasas aproximadas desde MXN (solo display en landing)
+const monedas = [
+  { code: "MXN", flag: "🇲🇽", label: "México",   rate: 1,      symbol: "$",    suffix: "MXN" },
+  { code: "USD", flag: "🇺🇸", label: "USD",      rate: 0.054,  symbol: "US$",  suffix: "USD" },
+  { code: "COP", flag: "🇨🇴", label: "Colombia", rate: 230,    symbol: "$",    suffix: "COP" },
+  { code: "PEN", flag: "🇵🇪", label: "Perú",     rate: 0.20,   symbol: "S/",   suffix: "PEN" },
+  { code: "CLP", flag: "🇨🇱", label: "Chile",    rate: 51,     symbol: "$",    suffix: "CLP" },
+] as const;
+
+function fmtMoneda(mxn: number, rate: number, symbol: string, code: string) {
+  const v = mxn * rate;
+  // Redondeo amigable según escala
+  const rounded = v >= 1000 ? Math.round(v / 10) * 10 : code === "USD" || code === "PEN" ? Math.round(v * 10) / 10 : Math.round(v);
+  const str = new Intl.NumberFormat("es-MX", { maximumFractionDigits: code === "USD" || code === "PEN" ? 2 : 0 }).format(rounded);
+  return `${symbol}${str}`;
+}
+
 
 const comparativa = [
   ["Funciona sin internet", false, false, false, true],
