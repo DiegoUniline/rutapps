@@ -405,6 +405,10 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/modulos" element={<ModulosMktPage />} />
+          <Route path="/precios" element={<PreciosMktPage />} />
+          <Route path="/giros" element={<GirosMktIndexPage />} />
+          <Route path="/giros/:slug" element={<GiroMktDetallePage />} />
           <Route path="/landing-nueva" element={<LandingV2Page />} />
           <Route path="/landing-nueva/giros" element={<GirosIndexPage />} />
           <Route path="/landing-nueva/precios" element={<PreciosLandingPage />} />
