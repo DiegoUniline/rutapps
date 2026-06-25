@@ -200,7 +200,12 @@ async function getScopedParentIds(table: CacheTable, empresaId: string): Promise
   if (!scope) return null;
 
   const localParentTable = getOfflineTable(scope.parentTable);
-  const localRows = localParentTable ? await localParentTable.toArray().catch(() => []) : [];
+  const localRowsRaw = localParentTable ? await localParentTable.toArray().catch(() => []) : [];
+  const localRows = localRowsRaw.filter((row: any) => {
+    if (scope.parentTable === 'empresas') return row?.id === empresaId;
+    if (TABLES_WITH_EMPRESA.has(scope.parentTable)) return row?.empresa_id === empresaId;
+    return true;
+  });
   const localIds = localRows.map((row: any) => row?.id).filter(Boolean) as string[];
   if (localIds.length > 0) return Array.from(new Set(localIds));
 
