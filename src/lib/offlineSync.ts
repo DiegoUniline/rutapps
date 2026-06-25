@@ -35,6 +35,8 @@ const TABLES_TO_CACHE = [
   'stock_almacen',
   'producto_presentaciones',
   'lista_precios',
+  'zonas',
+  'almacenes',
 ] as const;
 
 
