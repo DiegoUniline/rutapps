@@ -261,10 +261,14 @@ export default function RutaEntregaDetalle() {
     if (!nuevaFecha) { toast.error('Selecciona una fecha'); return; }
     setSavingReprog(true);
     try {
-      const { error } = await supabase.from('entregas')
-        .update({ fecha: nuevaFecha } as any)
-        .eq('id', id!);
-      if (error) throw error;
+      const payload = { id: id!, fecha: nuevaFecha };
+      if (navigator.onLine) {
+        const { error } = await supabase.from('entregas').update({ fecha: nuevaFecha } as any).eq('id', id!);
+        if (error) throw error;
+      } else {
+        await queueOperation('entregas', 'update', payload);
+        toast.message('Sin conexión: reprogramada localmente, se sincronizará');
+      }
       toast.success('Entrega reprogramada');
       setShowReprogramarModal(false);
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
