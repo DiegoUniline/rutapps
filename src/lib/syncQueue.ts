@@ -110,6 +110,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
 
       const newRetries = (item.retries ?? 0) + 1;
+      const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
 
       if (isConflict && item.operation === 'insert') {
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
@@ -121,6 +122,8 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
           createdAt: Date.now() + 1000, // bump forward so it's last
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       } else if (isNotFound || newRetries >= MAX_RETRIES) {
         // Dead letter: keep in queue but mark with high retries
@@ -128,15 +131,20 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         await offlineDb.syncQueue.update(item.id!, {
           retries: MAX_RETRIES + 1,
           createdAt: Date.now(),
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       } else {
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
           createdAt: Date.now(), // Reset timestamp for backoff calculation
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
         });
       }
       failed++;
     }
+
   }
 
   // Clear backup if everything succeeded
@@ -221,3 +229,56 @@ export async function retryDeadLetters(): Promise<number> {
 export async function clearSyncQueue() {
   await offlineDb.syncQueue.clear();
 }
+
+// ============================================================
+// Pending queue inspection / management (Fase 1: Visibilidad)
+// ============================================================
+
+export type QueueItemStatus = 'pending' | 'retrying' | 'failed';
+
+export interface PendingQueueItem extends SyncQueueItem {
+  status: QueueItemStatus;
+}
+
+export const SYNC_QUEUE_MAX_RETRIES = MAX_RETRIES;
+
+function computeStatus(item: SyncQueueItem): QueueItemStatus {
+  const r = item.retries ?? 0;
+  if (r > MAX_RETRIES) return 'failed';
+  if (r > 0) return 'retrying';
+  return 'pending';
+}
+
+// List all queued items (pending + retrying + failed) for UI
+export async function listQueueItems(): Promise<PendingQueueItem[]> {
+  const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
+  return items.map(i => ({ ...i, status: computeStatus(i) }));
+}
+
+// Retry a single item (reset retries so the next sync processes it immediately)
+export async function retryQueueItem(id: number): Promise<void> {
+  await offlineDb.syncQueue.update(id, {
+    retries: 0,
+    createdAt: Date.now() - 60_000, // backdate so it runs at the top of the queue
+    lastError: undefined,
+  });
+}
+
+// Discard a single item from the queue WITHOUT touching the local cache
+export async function discardQueueItem(id: number): Promise<void> {
+  await offlineDb.syncQueue.delete(id);
+}
+
+// Retry every item (pending, retrying and failed) and trigger a sync pass
+export async function retryAllQueueItems(): Promise<number> {
+  const items = await offlineDb.syncQueue.toArray();
+  for (const it of items) {
+    await offlineDb.syncQueue.update(it.id!, {
+      retries: 0,
+      createdAt: Date.now() - 60_000,
+      lastError: undefined,
+    });
+  }
+  return items.length;
+}
+

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home, Eye } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home, Eye, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
@@ -20,6 +20,8 @@ import { useRutaStore } from '@/stores/rutaStore';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
+import { usePendingQueue } from '@/hooks/usePendingQueue';
+
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
 
@@ -47,9 +49,11 @@ const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
+  { label: 'Pendientes', icon: Inbox, path: '/ruta/pendientes', permiso: null as string | null },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil', permiso: null as string | null },
 ];
+
 
 export default function MobileLayout() {
   const navigate = useNavigate();
@@ -87,6 +91,8 @@ export default function MobileLayout() {
   const [isUpdating, setIsUpdating] = useState(false);
   const isOnline = !useRutaStore(state => state.isOffline);
   const { pendingCount } = useNetworkStatus();
+  const { total: queueTotal, failed: queueFailed } = usePendingQueue(5000);
+
 
   // Aviso al cerrar/recargar si hay cambios sin sincronizar
   useUnloadGuard(pendingCount);
@@ -240,7 +246,26 @@ export default function MobileLayout() {
               <Monitor className="h-5 w-5" />
             </button>
           )}
+          {queueTotal > 0 && (
+            <button
+              onClick={() => navigate('/ruta/pendientes')}
+              className="relative flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              title={`${queueTotal} pendiente${queueTotal === 1 ? '' : 's'}${queueFailed ? ` · ${queueFailed} fallida${queueFailed === 1 ? '' : 's'}` : ''}`}
+              aria-label="Operaciones pendientes de sincronizar"
+            >
+              <Inbox className="h-5 w-5" />
+              <span
+                className={cn(
+                  'absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center',
+                  queueFailed > 0 ? 'bg-red-600' : 'bg-amber-500',
+                )}
+              >
+                {queueTotal > 99 ? '99+' : queueTotal}
+              </span>
+            </button>
+          )}
           <SyncCloudButton />
+
         </div>
       </header>
 

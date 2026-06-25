@@ -178,6 +178,8 @@ import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
 import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
 import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
+import PendientesSincronizarPage from "@/pages/ruta/PendientesSincronizarPage";
+
 import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
 import RutaClienteDetalle from "@/pages/ruta/RutaClienteDetalle";
 import RutaIniciarPage from "@/pages/ruta/RutaIniciarPage";
@@ -559,6 +561,8 @@ function AppRoutes() {
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
         <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
         <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+        <Route path="/ruta/pendientes" element={<PendientesSincronizarPage />} />
+
         <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
@@ -624,6 +628,8 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
       <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
       <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+      <Route path="/ruta/pendientes" element={<PendientesSincronizarPage />} />
+
       <Route path="/ruta/iniciar" element={<RutaIniciarPage />} />
 
       {/* Desktop POS */}

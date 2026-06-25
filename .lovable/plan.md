@@ -1,61 +1,106 @@
-## Resumen
-Función opcional por empresa para apartar stock al generar pedidos (vista móvil), con selector de almacén por línea y múltiples almacenes habilitados en Configuración. Con el flag apagado, cero cambios.
+# Plan offline 100% — 6 puntos por fases
 
-## 1. Base de datos (1 migración)
+Voy a implementar uno a la vez, validando cada uno antes de pasar al siguiente. Te aviso al terminar cada fase y subo la versión (`2026.06.25.13` → `.18`).
 
-**`empresas`** — nuevas columnas:
-- `apartar_stock_pedidos boolean not null default false`
-- `apartado_almacenes_ids uuid[] not null default '{}'` — almacenes habilitados para apartar/consultar en pedidos móviles.
+---
 
-**`venta_lineas`** — nueva columna:
-- `almacen_id uuid null references almacenes(id)` — almacén del que saldrá esa línea (solo se usa cuando el pedido se generó con el flag ON).
+## Fase 1 — Pantalla "Pendientes de sincronizar" (punto 2)
 
-**Nueva tabla `stock_apartado`**
-- `id, empresa_id, venta_id, venta_linea_id (unique), producto_id, almacen_id, cantidad, created_at`
-- Index `(empresa_id, almacen_id, producto_id)`
-- RLS por `empresa_id`, GRANT a authenticated + service_role.
+**Qué hace:** muestra al usuario qué operaciones tiene encoladas y permite actuar.
 
-**Función `fn_disponible_almacen(producto_id, almacen_id) → numeric`**
-- `stock_almacen.cantidad − COALESCE(SUM(stock_apartado.cantidad), 0)`
-- `stable`, `security definer`, scope por `empresa_id` del producto.
+**Entregables:**
+- Nueva ruta `/ruta/pendientes` (móvil) y acceso desde menú móvil.
+- Tabla con: tipo (Venta / Cobro / Entrega / Cliente / Visita), folio o referencia, fecha de creación, estado (pendiente / reintentando / **fallida**), # de intentos, último error.
+- Acciones por fila: **Reintentar ahora**, **Descartar**.
+- Acción global: **Reintentar todo**.
+- Badge con contador en el header móvil cuando hay ≥1 pendiente o falla.
+- Hook `usePendingQueue()` que lee de `syncQueue` en IndexedDB y se refresca cada 3s.
 
-**Triggers (DB-authoritative, idempotentes):**
-1. **Insert/update `venta_lineas`** en venta con `tipo='pedido'` y empresa con flag ON → upsert en `stock_apartado` con la cantidad y `almacen_id` de la línea. No deduce stock.
-2. **Delete `venta_lineas`** o **cancelación** de venta tipo pedido → borra filas correspondientes en `stock_apartado`.
-3. **Insert `entrega_lineas`** → consume del `stock_apartado` (decrementa o borra) y deduce de `stock_almacen` del almacén de la línea. Si entrega < apartado, el remanente queda apartado.
-4. Conversión pedido→venta_directa o entrega total → al cerrar la venta, libera cualquier `stock_apartado` remanente.
+**Cambios técnicos:**
+- `src/lib/syncQueue.ts`: agregar campos `status: 'pending'|'retrying'|'failed'`, `attempts`, `lastError`, `lastAttemptAt`. Backoff exponencial (1s, 5s, 30s, 5m) y marcar `failed` a los 5 intentos.
+- `src/pages/PendientesSincronizarPage.tsx` (nueva).
+- `src/components/PendingBadge.tsx` para el header.
 
-Permite negativos: no hay CHECK que bloquee.
+---
 
-## 2. Frontend — Configuración Empresa
+## Fase 2 — Indicador de frescura por tabla (punto 7)
 
-Nueva subsección "Inventario / Pedidos" en `src/pages/configuracion/...`:
-- Toggle "Apartar stock al generar pedidos".
-- Multi-select de almacenes (visible solo si toggle ON, requerido al guardar).
+**Qué hace:** el usuario ve "Stock actualizado hace 2h", "Clientes actualizados hace 5m", etc.
 
-## 3. Frontend — Vista móvil de Pedido
+**Entregables:**
+- Tabla `sync_meta` en IndexedDB (`{ table, lastSyncAt, rowCount }`).
+- `offlineSync.ts` escribe ahí al terminar cada tabla.
+- Componente `<FreshnessIndicator table="stock_almacen" />` reutilizable (texto + color: verde <1h, amarillo <6h, rojo >6h).
+- Sección en `SyncCloudButton` que muestra el detalle por tabla expandible.
+- En cabecera de Stock, Cargas, Clientes y Productos: chip de frescura visible.
 
-`src/pages/ruta/RutaNuevaVenta/...` (paso productos cuando `tipo='pedido'` y `empresa.apartar_stock_pedidos`):
-- Selector de almacén arriba del listado, opciones = `empresa.apartado_almacenes_ids`, default = primero.
-- Badge "Disponible: X" por producto vía `fn_disponible_almacen(producto_id, almacen_actual)`.
-- Sin filtrar por stock (sobreventa permitida).
-- Cada `CartItem` guarda su `almacen_id`. Cambiar el selector solo afecta nuevas líneas; las ya agregadas conservan su almacén original (editable desde la línea).
-- Al guardar, cada `venta_lineas.almacen_id` se persiste; el trigger crea el apartado.
+---
 
-## 4. Lo que NO se toca
-- Pantalla de Ventas (desktop y móvil).
-- POS, cotizaciones, venta directa, entregas existentes.
-- Empresas con flag OFF: cero cambios; los triggers no actúan porque chequean el flag de la empresa.
+## Fase 3 — Promociones offline al 100% (punto 5)
 
-## 5. Edge cases
-- Editar pedido: trigger reescribe el apartado de la línea modificada.
-- Entrega parcial: deduce stock real solo de lo entregado; resta del apartado en la misma cantidad.
-- Cancelar pedido: borra todos los apartados de esa venta.
-- Apagar el flag mientras hay pedidos abiertos: los apartados existentes se respetan hasta entregarse o cancelarse (los triggers siguen funcionando si la línea ya tiene `almacen_id`).
+**Qué hace:** el motor de promociones funciona idéntico con o sin internet.
 
-## Detalles técnicos
-- Hook nuevo `useDisponiblePorAlmacen(producto_ids, almacen_id)` con React Query, key `['disponible', empresaId, almacenId, ...ids]`, invalida en realtime sobre `stock_apartado` y `stock_almacen`.
-- `requireEmpresa` y filtros `empresa_id` en todas las queries nuevas.
-- Tipos TS regenerados tras migración; agregar `almacen_id` opcional a `VentaLinea` y `CartItem`.
+**Entregables:**
+- Agregar `promociones` y `promocion_aplicada` a `MOBILE_QUICK_SYNC_TABLES` y `NO_DELTA_TABLES`.
+- Hook `usePromocionesOffline()` con fallback IndexedDB.
+- Refactor de `promotionEngine.ts` para aceptar promociones desde cache.
+- Test manual documentado: aplicar 3 promos típicas online vs offline y comparar totales.
 
-¿Procedo con la migración primero?
+---
+
+## Fase 4 — Ticket térmico 100% desde IndexedDB (punto 6)
+
+**Qué hace:** el ticket impreso es idéntico online/offline.
+
+**Entregables:**
+- Auditar `ThermalTicket` y `useTicketData`: identificar campos que hoy se piden al servidor (saldo anterior, saldo nuevo, datos de empresa, datos de cliente extendidos).
+- Calcular `saldo_anterior` y `saldo_nuevo` desde IndexedDB usando cobros y ventas locales del cliente.
+- Cachear `empresa` completa (logo, RFC, dirección) en IndexedDB.
+- Fallback explícito en cada `useQuery` del ticket con `networkMode: 'always'` + try/catch.
+- Marcar visualmente en el ticket "⚠ Datos offline — saldo puede actualizarse al sincronizar" cuando se imprime sin conexión.
+
+---
+
+## Fase 5 — Crear clientes/productos offline robusto (punto 4)
+
+**Qué hace:** crear cliente offline con foto + GPS + tarifa sobrevive sin conexión.
+
+**Entregables:**
+- `src/lib/offlineClientes.ts`:
+  - Foto: comprimir a base64 con Canvas y guardar en IndexedDB; al subir, convertir a Blob y subir a Storage.
+  - GPS: usar última posición de `vendedor_ubicaciones` cacheada si `getCurrentPosition` falla.
+  - Tarifa: tomar tarifa por defecto desde IndexedDB.
+- Encolar en `syncQueue` con dependencias: primero `clientes.insert`, luego `storage.upload` con el ID local mapeado al real.
+- Mismo patrón para productos con foto.
+- Test: crear cliente offline → reconectar → validar que aparezca con foto, GPS y tarifa correctos.
+
+---
+
+## Fase 6 — Purge periódico de IndexedDB (punto 8)
+
+**Qué hace:** mantiene la app ligera borrando históricos viejos.
+
+**Entregables:**
+- `src/lib/offlinePurge.ts` con reglas:
+  - `ventas` y `venta_lineas`: borrar > 6 meses (configurable).
+  - `cobros` y `cobro_aplicaciones`: borrar > 6 meses.
+  - `movimientos_inventario` y `kardex`: borrar > 3 meses.
+  - `visitas`: borrar > 3 meses.
+  - **Nunca** borrar pendientes en `syncQueue`.
+- Ejecutar al arranque si pasaron >7 días desde el último purge.
+- Mostrar en Settings → Offline: "Último purge", "Próximo purge", botón "Limpiar ahora".
+- Logging del espacio liberado.
+
+---
+
+## Orden y validación
+
+Ejecuto Fase 1 completa, te muestro, y sigo con la 2, etc. Cada fase es independiente y no rompe la anterior. Versionado:
+- F1: `2026.06.25.13`
+- F2: `2026.06.25.14`
+- F3: `2026.06.25.15`
+- F4: `2026.06.25.16`
+- F5: `2026.06.25.17`
+- F6: `2026.06.25.18`
+
+¿Arranco con la Fase 1?
