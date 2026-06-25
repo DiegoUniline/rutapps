@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
 import { Link } from "react-router-dom";
-import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star } from "lucide-react";
+import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
 import TiendaShell from "./TiendaShell";
 import { useMemo } from "react";
 
