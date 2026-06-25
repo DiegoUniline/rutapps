@@ -96,16 +96,23 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
 
       // Handle specific conflict errors
       const isConflict = err?.code === '23505'; // unique_violation
+      const isFkMissing = err?.code === '23503'; // foreign_key_violation — parent not synced yet
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
 
       const newRetries = (item.retries ?? 0) + 1;
 
       if (isConflict && item.operation === 'insert') {
-        // Conflict on insert: convert to upsert (already using upsert, so just retry)
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isNotFound || newRetries >= MAX_RETRIES) {
+      if (isFkMissing) {
+        // Parent record hasn't been synced yet in this pass — push to end of queue
+        // by resetting createdAt so it processes after siblings.
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: newRetries,
+          createdAt: Date.now() + 1000, // bump forward so it's last
+        });
+      } else if (isNotFound || newRetries >= MAX_RETRIES) {
         // Dead letter: keep in queue but mark with high retries
         console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
         await offlineDb.syncQueue.update(item.id!, {

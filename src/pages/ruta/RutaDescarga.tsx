@@ -11,6 +11,7 @@ import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion'
 import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
+import { newLocalId } from '@/lib/localId';
 import {
   fetchMyProfileWithFallback,
   fetchCargaActivaWithFallback,
@@ -191,7 +192,7 @@ export default function RutaDescarga() {
         }
       } else {
         // Offline: encolar con id sintético; al sincronizar se hace upsert.
-        const localId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+        const localId = newLocalId();
         await queueOperation('descarga_ruta', 'insert', { id: localId, ...insertData });
       }
     },

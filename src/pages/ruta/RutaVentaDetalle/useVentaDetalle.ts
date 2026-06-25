@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { queueOperation } from '@/lib/syncQueue';
+import { newLocalId } from '@/lib/localId';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenta } from '@/hooks/useVentas';
@@ -173,7 +174,7 @@ export function useVentaDetalle() {
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
       // Generar id local del cobro para encolar offline; cuando esté online, supabase asigna real
-      const localCobroId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}`;
+      const localCobroId = newLocalId();
       const cobroPayload = {
         empresa_id: empresa.id,
         cliente_id: clienteId,
@@ -226,7 +227,7 @@ export function useVentaDetalle() {
           if (appErr) throw appErr;
         } else {
           for (const ap of aplicaciones) {
-            const apId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `local-${Date.now()}-${Math.random()}`;
+            const apId = newLocalId();
             await queueOperation('cobro_aplicaciones', 'insert', { id: apId, ...ap });
           }
         }

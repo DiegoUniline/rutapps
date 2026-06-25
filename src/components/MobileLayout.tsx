@@ -19,6 +19,7 @@ import SuperAdminMobileBar from '@/components/SuperAdminMobileBar';
 import { useRutaStore } from '@/stores/rutaStore';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
+import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
 
@@ -89,6 +90,9 @@ export default function MobileLayout() {
 
   // Aviso al cerrar/recargar si hay cambios sin sincronizar
   useUnloadGuard(pendingCount);
+
+  // Auto-sync al reconectar y avisar de nuevas cargas
+  useOnlineReconnect();
 
   // Pedir storage persistente una sola vez al montar la app móvil
   useEffect(() => { requestPersistentStorage().catch(() => {}); }, []);
