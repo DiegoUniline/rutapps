@@ -57,10 +57,13 @@ export default function TiendaConfigPage() {
   const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
   const [cfg, setCfg] = useState<TiendaConfig | null>(null);
+  const [empresa, setEmpresa] = useState<{ nombre: string; logo_url: string | null } | null>(null);
   const [listas, setListas] = useState<ListaPrecio[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -69,15 +72,17 @@ export default function TiendaConfigPage() {
       const [{ data: existing }, { data: lp }, { data: emp }] = await Promise.all([
         supabase.from("tienda_config").select("*").eq("empresa_id", empresaId).maybeSingle(),
         supabase.from("lista_precios").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
-        supabase.from("empresas").select("nombre").eq("id", empresaId).maybeSingle(),
+        supabase.from("empresas").select("nombre, logo_url").eq("id", empresaId).maybeSingle(),
       ]);
       setListas(lp ?? []);
+      setEmpresa(emp ?? null);
+      const autoSlug = slugify(emp?.nombre ?? "mi-tienda");
       if (existing) {
-        setCfg({ ...(existing as any), beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
+        setCfg({ ...(existing as any), slug: (existing as any).slug || autoSlug, beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
       } else {
         setCfg({
           empresa_id: empresaId,
-          slug: slugify(emp?.nombre ?? "mi-tienda"),
+          slug: autoSlug,
           activa: false,
           nombre_tienda: emp?.nombre ?? "Mi Tienda",
           banner_url: null,
@@ -94,6 +99,26 @@ export default function TiendaConfigPage() {
       setLoading(false);
     })();
   }, [empresaId]);
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresaId || !cfg) return;
+    setUploadingBanner(true);
+    try {
+      const compressed = await compressImage(file, { maxWidth: 1920, maxHeight: 600, quality: 0.82, outputType: "image/webp" });
+      const path = `${empresaId}/tienda/banner.webp`;
+      const { error: upErr } = await supabase.storage.from("empresa-assets").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(path);
+      setCfg({ ...cfg, banner_url: urlData.publicUrl + "?t=" + Date.now() });
+      toast.success("Banner cargado");
+    } catch (err: any) {
+      toast.error("Error al subir banner: " + err.message);
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+    }
+  };
 
   const save = async () => {
     if (!cfg) return;
