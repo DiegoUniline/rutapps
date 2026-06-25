@@ -232,16 +232,21 @@ export default function RutaEntregaDetalle() {
       const now = new Date().toISOString();
       const nuevaNota = `No entregado: ${motivo}`;
       const notasFinales = entrega.notas ? `${entrega.notas}\n${nuevaNota}` : nuevaNota;
-      const { error } = await supabase.from('entregas')
-        .update({
-          status: 'no_entregado',
-          motivo_no_entrega: motivo,
-          notas: notasFinales,
-          fecha_entrega: now,
-          validado_at: now,
-        } as any)
-        .eq('id', id!);
-      if (error) throw error;
+      const payload = {
+        id: id!,
+        status: 'no_entregado',
+        motivo_no_entrega: motivo,
+        notas: notasFinales,
+        fecha_entrega: now,
+        validado_at: now,
+      };
+      if (navigator.onLine) {
+        const { error } = await supabase.from('entregas').update(payload as any).eq('id', id!);
+        if (error) throw error;
+      } else {
+        await queueOperation('entregas', 'update', payload);
+        toast.message('Sin conexión: guardado localmente, se sincronizará');
+      }
       toast.success('Entrega marcada como no entregada');
       setShowNoEntregadoModal(false);
       setMotivoSeleccionado('');
