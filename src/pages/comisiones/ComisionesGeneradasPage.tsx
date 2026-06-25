@@ -87,10 +87,7 @@ export default function ComisionesGeneradasPage() {
           ))}
         </div>
         <div className="h-6 w-px bg-border mx-1" />
-        <Calendar className="h-4 w-4 text-muted-foreground" />
-        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(0); }} />
-        <span className="text-xs text-muted-foreground">-</span>
-        <input type="date" className="input-odoo text-xs py-1.5 w-36" value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(0); }} />
+        <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); setPage(0); }} />
         <div className="flex gap-1">
           <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
           <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Semana</button>

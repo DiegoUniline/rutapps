@@ -362,12 +362,9 @@ export function FacturaGlobalSection() {
             <Input value={year} onChange={e => setYear(e.target.value)} />
           </div>
           <div>
-            <Label>Desde</Label>
-            <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
-          </div>
-          <div>
-            <Label>Hasta</Label>
-            <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+          <div className="col-span-2">
+            <Label>Rango de fechas</Label>
+            <DateRangePicker from={fechaInicio} to={fechaFin} onChange={(f, t) => { setFechaInicio(f); setFechaFin(t); }} />
           </div>
         </div>
         <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
@@ -483,8 +480,7 @@ export function DescargaMasivaSection() {
       <CardHeader><CardTitle>Descarga Masiva de CFDIs</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><Label>Desde</Label><Input type="date" value={desde} onChange={e => setDesde(e.target.value)} /></div>
-          <div><Label>Hasta</Label><Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} /></div>
+          <div className="col-span-2"><Label>Rango de fechas</Label><DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} /></div>
           <div>
             <Label>Tipo</Label>
             <Select value={tipo} onValueChange={v => setTipo(v as any)}>

@@ -313,13 +313,13 @@ function ReporteRunner({ config, empresaId, empresaNombre, empresaInfo, onEdit, 
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
-          <div>
-            <Label className="text-xs">Desde</Label>
-            <Input type="date" value={filtros.fechaDesde} onChange={(e) => setFiltros({ ...filtros, fechaDesde: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">Hasta</Label>
-            <Input type="date" value={filtros.fechaHasta} onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })} />
+          <div className="col-span-2">
+            <Label className="text-xs">Rango de fechas</Label>
+            <DateRangePicker
+              from={filtros.fechaDesde}
+              to={filtros.fechaHasta}
+              onChange={(f, t) => setFiltros({ ...filtros, fechaDesde: f, fechaHasta: t })}
+            />
           </div>
           <div>
             <Label className="text-xs">Agrupar por</Label>

@@ -241,8 +241,7 @@ export default function GastosDesktopPage() {
               ))}
             </SelectContent>
           </Select>
-          <Input type="date" value={desde} onChange={e => setDesde(e.target.value)} placeholder="Desde" />
-          <Input type="date" value={hasta} onChange={e => setHasta(e.target.value)} placeholder="Hasta" />
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
         {hasFilters && (
           <div className="flex justify-end">
