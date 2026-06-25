@@ -788,6 +788,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <PublicidadPopup />
+        <TiendaAnnouncementModal />
 
         {/* Bottom navigation – app style */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
