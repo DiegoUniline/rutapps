@@ -190,13 +190,14 @@ export default function TiendaConfigPage() {
             </span>
           </label>
         </Field>
-        <Field label="Slug de la URL *">
+        <Field label="URL de la tienda (no editable)">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">rutapp.mx/tienda/</span>
-            <input className="input flex-1" value={cfg.slug} onChange={(e) => setCfg({ ...cfg, slug: e.target.value })} onBlur={(e) => setCfg({ ...cfg, slug: slugify(e.target.value) })} />
+            <input className="input flex-1 bg-gray-100 cursor-not-allowed" value={cfg.slug} readOnly />
           </div>
+          <div className="text-xs text-gray-500 mt-1">Se genera automáticamente con el nombre de tu empresa. Para cambiarlo, modifica el nombre en Configuración → Empresa.</div>
         </Field>
-        <Field label="Nombre de la tienda *">
+        <Field label="Nombre visible de la tienda *">
           <input className="input" value={cfg.nombre_tienda} onChange={(e) => setCfg({ ...cfg, nombre_tienda: e.target.value })} />
         </Field>
         <Field label="Mensaje de bienvenida">
