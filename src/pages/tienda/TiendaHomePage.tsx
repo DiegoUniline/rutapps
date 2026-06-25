@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
 import { Link } from "react-router-dom";
-import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star } from "lucide-react";
+import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
 import TiendaShell from "./TiendaShell";
 import { useMemo } from "react";
 
@@ -71,12 +71,21 @@ function HomeInner() {
       </section>
 
       {/* BENEFITS STRIP */}
-      <section className="tx-benefits">
-        <div className="tx-benefit"><Truck size={20} /><div><strong>Envío rápido</strong><span>A toda la zona</span></div></div>
-        <div className="tx-benefit"><Tag size={20} /><div><strong>Mejores precios</strong><span>Mayoreo y menudeo</span></div></div>
-        <div className="tx-benefit"><ShieldCheck size={20} /><div><strong>Compra segura</strong><span>Pedidos garantizados</span></div></div>
-        <div className="tx-benefit"><Headphones size={20} /><div><strong>Soporte directo</strong><span>WhatsApp y teléfono</span></div></div>
-      </section>
+      {(() => {
+        const ICONS: Record<string, any> = { truck: Truck, tag: Tag, shield: ShieldCheck, headphones: Headphones, award: Award, clock: Clock, card: CreditCard, gift: Gift, package: Package, phone: Phone };
+        const benes = (t.config?.beneficios ?? []).filter((b) => b.enabled);
+        if (benes.length === 0) return null;
+        return (
+          <section className="tx-benefits">
+            {benes.map((b, i) => {
+              const Ic = ICONS[b.icon] ?? Sparkles;
+              return (
+                <div key={i} className="tx-benefit"><Ic size={20} /><div><strong>{b.title}</strong><span>{b.subtitle}</span></div></div>
+              );
+            })}
+          </section>
+        );
+      })()}
 
       {/* CATEGORIES */}
       {categorias.length > 0 && (

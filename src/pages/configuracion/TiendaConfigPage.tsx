@@ -18,7 +18,30 @@ interface TiendaConfig {
   lista_precios_default_id: string | null;
   permitir_invitados: boolean;
   mensaje_bienvenida: string | null;
+  beneficios: Beneficio[];
 }
+
+interface Beneficio { icon: string; title: string; subtitle: string; enabled: boolean; }
+
+const ICON_OPTIONS = [
+  { v: "truck", label: "🚚 Envío" },
+  { v: "tag", label: "🏷️ Precio" },
+  { v: "shield", label: "🛡️ Seguridad" },
+  { v: "headphones", label: "🎧 Soporte" },
+  { v: "award", label: "🏆 Calidad" },
+  { v: "clock", label: "⏰ Rapidez" },
+  { v: "card", label: "💳 Pagos" },
+  { v: "gift", label: "🎁 Promos" },
+  { v: "package", label: "📦 Empaque" },
+  { v: "phone", label: "📞 Teléfono" },
+];
+
+const DEFAULT_BENEFICIOS: Beneficio[] = [
+  { icon: "truck", title: "Envío rápido", subtitle: "A toda la zona", enabled: true },
+  { icon: "tag", title: "Mejores precios", subtitle: "Mayoreo y menudeo", enabled: true },
+  { icon: "shield", title: "Compra segura", subtitle: "Pedidos garantizados", enabled: true },
+  { icon: "headphones", title: "Soporte directo", subtitle: "WhatsApp y teléfono", enabled: true },
+];
 
 interface ListaPrecio { id: string; nombre: string; }
 
@@ -49,7 +72,7 @@ export default function TiendaConfigPage() {
       ]);
       setListas(lp ?? []);
       if (existing) {
-        setCfg(existing as TiendaConfig);
+        setCfg({ ...(existing as any), beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
       } else {
         setCfg({
           empresa_id: empresaId,
@@ -64,6 +87,7 @@ export default function TiendaConfigPage() {
           lista_precios_default_id: null,
           permitir_invitados: true,
           mensaje_bienvenida: null,
+          beneficios: DEFAULT_BENEFICIOS,
         });
       }
       setLoading(false);
@@ -77,7 +101,7 @@ export default function TiendaConfigPage() {
       return;
     }
     setSaving(true);
-    const payload = { ...cfg, slug: slugify(cfg.slug) };
+    const payload: any = { ...cfg, slug: slugify(cfg.slug) };
     const { data, error } = cfg.id
       ? await supabase.from("tienda_config").update(payload).eq("id", cfg.id).select().single()
       : await supabase.from("tienda_config").insert(payload).select().single();
@@ -86,7 +110,7 @@ export default function TiendaConfigPage() {
       toast.error(error.message.includes("duplicate") ? "Ese slug ya está en uso" : error.message);
       return;
     }
-    setCfg(data as TiendaConfig);
+    setCfg({ ...(data as any), beneficios: (data as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
     toast.success("Configuración guardada");
   };
 
@@ -196,6 +220,43 @@ export default function TiendaConfigPage() {
             Permitir explorar productos sin iniciar sesión
           </label>
         </Field>
+      </Section>
+
+      <Section title="Beneficios que se muestran en la tienda">
+        <p className="text-sm text-gray-600 -mt-2">Activa solo los que realmente ofreces. Edita el texto para que coincida con tu negocio.</p>
+        <div className="space-y-3">
+          {cfg.beneficios.map((b, i) => (
+            <div key={i} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+              <div className="flex items-center justify-between gap-3">
+                <label className="inline-flex items-center gap-2 font-semibold">
+                  <input type="checkbox" checked={b.enabled} onChange={(e) => {
+                    const next = [...cfg.beneficios]; next[i] = { ...b, enabled: e.target.checked }; setCfg({ ...cfg, beneficios: next });
+                  }} className="h-4 w-4" />
+                  <span className={b.enabled ? "text-green-700" : "text-gray-500"}>{b.enabled ? "Activo" : "Oculto"}</span>
+                </label>
+                <select className="input" style={{ width: 180 }} value={b.icon} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, icon: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }}>
+                  {ICON_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input className="input" placeholder="Título" value={b.title} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, title: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }} />
+                <input className="input" placeholder="Detalle" value={b.subtitle} onChange={(e) => {
+                  const next = [...cfg.beneficios]; next[i] = { ...b, subtitle: e.target.value }; setCfg({ ...cfg, beneficios: next });
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button onClick={() => setCfg({ ...cfg, beneficios: [...cfg.beneficios, { icon: "award", title: "Nuevo beneficio", subtitle: "Descripción", enabled: true }] })} className="px-3 py-1.5 text-sm bg-white border rounded">+ Agregar beneficio</button>
+          {cfg.beneficios.length > 0 && (
+            <button onClick={() => setCfg({ ...cfg, beneficios: cfg.beneficios.slice(0, -1) })} className="px-3 py-1.5 text-sm bg-white border rounded text-red-600">– Quitar último</button>
+          )}
+        </div>
       </Section>
 
       <div className="flex justify-end gap-3">

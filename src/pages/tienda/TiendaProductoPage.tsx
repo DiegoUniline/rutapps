@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
 import { ProductCard } from "./TiendaHomePage";
@@ -10,35 +10,45 @@ function Inner() {
   const t = useTienda();
   const { productoId } = useParams<{ productoId: string }>();
   const nav = useNavigate();
+  const qc = useQueryClient();
   const base = `/tienda/${t.slug}`;
   const [qty, setQty] = useState(1);
 
+  // Build placeholder from existing catalog cache (instant render if user came from home/list)
+  const catalog: any = qc.getQueryData(["tienda-catalog", t.slug, t.token]);
+  const placeholderProducto: TiendaProducto | undefined = catalog?.productos?.find?.((x: TiendaProducto) => x.id === productoId);
+  const placeholder = placeholderProducto && {
+    producto: placeholderProducto,
+    relacionados: (catalog?.productos ?? []).filter((x: TiendaProducto) => x.id !== productoId && x.categoria && x.categoria === placeholderProducto.categoria).slice(0, 10),
+    tambien_compraron: (catalog?.productos ?? []).filter((x: TiendaProducto) => x.id !== productoId).slice(0, 10),
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: ["tienda-catalog", t.slug, t.token],
-    queryFn: () => fnGet("tienda-catalog", { slug: t.slug, ...(t.token ? { token: t.token } : {}) }),
+    queryKey: ["tienda-producto", t.slug, productoId, t.token],
+    queryFn: () => fnGet("tienda-producto", { slug: t.slug, producto_id: productoId!, ...(t.token ? { token: t.token } : {}) }),
+    enabled: !!productoId,
+    placeholderData: placeholder,
     staleTime: 60_000,
   });
 
-  const productos: TiendaProducto[] = data?.productos ?? [];
-  const p = useMemo(() => productos.find((x) => x.id === productoId), [productos, productoId]);
+  const p: TiendaProducto | undefined = data?.producto;
   const moneda = t.empresa?.moneda ?? "MXN";
+  const relacionados: TiendaProducto[] = data?.relacionados ?? [];
+  const tambienCompraron: TiendaProducto[] = data?.tambien_compraron ?? [];
 
-  const relacionados = useMemo(() => {
-    if (!p) return [];
-    return productos
-      .filter((x) => x.id !== p.id && x.categoria && x.categoria === p.categoria)
-      .slice(0, 10);
-  }, [productos, p]);
-
-  const tambienCompraron = useMemo(() => {
-    if (!p) return [];
-    return productos
-      .filter((x) => x.id !== p.id && (!p.categoria || x.categoria !== p.categoria))
-      .sort((a, b) => (b.stock || 0) - (a.stock || 0))
-      .slice(0, 10);
-  }, [productos, p]);
-
-  if (isLoading) return <main className="tienda-container"><div className="tienda-loading">Cargando…</div></main>;
+  if (!p && isLoading) return (
+    <main className="tienda-container">
+      <div className="tx-pdp">
+        <div className="tx-pdp-gallery"><div className="tx-pdp-image tx-skeleton" /></div>
+        <div className="tx-pdp-info">
+          <div className="tx-skeleton" style={{ height: 14, width: 120, marginBottom: 12 }} />
+          <div className="tx-skeleton" style={{ height: 28, width: "80%", marginBottom: 16 }} />
+          <div className="tx-skeleton" style={{ height: 36, width: 160, marginBottom: 16 }} />
+          <div className="tx-skeleton" style={{ height: 48, width: "100%" }} />
+        </div>
+      </div>
+    </main>
+  );
   if (!p) return (
     <main className="tienda-container">
       <div className="tienda-empty">Producto no encontrado.</div>
