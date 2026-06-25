@@ -417,8 +417,7 @@ export default function KardexPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input placeholder="Buscar referencia/notas..." className="pl-8 h-8 text-[12px]" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <Input type="date" className="h-8 text-[12px] w-[140px]" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
-            <Input type="date" className="h-8 text-[12px] w-[140px]" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
+            <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
             <select
               className="h-8 text-[12px] border border-border rounded px-2 bg-background"
               value={filterTipo}

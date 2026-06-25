@@ -490,12 +490,8 @@ export default function EntregaListPage() {
           />
         </div>
         <div>
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha desde</label>
-          <Input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-[160px]" />
-        </div>
-        <div>
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Fecha hasta</label>
-          <Input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-[160px]" />
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Rango de fechas</label>
+          <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
         </div>
         {(rutaFilter !== 'todos' || fechaDesde || fechaHasta || vendedorFilter !== 'todos') && (
           <Button variant="ghost" size="sm" onClick={() => { setRutaFilter('todos'); setFechaDesde(''); setFechaHasta(''); setVendedorFilter('todos'); }}>

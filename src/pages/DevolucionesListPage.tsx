@@ -151,8 +151,7 @@ export default function DevolucionesListPage() {
               {ACCIONES.map(a => <SelectItem key={a} value={a}>{ACCION_LABELS[a]}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input type="date" value={desde} onChange={e => { setDesde(e.target.value); setPage(1); }} />
-          <Input type="date" value={hasta} onChange={e => { setHasta(e.target.value); setPage(1); }} />
+          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); setPage(1); }} />
         </div>
         {hasFilters && (
           <div className="flex justify-end">
