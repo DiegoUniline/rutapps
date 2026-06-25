@@ -91,58 +91,15 @@ export default function RutaDescarga() {
   }, []);
 
   const { data: financials } = useQuery({
-    queryKey: ['descarga-mobile-financials', vendedorId, today],
-    enabled: !!vendedorId,
-    queryFn: async () => {
-      const [ventasRes, cobrosRes, gastosRes, devsRes] = await Promise.all([
-        supabase
-          .from('ventas')
-          .select('total')
-          .eq('vendedor_id', vendedorId!)
-          .eq('fecha', today)
-          .eq('condicion_pago', 'contado')
-          .neq('status', 'cancelado'),
-        supabase
-          .from('cobros')
-          .select('monto, metodo_pago')
-          .eq('empresa_id', empresa!.id)
-          .eq('user_id', user!.id)
-          .eq('fecha', today)
-          .neq('status', 'cancelado'),
-        supabase
-          .from('gastos')
-          .select('monto')
-          .eq('vendedor_id', vendedorId!)
-          .eq('fecha', today),
-        supabase
-          .from('devoluciones')
-          .select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, productos(nombre))')
-          .eq('empresa_id', empresa!.id)
-          .eq('vendedor_id', vendedorId!)
-          .eq('fecha', today),
-      ]);
-      const ventasContado = (ventasRes.data || []).reduce((s, v) => s + (Number(v.total) || 0), 0);
-      const cobrosEfectivo = (cobrosRes.data || [])
-        .filter(c => c.metodo_pago === 'efectivo')
-        .reduce((s, c) => s + (Number(c.monto) || 0), 0);
-      const gastosTotal = (gastosRes.data || []).reduce((s, g) => s + (Number(g.monto) || 0), 0);
-
-      // Process devoluciones
-      const devItems: { nombre: string; cantidad: number; motivo: string; accion: string; cliente: string }[] = [];
-      (devsRes.data || []).forEach((d: any) => {
-        (d.devolucion_lineas || []).forEach((l: any) => {
-          devItems.push({
-            nombre: l.productos?.nombre || '—',
-            cantidad: Number(l.cantidad),
-            motivo: l.motivo || '—',
-            accion: l.accion || 'reposicion',
-            cliente: d.clientes?.nombre || '—',
-          });
-        });
-      });
-
-      return { ventasContado, cobrosEfectivo, gastosTotal, devItems };
-    },
+    queryKey: ['descarga-mobile-financials', empresa?.id, vendedorId, user?.id, today],
+    enabled: !!vendedorId && !!empresa?.id && !!user?.id,
+    networkMode: 'always',
+    queryFn: () => fetchDescargaFinancialsWithFallback({
+      empresaId: empresa!.id,
+      userId: user!.id,
+      vendedorId: vendedorId!,
+      today,
+    }),
   });
 
   const efectivoEsperado = (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
