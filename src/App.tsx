@@ -90,6 +90,15 @@ const WhatsAppBotPage = lazy(() => import("@/pages/WhatsAppBotPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const LandingV2Page = lazy(() => import("@/pages/LandingV2Page"));
+const GirosIndexPage = lazy(() => import("@/pages/landing/GirosIndexPage"));
+const PreciosLandingPage = lazy(() => import("@/pages/landing/PreciosPage"));
+const AbarrotesPage = lazy(() => import("@/pages/landing/giros/AbarrotesPage"));
+const RefresquerasPage = lazy(() => import("@/pages/landing/giros/RefresquerasPage"));
+const PanaderiasPage = lazy(() => import("@/pages/landing/giros/PanaderiasPage"));
+const LimpiezaPage = lazy(() => import("@/pages/landing/giros/LimpiezaPage"));
+const LacteosPage = lazy(() => import("@/pages/landing/giros/LacteosPage"));
+const BotanasPage = lazy(() => import("@/pages/landing/giros/BotanasPage"));
+const AguaPage = lazy(() => import("@/pages/landing/giros/AguaPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
@@ -393,6 +402,15 @@ function AppRoutes() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/landing-nueva" element={<LandingV2Page />} />
+          <Route path="/landing-nueva/giros" element={<GirosIndexPage />} />
+          <Route path="/landing-nueva/precios" element={<PreciosLandingPage />} />
+          <Route path="/landing-nueva/giros/distribuidoras-de-abarrotes" element={<AbarrotesPage />} />
+          <Route path="/landing-nueva/giros/refresqueras-y-bebidas" element={<RefresquerasPage />} />
+          <Route path="/landing-nueva/giros/panaderias-y-reparto" element={<PanaderiasPage />} />
+          <Route path="/landing-nueva/giros/productos-de-limpieza" element={<LimpiezaPage />} />
+          <Route path="/landing-nueva/giros/lacteos-y-cremerias" element={<LacteosPage />} />
+          <Route path="/landing-nueva/giros/botanas-y-dulces" element={<BotanasPage />} />
+          <Route path="/landing-nueva/giros/agua-purificada" element={<AguaPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
