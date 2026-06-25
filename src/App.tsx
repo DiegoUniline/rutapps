@@ -178,6 +178,8 @@ import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
 import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
 import RutaPerfil from "@/pages/ruta/RutaPerfil";
 import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
+import PendientesSincronizarPage from "@/pages/ruta/PendientesSincronizarPage";
+
 import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
 import RutaClienteDetalle from "@/pages/ruta/RutaClienteDetalle";
 import RutaIniciarPage from "@/pages/ruta/RutaIniciarPage";
