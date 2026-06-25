@@ -24,11 +24,12 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("empresa_id")
+      .select("empresa_id, super_admin_override_empresa_id")
       .eq("id", userId)
       .maybeSingle();
-    if (!profile?.empresa_id) return json({ error: "Sin empresa" }, 403);
-    const empresaId = profile.empresa_id;
+    const empresaId = (profile as any)?.super_admin_override_empresa_id ?? profile?.empresa_id;
+    if (!empresaId) return json({ error: "Sin empresa" }, 403);
+
 
     const body = await req.json();
     const action = body.action as string;
