@@ -76,6 +76,11 @@ export default function CotizacionesListPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+        />
         <div className="flex gap-1 flex-wrap">
           {(['todas', 'borrador', 'enviada', 'aprobada', 'convertida', 'vencida', 'cancelada'] as const).map(e => (
             <button
