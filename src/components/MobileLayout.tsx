@@ -246,7 +246,26 @@ export default function MobileLayout() {
               <Monitor className="h-5 w-5" />
             </button>
           )}
+          {queueTotal > 0 && (
+            <button
+              onClick={() => navigate('/ruta/pendientes')}
+              className="relative flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              title={`${queueTotal} pendiente${queueTotal === 1 ? '' : 's'}${queueFailed ? ` · ${queueFailed} fallida${queueFailed === 1 ? '' : 's'}` : ''}`}
+              aria-label="Operaciones pendientes de sincronizar"
+            >
+              <Inbox className="h-5 w-5" />
+              <span
+                className={cn(
+                  'absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center',
+                  queueFailed > 0 ? 'bg-red-600' : 'bg-amber-500',
+                )}
+              >
+                {queueTotal > 99 ? '99+' : queueTotal}
+              </span>
+            </button>
+          )}
           <SyncCloudButton />
+
         </div>
       </header>
 
