@@ -257,6 +257,11 @@ function TiendaPublicRoutes() {
 }
 
 function AppRoutes() {
+  // Tienda en línea pública: siempre disponible sin importar auth/loading
+  const _loc = useLocation();
+  if (_loc.pathname.startsWith("/tienda/")) {
+    return <TiendaPublicRoutes />;
+  }
   const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId, empresa } = useAuth();
   const queryClient = useQueryClient();
   const subscription = useSubscription();
