@@ -64,10 +64,7 @@ export function useNetworkStatus() {
     const refresh = async () => {
       const count = await getPendingCount();
       setPendingCount(count);
-      if (count === 0 && isOnline && empresa?.id) {
-        const isVerified = await verifySyncedItems(empresa.id);
-        setVerified(isVerified);
-      } else {
+      if (count > 0 || !isOnline) {
         setVerified(false);
       }
     };
@@ -136,8 +133,9 @@ export function useNetworkStatus() {
       setLastSync(time);
       
       if (count === 0) {
-        const isVerified = await verifySyncedItems(empresa.id);
-        setVerified(isVerified);
+        verifySyncedItems(empresa.id)
+          .then(setVerified)
+          .catch(() => setVerified(false));
       }
 
       // Notify all useOfflineQuery hooks to refetch (folios, server-generated fields)
