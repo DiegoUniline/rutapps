@@ -89,6 +89,10 @@ const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const WhatsAppBotPage = lazy(() => import("@/pages/WhatsAppBotPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const ModulosMktPage = lazy(() => import("@/pages/marketing/ModulosPage"));
+const PreciosMktPage = lazy(() => import("@/pages/marketing/PreciosPage"));
+const GirosMktIndexPage = lazy(() => import("@/pages/marketing/GirosIndexPage"));
+const GiroMktDetallePage = lazy(() => import("@/pages/marketing/GiroDetallePage"));
 const LandingV2Page = lazy(() => import("@/pages/LandingV2Page"));
 const GirosIndexPage = lazy(() => import("@/pages/landing/GirosIndexPage"));
 const PreciosLandingPage = lazy(() => import("@/pages/landing/PreciosPage"));
@@ -401,6 +405,10 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/modulos" element={<ModulosMktPage />} />
+          <Route path="/precios" element={<PreciosMktPage />} />
+          <Route path="/giros" element={<GirosMktIndexPage />} />
+          <Route path="/giros/:slug" element={<GiroMktDetallePage />} />
           <Route path="/landing-nueva" element={<LandingV2Page />} />
           <Route path="/landing-nueva/giros" element={<GirosIndexPage />} />
           <Route path="/landing-nueva/precios" element={<PreciosLandingPage />} />

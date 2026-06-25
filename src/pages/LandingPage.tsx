@@ -273,10 +273,10 @@ export default function LandingPage() {
             <span className="text-[15px] font-bold tracking-tight max-[340px]:hidden">Rutapp</span>
           </Link>
           <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: BRAND.ink2 }}>
-            <a href="#modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</a>
-            <a href="#movil" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Móvil</a>
+            <Link to="/modulos" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Módulos</Link>
+            <Link to="/precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</Link>
+            <Link to="/giros" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Giros</Link>
             <a href="#ia" className="inline-flex items-center gap-1 transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">IA <span className="text-[9px] px-1 rounded text-white font-bold" style={{ background: BRAND.accent }}>NEW</span></a>
-            <a href="#precios" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Precios</a>
             <Link to="/partners" className="transition-colors hover:text-[color:var(--brand-primary,#0060e8)]">Partners</Link>
           </div>
           <div className="hidden md:flex items-center gap-2">
@@ -296,9 +296,10 @@ export default function LandingPage() {
         </div>
         {mobileMenu && (
           <div className="md:hidden bg-white border-t px-5 py-3 space-y-2.5 text-sm animate-[fade-in_0.25s_ease-out]" style={{ borderColor: BRAND.line }}>
-            {[['#modulos', 'Módulos'], ['#movil', 'Móvil'], ['#ia', 'IA'], ['#precios', 'Precios']].map(([h, l]) => (
-              <a key={h} href={h} onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>{l}</a>
-            ))}
+            <Link to="/modulos" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Módulos</Link>
+            <Link to="/precios" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Precios</Link>
+            <Link to="/giros" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>Giros</Link>
+            <a href="#ia" onClick={() => setMobileMenu(false)} className="block font-medium" style={{ color: BRAND.ink2 }}>IA</a>
             <Link to="/login" className="block font-medium" style={{ color: BRAND.ink2 }}>Iniciar sesión</Link>
           </div>
         )}
@@ -492,52 +493,12 @@ export default function LandingPage() {
 
         <WhatsAppAgentSection />
 
-        {/* ZIGZAG — los módulos más chidos, con visual real */}
-        <div className="max-w-[1440px] mx-auto mt-16 md:mt-24 space-y-16 md:space-y-24">
-          {[
-            { name: 'Ventas', kicker: 'POS + Rutero', idx: 0 },
-            { name: 'Cobranza', kicker: 'FIFO multi-folio', idx: 1 },
-            { name: 'Logística', kicker: 'Surtido y carga', idx: 3 },
-            { name: 'Compras', kicker: 'Sugerencias con IA', idx: 4 },
-            { name: 'Reportes', kicker: 'Dashboard ejecutivo', idx: 8 },
-            { name: 'IA', kicker: 'Asesor Rutapp', idx: 9 },
-          ].map((row, i) => {
-            const m = MODULES[row.idx];
-            const Icon = m.icon;
-            const flip = i % 2 === 1;
-            return (
-              <div key={row.name} className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
-                {/* Text side */}
-                <Reveal variant={flip ? 'right' : 'left'} duration={460}>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase tracking-[0.14em]"
-                    style={{ background: BRAND.primarySoft, color: BRAND.primary }}>
-                    <Icon className="h-3 w-3" /> {row.kicker}
-                  </div>
-                  <h3 className="mt-3 text-[24px] md:text-[32px] font-semibold tracking-tight leading-tight" style={{ letterSpacing: '-0.022em', color: BRAND.ink }}>
-                    {m.star.t}
-                  </h3>
-                  <p className="mt-3 text-[14.5px] leading-relaxed" style={{ color: BRAND.ink2 }}>
-                    {m.star.d}
-                  </p>
-                  <div className="mt-5 grid sm:grid-cols-2 gap-2">
-                    {m.features.slice(0, 4).map(f => (
-                      <div key={f} className="flex items-start gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
-                        <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" strokeWidth={3} style={{ color: BRAND.primary }} />
-                        <span>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-5 text-[13px] italic border-l-2 pl-3" style={{ color: BRAND.ink, borderColor: BRAND.accent }}>
-                    "{m.why}"
-                  </div>
-                </Reveal>
-                {/* Visual side */}
-                <Reveal variant={flip ? 'left' : 'right'} delay={80} duration={500}>
-                  <ModuleVisual name={row.name} />
-                </Reveal>
-              </div>
-            );
-          })}
+        {/* CTA a página de módulos */}
+        <div className="max-w-[1440px] mx-auto mt-10 text-center">
+          <Link to="/modulos" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-[13.5px] border bg-white hover:shadow-md transition-all"
+            style={{ borderColor: BRAND.line, color: BRAND.ink }}>
+            Ver los 10 módulos a detalle <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
 
@@ -777,44 +738,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* PRICING — teaser, detalle en /precios */}
       <section id="precios" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20" style={{ background: BRAND.surface }}>
-        <div className="max-w-[1280px] mx-auto">
-          <div className="text-center mb-6">
+        <div className="max-w-[1080px] mx-auto">
+          <div className="text-center mb-8">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: BRAND.primary }}>Precios</span>
             <h2 className="mt-2 text-[28px] md:text-[40px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>
               Simple. Sin sorpresas.
             </h2>
-            <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>7 días gratis · cancela cuando quieras</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-1.5 mb-8">
-            {CURRENCIES.map(c => {
-              const active = c.code === currency.code;
-              return (
-                <button
-                  key={c.code}
-                  type="button"
-                  onClick={() => setCurrency(c)}
-                  className="text-[12.5px] font-semibold px-3 py-1.5 rounded-full border transition-all"
-                  style={{
-                    background: active ? BRAND.primary : '#fff',
-                    color: active ? '#fff' : BRAND.ink2,
-                    borderColor: active ? BRAND.primary : BRAND.line,
-                  }}
-                >
-                  {c.label.split(' ')[0]} {c.code}
-                </button>
-              );
-            })}
+            <p className="mt-2 text-[14px]" style={{ color: BRAND.muted }}>Desde $450 MXN/mes · 7 días gratis · cancela cuando quieras</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {PLANS.map((p, i) => (
-              <Reveal key={p.slug} variant="up" delay={i * 80} duration={420}>
-                <div className="relative rounded-2xl p-6 bg-white border flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-xl h-full"
-                style={{
-                  borderColor: p.popular ? BRAND.primary : BRAND.line,
-                  boxShadow: p.popular ? `0 20px 50px -20px ${BRAND.primary}55` : 'none',
-                }}>
+            {PLANS.map(p => (
+              <div key={p.slug} className="relative rounded-2xl p-6 bg-white border flex flex-col"
+                style={{ borderColor: p.popular ? BRAND.primary : BRAND.line, boxShadow: p.popular ? `0 20px 50px -20px ${BRAND.primary}55` : 'none' }}>
                 {p.popular && (
                   <div className="absolute -top-2.5 left-6 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold text-white" style={{ background: BRAND.primary }}>
                     Más popular
@@ -822,27 +759,25 @@ export default function LandingPage() {
                 )}
                 <h3 className="text-[18px] font-semibold">{p.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-[36px] font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{fmtCur(p.price, currency)}</span>
-                  <span className="text-[13px]" style={{ color: BRAND.muted }}>{currency.code} /mes</span>
+                  <span className="text-[36px] font-bold tracking-tight">${p.price.toLocaleString('es-MX')}</span>
+                  <span className="text-[13px]" style={{ color: BRAND.muted }}>MXN /mes</span>
                 </div>
-                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios · extra {fmtCur(300, currency)}/mes</p>
+                <p className="mt-1 text-[12.5px]" style={{ color: BRAND.muted }}>{p.users} usuarios incluidos</p>
                 <Link to="/signup" className="mt-5 w-full text-center px-4 py-2.5 rounded-lg font-semibold text-[13.5px] text-white"
                   style={{ background: p.popular ? BRAND.primary : BRAND.ink }}>
                   Empezar gratis
                 </Link>
-                <ul className="mt-5 space-y-2 flex-1">
-                  {['Acceso completo', 'App móvil tolerante a cortes', 'IA incluida', 'Soporte WhatsApp'].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-[13px]" style={{ color: BRAND.ink2 }}>
-                      <Check className="h-3.5 w-3.5 shrink-0" style={{ color: BRAND.primary }} strokeWidth={3} /> {f}
-                    </li>
-                  ))}
-                </ul>
               </div>
-              </Reveal>
             ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link to="/precios" className="inline-flex items-center gap-2 text-[13.5px] font-semibold" style={{ color: BRAND.primary }}>
+              Ver detalle de precios y monedas <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
+
 
       {/* CTA — el gran final */}
       <section className="px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative">
