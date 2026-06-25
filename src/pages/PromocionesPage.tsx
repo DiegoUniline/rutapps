@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
