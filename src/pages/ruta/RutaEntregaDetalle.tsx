@@ -106,7 +106,7 @@ export default function RutaEntregaDetalle() {
     const saldo = (venta as any).saldo_pendiente ?? 0;
     const condicion = (venta as any).condicion_pago;
     // Solo auto-marcar si está en estados activos de ruta y saldo está en 0 (contado/pagado)
-    if (saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
+    if (navigator.onLine && saldo <= 0 && condicion !== 'credito' && ['cargado', 'en_ruta', 'surtido', 'asignado'].includes(status)) {
       autoMarkedRef.current = true;
       const now = new Date().toISOString();
       marcarEntregaHechaYSincronizarPedido(id!, pedidoId, now)
