@@ -695,7 +695,10 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Carga del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
+                <Package className="h-3.5 w-3.5" /> {stockTitulo} — {rptAlmacenNombre}
+                {stockFuente === 'kardex' && (
+                  <span className="text-[9px] font-normal text-muted-foreground normal-case">(reconstruido desde Kardex)</span>
+                )}
               </h2>
 
               <table className="w-full text-[11px]">
@@ -704,6 +707,7 @@ export default function ReporteDiarioRuta() {
                     <th className="text-left py-1.5">Código</th>
                     <th className="text-left py-1.5">Producto</th>
                     <th className="text-right py-1.5">Existencia</th>
+                    <th className="text-right py-1.5">Vendido</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -712,6 +716,7 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
                       <td className="py-1 text-right font-semibold">{p.cantidad}</td>
+                      <td className="py-1 text-right text-muted-foreground">{p.vendido || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -722,7 +727,7 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
               {stockEsHistorico
-                ? `No hay cargas registradas para este vendedor en ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
+                ? `Sin movimientos de inventario registrados para ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
                 : 'No se encontró stock en el almacén asignado a este usuario.'}
             </div>
           )}
