@@ -6851,6 +6851,7 @@ export type Database = {
       tienda_config: {
         Row: {
           activa: boolean
+          almacen_id: string | null
           banner_url: string | null
           beneficios: Json
           color_primario: string | null
@@ -6870,6 +6871,7 @@ export type Database = {
         }
         Insert: {
           activa?: boolean
+          almacen_id?: string | null
           banner_url?: string | null
           beneficios?: Json
           color_primario?: string | null
@@ -6889,6 +6891,7 @@ export type Database = {
         }
         Update: {
           activa?: boolean
+          almacen_id?: string | null
           banner_url?: string | null
           beneficios?: Json
           color_primario?: string | null
@@ -6907,6 +6910,13 @@ export type Database = {
           whatsapp_pedidos?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tienda_config_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tienda_config_empresa_id_fkey"
             columns: ["empresa_id"]

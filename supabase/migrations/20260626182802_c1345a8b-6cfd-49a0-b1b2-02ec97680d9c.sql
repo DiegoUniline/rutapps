@@ -1,0 +1,1 @@
+ALTER TABLE public.tienda_config ADD COLUMN IF NOT EXISTS almacen_id uuid REFERENCES public.almacenes(id) ON DELETE SET NULL;
