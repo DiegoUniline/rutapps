@@ -214,7 +214,7 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
+  const { data: clientesData, isLoading } = useClientesPaginated(debouncedSearch, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter, !!groupBy);
 
   // Client-side filters: credito + dia_visita
   const creditoFilter = filters.credito;
