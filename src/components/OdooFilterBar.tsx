@@ -174,13 +174,15 @@ export function OdooFilterBar({
   dateFrom, dateTo, onDateFromChange, onDateToChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
-  const groupRef = useRef<HTMLDivElement>(null);
+  const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
   const levels = activeGroupByLevels ?? (activeGroupBy ? [activeGroupBy] : []);
 
   useEffect(() => {
     if (!groupOpen) return;
     const handler = (e: MouseEvent) => {
-      if (groupRef.current && !groupRef.current.contains(e.target as Node)) setGroupOpen(false);
+      const target = e.target as Node;
+      const clickedInsideAnyGroup = groupRefs.current.some(ref => ref?.contains(target));
+      if (!clickedInsideAnyGroup) setGroupOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -259,7 +261,7 @@ export function OdooFilterBar({
             {/* Group by — multi-level */}
             <ResponsiveFilterCard label="Agrupar" isMobile={isMobile}>
               {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
-                <div ref={groupRef} className="relative">
+                <div ref={(el) => { groupRefs.current[isMobile ? 1 : 0] = el; }} className="relative">
                   <button
                     onClick={() => setGroupOpen(!groupOpen)}
                     className={cn(
