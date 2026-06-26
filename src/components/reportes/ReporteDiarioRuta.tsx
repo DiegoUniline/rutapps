@@ -697,9 +697,12 @@ export default function ReporteDiarioRuta() {
 
           {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
-              No se encontró stock en el almacén asignado a este usuario.
+              {stockEsHistorico
+                ? `No hay cargas registradas para este vendedor en ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
+                : 'No se encontró stock en el almacén asignado a este usuario.'}
             </div>
           )}
+
 
           {/* Ventas activas */}
           <div>
