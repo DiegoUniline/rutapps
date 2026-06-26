@@ -18,6 +18,7 @@ interface TiendaConfig {
   color_secundario: string;
   whatsapp_pedidos: string | null;
   lista_precios_default_id: string | null;
+  almacen_id: string | null;
   permitir_invitados: boolean;
   usar_lista_cliente: boolean;
   mensaje_bienvenida: string | null;
@@ -47,6 +48,7 @@ const DEFAULT_BENEFICIOS: Beneficio[] = [
 ];
 
 interface ListaPrecio { id: string; nombre: string; }
+interface Almacen { id: string; nombre: string; }
 
 const slugify = (s: string) => s
   .toLowerCase()
@@ -61,6 +63,7 @@ export default function TiendaConfigPage() {
   const [cfg, setCfg] = useState<TiendaConfig | null>(null);
   const [empresa, setEmpresa] = useState<{ nombre: string; logo_url: string | null } | null>(null);
   const [listas, setListas] = useState<ListaPrecio[]>([]);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -73,12 +76,14 @@ export default function TiendaConfigPage() {
     if (!empresaId) return;
     (async () => {
       setLoading(true);
-      const [{ data: existing }, { data: lp }, { data: emp }] = await Promise.all([
+      const [{ data: existing }, { data: lp }, { data: emp }, { data: al }] = await Promise.all([
         supabase.from("tienda_config").select("*").eq("empresa_id", empresaId).maybeSingle(),
         supabase.from("lista_precios").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
         supabase.from("empresas").select("nombre, logo_url").eq("id", empresaId).maybeSingle(),
+        supabase.from("almacenes").select("id, nombre").eq("empresa_id", empresaId).order("nombre"),
       ]);
       setListas(lp ?? []);
+      setAlmacenes(al ?? []);
       setEmpresa(emp ?? null);
       const autoSlug = slugify(emp?.nombre ?? "mi-tienda");
       if (existing) {
@@ -95,6 +100,7 @@ export default function TiendaConfigPage() {
           color_secundario: "#ff7a00",
           whatsapp_pedidos: null,
           lista_precios_default_id: null,
+          almacen_id: null,
           permitir_invitados: true,
           usar_lista_cliente: true,
           mensaje_bienvenida: null,
