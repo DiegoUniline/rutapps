@@ -159,7 +159,6 @@ export default function ProductosListPage() {
   };
 
   const FILTER_OPTIONS = useMemo(() => [
-    ...STATIC_FILTER_OPTIONS,
     { key: 'clasificacion', label: 'Categoría', options: (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre })) },
     { key: 'marca', label: 'Marca', options: (marcas ?? []).map(m => ({ value: m.id, label: m.nombre })) },
   ], [clasificaciones, marcas]);
