@@ -332,7 +332,8 @@ export default function ReporteDiarioRuta() {
           ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
           : undefined,
         stock: incluirStock && stockItems.length > 0
-          ? { items: stockItems, almacenNombre: rptAlmacenNombre }
+          ? { items: stockItems, almacenNombre: stockEsHistorico ? `${rptAlmacenNombre} (al cierre del ${fechaFin})` : rptAlmacenNombre }
+
           : undefined,
       });
       const url = URL.createObjectURL(blob);
