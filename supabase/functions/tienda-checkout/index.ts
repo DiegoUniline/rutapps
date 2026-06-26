@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg } = await supabase
       .from("tienda_config")
-      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente")
+      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente, almacen_id")
       .eq("slug", slug)
       .maybeSingle();
     if (!cfg || cfg.empresa_id !== payload.empresa_id || !cfg.activa) {
@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         status: "borrador",
         cliente_id: cliente.id,
         vendedor_id: null,
+        almacen_id: cfg.almacen_id ?? null,
         tarifa_id: cliente.tarifa_id,
         condicion_pago: "contado",
         fecha: new Date().toISOString().slice(0, 10),
