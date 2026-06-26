@@ -289,6 +289,44 @@ export default function RutaSincronizarPage() {
           )}
         </div>
 
+        {/* ── PARTIAL SYNC RECOVERY ── */}
+        {failedTables.length > 0 && (
+          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  Sincronización parcial: {failedTables.length} {failedTables.length === 1 ? 'tabla pendiente' : 'tablas pendientes'}
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                  La última descarga se interrumpió (red intermitente). El resto de tus datos sigue completo; solo falta refrescar estas:
+                </p>
+                <ul className="mt-2 space-y-0.5 max-h-32 overflow-y-auto">
+                  {failedTables.map(f => (
+                    <li key={f.table} className="text-[11px] text-foreground/80 truncate">
+                      • <span className="font-medium">{f.label}</span>
+                      <span className="text-muted-foreground"> — {formatTimeAgo(f.lastErrorAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={handleRetryFailed}
+                  disabled={!isOnline || retrying || downloading}
+                  className={cn(
+                    "mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]",
+                    !isOnline ? "bg-muted text-muted-foreground cursor-not-allowed" :
+                    retrying ? "bg-amber-600/50 text-white" :
+                    "bg-amber-600 text-white"
+                  )}
+                >
+                  {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {retrying ? 'Reintentando...' : 'Reintentar pendientes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── STEP 1: DOWNLOAD ── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="p-4">
