@@ -671,7 +671,7 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Stock al cierre del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
+                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Carga del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
               </h2>
 
               <table className="w-full text-[11px]">
