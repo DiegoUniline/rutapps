@@ -137,54 +137,72 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // Si fechaFin es hoy → stock vivo del almacén; si es fecha pasada → carga(s) registrada(s) ese día para el vendedor
+  // Si fechaFin es hoy → stock vivo. Si pasado → híbrido: cargas → Kardex (RPC con TZ).
   const stockEsHistorico = fechaFin < today;
-  const { data: rptStockAlmacen } = useQuery<any[]>({
-    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, usuarioId, stockEsHistorico ? `carga-${fechaInicio}-${fechaFin}` : 'hoy'],
+  const { data: rptStockData } = useQuery<{ items: any[]; fuente: 'cargas' | 'kardex' | 'vivo' }>({
+    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, usuarioId, stockEsHistorico ? `hist-${fechaInicio}-${fechaFin}` : 'hoy'],
     enabled: !!rptVendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
-      if (stockEsHistorico) {
-        // Buscar cargas del vendedor en el rango
-        const { data: cargas, error: ec } = await (supabase as any).from('cargas')
-          .select('id')
-          .eq('empresa_id', empresa!.id)
-          .eq('vendedor_id', usuarioId)
-          .gte('fecha', fechaInicio)
-          .lte('fecha', fechaFin);
-        if (ec) throw ec;
-        const cargaIds = (cargas ?? []).map((c: any) => c.id);
-        if (cargaIds.length === 0) return [];
-        const { data: lineas, error: el } = await (supabase as any).from('carga_lineas')
+      if (!stockEsHistorico) {
+        const { data } = await (supabase as any).from('stock_almacen')
+          .select('producto_id, cantidad, productos(nombre, codigo)')
+          .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
+          .gt('cantidad', 0)
+          .order('producto_id');
+        return { items: data ?? [], fuente: 'vivo' as const };
+      }
+      // 1) Intentar con tabla `cargas`
+      const { data: cargas } = await (supabase as any).from('cargas')
+        .select('id')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', usuarioId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+      const cargaIds = (cargas ?? []).map((c: any) => c.id);
+      if (cargaIds.length > 0) {
+        const { data: lineas } = await (supabase as any).from('carga_lineas')
           .select('producto_id, cantidad_cargada')
           .in('carga_id', cargaIds);
-        if (el) throw el;
-        // Agregar por producto
         const agg: Record<string, number> = {};
         (lineas ?? []).forEach((l: any) => {
           if (!l.producto_id) return;
           agg[l.producto_id] = (agg[l.producto_id] || 0) + Number(l.cantidad_cargada || 0);
         });
         const ids = Object.keys(agg).filter((id) => agg[id] > 0);
-        if (ids.length === 0) return [];
-        const { data: prods } = await (supabase as any).from('productos')
-          .select('id, nombre, codigo')
-          .in('id', ids);
-        const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
-        return ids.map((id) => ({
-          producto_id: id,
-          cantidad: agg[id],
-          productos: map.get(id) || null,
-        }));
+        if (ids.length > 0) {
+          const { data: prods } = await (supabase as any).from('productos')
+            .select('id, nombre, codigo').in('id', ids);
+          const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
+          return {
+            items: ids.map((id) => ({ producto_id: id, cantidad: agg[id], productos: map.get(id) || null })),
+            fuente: 'cargas' as const,
+          };
+        }
       }
-      const { data, error } = await (supabase as any).from('stock_almacen')
-        .select('producto_id, cantidad, productos(nombre, codigo)')
-        .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
-        .gt('cantidad', 0)
-        .order('producto_id');
+      // 2) Fallback Kardex
+      const { data: rpc, error } = await (supabase as any).rpc('stock_almacen_at_eod', {
+        p_almacen_id: rptVendedorAlmacen!.almacen_id!,
+        p_fecha: fechaFin,
+      });
       if (error) throw error;
-      return data ?? [];
+      const positivos = (rpc ?? []).filter((r: any) => Number(r.cantidad) > 0);
+      if (positivos.length === 0) return { items: [], fuente: 'kardex' as const };
+      const ids = positivos.map((r: any) => r.producto_id);
+      const { data: prods } = await (supabase as any).from('productos')
+        .select('id, nombre, codigo').in('id', ids);
+      const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
+      return {
+        items: positivos.map((r: any) => ({
+          producto_id: r.producto_id,
+          cantidad: Number(r.cantidad),
+          productos: map.get(r.producto_id) || null,
+        })),
+        fuente: 'kardex' as const,
+      };
     },
   });
+  const rptStockAlmacen = rptStockData?.items;
+  const stockFuente = rptStockData?.fuente;
 
 
 
@@ -284,10 +302,17 @@ export default function ReporteDiarioRuta() {
 
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
+    producto_id: s.producto_id,
     nombre: s.productos?.nombre || '—',
     codigo: s.productos?.codigo || '',
     cantidad: Number(s.cantidad) || 0,
+    vendido: Number(prodMap[s.producto_id]?.cantidad || 0),
   })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+  const stockTitulo = stockFuente === 'cargas'
+    ? `Carga del ${fechaFin}`
+    : stockFuente === 'kardex'
+    ? `Stock al cierre del ${fechaFin}`
+    : 'Stock actual';
 
   const usuarioNombre = isAll
     ? `Todos los usuarios (${(usuarios || []).length})`
@@ -346,8 +371,7 @@ export default function ReporteDiarioRuta() {
           ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
           : undefined,
         stock: incluirStock && stockItems.length > 0
-          ? { items: stockItems, almacenNombre: stockEsHistorico ? `Carga del ${fechaFin} — ${rptAlmacenNombre}` : rptAlmacenNombre }
-
+          ? { items: stockItems, almacenNombre: `${stockTitulo} — ${rptAlmacenNombre}` }
           : undefined,
 
       });
@@ -671,7 +695,10 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Carga del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
+                <Package className="h-3.5 w-3.5" /> {stockTitulo} — {rptAlmacenNombre}
+                {stockFuente === 'kardex' && (
+                  <span className="text-[9px] font-normal text-muted-foreground normal-case">(reconstruido desde Kardex)</span>
+                )}
               </h2>
 
               <table className="w-full text-[11px]">
@@ -680,6 +707,7 @@ export default function ReporteDiarioRuta() {
                     <th className="text-left py-1.5">Código</th>
                     <th className="text-left py-1.5">Producto</th>
                     <th className="text-right py-1.5">Existencia</th>
+                    <th className="text-right py-1.5">Vendido</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -688,6 +716,7 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
                       <td className="py-1 text-right font-semibold">{p.cantidad}</td>
+                      <td className="py-1 text-right text-muted-foreground">{p.vendido || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -698,7 +727,7 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
               {stockEsHistorico
-                ? `No hay cargas registradas para este vendedor en ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
+                ? `Sin movimientos de inventario registrados para ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
                 : 'No se encontró stock en el almacén asignado a este usuario.'}
             </div>
           )}
