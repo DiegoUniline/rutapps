@@ -17,6 +17,12 @@ export interface SyncQueueItem {
 export interface CacheTimestamp {
   table: string;
   lastSync: number;
+  // Extended metadata (no schema change needed — Dexie only indexes 'table').
+  // lastSync is updated only on success; lastError/lastErrorAt persist failures
+  // across reloads so the sync screen can highlight pending tables.
+  lastSuccessAt?: number;
+  lastError?: string;
+  lastErrorAt?: number;
 }
 
 class OfflineDatabase extends Dexie {

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { downloadAllData, getLocalDataSummary, type SyncProgress } from '@/lib/offlineSync';
+import { downloadAllData, getLocalDataSummary, getFailedTables, retryFailedTables, type SyncProgress } from '@/lib/offlineSync';
 import { getPendingCount, getDeadLetterCount, retryDeadLetters, processSyncQueue } from '@/lib/syncQueue';
 import { offlineDb } from '@/lib/offlineDb';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,8 @@ export default function RutaSincronizarPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [diag, setDiag] = useState<SyncDiagnostics | null>(null);
   const [diagLoading, setDiagLoading] = useState(false);
+  const [failedTables, setFailedTables] = useState<{ table: string; label: string; error: string; lastErrorAt: number }[]>([]);
+  const [retrying, setRetrying] = useState(false);
 
   const loadDiag = useCallback(async () => {
     setDiagLoading(true);
@@ -60,9 +62,32 @@ export default function RutaSincronizarPage() {
     setLocalSummary(summary);
     const dl = await getDeadLetterCount();
     setDeadLetters(dl);
+    try { setFailedTables(await getFailedTables()); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
+
+  const handleRetryFailed = async () => {
+    if (!empresa?.id || !isOnline || retrying) return;
+    setRetrying(true);
+    try {
+      const result = await retryFailedTables(empresa.id, (progress) => {
+        setDownloadProgress(progress);
+      });
+      const okCount = result.tableResults.filter(t => t.status === 'done').length;
+      const errCount = result.tableResults.filter(t => t.status === 'error').length;
+      if (errCount === 0 && okCount > 0) {
+        toast.success(`✅ Sincronización completa: ${okCount} tabla${okCount === 1 ? '' : 's'} pendiente${okCount === 1 ? '' : 's'} recuperada${okCount === 1 ? '' : 's'}`);
+      } else if (errCount > 0) {
+        toast.warning(`${okCount} recuperadas, ${errCount} siguen fallando. Revisa tu conexión y vuelve a intentar.`);
+      }
+      await loadSummary();
+    } catch (err: any) {
+      toast.error('No se pudo reintentar: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const totalLocalRecords = localSummary.reduce((s, r) => s + r.count, 0);
   const oldestSync = localSummary.reduce((min, r) => {
@@ -263,6 +288,44 @@ export default function RutaSincronizarPage() {
             </div>
           )}
         </div>
+
+        {/* ── PARTIAL SYNC RECOVERY ── */}
+        {failedTables.length > 0 && (
+          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  Sincronización parcial: {failedTables.length} {failedTables.length === 1 ? 'tabla pendiente' : 'tablas pendientes'}
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                  La última descarga se interrumpió (red intermitente). El resto de tus datos sigue completo; solo falta refrescar estas:
+                </p>
+                <ul className="mt-2 space-y-0.5 max-h-32 overflow-y-auto">
+                  {failedTables.map(f => (
+                    <li key={f.table} className="text-[11px] text-foreground/80 truncate">
+                      • <span className="font-medium">{f.label}</span>
+                      <span className="text-muted-foreground"> — {formatTimeAgo(f.lastErrorAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={handleRetryFailed}
+                  disabled={!isOnline || retrying || downloading}
+                  className={cn(
+                    "mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]",
+                    !isOnline ? "bg-muted text-muted-foreground cursor-not-allowed" :
+                    retrying ? "bg-amber-600/50 text-white" :
+                    "bg-amber-600 text-white"
+                  )}
+                >
+                  {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {retrying ? 'Reintentando...' : 'Reintentar pendientes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── STEP 1: DOWNLOAD ── */}
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
