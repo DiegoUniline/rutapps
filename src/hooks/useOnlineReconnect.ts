@@ -41,6 +41,17 @@ export function useOnlineReconnect() {
         // 2) Pull critical fresh data
         await downloadAllData(empresa.id, false, undefined, { tables: MOBILE_QUICK_SYNC_TABLES }).catch((e) => console.warn('[reconnect] pull failed', e));
 
+        // 2.b) Second pass: if anything failed during the quick sync (timeout,
+        // flaky link, partial response), retry ONLY those tables once. Cheap
+        // and idempotent — keeps a foreign-vendor's offline cache complete
+        // even when the first download was interrupted.
+        try {
+          const stillFailed = await getFailedTables();
+          if (stillFailed.length > 0) {
+            await retryFailedTables(empresa.id).catch((e) => console.warn('[reconnect] retry failed', e));
+          }
+        } catch { /* ignore */ }
+
         // 3) Detect new/changed carga lines
         const afterRows = await offlineDb.carga_lineas.toArray();
         const afterSig = signature(afterRows);
