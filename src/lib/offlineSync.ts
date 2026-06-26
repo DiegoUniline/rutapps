@@ -457,3 +457,41 @@ export async function isCacheStale(maxAgeMinutes: number = 30): Promise<boolean>
   if (!lastSync) return true;
   return Date.now() - lastSync > maxAgeMinutes * 60 * 1000;
 }
+
+/**
+ * Tables whose last sync attempt failed (persisted across reloads).
+ * Used by the sync screen to show a "pending" banner and by the
+ * reconnect hook to auto-retry only what's missing.
+ */
+export async function getFailedTables(): Promise<{ table: string; label: string; error: string; lastErrorAt: number }[]> {
+  const all = await offlineDb.cacheTimestamps.toArray();
+  return all
+    .filter(t => t.lastError && t.lastErrorAt)
+    .map(t => ({
+      table: t.table,
+      label: TABLE_LABELS[t.table] || t.table,
+      error: t.lastError!,
+      lastErrorAt: t.lastErrorAt!,
+    }));
+}
+
+/**
+ * Re-download ONLY tables whose previous attempt failed.
+ * Safe to call repeatedly: no-op if nothing failed.
+ */
+export async function retryFailedTables(
+  empresaId: string,
+  onProgress?: (progress: SyncProgress[]) => void,
+): Promise<DownloadResult> {
+  const failed = await getFailedTables();
+  if (failed.length === 0) {
+    return { rowsDownloaded: 0, tableResults: [] };
+  }
+  const tables = failed
+    .map(f => f.table)
+    .filter((t): t is CacheTable => (TABLES_TO_CACHE as readonly string[]).includes(t));
+  if (tables.length === 0) {
+    return { rowsDownloaded: 0, tableResults: [] };
+  }
+  return downloadAllData(empresaId, false, onProgress, { tables });
+}
