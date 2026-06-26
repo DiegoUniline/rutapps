@@ -168,7 +168,7 @@ export default function ProductosListPage() {
   const clasificacionFilter = filters.clasificacion?.length ? filters.clasificacion.join(',') : 'todos';
   const marcaFilter = filters.marca?.length ? filters.marca.join(',') : 'todos';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter, !!groupBy);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
