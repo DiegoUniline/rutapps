@@ -225,6 +225,15 @@ export default function MobileLayout() {
             <Eye className="h-5 w-5" />
           </button>
           <button
+            onClick={() => navigate('/ruta/sincronizar')}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            title="Sincronizar"
+            aria-label="Sincronizar"
+          >
+            <RefreshCw className="h-5 w-5" />
+          </button>
+
+          <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
             title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
