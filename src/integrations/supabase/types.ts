@@ -8795,6 +8795,13 @@ export type Database = {
         Returns: string
       }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
+      stock_almacen_at_eod: {
+        Args: { p_almacen_id: string; p_fecha: string }
+        Returns: {
+          cantidad: number
+          producto_id: string
+        }[]
+      }
       super_admin_list_empresas: {
         Args: never
         Returns: {
