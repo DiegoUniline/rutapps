@@ -35,8 +35,26 @@ export async function getSyncDiagnostics(): Promise<SyncDiagnostics> {
   let serviceWorkerActive = false;
   try {
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      serviceWorkerActive = regs.some(r => !!r.active);
+      // controller = SW que ya controla esta pestaña → garantía de offline
+      if (navigator.serviceWorker.controller) {
+        serviceWorkerActive = true;
+      } else {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        // Cuenta también installing/waiting: el SW ya está instalado en
+        // el dispositivo aunque aún no controle ESTA pestaña (común en la
+        // primera carga después de publicar). En la siguiente recarga
+        // tomará control automáticamente.
+        serviceWorkerActive = regs.some(r => !!(r.active || r.waiting || r.installing));
+        // Si hay registro pero no está activo, esperar brevemente al "ready"
+        // (con timeout) por si está terminando de instalar en este instante.
+        if (!serviceWorkerActive && regs.length > 0) {
+          const ready = await Promise.race([
+            navigator.serviceWorker.ready.then(() => true),
+            new Promise<boolean>(res => setTimeout(() => res(false), 1500)),
+          ]);
+          serviceWorkerActive = ready;
+        }
+      }
     }
   } catch {
     // ignore
