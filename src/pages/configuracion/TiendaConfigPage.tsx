@@ -298,6 +298,16 @@ export default function TiendaConfigPage() {
               Esta lista se usa para invitados y clientes sin lista asignada en su ficha.
             </div>
           </Field>
+          <Field label="Almacén que alimenta la tienda *">
+            <select className="input" value={cfg.almacen_id ?? ""} onChange={(e) => setCfg({ ...cfg, almacen_id: e.target.value || null })}>
+              <option value="">— Selecciona un almacén —</option>
+              {almacenes.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+            </select>
+            <div className="text-xs text-gray-500 mt-1">
+              El stock mostrado en la tienda se toma de este almacén, y los pedidos recibidos se crean asignados a él.
+              Si no eliges uno, se suma el stock de todos los almacenes y los pedidos quedarán sin almacén.
+            </div>
+          </Field>
           <Field label="¿Qué precios ve cada cliente cuando inicia sesión?">
             <label className="inline-flex items-start gap-2">
               <input type="checkbox" className="mt-1" checked={cfg.usar_lista_cliente} onChange={(e) => setCfg({ ...cfg, usar_lista_cliente: e.target.checked })} />
