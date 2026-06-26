@@ -82,8 +82,8 @@ export default function VentasListPage() {
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
-  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined, !!groupBy);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
