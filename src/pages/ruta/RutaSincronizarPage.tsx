@@ -322,6 +322,22 @@ export default function RutaSincronizarPage() {
                   {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   {retrying ? 'Reintentando...' : 'Reintentar pendientes'}
                 </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const { clearFailedTableFlags } = await import('@/lib/offlineSync');
+                      await clearFailedTableFlags();
+                      await loadSummary();
+                      toast.success('Avisos de sincronización descartados');
+                    } catch (e: any) {
+                      toast.error('No se pudo descartar: ' + (e?.message || ''));
+                    }
+                  }}
+                  disabled={retrying || downloading}
+                  className="mt-2 w-full text-[11px] text-muted-foreground hover:text-foreground underline py-1"
+                >
+                  Descartar avisos (ya está todo bien)
+                </button>
               </div>
             </div>
           </div>

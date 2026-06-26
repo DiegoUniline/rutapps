@@ -362,7 +362,7 @@ async function downloadAllDataInternal(
             );
             if (error) {
               console.error(`Error downloading ${table}:`, error);
-              break;
+              throw new Error(error.message || `Error al descargar ${table}`);
             }
             if (data && data.length > 0) {
               allData = allData.concat(data);
@@ -465,14 +465,42 @@ export async function isCacheStale(maxAgeMinutes: number = 30): Promise<boolean>
  */
 export async function getFailedTables(): Promise<{ table: string; label: string; error: string; lastErrorAt: number }[]> {
   const all = await offlineDb.cacheTimestamps.toArray();
+  const valid = new Set<string>(TABLES_TO_CACHE as readonly string[]);
+  // Auto-clean orphan error entries left over from previous app versions
+  // (tables that no longer exist in TABLES_TO_CACHE). Without this, the
+  // "partial sync" banner can stay forever because retry skips them.
+  const orphans = all.filter(t => t.lastError && !valid.has(t.table));
+  if (orphans.length > 0) {
+    try {
+      await Promise.all(orphans.map(o => offlineDb.cacheTimestamps.delete(o.table)));
+    } catch { /* ignore */ }
+  }
   return all
-    .filter(t => t.lastError && t.lastErrorAt)
+    .filter(t => t.lastError && t.lastErrorAt && valid.has(t.table))
     .map(t => ({
       table: t.table,
       label: TABLE_LABELS[t.table] || t.table,
       error: t.lastError!,
       lastErrorAt: t.lastErrorAt!,
     }));
+}
+
+/**
+ * Manually clear all failure flags (user dismisses the "partial sync" banner).
+ * Does NOT touch cached data — only the error metadata.
+ */
+export async function clearFailedTableFlags(): Promise<void> {
+  const all = await offlineDb.cacheTimestamps.toArray();
+  const failed = all.filter(t => t.lastError);
+  await Promise.all(
+    failed.map(t => offlineDb.cacheTimestamps.put({
+      table: t.table,
+      lastSync: t.lastSync,
+      lastSuccessAt: t.lastSuccessAt,
+      lastError: undefined,
+      lastErrorAt: undefined,
+    }))
+  );
 }
 
 /**
