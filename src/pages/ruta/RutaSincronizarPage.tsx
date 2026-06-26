@@ -277,13 +277,41 @@ export default function RutaSincronizarPage() {
                 ) : (
                   <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 )}
-                <p className="text-[11px] leading-relaxed">
-                  {diag.integrityOk && diag.serviceWorkerActive
-                    ? 'Todo en orden. Puedes cerrar la app, recargar o trabajar sin internet — tus cambios están a salvo.'
-                    : !diag.serviceWorkerActive
-                      ? 'La app aún no quedó disponible offline. Recarga la página con internet para activar el modo sin conexión.'
-                      : 'El respaldo redundante quedó desactualizado. Presiona "Verificar" para refrescarlo.'}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] leading-relaxed">
+                    {diag.integrityOk && diag.serviceWorkerActive
+                      ? 'Todo en orden. Puedes cerrar la app, recargar o trabajar sin internet — tus cambios están a salvo.'
+                      : !diag.serviceWorkerActive
+                        ? 'La app aún no quedó disponible offline en este dispositivo. Toca "Activar modo offline" para instalarlo ahora.'
+                        : 'El respaldo redundante quedó desactualizado. Presiona "Verificar" para refrescarlo.'}
+                  </p>
+                  {!diag.serviceWorkerActive && isOnline && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          toast.loading('Instalando modo offline...', { id: 'sw-install' });
+                          const { registerAppSW } = await import('@/pwa/registerSW');
+                          await registerAppSW();
+                          // Esperar al ready (máx 8s)
+                          if ('serviceWorker' in navigator) {
+                            await Promise.race([
+                              navigator.serviceWorker.ready,
+                              new Promise(res => setTimeout(res, 8000)),
+                            ]);
+                          }
+                          await loadDiag();
+                          toast.success('Modo offline activado', { id: 'sw-install' });
+                        } catch (e: any) {
+                          toast.error('No se pudo activar: ' + (e?.message || 'error'), { id: 'sw-install' });
+                        }
+                      }}
+                      className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold"
+                    >
+                      Activar modo offline
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
