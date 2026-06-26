@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { downloadAllData, getLocalDataSummary, type SyncProgress } from '@/lib/offlineSync';
+import { downloadAllData, getLocalDataSummary, getFailedTables, retryFailedTables, type SyncProgress } from '@/lib/offlineSync';
 import { getPendingCount, getDeadLetterCount, retryDeadLetters, processSyncQueue } from '@/lib/syncQueue';
 import { offlineDb } from '@/lib/offlineDb';
 import { cn } from '@/lib/utils';
