@@ -137,54 +137,72 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // Si fechaFin es hoy → stock vivo del almacén; si es fecha pasada → carga(s) registrada(s) ese día para el vendedor
+  // Si fechaFin es hoy → stock vivo. Si pasado → híbrido: cargas → Kardex (RPC con TZ).
   const stockEsHistorico = fechaFin < today;
-  const { data: rptStockAlmacen } = useQuery<any[]>({
-    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, usuarioId, stockEsHistorico ? `carga-${fechaInicio}-${fechaFin}` : 'hoy'],
+  const { data: rptStockData } = useQuery<{ items: any[]; fuente: 'cargas' | 'kardex' | 'vivo' }>({
+    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, usuarioId, stockEsHistorico ? `hist-${fechaInicio}-${fechaFin}` : 'hoy'],
     enabled: !!rptVendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
-      if (stockEsHistorico) {
-        // Buscar cargas del vendedor en el rango
-        const { data: cargas, error: ec } = await (supabase as any).from('cargas')
-          .select('id')
-          .eq('empresa_id', empresa!.id)
-          .eq('vendedor_id', usuarioId)
-          .gte('fecha', fechaInicio)
-          .lte('fecha', fechaFin);
-        if (ec) throw ec;
-        const cargaIds = (cargas ?? []).map((c: any) => c.id);
-        if (cargaIds.length === 0) return [];
-        const { data: lineas, error: el } = await (supabase as any).from('carga_lineas')
+      if (!stockEsHistorico) {
+        const { data } = await (supabase as any).from('stock_almacen')
+          .select('producto_id, cantidad, productos(nombre, codigo)')
+          .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
+          .gt('cantidad', 0)
+          .order('producto_id');
+        return { items: data ?? [], fuente: 'vivo' as const };
+      }
+      // 1) Intentar con tabla `cargas`
+      const { data: cargas } = await (supabase as any).from('cargas')
+        .select('id')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', usuarioId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+      const cargaIds = (cargas ?? []).map((c: any) => c.id);
+      if (cargaIds.length > 0) {
+        const { data: lineas } = await (supabase as any).from('carga_lineas')
           .select('producto_id, cantidad_cargada')
           .in('carga_id', cargaIds);
-        if (el) throw el;
-        // Agregar por producto
         const agg: Record<string, number> = {};
         (lineas ?? []).forEach((l: any) => {
           if (!l.producto_id) return;
           agg[l.producto_id] = (agg[l.producto_id] || 0) + Number(l.cantidad_cargada || 0);
         });
         const ids = Object.keys(agg).filter((id) => agg[id] > 0);
-        if (ids.length === 0) return [];
-        const { data: prods } = await (supabase as any).from('productos')
-          .select('id, nombre, codigo')
-          .in('id', ids);
-        const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
-        return ids.map((id) => ({
-          producto_id: id,
-          cantidad: agg[id],
-          productos: map.get(id) || null,
-        }));
+        if (ids.length > 0) {
+          const { data: prods } = await (supabase as any).from('productos')
+            .select('id, nombre, codigo').in('id', ids);
+          const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
+          return {
+            items: ids.map((id) => ({ producto_id: id, cantidad: agg[id], productos: map.get(id) || null })),
+            fuente: 'cargas' as const,
+          };
+        }
       }
-      const { data, error } = await (supabase as any).from('stock_almacen')
-        .select('producto_id, cantidad, productos(nombre, codigo)')
-        .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
-        .gt('cantidad', 0)
-        .order('producto_id');
+      // 2) Fallback Kardex
+      const { data: rpc, error } = await (supabase as any).rpc('stock_almacen_at_eod', {
+        p_almacen_id: rptVendedorAlmacen!.almacen_id!,
+        p_fecha: fechaFin,
+      });
       if (error) throw error;
-      return data ?? [];
+      const positivos = (rpc ?? []).filter((r: any) => Number(r.cantidad) > 0);
+      if (positivos.length === 0) return { items: [], fuente: 'kardex' as const };
+      const ids = positivos.map((r: any) => r.producto_id);
+      const { data: prods } = await (supabase as any).from('productos')
+        .select('id, nombre, codigo').in('id', ids);
+      const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
+      return {
+        items: positivos.map((r: any) => ({
+          producto_id: r.producto_id,
+          cantidad: Number(r.cantidad),
+          productos: map.get(r.producto_id) || null,
+        })),
+        fuente: 'kardex' as const,
+      };
     },
   });
+  const rptStockAlmacen = rptStockData?.items;
+  const stockFuente = rptStockData?.fuente;
 
 
 
