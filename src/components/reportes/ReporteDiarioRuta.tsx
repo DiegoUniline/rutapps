@@ -382,12 +382,16 @@ export default function ReporteDiarioRuta() {
     </div>`;
 
     // Stock
+    const stockTitulo = stockEsHistorico
+      ? `Stock al cierre del ${fechaFin} — ${rptAlmacenNombre}`
+      : `Stock actual — ${rptAlmacenNombre}`;
     const stockHtml = incluirStock && stockItems.length > 0
-      ? sec(`Stock — ${rptAlmacenNombre}`, makeTable(
+      ? sec(stockTitulo, makeTable(
           ['Código', 'Producto', 'Existencia'],
           stockItems.map((p: any) => [p.codigo, p.nombre, String(p.cantidad)])
         ))
       : '';
+
 
     // Ventas
     const ventasHtml = ventasActivas.length > 0
