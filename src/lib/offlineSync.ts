@@ -303,7 +303,13 @@ async function downloadAllDataInternal(
         if (parentIds && parentIds.length === 0) {
           const localTable = getOfflineTable(table);
           if (localTable && !lastTableSync) await localTable.clear();
-          await offlineDb.cacheTimestamps.put({ table, lastSync: Date.now() });
+          await offlineDb.cacheTimestamps.put({
+            table,
+            lastSync: Date.now(),
+            lastSuccessAt: Date.now(),
+            lastError: undefined,
+            lastErrorAt: undefined,
+          });
           progress[idx].status = 'done';
           progress[idx].rowCount = 0;
           notify();
