@@ -371,8 +371,7 @@ export default function ReporteDiarioRuta() {
           ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
           : undefined,
         stock: incluirStock && stockItems.length > 0
-          ? { items: stockItems, almacenNombre: stockEsHistorico ? `Carga del ${fechaFin} — ${rptAlmacenNombre}` : rptAlmacenNombre }
-
+          ? { items: stockItems, almacenNombre: `${stockTitulo} — ${rptAlmacenNombre}` }
           : undefined,
 
       });
