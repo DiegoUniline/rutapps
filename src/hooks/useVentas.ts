@@ -86,52 +86,25 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   });
 }
 
-/** Paginated product lines (venta_lineas) with header data for "Products" view */
+/** Paginated product lines (venta_lineas) with header data for "Products" view. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useVentaLineasPaginated(
   search?: string, statusFilter?: string, tipoFilter?: string,
   page = 1, pageSize = 80, condicionFilter?: string,
-  vendedorFilter?: string, dateFrom?: string, dateTo?: string
+  vendedorFilter?: string, dateFrom?: string, dateTo?: string,
+  fetchAll = false,
 ) {
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
   const filterOwn = !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
+    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('venta_lineas')
-        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))', { count: 'exact' })
-        .eq('ventas.empresa_id', empresa!.id)
-        .order('created_at', { ascending: false, referencedTable: undefined })
-        .range((page - 1) * pageSize, page * pageSize - 1);
+      const SELECT = 'id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, tarifa_id, clientes(id, nombre), vendedores:profiles!vendedor_id(nombre), tarifas(nombre))';
 
-      if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
-
-      if (statusFilter && statusFilter !== 'todos') {
-        const arr = statusFilter.split(',');
-        if (arr.length > 1) q = q.in('ventas.status', arr as any);
-        else q = q.eq('ventas.status', statusFilter as any);
-      }
-      if (tipoFilter && tipoFilter !== 'todos') {
-        const arr = tipoFilter.split(',');
-        if (arr.length > 1) q = q.in('ventas.tipo', arr as any);
-        else q = q.eq('ventas.tipo', tipoFilter as any);
-      }
-      if (condicionFilter && condicionFilter !== 'todos') {
-        const arr = condicionFilter.split(',');
-        if (arr.length > 1) q = q.in('ventas.condicion_pago', arr as any);
-        else q = q.eq('ventas.condicion_pago', condicionFilter as any);
-      }
-      if (vendedorFilter && vendedorFilter !== 'todos') {
-        const arr = vendedorFilter.split(',');
-        if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any);
-        else q = q.eq('ventas.vendedor_id', vendedorFilter);
-      }
-      if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
-      if (dateTo) q = q.lte('ventas.fecha', dateTo);
-
+      let searchOr: string | null = null;
+      let searchEmpty = false;
       if (search) {
         const s = search.replace(/[%_,()]/g, '\\$&').replace(/'/g, "''");
         const [productosRes, ventasRes] = await Promise.all([
@@ -143,17 +116,41 @@ export function useVentaLineasPaginated(
         const orParts: string[] = [];
         if (productoIds.length) orParts.push(`producto_id.in.(${productoIds.join(',')})`);
         if (ventaIds.length) orParts.push(`venta_id.in.(${ventaIds.join(',')})`);
-        if (orParts.length === 0) {
-          q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
-        } else {
-          q = q.or(orParts.join(','));
-        }
+        if (orParts.length === 0) searchEmpty = true;
+        else searchOr = orParts.join(',');
       }
 
-      const { data, error, count } = await q;
-      if (error) throw error;
+      const applyFilters = (q: any) => {
+        q = q.eq('ventas.empresa_id', empresa!.id).order('created_at', { ascending: false, referencedTable: undefined });
+        if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.status', arr as any);
+          else q = q.eq('ventas.status', statusFilter as any);
+        }
+        if (tipoFilter && tipoFilter !== 'todos') {
+          const arr = tipoFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.tipo', arr as any);
+          else q = q.eq('ventas.tipo', tipoFilter as any);
+        }
+        if (condicionFilter && condicionFilter !== 'todos') {
+          const arr = condicionFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.condicion_pago', arr as any);
+          else q = q.eq('ventas.condicion_pago', condicionFilter as any);
+        }
+        if (vendedorFilter && vendedorFilter !== 'todos') {
+          const arr = vendedorFilter.split(',');
+          if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any);
+          else q = q.eq('ventas.vendedor_id', vendedorFilter);
+        }
+        if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
+        if (dateTo) q = q.lte('ventas.fecha', dateTo);
+        if (searchEmpty) q = q.eq('venta_id', '00000000-0000-0000-0000-000000000000');
+        else if (searchOr) q = q.or(searchOr);
+        return q;
+      };
 
-      const rows = (data ?? []).map((row: any) => ({
+      const mapRow = (row: any) => ({
         linea_id: row.id,
         venta_id: row.venta_id,
         producto_id: row.producto_id,
@@ -172,8 +169,19 @@ export function useVentaLineasPaginated(
         cliente_nombre: row.ventas?.clientes?.nombre,
         vendedor_nombre: row.ventas?.vendedores?.nombre,
         tarifa_nombre: row.ventas?.tarifas?.nombre ?? null,
-      }));
+      });
 
+      if (fetchAll) {
+        const data = await fetchAllPages<any>((from, to) => applyFilters(supabase.from('venta_lineas').select(SELECT).range(from, to)));
+        const rows = (data ?? []).map(mapRow);
+        return { rows, total: rows.length };
+      }
+
+      let q = supabase.from('venta_lineas').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
+      q = applyFilters(q);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      const rows = (data ?? []).map(mapRow);
       return { rows, total: count ?? 0 };
     },
   });
