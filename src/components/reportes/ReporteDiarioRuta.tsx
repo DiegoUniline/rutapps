@@ -302,10 +302,17 @@ export default function ReporteDiarioRuta() {
 
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
+    producto_id: s.producto_id,
     nombre: s.productos?.nombre || '—',
     codigo: s.productos?.codigo || '',
     cantidad: Number(s.cantidad) || 0,
+    vendido: Number(prodMap[s.producto_id]?.cantidad || 0),
   })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+  const stockTitulo = stockFuente === 'cargas'
+    ? `Carga del ${fechaFin}`
+    : stockFuente === 'kardex'
+    ? `Stock al cierre del ${fechaFin}`
+    : 'Stock actual';
 
   const usuarioNombre = isAll
     ? `Todos los usuarios (${(usuarios || []).length})`
