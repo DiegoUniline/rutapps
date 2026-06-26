@@ -362,7 +362,7 @@ async function downloadAllDataInternal(
             );
             if (error) {
               console.error(`Error downloading ${table}:`, error);
-              break;
+              throw new Error(error.message || `Error al descargar ${table}`);
             }
             if (data && data.length > 0) {
               allData = allData.concat(data);
