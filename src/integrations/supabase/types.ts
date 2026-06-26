@@ -8802,6 +8802,13 @@ export type Database = {
           producto_id: string
         }[]
       }
+      stock_almacen_at_eod_v2: {
+        Args: { p_almacen_id: string; p_fecha: string }
+        Returns: {
+          cantidad: number
+          producto_id: string
+        }[]
+      }
       super_admin_list_empresas: {
         Args: never
         Returns: {
