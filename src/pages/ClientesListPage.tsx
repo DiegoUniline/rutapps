@@ -89,18 +89,56 @@ function useDynamicFilterOptions() {
     queryKey: ['vendedores-filter', empresa?.id],
     enabled: !!empresa?.id,
     staleTime: 60_000,
+    networkMode: 'always',
     queryFn: async () => {
-      const { data } = await (supabase.from('profiles') as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
-      return (data ?? []) as { id: string; nombre: string }[];
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.profiles.where('empresa_id').equals(empresa!.id).toArray();
+          return (cached as any[])
+            .filter(p => !p.estado || p.estado === 'activo')
+            .map(p => ({ id: p.id, nombre: p.nombre }))
+            .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || '')));
+        } catch { return []; }
+      };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const c = await readCache(); if (c.length) return c as { id: string; nombre: string }[];
+      }
+      try {
+        const { data, error } = await (supabase.from('profiles') as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+        if (error) throw error;
+        return (data ?? []) as { id: string; nombre: string }[];
+      } catch {
+        return await readCache() as { id: string; nombre: string }[];
+      }
     },
   });
   const { data: zonas } = useQuery({
     queryKey: ['zonas-filter', empresa?.id],
     enabled: !!empresa?.id,
     staleTime: 60_000,
+    networkMode: 'always',
     queryFn: async () => {
-      const { data } = await (supabase.from('zonas') as any).select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
-      return (data ?? []) as { id: string; nombre: string }[];
+      const readCache = async () => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const cached = await offlineDb.zonas.where('empresa_id').equals(empresa!.id).toArray();
+          return (cached as any[])
+            .filter(z => z.activo !== false)
+            .map(z => ({ id: z.id, nombre: z.nombre }))
+            .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || '')));
+        } catch { return []; }
+      };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        const c = await readCache(); if (c.length) return c as { id: string; nombre: string }[];
+      }
+      try {
+        const { data, error } = await (supabase.from('zonas') as any).select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+        if (error) throw error;
+        return (data ?? []) as { id: string; nombre: string }[];
+      } catch {
+        return await readCache() as { id: string; nombre: string }[];
+      }
     },
   });
   return { vendedores, zonas };
