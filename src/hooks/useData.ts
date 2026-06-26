@@ -77,35 +77,43 @@ export function useProductosRealtime() {
   }, [qc, empresaId]);
 }
 
-/** Paginated products for list views */
-export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string) {
+/** Paginated products for list views. When fetchAll=true, returns all matching rows (used for grouping). */
+export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter],
+    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)', { count: 'exact' })
-        .eq('empresa_id', empresa!.id)
-        .order('nombre', { ascending: true })
-        .range((page - 1) * pageSize, page * pageSize - 1);
-      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') {
-        const arr = statusFilter.split(',');
-        if (arr.length > 1) q = q.in('status', arr as any);
-        else q = q.eq('status', statusFilter as Producto['status']);
+      const SELECT = 'id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)';
+      const applyFilters = (q: any) => {
+        q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
+        if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',');
+          if (arr.length > 1) q = q.in('status', arr as any);
+          else q = q.eq('status', statusFilter as Producto['status']);
+        }
+        if (clasificacionFilter && clasificacionFilter !== 'todos') {
+          const arr = clasificacionFilter.split(',');
+          if (arr.length > 1) q = q.in('clasificacion_id', arr as any);
+          else q = q.eq('clasificacion_id', clasificacionFilter);
+        }
+        if (marcaFilter && marcaFilter !== 'todos') {
+          const arr = marcaFilter.split(',');
+          if (arr.length > 1) q = q.in('marca_id', arr as any);
+          else q = q.eq('marca_id', marcaFilter);
+        }
+        return q;
+      };
+
+      if (fetchAll) {
+        const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('productos').select(SELECT).range(from, to)));
+        return { rows: (rows ?? []) as unknown as Producto[], total: rows?.length ?? 0 };
       }
-      if (clasificacionFilter && clasificacionFilter !== 'todos') {
-        const arr = clasificacionFilter.split(',');
-        if (arr.length > 1) q = q.in('clasificacion_id', arr as any);
-        else q = q.eq('clasificacion_id', clasificacionFilter);
-      }
-      if (marcaFilter && marcaFilter !== 'todos') {
-        const arr = marcaFilter.split(',');
-        if (arr.length > 1) q = q.in('marca_id', arr as any);
-        else q = q.eq('marca_id', marcaFilter);
-      }
+
+      let q = supabase.from('productos').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
+      q = applyFilters(q);
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as unknown as Producto[], total: count ?? 0 };
