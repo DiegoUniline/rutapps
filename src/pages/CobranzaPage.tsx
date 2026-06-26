@@ -261,14 +261,15 @@ export default function CobranzaPage() {
 
   // Reset page on filter change is handled by deps: filtered changes → useTablePagination clamps page
 
-  // Grouping uses paginated items for display
-  const groups = useMemo(() => groupData(pagination.paginatedItems, groupBy, (item: any, key: string) => {
+  // Grouping uses ALL filtered items (not paginated) so groups reflect the full result set
+  const groupSource = groupBy ? filtered : pagination.paginatedItems;
+  const groups = useMemo(() => groupData(groupSource, groupBy, (item: any, key: string) => {
     if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     if (key === 'metodo') return item.metodo_pago ?? 'Sin método';
     if (key === 'vendedor') return vendedorMap.get(item.user_id) || 'Sin vendedor';
     return '';
-  }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
+  }, groupByLevels), [groupSource, groupBy, groupByLevels, vendedorMap]);
 
   const CobrosTable = ({ items, selected, onToggleOne }: { items: any[]; selected?: Set<string>; onToggleOne?: (id: string) => void }) => {
     const sel = selected ?? new Set<string>();
