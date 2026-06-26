@@ -380,13 +380,32 @@ async function downloadAllDataInternal(
           totalRows += allData.length;
         }
 
-        await offlineDb.cacheTimestamps.put({ table, lastSync: Date.now() });
+        await offlineDb.cacheTimestamps.put({
+          table,
+          lastSync: Date.now(),
+          lastSuccessAt: Date.now(),
+          lastError: undefined,
+          lastErrorAt: undefined,
+        });
 
         progress[idx].status = 'done';
         progress[idx].rowCount = allData.length;
         notify();
       } catch (err: any) {
         console.error(`Failed to cache ${table}:`, err);
+        // Persist failure metadata WITHOUT touching lastSync — so the next
+        // sync still runs a full pull for this table and the UI can show
+        // "pending" tables even after a reload.
+        try {
+          const prev = await offlineDb.cacheTimestamps.get(table);
+          await offlineDb.cacheTimestamps.put({
+            table,
+            lastSync: prev?.lastSync ?? 0,
+            lastSuccessAt: prev?.lastSuccessAt,
+            lastError: err?.message || 'Error desconocido',
+            lastErrorAt: Date.now(),
+          });
+        } catch { /* ignore */ }
         progress[idx].status = 'error';
         progress[idx].error = err?.message || 'Error desconocido';
         notify();
