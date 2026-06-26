@@ -62,9 +62,32 @@ export default function RutaSincronizarPage() {
     setLocalSummary(summary);
     const dl = await getDeadLetterCount();
     setDeadLetters(dl);
+    try { setFailedTables(await getFailedTables()); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
+
+  const handleRetryFailed = async () => {
+    if (!empresa?.id || !isOnline || retrying) return;
+    setRetrying(true);
+    try {
+      const result = await retryFailedTables(empresa.id, (progress) => {
+        setDownloadProgress(progress);
+      });
+      const okCount = result.tableResults.filter(t => t.status === 'done').length;
+      const errCount = result.tableResults.filter(t => t.status === 'error').length;
+      if (errCount === 0 && okCount > 0) {
+        toast.success(`✅ Sincronización completa: ${okCount} tabla${okCount === 1 ? '' : 's'} pendiente${okCount === 1 ? '' : 's'} recuperada${okCount === 1 ? '' : 's'}`);
+      } else if (errCount > 0) {
+        toast.warning(`${okCount} recuperadas, ${errCount} siguen fallando. Revisa tu conexión y vuelve a intentar.`);
+      }
+      await loadSummary();
+    } catch (err: any) {
+      toast.error('No se pudo reintentar: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const totalLocalRecords = localSummary.reduce((s, r) => s + r.count, 0);
   const oldestSync = localSummary.reduce((min, r) => {
