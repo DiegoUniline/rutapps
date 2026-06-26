@@ -180,7 +180,7 @@ export default function ReporteDiarioRuta() {
         }
       }
       // 2) Fallback Kardex
-      const { data: rpc, error } = await (supabase as any).rpc('stock_almacen_at_eod', {
+      const { data: rpc, error } = await (supabase as any).rpc('stock_almacen_at_eod_v2', {
         p_almacen_id: rptVendedorAlmacen!.almacen_id!,
         p_fecha: fechaFin,
       });
