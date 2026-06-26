@@ -137,30 +137,43 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // Si fechaFin es hoy → stock actual; si es fecha pasada → reconstruye stock al cierre del día seleccionado vía RPC
+  // Si fechaFin es hoy → stock vivo del almacén; si es fecha pasada → carga(s) registrada(s) ese día para el vendedor
   const stockEsHistorico = fechaFin < today;
   const { data: rptStockAlmacen } = useQuery<any[]>({
-    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, stockEsHistorico ? fechaFin : 'hoy'],
+    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id, usuarioId, stockEsHistorico ? `carga-${fechaInicio}-${fechaFin}` : 'hoy'],
     enabled: !!rptVendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
       if (stockEsHistorico) {
-        // Stock al cierre del día seleccionado (reconstruido desde movimientos)
-        const { data: rows, error } = await (supabase as any).rpc('stock_almacen_at_eod', {
-          p_almacen_id: rptVendedorAlmacen!.almacen_id,
-          p_fecha: fechaFin,
+        // Buscar cargas del vendedor en el rango
+        const { data: cargas, error: ec } = await (supabase as any).from('cargas')
+          .select('id')
+          .eq('empresa_id', empresa!.id)
+          .eq('vendedor_id', usuarioId)
+          .gte('fecha', fechaInicio)
+          .lte('fecha', fechaFin);
+        if (ec) throw ec;
+        const cargaIds = (cargas ?? []).map((c: any) => c.id);
+        if (cargaIds.length === 0) return [];
+        const { data: lineas, error: el } = await (supabase as any).from('carga_lineas')
+          .select('producto_id, cantidad_cargada')
+          .in('carga_id', cargaIds);
+        if (el) throw el;
+        // Agregar por producto
+        const agg: Record<string, number> = {};
+        (lineas ?? []).forEach((l: any) => {
+          if (!l.producto_id) return;
+          agg[l.producto_id] = (agg[l.producto_id] || 0) + Number(l.cantidad_cargada || 0);
         });
-        if (error) throw error;
-        const positivos = (rows ?? []).filter((r: any) => Number(r.cantidad) > 0);
-        const ids = positivos.map((r: any) => r.producto_id).filter(Boolean);
+        const ids = Object.keys(agg).filter((id) => agg[id] > 0);
         if (ids.length === 0) return [];
         const { data: prods } = await (supabase as any).from('productos')
           .select('id, nombre, codigo')
           .in('id', ids);
         const map = new Map((prods ?? []).map((p: any) => [p.id, p]));
-        return positivos.map((r: any) => ({
-          producto_id: r.producto_id,
-          cantidad: r.cantidad,
-          productos: map.get(r.producto_id) || null,
+        return ids.map((id) => ({
+          producto_id: id,
+          cantidad: agg[id],
+          productos: map.get(id) || null,
         }));
       }
       const { data, error } = await (supabase as any).from('stock_almacen')
@@ -172,6 +185,7 @@ export default function ReporteDiarioRuta() {
       return data ?? [];
     },
   });
+
 
 
   // --- Computed data ---
@@ -332,9 +346,10 @@ export default function ReporteDiarioRuta() {
           ? { items: abonosCreditoPrevio, totalMonto: totalAbonosPrevios, clientesUnicos: clientesQueAbonaron }
           : undefined,
         stock: incluirStock && stockItems.length > 0
-          ? { items: stockItems, almacenNombre: stockEsHistorico ? `${rptAlmacenNombre} (al cierre del ${fechaFin})` : rptAlmacenNombre }
+          ? { items: stockItems, almacenNombre: stockEsHistorico ? `Carga del ${fechaFin} — ${rptAlmacenNombre}` : rptAlmacenNombre }
 
           : undefined,
+
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -384,8 +399,9 @@ export default function ReporteDiarioRuta() {
 
     // Stock
     const stockTitulo = stockEsHistorico
-      ? `Stock al cierre del ${fechaFin} — ${rptAlmacenNombre}`
+      ? `Carga del ${fechaFin} — ${rptAlmacenNombre}`
       : `Stock actual — ${rptAlmacenNombre}`;
+
     const stockHtml = incluirStock && stockItems.length > 0
       ? sec(stockTitulo, makeTable(
           ['Código', 'Producto', 'Existencia'],
@@ -655,7 +671,7 @@ export default function ReporteDiarioRuta() {
           {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Stock al cierre del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
+                <Package className="h-3.5 w-3.5" /> {stockEsHistorico ? `Carga del ${fechaFin}` : 'Stock actual'} — {rptAlmacenNombre}
               </h2>
 
               <table className="w-full text-[11px]">
@@ -681,9 +697,12 @@ export default function ReporteDiarioRuta() {
 
           {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
-              No se encontró stock en el almacén asignado a este usuario.
+              {stockEsHistorico
+                ? `No hay cargas registradas para este vendedor en ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
+                : 'No se encontró stock en el almacén asignado a este usuario.'}
             </div>
           )}
+
 
           {/* Ventas activas */}
           <div>
