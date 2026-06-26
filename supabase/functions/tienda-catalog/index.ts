@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg } = await supabase
       .from("tienda_config")
-      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente")
+      .select("empresa_id, activa, lista_precios_default_id, usar_lista_cliente, almacen_id")
       .eq("slug", slug)
       .maybeSingle();
     if (!cfg || !cfg.activa) return json({ error: "Tienda no disponible" }, 404);
@@ -91,7 +91,9 @@ Deno.serve(async (req) => {
       clasifIds.length ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds) : { data: [] },
       marcaIds.length ? supabase.from("marcas").select("id, nombre").in("id", marcaIds) : { data: [] },
       unidadIds.length ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds) : { data: [] },
-      supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", prodIds),
+      (cfg.almacen_id
+        ? supabase.from("stock_almacen").select("producto_id, cantidad").eq("almacen_id", cfg.almacen_id).in("producto_id", prodIds)
+        : supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", prodIds)),
     ]);
     const cMap = new Map((cR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const mMap = new Map((mR.data ?? []).map((x: any) => [x.id, x.nombre]));
