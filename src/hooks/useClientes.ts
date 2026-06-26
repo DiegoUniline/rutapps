@@ -10,42 +10,50 @@ import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
-/** Paginated clients for list views */
-export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string) {
+/** Paginated clients for list views. When fetchAll=true, returns all matching rows (used for grouping). */
+export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false) {
   const { empresa } = useAuth();
   const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter],
+    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter, fetchAll],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)', { count: 'exact' })
-        .eq('empresa_id', empresa!.id)
-        .order('codigo', { ascending: true })
-        .range((page - 1) * pageSize, page * pageSize - 1);
-      if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
-      if (search) {
-        const s = search.replace(/'/g, "''");
-        q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%`);
+      const SELECT = 'id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)';
+      const applyFilters = (q: any) => {
+        q = q.eq('empresa_id', empresa!.id).order('codigo', { ascending: true });
+        if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
+        if (search) {
+          const s = search.replace(/'/g, "''");
+          q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%`);
+        }
+        if (statusFilter && statusFilter !== 'todos') {
+          const arr = statusFilter.split(',');
+          if (arr.length > 1) q = q.in('status', arr as any);
+          else q = q.eq('status', statusFilter as Cliente['status']);
+        }
+        if (vendedorFilter && vendedorFilter !== 'todos') {
+          const arr = vendedorFilter.split(',');
+          if (arr.length > 1) q = q.in('vendedor_id', arr as any);
+          else q = q.eq('vendedor_id', vendedorFilter);
+        }
+        if (zonaFilter && zonaFilter !== 'todos') {
+          const arr = zonaFilter.split(',');
+          if (arr.length > 1) q = q.in('zona_id', arr as any);
+          else q = q.eq('zona_id', zonaFilter);
+        }
+        return q;
+      };
+
+      if (fetchAll) {
+        const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('clientes').select(SELECT).range(from, to)));
+        return { rows: (rows ?? []) as unknown as Cliente[], total: rows?.length ?? 0 };
       }
-      if (statusFilter && statusFilter !== 'todos') {
-        const arr = statusFilter.split(',');
-        if (arr.length > 1) q = q.in('status', arr as any);
-        else q = q.eq('status', statusFilter as Cliente['status']);
-      }
-      if (vendedorFilter && vendedorFilter !== 'todos') {
-        const arr = vendedorFilter.split(',');
-        if (arr.length > 1) q = q.in('vendedor_id', arr as any);
-        else q = q.eq('vendedor_id', vendedorFilter);
-      }
-      if (zonaFilter && zonaFilter !== 'todos') {
-        const arr = zonaFilter.split(',');
-        if (arr.length > 1) q = q.in('zona_id', arr as any);
-        else q = q.eq('zona_id', zonaFilter);
-      }
+
+      let q = supabase.from('clientes').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
+      q = applyFilters(q);
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as unknown as Cliente[], total: count ?? 0 };
