@@ -41,6 +41,8 @@ export default function RutaSincronizarPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [diag, setDiag] = useState<SyncDiagnostics | null>(null);
   const [diagLoading, setDiagLoading] = useState(false);
+  const [failedTables, setFailedTables] = useState<{ table: string; label: string; error: string; lastErrorAt: number }[]>([]);
+  const [retrying, setRetrying] = useState(false);
 
   const loadDiag = useCallback(async () => {
     setDiagLoading(true);
