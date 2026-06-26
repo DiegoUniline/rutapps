@@ -399,8 +399,9 @@ export default function ReporteDiarioRuta() {
 
     // Stock
     const stockTitulo = stockEsHistorico
-      ? `Stock al cierre del ${fechaFin} — ${rptAlmacenNombre}`
+      ? `Carga del ${fechaFin} — ${rptAlmacenNombre}`
       : `Stock actual — ${rptAlmacenNombre}`;
+
     const stockHtml = incluirStock && stockItems.length > 0
       ? sec(stockTitulo, makeTable(
           ['Código', 'Producto', 'Existencia'],
