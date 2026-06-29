@@ -111,8 +111,10 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       // RLS violation: usually the parent row isn't visible yet (its insert is still pending
       // or failed earlier in this pass). Treat as deferrable so the child waits, instead of
       // burning retries and getting stuck as "pending por sincronizar".
-      const CHILD_TABLES_RLS_DEFER = ['devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
+      const CHILD_TABLES_RLS_DEFER = ['devoluciones', 'devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
       const isRlsViolation = err?.code === '42501' && CHILD_TABLES_RLS_DEFER.includes(item.table);
+      // Enum/check-constraint failures on devoluciones are sanitized on each retry — defer instead of dead-lettering
+      const isDevolucionEnumIssue = (err?.code === '22P02' || err?.code === '23514') && (item.table === 'devoluciones' || item.table === 'devolucion_lineas');
 
       const newRetries = (item.retries ?? 0) + 1;
       const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
