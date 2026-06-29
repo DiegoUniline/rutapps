@@ -37,6 +37,12 @@ export default defineConfig(({ mode }) => ({
     '__BUILD_DATE__': JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')),
     '__APP_VERSION__': JSON.stringify(APP_VERSION),
   },
+  // En producción elimina console.log/debug/info y `debugger` (ruido que
+  // gasta CPU en móviles). Conserva console.error/warn para soporte. En
+  // builds de desarrollo (build:dev) no se toca nada.
+  esbuild: mode === "production"
+    ? { pure: ["console.log", "console.debug", "console.info"], drop: ["debugger"] }
+    : {},
   build: {
     rollupOptions: {
       output: {
