@@ -1,0 +1,66 @@
+name: CI
+
+# Red de seguridad de calidad. NO modifica el código ni interfiere con Lovable:
+# solo valida cada push/PR y reporta el estado en GitHub.
+#
+# - build y test son obligatorios (fallan el check si se rompen).
+# - lint es informativo (continue-on-error) porque hoy hay miles de avisos
+#   heredados; se irá limpiando con las reglas de .lovable/memory.
+#
+# Se usa npm con el registro público (package-lock.json ya apunta ahí).
+# NO se usa bun: bun.lock está fijado al registro privado de Lovable y
+# fallaría en los runners de GitHub.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Si llegan varios pushes seguidos (Lovable empuja seguido), cancela los
+# runs viejos y deja solo el último.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --registry=https://registry.npmjs.org
+
+      - name: Tests (vitest)
+        run: npm test
+
+      - name: Build (vite)
+        run: npm run build
+
+  lint:
+    name: Lint (informativo)
+    runs-on: ubuntu-latest
+    # No bloquea: hoy existen avisos heredados. Sirve para ver la tendencia.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --registry=https://registry.npmjs.org
+
+      - name: Lint (eslint)
+        run: npm run lint
