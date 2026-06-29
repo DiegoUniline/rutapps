@@ -35,7 +35,9 @@ export function useOnlineReconnect() {
         const beforeRows = await offlineDb.carga_lineas.toArray();
         const beforeSig = signature(beforeRows);
 
-        // 1) Push pending mutations first
+        // 1) Push pending mutations first — resurrect dead-lettered devoluciones
+        //    (older builds left them stuck with invalid enum `tipo`; now sanitized).
+        await resurrectDeadLetters(['devoluciones', 'devolucion_lineas']).catch(() => {});
         await processSyncQueue().catch((e) => console.warn('[reconnect] push failed', e));
 
         // 2) Pull critical fresh data
