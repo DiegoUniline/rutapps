@@ -69,14 +69,24 @@ Deno.serve(async (req) => {
       rules = (tr ?? []) as Rule[];
     }
 
-    // Productos
-    const { data: productos } = await supabase
-      .from("productos")
-      .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
-      .eq("empresa_id", cfg.empresa_id)
-      .eq("status", "activo")
-      .eq("se_puede_vender", true)
-      .limit(3000);
+    // Productos — paginar para evitar el tope de 1000 filas de Supabase
+    const productos: any[] = [];
+    const PAGE = 1000;
+    for (let page = 0; page < 50; page++) {
+      const from = page * PAGE;
+      const to = from + PAGE - 1;
+      const { data: chunk, error: pErr } = await supabase
+        .from("productos")
+        .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
+        .eq("empresa_id", cfg.empresa_id)
+        .eq("status", "activo")
+        .eq("se_puede_vender", true)
+        .range(from, to);
+      if (pErr) throw pErr;
+      const rows = chunk ?? [];
+      productos.push(...rows);
+      if (rows.length < PAGE) break;
+    }
 
     if (!productos || productos.length === 0) {
       return json({ cliente, lista_nombre: listaNombre, productos: [], categorias: [], marcas: [] });
