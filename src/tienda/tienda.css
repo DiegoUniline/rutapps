@@ -181,6 +181,19 @@
 .tienda-error { color: #c43; font-size: 13px; padding: 8px 12px; background: #fde8e8; border-radius: 8px; margin-bottom: 12px; }
 .tienda-success { color: #1a8754; font-size: 13px; padding: 8px 12px; background: #e6f5ec; border-radius: 8px; margin-bottom: 12px; }
 
+.tienda-cart-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 12px;
+}
+.tienda-cart-subtitle { color: #666; font-size: 13px; margin: 4px 0 0; }
+.tienda-cart-count-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: color-mix(in srgb, var(--tienda-primary) 10%, #fff);
+  color: var(--tienda-primary); font-weight: 700; font-size: 14px;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tienda-primary) 20%, transparent);
+}
+
 .tienda-cart-page { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
 .tienda-cart-list { background: #fff; border-radius: 12px; overflow: hidden; }
 .tienda-cart-row {
@@ -190,8 +203,17 @@
 }
 .tienda-cart-row:last-child { border-bottom: none; }
 .tienda-cart-row img { width: 80px; height: 80px; object-fit: contain; background: #f5f6fa; border-radius: 8px; }
+.tienda-cart-row-img-fallback {
+  width: 80px; height: 80px; background: #f5f6fa; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; color: #c9ccd1;
+}
 .tienda-cart-row .name { font-weight: 500; font-size: 14px; }
 .tienda-cart-row .price { color: #666; font-size: 13px; }
+.tienda-cart-row-subtotal { display: none; font-size: 12px; color: #444; margin-top: 4px; }
+.tienda-cart-row-actions { display: flex; align-items: center; gap: 10px; }
+.tienda-cart-row-total-desktop { font-weight: 700; min-width: 90px; text-align: right; }
+.tienda-cart-keep-shopping { padding: 14px; border-top: 1px solid #eef0f3; display: none; }
+
 .tienda-qty { display: inline-flex; align-items: center; border: 1px solid #d4d7dc; border-radius: 8px; overflow: hidden; }
 .tienda-qty button { background: #f5f6fa; border: none; width: 32px; height: 32px; font-size: 16px; cursor: pointer; }
 .tienda-qty button:hover { background: #e6e8eb; }
@@ -202,6 +224,8 @@
 }
 .tienda-cart-summary .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
 .tienda-cart-summary .total { font-size: 20px; font-weight: 700; padding-top: 12px; border-top: 1px solid #eef0f3; margin-top: 8px; }
+.tienda-cart-summary-handle { display: none; }
+.tienda-cart-summary-cta { margin-top: 12px; }
 
 .tienda-pedidos-list { background: #fff; border-radius: 12px; overflow: hidden; }
 .tienda-pedido-row {
