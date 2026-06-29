@@ -123,7 +123,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isFkMissing || isRlsViolation) {
+      if (isFkMissing || isRlsViolation || isDevolucionEnumIssue) {
         // Parent record hasn't been synced yet in this pass — push to end of queue
 
         // by resetting createdAt so it processes after siblings.
