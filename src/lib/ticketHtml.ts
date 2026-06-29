@@ -116,19 +116,28 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   };
 
   // ── Header (real HTML, text-align:center) ──
+  const tc = empresa.ticket_campos ?? {};
+  const showLogo = tc.logo !== false;
+  const showNombre = tc.nombre !== false;
+  const showRazon = tc.razon_social !== false;
+  const showRfc = tc.rfc !== false;
+  const showDir = tc.direccion !== false;
+  const showTel = tc.telefono !== false;
+  const showNotas = tc.notas_ticket !== false;
+
   const hLines: string[] = [];
-  if (empresa.logo_url) {
+  if (showLogo && empresa.logo_url) {
     hLines.push(`<div style="margin-bottom:6px"><img src="${empresa.logo_url}" alt="${empresa.nombre}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
   }
-  hLines.push(`<div style="font-weight:700;font-size:22px">${empresa.nombre.toUpperCase()}</div>`);
-  if (empresa.razon_social) hLines.push(`<div style="font-size:14px">${empresa.razon_social}</div>`);
-  if (empresa.rfc) hLines.push(`<div style="font-size:14px">RFC: ${empresa.rfc}</div>`);
+  if (showNombre) hLines.push(`<div style="font-weight:700;font-size:22px">${empresa.nombre.toUpperCase()}</div>`);
+  if (showRazon && empresa.razon_social) hLines.push(`<div style="font-size:14px">${empresa.razon_social}</div>`);
+  if (showRfc && empresa.rfc) hLines.push(`<div style="font-size:14px">RFC: ${empresa.rfc}</div>`);
   const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', ');
-  if (dir1) hLines.push(`<div style="font-size:13px">${dir1}</div>`);
+  if (showDir && dir1) hLines.push(`<div style="font-size:13px">${dir1}</div>`);
   const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (dir2) hLines.push(`<div style="font-size:13px">${dir2}</div>`);
-  if (empresa.telefono) hLines.push(`<div style="font-size:13px">Tel: ${empresa.telefono}</div>`);
-  if (empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
+  if (showDir && dir2) hLines.push(`<div style="font-size:13px">${dir2}</div>`);
+  if (showTel && empresa.telefono) hLines.push(`<div style="font-size:13px">Tel: ${empresa.telefono}</div>`);
+  if (showDir && empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
   const headerHtml = hLines.join('');
 
   // ── Body (monospace <pre> grid) ──
