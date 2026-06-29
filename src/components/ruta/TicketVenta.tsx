@@ -13,7 +13,7 @@ interface DevolucionTicketItem {
 }
 
 interface TicketVentaProps {
-  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null; razon_social?: string | null; colonia?: string | null; ciudad?: string | null; estado?: string | null; cp?: string | null; email?: string | null; notas_ticket?: string | null };
+  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null; razon_social?: string | null; colonia?: string | null; ciudad?: string | null; estado?: string | null; cp?: string | null; email?: string | null; notas_ticket?: string | null; ticket_campos?: Record<string, boolean> | null };
   folio: string;
   fecha: string;
   clienteNombre: string;
