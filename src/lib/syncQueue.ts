@@ -108,6 +108,11 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       const isConflict = err?.code === '23505'; // unique_violation
       const isFkMissing = err?.code === '23503'; // foreign_key_violation — parent not synced yet
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
+      // RLS violation: usually the parent row isn't visible yet (its insert is still pending
+      // or failed earlier in this pass). Treat as deferrable so the child waits, instead of
+      // burning retries and getting stuck as "pending por sincronizar".
+      const CHILD_TABLES_RLS_DEFER = ['devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
+      const isRlsViolation = err?.code === '42501' && CHILD_TABLES_RLS_DEFER.includes(item.table);
 
       const newRetries = (item.retries ?? 0) + 1;
       const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
@@ -116,8 +121,9 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isFkMissing) {
+      if (isFkMissing || isRlsViolation) {
         // Parent record hasn't been synced yet in this pass — push to end of queue
+
         // by resetting createdAt so it processes after siblings.
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
@@ -169,6 +175,17 @@ async function processItem(item: SyncQueueItem) {
       delete cleanData[key];
     }
   }
+
+  // Sanitize legacy/garbage enum values that can lock items in the queue forever.
+  // (e.g. older PWA builds queued devoluciones with tipo: "—" which fails enum check
+  // and then orphans the child devolucion_lineas via RLS until the parent exists.)
+  if (table === 'devoluciones') {
+    const validTipos = ['almacen', 'tienda'];
+    if (!validTipos.includes(cleanData.tipo)) {
+      cleanData.tipo = cleanData.cliente_id ? 'tienda' : 'almacen';
+    }
+  }
+
 
   switch (operation) {
     case 'insert': {
