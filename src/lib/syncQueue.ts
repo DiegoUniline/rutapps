@@ -254,6 +254,9 @@ export async function resurrectDeadLetters(tables: string[]): Promise<number> {
     await offlineDb.syncQueue.update(it.id!, { retries: 0, createdAt: Date.now() - 60_000 });
   }
   return targets.length;
+}
+
+
 
 // Clear entire sync queue (use with caution)
 export async function clearSyncQueue() {
