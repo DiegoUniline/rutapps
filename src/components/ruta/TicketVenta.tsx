@@ -187,19 +187,31 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
           {/* ─── Printable ticket ─── */}
           <div ref={ticketRef}>
-            {/* Company */}
-            <div className="tk-center px-5 pt-4 pb-2">
-              {empresa.logo_url && (
-                <img src={empresa.logo_url} alt={empresa.nombre} className="tk-logo h-8 max-w-[120px] object-contain mx-auto mb-1" />
-              )}
-              <p className="tk-empresa text-[12px] font-bold text-foreground">{empresa.nombre}</p>
-              {empresa.razon_social && <p className="tk-sub text-[9px] text-muted-foreground">{empresa.razon_social}</p>}
-              {empresa.rfc && <p className="tk-sub text-[9px] text-muted-foreground">RFC: {empresa.rfc}</p>}
-              {(() => { const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', '); return dir1 ? <p className="tk-sub text-[8px] text-muted-foreground mt-px">{dir1}</p> : null; })()}
-              {(() => { const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', '); return dir2 ? <p className="tk-sub text-[8px] text-muted-foreground">{dir2}</p> : null; })()}
-              {empresa.telefono && <p className="tk-sub text-[8px] text-muted-foreground">Tel: {empresa.telefono}</p>}
-              {empresa.email && <p className="tk-sub text-[8px] text-muted-foreground">{empresa.email}</p>}
-            </div>
+            {(() => {
+              const tc = (empresa as any).ticket_campos ?? {};
+              const showLogo = tc.logo !== false;
+              const showNombre = tc.nombre !== false;
+              const showRazon = tc.razon_social !== false;
+              const showRfc = tc.rfc !== false;
+              const showDir = tc.direccion !== false;
+              const showTel = tc.telefono !== false;
+              const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', ');
+              const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
+              return (
+                <div className="tk-center px-5 pt-4 pb-2">
+                  {showLogo && empresa.logo_url && (
+                    <img src={empresa.logo_url} alt={empresa.nombre} className="tk-logo h-8 max-w-[120px] object-contain mx-auto mb-1" />
+                  )}
+                  {showNombre && <p className="tk-empresa text-[12px] font-bold text-foreground">{empresa.nombre}</p>}
+                  {showRazon && empresa.razon_social && <p className="tk-sub text-[9px] text-muted-foreground">{empresa.razon_social}</p>}
+                  {showRfc && empresa.rfc && <p className="tk-sub text-[9px] text-muted-foreground">RFC: {empresa.rfc}</p>}
+                  {showDir && dir1 && <p className="tk-sub text-[8px] text-muted-foreground mt-px">{dir1}</p>}
+                  {showDir && dir2 && <p className="tk-sub text-[8px] text-muted-foreground">{dir2}</p>}
+                  {showTel && empresa.telefono && <p className="tk-sub text-[8px] text-muted-foreground">Tel: {empresa.telefono}</p>}
+                  {showDir && empresa.email && <p className="tk-sub text-[8px] text-muted-foreground">{empresa.email}</p>}
+                </div>
+              );
+            })()}
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
