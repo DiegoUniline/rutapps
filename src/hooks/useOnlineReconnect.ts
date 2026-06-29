@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { offlineDb } from '@/lib/offlineDb';
 import { downloadAllData, MOBILE_QUICK_SYNC_TABLES, retryFailedTables, getFailedTables } from '@/lib/offlineSync';
-import { processSyncQueue } from '@/lib/syncQueue';
+import { processSyncQueue, resurrectDeadLetters } from '@/lib/syncQueue';
 import { hasRealConnection } from '@/lib/connectivity';
 
 /**
