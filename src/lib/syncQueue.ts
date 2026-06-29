@@ -170,6 +170,17 @@ async function processItem(item: SyncQueueItem) {
     }
   }
 
+  // Sanitize legacy/garbage enum values that can lock items in the queue forever.
+  // (e.g. older PWA builds queued devoluciones with tipo: "—" which fails enum check
+  // and then orphans the child devolucion_lineas via RLS until the parent exists.)
+  if (table === 'devoluciones') {
+    const validTipos = ['almacen', 'tienda'];
+    if (!validTipos.includes(cleanData.tipo)) {
+      cleanData.tipo = cleanData.cliente_id ? 'tienda' : 'almacen';
+    }
+  }
+
+
   switch (operation) {
     case 'insert': {
       const { data: returned, error } = await (supabase.from as any)(table).upsert(cleanData).select();
