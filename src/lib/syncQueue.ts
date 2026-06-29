@@ -244,6 +244,17 @@ export async function retryDeadLetters(): Promise<number> {
   return deadLetters.length;
 }
 
+// Resurrect dead letters for specific tables (used to recover items orphaned by
+// older builds whose root cause has since been patched, e.g. devoluciones with
+// invalid enum values that we now sanitize on each retry).
+export async function resurrectDeadLetters(tables: string[]): Promise<number> {
+  const items = await offlineDb.syncQueue.toArray();
+  const targets = items.filter(i => (i.retries ?? 0) > MAX_RETRIES && tables.includes(i.table));
+  for (const it of targets) {
+    await offlineDb.syncQueue.update(it.id!, { retries: 0, createdAt: Date.now() - 60_000 });
+  }
+  return targets.length;
+
 // Clear entire sync queue (use with caution)
 export async function clearSyncQueue() {
   await offlineDb.syncQueue.clear();
