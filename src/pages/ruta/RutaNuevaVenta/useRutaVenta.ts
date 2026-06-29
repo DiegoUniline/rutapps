@@ -488,7 +488,25 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return m;
   }, [promoResults]);
 
-  const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
+  const descuentoDevolucion = useMemo(() => {
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    return devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => {
+      const prod: any = productos?.find((p: any) => p.id === d.producto_id);
+      // Base price: from devolución, fallback to product, fallback to cart line
+      let base = d.precio_unitario;
+      if (!base || base <= 0) {
+        const cartLine = cart.find(c => c.producto_id === d.producto_id && !c.es_cambio);
+        base = prod?.precio_principal ?? cartLine?.precio_unitario ?? 0;
+      }
+      // Include taxes so the discount actually reduces the tax-inclusive total
+      let factor = 1;
+      if (!sinImpuestos && prod) {
+        if (prod.tiene_iva) factor += (prod.iva_pct ?? 16) / 100;
+        if (prod.tiene_ieps && prod.ieps_tipo !== 'cuota') factor += (prod.ieps_pct ?? 0) / 100;
+      }
+      return s + r2(base * factor) * d.cantidad;
+    }, 0);
+  }, [devoluciones, productos, cart, sinImpuestos]);
 
   const totals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;

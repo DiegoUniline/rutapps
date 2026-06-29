@@ -206,8 +206,16 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
 
   add(INIT);
 
+  const tc = data.empresa.ticket_campos ?? {};
+  const showLogo = tc.logo !== false;
+  const showNombre = tc.nombre !== false;
+  const showRazon = tc.razon_social !== false;
+  const showRfc = tc.rfc !== false;
+  const showDir = tc.direccion !== false;
+  const showTel = tc.telefono !== false;
+
   // ── LOGO (raster image) ──
-  if (data.empresa.logo_url && data.empresa.ticket_campos?.logo !== false) {
+  if (showLogo && data.empresa.logo_url) {
     add(ALIGN_CENTER);
     const logoBytes = await logoToRasterBytes(data.empresa.logo_url, maxPixelWidth);
     if (logoBytes.length > 0) {
@@ -218,19 +226,21 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
 
   // ── HEADER (centered via ESC/POS command) ──
   add(ALIGN_CENTER);
-  add(BOLD_ON);
-  ln(clean(data.empresa.nombre).slice(0, W));
-  add(BOLD_OFF);
-  if (data.empresa.razon_social) ln(clean(data.empresa.razon_social).slice(0, W));
-  if (data.empresa.rfc) ln(clean(`RFC: ${data.empresa.rfc}`).slice(0, W));
+  if (showNombre) {
+    add(BOLD_ON);
+    ln(clean(data.empresa.nombre).slice(0, W));
+    add(BOLD_OFF);
+  }
+  if (showRazon && data.empresa.razon_social) ln(clean(data.empresa.razon_social).slice(0, W));
+  if (showRfc && data.empresa.rfc) ln(clean(`RFC: ${data.empresa.rfc}`).slice(0, W));
   const dir = [data.empresa.direccion, data.empresa.colonia].filter(Boolean).join(', ');
-  if (dir) {
+  if (showDir && dir) {
     wrap(dir, W).forEach(l => ln(l.trim()));
   }
   const dir2Parts = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (dir2Parts) ln(clean(dir2Parts).slice(0, W));
-  if (data.empresa.telefono) ln(clean(`Tel: ${data.empresa.telefono}`).slice(0, W));
-  if (data.empresa.email) ln(clean(data.empresa.email).slice(0, W));
+  if (showDir && dir2Parts) ln(clean(dir2Parts).slice(0, W));
+  if (showTel && data.empresa.telefono) ln(clean(`Tel: ${data.empresa.telefono}`).slice(0, W));
+  if (showDir && data.empresa.email) ln(clean(data.empresa.email).slice(0, W));
   add(LF);
 
   // ── INFO (left) ──
@@ -321,7 +331,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   add(LF);
   add(ALIGN_CENTER);
   ln('Gracias por su compra');
-  if (data.empresa.notas_ticket) {
+  if (tc.notas_ticket !== false && data.empresa.notas_ticket) {
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
