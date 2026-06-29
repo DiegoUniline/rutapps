@@ -69,14 +69,24 @@ Deno.serve(async (req) => {
       rules = (tr ?? []) as Rule[];
     }
 
-    // Productos
-    const { data: productos } = await supabase
-      .from("productos")
-      .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
-      .eq("empresa_id", cfg.empresa_id)
-      .eq("status", "activo")
-      .eq("se_puede_vender", true)
-      .limit(3000);
+    // Productos — paginar para evitar el tope de 1000 filas de Supabase
+    const productos: any[] = [];
+    const PAGE = 1000;
+    for (let page = 0; page < 50; page++) {
+      const from = page * PAGE;
+      const to = from + PAGE - 1;
+      const { data: chunk, error: pErr } = await supabase
+        .from("productos")
+        .select("id, nombre, codigo, notas, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio, vender_sin_stock")
+        .eq("empresa_id", cfg.empresa_id)
+        .eq("status", "activo")
+        .eq("se_puede_vender", true)
+        .range(from, to);
+      if (pErr) throw pErr;
+      const rows = chunk ?? [];
+      productos.push(...rows);
+      if (rows.length < PAGE) break;
+    }
 
     if (!productos || productos.length === 0) {
       return json({ cliente, lista_nombre: listaNombre, productos: [], categorias: [], marcas: [] });
@@ -87,13 +97,35 @@ Deno.serve(async (req) => {
     const unidadIds = [...new Set(productos.map((p: any) => p.unidad_venta_id).filter(Boolean))];
     const prodIds = productos.map((p: any) => p.id);
 
+    // Stock paginado en chunks de IDs y por filas
+    const fetchStock = async () => {
+      const out: any[] = [];
+      const CHUNK = 300;
+      for (let i = 0; i < prodIds.length; i += CHUNK) {
+        const ids = prodIds.slice(i, i + CHUNK);
+        let page = 0;
+        while (page < 50) {
+          const from = page * 1000;
+          const to = from + 999;
+          let q = cfg.almacen_id
+            ? supabase.from("stock_almacen").select("producto_id, cantidad").eq("almacen_id", cfg.almacen_id).in("producto_id", ids)
+            : supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", ids);
+          const { data: rows, error: sErr } = await q.range(from, to);
+          if (sErr) throw sErr;
+          const r = rows ?? [];
+          out.push(...r);
+          if (r.length < 1000) break;
+          page++;
+        }
+      }
+      return { data: out };
+    };
+
     const [cR, mR, uR, sR] = await Promise.all([
       clasifIds.length ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds) : { data: [] },
       marcaIds.length ? supabase.from("marcas").select("id, nombre").in("id", marcaIds) : { data: [] },
       unidadIds.length ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds) : { data: [] },
-      (cfg.almacen_id
-        ? supabase.from("stock_almacen").select("producto_id, cantidad").eq("almacen_id", cfg.almacen_id).in("producto_id", prodIds)
-        : supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", prodIds)),
+      fetchStock(),
     ]);
     const cMap = new Map((cR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const mMap = new Map((mR.data ?? []).map((x: any) => [x.id, x.nombre]));
