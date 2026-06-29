@@ -219,7 +219,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
 
   add('');
   add(centerText('Gracias por su compra'));
-  if (empresa.notas_ticket) add(centerText(empresa.notas_ticket));
+  if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
   add(centerText('rutapp.mx'));
 
   const bodyContent = rows.join('\n');
