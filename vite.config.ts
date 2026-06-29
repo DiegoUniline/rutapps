@@ -37,6 +37,29 @@ export default defineConfig(({ mode }) => ({
     '__BUILD_DATE__': JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')),
     '__APP_VERSION__': JSON.stringify(APP_VERSION),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Separa librerías estables (vendor) en chunks propios y cacheables.
+        // No cambia el código que corre: solo agrupa el empaquetado para que
+        // el navegador no re-descargue React/Supabase/etc. en cada deploy.
+        // Las libs pesadas que ya cargan bajo demanda (xlsx, jspdf, maps,
+        // recharts) NO se agrupan aquí para conservar su carga diferida.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('/react-dom/') || id.includes('/react/') ||
+              id.includes('/react-router') || id.includes('/scheduler/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('/@radix-ui/')) return 'radix-vendor';
+          if (id.includes('/@supabase/')) return 'supabase-vendor';
+          if (id.includes('/@tanstack/')) return 'query-vendor';
+          if (id.includes('/date-fns/')) return 'date-fns-vendor';
+          if (id.includes('/lucide-react/')) return 'icons-vendor';
+        },
+      },
+    },
+  },
   server: {
     host: "::",
     port: 8080,
