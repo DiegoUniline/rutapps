@@ -404,7 +404,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">
               <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>
-              {empresa.notas_ticket && <p className="text-[8px] text-muted-foreground">{empresa.notas_ticket}</p>}
+              {((empresa as any).ticket_campos?.notas_ticket !== false) && empresa.notas_ticket && <p className="text-[8px] text-muted-foreground">{empresa.notas_ticket}</p>}
               <p className="text-[8px] text-muted-foreground">rutapp.mx</p>
             </div>
           </div>
