@@ -695,7 +695,7 @@
 @supports (padding: max(0px)) {
   .tienda-header { padding-top: env(safe-area-inset-top); }
   .tienda-footer { padding-bottom: max(22px, env(safe-area-inset-bottom)); }
-  .tienda-cart-summary {
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  .tienda-cart-summary-cta {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
