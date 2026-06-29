@@ -331,7 +331,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   add(LF);
   add(ALIGN_CENTER);
   ln('Gracias por su compra');
-  if (data.empresa.notas_ticket) {
+  if (tc.notas_ticket !== false && data.empresa.notas_ticket) {
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
