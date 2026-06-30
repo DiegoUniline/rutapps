@@ -8545,6 +8545,7 @@ export type Database = {
         Args: { p_deleted_by: string; p_empresa_ids: string[] }
         Returns: Json
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
