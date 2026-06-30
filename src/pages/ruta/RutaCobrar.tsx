@@ -1,11 +1,13 @@
 import { todayLocal } from '@/lib/utils';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
+import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { useSaldoFavor } from '@/hooks/useSaldoFavor';
+import { SALDO_FAVOR_METODO, aplicarSaldoFavor } from '@/lib/saldoFavor';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -123,6 +125,24 @@ export default function RutaCobrar() {
     [ventasPendientes]
   );
 
+  // Saldo a favor (crédito por nota de crédito) disponible del cliente.
+  const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
+  const usandoSaldoFavor = metodoPago === SALDO_FAVOR_METODO;
+  // Métodos a mostrar: "Saldo a favor" solo aparece si el cliente tiene disponible.
+  const metodosMostrar = useMemo(() => {
+    const base = [...METODOS_PAGO] as { value: string; label: string; icon: any }[];
+    if (saldoFavorDisp > 0) base.push({ value: SALDO_FAVOR_METODO, label: 'Saldo a favor', icon: PiggyBank });
+    return base;
+  }, [saldoFavorDisp]);
+
+  // Pre-llena el monto con el saldo a favor y selecciona el método.
+  const usarSaldoFavor = () => {
+    const { aplicado } = aplicarSaldoFavor(saldoFavorDisp, totalPendienteCliente);
+    if (aplicado <= 0) return;
+    setMetodoPago(SALDO_FAVOR_METODO);
+    setMontoRecibido(String(aplicado));
+  };
+
   // Auto-apply amount to oldest debts first
   const autoApply = (monto: number, ventas: typeof ventasPendientes) => {
     if (!ventas || ventas.length === 0) return [];
@@ -164,6 +184,11 @@ export default function RutaCobrar() {
 
   const handleSave = async () => {
     if (!empresa || !user || totalAplicado <= 0) return;
+    // No permitir aplicar más saldo a favor del disponible.
+    if (usandoSaldoFavor && totalAplicado > saldoFavorDisp + 0.01) {
+      toast.error(`Saldo a favor insuficiente. Disponible: ${fmtC(saldoFavorDisp)}`);
+      return;
+    }
     setSaving(true);
     try {
       const cobroId = crypto.randomUUID();
@@ -409,6 +434,22 @@ export default function RutaCobrar() {
                 </button>
               )}
             </div>
+
+            {/* Saldo a favor disponible (opcional) */}
+            {saldoFavorDisp > 0 && (
+              <button
+                onClick={usarSaldoFavor}
+                className={`w-full rounded-xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform border ${usandoSaldoFavor ? 'bg-primary/10 border-primary' : 'bg-card border-border'}`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <PiggyBank className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Tiene saldo a favor: {fmt(saldoFavorDisp)}</p>
+                  <p className="text-xs text-muted-foreground">{usandoSaldoFavor ? 'Se usará para este cobro ✓' : 'Toca para usarlo en este cobro'}</p>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Continue button */}
@@ -538,7 +579,7 @@ export default function RutaCobrar() {
             <section className="bg-card rounded-xl p-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Método de pago</p>
               <div className="grid grid-cols-4 gap-2">
-                {METODOS_PAGO.map(m => (
+                {metodosMostrar.map(m => (
                   <button
                     key={m.value}
                     onClick={() => setMetodoPago(m.value)}
@@ -554,7 +595,7 @@ export default function RutaCobrar() {
                 ))}
               </div>
 
-              {metodoPago !== 'efectivo' && (
+              {metodoPago !== 'efectivo' && !usandoSaldoFavor && (
                 <input
                   type="text"
                   placeholder="Referencia / No. operación"
@@ -562,6 +603,13 @@ export default function RutaCobrar() {
                   value={referencia}
                   onChange={e => setReferencia(e.target.value)}
                 />
+              )}
+
+              {usandoSaldoFavor && (
+                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+                  <PiggyBank className="h-3.5 w-3.5 text-primary shrink-0" />
+                  Disponible {fmt(saldoFavorDisp)} · se descontará {fmt(totalAplicado)} del saldo a favor
+                </p>
               )}
             </section>
 

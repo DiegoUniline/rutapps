@@ -124,6 +124,23 @@ export async function fetchOtrasPendientesWithFallback(clienteId: string) {
     .map((v: any) => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total, saldo_pendiente: v.saldo_pendiente }));
 }
 
+export interface DevFinItem {
+  nombre: string;
+  cantidad: number;
+  motivo: string;
+  accion: string;
+  monto_credito: number;
+  cliente: string;
+}
+
+/** Efectivo entregado al cliente por devoluciones de dinero (sale de la caja del vendedor). */
+function sumDevolucionesDinero(items: DevFinItem[]): number {
+  return Math.round(
+    items.filter(i => i.accion === 'devolucion_dinero')
+      .reduce((s, i) => s + (Number(i.monto_credito) || 0), 0) * 100,
+  ) / 100;
+}
+
 /** Cálculos financieros del día para liquidación de ruta. Lee de IndexedDB si offline. */
 export async function fetchDescargaFinancialsWithFallback(args: {
   empresaId: string;
@@ -138,12 +155,12 @@ export async function fetchDescargaFinancialsWithFallback(args: {
         supabase.from('ventas').select('total').eq('vendedor_id', vendedorId).eq('fecha', today).eq('condicion_pago', 'contado').neq('status', 'cancelado'),
         supabase.from('cobros').select('monto, metodo_pago').eq('empresa_id', empresaId).eq('user_id', userId).eq('fecha', today).neq('status', 'cancelado'),
         supabase.from('gastos').select('monto').eq('vendedor_id', vendedorId).eq('fecha', today),
-        supabase.from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, productos(nombre))').eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today),
+        supabase.from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos(nombre))').eq('empresa_id', empresaId).eq('vendedor_id', vendedorId).eq('fecha', today),
       ]);
       const ventasContado = (ventasRes.data || []).reduce((s, v: any) => s + (Number(v.total) || 0), 0);
       const cobrosEfectivo = (cobrosRes.data || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s, c: any) => s + (Number(c.monto) || 0), 0);
       const gastosTotal = (gastosRes.data || []).reduce((s, g: any) => s + (Number(g.monto) || 0), 0);
-      const devItems: { nombre: string; cantidad: number; motivo: string; accion: string; cliente: string }[] = [];
+      const devItems: DevFinItem[] = [];
       (devsRes.data || []).forEach((d: any) => {
         (d.devolucion_lineas || []).forEach((l: any) => {
           devItems.push({
@@ -151,11 +168,12 @@ export async function fetchDescargaFinancialsWithFallback(args: {
             cantidad: Number(l.cantidad),
             motivo: l.motivo || '—',
             accion: l.accion || 'reposicion',
+            monto_credito: Number(l.monto_credito) || 0,
             cliente: d.clientes?.nombre || '—',
           });
         });
       });
-      return { ventasContado, cobrosEfectivo, gastosTotal, devItems };
+      return { ventasContado, cobrosEfectivo, gastosTotal, devItems, devolucionesDinero: sumDevolucionesDinero(devItems) };
     } catch (err) {
       console.warn('[fetchDescargaFinancialsWithFallback] server failed, using cache:', err);
     }
@@ -183,7 +201,7 @@ export async function fetchDescargaFinancialsWithFallback(args: {
   const cliMap = new Map(clientes.map((c: any) => [c.id, c]));
   const devsDelDia = devoluciones.filter((d: any) => d.empresa_id === empresaId && d.vendedor_id === vendedorId && d.fecha === today);
   const devIds = new Set(devsDelDia.map((d: any) => d.id));
-  const devItems: { nombre: string; cantidad: number; motivo: string; accion: string; cliente: string }[] = [];
+  const devItems: DevFinItem[] = [];
   for (const l of devLineas) {
     if (!devIds.has(l.devolucion_id)) continue;
     const dev = devsDelDia.find((d: any) => d.id === l.devolucion_id);
@@ -192,10 +210,11 @@ export async function fetchDescargaFinancialsWithFallback(args: {
       cantidad: Number(l.cantidad),
       motivo: l.motivo || '—',
       accion: l.accion || 'reposicion',
+      monto_credito: Number(l.monto_credito) || 0,
       cliente: dev?.cliente_id ? (cliMap.get(dev.cliente_id)?.nombre ?? '—') : '—',
     });
   }
-  return { ventasContado, cobrosEfectivo, gastosTotal, devItems };
+  return { ventasContado, cobrosEfectivo, gastosTotal, devItems, devolucionesDinero: sumDevolucionesDinero(devItems) };
 }
 
 /** Verifica si ya existe una liquidación enviada hoy (por carga, vendedor o user). */
