@@ -14,6 +14,7 @@ import {
   Route, Info, Clock, TrendingUp, MapPinOff, Eye, EyeOff, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn, todayInTimezone } from '@/lib/utils';
+import { clienteTieneDia } from '@/lib/rutaDays';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import MyLocationMarkerML from '@/components/MyLocationMarkerML';
@@ -350,7 +351,7 @@ export default function MapaClientesPage() {
     let result = clientes ?? [];
     if (zonaFilter) result = result.filter((c: any) => c.zona_id === zonaFilter);
     if (vendedorFilter) result = result.filter((c: any) => c.vendedor_id === vendedorFilter);
-    if (diaFilter) result = result.filter((c: any) => c.dia_visita?.includes(diaFilter));
+    if (diaFilter) result = result.filter((c: any) => clienteTieneDia(c, diaFilter));
     if (clienteIdsFilter.size > 0) result = result.filter((c: any) => clienteIdsFilter.has(c.id));
     return result;
   }, [clientes, zonaFilter, vendedorFilter, diaFilter, clienteIdsFilter]);
@@ -387,7 +388,7 @@ export default function MapaClientesPage() {
 
   const posOf = useCallback((c: any) => displayCoords.get(c.id) ?? { lat: c.gps_lat, lng: c.gps_lng }, [displayCoords]);
 
-  const todayClients = useMemo(() => filtered.filter((c: any) => c.dia_visita?.includes(DIA_HOY)), [filtered]);
+  const todayClients = useMemo(() => filtered.filter((c: any) => clienteTieneDia(c, DIA_HOY)), [filtered]);
   const visitedCount = useMemo(() => {
     if (!ventasHoy) return 0;
     return todayClients.filter((c: any) => ventasHoy.has(c.id)).length;
@@ -671,8 +672,8 @@ export default function MapaClientesPage() {
     }
     if (colorMode === 'dia') {
       const dias: string[] = cliente.dia_visita ?? [];
-      if (diaFilter && dias.includes(diaFilter)) return DIA_COLORS[diaFilter] ?? '#6366f1';
-      const todayMatch = dias.includes(DIA_HOY);
+      if (diaFilter && clienteTieneDia(cliente, diaFilter)) return DIA_COLORS[diaFilter] ?? '#6366f1';
+      const todayMatch = clienteTieneDia(cliente, DIA_HOY);
       if (todayMatch) return DIA_COLORS[DIA_HOY] ?? '#6366f1';
       if (dias.length > 0) return DIA_COLORS[dias[0]] ?? '#6366f1';
       return '#9ca3af';
@@ -1225,7 +1226,7 @@ export default function MapaClientesPage() {
                   <div className="font-bold text-sm flex-1">{selectedCliente.nombre}</div>
                   {ventasHoy?.has(selectedCliente.id) ? (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Visitado</span>
-                  ) : selectedCliente.dia_visita?.includes(DIA_HOY) ? (
+                  ) : clienteTieneDia(selectedCliente, DIA_HOY) ? (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Pendiente</span>
                   ) : null}
                 </div>
