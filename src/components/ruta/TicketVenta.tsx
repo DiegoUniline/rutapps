@@ -108,11 +108,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
   };
 
   const handleShare = async () => {
+    // Respeta la config del ticket (ticket_campos), igual que el ticket impreso.
+    const tc = (empresa as any).ticket_campos ?? {};
     const text = [
-      empresa.nombre,
-      empresa.rfc ? `RFC: ${empresa.rfc}` : '',
-      empresa.direccion ?? '',
-      empresa.telefono ? `Tel: ${empresa.telefono}` : '',
+      tc.nombre !== false ? empresa.nombre : '',
+      tc.rfc !== false && empresa.rfc ? `RFC: ${empresa.rfc}` : '',
+      tc.direccion !== false ? (empresa.direccion ?? '') : '',
+      tc.telefono !== false && empresa.telefono ? `Tel: ${empresa.telefono}` : '',
       '─'.repeat(30),
       `Folio: ${folio}`,
       `Fecha: ${fecha}`,
