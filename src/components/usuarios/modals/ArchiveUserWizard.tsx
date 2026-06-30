@@ -229,10 +229,24 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
                     <AlertTriangle className="h-3.5 w-3.5" /> Resuelve los pendientes antes de archivar
                   </span>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   <button onClick={onClose} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent">Cancelar</button>
+                  {isSuperAdmin && !summary.puede_archivar && (
+                    <button
+                      onClick={() => handleArchive(true)}
+                      disabled={archiving}
+                      className={cn(
+                        'text-xs px-3 py-1.5 rounded border border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 flex items-center gap-1',
+                        archiving && 'opacity-50 cursor-not-allowed'
+                      )}
+                      title="Solo Super Admin: archiva ignorando pendientes"
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      {archiving ? 'Archivando…' : 'Forzar archivado (Super Admin)'}
+                    </button>
+                  )}
                   <button
-                    onClick={handleArchive}
+                    onClick={() => handleArchive(false)}
                     disabled={!summary.puede_archivar || archiving}
                     className={cn(
                       'text-xs px-3 py-1.5 rounded text-primary-foreground bg-destructive hover:bg-destructive/90',
