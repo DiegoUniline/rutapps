@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Trash2, AlertTriangle, Clock, CheckCircle2, Loader2, CloudOff, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -75,6 +75,17 @@ export default function PendientesSincronizarPage() {
   const { items, pending, retrying, failed, total, loading, reload } = usePendingQueue();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [busyAll, setBusyAll] = useState(false);
+
+  // Auto-reprocess every 15s while page is visible and online — recovers items
+  // stuck from older builds without forcing the user to tap "Reintentar todo".
+  useEffect(() => {
+    if (!isOnline || total === 0) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      processSyncQueue().then(() => reload()).catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, [isOnline, total, reload]);
 
   const handleRetry = async (item: PendingQueueItem) => {
     if (!item.id) return;

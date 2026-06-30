@@ -1,62 +1,55 @@
-# Plan: Sitio de marketing Rutapp (aplicado a /landing-nueva)
 
-## Alcance
-Transformar `/landing-nueva` en un sitio de marketing completo con SEO real, páginas por giro y CTA WhatsApp. La app actual sigue funcionando en sus rutas normales.
+## Diagnóstico
 
-## Cambios estructurales
+Los 2 errores del screenshot vienen del **orden** en que se encolan las operaciones al guardar una venta con devoluciones en `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`:
 
-### 1. SEO base
-- Instalar `react-helmet-async` y envolver el app en `HelmetProvider` (en `src/main.tsx`).
-- Crear componente `<SEO />` reutilizable (title, description, OG, Twitter, canonical, JSON-LD opcional).
-- Agregar JSON-LD: SoftwareApplication + Organization en home; FAQPage en home y giros.
-- Generar `public/robots.txt` y `scripts/generate-sitemap.ts` (predev/prebuild) con todas las rutas marketing.
+```
+queueOperation('devoluciones', insert, { venta_id: ventaId, … })   ← línea 626
+queueOperation('devolucion_lineas', insert, { devolucion_id, … })  ← línea 629
+… (más items) …
+queueOperation('ventas', insert, { id: ventaId, … })               ← línea 734
+queueOperation('venta_lineas', …)                                  ← línea 737
+```
 
-### 2. Rutas nuevas (todas públicas, indexables)
-- `/landing-nueva` → Home rediseñada (queda como la landing oficial nueva)
-- `/landing-nueva/giros` → índice de giros
-- `/landing-nueva/giros/distribuidoras-de-abarrotes`
-- `/landing-nueva/giros/refresqueras-y-bebidas`
-- `/landing-nueva/giros/panaderias-y-reparto`
-- `/landing-nueva/giros/productos-de-limpieza`
-- `/landing-nueva/giros/lacteos-y-cremerias`
-- `/landing-nueva/giros/botanas-y-dulces`
-- `/landing-nueva/giros/agua-purificada`
-- `/landing-nueva/precios`
+El `syncQueue` procesa por `createdAt` ascendente, así que en el primer pase:
 
-Nota: las rutas viven bajo `/landing-nueva/*` para no chocar con la app actual. Cuando el usuario decida reemplazar la landing oficial, se promueven a raíz.
+1. **`devoluciones`** se envía **antes** que `ventas` → Postgres rechaza con `23503` (FK `devoluciones_venta_id_fkey`) porque la venta aún no existe en el servidor. Se difiere correctamente (`isFkMissing`), pero **queda con `createdAt = Date.now() + 1000`**.
+2. **`devolucion_lineas`** se envía antes que su padre devolución exista en servidor → `42501` RLS. También se difiere.
+3. La `ventas` sí se sube bien y desaparece de la cola — por eso en el screenshot **solo quedan** la devolución y su línea.
 
-### 3. Home reordenada según spec
-Orden: Navbar sticky → Hero (H1 de resultado + CTA WhatsApp + Probar gratis) → Barra de prueba social → Problema/Solución → Cómo funciona en 3 pasos → Beneficios → Diferenciadores → Testimonios → Precios (3 planes, toggle mensual/anual, "Recomendado" al centro) → FAQ (acordeón + JSON-LD) → CTA final → Footer.
+A partir de ahí el reintento automático **no se vuelve a disparar** solo: `processSyncQueue()` arranca por `queueOperation` (no hay más) o por `useOnlineReconnect` (no hay cambio de red). El usuario está online y mirando la página, pero no pasa nada — por eso ves "Intentos: 1, hace 55s" permanentes. El stock sí se restauró porque ese path es el trigger BD sobre `devolucion_lineas`, pero aplicado **localmente** en IndexedDB; en servidor sigue pendiente.
 
-Mantengo lo que ya brilla: hero con foto real del vendedor, animaciones framer-motion, multi-currency en precios, sección WhatsApp animada, mockups del sistema. Reorganizo para que el orden sea exactamente el del brief.
+## Plan de corrección (mínimo, sin tocar UI ni lógica de negocio)
 
-### 4. CTA WhatsApp global
-- Helper `waLink(message)` que construye `https://wa.me/52XXXXXXXXXX?text=...` con placeholder `XXXXXXXXXX` definido en `src/lib/marketing.ts` (un solo lugar para cambiar el número).
-- Botón flotante WhatsApp en mobile.
+### 1) `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` — orden de encolado
+Mover el bloque `if (devoluciones.length > 0 && clienteId) { … }` (líneas 623–700) para que se ejecute **después** del `queueOperation('ventas', 'insert', …)` de la línea 734 (y también después del loop de `venta_lineas` para mantener coherencia padre→hijo). Así el primer pase ya encuentra la venta en servidor y la devolución entra a la primera.
 
-### 5. Plantilla de giro
-- `src/components/landing/GiroTemplate.tsx` parametrizada: hero específico, 3 dolores, beneficios mapeados, prueba social, FAQ corto, CTA WhatsApp.
-- 7 archivos delgados en `src/pages/landing/giros/` que solo pasan props.
+No se cambia ningún cálculo, ni el restablecimiento de stock local, ni el contenido de los payloads — solo se reordena la inserción en la cola.
 
-### 6. Página /precios
-Extrae la sección de precios actual, agrega comparativa y FAQ de pricing.
+### 2) `src/lib/syncQueue.ts` — orden topológico padre→hijo
+Antes de iterar `items`, ordenar usando una prioridad por tabla (padres primero), con `createdAt` como desempate:
 
-### 7. Página /giros índice
-Grid con los 7 giros + CTA.
+```
+PRIORIDAD: ventas, cargas, devoluciones, cobros, entregas, compras, cotizaciones, traspasos, mermas, descarga_ruta, cfdis, conteos_fisicos, auditorias, ...
+HIJOS:     venta_lineas, carga_lineas, devolucion_lineas, cobro_aplicaciones, entrega_lineas, compra_lineas, ...
+```
+
+Esto cubre cualquier futuro path donde alguien encole un hijo antes del padre sin que el síncer se atore.
+
+### 3) `src/lib/syncQueue.ts` — reintento inmediato dentro del mismo pase
+Cuando un item se difiere por `isFkMissing` o RLS y dentro del **mismo pase** se sincroniza un item de la tabla padre que faltaba, hacer un segundo barrido de los items diferidos al final del loop. Evita esperar 30s a la siguiente ventana.
+
+### 4) `src/pages/ruta/PendientesSincronizarPage.tsx` — re-trigger periódico
+Mientras la página esté visible y haya items, llamar `processSyncQueue()` cada 15s si `isOnline`. Es un seguro para casos viejos ya en cola por bugs anteriores, sin requerir que el usuario presione "Reintentar todo".
+
+### Recuperación de los 2 items del screenshot
+Tras subir el fix, esos 2 items se reintentan solos en el siguiente pase (paso 4) o al tocar "Reintentar todo". No requieren limpieza manual: la venta ya existe en servidor, así que la devolución y su línea pasarán a la primera.
 
 ## Detalles técnicos
-- Stack ya es React + Vite + Tailwind ✓
-- Imágenes existentes ya son `.jpg/.webp` con lazy loading.
-- Paleta: respeto la marca actual (azul Rutapp + naranja), no cambio a #1a1a2e porque viola la memoria de marca del proyecto. Si el usuario lo quiere oscuro a fuerza, lo aplico después.
-- Sin formularios: CTAs van a WhatsApp y a `/auth` (alta existente = "1 paso").
-- Sitemap incluye home actual `/`, `/landing-nueva` y todas las páginas marketing.
 
-## Fuera de alcance
-- No toco la app (auth, dashboard, módulos).
-- No reemplazo la home `/` actual sin confirmación; la nueva sigue en `/landing-nueva/*`.
-- Número de WhatsApp queda como placeholder hasta que lo pases.
+- Solo se editan 2 archivos de lógica (`useRutaVenta.ts`, `syncQueue.ts`) y 1 de UI mínima (`PendientesSincronizarPage.tsx`).
+- Nada cambia en el esquema BD, RLS, triggers ni en los componentes de devoluciones.
+- El restablecimiento de stock al almacén del vendedor sigue idéntico (lo aplica el trigger BD `trg_apply_devolucion_linea_inventory` cuando la línea sube; localmente ya se reflejó vía IndexedDB).
+- Se bumpea `src/version.ts` para forzar refresco PWA.
 
-## Confirmaciones rápidas
-1. ¿Mantengo paleta azul/naranja Rutapp o forzo el `#1a1a2e` oscuro del brief?
-2. Número de WhatsApp real (si no, dejo `52XXXXXXXXXX`).
-3. ¿Confirmas que las páginas vivan bajo `/landing-nueva/*` por ahora?
+¿Procedo?
