@@ -76,6 +76,17 @@ export default function PendientesSincronizarPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [busyAll, setBusyAll] = useState(false);
 
+  // Auto-reprocess every 15s while page is visible and online — recovers items
+  // stuck from older builds without forcing the user to tap "Reintentar todo".
+  useEffect(() => {
+    if (!isOnline || total === 0) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      processSyncQueue().then(() => reload()).catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, [isOnline, total, reload]);
+
   const handleRetry = async (item: PendingQueueItem) => {
     if (!item.id) return;
     setBusyId(item.id);
