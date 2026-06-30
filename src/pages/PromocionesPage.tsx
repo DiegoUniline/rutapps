@@ -20,6 +20,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -77,8 +78,10 @@ export default function PromocionesPage() {
     queryKey: ['promo-productos', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('productos').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(1000);
-      return (data ?? []) as { id: string; nombre: string; codigo: string | null }[];
+      return await fetchAllPages<{ id: string; nombre: string; codigo: string | null }>(
+        (from, to) => (supabase.from('productos').select('id, nombre, codigo') as any)
+          .eq('empresa_id', empresa!.id).order('nombre').range(from, to),
+      );
     },
   });
 
@@ -95,8 +98,10 @@ export default function PromocionesPage() {
     queryKey: ['promo-clientes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('clientes').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(1000);
-      return (data ?? []) as { id: string; nombre: string; codigo: string | null }[];
+      return await fetchAllPages<{ id: string; nombre: string; codigo: string | null }>(
+        (from, to) => (supabase.from('clientes').select('id, nombre, codigo') as any)
+          .eq('empresa_id', empresa!.id).order('nombre').range(from, to),
+      );
     },
   });
 

@@ -4,6 +4,7 @@ import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipboardCheck, Plus, Search, Package, Eye, Calendar, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -75,8 +76,10 @@ export default function AuditoriasPage() {
     queryKey: ['productos-audit', empresa?.id],
     enabled: !!empresa?.id && showDialog && filtroTipo === 'productos',
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, nombre, codigo').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre');
-      return data ?? [];
+      return await fetchAllPages<{ id: string; nombre: string; codigo: string | null }>(
+        (from, to) => supabase.from('productos').select('id, nombre, codigo')
+          .eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre').range(from, to),
+      );
     },
   });
 

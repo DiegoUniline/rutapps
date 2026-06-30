@@ -18,6 +18,7 @@ import {
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
@@ -278,11 +279,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     queryKey: ['stock_almacen_surtir', surtirAlmacenId],
     queryFn: async () => {
       if (!surtirAlmacenId) return [];
-      const { data } = await supabase
-        .from('stock_almacen')
-        .select('producto_id, cantidad')
-        .eq('almacen_id', surtirAlmacenId);
-      return data ?? [];
+      return await fetchAllPages(
+        (from, to) => supabase
+          .from('stock_almacen')
+          .select('producto_id, cantidad')
+          .eq('almacen_id', surtirAlmacenId)
+          .range(from, to),
+      );
     },
     enabled: !!surtirAlmacenId && showSurtirDialog,
   });
@@ -295,11 +298,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     queryKey: ['stock_almacen_lineas', lineaOrigenIds.sort().join(',')],
     queryFn: async () => {
       if (lineaOrigenIds.length === 0) return [];
-      const { data } = await supabase
-        .from('stock_almacen')
-        .select('producto_id, almacen_id, cantidad')
-        .in('almacen_id', lineaOrigenIds);
-      return data ?? [];
+      return await fetchAllPages(
+        (from, to) => supabase
+          .from('stock_almacen')
+          .select('producto_id, almacen_id, cantidad')
+          .in('almacen_id', lineaOrigenIds)
+          .range(from, to),
+      );
     },
     enabled: lineaOrigenIds.length > 0,
   });

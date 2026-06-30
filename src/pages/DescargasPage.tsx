@@ -6,6 +6,7 @@ import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -200,13 +201,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryKey: ['liq-stock-almacen', descarga.empresa_id, vendedorAlmacen?.almacen_id],
     enabled: !!vendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
-      const { data, error } = await supabase.from('stock_almacen')
-        .select('producto_id, cantidad, productos(nombre, codigo)')
-        .eq('almacen_id', vendedorAlmacen!.almacen_id!)
-        .gt('cantidad', 0)
-        .order('producto_id');
-      if (error) throw error;
-      return data;
+      return await fetchAllPages(
+        (from, to) => supabase.from('stock_almacen')
+          .select('producto_id, cantidad, productos(nombre, codigo)')
+          .eq('almacen_id', vendedorAlmacen!.almacen_id!)
+          .gt('cantidad', 0)
+          .order('producto_id')
+          .range(from, to),
+      );
     },
   });
 
