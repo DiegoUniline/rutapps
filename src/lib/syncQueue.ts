@@ -77,37 +77,77 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
   return activeProcessPromise;
 }
 
+// Parent tables go before their children — guarantees FK/RLS-safe order
+// regardless of original enqueue order. Lower number = processed earlier.
+const TABLE_PRIORITY: Record<string, number> = {
+  // Independent / parent entities
+  empresas: 0, profiles: 0, almacenes: 0, clientes: 0, proveedores: 0,
+  productos: 5, unidades: 5, marcas: 5, listas: 5, tarifas: 5, lista_precios: 5, zonas: 5,
+  // Top-level transactions (parents)
+  cargas: 10, ventas: 10, compras: 10, traspasos: 10, cotizaciones: 10,
+  conteos_fisicos: 10, auditorias: 10, mermas: 10, descarga_ruta: 10, cfdis: 10,
+  // Devoluciones depends on ventas → must come after
+  devoluciones: 15,
+  // Cobros depends on ventas (via aplicaciones)
+  cobros: 15,
+  entregas: 15,
+  // Children / line tables
+  venta_lineas: 20, carga_lineas: 20, compra_lineas: 20, cotizacion_lineas: 20,
+  traspaso_lineas: 20, conteo_lineas: 20, auditoria_lineas: 20, merma_lineas: 20,
+  descarga_ruta_lineas: 20, cfdi_lineas: 20, entrega_lineas: 20,
+  devolucion_lineas: 25, cobro_aplicaciones: 25,
+  // Inventory side-effects last
+  stock_almacen: 30, movimientos_inventario: 30,
+};
+
+function priorityOf(table: string): number {
+  return TABLE_PRIORITY[table] ?? 50;
+}
+
 async function processSyncQueueInternal(): Promise<{ success: number; failed: number }> {
   // Backup before processing as safety net
   await backupSyncQueueToStorage();
-  
-  const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
+
+  let items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
+  // Topological order: parents before children, createdAt as tiebreaker.
+  items.sort((a, b) => {
+    const pa = priorityOf(a.table);
+    const pb = priorityOf(b.table);
+    if (pa !== pb) return pa - pb;
+    return a.createdAt - b.createdAt;
+  });
+
   let success = 0;
   let failed = 0;
+  // Tables for which a parent insert just succeeded in THIS pass — children
+  // deferred earlier in the pass should be retried at the end.
+  const parentSyncedThisPass = new Set<string>();
+  const deferredIds: number[] = [];
 
-  for (const item of items) {
+  const runItem = async (item: SyncQueueItem) => {
     // Skip items that have exceeded max retries recently (backoff)
     if (item.retries > 0) {
       const delay = getRetryDelay(item.retries);
       const elapsed = Date.now() - item.createdAt;
-      if (elapsed < delay) continue; // Not enough time passed for retry
+      if (elapsed < delay) return { handled: false };
     }
 
     try {
       await processItem(item);
       await offlineDb.syncQueue.delete(item.id!);
-      // Mark for verification
-      if (item.keyValue) {
-        markAsSynced(item.table, item.keyValue);
-      }
+      if (item.keyValue) markAsSynced(item.table, item.keyValue);
+      parentSyncedThisPass.add(item.table);
       success++;
+      return { handled: true };
     } catch (err: any) {
       console.error(`Sync failed for ${item.table}/${item.operation}:`, err);
 
-      // Handle specific conflict errors
-      const isConflict = err?.code === '23505'; // unique_violation
-      const isFkMissing = err?.code === '23503'; // foreign_key_violation — parent not synced yet
+      const isConflict = err?.code === '23505';
+      const isFkMissing = err?.code === '23503';
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
+      const CHILD_TABLES_RLS_DEFER = ['devoluciones', 'devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
+      const isRlsViolation = err?.code === '42501' && CHILD_TABLES_RLS_DEFER.includes(item.table);
+      const isDevolucionEnumIssue = (err?.code === '22P02' || err?.code === '23514') && (item.table === 'devoluciones' || item.table === 'devolucion_lineas');
 
       const newRetries = (item.retries ?? 0) + 1;
       const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
@@ -116,17 +156,15 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isFkMissing) {
-        // Parent record hasn't been synced yet in this pass — push to end of queue
-        // by resetting createdAt so it processes after siblings.
+      if (isFkMissing || isRlsViolation || isDevolucionEnumIssue) {
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
-          createdAt: Date.now() + 1000, // bump forward so it's last
+          createdAt: Date.now() + 1000,
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
+        if (item.id) deferredIds.push(item.id);
       } else if (isNotFound || newRetries >= MAX_RETRIES) {
-        // Dead letter: keep in queue but mark with high retries
         console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
         await offlineDb.syncQueue.update(item.id!, {
           retries: MAX_RETRIES + 1,
@@ -137,14 +175,30 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       } else {
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
-          createdAt: Date.now(), // Reset timestamp for backoff calculation
+          createdAt: Date.now(),
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
       }
       failed++;
+      return { handled: true };
     }
+  };
 
+  for (const item of items) {
+    await runItem(item);
+  }
+
+  // Same-pass second sweep: any item deferred because its parent wasn't synced
+  // yet gets one more chance now that parents may have come through.
+  if (deferredIds.length > 0 && parentSyncedThisPass.size > 0) {
+    const fresh = await offlineDb.syncQueue
+      .where('id').anyOf(deferredIds).toArray();
+    fresh.sort((a, b) => priorityOf(a.table) - priorityOf(b.table) || a.createdAt - b.createdAt);
+    for (const item of fresh) {
+      // Bypass backoff for this immediate second attempt.
+      await runItem({ ...item, retries: 0 } as SyncQueueItem).catch(() => {});
+    }
   }
 
   // Clear backup if everything succeeded
@@ -154,6 +208,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
 
   return { success, failed };
 }
+
 
 async function processItem(item: SyncQueueItem) {
   const { table, operation, data, keyField, keyValue } = item;
@@ -169,6 +224,17 @@ async function processItem(item: SyncQueueItem) {
       delete cleanData[key];
     }
   }
+
+  // Sanitize legacy/garbage enum values that can lock items in the queue forever.
+  // (e.g. older PWA builds queued devoluciones with tipo: "—" which fails enum check
+  // and then orphans the child devolucion_lineas via RLS until the parent exists.)
+  if (table === 'devoluciones') {
+    const validTipos = ['almacen', 'tienda'];
+    if (!validTipos.includes(cleanData.tipo)) {
+      cleanData.tipo = cleanData.cliente_id ? 'tienda' : 'almacen';
+    }
+  }
+
 
   switch (operation) {
     case 'insert': {
@@ -224,6 +290,20 @@ export async function retryDeadLetters(): Promise<number> {
   }
   return deadLetters.length;
 }
+
+// Resurrect dead letters for specific tables (used to recover items orphaned by
+// older builds whose root cause has since been patched, e.g. devoluciones with
+// invalid enum values that we now sanitize on each retry).
+export async function resurrectDeadLetters(tables: string[]): Promise<number> {
+  const items = await offlineDb.syncQueue.toArray();
+  const targets = items.filter(i => (i.retries ?? 0) > MAX_RETRIES && tables.includes(i.table));
+  for (const it of targets) {
+    await offlineDb.syncQueue.update(it.id!, { retries: 0, createdAt: Date.now() - 60_000 });
+  }
+  return targets.length;
+}
+
+
 
 // Clear entire sync queue (use with caution)
 export async function clearSyncQueue() {

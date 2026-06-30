@@ -1974,6 +1974,14 @@ export default function PuntoVentaPage() {
                   logo_url: empresa?.logo_url,
                   rfc: empresa?.rfc,
                   moneda: empresa?.moneda,
+                  razon_social: (empresa as any)?.razon_social,
+                  colonia: (empresa as any)?.colonia,
+                  ciudad: (empresa as any)?.ciudad,
+                  estado: (empresa as any)?.estado,
+                  cp: (empresa as any)?.cp,
+                  email: (empresa as any)?.email,
+                  notas_ticket: (empresa as any)?.notas_ticket,
+                  ticket_campos: (empresa as any)?.ticket_campos,
                 }}
                 folio={lastVentaData.folio}
                 fecha={lastVentaData.fecha}

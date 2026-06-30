@@ -87,3 +87,6 @@ verify_jwt = false
 
 [functions.factura-redirect]
 verify_jwt = false
+
+[functions.billing-align-bridge-aug2026]
+verify_jwt = false

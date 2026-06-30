@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { offlineDb } from '@/lib/offlineDb';
 import { downloadAllData, MOBILE_QUICK_SYNC_TABLES, retryFailedTables, getFailedTables } from '@/lib/offlineSync';
-import { processSyncQueue } from '@/lib/syncQueue';
+import { processSyncQueue, resurrectDeadLetters } from '@/lib/syncQueue';
 import { hasRealConnection } from '@/lib/connectivity';
 
 /**
@@ -35,7 +35,9 @@ export function useOnlineReconnect() {
         const beforeRows = await offlineDb.carga_lineas.toArray();
         const beforeSig = signature(beforeRows);
 
-        // 1) Push pending mutations first
+        // 1) Push pending mutations first — resurrect dead-lettered devoluciones
+        //    (older builds left them stuck with invalid enum `tipo`; now sanitized).
+        await resurrectDeadLetters(['devoluciones', 'devolucion_lineas']).catch(() => {});
         await processSyncQueue().catch((e) => console.warn('[reconnect] push failed', e));
 
         // 2) Pull critical fresh data

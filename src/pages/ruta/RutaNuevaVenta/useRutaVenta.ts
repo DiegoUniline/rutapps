@@ -488,7 +488,25 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return m;
   }, [promoResults]);
 
-  const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
+  const descuentoDevolucion = useMemo(() => {
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    return devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => {
+      const prod: any = productos?.find((p: any) => p.id === d.producto_id);
+      // Base price: from devolución, fallback to product, fallback to cart line
+      let base = d.precio_unitario;
+      if (!base || base <= 0) {
+        const cartLine = cart.find(c => c.producto_id === d.producto_id && !c.es_cambio);
+        base = prod?.precio_principal ?? cartLine?.precio_unitario ?? 0;
+      }
+      // Include taxes so the discount actually reduces the tax-inclusive total
+      let factor = 1;
+      if (!sinImpuestos && prod) {
+        if (prod.tiene_iva) factor += (prod.iva_pct ?? 16) / 100;
+        if (prod.tiene_ieps && prod.ieps_tipo !== 'cuota') factor += (prod.ieps_pct ?? 0) / 100;
+      }
+      return s + r2(base * factor) * d.cantidad;
+    }, 0);
+  }, [devoluciones, productos, cart, sinImpuestos]);
 
   const totals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -602,84 +620,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         localFolio = `${prefix}-${ventaId.slice(0, 8).toUpperCase()}`;
       }
 
-      if (devoluciones.length > 0 && clienteId) {
-        const devId = crypto.randomUUID();
-        const cargaIdForDev = activeCarga?.id || null;
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, vendedor_id: profile?.id || profile?.id || null, cliente_id: clienteId, carga_id: cargaIdForDev, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-        for (const d of devoluciones) {
-          const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
-          await queueOperation('devolucion_lineas', 'insert', {
-            id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
-            motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
-            monto_credito: montoCredito, created_at: new Date().toISOString(),
-          });
-
-          // ── Restore inventory for returned products ──
-          const destAlmacenId = profile?.almacen_id || null;
-
-          if (activeCarga) {
-            // Has active carga → update carga_lineas devuelta count
-            try {
-              const cargaLineasTable = getOfflineTable('carga_lineas');
-              if (cargaLineasTable) {
-                const allCL = await cargaLineasTable.toArray();
-                const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
-                if (cl) {
-                  await queueOperation('carga_lineas', 'update', {
-                    id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
-                    cantidad_cargada: cl.cantidad_cargada,
-                    cantidad_vendida: cl.cantidad_vendida ?? 0,
-                    cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
-                  });
-                }
-              }
-            } catch (e) { console.error('Error updating carga devuelta:', e); }
-          }
-
-          // Always restore stock to user's assigned warehouse
-          if (destAlmacenId) {
-            try {
-              const stockTable = getOfflineTable('stock_almacen');
-              if (stockTable) {
-                const allStock = await stockTable.toArray();
-                const existing = allStock.find((s: any) => s.almacen_id === destAlmacenId && s.producto_id === d.producto_id);
-                if (existing) {
-                  await queueOperation('stock_almacen', 'update', {
-                    id: existing.id, almacen_id: destAlmacenId, producto_id: d.producto_id,
-                    empresa_id: empresa.id, cantidad: (existing.cantidad ?? 0) + d.cantidad,
-                  });
-                } else {
-                  await queueOperation('stock_almacen', 'insert', {
-                    id: crypto.randomUUID(), almacen_id: destAlmacenId, producto_id: d.producto_id,
-                    empresa_id: empresa.id, cantidad: d.cantidad,
-                  });
-                }
-              }
-              // Also update global product stock
-              const prodTable = getOfflineTable('productos');
-              if (prodTable) {
-                const prod = await prodTable.get(d.producto_id);
-                if (prod) {
-                  await queueOperation('productos', 'update', {
-                    id: d.producto_id, cantidad: (prod.cantidad ?? 0) + d.cantidad,
-                  });
-                }
-              }
-            } catch (e) { console.error('Error restoring stock for devolution:', e); }
-
-            // Log inventory movement
-            await queueOperation('movimientos_inventario', 'insert', {
-              id: crypto.randomUUID(), empresa_id: empresa.id, tipo: 'entrada',
-              producto_id: d.producto_id, cantidad: d.cantidad,
-              almacen_destino_id: destAlmacenId,
-              referencia_tipo: 'devolucion', referencia_id: devId,
-              user_id: user.id, fecha: todayInTimezone(empresa.zona_horaria),
-              created_at: new Date().toISOString(),
-              notas: `Devolución ${d.nombre} - ${d.motivo}`,
-            });
-          }
-        }
-      }
+      // NOTE: Devoluciones block moved AFTER ventas/venta_lineas enqueue to
+      // guarantee parent→child order in the sync queue (avoids FK 23503 on
+      // devoluciones_venta_id_fkey and cascading RLS 42501 on devolucion_lineas).
 
       const applyPayment = totalACobrar > 0;
 
@@ -717,6 +660,84 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
+
+      // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
+      // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
+      if (devoluciones.length > 0 && clienteId) {
+        const devId = crypto.randomUUID();
+        const cargaIdForDev = activeCarga?.id || null;
+        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, vendedor_id: profile?.id || profile?.id || null, cliente_id: clienteId, carga_id: cargaIdForDev, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+        for (const d of devoluciones) {
+          const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
+          await queueOperation('devolucion_lineas', 'insert', {
+            id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
+            motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
+            monto_credito: montoCredito, created_at: new Date().toISOString(),
+          });
+
+          // ── Restore inventory for returned products ──
+          const destAlmacenId = profile?.almacen_id || null;
+
+          if (activeCarga) {
+            try {
+              const cargaLineasTable = getOfflineTable('carga_lineas');
+              if (cargaLineasTable) {
+                const allCL = await cargaLineasTable.toArray();
+                const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
+                if (cl) {
+                  await queueOperation('carga_lineas', 'update', {
+                    id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
+                    cantidad_cargada: cl.cantidad_cargada,
+                    cantidad_vendida: cl.cantidad_vendida ?? 0,
+                    cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
+                  });
+                }
+              }
+            } catch (e) { console.error('Error updating carga devuelta:', e); }
+          }
+
+          if (destAlmacenId) {
+            try {
+              const stockTable = getOfflineTable('stock_almacen');
+              if (stockTable) {
+                const allStock = await stockTable.toArray();
+                const existing = allStock.find((s: any) => s.almacen_id === destAlmacenId && s.producto_id === d.producto_id);
+                if (existing) {
+                  await queueOperation('stock_almacen', 'update', {
+                    id: existing.id, almacen_id: destAlmacenId, producto_id: d.producto_id,
+                    empresa_id: empresa.id, cantidad: (existing.cantidad ?? 0) + d.cantidad,
+                  });
+                } else {
+                  await queueOperation('stock_almacen', 'insert', {
+                    id: crypto.randomUUID(), almacen_id: destAlmacenId, producto_id: d.producto_id,
+                    empresa_id: empresa.id, cantidad: d.cantidad,
+                  });
+                }
+              }
+              const prodTable = getOfflineTable('productos');
+              if (prodTable) {
+                const prod = await prodTable.get(d.producto_id);
+                if (prod) {
+                  await queueOperation('productos', 'update', {
+                    id: d.producto_id, cantidad: (prod.cantidad ?? 0) + d.cantidad,
+                  });
+                }
+              }
+            } catch (e) { console.error('Error restoring stock for devolution:', e); }
+
+            await queueOperation('movimientos_inventario', 'insert', {
+              id: crypto.randomUUID(), empresa_id: empresa.id, tipo: 'entrada',
+              producto_id: d.producto_id, cantidad: d.cantidad,
+              almacen_destino_id: destAlmacenId,
+              referencia_tipo: 'devolucion', referencia_id: devId,
+              user_id: user.id, fecha: todayInTimezone(empresa.zona_horaria),
+              created_at: new Date().toISOString(),
+              notas: `Devolución ${d.nombre} - ${d.motivo}`,
+            });
+          }
+        }
+      }
+
 
       if (applyPayment && ventaClienteId && pagos.length > 0) {
         // Snapshot pending accounts to avoid mutating React state
