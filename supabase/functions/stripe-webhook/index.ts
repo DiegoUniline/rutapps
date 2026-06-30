@@ -94,8 +94,93 @@ Deno.serve(async (req) => {
         ? session.customer
         : session.customer?.id;
 
-      // ── Flujo nuevo: alta con trial 7 días + tarjeta obligatoria ──
-      if (empresa_id && flow === "trial_signup" && stripeSubId) {
+      // ── Flujo nuevo MENSUAL: alta vía setup mode. Creamos sub aquí con
+      //    trial_end + billing_cycle_anchor para alinear al día 1 (CDMX).
+      if (empresa_id && flow === "trial_signup_setup" && session.mode === "setup") {
+        const setupIntentId = typeof session.setup_intent === "string"
+          ? session.setup_intent : session.setup_intent?.id;
+        if (!setupIntentId) throw new Error("setup_intent ausente en session");
+        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+        const paymentMethodId = typeof setupIntent.payment_method === "string"
+          ? setupIntent.payment_method : setupIntent.payment_method?.id;
+        if (!paymentMethodId || !stripeCustomerId) throw new Error("PM o customer ausente");
+
+        await stripe.customers.update(stripeCustomerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        });
+
+        const planSlug = session.metadata?.plan_slug || "";
+        const planIdMeta = session.metadata?.plan_id;
+        const qty = parseInt(session.metadata?.num_usuarios || "1", 10);
+        const { data: planRow } = await supabase
+          .from("subscription_plans")
+          .select("usuarios_incluidos, stripe_price_id, stripe_price_id_extra")
+          .eq("id", planIdMeta).maybeSingle();
+        if (!planRow?.stripe_price_id) throw new Error("Plan sin stripe_price_id");
+
+        const items: Stripe.SubscriptionCreateParams.Item[] = [];
+        if (planSlug && planRow.stripe_price_id_extra) {
+          items.push({ price: planRow.stripe_price_id, quantity: 1 });
+          const extras = Math.max(0, qty - (planRow.usuarios_incluidos || 0));
+          if (extras > 0) items.push({ price: planRow.stripe_price_id_extra, quantity: extras });
+        } else {
+          items.push({ price: planRow.stripe_price_id, quantity: qty });
+        }
+
+        // trial_end = ahora + 7 días
+        const trialEndUnix = Math.floor(Date.now() / 1000) + 7 * 86400;
+        // billing_cycle_anchor = 1° del mes siguiente al fin de trial, 00:00 CDMX
+        const trialEndDate = new Date(trialEndUnix * 1000);
+        const cdmxFmt = new Intl.DateTimeFormat("en-CA", {
+          timeZone: TZ, year: "numeric", month: "2-digit",
+        }).formatToParts(trialEndDate);
+        const trialYear = parseInt(cdmxFmt.find(p => p.type === "year")!.value, 10);
+        const trialMonth = parseInt(cdmxFmt.find(p => p.type === "month")!.value, 10);
+        // primer día del mes siguiente, 00:00 CDMX (= 06:00 UTC)
+        const nextMonth = trialMonth === 12 ? 1 : trialMonth + 1;
+        const nextYear = trialMonth === 12 ? trialYear + 1 : trialYear;
+        const anchorIso = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01T06:00:00.000Z`;
+        const anchorUnix = Math.floor(new Date(anchorIso).getTime() / 1000);
+
+        const newSub = await stripe.subscriptions.create({
+          customer: stripeCustomerId,
+          items,
+          default_payment_method: paymentMethodId,
+          trial_end: trialEndUnix,
+          billing_cycle_anchor: anchorUnix,
+          proration_behavior: "create_prorations",
+          collection_method: "charge_automatically",
+          metadata: {
+            empresa_id,
+            plan_id: planIdMeta || "",
+            plan_slug: planSlug,
+            num_usuarios: String(qty),
+            billing_period: "mensual",
+            flow: "trial_signup_setup",
+            alignment: "first_of_month_cdmx",
+          },
+        });
+
+        await supabase
+          .from("subscriptions")
+          .update({
+            status: "trial",
+            trial_ends_at: new Date(trialEndUnix * 1000).toISOString(),
+            current_period_end: anchorIso,
+            fecha_vencimiento: anchorIso.slice(0, 10),
+            acceso_bloqueado: false,
+            stripe_subscription_id: newSub.id,
+            stripe_customer_id: stripeCustomerId,
+            stripe_payment_method_id: paymentMethodId,
+            cancel_at_period_end: false,
+            terms_accepted_at: session.metadata?.accepted_terms_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("empresa_id", empresa_id);
+        log("Trial signup (setup→sub) created", { empresa_id, subId: newSub.id, trialEndUnix, anchorUnix });
+      }
+      // ── Flujo viejo: semestral/anual con mode=subscription ──
+      else if (empresa_id && flow === "trial_signup" && stripeSubId) {
         const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
         const trialEndsAt = stripeSub.trial_end
           ? new Date(stripeSub.trial_end * 1000).toISOString()
