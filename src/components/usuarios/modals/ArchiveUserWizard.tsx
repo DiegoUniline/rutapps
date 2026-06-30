@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { X, Archive, AlertTriangle, CheckCircle2, RefreshCw, Truck, Package, FileText, ExternalLink } from 'lucide-react';
+import { X, Archive, AlertTriangle, CheckCircle2, RefreshCw, Truck, Package, FileText, ExternalLink, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ProfileUser, Almacen } from '@/hooks/useUsuarios';
 import { confirmDialog } from '@/lib/confirm';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
 interface Summary {
   profile_id: string;
