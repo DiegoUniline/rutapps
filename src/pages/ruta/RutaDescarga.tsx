@@ -103,7 +103,9 @@ export default function RutaDescarga() {
     }),
   });
 
-  const efectivoEsperado = (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
+  // El efectivo entregado al cliente por devoluciones de dinero SALE de la caja
+  // del vendedor, así que se resta de lo que se le exige liquidar.
+  const efectivoEsperado = (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0) - (financials?.devolucionesDinero ?? 0);
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
