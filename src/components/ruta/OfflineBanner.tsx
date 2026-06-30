@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { WifiOff, CheckCircle2, CloudUpload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { WifiOff, CheckCircle2, CloudUpload, AlertTriangle } from 'lucide-react';
 import { useRutaStore } from '@/stores/rutaStore';
 import { hasRealConnection } from '@/lib/connectivity';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -14,7 +15,8 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
  */
 export default function OfflineBanner() {
   const { isOffline, setOffline } = useRutaStore();
-  const { pendingCount, isSyncing } = useNetworkStatus();
+  const { pendingCount, failedCount, isSyncing } = useNetworkStatus();
+  const navigate = useNavigate();
   const [justReconnected, setJustReconnected] = useState(false);
   const wasOfflineRef = useRef(false);
 
@@ -53,6 +55,27 @@ export default function OfflineBanner() {
       return () => clearTimeout(t);
     }
   }, [isOffline]);
+
+  // FALLIDOS (dead-letter): registros que no se pudieron sincronizar.
+  // Máxima prioridad y SIEMPRE visible (antes desaparecían del contador),
+  // clickeable para ir a revisarlos/reintentarlos.
+  if (failedCount > 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate('/ruta/pendientes')}
+        className="w-full bg-destructive/15 border-b border-destructive/40 px-3 py-2 flex items-center gap-2 text-destructive text-xs font-semibold"
+      >
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate text-left">
+          {failedCount} registro{failedCount > 1 ? 's' : ''} no se pudo sincronizar — toca para revisar
+        </span>
+        <span className="ml-auto bg-destructive/25 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
+          {failedCount}
+        </span>
+      </button>
+    );
+  }
 
   // OFFLINE
   if (isOffline) {
