@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Trash2, AlertTriangle, Clock, CheckCircle2, Loader2, CloudOff, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
