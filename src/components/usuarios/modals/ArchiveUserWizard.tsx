@@ -70,18 +70,21 @@ export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almac
     }
   };
 
-  const handleArchive = async () => {
-    if (!summary?.puede_archivar) { toast.error('Aún hay pendientes que resolver'); return; }
-    if (!await confirmDialog(`¿Archivar a ${user.nombre || emailLabel}? El usuario no podrá iniciar sesión, vender ni entregar. Sí seguirá disponible para traspasos, ajustes y carga de camión sobre su almacén.`)) return;
+  const handleArchive = async (force = false) => {
+    if (!force && !summary?.puede_archivar) { toast.error('Aún hay pendientes que resolver'); return; }
+    const msg = force
+      ? `⚠ FORZAR archivado de ${user.nombre || emailLabel}.\n\nQuedan pendientes sin resolver (entregas, stock o ventas). El usuario quedará archivado de todos modos, pero los pendientes seguirán en la base de datos atribuidos a él. ¿Continuar?`
+      : `¿Archivar a ${user.nombre || emailLabel}? El usuario no podrá iniciar sesión, vender ni entregar. Sí seguirá disponible para traspasos, ajustes y carga de camión sobre su almacén.`;
+    if (!await confirmDialog(msg)) return;
     setArchiving(true);
     try {
       const { error } = await supabase.rpc('archivar_usuario', {
         p_profile_id: user.id,
         p_motivo: motivo || null,
-        p_force: false,
+        p_force: force,
       });
       if (error) throw error;
-      toast.success('Usuario archivado. Cupo del plan liberado.');
+      toast.success(force ? 'Usuario archivado (forzado). Cupo del plan liberado.' : 'Usuario archivado. Cupo del plan liberado.');
       onArchived();
     } catch (e: any) {
       toast.error(e.message);
