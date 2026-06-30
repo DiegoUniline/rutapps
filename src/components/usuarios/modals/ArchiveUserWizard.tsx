@@ -29,6 +29,7 @@ interface Props {
 }
 
 export default function ArchiveUserWizard({ user, emailLabel, activeUsers, almacenes, onClose, onArchived }: Props) {
+  const isSuperAdmin = useIsSuperAdmin();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [targetUser, setTargetUser] = useState<string>('');
