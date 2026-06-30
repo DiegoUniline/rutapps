@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -435,9 +436,11 @@ export default function AdminWhatsAppTab() {
                               <div className="bg-white rounded-lg shadow-sm p-3 max-w-[290px] self-start">
                                 <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed"
                                    dangerouslySetInnerHTML={{
-                                     __html: previewText
-                                       .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-                                       .replace(/\n/g, '<br/>')
+                                     __html: DOMPurify.sanitize(
+                                       previewText
+                                         .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+                                         .replace(/\n/g, '<br/>')
+                                     )
                                    }}
                                 />
                                 {/* Timestamp */}

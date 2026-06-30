@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getPendingCount, processSyncQueue } from '@/lib/syncQueue';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
+import { getPendingCount, getDeadLetterCount, processSyncQueue } from '@/lib/syncQueue';
 import { downloadAllData, getLastSyncTime, isCacheStale, MOBILE_QUICK_SYNC_TABLES } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +15,8 @@ let lastGlobalSyncAt = 0;
 export function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
+  const prevFailedRef = useRef<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [verified, setVerified] = useState(false);
@@ -68,6 +71,19 @@ export function useNetworkStatus() {
       if (count > 0 || !isOnline) {
         setVerified(false);
       }
+      // Dead-letter (fallidos): hacer visibles los registros que no
+      // pudieron sincronizar. Avisar con toast SOLO cuando el número sube
+      // (un fallo nuevo), no en cada refresco.
+      const failed = await getDeadLetterCount();
+      setFailedCount(failed);
+      const prev = prevFailedRef.current;
+      if (prev !== null && failed > prev) {
+        toast.error(
+          `${failed} registro${failed > 1 ? 's' : ''} no se pudo sincronizar`,
+          { description: 'Revísalo en Ruta › Pendientes por sincronizar.', duration: 8000 },
+        );
+      }
+      prevFailedRef.current = failed;
     };
     refresh();
     const interval = setInterval(refresh, config.pendingCheckInterval);
@@ -167,7 +183,7 @@ export function useNetworkStatus() {
   }, [isOnline, empresa?.id, autoSync]);
 
   return {
-    isOnline, pendingCount, isSyncing, lastSync, syncNow,
+    isOnline, pendingCount, failedCount, isSyncing, lastSync, syncNow,
     autoSync, setAutoSync, verified, lastSyncRows,
     dataSaver, setDataSaver,
   };

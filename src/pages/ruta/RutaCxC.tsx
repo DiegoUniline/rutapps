@@ -42,7 +42,7 @@ export default function RutaCxC() {
     const map = new Map<string, { id: string; nombre: string; saldo: number; numCuentas: number; oldest?: string; vendedorId?: string; vendedorNombre?: string }>();
     (ventas ?? []).forEach((v: any) => {
       const saldo = Number(v.saldo_pendiente ?? 0);
-      if (!v.cliente_id || saldo <= 0 || v.status === 'cancelada') return;
+      if (!v.cliente_id || saldo <= 0 || v.status === 'cancelado') return;
       if (clientesPermitidos && !clientesPermitidos.has(v.cliente_id)) return;
       const c = (clientes ?? []).find((x: any) => x.id === v.cliente_id);
       const nombre = c?.nombre ?? 'Cliente';

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -151,7 +152,7 @@ function BannerPreview({ form }: { form: Partial<AppNotification> }) {
         </span>
         <span className="opacity-40 text-xs">•</span>
         {form.body ? (
-          <span className="opacity-90 text-xs [&_b]:font-semibold" dangerouslySetInnerHTML={{ __html: form.body }} />
+          <span className="opacity-90 text-xs [&_b]:font-semibold" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.body) }} />
         ) : (
           <span className="opacity-50 text-xs">Mensaje del banner...</span>
         )}
@@ -169,7 +170,7 @@ function ModalPreview({ form }: { form: Partial<AppNotification> }) {
       <div className="p-4 pt-2">
         {form.image_url && <img src={form.image_url} alt="" className="w-full rounded-xl max-h-28 object-cover mb-3" />}
         <div className="prose prose-sm dark:prose-invert max-w-none text-xs [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-0"
-          dangerouslySetInnerHTML={{ __html: form.body || '<p class="text-muted-foreground">Contenido...</p>' }} />
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.body || '<p class="text-muted-foreground">Contenido...</p>') }} />
       </div>
       <div className="p-3 border-t border-border flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground">☐ No volver a mostrar</span>
@@ -197,7 +198,7 @@ function BubblePreview({ form }: { form: Partial<AppNotification> }) {
           <span className="text-xs font-bold text-foreground truncate">{form.title || 'Título'}</span>
         </div>
         {form.body && (
-          <div className="px-3.5 pt-0.5 pb-2.5 text-[11px] text-muted-foreground [&_b]:font-semibold [&_b]:text-foreground" dangerouslySetInnerHTML={{ __html: form.body }} />
+          <div className="px-3.5 pt-0.5 pb-2.5 text-[11px] text-muted-foreground [&_b]:font-semibold [&_b]:text-foreground" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.body) }} />
         )}
         {form.redirect_url && (
           <div className="px-3.5 pb-3">
