@@ -8951,7 +8951,7 @@ export type Database = {
         | "cancelado"
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
-      tipo_devolucion: "almacen" | "tienda"
+      tipo_devolucion: "almacen" | "tienda" | "—" | "–" | "-"
       tipo_movimiento: "entrada" | "salida" | "transferencia"
       tipo_promocion:
         | "descuento_porcentaje"
@@ -9165,7 +9165,7 @@ export const Constants = {
       ],
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
-      tipo_devolucion: ["almacen", "tienda"],
+      tipo_devolucion: ["almacen", "tienda", "—", "–", "-"],
       tipo_movimiento: ["entrada", "salida", "transferencia"],
       tipo_promocion: [
         "descuento_porcentaje",
