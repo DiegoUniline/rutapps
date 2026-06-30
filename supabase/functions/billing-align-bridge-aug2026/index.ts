@@ -71,9 +71,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY no configurado");
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    // ─── AUTH GUARD ───
+    // Acepta 2 formas de invocación:
+    //  a) Header `x-internal-secret: <BILLING_BRIDGE_INTERNAL_SECRET>` (cron interno)
+    //  b) Bearer JWT de un super admin (invocación manual desde el panel)
+    const internalSecret = Deno.env.get("BILLING_BRIDGE_INTERNAL_SECRET");
+    const providedSecret = req.headers.get("x-internal-secret");
+    let authorized = !!(internalSecret && providedSecret && providedSecret === internalSecret);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -81,9 +85,30 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    if (!authorized) {
+      const authHeader = req.headers.get("Authorization") || "";
+      if (authHeader.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: claimsData } = await supabase.auth.getClaims(token);
+        const email = (claimsData?.claims as any)?.email?.toLowerCase();
+        if (email === "diego.leon@uniline.mx") authorized = true;
+      }
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY no configurado");
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+
     const body = await req.json().catch(() => ({}));
     const mode: "dry_run" | "execute" = body?.mode === "execute" ? "execute" : "dry_run";
     const forceSubIds: string[] = Array.isArray(body?.force_sub_ids) ? body.force_sub_ids : [];
+
 
     const today = todayCDMX(); // YYYY-MM-DD
     log("Run start", { mode, today, forceSubIds });
