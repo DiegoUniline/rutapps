@@ -30,7 +30,7 @@ const corsHeaders = {
 };
 
 const REASON = "billing_alignment_bridge_to_august_2026";
-const ANCHOR_UNIX = 1785564000; // 2026-08-01 00:00 America/Mexico_City
+const ANCHOR_UNIX = 1785592800; // 2026-08-01 08:00 America/Mexico_City (= 14:00 UTC)
 const JULY_DAYS = 31;
 
 // Whitelist EXACTA: solo estas 7 suscripciones pueden ser procesadas.
