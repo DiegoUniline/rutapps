@@ -1,7 +1,5 @@
 import { useSubscription } from '@/hooks/useSubscription';
 import { useFacturaPendiente } from '@/hooks/useFacturaPendiente';
-import { useAuth } from '@/contexts/AuthContext';
-import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { AlertTriangle, Clock, CreditCard, Zap, FileWarning } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -10,10 +8,6 @@ export default function SubscriptionBanner() {
   const { daysLeft, status } = useSubscription();
   const fp = useFacturaPendiente();
   const location = useLocation();
-  const { user } = useAuth();
-
-  // Solo el dueño de facturación ve banners
-  if (!isSuperAdminEmail(user?.email)) return null;
 
   // Ocultar únicamente en la vista móvil de ruta; en escritorio lo ven todos
   if (location.pathname.startsWith('/ruta')) return null;
