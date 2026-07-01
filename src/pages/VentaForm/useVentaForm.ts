@@ -256,7 +256,7 @@ export function useVentaForm() {
           cantidad: Number(l.cantidad) || 0,
         };
       });
-    return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined);
+    return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria);
   }, [promocionesActivas, lineas, productosList, form.cliente_id]);
 
   // Build per-product promo discount map

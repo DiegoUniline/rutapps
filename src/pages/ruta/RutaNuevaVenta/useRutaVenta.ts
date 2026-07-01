@@ -500,7 +500,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const prod = productos?.find((p: any) => p.id === c.producto_id);
       return { producto_id: c.producto_id, clasificacion_id: prod?.clasificacion_id ?? undefined, precio_unitario: c.precio_unitario, cantidad: c.cantidad };
     });
-    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined);
+    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined, (empresa as any)?.zona_horaria);
   }, [promocionesActivas, cart, clienteId, selectedCliente, productos]);
 
   // Build a map of raw promo discount per product

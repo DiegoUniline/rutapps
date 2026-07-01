@@ -437,7 +437,7 @@ export default function PuntoVentaPage() {
         cantidad: item.cantidad,
       };
     });
-    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined);
+    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined, (empresa as any)?.zona_horaria);
   }, [promocionesActivas, cart, productos, clienteId]);
 
   // Build per-product raw promo discount map
