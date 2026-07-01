@@ -1209,7 +1209,7 @@ export default function MiSuscripcionPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Timbres Section — solo visible para super admin */}
-              {user?.email === 'diego.leon@uniline.mx' && (
+              {isSuperAdminUser && (
               <Card>
                 <CardContent className="p-4 sm:p-6">
                   <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
