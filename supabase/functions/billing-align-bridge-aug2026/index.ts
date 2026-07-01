@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
             monthly_total_cents: monthly,
             bridge_days: days,
             bridge_amount_cents: amount,
-            target_anchor: "2026-08-01T00:00:00-06:00",
+            target_anchor: "2026-08-01T08:00:00-06:00",
           },
         });
 
