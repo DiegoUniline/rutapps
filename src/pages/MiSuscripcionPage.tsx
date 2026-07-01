@@ -832,7 +832,7 @@ export default function MiSuscripcionPage() {
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap bg-white border border-border">
           <TabsTrigger value="resumen" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Resumen</TabsTrigger>
           <TabsTrigger value="plan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Plan & Cupones</TabsTrigger>
-          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas{user?.email === 'diego.leon@uniline.mx' ? ' & Timbres' : ''}</TabsTrigger>
+          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas{isSuperAdminUser ? ' & Timbres' : ''}</TabsTrigger>
           <TabsTrigger value="fiscal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Datos fiscales</TabsTrigger>
           <TabsTrigger value="simulador" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Simulador de costos</TabsTrigger>
         </TabsList>
