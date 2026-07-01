@@ -157,7 +157,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
-      supabase.from('profiles').select('id, nombre, telefono, rol, user_id').eq('empresa_id', empresaId),
+      supabase.from('profiles').select('id, nombre, telefono, rol, user_id, estado, archivado_en, archivado_motivo').eq('empresa_id', empresaId),
     ]);
 
     setEmpresa(empRes.data);
@@ -514,7 +514,37 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     finally { setDeleting(false); }
   }
 
-  const allUsers = usersDetailed.length > 0 ? usersDetailed : profiles;
+  // Merge estado/archivado_en from profiles into detailed users (admin-users doesn't include it)
+  const profilesByUserId = useMemo(() => {
+    const m = new Map<string, any>();
+    profiles.forEach(p => { if (p.user_id) m.set(p.user_id, p); });
+    return m;
+  }, [profiles]);
+  const allUsers = useMemo(() => {
+    const base = usersDetailed.length > 0 ? usersDetailed : profiles;
+    return base.map((u: any) => {
+      const p = profilesByUserId.get(u.user_id ?? u.id) || (usersDetailed.length === 0 ? u : null);
+      return {
+        ...u,
+        estado: p?.estado ?? u.estado ?? 'activo',
+        archivado_en: p?.archivado_en ?? u.archivado_en ?? null,
+        archivado_motivo: p?.archivado_motivo ?? u.archivado_motivo ?? null,
+      };
+    });
+  }, [usersDetailed, profiles, profilesByUserId]);
+  const [userStatusFilter, setUserStatusFilter] = useState<'todos' | 'activo' | 'baja' | 'archivado'>('todos');
+  const usersCounts = useMemo(() => {
+    const c = { todos: allUsers.length, activo: 0, baja: 0, archivado: 0 } as Record<string, number>;
+    allUsers.forEach((u: any) => {
+      const s = (u.estado || 'activo') as string;
+      if (c[s] != null) c[s]++;
+    });
+    return c;
+  }, [allUsers]);
+  const filteredUsers = useMemo(
+    () => userStatusFilter === 'todos' ? allUsers : allUsers.filter((u: any) => (u.estado || 'activo') === userStatusFilter),
+    [allUsers, userStatusFilter]
+  );
 
   // ── KPIs / derivados ─────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -601,7 +631,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
   const planNombre = planActual?.nombre || '—';
   const precioFinal = (planActual?.precio_por_usuario || 0) * (1 - (subscription?.descuento_porcentaje || 0) / 100);
   const baseUsuarios = planActual?.usuarios_incluidos ?? null;
-  const usuariosActivos = allUsers.length;
+  const usuariosActivos = usersCounts.activo;
   const asientosExtra = baseUsuarios != null ? Math.max(0, usuariosActivos - baseUsuarios) : 0;
 
   return (
@@ -806,7 +836,24 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
         {/* ── USUARIOS ───────────────────────────────── */}
         <TabsContent value="usuarios">
           <div className="space-y-3">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { k: 'todos', l: 'Todos', cls: 'bg-muted text-foreground' },
+                  { k: 'activo', l: 'Activos', cls: 'bg-green-500/10 text-green-700 dark:text-green-400' },
+                  { k: 'baja', l: 'Baja', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+                  { k: 'archivado', l: 'Archivados', cls: 'bg-destructive/10 text-destructive' },
+                ] as const).map(opt => {
+                  const active = userStatusFilter === opt.k;
+                  const n = usersCounts[opt.k] || 0;
+                  return (
+                    <button key={opt.k} onClick={() => setUserStatusFilter(opt.k as any)}
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition ${active ? 'bg-primary text-primary-foreground border-primary' : `${opt.cls} border-transparent hover:border-border`}`}>
+                      {opt.l} <span className="opacity-70 ml-1">({n})</span>
+                    </button>
+                  );
+                })}
+              </div>
               <Button variant="outline" size="sm" disabled={forcingAll || allUsers.length === 0}
                 onClick={handleForceChangeAll} className="gap-1.5">
                 {forcingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
@@ -814,7 +861,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               </Button>
             </div>
 
-            {allUsers.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <Card className="border-border/60">
                 <CardContent className="py-12 text-center text-muted-foreground">Sin usuarios</CardContent>
               </Card>
@@ -827,41 +874,64 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                       <TableHead className="font-semibold">Email</TableHead>
                       <TableHead className="font-semibold">Teléfono</TableHead>
                       <TableHead className="font-semibold">Rol</TableHead>
+                      <TableHead className="font-semibold">Estado</TableHead>
                       <TableHead className="font-semibold">Último acceso</TableHead>
                       <TableHead className="font-semibold">Registro</TableHead>
                       <TableHead className="font-semibold text-center w-32">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allUsers.map((u: any) => (
-                      <TableRow key={u.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium py-3">{u.nombre || 'Sin nombre'}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
-                        <TableCell><Badge variant="outline">{u.rol || 'Sin rol'}</Badge></TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es }) : 'Nunca'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : '—'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="gap-1.5"
-                            onClick={() => {
-                              setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email });
-                              setResetPassword(''); setResetForceChange(true);
-                            }}>
-                            <KeyRound className="h-3.5 w-3.5" /> Resetear
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredUsers.map((u: any) => {
+                      const est = (u.estado || 'activo') as string;
+                      const estCls = est === 'activo'
+                        ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
+                        : est === 'baja'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                          : 'bg-destructive/10 text-destructive border-destructive/30';
+                      const estLabel = est === 'activo' ? 'Activo' : est === 'baja' ? 'Baja' : 'Archivado';
+                      return (
+                        <TableRow key={u.id} className={`hover:bg-muted/30 ${est !== 'activo' ? 'opacity-70' : ''}`}>
+                          <TableCell className="font-medium py-3">{u.nombre || 'Sin nombre'}</TableCell>
+                          <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
+                          <TableCell><Badge variant="outline">{u.rol || 'Sin rol'}</Badge></TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant="outline" className={estCls}>{estLabel}</Badge>
+                              {u.archivado_en && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {format(new Date(u.archivado_en), 'dd MMM yyyy', { locale: es })}
+                                  {u.archivado_motivo ? ` · ${u.archivado_motivo}` : ''}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es }) : 'Nunca'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : '—'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button variant="outline" size="sm" className="gap-1.5"
+                              onClick={() => {
+                                setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email });
+                                setResetPassword(''); setResetForceChange(true);
+                              }}>
+                              <KeyRound className="h-3.5 w-3.5" /> Resetear
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
             )}
           </div>
         </TabsContent>
+
+
 
         {/* ── FACTURAS ───────────────────────────────── */}
         <TabsContent value="facturas">
