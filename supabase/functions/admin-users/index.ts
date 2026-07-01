@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       // Get all profiles for this empresa
       const { data: profiles } = await adminClient
         .from("profiles")
-        .select("user_id, nombre, telefono")
+        .select("user_id, nombre, telefono, estado, archivado_en, archivado_motivo")
         .eq("empresa_id", targetEmpresaId);
 
       const userIds = (profiles ?? []).map((p: any) => p.user_id);
