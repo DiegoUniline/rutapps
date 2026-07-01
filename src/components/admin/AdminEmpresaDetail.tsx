@@ -157,7 +157,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
-      supabase.from('profiles').select('id, nombre, telefono, rol, user_id').eq('empresa_id', empresaId),
+      supabase.from('profiles').select('id, nombre, telefono, rol, user_id, estado, archivado_en, archivado_motivo').eq('empresa_id', empresaId),
     ]);
 
     setEmpresa(empRes.data);
