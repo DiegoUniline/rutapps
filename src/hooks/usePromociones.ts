@@ -172,10 +172,24 @@ export function evaluatePromociones(
   cartItems: CartItemForPromo[],
   clienteId?: string,
   zonaId?: string,
+  zonaHoraria?: string,
 ): PromoResult[] {
   const results: PromoResult[] = [];
-  const today = todayInTimezone();
-  const diaHoy = DIAS_MAP[new Date().getDay()];
+  const today = todayInTimezone(zonaHoraria);
+  // Día de la semana en la zona horaria de la empresa
+  const tz = zonaHoraria || 'America/Mexico_City';
+  const diaHoy = (() => {
+    try {
+      const wd = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long' }).format(new Date()).toLowerCase();
+      const map: Record<string, string> = {
+        sunday: 'domingo', monday: 'lunes', tuesday: 'martes', wednesday: 'miércoles',
+        thursday: 'jueves', friday: 'viernes', saturday: 'sábado',
+      };
+      return map[wd] || DIAS_MAP[new Date().getDay()];
+    } catch {
+      return DIAS_MAP[new Date().getDay()];
+    }
+  })();
 
   const activePromos = promociones
     .filter(p => p.activa)
@@ -186,6 +200,7 @@ export function evaluatePromociones(
       return dias.length === 0 || dias.includes(diaHoy);
     })
     .sort((a, b) => b.prioridad - a.prioridad);
+
 
   const appliedNonAcumulable = new Set<string>();
 
