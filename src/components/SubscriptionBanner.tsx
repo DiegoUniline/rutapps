@@ -63,16 +63,21 @@ export default function SubscriptionBanner() {
   }
 
   // PRIORIDAD 2: Vencimiento de suscripción (legacy)
-  if (daysLeft === null || daysLeft > 3) return null;
-  if (status === 'active' && daysLeft > 3) return null;
+  const isPastDue = status === 'past_due';
+  if (!isPastDue) {
+    if (daysLeft === null || daysLeft > 3) return null;
+    if (status === 'active' && daysLeft > 3) return null;
+  }
 
-  const isExpired = daysLeft <= 0;
-  const isGracePeriod = isExpired && daysLeft >= -3;
+  const isExpired = isPastDue || (daysLeft !== null && daysLeft <= 0);
+  const isGracePeriod = !isPastDue && isExpired && daysLeft !== null && daysLeft >= -3;
   const isTrial = status === 'trial';
-  const graceDaysLeft = isExpired ? 3 + daysLeft : 0;
+  const graceDaysLeft = isExpired && daysLeft !== null ? 3 + daysLeft : 0;
 
   let message = '';
-  if (isExpired) {
+  if (isPastDue) {
+    message = '¡Tu suscripción tiene un pago vencido! Regulariza para evitar la suspensión.';
+  } else if (isExpired) {
     if (isGracePeriod) {
       message = isTrial
         ? `¡Tu prueba expiró! Tienes ${graceDaysLeft} día${graceDaysLeft !== 1 ? 's' : ''} de gracia para activar tu plan.`
@@ -86,7 +91,7 @@ export default function SubscriptionBanner() {
       : `Tu suscripción vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}. ¡Renueva ahora!`;
   }
 
-  const isUrgent = daysLeft <= 3;
+  const isUrgent = isPastDue || (daysLeft !== null && daysLeft <= 3);
 
   return (
     <div
