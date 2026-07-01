@@ -773,6 +773,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
               <p className="text-muted-foreground text-sm">Sin suscripción</p>
             ) : (
               <div className="space-y-3 text-sm">
+                {subscription.stripe_sync_error && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/30 p-2.5 text-xs">
+                    <p className="font-semibold text-destructive flex items-center gap-1">⚠️ No se pudo sincronizar con Stripe</p>
+                    <p className="mt-0.5 text-destructive/90 break-words">{subscription.stripe_sync_error}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">La cantidad cobrada en Stripe puede estar desactualizada — revísala a mano.</p>
+                  </div>
+                )}
                 <Row label="Plan" value={planNombre} />
                 <Row label="Status" value={STATUS_MAP[subscription.status]?.l || subscription.status} />
                 <Row label="Máx. usuarios" value={String(subscription.max_usuarios ?? '—')} />

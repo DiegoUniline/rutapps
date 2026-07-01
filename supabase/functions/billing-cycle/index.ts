@@ -519,8 +519,19 @@ Deno.serve(async (req) => {
           if (qty !== sub.max_usuarios) {
             await supabase.from("subscriptions").update({ max_usuarios: qty, updated_at: now.toISOString() }).eq("id", sub.id);
           }
+          // Sync OK: limpiar cualquier error previo (solo si lo había).
+          await supabase.from("subscriptions")
+            .update({ stripe_sync_error: null, stripe_sync_error_at: null })
+            .eq("id", sub.id)
+            .not("stripe_sync_error", "is", null);
         } catch (e) {
-          log("Stripe sync failed (non-blocking)", { empresa: sub.empresa_id, error: (e as Error).message });
+          const msg = (e as Error).message || "Error desconocido";
+          log("Stripe sync failed (non-blocking)", { empresa: sub.empresa_id, error: msg });
+          // Guardar el error para que el super admin lo vea en el panel
+          // (antes fallaba callado y la cantidad quedaba vieja → cobraba de más).
+          await supabase.from("subscriptions")
+            .update({ stripe_sync_error: msg.slice(0, 500), stripe_sync_error_at: now.toISOString() })
+            .eq("id", sub.id);
         }
       }
     }
