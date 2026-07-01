@@ -283,7 +283,7 @@ export function evaluatePromociones(
         }
       }
 
-      }
+
 
       if (descuento > 0) {
         results.push({
