@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 interface TrialState {
   status: string | null;
   trial_ends_at: string | null;
+  current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   stripe_payment_method_id: string | null;
@@ -43,7 +44,7 @@ export default function TrialCountdownBanner() {
     setLoading(true);
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('status, trial_ends_at, current_period_end, cancel_at_period_end, stripe_payment_method_id, max_usuarios, plan_id')
+      .select('status, trial_ends_at, current_period_start, current_period_end, cancel_at_period_end, stripe_payment_method_id, max_usuarios, plan_id')
       .eq('empresa_id', empresa!.id)
       .maybeSingle();
 
@@ -66,6 +67,7 @@ export default function TrialCountdownBanner() {
     setData({
       status: sub.status,
       trial_ends_at: sub.trial_ends_at,
+      current_period_start: (sub as any).current_period_start,
       current_period_end: sub.current_period_end,
       cancel_at_period_end: !!(sub as any).cancel_at_period_end,
       stripe_payment_method_id: (sub as any).stripe_payment_method_id || null,
@@ -101,9 +103,11 @@ export default function TrialCountdownBanner() {
 
   const isTrial = data.status === 'trial';
   const isActive = data.status === 'active';
+  // Periodo de gracia: la prueba/periodo terminó y el pago está pendiente.
+  const isGracia = data.status === 'past_due' || data.status === 'gracia';
 
-  // Banner sólo aplica para trial (con o sin tarjeta) o para cancel_at_period_end
-  if (!isTrial && !data.cancel_at_period_end) return null;
+  // Banner aplica para trial, para el periodo de gracia (past_due) o cancel_at_period_end
+  if (!isTrial && !isGracia && !data.cancel_at_period_end) return null;
 
   const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
   const periodEnd = data.current_period_end ? new Date(data.current_period_end) : null;
@@ -159,6 +163,40 @@ export default function TrialCountdownBanner() {
           chargeAmount={totalCargo}
         />
       </>
+    );
+  }
+
+  // Periodo de gracia: prueba/periodo terminó, pago pendiente, aún con acceso (3 días)
+  if (isGracia) {
+    const DIAS_GRACIA = 3;
+    const refDate = trialEnd ?? (data.current_period_start ? new Date(data.current_period_start) : null);
+    const diasTranscurridos = refDate ? Math.max(0, differenceInDays(today, refDate)) : 0;
+    const diasRestantes = Math.max(0, DIAS_GRACIA - diasTranscurridos);
+    return (
+      <Card className="border-2 border-destructive/40 bg-destructive/5 mb-4">
+        <CardContent className="pt-4 pb-4 flex flex-col md:flex-row md:items-center gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="rounded-full bg-destructive/10 p-2.5">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-base text-destructive">
+                {diasRestantes > 0
+                  ? <>Tu acceso se pausará en <span>{diasRestantes} día{diasRestantes !== 1 ? 's' : ''}</span></>
+                  : <>Tu acceso se pausará hoy por falta de pago</>}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Tu {trialEnd ? 'prueba' : 'periodo'} terminó y el pago está pendiente. Paga ahora para no perder el acceso.
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" asChild>
+              <Link to="/mi-suscripcion">Pagar ahora</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
