@@ -126,6 +126,9 @@ Deno.serve(async (req) => {
           nombre: profilesMap[u.id]?.nombre || null,
           telefono: profilesMap[u.id]?.telefono || null,
           rol: rolesMap[u.id] || null,
+          estado: profilesMap[u.id]?.estado ?? 'activo',
+          archivado_en: profilesMap[u.id]?.archivado_en ?? null,
+          archivado_motivo: profilesMap[u.id]?.archivado_motivo ?? null,
           created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at,
         }));
