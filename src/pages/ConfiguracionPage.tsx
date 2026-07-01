@@ -857,7 +857,7 @@ export default function ConfiguracionPage() {
       </Button>
 
       {/* Mi Suscripción — solo super admin */}
-      {(user?.email === 'diego.leon@uniline.mx') && (
+      {isSuperAdminEmail(user?.email) && (
         <div className="max-w-xl">
           <SubscriptionCard />
         </div>
