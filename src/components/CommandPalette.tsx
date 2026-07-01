@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useDebounce } from '@/hooks/useDebounce';
 import { fmtCurrency, fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
