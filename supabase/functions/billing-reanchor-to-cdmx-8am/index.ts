@@ -125,10 +125,9 @@ Deno.serve(async (req) => {
               });
               updated++;
               await sb.from("maintenance_log").insert({
-                action: "reanchor_cdmx_8am",
-                entity_type: "stripe_subscription",
-                entity_id: sub.id,
-                details: entry,
+                ejecutado_por: userData.user.id,
+                tablas_procesadas: ["stripe_subscription"],
+                notas: `reanchor_cdmx_8am ${sub.id}: ${JSON.stringify(entry)}`,
               });
             }
             results.push(entry);
