@@ -883,7 +883,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((u: any) => {
-                      const est = (u.estado || 'activo') as string;
+                      const est = classifyUser(u);
                       const estCls = est === 'activo'
                         ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
                         : est === 'baja'
