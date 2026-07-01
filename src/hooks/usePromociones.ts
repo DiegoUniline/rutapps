@@ -194,6 +194,14 @@ export function evaluatePromociones(
       if (item.es_cambio) return false;
       if (!promo.acumulable && appliedNonAcumulable.has(item.producto_id)) return false;
 
+      // FIX: para promos "producto_gratis" con producto_gratis_id definido,
+      // sólo aplican al item cuyo producto_id coincide con el producto configurado.
+      // Sin esto, una promo tipo 3x2 con aplica_a='zona'/'cliente'/'todos' regalaría
+      // cualquier producto del carrito, no el producto real de la promoción.
+      if (promo.tipo === 'producto_gratis' && promo.producto_gratis_id && item.producto_id !== promo.producto_gratis_id) {
+        return false;
+      }
+
       switch (promo.aplica_a) {
         case 'todos':
           return true;
