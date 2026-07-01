@@ -514,7 +514,37 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     finally { setDeleting(false); }
   }
 
-  const allUsers = usersDetailed.length > 0 ? usersDetailed : profiles;
+  // Merge estado/archivado_en from profiles into detailed users (admin-users doesn't include it)
+  const profilesByUserId = useMemo(() => {
+    const m = new Map<string, any>();
+    profiles.forEach(p => { if (p.user_id) m.set(p.user_id, p); });
+    return m;
+  }, [profiles]);
+  const allUsers = useMemo(() => {
+    const base = usersDetailed.length > 0 ? usersDetailed : profiles;
+    return base.map((u: any) => {
+      const p = profilesByUserId.get(u.user_id ?? u.id) || (usersDetailed.length === 0 ? u : null);
+      return {
+        ...u,
+        estado: p?.estado ?? u.estado ?? 'activo',
+        archivado_en: p?.archivado_en ?? u.archivado_en ?? null,
+        archivado_motivo: p?.archivado_motivo ?? u.archivado_motivo ?? null,
+      };
+    });
+  }, [usersDetailed, profiles, profilesByUserId]);
+  const [userStatusFilter, setUserStatusFilter] = useState<'todos' | 'activo' | 'baja' | 'archivado'>('todos');
+  const usersCounts = useMemo(() => {
+    const c = { todos: allUsers.length, activo: 0, baja: 0, archivado: 0 } as Record<string, number>;
+    allUsers.forEach((u: any) => {
+      const s = (u.estado || 'activo') as string;
+      if (c[s] != null) c[s]++;
+    });
+    return c;
+  }, [allUsers]);
+  const filteredUsers = useMemo(
+    () => userStatusFilter === 'todos' ? allUsers : allUsers.filter((u: any) => (u.estado || 'activo') === userStatusFilter),
+    [allUsers, userStatusFilter]
+  );
 
   // ── KPIs / derivados ─────────────────────────────────────────
   const kpis = useMemo(() => {
