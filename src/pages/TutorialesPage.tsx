@@ -85,7 +85,7 @@ interface VideoRow {
 export default function TutorialesPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const isAdmin = user?.email === SUPER_ADMIN_EMAIL;
+  const isAdmin = isSuperAdminEmail(user?.email);
 
   const [selected, setSelected] = useState<VideoRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
