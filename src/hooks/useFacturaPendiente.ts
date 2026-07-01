@@ -61,27 +61,12 @@ export function useFacturaPendiente(): FacturaPendienteState {
       }
 
 
-      // Solo las suscripciones MANUALES pueden ocultar facturas pendientes
-      // cuya cobertura ya está garantizada por el admin. Para suscripciones
-      // automáticas, una factura pendiente siempre debe mostrarse — el hecho
-      // de que current_period_end haya avanzado no significa que se haya pagado.
-      const subEndCandidates = [sub?.current_period_end, sub?.fecha_vencimiento]
-        .filter(Boolean)
-        .map((d) => new Date(d as string));
-      const subEnd = subEndCandidates.length
-        ? new Date(Math.max(...subEndCandidates.map((d) => d.getTime())))
-        : null;
-      const subTieneCoberturaManual = !!sub?.es_manual && subEnd !== null && subEnd >= new Date();
-
-      const f = facturas?.find((factura) => {
-        const facturaPeriodEnd = factura.periodo_fin ? new Date(factura.periodo_fin) : null;
-        const coveredByManualSubscription =
-          subTieneCoberturaManual &&
-          subEnd !== null &&
-          facturaPeriodEnd !== null &&
-          facturaPeriodEnd <= subEnd;
-        return !coveredByManualSubscription;
-      });
+      // Una factura pendiente / procesando / past_due SIEMPRE debe mostrar el
+      // banner — aunque el admin haya extendido la cobertura manual de la
+      // suscripción, la factura sigue sin pagarse y el dueño (y el super admin
+      // impersonando la empresa) tienen que verla.
+      void sub;
+      const f = facturas?.[0];
       if (!f) return EMPTY;
 
       // Si no hay fecha_vencimiento explícita, derivarla: fecha_emision + 3 días de gracia.
