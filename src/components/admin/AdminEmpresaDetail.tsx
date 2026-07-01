@@ -533,16 +533,17 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     });
   }, [usersDetailed, profiles, profilesByUserId]);
   const [userStatusFilter, setUserStatusFilter] = useState<'todos' | 'activo' | 'baja' | 'archivado'>('todos');
+  const classifyUser = (u: any): 'activo' | 'baja' | 'archivado' => {
+    if (u?.archivado_en) return 'archivado';
+    return (u?.estado || 'activo') === 'activo' ? 'activo' : 'baja';
+  };
   const usersCounts = useMemo(() => {
     const c = { todos: allUsers.length, activo: 0, baja: 0, archivado: 0 } as Record<string, number>;
-    allUsers.forEach((u: any) => {
-      const s = (u.estado || 'activo') as string;
-      if (c[s] != null) c[s]++;
-    });
+    allUsers.forEach((u: any) => { c[classifyUser(u)]++; });
     return c;
   }, [allUsers]);
   const filteredUsers = useMemo(
-    () => userStatusFilter === 'todos' ? allUsers : allUsers.filter((u: any) => (u.estado || 'activo') === userStatusFilter),
+    () => userStatusFilter === 'todos' ? allUsers : allUsers.filter((u: any) => classifyUser(u) === userStatusFilter),
     [allUsers, userStatusFilter]
   );
 
@@ -882,7 +883,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((u: any) => {
-                      const est = (u.estado || 'activo') as string;
+                      const est = classifyUser(u);
                       const estCls = est === 'activo'
                         ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
                         : est === 'baja'

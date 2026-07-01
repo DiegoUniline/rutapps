@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       // Get all profiles for this empresa
       const { data: profiles } = await adminClient
         .from("profiles")
-        .select("user_id, nombre, telefono")
+        .select("user_id, nombre, telefono, estado, archivado_en, archivado_motivo")
         .eq("empresa_id", targetEmpresaId);
 
       const userIds = (profiles ?? []).map((p: any) => p.user_id);
@@ -126,6 +126,9 @@ Deno.serve(async (req) => {
           nombre: profilesMap[u.id]?.nombre || null,
           telefono: profilesMap[u.id]?.telefono || null,
           rol: rolesMap[u.id] || null,
+          estado: profilesMap[u.id]?.estado ?? 'activo',
+          archivado_en: profilesMap[u.id]?.archivado_en ?? null,
+          archivado_motivo: profilesMap[u.id]?.archivado_motivo ?? null,
           created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at,
         }));
