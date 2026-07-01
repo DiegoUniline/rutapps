@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users, MapPin, Smartphone, AlertTriangle } from 'lucide-react';
@@ -857,7 +858,7 @@ export default function ConfiguracionPage() {
       </Button>
 
       {/* Mi Suscripción — solo super admin */}
-      {(user?.email === 'diego.leon@uniline.mx') && (
+      {isSuperAdminEmail(user?.email) && (
         <div className="max-w-xl">
           <SubscriptionCard />
         </div>

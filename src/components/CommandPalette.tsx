@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useDebounce } from '@/hooks/useDebounce';
 import { fmtCurrency, fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -98,7 +99,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
   const empresaId = empresa?.id;
-  const isBillingOwner = (user?.email || '').toLowerCase() === 'diego.leon@uniline.mx';
+  const isBillingOwner = isSuperAdminEmail(user?.email);
   const VISIBLE_MENU_ITEMS = isBillingOwner ? MENU_ITEMS : MENU_ITEMS.filter(m => !m.to.startsWith('/facturacion-cfdi') && m.to !== '/mi-suscripcion' && m.to !== '/facturacion');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ResultItem[]>([]);

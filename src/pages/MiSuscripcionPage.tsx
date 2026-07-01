@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -672,7 +673,7 @@ export default function MiSuscripcionPage() {
     }
   }
 
-  const isSuperAdminUser = user?.email === 'diego.leon@uniline.mx';
+  const isSuperAdminUser = isSuperAdminEmail(user?.email);
 
   // ─── Eliminar factura (solo super admin) ───
   async function handleDeleteFactura(factura: FacturaRow) {
@@ -831,7 +832,7 @@ export default function MiSuscripcionPage() {
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap bg-white border border-border">
           <TabsTrigger value="resumen" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Resumen</TabsTrigger>
           <TabsTrigger value="plan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Plan & Cupones</TabsTrigger>
-          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas{user?.email === 'diego.leon@uniline.mx' ? ' & Timbres' : ''}</TabsTrigger>
+          <TabsTrigger value="facturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Facturas{isSuperAdminUser ? ' & Timbres' : ''}</TabsTrigger>
           <TabsTrigger value="fiscal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Datos fiscales</TabsTrigger>
           <TabsTrigger value="simulador" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Simulador de costos</TabsTrigger>
         </TabsList>
@@ -1208,7 +1209,7 @@ export default function MiSuscripcionPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Timbres Section — solo visible para super admin */}
-              {user?.email === 'diego.leon@uniline.mx' && (
+              {isSuperAdminUser && (
               <Card>
                 <CardContent className="p-4 sm:p-6">
                   <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">

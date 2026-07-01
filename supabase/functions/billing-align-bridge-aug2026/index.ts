@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         const token = authHeader.replace("Bearer ", "");
         const { data: claimsData } = await supabase.auth.getClaims(token);
         const email = (claimsData?.claims as any)?.email?.toLowerCase();
-        if (email === "diego.leon@uniline.mx") authorized = true;
+        if (email === "diego.leon@uniline.mx" || email === "ventas@uniline.mx") authorized = true;
       }
     }
 

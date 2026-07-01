@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { Seo } from '@/components/seo/Seo';
 
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@RutAppMx';
-const SUPER_ADMIN_EMAIL = 'diego.leon@uniline.mx';
+import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 const MODULES: { value: string; label: string }[] = [
   { value: 'dashboard', label: 'Dashboard' },
@@ -85,7 +85,7 @@ interface VideoRow {
 export default function TutorialesPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const isAdmin = user?.email === SUPER_ADMIN_EMAIL;
+  const isAdmin = isSuperAdminEmail(user?.email);
 
   const [selected, setSelected] = useState<VideoRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
