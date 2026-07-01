@@ -211,7 +211,7 @@ export default function ClienteFormPage() {
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
-  const billingEnabled = (user?.email || '').toLowerCase() === 'diego.leon@uniline.mx';
+  const billingEnabled = isSuperAdminEmail(user?.email);
   const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
