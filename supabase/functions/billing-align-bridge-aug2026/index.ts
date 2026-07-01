@@ -264,9 +264,9 @@ Deno.serve(async (req) => {
         await supabase
           .from("subscriptions")
           .update({
-            current_period_end: "2026-08-01T06:00:00Z",
+            current_period_end: "2026-08-01T14:00:00Z",
             fecha_vencimiento: "2026-08-01",
-            trial_ends_at: "2026-08-01T06:00:00Z",
+            trial_ends_at: "2026-08-01T14:00:00Z",
             status: "active",
             acceso_bloqueado: false,
             updated_at: new Date().toISOString(),
