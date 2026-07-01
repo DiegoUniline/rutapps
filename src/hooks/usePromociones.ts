@@ -194,14 +194,6 @@ export function evaluatePromociones(
       if (item.es_cambio) return false;
       if (!promo.acumulable && appliedNonAcumulable.has(item.producto_id)) return false;
 
-      // FIX: para promos "producto_gratis" con producto_gratis_id definido,
-      // sólo aplican al item cuyo producto_id coincide con el producto configurado.
-      // Sin esto, una promo tipo 3x2 con aplica_a='zona'/'cliente'/'todos' regalaría
-      // cualquier producto del carrito, no el producto real de la promoción.
-      if (promo.tipo === 'producto_gratis' && promo.producto_gratis_id && item.producto_id !== promo.producto_gratis_id) {
-        return false;
-      }
-
       switch (promo.aplica_a) {
         case 'todos':
           return true;
@@ -243,26 +235,55 @@ export function evaluatePromociones(
           break;
         case 'producto_gratis': {
           const cantGratis = promo.cantidad_gratis || 1;
-          // Calculate how many sets of "buy X" fit in the cart quantity
           const sets = Math.floor(item.cantidad / (promo.cantidad_minima || 1));
           const totalGratis = sets * cantGratis;
-          // The discount is the value of the free items at the item's unit price
-          descuento = totalGratis * item.precio_unitario;
-          descripcion = `${cantGratis}x gratis (${promo.cantidad_minima || 1}×${(promo.cantidad_minima || 1) - cantGratis}) — ${promo.nombre}`;
-          results.push({
-            promocion_id: promo.id,
-            nombre: promo.nombre,
-            tipo: promo.tipo,
-            producto_id: item.producto_id,
-            descuento: Math.round(descuento * 100) / 100,
-            descripcion,
-            producto_gratis_id: promo.producto_gratis_id || item.producto_id,
-            cantidad_gratis: totalGratis,
-          });
-          if (!promo.acumulable) appliedNonAcumulable.add(item.producto_id);
+          if (totalGratis <= 0) continue;
+
+          // Determinar producto que se regala y su precio
+          const freeProductId = promo.producto_gratis_id || item.producto_id;
+          const freeItemInCart = cartItems.find(ci => ci.producto_id === freeProductId);
+          const precioGratis = freeItemInCart?.precio_unitario ?? item.precio_unitario;
+
+          // Si es un producto DIFERENTE, sólo aplica si está en el carrito con suficiente cantidad
+          if (freeProductId !== item.producto_id) {
+            if (!freeItemInCart) continue;
+            const gratisReal = Math.min(totalGratis, freeItemInCart.cantidad);
+            if (gratisReal <= 0) continue;
+            descuento = gratisReal * precioGratis;
+            descripcion = `${gratisReal}× ${freeProductId === item.producto_id ? '' : 'gratis'} — ${promo.nombre}`;
+            results.push({
+              promocion_id: promo.id,
+              nombre: promo.nombre,
+              tipo: promo.tipo,
+              producto_id: freeProductId,
+              descuento: Math.round(descuento * 100) / 100,
+              descripcion,
+              producto_gratis_id: freeProductId,
+              cantidad_gratis: gratisReal,
+            });
+          } else {
+            descuento = totalGratis * precioGratis;
+            descripcion = `${cantGratis}x gratis (${promo.cantidad_minima || 1}×${(promo.cantidad_minima || 1) - cantGratis}) — ${promo.nombre}`;
+            results.push({
+              promocion_id: promo.id,
+              nombre: promo.nombre,
+              tipo: promo.tipo,
+              producto_id: item.producto_id,
+              descuento: Math.round(descuento * 100) / 100,
+              descripcion,
+              producto_gratis_id: freeProductId,
+              cantidad_gratis: totalGratis,
+            });
+          }
+          if (!promo.acumulable) {
+            appliedNonAcumulable.add(item.producto_id);
+            appliedNonAcumulable.add(freeProductId);
+          }
           continue;
         }
       }
+
+
 
       if (descuento > 0) {
         results.push({
