@@ -631,7 +631,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
   const planNombre = planActual?.nombre || '—';
   const precioFinal = (planActual?.precio_por_usuario || 0) * (1 - (subscription?.descuento_porcentaje || 0) / 100);
   const baseUsuarios = planActual?.usuarios_incluidos ?? null;
-  const usuariosActivos = allUsers.length;
+  const usuariosActivos = usersCounts.activo;
   const asientosExtra = baseUsuarios != null ? Math.max(0, usuariosActivos - baseUsuarios) : 0;
 
   return (
