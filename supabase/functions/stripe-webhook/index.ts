@@ -129,17 +129,18 @@ Deno.serve(async (req) => {
 
         // trial_end = ahora + 7 días
         const trialEndUnix = Math.floor(Date.now() / 1000) + 7 * 86400;
-        // billing_cycle_anchor = 1° del mes siguiente al fin de trial, 00:00 CDMX
+        // billing_cycle_anchor = 1° del mes siguiente al fin de trial, 08:00 CDMX
+        // (= 14:00 UTC) para no cobrar en la madrugada mexicana.
         const trialEndDate = new Date(trialEndUnix * 1000);
         const cdmxFmt = new Intl.DateTimeFormat("en-CA", {
           timeZone: TZ, year: "numeric", month: "2-digit",
         }).formatToParts(trialEndDate);
         const trialYear = parseInt(cdmxFmt.find(p => p.type === "year")!.value, 10);
         const trialMonth = parseInt(cdmxFmt.find(p => p.type === "month")!.value, 10);
-        // primer día del mes siguiente, 00:00 CDMX (= 06:00 UTC)
+        // primer día del mes siguiente, 08:00 CDMX (= 14:00 UTC)
         const nextMonth = trialMonth === 12 ? 1 : trialMonth + 1;
         const nextYear = trialMonth === 12 ? trialYear + 1 : trialYear;
-        const anchorIso = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01T06:00:00.000Z`;
+        const anchorIso = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01T14:00:00.000Z`;
         const anchorUnix = Math.floor(new Date(anchorIso).getTime() / 1000);
 
         const newSub = await stripe.subscriptions.create({
