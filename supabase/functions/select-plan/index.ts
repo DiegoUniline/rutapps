@@ -208,7 +208,9 @@ Deno.serve(async (req) => {
             customerId = nc.id;
           }
 
-          const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          // 1° del mes siguiente a las 08:00 CDMX (= 14:00 UTC) para evitar
+          // que Stripe cobre en la madrugada mexicana.
+          const nextFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 14, 0, 0));
 
           let discounts: any[] = [];
           const descPct = currentSub?.descuento_porcentaje || 0;

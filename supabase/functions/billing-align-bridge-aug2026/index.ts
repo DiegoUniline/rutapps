@@ -30,7 +30,7 @@ const corsHeaders = {
 };
 
 const REASON = "billing_alignment_bridge_to_august_2026";
-const ANCHOR_UNIX = 1785564000; // 2026-08-01 00:00 America/Mexico_City
+const ANCHOR_UNIX = 1785592800; // 2026-08-01 08:00 America/Mexico_City (= 14:00 UTC)
 const JULY_DAYS = 31;
 
 // Whitelist EXACTA: solo estas 7 suscripciones pueden ser procesadas.
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
             monthly_total_cents: monthly,
             bridge_days: days,
             bridge_amount_cents: amount,
-            target_anchor: "2026-08-01T00:00:00-06:00",
+            target_anchor: "2026-08-01T08:00:00-06:00",
           },
         });
 
@@ -264,9 +264,9 @@ Deno.serve(async (req) => {
         await supabase
           .from("subscriptions")
           .update({
-            current_period_end: "2026-08-01T06:00:00Z",
+            current_period_end: "2026-08-01T14:00:00Z",
             fecha_vencimiento: "2026-08-01",
-            trial_ends_at: "2026-08-01T06:00:00Z",
+            trial_ends_at: "2026-08-01T14:00:00Z",
             status: "active",
             acceso_bloqueado: false,
             updated_at: new Date().toISOString(),
