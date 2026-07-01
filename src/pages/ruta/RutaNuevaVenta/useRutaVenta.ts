@@ -165,12 +165,36 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   }, [urlClienteId, clientes]);
 
   const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const [saldoOnlineOverride, setSaldoOnlineOverride] = useState<number | null>(null);
   const ventasPendientes = useMemo(() => {
     if (!allVentas || !clienteId) return [];
     return (allVentas as any[]).filter(v => v.cliente_id === clienteId && (v.saldo_pendiente ?? 0) > 0 && ['confirmado', 'entregado', 'facturado'].includes(v.status)).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
   }, [allVentas, clienteId]);
 
-  const saldoPendienteTotal = useMemo(() => (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0), [ventasPendientes]);
+  const saldoPendienteLocal = useMemo(() => (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0), [ventasPendientes]);
+  const saldoPendienteTotal = saldoOnlineOverride ?? saldoPendienteLocal;
+
+  // Refresh saldo anterior desde servidor cuando hay conexión — evita que el cache local (IndexedDB) muestre saldos ya cobrados
+  useEffect(() => {
+    if (!clienteId || !empresa?.id || !navigator.onLine) { setSaldoOnlineOverride(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('ventas')
+          .select('saldo_pendiente')
+          .eq('empresa_id', empresa.id)
+          .eq('cliente_id', clienteId)
+          .gt('saldo_pendiente', 0)
+          .in('status', ['confirmado', 'entregado', 'facturado']);
+        if (cancelled) return;
+        const total = (data ?? []).reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+        setSaldoOnlineOverride(total);
+      } catch { /* offline — fallback local */ }
+    })();
+    return () => { cancelled = true; };
+  }, [clienteId, empresa?.id]);
+
 
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id, se_puede_vender: true, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
   const { data: tarifasOffline } = useOfflineQuery('tarifas', { empresa_id: empresa?.id, activa: true }, { enabled: !!empresa?.id });
