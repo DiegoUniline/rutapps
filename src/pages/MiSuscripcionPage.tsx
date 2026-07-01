@@ -673,7 +673,7 @@ export default function MiSuscripcionPage() {
     }
   }
 
-  const isSuperAdminUser = user?.email === 'diego.leon@uniline.mx';
+  const isSuperAdminUser = isSuperAdminEmail(user?.email);
 
   // ─── Eliminar factura (solo super admin) ───
   async function handleDeleteFactura(factura: FacturaRow) {
