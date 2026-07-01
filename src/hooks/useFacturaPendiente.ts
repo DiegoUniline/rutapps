@@ -35,8 +35,6 @@ export function useFacturaPendiente(): FacturaPendienteState {
     queryKey: ['factura-pendiente', empresa?.id, user?.email],
     queryFn: async (): Promise<Omit<FacturaPendienteState, 'loading'>> => {
       if (!empresa?.id) return EMPTY;
-      // Super admin nunca se bloquea por factura pendiente
-      if (isSuperAdminEmail(user?.email)) return EMPTY;
       let sub: any = null;
       let facturas: any[] | null = null;
       try {
