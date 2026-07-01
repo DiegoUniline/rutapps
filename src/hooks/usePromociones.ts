@@ -245,9 +245,12 @@ export function evaluatePromociones(
           descripcion = `Precio especial $${promo.valor} — ${promo.nombre}`;
           break;
         case 'volumen':
+          // Requiere cantidad mínima > 0 y valor > 0 para tener sentido
+          if ((promo.cantidad_minima || 0) <= 0 || (promo.valor || 0) <= 0) continue;
           descuento = item.precio_unitario * item.cantidad * (promo.valor / 100);
           descripcion = `${promo.valor}% vol. (${promo.cantidad_minima}+) — ${promo.nombre}`;
           break;
+
         case 'producto_gratis': {
           const cantGratis = promo.cantidad_gratis || 1;
           const sets = Math.floor(item.cantidad / (promo.cantidad_minima || 1));
