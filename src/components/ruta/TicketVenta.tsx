@@ -299,24 +299,23 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               </>
             )}
 
-            {/* Ahorro total promos — inline per product above */}
-            {promociones.length > 0 && promociones.reduce((s, p) => s + p.descuento, 0) > 0 && (
-              <div className="px-5 py-0.5">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-primary font-semibold">🏷️ Ahorro promos</span>
-                  <span className="text-primary font-bold tabular-nums">-{fmt(promociones.reduce((s, p) => s + p.descuento, 0))}</span>
-                </div>
-              </div>
-            )}
-
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
             {/* Totals */}
+            {(() => {
+              const descuentoPromos = promociones.reduce((s, p) => s + p.descuento, 0);
+              return (
             <div className="px-5 py-2 space-y-0.5">
               {taxMode !== 'ninguno' && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">Subtotal</span>
                   <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
+                </div>
+              )}
+              {descuentoPromos > 0 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-primary font-semibold">Descuento</span>
+                  <span className="val text-primary font-bold tabular-nums">-{fmt(descuentoPromos)}</span>
                 </div>
               )}
               {taxMode !== 'ninguno' && iva > 0 && (
