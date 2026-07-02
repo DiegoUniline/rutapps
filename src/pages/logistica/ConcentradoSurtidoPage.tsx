@@ -24,6 +24,9 @@ interface VentaLite {
   fecha: string;
   status: string;
   empresa_id: string;
+  total: number | null;
+  cliente_id: string | null;
+  clientes: { nombre: string | null } | null;
 }
 interface LineaRow {
   producto_id: string;
@@ -72,6 +75,7 @@ export default function ConcentradoSurtidoPage() {
   const toggleStatus = (v: string) => {
     setStatusFilter(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   };
+  const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
@@ -83,16 +87,17 @@ export default function ConcentradoSurtidoPage() {
         : ['confirmado', 'entregado', 'facturado'];
       const ventas = await fetchAllPages<VentaLite>((from, to) =>
         supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, empresa_id')
+          .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
           .gte('fecha_entrega', desde)
           .lte('fecha_entrega', hasta)
           .in('status', statuses as any)
+          .order('fecha_entrega', { ascending: true })
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
       if (ventaIds.length === 0) {
-        return { rows: [] as Row[], ventas: [] as VentaLite[] };
+        return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
       }
 
       // 2) Líneas de esas ventas
@@ -151,7 +156,39 @@ export default function ConcentradoSurtidoPage() {
       }).filter(r => r.pendiente > 0)
         .sort((a, b) => (b.faltante - a.faltante) || a.nombre.localeCompare(b.nombre));
 
-      return { rows, ventas };
+      // Agregación por pedido
+      const reqPorVenta = new Map<string, number>();
+      for (const l of lineas) reqPorVenta.set(l.venta_id, (reqPorVenta.get(l.venta_id) ?? 0) + Number(l.cantidad || 0));
+      const entPorVenta = new Map<string, number>();
+      for (const el of entregaLineas) {
+        const vid = el.entregas?.pedido_id;
+        if (!vid) continue;
+        entPorVenta.set(vid, (entPorVenta.get(vid) ?? 0) + Number(el.cantidad_entregada || 0));
+      }
+      const pedidos: PedidoRow[] = ventas.map(v => {
+        const req = reqPorVenta.get(v.id) ?? 0;
+        const ent = entPorVenta.get(v.id) ?? 0;
+        const pend = Math.max(0, req - ent);
+        let surtido_status: PedidoRow['surtido_status'];
+        if (req === 0) surtido_status = 'sin_lineas';
+        else if (ent <= 0) surtido_status = 'pendiente';
+        else if (pend <= 0) surtido_status = 'surtido';
+        else surtido_status = 'parcial';
+        return {
+          id: v.id,
+          folio: v.folio,
+          fecha_entrega: v.fecha_entrega,
+          status: v.status,
+          cliente: v.clientes?.nombre ?? '—',
+          total: Number(v.total ?? 0),
+          requerido: req,
+          entregado: ent,
+          pendiente: pend,
+          surtido_status,
+        };
+      }).sort((a, b) => (a.fecha_entrega ?? '').localeCompare(b.fecha_entrega ?? '') || (a.folio ?? '').localeCompare(b.folio ?? ''));
+
+      return { rows, ventas, pedidos };
     },
   });
 
@@ -389,55 +426,126 @@ export default function ConcentradoSurtidoPage() {
         </div>
       )}
 
+      {/* Toggle vista */}
+      <div className="flex items-center gap-1 bg-muted/30 border border-border rounded-lg p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setViewMode('pedidos')}
+          className={`text-xs px-3 py-1.5 rounded-md transition ${
+            viewMode === 'pedidos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
+          }`}
+        >
+          Por pedido
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('productos')}
+          className={`text-xs px-3 py-1.5 rounded-md transition ${
+            viewMode === 'productos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
+          }`}
+        >
+          Por producto
+        </button>
+      </div>
+
       {/* Tabla */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs text-muted-foreground">
-              <tr>
-                <th className="text-left px-3 py-2">Código</th>
-                <th className="text-left px-3 py-2">Producto</th>
-                <th className="text-right px-3 py-2">Requerido</th>
-                <th className="text-right px-3 py-2">Ya entregado</th>
-                <th className="text-right px-3 py-2">A surtir</th>
-                <th className="text-right px-3 py-2">Stock actual</th>
-                <th className="text-right px-3 py-2">Faltante</th>
-                <th className="text-left px-3 py-2">Proveedor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
-              )}
-              {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin pedidos pendientes a entregar en este rango.</td></tr>
-              )}
-              {rows.map(r => {
-                const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
-                const tieneFaltante = r.faltante > 0;
-                return (
-                  <tr key={r.producto_id} className={tieneFaltante ? 'bg-destructive/5' : 'hover:bg-muted/20'}>
-                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.codigo}</td>
-                    <td className="px-3 py-2 font-medium">{r.nombre}</td>
-                    <td className="px-3 py-2 text-right">{r.requerido}</td>
-                    <td className="px-3 py-2 text-right text-muted-foreground">{r.entregado || '—'}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{r.pendiente}</td>
-                    <td className={`px-3 py-2 text-right ${r.stock < r.pendiente ? 'text-destructive font-semibold' : ''}`}>{r.stock}</td>
-                    <td className="px-3 py-2 text-right">
-                      {tieneFaltante ? (
-                        <Badge variant="destructive" className="font-mono">{r.faltante}</Badge>
-                      ) : (
-                        <span className="text-success">✓</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {prov?.nombre ?? (r.proveedor_preferido_id ? '—' : <span className="text-destructive/80">Sin proveedor</span>)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {viewMode === 'pedidos' ? (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2">Fecha entrega</th>
+                  <th className="text-left px-3 py-2">Folio</th>
+                  <th className="text-left px-3 py-2">Cliente</th>
+                  <th className="text-left px-3 py-2">Estado pedido</th>
+                  <th className="text-right px-3 py-2">Requerido</th>
+                  <th className="text-right px-3 py-2">Entregado</th>
+                  <th className="text-right px-3 py-2">Pendiente</th>
+                  <th className="text-left px-3 py-2">Surtido</th>
+                  <th className="text-right px-3 py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                )}
+                {!isLoading && (data?.pedidos ?? []).length === 0 && (
+                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los estados seleccionados.</td></tr>
+                )}
+                {(data?.pedidos ?? []).map(p => {
+                  const badge = {
+                    surtido:   { label: 'Surtido',   cls: 'bg-success/15 text-success border-success/30' },
+                    parcial:   { label: 'Parcial',   cls: 'bg-warning/15 text-warning border-warning/30' },
+                    pendiente: { label: 'Por surtir',cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                    sin_lineas:{ label: 'Sin líneas',cls: 'bg-muted text-muted-foreground border-border' },
+                  }[p.surtido_status];
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
+                      <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
+                      <td className="px-3 py-2 font-medium">{p.cliente}</td>
+                      <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
+                      <td className="px-3 py-2 text-right">{p.requerido}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">{fmtMoney(p.total)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2">Código</th>
+                  <th className="text-left px-3 py-2">Producto</th>
+                  <th className="text-right px-3 py-2">Requerido</th>
+                  <th className="text-right px-3 py-2">Ya entregado</th>
+                  <th className="text-right px-3 py-2">A surtir</th>
+                  <th className="text-right px-3 py-2">Stock actual</th>
+                  <th className="text-right px-3 py-2">Faltante</th>
+                  <th className="text-left px-3 py-2">Proveedor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                )}
+                {!isLoading && rows.length === 0 && (
+                  <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin productos pendientes a surtir en este rango.</td></tr>
+                )}
+                {rows.map(r => {
+                  const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
+                  const tieneFaltante = r.faltante > 0;
+                  return (
+                    <tr key={r.producto_id} className={tieneFaltante ? 'bg-destructive/5' : 'hover:bg-muted/20'}>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.codigo}</td>
+                      <td className="px-3 py-2 font-medium">{r.nombre}</td>
+                      <td className="px-3 py-2 text-right">{r.requerido}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">{r.entregado || '—'}</td>
+                      <td className="px-3 py-2 text-right font-semibold">{r.pendiente}</td>
+                      <td className={`px-3 py-2 text-right ${r.stock < r.pendiente ? 'text-destructive font-semibold' : ''}`}>{r.stock}</td>
+                      <td className="px-3 py-2 text-right">
+                        {tieneFaltante ? (
+                          <Badge variant="destructive" className="font-mono">{r.faltante}</Badge>
+                        ) : (
+                          <span className="text-success">✓</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {prov?.nombre ?? (r.proveedor_preferido_id ? '—' : <span className="text-destructive/80">Sin proveedor</span>)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -455,6 +563,19 @@ interface Row {
   faltante: number;
   costo: number;
   proveedor_preferido_id: string | null;
+}
+
+interface PedidoRow {
+  id: string;
+  folio: string | null;
+  fecha_entrega: string | null;
+  status: string;
+  cliente: string;
+  total: number;
+  requerido: number;
+  entregado: number;
+  pendiente: number;
+  surtido_status: 'surtido' | 'parcial' | 'pendiente' | 'sin_lineas';
 }
 
 function KPI({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
