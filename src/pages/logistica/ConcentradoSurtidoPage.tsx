@@ -326,6 +326,43 @@ export default function ConcentradoSurtidoPage() {
             </Button>
           )}
         </div>
+
+        <div className="w-full space-y-1">
+          <Label className="text-xs">Estado del pedido</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_OPTIONS.map(opt => {
+              const active = statusFilter.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleStatus(opt.value)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-foreground border-border hover:bg-muted/40'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+            {statusFilter.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter([])}
+                className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:bg-muted/40"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {statusFilter.length === 0
+              ? 'Mostrando: Confirmado, Entregado y Facturado (por defecto).'
+              : `Filtrando por ${statusFilter.length} estado(s).`}
+          </p>
+        </div>
       </div>
 
       {/* KPIs */}
