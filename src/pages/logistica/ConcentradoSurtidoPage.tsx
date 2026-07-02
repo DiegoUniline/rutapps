@@ -492,10 +492,10 @@ export default function ConcentradoSurtidoPage() {
                 )}
                 {(data?.pedidos ?? []).map(p => {
                   const badge = {
-                    surtido:   { label: 'Surtido',   cls: 'bg-success/15 text-success border-success/30' },
-                    parcial:   { label: 'Parcial',   cls: 'bg-warning/15 text-warning border-warning/30' },
-                    pendiente: { label: 'Por surtir',cls: 'bg-destructive/15 text-destructive border-destructive/30' },
-                    sin_lineas:{ label: 'Sin líneas',cls: 'bg-muted text-muted-foreground border-border' },
+                    surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
+                    parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
+                    pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                    sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
                   }[p.surtido_status];
                   return (
                     <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
