@@ -226,7 +226,9 @@ export function evaluatePromociones(
     });
 
     for (const item of matchingItems) {
-      if (item.cantidad < (promo.cantidad_minima || 0)) continue;
+      const cantMinRaw = Number(promo.cantidad_minima) || 0;
+      const cantMinEffective = Math.max(0, cantMinRaw);
+      if (item.cantidad < cantMinEffective) continue;
 
       let descuento = 0;
       let descripcion = '';
