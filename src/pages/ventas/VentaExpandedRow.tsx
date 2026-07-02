@@ -104,7 +104,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       if (devIds.length > 0) {
         const { data } = await supabase
           .from('devolucion_lineas')
-          .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+          .select('cantidad, motivo, accion, monto_credito, producto:productos!devolucion_lineas_producto_id_fkey(nombre)')
           .in('devolucion_id', devIds);
         devLineas = data ?? [];
       }

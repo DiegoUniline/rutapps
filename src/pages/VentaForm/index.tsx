@@ -89,7 +89,7 @@ export default function VentaFormPage() {
       if (ids.length === 0) return [] as any[];
       const { data } = await supabase
         .from('devolucion_lineas')
-        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos!devolucion_lineas_producto_id_fkey(nombre)')
         .in('devolucion_id', ids);
       return data ?? [];
     },

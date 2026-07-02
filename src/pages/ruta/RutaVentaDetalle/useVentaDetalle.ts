@@ -76,7 +76,7 @@ export function useVentaDetalle() {
       if (ids.length === 0) return [] as Array<{ cantidad: number; motivo: string; accion: string; monto_credito: number | null; producto: { nombre: string } | null }>;
       const { data } = await supabase
         .from('devolucion_lineas')
-        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos!devolucion_lineas_producto_id_fkey(nombre)')
         .in('devolucion_id', ids);
       return (data ?? []) as any;
     },
