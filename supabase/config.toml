@@ -90,3 +90,6 @@ verify_jwt = false
 
 [functions.billing-align-bridge-aug2026]
 verify_jwt = false
+
+[functions.admin-backfill-facturas]
+verify_jwt = false
