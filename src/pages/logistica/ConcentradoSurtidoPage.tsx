@@ -24,6 +24,9 @@ interface VentaLite {
   fecha: string;
   status: string;
   empresa_id: string;
+  total: number | null;
+  cliente_id: string | null;
+  clientes: { nombre: string | null } | null;
 }
 interface LineaRow {
   producto_id: string;
