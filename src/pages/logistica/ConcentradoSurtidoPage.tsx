@@ -493,6 +493,19 @@ interface Row {
   proveedor_preferido_id: string | null;
 }
 
+interface PedidoRow {
+  id: string;
+  folio: string | null;
+  fecha_entrega: string | null;
+  status: string;
+  cliente: string;
+  total: number;
+  requerido: number;
+  entregado: number;
+  pendiente: number;
+  surtido_status: 'surtido' | 'parcial' | 'pendiente' | 'sin_lineas';
+}
+
 function KPI({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
     <div className={`bg-card border rounded-lg p-3 ${highlight ? 'border-destructive/40 bg-destructive/5' : 'border-border'}`}>
