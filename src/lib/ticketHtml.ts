@@ -58,6 +58,7 @@ export interface TicketData {
   vendedorNombre?: string;
   lineas: TicketLinea[];
   subtotal: number;
+  descuento?: number;
   iva: number;
   ieps?: number;
   total: number;
@@ -104,7 +105,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, descuento = 0, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -175,19 +176,20 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(div);
 
   const totalPromo = (promociones ?? []).reduce((s, p) => s + p.descuento, 0);
+  const totalDescuento = Math.max(descuento, totalPromo, 0);
   add('');
   if (showTax) {
     add(pad('Subtotal', fmt(subtotal)));
-    if (totalPromo > 0) add(pad('Descuento', `-${fmt(totalPromo)}`));
+    if (totalDescuento > 0) add(pad('Descuento', `-${fmt(totalDescuento)}`));
     if (iva > 0) add(pad('IVA', fmt(iva)));
     if (ieps > 0) add(pad('IEPS', fmt(ieps)));
     add(div);
-  } else if (totalPromo > 0) {
+  } else if (totalDescuento > 0) {
     add(pad('Subtotal', fmt(subtotal)));
-    add(pad('Descuento', `-${fmt(totalPromo)}`));
+    add(pad('Descuento', `-${fmt(totalDescuento)}`));
     add(div);
   }
-  add(pad('TOTAL', fmt(showTax ? total : Math.max(0, subtotal - totalPromo))));
+  add(pad('TOTAL', fmt(total)));
 
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));

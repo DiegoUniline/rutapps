@@ -103,6 +103,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           folio: venta.folio,
           fecha: fmtDate(venta.created_at),
           subtotal: venta.subtotal,
+          descuento_total: venta.descuento_total,
           iva_total: venta.iva_total,
           ieps_total: venta.ieps_total,
           total: venta.total,

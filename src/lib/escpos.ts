@@ -276,23 +276,22 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   ln(divider(W));
 
   // ── TOTALES ──
+  const totalPromo = (data.promociones ?? []).reduce((s, p) => s + p.descuento, 0);
+  const totalDescuento = Math.max(data.descuento ?? 0, totalPromo, 0);
   if (showTax) {
     ln(row('Subtotal', fmt(data.subtotal), W));
+    if (totalDescuento > 0) ln(row('Descuento', `-${fmt(totalDescuento)}`, W));
     if (data.iva > 0) ln(row('IVA', fmt(data.iva), W));
     if ((data.ieps ?? 0) > 0) ln(row('IEPS', fmt(data.ieps!), W));
     ln(divider(W));
+  } else if (totalDescuento > 0) {
+    ln(row('Subtotal', fmt(data.subtotal), W));
+    ln(row('Descuento', `-${fmt(totalDescuento)}`, W));
+    ln(divider(W));
   }
   add(BOLD_ON);
-  ln(row('TOTAL', fmt(showTax ? data.total : data.subtotal), W));
+  ln(row('TOTAL', fmt(data.total), W));
   add(BOLD_OFF);
-
-  // Ahorro total por promociones
-  if (data.promociones && data.promociones.length > 0) {
-    const totalPromo = data.promociones.reduce((s, p) => s + p.descuento, 0);
-    if (totalPromo > 0) {
-      ln(row('Ahorro promos', `-${fmt(totalPromo)}`, W));
-    }
-  }
 
   if (data.montoRecibido && data.montoRecibido > 0) {
     ln(row('Recibido', fmt(data.montoRecibido), W));
