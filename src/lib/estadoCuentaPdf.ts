@@ -1,13 +1,37 @@
 /**
- * Estado de Cuenta PDF — Professional clean layout
+ * Estado de Cuenta PDF — Rutapp corporate layout
+ * Header + KPI cards + Ventas (histórico) + Pagos + Saldo pendiente total
+ * Colores: primario azul corporativo (#0060E6), acentos gris, verde para liquidado.
  */
-import {
-  createDoc, ML, MR, C, fmtCurrency, fmtDate,
-  drawDocHeader, drawInfoGrid, drawCleanTable,
-  drawFooter, checkPageBreak,
-  type EmpresaInfo,
-} from './pdfStyleOdoo';
 import { getCurrencyConfig } from '@/lib/currency';
+import type jsPDF from 'jspdf';
+
+const ML = 14;
+const MR = 14;
+
+// Paleta corporativa
+const PRIMARY: [number, number, number] = [0, 96, 230];      // #0060E6
+const PRIMARY_SOFT: [number, number, number] = [230, 240, 255]; // fondo tarjetas suaves
+const TEXT: [number, number, number] = [26, 26, 26];
+const MUTED: [number, number, number] = [110, 110, 110];
+const BORDER: [number, number, number] = [225, 228, 232];
+const CARD_BG: [number, number, number] = [250, 251, 253];
+const SUCCESS: [number, number, number] = [22, 163, 74];
+const SUCCESS_SOFT: [number, number, number] = [230, 248, 236];
+const DANGER: [number, number, number] = [220, 38, 38];
+const DANGER_SOFT: [number, number, number] = [254, 232, 232];
+const WHITE: [number, number, number] = [255, 255, 255];
+
+interface EmpresaInfo {
+  nombre: string;
+  razon_social?: string | null;
+  rfc?: string | null;
+  direccion?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  logo_url?: string | null;
+  moneda?: string | null;
+}
 
 interface EstadoCuentaParams {
   empresa: EmpresaInfo;
@@ -38,109 +62,409 @@ interface EstadoCuentaParams {
   }[];
 }
 
+const fmtCurrency = (n: number) =>
+  n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtDate = (d: string) => {
+  try {
+    const dt = new Date(d + 'T12:00:00');
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}/${dt.getFullYear()}`;
+  } catch { return d; }
+};
+
+const fmtDateShort = (d: string) => {
+  try {
+    const dt = new Date(d + 'T12:00:00');
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(dt.getDate())}/${pad(dt.getMonth() + 1)}`;
+  } catch { return d; }
+};
+
+const fmtDateLong = (d: Date) => {
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+};
+
+function drawMoneyMixed(doc: jsPDF, value: number, x: number, y: number, sym: string, bigSize = 20, smallSize = 10) {
+  const [intPart, decPart] = fmtCurrency(value).split('.');
+  const big = `${sym}${intPart}`;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(bigSize);
+  doc.text(big, x, y);
+  const bigW = doc.getTextWidth(big);
+  doc.setFontSize(smallSize);
+  doc.setTextColor(...MUTED);
+  doc.text(`.${decPart}`, x + bigW + 0.5, y);
+}
+
+function statusPill(status: string): { label: string; bg: [number, number, number]; fg: [number, number, number] } {
+  const s = status.toLowerCase();
+  if (s === 'cancelado') return { label: 'Cancelado', bg: DANGER_SOFT, fg: DANGER };
+  if (s === 'borrador') return { label: 'Borrador', bg: [240, 240, 240], fg: MUTED };
+  if (s === 'entregado' || s === 'facturado') return { label: s.charAt(0).toUpperCase() + s.slice(1), bg: SUCCESS_SOFT, fg: SUCCESS };
+  return { label: 'Confirmado', bg: SUCCESS_SOFT, fg: SUCCESS };
+}
+
+function metodoLabel(m: string): string {
+  const map: Record<string, string> = {
+    efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta',
+    cheque: 'Cheque', deposito: 'Depósito', credito: 'Crédito',
+  };
+  return map[m?.toLowerCase()] || (m ? m.charAt(0).toUpperCase() + m.slice(1) : '—');
+}
+
+function pillBox(doc: jsPDF, text: string, x: number, y: number, bg: [number, number, number], fg: [number, number, number], padX = 3, height = 5) {
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  const w = doc.getTextWidth(text) + padX * 2;
+  doc.setFillColor(...bg);
+  doc.roundedRect(x, y - height + 1.2, w, height, 1.2, 1.2, 'F');
+  doc.setTextColor(...fg);
+  doc.text(text, x + padX, y - 0.6);
+  return w;
+}
+
+function checkPageBreak(doc: jsPDF, y: number, needed = 40): number {
+  if (y > doc.internal.pageSize.getHeight() - needed) {
+    doc.addPage();
+    return 20;
+  }
+  return y;
+}
+
+function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
+  // Barra vertical + título
+  doc.setFillColor(...PRIMARY);
+  doc.rect(ML, y - 3.5, 1.2, 4.5, 'F');
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...TEXT);
+  doc.text(title.toUpperCase(), ML + 3.5, y);
+  return y + 4;
+}
+
 export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promise<Blob> {
   const { empresa, logoBase64, cliente, ventas, cobros } = params;
-  const doc = await createDoc();
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
-  const s = getCurrencyConfig(empresa.moneda).symbol;
+  const sym = getCurrencyConfig(empresa.moneda).symbol;
 
-  const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  // ═════════════════ HEADER ═════════════════
+  let y = 18;
+  let leftX = ML;
+  if (logoBase64) {
+    try { doc.addImage(logoBase64, 'PNG', ML, 14, 12, 12); leftX = ML + 15; } catch { /* ignore */ }
+  }
 
-  let y = drawDocHeader(doc, empresa, 'ESTADO DE CUENTA', fechaHoy, logoBase64);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...PRIMARY);
+  doc.text((empresa.nombre || empresa.razon_social || '').toUpperCase(), leftX, y);
 
-  const totalVendido = ventas.reduce((s, v) => s + v.total, 0);
-  const totalPendiente = ventas.reduce((s, v) => s + v.saldo_pendiente, 0);
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  if (empresa.email) { doc.text(empresa.email, leftX, y); y += 4; }
+  if (empresa.telefono) { doc.text(`Tel: ${empresa.telefono}`, leftX, y); y += 4; }
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(8);
+  doc.text('Rutapp', leftX, y);
+
+  // Badge derecha "ESTADO DE CUENTA"
+  const badgeText = 'ESTADO DE CUENTA';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  const badgeW = doc.getTextWidth(badgeText) + 8;
+  const badgeH = 6.5;
+  doc.setFillColor(...PRIMARY);
+  doc.roundedRect(rightX - badgeW, 14, badgeW, badgeH, 1.2, 1.2, 'F');
+  doc.setTextColor(...WHITE);
+  doc.text(badgeText, rightX - badgeW / 2, 18.4, { align: 'center' });
+
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  doc.text(fmtDateLong(now), rightX, 26, { align: 'right' });
+  doc.setTextColor(...MUTED);
+  doc.text(`Generado: ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`, rightX, 30, { align: 'right' });
+
+  y = 38;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(ML, y, rightX, y);
+  y += 6;
+
+  // ═════════════════ KPI CARDS ═════════════════
+  const ventasValidas = ventas.filter(v => v.status !== 'cancelado');
+  const totalVendido = ventasValidas.reduce((s, v) => s + v.total, 0);
+  const totalPendiente = ventasValidas.reduce((s, v) => s + v.saldo_pendiente, 0);
   const totalCobrado = cobros.reduce((s, c) => s + c.monto, 0);
+  const ultimoCobro = cobros.length > 0
+    ? cobros.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0]
+    : null;
 
-  y = drawInfoGrid(doc, y,
-    'Cliente',
-    [
-      ['Nombre:', cliente.nombre],
-      ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
-      ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
-      ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
-    ],
-    'Resumen financiero',
-    [
-      ['Total vendido:', `${s}${fmtCurrency(totalVendido)}`],
-      ['Total cobrado:', `${s}${fmtCurrency(totalCobrado)}`],
-      ['Saldo pendiente:', `${s}${fmtCurrency(totalPendiente)}`],
-      ...(cliente.credito ? [['Crédito:', `${cliente.dias_credito ?? 0} días · Límite: ${s}${fmtCurrency(cliente.limite_credito ?? 0)}`] as [string, string]] : []),
-    ],
-  );
-
-  // Ventas con saldo pendiente
-  const ventasConSaldo = ventas.filter(v => v.saldo_pendiente > 0);
-  const ventasSaldadas = ventas.filter(v => v.saldo_pendiente <= 0);
-
-  if (ventasConSaldo.length > 0) {
-    y = await drawCleanTable(doc, y,
-      ['Folio', 'Fecha', 'Condición', 'Estado', 'Total', 'Pagado', 'Pendiente'],
-      ventasConSaldo.map(v => [
-        { content: v.folio || '—', styles: { fontStyle: 'bold' } },
-        fmtDate(v.fecha),
-        v.condicion_pago === 'credito' ? 'Crédito' : v.condicion_pago === 'contado' ? 'Contado' : 'Por definir',
-        v.status.charAt(0).toUpperCase() + v.status.slice(1),
-        { content: `${s}${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
-        { content: `${s}${fmtCurrency(v.total - v.saldo_pendiente)}`, styles: { halign: 'right' } },
-        { content: `${s}${fmtCurrency(v.saldo_pendiente)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
-      ]),
-      {
-        0: { cellWidth: 24 },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
-        6: { halign: 'right' },
+  const cards: { label: string; render: (cx: number, cy: number, cw: number) => void; highlight?: 'primary' | 'success' }[] = [
+    {
+      label: 'CLIENTE',
+      render: (cx, cy, cw) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...TEXT);
+        const nameLines = doc.splitTextToSize(cliente.nombre, cw - 6);
+        doc.text(nameLines[0], cx + 3, cy + 12);
+        if (cliente.telefono) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(...MUTED);
+          doc.text(`Tel: ${cliente.telefono}`, cx + 3, cy + 17);
+        }
       },
-    );
+    },
+    {
+      label: 'TOTAL VENDIDO',
+      highlight: 'primary',
+      render: (cx, cy) => drawMoneyMixed(doc, totalVendido, cx + 3, cy + 15, sym, 16, 9),
+    },
+    {
+      label: 'TOTAL COBRADO',
+      render: (cx, cy) => {
+        doc.setTextColor(...TEXT);
+        drawMoneyMixed(doc, totalCobrado, cx + 3, cy + 15, sym, 16, 9);
+      },
+    },
+    {
+      label: 'SALDO PENDIENTE',
+      highlight: totalPendiente <= 0 ? 'success' : undefined,
+      render: (cx, cy) => {
+        doc.setTextColor(...(totalPendiente <= 0 ? SUCCESS : DANGER));
+        drawMoneyMixed(doc, totalPendiente, cx + 3, cy + 15, sym, 16, 9);
+      },
+    },
+    {
+      label: 'ÚLTIMO PAGO',
+      render: (cx, cy) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(...TEXT);
+        doc.text(ultimoCobro ? fmtDateShort(ultimoCobro.fecha) : '—', cx + 3, cy + 13);
+        if (ultimoCobro) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(...MUTED);
+          doc.text(String(new Date(ultimoCobro.fecha + 'T12:00:00').getFullYear()), cx + 3, cy + 18);
+        }
+      },
+    },
+  ];
 
-    doc.setFontSize(9);
+  const gap = 2.5;
+  const cardH = 22;
+  const totalGap = gap * (cards.length - 1);
+  const cardW = (rightX - ML - totalGap) / cards.length;
+
+  cards.forEach((card, i) => {
+    const cx = ML + i * (cardW + gap);
+    const isPrimary = card.highlight === 'primary';
+    const isSuccess = card.highlight === 'success';
+    // Fondo
+    doc.setFillColor(...(isPrimary ? PRIMARY_SOFT : isSuccess ? SUCCESS_SOFT : CARD_BG));
+    doc.setDrawColor(...(isPrimary ? PRIMARY : isSuccess ? SUCCESS : BORDER));
+    doc.setLineWidth(isPrimary || isSuccess ? 0.5 : 0.3);
+    doc.roundedRect(cx, y, cardW, cardH, 1.5, 1.5, 'FD');
+    // Label
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(`Total pendiente: ${s}${fmtCurrency(totalPendiente)}`, rightX, y - 3, { align: 'right' });
-    y += 7;
-  }
+    doc.setFontSize(7);
+    doc.setTextColor(...(isPrimary ? PRIMARY : isSuccess ? SUCCESS : MUTED));
+    const labelLines = doc.splitTextToSize(card.label, cardW - 6);
+    labelLines.slice(0, 2).forEach((ln: string, idx: number) => {
+      doc.text(ln, cx + 3, y + 4.5 + idx * 3);
+    });
+    card.render(cx, y, cardW);
+  });
 
-  // Ventas saldadas
-  if (ventasSaldadas.length > 0) {
-    y = checkPageBreak(doc, y);
-    y = await drawCleanTable(doc, y,
-      ['Folio', 'Fecha', 'Total', 'Estado'],
-      ventasSaldadas.slice(0, 20).map(v => [
-        { content: v.folio || '—', styles: { fontStyle: 'bold' } },
-        fmtDate(v.fecha),
-        { content: `${s}${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
-        v.status.charAt(0).toUpperCase() + v.status.slice(1),
-      ]),
-      { 0: { cellWidth: 24 }, 2: { halign: 'right' } },
-    );
-  }
+  y += cardH + 8;
 
-  // Cobros
-  y = checkPageBreak(doc, y);
+  // ═════════════════ VENTAS ═════════════════
+  y = drawSectionTitle(doc, y, 'Ventas');
+  y += 2;
+
+  const ventasOrdenadas = ventas.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  const subtotalVentas = ventasValidas.reduce((s, v) => s + v.total, 0);
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: ML, right: MR },
+    theme: 'plain',
+    head: [['Folio', 'Fecha', 'Total', 'Estado']],
+    body: ventasOrdenadas.map(v => [
+      v.folio || '—',
+      fmtDate(v.fecha),
+      `${sym}${fmtCurrency(v.total)}`,
+      v.status,
+    ]),
+    styles: { fontSize: 9, cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 }, textColor: TEXT, font: 'helvetica' },
+    headStyles: {
+      fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', textColor: PRIMARY },
+      2: { halign: 'right', fontStyle: 'bold' },
+      3: { halign: 'left', cellWidth: 40 },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        data.cell.text = ['']; // dibujamos pill manualmente
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body') {
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.15);
+        doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+      }
+      if (data.section === 'body' && data.column.index === 3) {
+        const v = ventasOrdenadas[data.row.index];
+        if (!v) return;
+        const p = statusPill(v.status);
+        pillBox(doc, p.label, data.cell.x + 3, data.cell.y + data.cell.height / 2 + 1.5, p.bg, p.fg);
+      }
+    },
+  });
+  y = (doc as any).lastAutoTable.finalY;
+
+  // Subtotal
+  doc.setFillColor(...CARD_BG);
+  doc.rect(ML, y, rightX - ML, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  doc.text('Subtotal', ML + 3, y + 4.7);
+  doc.text(`${sym}${fmtCurrency(subtotalVentas)}`, rightX - 3, y + 4.7, { align: 'right' });
+  y += 12;
+
+  // ═════════════════ PAGOS RECIBIDOS ═════════════════
+  y = checkPageBreak(doc, y, 50);
+  y = drawSectionTitle(doc, y, 'Pagos recibidos');
+  y += 2;
+
   if (cobros.length > 0) {
-    y = await drawCleanTable(doc, y,
-      ['Fecha', 'Método', 'Referencia', 'Monto'],
-      cobros.map(c => [
+    const cobrosOrdenados = cobros.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    autoTable(doc, {
+      startY: y,
+      margin: { left: ML, right: MR },
+      theme: 'plain',
+      head: [['Fecha', 'Método de pago', 'Referencia', 'Monto']],
+      body: cobrosOrdenados.map(c => [
         fmtDate(c.fecha),
-        c.metodo_pago === 'efectivo' ? 'Efectivo' : c.metodo_pago === 'transferencia' ? 'Transferencia' : c.metodo_pago === 'tarjeta' ? 'Tarjeta' : c.metodo_pago,
+        metodoLabel(c.metodo_pago),
         c.referencia || '—',
-        { content: `${s}${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        `${sym}${fmtCurrency(c.monto)}`,
       ]),
-      { 3: { halign: 'right' } },
-    );
+      styles: { fontSize: 9, cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 }, textColor: TEXT, font: 'helvetica' },
+      headStyles: {
+        fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8,
+        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+      },
+      columnStyles: {
+        1: { cellWidth: 45 },
+        3: { halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 1) data.cell.text = [''];
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body') {
+          doc.setDrawColor(...BORDER);
+          doc.setLineWidth(0.15);
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
+        if (data.section === 'body' && data.column.index === 1) {
+          const c = cobrosOrdenados[data.row.index];
+          if (!c) return;
+          pillBox(doc, metodoLabel(c.metodo_pago), data.cell.x + 3, data.cell.y + data.cell.height / 2 + 1.5, PRIMARY_SOFT, PRIMARY);
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY;
 
-    doc.setFontSize(9);
+    doc.setFillColor(...CARD_BG);
+    doc.rect(ML, y, rightX - ML, 7, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(`Total cobrado: ${s}${fmtCurrency(totalCobrado)}`, rightX, y - 3, { align: 'right' });
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    doc.text('Total cobrado', ML + 3, y + 4.7);
+    doc.text(`${sym}${fmtCurrency(totalCobrado)}`, rightX - 3, y + 4.7, { align: 'right' });
+    y += 12;
   } else {
-    doc.setTextColor(...C.text);
-    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
     doc.text('Sin pagos registrados', ML, y + 4);
+    y += 10;
   }
 
-  drawFooter(doc, empresa);
+  // ═════════════════ BANNER SALDO PENDIENTE ═════════════════
+  y = checkPageBreak(doc, y, 30);
+  const liquidado = totalPendiente <= 0.005;
+  const bannerBg = liquidado ? SUCCESS_SOFT : DANGER_SOFT;
+  const bannerFg = liquidado ? SUCCESS : DANGER;
+  const bannerH = 14;
+  doc.setFillColor(...bannerBg);
+  doc.setDrawColor(...bannerFg);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(ML, y, rightX - ML, bannerH, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...bannerFg);
+  doc.text('Saldo pendiente total', ML + 5, y + 9);
+
+  // Monto grande a la derecha
+  const montoTxt = `${sym}${fmtCurrency(Math.max(totalPendiente, 0))}`;
+  doc.setFontSize(16);
+  doc.setTextColor(...bannerFg);
+  const montoW = doc.getTextWidth(montoTxt);
+
+  // Pill estado
+  const estadoTxt = liquidado ? 'LIQUIDADO' : 'PENDIENTE';
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  const pillW = doc.getTextWidth(estadoTxt) + 6;
+  const pillX = rightX - 5 - pillW;
+  doc.setFillColor(...bannerFg);
+  doc.roundedRect(pillX, y + 4, pillW, 6, 1.2, 1.2, 'F');
+  doc.setTextColor(...WHITE);
+  doc.text(estadoTxt, pillX + pillW / 2, y + 8, { align: 'center' });
+
+  // Monto
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...bannerFg);
+  doc.text(montoTxt, pillX - 4, y + 10, { align: 'right' });
+
+  // ═════════════════ FOOTER ═════════════════
+  const pageH = doc.internal.pageSize.getHeight();
+  const totalPages = doc.getNumberOfPages();
+  const empresaNombre = empresa.nombre || empresa.razon_social || '';
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.line(ML, pageH - 13, pageW - MR, pageH - 13);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...MUTED);
+    doc.text(empresaNombre ? `Rutapp · ${empresaNombre}` : 'Rutapp', ML, pageH - 8);
+    doc.text(`Página ${i} de ${totalPages}`, pageW - MR, pageH - 8, { align: 'right' });
+  }
+
   return doc.output('blob');
 }
