@@ -593,33 +593,18 @@ table[data-no-odoo] tbody td {
 
 /* ============================================================
  * Tablas responsivas al monitor (scroll fijo).
- * Problema que resuelve: en tablas con miles de filas, la barra
- * horizontal quedaba hasta el fondo (había que bajar al último
- * registro para poder usarla). Ahora cada tabla ancha/alta scrollea
- * DENTRO de su propio contenedor, acotado al alto de la pantalla,
- * así la barra horizontal queda SIEMPRE visible al nivel del monitor
- * y el encabezado se queda pegado arriba.
+ * El ALTO de cada contenedor de tabla lo ajusta TableAutoHeight (JS):
+ * estira cada tabla justo hasta el borde inferior del monitor y la hace
+ * scrollear adentro, así la barra horizontal siempre queda visible y no
+ * se pierde espacio. Solo actúa en pantallas ≥768px (el app móvil no se
+ * toca). Opt-out por tabla: <table data-no-scroll>.
  *
- * Es global: aplica a TODA <div><table> del sistema (crudas y shadcn),
- * SOLO en pantallas ≥768px (el app móvil no se toca).
- *
- * Ajuste fino con la variable --table-scroll-reserve (espacio que se
- * reserva arriba para filtros/encabezados de cada vista).
- * Opt-out por tabla: <table data-no-scroll>.
+ * Aquí solo dejamos el encabezado PEGAJOSO (sticky) para que las columnas
+ * se vean al hacer scroll. El fondo sólido del header ya lo pone el estilo
+ * Odoo de arriba (#f8f9fa !important).
  * ============================================================ */
-:root { --table-scroll-reserve: 13rem; }
-
 @media (min-width: 768px) {
-  /* [class] sube la especificidad para ganarle a utilidades como
-     overflow-hidden / overflow-x-auto sin usar !important. */
-  div[class]:has(> table:not([data-no-scroll])) {
-    max-height: calc(100dvh - var(--table-scroll-reserve));
-    overflow: auto;
-    overscroll-behavior: contain;
-  }
-
-  /* Encabezado pegajoso (el fondo sólido ya lo pone el estilo Odoo). */
-  div[class]:has(> table:not([data-no-scroll])) > table thead th {
+  div[data-auto-table-scroll] > table thead th {
     position: sticky;
     top: 0;
     z-index: 3;

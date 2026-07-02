@@ -28,6 +28,7 @@ import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 import BroadcastListener from "@/components/BroadcastListener";
 import GlobalColumnResizer from "@/components/global/GlobalColumnResizer";
 import GlobalColumnHider from "@/components/global/GlobalColumnHider";
+import { TableAutoHeight } from "@/components/global/TableAutoHeight";
 
 
 // Lazy-loaded pages
@@ -893,6 +894,7 @@ const App = () => (
           <AuthProvider>
             <GlobalColumnResizer />
             <GlobalColumnHider />
+            <TableAutoHeight />
             <BrowserRouter>
               <AppRoutes />
               <FacturaPendienteModal />
