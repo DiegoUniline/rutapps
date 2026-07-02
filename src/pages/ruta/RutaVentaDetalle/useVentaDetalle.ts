@@ -575,7 +575,36 @@ export function useVentaDetalle() {
     if (!empresa || !clienteData) { toast.error('Cargando datos...'); return; }
     try {
       const [ventasRes, cobrosRes] = await Promise.all([supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).neq('status', 'cancelado').order('fecha', { ascending: false }).limit(200), supabase.from('cobros').select('id, fecha, monto, metodo_pago, referencia').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).order('fecha', { ascending: false }).limit(200)]);
-      const blob = await generarEstadoCuentaPdf({ empresa: { nombre: empresa.nombre, razon_social: empresa.razon_social ?? undefined, rfc: empresa.rfc ?? undefined, direccion: empresa.direccion ?? undefined, telefono: empresa.telefono ?? undefined, email: empresa.email ?? undefined, logo_url: empresa.logo_url ?? undefined }, cliente: { nombre: clienteData.nombre, telefono: clienteData.telefono ?? undefined, credito: clienteData.credito ?? false, limite_credito: clienteData.limite_credito ?? 0, dias_credito: clienteData.dias_credito ?? 0 }, ventas: (ventasRes.data ?? []).map(v => ({ folio: v.folio ?? '—', fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, status: v.status, condicion_pago: v.condicion_pago })), cobros: (cobrosRes.data ?? []).map(c => ({ fecha: c.fecha, monto: c.monto ?? 0, metodo_pago: c.metodo_pago, referencia: c.referencia ?? undefined })) });
+      const ventaIds = (ventasRes.data ?? []).map(v => v.id);
+      let productosVendidos: { nombre: string; cantidad: number; total: number }[] = [];
+      let productosDevueltos: { nombre: string; cantidad: number; motivo?: string }[] = [];
+      if (ventaIds.length > 0) {
+        const [linRes, devRes] = await Promise.all([
+          supabase.from('venta_lineas').select('cantidad, total, descripcion, producto:productos(nombre)').in('venta_id', ventaIds),
+          supabase.from('devoluciones').select('id, devolucion_lineas(cantidad, motivo, producto:productos(nombre))').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).limit(200),
+        ]);
+        const mapV = new Map<string, { nombre: string; cantidad: number; total: number }>();
+        (linRes.data ?? []).forEach((l: any) => {
+          const nombre = l.producto?.nombre || l.descripcion || 'Producto';
+          const cur = mapV.get(nombre) ?? { nombre, cantidad: 0, total: 0 };
+          cur.cantidad += Number(l.cantidad ?? 0);
+          cur.total += Number(l.total ?? 0);
+          mapV.set(nombre, cur);
+        });
+        productosVendidos = Array.from(mapV.values()).sort((a, b) => b.total - a.total).slice(0, 30);
+        const mapD = new Map<string, { nombre: string; cantidad: number; motivo?: string }>();
+        (devRes.data ?? []).forEach((d: any) => {
+          (d.devolucion_lineas ?? []).forEach((l: any) => {
+            const nombre = l.producto?.nombre || 'Producto';
+            const key = `${nombre}|${l.motivo ?? ''}`;
+            const cur = mapD.get(key) ?? { nombre, cantidad: 0, motivo: l.motivo };
+            cur.cantidad += Number(l.cantidad ?? 0);
+            mapD.set(key, cur);
+          });
+        });
+        productosDevueltos = Array.from(mapD.values()).sort((a, b) => b.cantidad - a.cantidad).slice(0, 30);
+      }
+      const blob = await generarEstadoCuentaPdf({ empresa: { nombre: empresa.nombre, razon_social: empresa.razon_social ?? undefined, rfc: empresa.rfc ?? undefined, direccion: empresa.direccion ?? undefined, telefono: empresa.telefono ?? undefined, email: empresa.email ?? undefined, logo_url: empresa.logo_url ?? undefined }, cliente: { nombre: clienteData.nombre, telefono: clienteData.telefono ?? undefined, credito: clienteData.credito ?? false, limite_credito: clienteData.limite_credito ?? 0, dias_credito: clienteData.dias_credito ?? 0 }, ventas: (ventasRes.data ?? []).map(v => ({ folio: v.folio ?? '—', fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, status: v.status, condicion_pago: v.condicion_pago })), cobros: (cobrosRes.data ?? []).map(c => ({ fecha: c.fecha, monto: c.monto ?? 0, metodo_pago: c.metodo_pago, referencia: c.referencia ?? undefined })), productosVendidos, productosDevueltos });
       setEcPdfBlob(blob); setShowEcPreview(true);
     } catch { toast.error('Error generando estado de cuenta'); }
   };
