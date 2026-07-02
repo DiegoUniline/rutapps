@@ -138,6 +138,13 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           monto: p.monto_aplicado ?? 0,
           referencia: (p.cobros as any)?.referencia,
         })),
+        devoluciones: devLineas.map((d: any) => ({
+          nombre: d.producto?.nombre ?? 'Producto',
+          cantidad: Number(d.cantidad) || 0,
+          motivo: d.motivo,
+          accion: d.accion,
+          monto: Number(d.monto_credito ?? 0) || 0,
+        })),
       });
       await printTicket(td);
     } catch (err: any) {
