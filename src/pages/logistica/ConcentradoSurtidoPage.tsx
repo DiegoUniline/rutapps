@@ -87,7 +87,7 @@ export default function ConcentradoSurtidoPage() {
           .eq('empresa_id', empresa!.id)
           .gte('fecha_entrega', desde)
           .lte('fecha_entrega', hasta)
-          .in('status', statuses)
+          .in('status', statuses as any)
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
