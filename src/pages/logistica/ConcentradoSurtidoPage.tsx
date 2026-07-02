@@ -629,8 +629,8 @@ export default function ConcentradoSurtidoPage() {
                       const totEnt = items.reduce((s, p) => s + p.entregado, 0);
                       const totPend = items.reduce((s, p) => s + p.pendiente, 0);
                       return (
-                        <>
-                          <tr key={`g-${label}`} className="bg-muted/60 cursor-pointer" onClick={() => toggleGroup(label)}>
+                        <Fragment key={`g-${label}`}>
+                          <tr className="bg-muted/60 cursor-pointer" onClick={() => toggleGroup(label)}>
                             <td colSpan={6} className="px-3 py-2 text-xs font-semibold">
                               <span className="inline-flex items-center gap-1">
                                 {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -643,7 +643,7 @@ export default function ConcentradoSurtidoPage() {
                             <td className="px-3 py-2" />
                           </tr>
                           {open && items.map(renderRow)}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tbody>
