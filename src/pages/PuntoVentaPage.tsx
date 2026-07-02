@@ -920,7 +920,10 @@ export default function PuntoVentaPage() {
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const lineas = cart.map(item => {
         const chargedLineTotal = getChargedLineTotal(item);
-        const breakdown = splitFinalGross(item, chargedLineTotal);
+        const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
+        const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
+        const grossBeforeDiscount = r2(chargedLineTotal + lp.effectiveDiscount);
+        const breakdown = splitFinalGross(item, grossBeforeDiscount);
         return {
           venta_id: ventaId,
           producto_id: item.producto_id,
@@ -933,7 +936,7 @@ export default function PuntoVentaPage() {
           ieps_pct: item.ieps_pct,
           ieps_monto: breakdown.ieps,
           descuento_pct: 0,
-          total: chargedLineTotal,
+          total: grossBeforeDiscount,
           presentacion_id: (item as any).presentacion_id ?? null,
           presentacion_nombre: (item as any).presentacion_nombre ?? null,
           presentacion_factor: (item as any).presentacion_factor ?? null,
@@ -1022,7 +1025,10 @@ export default function PuntoVentaPage() {
         clienteNombre,
         lineas: cart.map(item => {
           const chargedLineTotal = getChargedLineTotal(item);
-          const breakdown = splitFinalGross(item, chargedLineTotal);
+          const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
+          const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
+          const grossBeforeDiscount = r2(chargedLineTotal + lp.effectiveDiscount);
+          const breakdown = splitFinalGross(item, grossBeforeDiscount);
           const prod: any = productos?.find((p: any) => p.id === item.producto_id);
           return {
             nombre: item.nombre,
@@ -1031,7 +1037,7 @@ export default function PuntoVentaPage() {
             subtotal: breakdown.subtotal,
             iva_monto: breakdown.iva,
             ieps_monto: breakdown.ieps,
-            total: chargedLineTotal,
+            total: grossBeforeDiscount,
             producto_id: item.producto_id,
             precio_sugerido_publico: Number(prod?.precio_sugerido_publico) || 0,
           };
