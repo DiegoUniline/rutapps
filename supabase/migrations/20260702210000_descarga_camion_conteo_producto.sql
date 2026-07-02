@@ -91,7 +91,7 @@ BEGIN
         referencia_tipo, referencia_id, user_id, fecha, notas
       ) VALUES (
         NEW.empresa_id, 'entrada', v_linea.producto_id, v_real, v_camion, v_bodega,
-        'descarga', NEW.id, NEW.aprobado_por, COALESCE(NEW.fecha, CURRENT_DATE),
+        'descarga', NEW.id, COALESCE(NEW.aprobado_por, NEW.user_id), COALESCE(NEW.fecha, CURRENT_DATE),
         'Descarga de ruta: entrada a bodega (folio ' || COALESCE(NEW.folio, '—') || ')'
       );
     END IF;
@@ -106,7 +106,7 @@ BEGIN
         referencia_tipo, referencia_id, user_id, fecha, notas
       ) VALUES (
         NEW.empresa_id, 'salida', v_linea.producto_id, v_cam_now, v_camion,
-        'descarga', NEW.id, NEW.aprobado_por, COALESCE(NEW.fecha, CURRENT_DATE),
+        'descarga', NEW.id, COALESCE(NEW.aprobado_por, NEW.user_id), COALESCE(NEW.fecha, CURRENT_DATE),
         'Descarga de ruta: salida de camión (folio ' || COALESCE(NEW.folio, '—') || ')'
       );
     END IF;
@@ -117,10 +117,10 @@ BEGIN
       INSERT INTO public.ajustes_inventario (
         empresa_id, producto_id, almacen_id, cantidad_anterior, cantidad_nueva, diferencia, motivo, user_id, fecha
       ) VALUES (
-        NEW.empresa_id, v_linea.producto_id, v_bodega, v_cam_now, v_real, v_dif,
+        NEW.empresa_id, v_linea.producto_id, v_camion, v_cam_now, v_real, v_dif,
         'Diferencia en descarga (revisar) — folio ' || COALESCE(NEW.folio, '—')
           || ' · esperado ' || v_cam_now || ' · físico ' || v_real,
-        NEW.aprobado_por, COALESCE(NEW.fecha, CURRENT_DATE)
+        COALESCE(NEW.aprobado_por, NEW.user_id), COALESCE(NEW.fecha, CURRENT_DATE)
       );
     END IF;
 

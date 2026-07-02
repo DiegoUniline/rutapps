@@ -364,35 +364,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .eq('id', descarga.id);
       if (error) throw error;
 
-      // Deduct from vendedor's almacen via stock_almacen when approving descarga
-      if (accion === 'aprobada') {
-        const { data: descLineas } = await supabase
-          .from('descarga_ruta_lineas')
-          .select('producto_id, cantidad_real')
-          .eq('descarga_id', descarga.id);
-
-        if (descLineas && descarga.vendedor_id) {
-          // Get vendedor's almacen_id
-          const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', descarga.vendedor_id).maybeSingle();
-          const almId = prof?.almacen_id;
-          if (almId) {
-            for (const l of descLineas) {
-              if (!l.cantidad_real || l.cantidad_real <= 0) continue;
-              const { data: sa } = await supabase
-                .from('stock_almacen')
-                .select('id, cantidad')
-                .eq('almacen_id', almId)
-                .eq('producto_id', l.producto_id)
-                .maybeSingle();
-              if (sa) {
-                await supabase.from('stock_almacen')
-                  .update({ cantidad: Math.max(0, sa.cantidad - l.cantidad_real), updated_at: new Date().toISOString() } as any)
-                  .eq('id', sa.id);
-              }
-            }
-          }
-        }
-      }
+      // El descuento de inventario al aprobar (cuando se descargó el camión) lo hace
+      // ÚNICAMENTE el trigger apply_descarga_ruta_aprobada en la BD: mete el físico a
+      // la bodega destino, deja el camión en 0 y registra la diferencia como ajuste.
+      // Antes había aquí un descuento en JS que (a) duplicaba con el trigger y
+      // (b) descontaba aunque descargo_camion fuera false. Eliminado.
     },
     onSuccess: (_, accion) => {
       toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
