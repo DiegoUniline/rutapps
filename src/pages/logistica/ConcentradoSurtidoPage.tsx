@@ -104,23 +104,27 @@ export default function ConcentradoSurtidoPage() {
     const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n;
   });
 
+  const vendedoresKey = vendedorFilter.slice().sort().join(',');
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
         ? statusFilter
         : ['confirmado', 'entregado', 'facturado'];
-      const ventas = await fetchAllPages<VentaLite>((from, to) =>
-        supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
+      const ventas = await fetchAllPages<VentaLite>((from, to) => {
+        let q = supabase.from('ventas')
+          .select('id, folio, fecha_entrega, fecha, status, tipo, empresa_id, total, cliente_id, vendedor_id, clientes(nombre), vendedor:profiles!vendedor_id(id, nombre)')
           .eq('empresa_id', empresa!.id)
           .gte(fechaField, desde)
           .lte(fechaField, hasta)
           .in('status', statuses as any)
           .order(fechaField, { ascending: true })
-          .range(from, to)
-      );
+          .range(from, to);
+        if (tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter);
+        if (vendedorFilter.length > 0) q = q.in('vendedor_id', vendedorFilter);
+        return q;
+      });
       const ventaIds = ventas.map(v => v.id);
       if (ventaIds.length === 0) {
         return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
