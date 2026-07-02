@@ -98,6 +98,25 @@ export default function RutaEntregaDetalle() {
     queryFn: async () => fetchOtrasPendientesWithFallback(clienteId!),
   });
 
+  const ventaId = (venta as any)?.id ?? pedidoId;
+  const { data: devolucionesVenta } = useQuery({
+    queryKey: ['ruta-entrega-devoluciones', ventaId],
+    enabled: !!ventaId,
+    networkMode: 'always',
+    queryFn: async () => {
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', ventaId!);
+      const ids = (heads ?? []).map((h: any) => h.id);
+      if (ids.length === 0) return [] as any[];
+      const { data } = await supabase
+        .from('devolucion_lineas')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .in('devolucion_id', ids);
+      return data ?? [];
+    },
+  });
+
+
+
   // Auto-marcar como entregado si la venta ya fue cobrada totalmente
   const autoMarkedRef = useRef(false);
   useEffect(() => {
