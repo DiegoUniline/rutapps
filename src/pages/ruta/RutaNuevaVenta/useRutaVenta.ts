@@ -700,9 +700,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             monto_credito: montoCredito, created_at: new Date().toISOString(),
           });
 
-          // ── Restore inventory for returned products ──
-          const destAlmacenId = profile?.almacen_id || null;
-
+          // ── carga_lineas: registrar la cantidad devuelta de esta carga ──
           if (activeCarga) {
             try {
               const cargaLineasTable = getOfflineTable('carga_lineas');
@@ -721,45 +719,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             } catch (e) { console.error('Error updating carga devuelta:', e); }
           }
 
-          if (destAlmacenId) {
-            try {
-              const stockTable = getOfflineTable('stock_almacen');
-              if (stockTable) {
-                const allStock = await stockTable.toArray();
-                const existing = allStock.find((s: any) => s.almacen_id === destAlmacenId && s.producto_id === d.producto_id);
-                if (existing) {
-                  await queueOperation('stock_almacen', 'update', {
-                    id: existing.id, almacen_id: destAlmacenId, producto_id: d.producto_id,
-                    empresa_id: empresa.id, cantidad: (existing.cantidad ?? 0) + d.cantidad,
-                  });
-                } else {
-                  await queueOperation('stock_almacen', 'insert', {
-                    id: crypto.randomUUID(), almacen_id: destAlmacenId, producto_id: d.producto_id,
-                    empresa_id: empresa.id, cantidad: d.cantidad,
-                  });
-                }
-              }
-              const prodTable = getOfflineTable('productos');
-              if (prodTable) {
-                const prod = await prodTable.get(d.producto_id);
-                if (prod) {
-                  await queueOperation('productos', 'update', {
-                    id: d.producto_id, cantidad: (prod.cantidad ?? 0) + d.cantidad,
-                  });
-                }
-              }
-            } catch (e) { console.error('Error restoring stock for devolution:', e); }
-
-            await queueOperation('movimientos_inventario', 'insert', {
-              id: crypto.randomUUID(), empresa_id: empresa.id, tipo: 'entrada',
-              producto_id: d.producto_id, cantidad: d.cantidad,
-              almacen_destino_id: destAlmacenId,
-              referencia_tipo: 'devolucion', referencia_id: devId,
-              user_id: user.id, fecha: todayInTimezone(empresa.zona_horaria),
-              created_at: new Date().toISOString(),
-              notas: `Devolución ${d.nombre} - ${d.motivo}`,
-            });
-          }
+          // ── Reingreso al inventario: lo aplica SOLO el trigger de BD
+          // (apply_devolucion_linea_inventory sobre devolucion_lineas), igual que
+          // useDevoluciones.ts (la pantalla de Devoluciones). Antes esta ruta también
+          // ajustaba stock_almacen, productos.cantidad y creaba un movimiento
+          // 'devolucion' A MANO —además del trigger—, y por el orden del sync se
+          // DUPLICABA el reingreso (stock sumado 2×; movimientos 'devolucion' +
+          // 'devolucion_aplicada'). Se elimina el ajuste manual y se delega al trigger.
         }
       }
 
