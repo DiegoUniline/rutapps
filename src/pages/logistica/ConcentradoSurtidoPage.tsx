@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +16,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { EntityMultiSelect } from '@/components/reportes/EntityMultiSelect';
+import { useVendedoresForFilter } from '@/hooks/useFilterOptions';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 interface VentaLite {
   id: string;
@@ -23,10 +29,13 @@ interface VentaLite {
   fecha_entrega: string | null;
   fecha: string;
   status: string;
+  tipo: string | null;
   empresa_id: string;
   total: number | null;
   cliente_id: string | null;
+  vendedor_id: string | null;
   clientes: { nombre: string | null } | null;
+  vendedor: { id: string; nombre: string | null } | null;
 }
 interface LineaRow {
   producto_id: string;
@@ -77,23 +86,45 @@ export default function ConcentradoSurtidoPage() {
   };
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
+  // Filtros nuevos: tipo (pedido/venta_directa) y vendedor (multi)
+  const TIPO_OPTIONS: { value: string; label: string }[] = [
+    { value: 'pedido', label: 'Solo pedidos' },
+    { value: 'venta_directa', label: 'Solo ventas directas' },
+    { value: 'todos', label: 'Todos' },
+  ];
+  const [tipoFilter, setTipoFilter] = useState<'pedido' | 'venta_directa' | 'todos'>('pedido');
+  const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
+  const { data: vendedoresList = [], isLoading: loadingVendedores } = useVendedoresForFilter();
+
+  // Agrupador
+  type GroupKey = 'none' | 'vendedor' | 'cliente' | 'estado' | 'estado_surtido';
+  const [groupBy, setGroupBy] = useState<GroupKey>('none');
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (k: string) => setOpenGroups(prev => {
+    const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n;
+  });
+
+  const vendedoresKey = vendedorFilter.slice().sort().join(',');
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
         ? statusFilter
         : ['confirmado', 'entregado', 'facturado'];
-      const ventas = await fetchAllPages<VentaLite>((from, to) =>
-        supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
+      const ventas = await fetchAllPages<VentaLite>((from, to) => {
+        let q = supabase.from('ventas')
+          .select('id, folio, fecha_entrega, fecha, status, tipo, empresa_id, total, cliente_id, vendedor_id, clientes(nombre), vendedor:profiles!vendedor_id(id, nombre)')
           .eq('empresa_id', empresa!.id)
           .gte(fechaField, desde)
           .lte(fechaField, hasta)
           .in('status', statuses as any)
           .order(fechaField, { ascending: true })
-          .range(from, to)
-      );
+          .range(from, to);
+        if (tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter);
+        if (vendedorFilter.length > 0) q = q.in('vendedor_id', vendedorFilter);
+        return q;
+      });
       const ventaIds = ventas.map(v => v.id);
       if (ventaIds.length === 0) {
         return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
@@ -177,7 +208,10 @@ export default function ConcentradoSurtidoPage() {
           folio: v.folio,
           fecha_entrega: v.fecha_entrega,
           status: v.status,
+          tipo: v.tipo ?? null,
           cliente: v.clientes?.nombre ?? '—',
+          vendedor_id: v.vendedor_id ?? null,
+          vendedor: (v as any).vendedor?.nombre ?? '—',
           total: Number(v.total ?? 0),
           requerido: req,
           entregado: ent,
@@ -417,6 +451,55 @@ export default function ConcentradoSurtidoPage() {
               : `Filtrando por ${statusFilter.length} estado(s).`}
           </p>
         </div>
+
+        {/* Fila 2: Tipo + Vendedor + Agrupar */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 border-t border-border">
+          <div className="space-y-1 pt-2">
+            <Label className="text-xs">Tipo de documento</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIPO_OPTIONS.map(opt => {
+                const active = tipoFilter === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTipoFilter(opt.value as any)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                      active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="pt-1">
+            <EntityMultiSelect
+              label="Vendedor"
+              placeholder="Todos los vendedores"
+              loading={loadingVendedores}
+              options={vendedoresList.map(v => ({ id: v.id, label: v.nombre || '—' }))}
+              value={vendedorFilter}
+              onChange={setVendedorFilter}
+            />
+          </div>
+          <div className="space-y-1 pt-2">
+            <Label className="text-xs">Agrupar por</Label>
+            <Select value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setOpenGroups(new Set()); }}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin agrupar</SelectItem>
+                <SelectItem value="vendedor">Vendedor</SelectItem>
+                <SelectItem value="cliente">Cliente</SelectItem>
+                <SelectItem value="estado">Estado del pedido</SelectItem>
+                <SelectItem value="estado_surtido">Estado de surtido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -469,52 +552,104 @@ export default function ConcentradoSurtidoPage() {
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           {viewMode === 'pedidos' ? (
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs text-muted-foreground">
-                <tr>
-                  <th className="text-left px-3 py-2">Fecha entrega</th>
-                  <th className="text-left px-3 py-2">Folio</th>
-                  <th className="text-left px-3 py-2">Cliente</th>
-                  <th className="text-left px-3 py-2">Estado pedido</th>
-                  <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Surtido</th>
-                  <th className="text-right px-3 py-2">Falta surtir</th>
-                  <th className="text-left px-3 py-2">Estado surtido</th>
-                  <th className="text-right px-3 py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && (
-                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
-                )}
-                {!isLoading && (data?.pedidos ?? []).length === 0 && (
-                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los estados seleccionados.</td></tr>
-                )}
-                {(data?.pedidos ?? []).map(p => {
-                  const badge = {
-                    surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
-                    parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
-                    pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
-                    sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
-                  }[p.surtido_status];
-                  return (
-                    <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
-                      <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
-                      <td className="px-3 py-2 font-medium">{p.cliente}</td>
-                      <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
-                      <td className="px-3 py-2 text-right">{p.requerido}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
-                      <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
-                      <td className="px-3 py-2">
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">{fmtMoney(p.total)}</td>
+            (() => {
+              const pedidos = data?.pedidos ?? [];
+              const surtidoLabel: Record<PedidoRow['surtido_status'], string> = {
+                surtido: 'Surtido completo',
+                parcial: 'Surtido parcial',
+                pendiente: 'Sin surtir',
+                sin_lineas: 'Sin líneas',
+              };
+              const keyOf = (p: PedidoRow): string => {
+                if (groupBy === 'vendedor') return p.vendedor || '— Sin vendedor —';
+                if (groupBy === 'cliente') return p.cliente || '— Sin cliente —';
+                if (groupBy === 'estado') return p.status || '—';
+                if (groupBy === 'estado_surtido') return surtidoLabel[p.surtido_status];
+                return '';
+              };
+              const grouped = new Map<string, PedidoRow[]>();
+              for (const p of pedidos) {
+                const k = keyOf(p);
+                if (!grouped.has(k)) grouped.set(k, []);
+                grouped.get(k)!.push(p);
+              }
+              const groups = Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+              const colSpan = 10;
+              const renderRow = (p: PedidoRow) => {
+                const badge = {
+                  surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
+                  parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
+                  pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                  sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
+                }[p.surtido_status];
+                return (
+                  <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
+                    <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
+                    <td className="px-3 py-2 font-medium">{p.cliente}</td>
+                    <td className="px-3 py-2 text-xs">{p.vendedor}</td>
+                    <td className="px-3 py-2 text-xs capitalize">{p.tipo === 'venta_directa' ? 'Venta directa' : (p.tipo ?? 'pedido')}</td>
+                    <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
+                    <td className="px-3 py-2 text-right">{p.requerido}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
+                    <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                    </td>
+                  </tr>
+                );
+              };
+              return (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-3 py-2">Fecha entrega</th>
+                      <th className="text-left px-3 py-2">Folio</th>
+                      <th className="text-left px-3 py-2">Cliente</th>
+                      <th className="text-left px-3 py-2">Vendedor</th>
+                      <th className="text-left px-3 py-2">Tipo</th>
+                      <th className="text-left px-3 py-2">Estado pedido</th>
+                      <th className="text-right px-3 py-2">Requerido</th>
+                      <th className="text-right px-3 py-2">Surtido</th>
+                      <th className="text-right px-3 py-2">Falta surtir</th>
+                      <th className="text-left px-3 py-2">Estado surtido</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {isLoading && (
+                      <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                    )}
+                    {!isLoading && pedidos.length === 0 && (
+                      <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los filtros seleccionados.</td></tr>
+                    )}
+                    {!isLoading && groupBy === 'none' && pedidos.map(renderRow)}
+                    {!isLoading && groupBy !== 'none' && groups.map(([label, items]) => {
+                      const open = openGroups.has(label);
+                      const totReq = items.reduce((s, p) => s + p.requerido, 0);
+                      const totEnt = items.reduce((s, p) => s + p.entregado, 0);
+                      const totPend = items.reduce((s, p) => s + p.pendiente, 0);
+                      return (
+                        <Fragment key={`g-${label}`}>
+                          <tr className="bg-muted/60 cursor-pointer" onClick={() => toggleGroup(label)}>
+                            <td colSpan={6} className="px-3 py-2 text-xs font-semibold">
+                              <span className="inline-flex items-center gap-1">
+                                {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                {label} <span className="text-muted-foreground font-normal">({items.length})</span>
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold">{totReq}</td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">{totEnt}</td>
+                            <td className={`px-3 py-2 text-right text-xs font-semibold ${totPend > 0 ? 'text-destructive' : ''}`}>{totPend}</td>
+                            <td className="px-3 py-2" />
+                          </tr>
+                          {open && items.map(renderRow)}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
@@ -587,7 +722,10 @@ interface PedidoRow {
   folio: string | null;
   fecha_entrega: string | null;
   status: string;
+  tipo: string | null;
   cliente: string;
+  vendedor_id: string | null;
+  vendedor: string;
   total: number;
   requerido: number;
   entregado: number;
