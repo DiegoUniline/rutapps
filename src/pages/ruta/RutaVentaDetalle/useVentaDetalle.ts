@@ -83,6 +83,36 @@ export function useVentaDetalle() {
     },
   });
 
+  // Pagos aplicados a esta venta (cobros)
+  const { data: pagosVenta } = useQuery({
+    queryKey: ['ruta-venta-pagos', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
+        .eq('venta_id', id!)
+        .order('created_at');
+      return data ?? [];
+    },
+  });
+
+  // Clasificaciones de productos de la venta (para evaluar promociones en vivo)
+  const productoIdsVenta = useMemo(() => {
+    const ids = new Set<string>();
+    ((venta as any)?.venta_lineas ?? []).forEach((l: any) => { if (l.producto_id) ids.add(l.producto_id); });
+    return Array.from(ids);
+  }, [venta]);
+  const { data: productosClasif } = useQuery({
+    queryKey: ['ruta-venta-productos-clasif', id, productoIdsVenta.join(',')],
+    enabled: productoIdsVenta.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from('productos').select('id, clasificacion_id').in('id', productoIdsVenta);
+      return data ?? [];
+    },
+  });
+  const { data: promocionesActivas } = usePromocionesActivas();
+
 
 
   const editTotals = useMemo(() => {
