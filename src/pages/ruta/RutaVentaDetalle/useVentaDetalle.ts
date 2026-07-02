@@ -477,7 +477,7 @@ export function useVentaDetalle() {
     } catch (err: any) { toast.error(err.message); } finally { setSendingWA(false); }
   };
 
-  const ticketAncho = (empresa as any)?.ticket_ancho ?? '80';
+  const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
 
   /** Convert remote logo URL to base64 to avoid CORS issues with toPng */
   const logoToBase64 = async (td: TicketData): Promise<TicketData> => {
