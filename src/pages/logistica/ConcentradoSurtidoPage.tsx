@@ -522,10 +522,10 @@ export default function ConcentradoSurtidoPage() {
                   <th className="text-left px-3 py-2">Código</th>
                   <th className="text-left px-3 py-2">Producto</th>
                   <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Ya entregado</th>
-                  <th className="text-right px-3 py-2">A surtir</th>
+                  <th className="text-right px-3 py-2">Ya surtido</th>
+                  <th className="text-right px-3 py-2">Falta surtir</th>
                   <th className="text-right px-3 py-2">Stock actual</th>
-                  <th className="text-right px-3 py-2">Faltante</th>
+                  <th className="text-right px-3 py-2">Faltante compra</th>
                   <th className="text-left px-3 py-2">Proveedor</th>
                 </tr>
               </thead>
