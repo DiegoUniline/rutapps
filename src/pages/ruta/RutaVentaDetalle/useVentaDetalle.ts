@@ -71,13 +71,17 @@ export function useVentaDetalle() {
     queryKey: ['ruta-venta-devoluciones', id],
     enabled: !!id,
     queryFn: async () => {
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', id!);
+      const ids = (heads ?? []).map((h: any) => h.id);
+      if (ids.length === 0) return [] as Array<{ cantidad: number; motivo: string; accion: string; monto_credito: number | null; producto: { nombre: string } | null }>;
       const { data } = await supabase
-        .from('devoluciones')
+        .from('devolucion_lineas')
         .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
-        .eq('venta_id', id!);
-      return (data ?? []) as Array<{ cantidad: number; motivo: string; accion: string; monto_credito: number | null; producto: { nombre: string } | null }>;
+        .in('devolucion_id', ids);
+      return (data ?? []) as any;
     },
   });
+
 
 
   const editTotals = useMemo(() => {
