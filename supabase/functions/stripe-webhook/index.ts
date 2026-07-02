@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
             });
           }
 
-          await supabase
+          const { error: pagadaErr } = await supabase
             .from("facturas")
             .update({
               estado: "pagada",
@@ -434,6 +434,13 @@ Deno.serve(async (req) => {
               stripe_payment_intent_id: typeof (invoice as any).payment_intent === "string" ? (invoice as any).payment_intent : null,
             })
             .eq("stripe_invoice_id", invoice.id);
+          // CRÍTICO: si esto falla en silencio, la factura queda 'pendiente' y
+          // daily-billing podría bloquear a un cliente que SÍ pagó. Lanzamos el
+          // error para responder != 200 y que Stripe reenvíe el webhook hasta
+          // que la factura quede marcada 'pagada'.
+          if (pagadaErr) {
+            throw new Error(`No se pudo marcar factura pagada (${invoice.id}): ${pagadaErr.message}`);
+          }
         }
 
         log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
