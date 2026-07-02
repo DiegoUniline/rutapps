@@ -516,7 +516,7 @@ export function useVentaDetalle() {
   const handlePrintTicket = async () => {
     const td = getTicketData();
     if (!td) return;
-    await printTicket(td, { ticketAncho });
+    await printTicket(td);
   };
 
   const handleShareTicket = async () => {
