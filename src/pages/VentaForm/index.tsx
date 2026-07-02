@@ -79,7 +79,23 @@ export default function VentaFormPage() {
     },
   });
 
-  // Count of CFDIs issued for this venta (used in Facturas tab label)
+  // Devoluciones de esta venta (para ticket/impresión)
+  const { data: devolucionesVenta } = useQuery({
+    queryKey: ['venta-devoluciones-ticket', form.id],
+    enabled: !!form.id && !isNew,
+    queryFn: async () => {
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', form.id!);
+      const ids = (heads ?? []).map((h: any) => h.id);
+      if (ids.length === 0) return [] as any[];
+      const { data } = await supabase
+        .from('devolucion_lineas')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .in('devolucion_id', ids);
+      return data ?? [];
+    },
+  });
+
+
   const { data: cfdisCount } = useQuery({
     queryKey: ['cfdis-count-venta', form.id],
     enabled: !!form.id && !isNew,
