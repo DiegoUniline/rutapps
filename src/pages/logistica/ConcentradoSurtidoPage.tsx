@@ -96,7 +96,7 @@ export default function ConcentradoSurtidoPage() {
       );
       const ventaIds = ventas.map(v => v.id);
       if (ventaIds.length === 0) {
-        return { rows: [] as Row[], ventas: [] as VentaLite[] };
+        return { rows: [] as Row[], ventas: [] as VentaLite[], pedidos: [] as PedidoRow[] };
       }
 
       // 2) Líneas de esas ventas
