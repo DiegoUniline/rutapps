@@ -64,7 +64,8 @@ export function useVentaDetalle() {
   });
 
   const { data: ventasPendientesCredito } = useQuery({
-    queryKey: ['ruta-saldo-total-credito', clienteId], enabled: !!clienteId && view === 'editar',
+    queryKey: ['ruta-saldo-total-credito', clienteId, id],
+    enabled: !!clienteId && !!id,
     queryFn: async () => { const { data } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!); return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0); },
   });
 
@@ -408,7 +409,8 @@ export function useVentaDetalle() {
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
     const total = Number(venta.total ?? 0);
     const saldoPendiente = Number(venta.saldo_pendiente ?? 0);
-    const saldoAnterior = totalPagado + saldoPendiente; // = total en la mayoría de casos
+    // Saldo anterior = suma de saldos pendientes de OTRAS ventas del cliente (excluye la actual)
+    const saldoAnterior = Number(ventasPendientesCredito ?? 0);
 
     return {
       empresa: {
@@ -450,7 +452,7 @@ export function useVentaDetalle() {
       metodoPago: (venta as any).metodo_pago ?? (pagos.length ? pagos.map(p => p.metodo).join(', ') : undefined),
       saldoAnterior,
       pagoAplicado: totalPagado,
-      saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
+      saldoNuevo: (saldoAnterior + saldoPendiente) > 0 ? (saldoAnterior + saldoPendiente) : undefined,
       pagos,
       promociones: promoResults
         .filter((r: any) => r.descuento > 0)
