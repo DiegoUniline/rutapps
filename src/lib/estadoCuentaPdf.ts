@@ -60,6 +60,8 @@ interface EstadoCuentaParams {
     metodo_pago: string;
     referencia?: string;
   }[];
+  productosVendidos?: { nombre: string; cantidad: number; total: number }[];
+  productosDevueltos?: { nombre: string; cantidad: number; motivo?: string }[];
 }
 
 const fmtCurrency = (n: number) =>
@@ -145,7 +147,7 @@ function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
 }
 
 export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promise<Blob> {
-  const { empresa, logoBase64, cliente, ventas, cobros } = params;
+  const { empresa, logoBase64, cliente, ventas, cobros, productosVendidos = [], productosDevueltos = [] } = params;
   const { default: jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
@@ -416,41 +418,112 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
   const liquidado = totalPendiente <= 0.005;
   const bannerBg = liquidado ? SUCCESS_SOFT : DANGER_SOFT;
   const bannerFg = liquidado ? SUCCESS : DANGER;
-  const bannerH = 14;
+  const bannerH = 20;
   doc.setFillColor(...bannerBg);
   doc.setDrawColor(...bannerFg);
   doc.setLineWidth(0.4);
   doc.roundedRect(ML, y, rightX - ML, bannerH, 2, 2, 'FD');
 
+  // Label izquierda
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...bannerFg);
   doc.text('Saldo pendiente total', ML + 5, y + 9);
-
-  // Monto grande a la derecha
-  const montoTxt = `${sym}${fmtCurrency(Math.max(totalPendiente, 0))}`;
-  doc.setFontSize(16);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
   doc.setTextColor(...bannerFg);
-  const montoW = doc.getTextWidth(montoTxt);
+  doc.text(liquidado ? 'Cuenta al corriente' : 'El cliente adeuda este monto', ML + 5, y + 15);
 
-  // Pill estado
+  // Pill estado arriba a la derecha
   const estadoTxt = liquidado ? 'LIQUIDADO' : 'PENDIENTE';
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   const pillW = doc.getTextWidth(estadoTxt) + 6;
   const pillX = rightX - 5 - pillW;
   doc.setFillColor(...bannerFg);
-  doc.roundedRect(pillX, y + 4, pillW, 6, 1.2, 1.2, 'F');
+  doc.roundedRect(pillX, y + 3, pillW, 5.5, 1.2, 1.2, 'F');
   doc.setTextColor(...WHITE);
-  doc.text(estadoTxt, pillX + pillW / 2, y + 8, { align: 'center' });
+  doc.text(estadoTxt, pillX + pillW / 2, y + 6.9, { align: 'center' });
 
-  // Monto
-  doc.setFontSize(16);
+  // Monto grande debajo del pill
+  const montoTxt = `${sym}${fmtCurrency(Math.max(totalPendiente, 0))}`;
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
   doc.setTextColor(...bannerFg);
-  doc.text(montoTxt, pillX - 4, y + 10, { align: 'right' });
+  doc.text(montoTxt, rightX - 5, y + 16, { align: 'right' });
 
-  // ═════════════════ FOOTER ═════════════════
+  y += bannerH + 8;
+
+  // ═════════════════ RESUMEN DE PRODUCTOS ═════════════════
+  if (productosVendidos.length > 0) {
+    y = checkPageBreak(doc, y, 40);
+    y = drawSectionTitle(doc, y, 'Productos vendidos (histórico)');
+    y += 2;
+    const totalCant = productosVendidos.reduce((s, p) => s + p.cantidad, 0);
+    const totalMonto = productosVendidos.reduce((s, p) => s + p.total, 0);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: ML, right: MR },
+      theme: 'plain',
+      head: [['Producto', 'Cantidad', 'Importe']],
+      body: productosVendidos.map(p => [
+        p.nombre,
+        p.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 }),
+        `${sym}${fmtCurrency(p.total)}`,
+      ]),
+      foot: [['Total', totalCant.toLocaleString('es-MX', { maximumFractionDigits: 3 }), `${sym}${fmtCurrency(totalMonto)}`]],
+      styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, textColor: TEXT, font: 'helvetica' },
+      headStyles: { fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8 },
+      footStyles: { fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9 },
+      columnStyles: {
+        1: { halign: 'right', cellWidth: 30 },
+        2: { halign: 'right', cellWidth: 35, fontStyle: 'bold' },
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body') {
+          doc.setDrawColor(...BORDER);
+          doc.setLineWidth(0.15);
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  if (productosDevueltos.length > 0) {
+    y = checkPageBreak(doc, y, 40);
+    y = drawSectionTitle(doc, y, 'Productos devueltos');
+    y += 2;
+    const totalCant = productosDevueltos.reduce((s, p) => s + p.cantidad, 0);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: ML, right: MR },
+      theme: 'plain',
+      head: [['Producto', 'Motivo', 'Cantidad']],
+      body: productosDevueltos.map(p => [
+        p.nombre,
+        p.motivo || '—',
+        p.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 }),
+      ]),
+      foot: [['Total', '', totalCant.toLocaleString('es-MX', { maximumFractionDigits: 3 })]],
+      styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, textColor: TEXT, font: 'helvetica' },
+      headStyles: { fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8 },
+      footStyles: { fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9 },
+      columnStyles: {
+        1: { cellWidth: 45 },
+        2: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body') {
+          doc.setDrawColor(...BORDER);
+          doc.setLineWidth(0.15);
+          doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
   const pageH = doc.internal.pageSize.getHeight();
   const totalPages = doc.getNumberOfPages();
   const empresaNombre = empresa.nombre || empresa.razon_social || '';
