@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { RotateCcw, Filter, X, Search } from 'lucide-react';
+import { RotateCcw, Filter, X, Search, Settings2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,8 @@ import { OdooPagination } from '@/components/OdooPagination';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
+import { usePermisos } from '@/hooks/usePermisos';
+import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
 
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
@@ -21,6 +23,9 @@ export default function DevolucionesListPage() {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
+  const { hasPermiso } = usePermisos();
+  const canConfig = hasPermiso('ventas.devoluciones', 'editar');
+  const [mermaConfigOpen, setMermaConfigOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string>('all');
@@ -106,7 +111,14 @@ export default function DevolucionesListPage() {
         <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
           <RotateCcw className="h-5 w-5" /> Devoluciones
         </h1>
+        {canConfig && (
+          <Button variant="outline" size="sm" onClick={() => setMermaConfigOpen(true)}>
+            <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Configurar mermas
+          </Button>
+        )}
       </div>
+
+      <MermaConfigDialog open={mermaConfigOpen} onOpenChange={setMermaConfigOpen} />
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg p-3 space-y-2">
