@@ -336,7 +336,7 @@ export default function PromocionesPage() {
                   </div>
                   <div>
                     <Label>Cantidad mínima</Label>
-                    <Input type="number" value={editing.cantidad_minima || ''} onChange={e => setEditing({ ...editing, cantidad_minima: parseFloat(e.target.value) || 0 })} placeholder="Ej: 5" />
+                    <Input type="number" min={0} step="1" value={editing.cantidad_minima ?? ''} onChange={e => setEditing({ ...editing, cantidad_minima: Math.max(0, parseFloat(e.target.value) || 0) })} placeholder="Ej: 5" />
                     <p className="text-[10px] text-muted-foreground mt-0.5">Mínimo de unidades para activar. 0 = sin mínimo</p>
                   </div>
                 </div>
