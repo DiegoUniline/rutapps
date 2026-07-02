@@ -45,7 +45,6 @@ interface ProductoRow {
   cantidad: number | null;
   costo: number | null;
   proveedor_preferido_id: string | null;
-  unidad_id: string | null;
 }
 
 function addDays(iso: string, n: number) {
@@ -121,7 +120,7 @@ export default function ConcentradoSurtidoPage() {
       const productoIds = Array.from(new Set(lineas.map(l => l.producto_id)));
       const productos = productoIds.length === 0 ? [] : await fetchAllPages<ProductoRow>((from, to) =>
         supabase.from('productos')
-          .select('id, codigo, nombre, cantidad, costo, proveedor_preferido_id, unidad_id')
+          .select('id, codigo, nombre, cantidad, costo, proveedor_preferido_id')
           .in('id', productoIds)
           .range(from, to)
       );
@@ -153,8 +152,7 @@ export default function ConcentradoSurtidoPage() {
           costo: Number(p?.costo ?? 0),
           proveedor_preferido_id: p?.proveedor_preferido_id ?? null,
         };
-      }).filter(r => r.pendiente > 0)
-        .sort((a, b) => (b.faltante - a.faltante) || a.nombre.localeCompare(b.nombre));
+      }).sort((a, b) => (b.faltante - a.faltante) || a.nombre.localeCompare(b.nombre));
 
       // Agregación por pedido
       const reqPorVenta = new Map<string, number>();
