@@ -551,13 +551,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         redondeo: item.redondeo ?? 'ninguno',
       };
       const lp = buildPosLinePricing(pricingItem, promoDisc);
-      subtotal += lp.subtotal;
-      iva += lp.iva;
-      ieps += lp.ieps;
+      const original = buildPosLinePricing(pricingItem, 0);
+      subtotal += original.subtotal;
+      iva += original.iva;
+      ieps += original.ieps;
       descuentoPromo += lp.effectiveDiscount;
       items += item.cantidad;
     });
-    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
+    const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));
     // Solo aplica si tiene permiso y valor > 0
     const extraVal = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
     const extraAmt = extraVal > 0
