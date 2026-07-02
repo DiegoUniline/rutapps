@@ -60,6 +60,8 @@ interface EstadoCuentaParams {
     metodo_pago: string;
     referencia?: string;
   }[];
+  productosVendidos?: { nombre: string; cantidad: number; total: number }[];
+  productosDevueltos?: { nombre: string; cantidad: number; motivo?: string }[];
 }
 
 const fmtCurrency = (n: number) =>
