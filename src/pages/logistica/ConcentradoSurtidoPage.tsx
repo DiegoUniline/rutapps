@@ -86,11 +86,12 @@ export default function ConcentradoSurtidoPage() {
         : ['confirmado', 'entregado', 'facturado'];
       const ventas = await fetchAllPages<VentaLite>((from, to) =>
         supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, empresa_id')
+          .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
           .gte('fecha_entrega', desde)
           .lte('fecha_entrega', hasta)
           .in('status', statuses as any)
+          .order('fecha_entrega', { ascending: true })
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
