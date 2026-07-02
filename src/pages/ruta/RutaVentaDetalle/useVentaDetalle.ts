@@ -509,8 +509,29 @@ export function useVentaDetalle() {
   const handleDownloadPDF = async () => {
     let td = getTicketData(); if (!td) return;
     td = await logoToBase64(td);
-    const container = document.createElement('div'); container.style.position = 'fixed'; container.style.left = '-9999px'; container.style.top = '0'; container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho }); document.body.appendChild(container);
-    try { await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200))); const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' }); const a = document.createElement('a'); a.href = dataUrl; a.download = `${venta?.folio ?? 'ticket'}.png`; a.click(); toast.success('Ticket descargado'); } catch { toast.error('Error generando imagen'); } finally { document.body.removeChild(container); }
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.width = 'max-content';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '-1';
+    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
+    document.body.appendChild(container);
+    try {
+      await document.fonts?.ready;
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+      const ticketEl = container.firstElementChild as HTMLElement;
+      ticketEl.style.width = '420px';
+      ticketEl.style.minWidth = '420px';
+      ticketEl.style.maxWidth = 'none';
+      ticketEl.style.boxSizing = 'border-box';
+      ticketEl.style.overflow = 'visible';
+      const width = Math.ceil(Math.max(ticketEl.scrollWidth, ticketEl.offsetWidth, ticketEl.getBoundingClientRect().width));
+      const height = Math.ceil(Math.max(ticketEl.scrollHeight, ticketEl.offsetHeight, ticketEl.getBoundingClientRect().height));
+      const dataUrl = await toPng(ticketEl, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff', width, height, style: { width: `${width}px`, height: `${height}px`, maxWidth: 'none', overflow: 'visible' } });
+      const a = document.createElement('a'); a.href = dataUrl; a.download = `${venta?.folio ?? 'ticket'}.png`; a.click(); toast.success('Ticket descargado');
+    } catch { toast.error('Error generando imagen'); } finally { document.body.removeChild(container); }
   };
 
   const handlePrintTicket = async () => {
