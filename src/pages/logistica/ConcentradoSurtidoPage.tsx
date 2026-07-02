@@ -332,7 +332,7 @@ export default function ConcentradoSurtidoPage() {
             <Package className="w-5 h-5 text-primary" /> Concentrado a surtir
           </h1>
           <p className="text-xs text-muted-foreground">
-            Total a entregar por producto en el rango (por fecha de entrega), descontando lo ya entregado.
+            Pedidos levantados/a entregar en el rango, con lo ya surtido y lo pendiente.
           </p>
         </div>
       </div>
