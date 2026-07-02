@@ -61,18 +61,33 @@ export default function ConcentradoSurtidoPage() {
   const [hasta, setHasta] = useState(addDays(today, 1));
   const [generando, setGenerando] = useState(false);
 
+  const STATUS_OPTIONS: { value: string; label: string }[] = [
+    { value: 'borrador', label: 'Borrador' },
+    { value: 'confirmado', label: 'Confirmado / Por surtir' },
+    { value: 'entregado', label: 'Surtido / Entregado' },
+    { value: 'facturado', label: 'Facturado' },
+    { value: 'cancelado', label: 'Cancelado' },
+  ];
+  const [statusFilter, setStatusFilter] = useState<string[]>(['confirmado']);
+  const toggleStatus = (v: string) => {
+    setStatusFilter(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+  };
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // 1) Pedidos en rango por fecha_entrega
+      const statuses = statusFilter.length > 0
+        ? statusFilter
+        : ['confirmado', 'entregado', 'facturado'];
       const ventas = await fetchAllPages<VentaLite>((from, to) =>
         supabase.from('ventas')
           .select('id, folio, fecha_entrega, fecha, status, empresa_id')
           .eq('empresa_id', empresa!.id)
           .gte('fecha_entrega', desde)
           .lte('fecha_entrega', hasta)
-          .not('status', 'in', '(cancelado,borrador)')
+          .in('status', statuses as any)
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
@@ -310,6 +325,43 @@ export default function ConcentradoSurtidoPage() {
               Generar compras ({faltantes.length})
             </Button>
           )}
+        </div>
+
+        <div className="w-full space-y-1">
+          <Label className="text-xs">Estado del pedido</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_OPTIONS.map(opt => {
+              const active = statusFilter.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleStatus(opt.value)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-foreground border-border hover:bg-muted/40'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+            {statusFilter.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter([])}
+                className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:bg-muted/40"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {statusFilter.length === 0
+              ? 'Mostrando: Confirmado, Entregado y Facturado (por defecto).'
+              : `Filtrando por ${statusFilter.length} estado(s).`}
+          </p>
         </div>
       </div>
 
