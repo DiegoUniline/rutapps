@@ -67,6 +67,19 @@ export function useVentaDetalle() {
     queryFn: async () => { const { data } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!); return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0); },
   });
 
+  const { data: devolucionesVenta } = useQuery({
+    queryKey: ['ruta-venta-devoluciones', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('devoluciones')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .eq('venta_id', id!);
+      return (data ?? []) as Array<{ cantidad: number; motivo: string; accion: string; monto_credito: number | null; producto: { nombre: string } | null }>;
+    },
+  });
+
+
   const editTotals = useMemo(() => {
     let subtotal = 0, iva = 0;
     editLineas.forEach(item => { const s = item.precio_unitario * item.cantidad; subtotal += s; if (item.tiene_iva) iva += s * (item.iva_pct / 100); });
