@@ -114,7 +114,7 @@ export default function ConcentradoSurtidoPage() {
         : ['confirmado', 'entregado', 'facturado'];
       const ventas = await fetchAllPages<VentaLite>((from, to) => {
         let q = supabase.from('ventas')
-          .select('id, folio, fecha_entrega, fecha, status, tipo, empresa_id, total, cliente_id, vendedor_id, clientes(nombre), vendedor:profiles!vendedor_id(id, nombre)')
+          .select('id, folio, fecha_entrega, fecha, status, tipo, empresa_id, total, cliente_id, vendedor_id, clientes(nombre), vendedor:profiles!ventas_vendedor_id_profiles_fkey(id, nombre)')
           .eq('empresa_id', empresa!.id)
           .gte(fechaField, desde)
           .lte(fechaField, hasta)
