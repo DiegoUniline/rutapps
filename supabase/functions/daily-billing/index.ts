@@ -1,3 +1,4 @@
+import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -48,6 +49,9 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" }) : null;
+
     const now = nowInMx();
     const today = now.toISOString().slice(0, 10);
     const dayOfMonth = now.getDate();
@@ -79,13 +83,19 @@ Deno.serve(async (req) => {
       // 2) Buscar facturas pendientes ya vencidas → candidatos a bloqueo.
       const { data: vencidas } = await supabase
         .from("facturas")
-        .select("empresa_id, numero_factura, fecha_vencimiento, estado")
+        .select("id, empresa_id, numero_factura, fecha_vencimiento, estado, stripe_invoice_id")
         .in("estado", ["pendiente", "procesando", "past_due"])
         .lt("fecha_vencimiento", new Date().toISOString());
 
-      const empresasConVencidas = Array.from(
-        new Set((vencidas || []).map((f: any) => f.empresa_id).filter(Boolean))
-      );
+      // Agrupar las vencidas por empresa
+      const vencidasPorEmpresa = new Map<string, any[]>();
+      for (const f of vencidas || []) {
+        if (!f.empresa_id) continue;
+        const arr = vencidasPorEmpresa.get(f.empresa_id) || [];
+        arr.push(f);
+        vencidasPorEmpresa.set(f.empresa_id, arr);
+      }
+      const empresasConVencidas = Array.from(vencidasPorEmpresa.keys());
 
       const idsBloqueables: string[] = [];
       for (const empresaId of empresasConVencidas) {
@@ -97,7 +107,36 @@ Deno.serve(async (req) => {
         if (!sub) continue;
         if (sub.es_manual) continue;          // pagos manuales — no automatizar bloqueo
         if (sub.acceso_bloqueado) continue;   // ya bloqueada
-        idsBloqueables.push(empresaId);
+
+        // SEGURIDAD anti-bloqueo-indebido: antes de bloquear, para las facturas
+        // que vienen de Stripe verificamos con Stripe si REALMENTE siguen impagas.
+        // - Stripe dice 'paid'  → la marcamos 'pagada' y NO cuenta para bloqueo
+        //   (protege a quien pagó pero cuyo webhook invoice.paid se perdió).
+        // - Stripe dice 'open'/'uncollectible' → impaga confirmada → sí bloquea.
+        // - Error/duda con Stripe → NO la contamos (fail-safe: ante la duda, no bloquear).
+        // Las facturas SIN stripe_invoice_id (cobro manual/interno) cuentan como antes.
+        const facturas = vencidasPorEmpresa.get(empresaId) || [];
+        let impagaConfirmada = 0;
+        for (const f of facturas) {
+          if (!f.stripe_invoice_id) { impagaConfirmada++; continue; } // no-Stripe: como antes
+          if (!stripe) continue;                                      // sin Stripe: fail-safe, no contar
+          try {
+            const inv = await stripe.invoices.retrieve(f.stripe_invoice_id);
+            if (inv.status === "paid") {
+              await supabase.from("facturas")
+                .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
+                .eq("id", f.id);
+              log("Factura ya pagada en Stripe — no bloquea", { empresaId, invoice: f.stripe_invoice_id });
+            } else if (inv.status === "open" || inv.status === "uncollectible") {
+              impagaConfirmada++;
+            }
+            // draft/void/otro → duda → no contar
+          } catch (e) {
+            log("No se pudo verificar factura en Stripe (fail-safe: no bloquea)", { empresaId, invoice: f.stripe_invoice_id, error: (e as Error).message });
+          }
+        }
+
+        if (impagaConfirmada > 0) idsBloqueables.push(empresaId);
       }
 
       if (idsBloqueables.length > 0) {

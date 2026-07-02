@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
             });
           }
 
-          await supabase
+          const { error: pagadaErr } = await supabase
             .from("facturas")
             .update({
               estado: "pagada",
@@ -434,6 +434,13 @@ Deno.serve(async (req) => {
               stripe_payment_intent_id: typeof (invoice as any).payment_intent === "string" ? (invoice as any).payment_intent : null,
             })
             .eq("stripe_invoice_id", invoice.id);
+          // CRÍTICO: si esto falla en silencio, la factura queda 'pendiente' y
+          // daily-billing podría bloquear a un cliente que SÍ pagó. Lanzamos el
+          // error para responder != 200 y que Stripe reenvíe el webhook hasta
+          // que la factura quede marcada 'pagada'.
+          if (pagadaErr) {
+            throw new Error(`No se pudo marcar factura pagada (${invoice.id}): ${pagadaErr.message}`);
+          }
         }
 
         log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
@@ -504,6 +511,55 @@ Deno.serve(async (req) => {
       }
 
       if (empresa_id) {
+        // ── Registrar la factura como PENDIENTE si aún no existe ──
+        // Antes, el webhook SOLO creaba la fila en `facturas` cuando la factura
+        // se PAGABA (invoice.paid). Las impagas quedaban invisibles para el
+        // sistema (no aparecían en "Mi Suscripción", no salía el aviso de gracia
+        // y daily-billing nunca podía aplicar los 3 días → suspensión).
+        //
+        // NO mueve dinero: solo INSERTA una fila en la BD. Stripe sigue cobrando
+        // y reintentando por su cuenta, así que esto no puede cobrar doble ni
+        // dejar de cobrar. Es idempotente (por stripe_invoice_id): si ya existe
+        // —o cuando luego se pague— no se duplica; invoice.paid la vuelve 'pagada'.
+        try {
+          const totalFac = (invoice.total ?? invoice.amount_due ?? 0) / 100;
+          if (invoice.id && totalFac > 0) {
+            const { count } = await supabase
+              .from("facturas")
+              .select("id", { count: "exact", head: true })
+              .eq("stripe_invoice_id", invoice.id);
+            if (!count) {
+              const { data: subRow } = await supabase
+                .from("subscriptions").select("id, max_usuarios")
+                .eq("empresa_id", empresa_id).maybeSingle();
+              let nUsers = invoice.metadata?.num_usuarios ? parseInt(invoice.metadata.num_usuarios, 10) : 0;
+              if (!nUsers) { for (const l of invoice.lines?.data ?? []) nUsers += (l as any).quantity ?? 0; }
+              if (!nUsers) nUsers = subRow?.max_usuarios ?? 1;
+              const periodo = getInvoicePeriod(invoice);
+              const created = invoice.created ? new Date(invoice.created * 1000) : new Date();
+              const venc = new Date(created.getTime() + 3 * 86400000); // 3 días de gracia
+              await supabase.from("facturas").insert({
+                empresa_id,
+                suscripcion_id: subRow?.id ?? null,
+                periodo_inicio: periodo.inicio,
+                periodo_fin: periodo.fin,
+                num_usuarios: nUsers,
+                precio_unitario: nUsers > 0 ? Math.round((totalFac / nUsers) * 100) / 100 : totalFac,
+                subtotal: totalFac,
+                total: totalFac,
+                estado: "pendiente",
+                fecha_emision: created.toISOString(),
+                fecha_vencimiento: venc.toISOString(),
+                stripe_invoice_id: invoice.id,
+                es_prorrateo: false,
+              });
+              log("Factura pendiente creada (payment_failed)", { empresa_id, invoice: invoice.id, total: totalFac });
+            }
+          }
+        } catch (e) {
+          console.error("[STRIPE-WEBHOOK] No se pudo crear factura pendiente:", e);
+        }
+
         try {
           const { data: waConfig } = await supabase
             .from("whatsapp_config").select("api_token")
