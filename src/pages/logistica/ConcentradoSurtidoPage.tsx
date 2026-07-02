@@ -86,6 +86,24 @@ export default function ConcentradoSurtidoPage() {
   };
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
+  // Filtros nuevos: tipo (pedido/venta_directa) y vendedor (multi)
+  const TIPO_OPTIONS: { value: string; label: string }[] = [
+    { value: 'pedido', label: 'Solo pedidos' },
+    { value: 'venta_directa', label: 'Solo ventas directas' },
+    { value: 'todos', label: 'Todos' },
+  ];
+  const [tipoFilter, setTipoFilter] = useState<'pedido' | 'venta_directa' | 'todos'>('pedido');
+  const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
+  const { data: vendedoresList = [], isLoading: loadingVendedores } = useVendedoresForFilter();
+
+  // Agrupador
+  type GroupKey = 'none' | 'vendedor' | 'cliente' | 'estado' | 'estado_surtido';
+  const [groupBy, setGroupBy] = useState<GroupKey>('none');
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (k: string) => setOpenGroups(prev => {
+    const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n;
+  });
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField],
     enabled: !!empresa?.id,
