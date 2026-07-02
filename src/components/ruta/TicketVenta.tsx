@@ -355,6 +355,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 </div>
               )}
             </div>
+              );
+            })()}
 
             {/* Balance / Saldo */}
             {true ? (
