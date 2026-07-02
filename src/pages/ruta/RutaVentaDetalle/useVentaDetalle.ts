@@ -446,11 +446,11 @@ export function useVentaDetalle() {
       '─'.repeat(30),
       ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} ${fmtM(l.total)}`),
       '─'.repeat(30),
-      `Subtotal: ${fmtM(td.subtotal)}`,
-      (td.descuento ?? 0) > 0 ? `Descuento: -${fmtM(td.descuento ?? 0)}` : '',
-      td.iva > 0 ? `IVA: ${fmtM(td.iva)}` : '',
-      (td.ieps ?? 0) > 0 ? `IEPS: ${fmtM(td.ieps!)}` : '',
-      `TOTAL: ${fmtM(td.total)}`,
+      `Sub total: ${fmtM(td.subtotal)}`,
+      `Descuentos: ${(td.descuento ?? 0) > 0 ? '-' : ''}${fmtM(td.descuento ?? 0)}`,
+      `Impuestos: ${fmtM((td.iva ?? 0) + (td.ieps ?? 0))}`,
+      `Total pagado: ${fmtM((td.pagos ?? []).reduce((s, p) => s + (p.monto ?? 0), 0) || (td.condicionPago === 'credito' ? 0 : td.total))}`,
+      `Saldo: ${fmtM(td.saldoNuevo ?? 0)}`,
       '', 'rutapp.mx',
     ].filter(Boolean).join('\n');
     if (navigator.share) {

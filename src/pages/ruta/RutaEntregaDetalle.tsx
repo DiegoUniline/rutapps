@@ -390,7 +390,12 @@ export default function RutaEntregaDetalle() {
       '─'.repeat(30), `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
       '─'.repeat(30),
       ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} ${fmtM(l.total)}`),
-      '─'.repeat(30), `TOTAL: ${fmtM(td.total)}`,
+      '─'.repeat(30),
+      `Sub total: ${fmtM(td.subtotal)}`,
+      `Descuentos: ${fmtM(td.descuento ?? 0)}`,
+      `Impuestos: ${fmtM((td.iva ?? 0) + (td.ieps ?? 0))}`,
+      `Total pagado: ${fmtM(td.total)}`,
+      `Saldo: ${fmtM(td.saldoNuevo ?? 0)}`,
     ].filter(Boolean).join('\n');
     if (navigator.share) {
       try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { }

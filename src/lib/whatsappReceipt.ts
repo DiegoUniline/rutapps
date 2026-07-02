@@ -78,10 +78,17 @@ export async function sendReceiptWhatsApp(params: SendReceiptParams): Promise<{ 
     // Fallback: send as text
     try {
       const fmt2 = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const descuentoTotal = data.descuento ?? 0;
+      const impuestosTotal = (data.iva ?? 0) + (data.ieps ?? 0);
+      const totalPagado = (data.pagos ?? []).reduce((s, p) => s + (p.monto ?? 0), 0) || (data.condicionPago === 'credito' ? 0 : data.total);
       const textMsg = `✓ Comprobante\n` +
         `Folio: ${data.folio}\nCliente: ${data.clienteNombre}\n` +
         data.lineas.map(l => `${l.cantidad}x ${l.nombre} ${cs}${fmt2(l.total)}`).join('\n') +
-        `\n─────────\nTOTAL: ${cs}${fmt2(data.total)}`;
+        `\n─────────\nSub total: ${cs}${fmt2(data.subtotal)}\n` +
+        `Descuentos: ${descuentoTotal > 0 ? '-' : ''}${cs}${fmt2(descuentoTotal)}\n` +
+        `Impuestos: ${cs}${fmt2(impuestosTotal)}\n` +
+        `Total pagado: ${cs}${fmt2(totalPagado)}\n` +
+        `Saldo: ${cs}${fmt2(data.saldoNuevo ?? 0)}`;
 
       await supabase.functions.invoke('whatsapp-sender', {
         body: { action: 'send-text', empresa_id: empresaId, phone, message: textMsg, tipo, referencia_id },

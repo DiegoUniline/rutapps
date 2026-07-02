@@ -48,6 +48,43 @@ const ACCION_LABELS: Record<string, string> = {
   devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
 };
 
+function calcTicketSummary(params: {
+  total: number;
+  iva: number;
+  ieps: number;
+  descuentoPromos: number;
+  descuentoDevolucion: number;
+  condicionPago: string;
+  montoRecibido?: number;
+  cambio?: number;
+  pagoAplicado?: number;
+  saldoNuevo?: number;
+  pagos: { monto: number }[];
+}) {
+  const descuentos = Math.max(params.descuentoPromos + params.descuentoDevolucion, 0);
+  const impuestos = Math.max(params.iva + params.ieps, 0);
+  const pagosTotal = params.pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+  const recibidoNeto = params.montoRecibido != null
+    ? Math.max((Number(params.montoRecibido) || 0) - (Number(params.cambio ?? 0) || 0), 0)
+    : 0;
+  const pagoAplicado = Math.max(Number(params.pagoAplicado ?? 0) || 0, 0);
+  const totalVenta = Math.max(Number(params.total) || 0, 0);
+  const totalPagado = pagosTotal > 0
+    ? pagosTotal
+    : pagoAplicado > 0
+      ? pagoAplicado
+      : recibidoNeto > 0
+        ? recibidoNeto
+        : params.condicionPago === 'credito'
+          ? 0
+          : totalVenta;
+  const saldo = params.saldoNuevo != null
+    ? Math.max(Number(params.saldoNuevo) || 0, 0)
+    : Math.max(totalVenta - Math.min(totalPagado, totalVenta), 0);
+
+  return { descuentos, impuestos, totalPagado, saldo };
+}
+
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
@@ -70,6 +107,20 @@ export default function TicketVenta(props: TicketVentaProps) {
   const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
+  const descuentoPromos = promociones.reduce((s, p) => s + (Number(p.descuento) || 0), 0);
+  const summary = calcTicketSummary({
+    total,
+    iva,
+    ieps,
+    descuentoPromos,
+    descuentoDevolucion,
+    condicionPago,
+    montoRecibido,
+    cambio,
+    pagoAplicado,
+    saldoNuevo,
+    pagos,
+  });
 
   const handlePrint = () => {
     if (!ticketRef.current) return;
@@ -130,11 +181,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
       }),
       '─'.repeat(30),
-      `Subtotal: ${fmt(subtotal)}`,
-      iva > 0 ? `IVA: ${fmt(iva)}` : '',
-      ieps > 0 ? `IEPS: ${fmt(ieps)}` : '',
-      descuentoDevolucion > 0 ? `Desc. devolución: -${fmt(descuentoDevolucion)}` : '',
-      `TOTAL: ${fmt(total)}`,
+      `Sub total: ${fmt(subtotal)}`,
+      `Descuentos: ${summary.descuentos > 0 ? '-' : ''}${fmt(summary.descuentos)}`,
+      `Impuestos: ${fmt(summary.impuestos)}`,
+      `Total pagado: ${fmt(summary.totalPagado)}`,
+      `Saldo: ${fmt(summary.saldo)}`,
       ...(devoluciones.length > 0 ? [
         '─'.repeat(30),
         'DEVOLUCIONES:',
@@ -303,42 +354,27 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Totals */}
             {(() => {
-              const descuentoPromos = promociones.reduce((s, p) => s + p.descuento, 0);
               return (
             <div className="px-5 py-2 space-y-0.5">
-              {taxMode !== 'ninguno' && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground">Subtotal</span>
-                  <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
-                </div>
-              )}
-              {descuentoPromos > 0 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-primary font-semibold">Descuento</span>
-                  <span className="val text-primary font-bold tabular-nums">-{fmt(descuentoPromos)}</span>
-                </div>
-              )}
-              {taxMode !== 'ninguno' && iva > 0 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground">IVA</span>
-                  <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
-                </div>
-              )}
-              {taxMode !== 'ninguno' && ieps > 0 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-muted-foreground">IEPS</span>
-                  <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
-                </div>
-              )}
-              {descuentoDevolucion > 0 && (
-                <div className="tk-tot-row flex justify-between text-[10px]">
-                  <span className="lbl text-amber-600">Desc. devolución</span>
-                  <span className="val text-amber-600 font-medium tabular-nums">-{fmt(descuentoDevolucion)}</span>
-                </div>
-              )}
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-muted-foreground">Sub total</span>
+                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
+              </div>
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-primary font-semibold">Descuentos</span>
+                <span className="val text-primary font-bold tabular-nums">{summary.descuentos > 0 ? '-' : ''}{fmt(summary.descuentos)}</span>
+              </div>
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-muted-foreground">Impuestos</span>
+                <span className="val text-foreground tabular-nums">{fmt(taxMode !== 'ninguno' ? summary.impuestos : 0)}</span>
+              </div>
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
-                <span className="text-[12px] font-bold text-foreground">Total</span>
-                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(total)}</span>
+                <span className="text-[12px] font-bold text-foreground">Total pagado</span>
+                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(summary.totalPagado)}</span>
+              </div>
+              <div className="tk-tot-row flex justify-between text-[10px]">
+                <span className="lbl text-muted-foreground">Saldo</span>
+                <span className={`val font-bold tabular-nums ${summary.saldo > 0 ? 'text-destructive' : 'text-green-600'}`}>{fmt(summary.saldo)}</span>
               </div>
               {montoRecibido != null && montoRecibido > 0 && (
                 <div className="pt-1 space-y-0.5">
