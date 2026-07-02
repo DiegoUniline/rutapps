@@ -61,8 +61,9 @@ export default function ConcentradoSurtidoPage() {
 
   const today = todayLocal();
   const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(addDays(today, 1));
+  const [hasta, setHasta] = useState(today);
   const [generando, setGenerando] = useState(false);
+  const [fechaField, setFechaField] = useState<'fecha' | 'fecha_entrega'>('fecha');
 
   const STATUS_OPTIONS: { value: string; label: string }[] = [
     { value: 'borrador', label: 'Borrador' },
@@ -78,10 +79,9 @@ export default function ConcentradoSurtidoPage() {
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // 1) Pedidos en rango por fecha_entrega
       const statuses = statusFilter.length > 0
         ? statusFilter
         : ['confirmado', 'entregado', 'facturado'];
@@ -89,10 +89,10 @@ export default function ConcentradoSurtidoPage() {
         supabase.from('ventas')
           .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
-          .gte('fecha_entrega', desde)
-          .lte('fecha_entrega', hasta)
+          .gte(fechaField, desde)
+          .lte(fechaField, hasta)
           .in('status', statuses as any)
-          .order('fecha_entrega', { ascending: true })
+          .order(fechaField, { ascending: true })
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
@@ -332,13 +332,32 @@ export default function ConcentradoSurtidoPage() {
             <Package className="w-5 h-5 text-primary" /> Concentrado a surtir
           </h1>
           <p className="text-xs text-muted-foreground">
-            Total a entregar por producto en el rango (por fecha de entrega), descontando lo ya entregado.
+            Pedidos levantados/a entregar en el rango, con lo ya surtido y lo pendiente.
           </p>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Filtrar por</Label>
+          <div className="flex gap-1 bg-muted/30 border border-border rounded-md p-0.5">
+            <button
+              type="button"
+              onClick={() => setFechaField('fecha')}
+              className={`text-xs px-2.5 py-1 rounded ${fechaField === 'fecha' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'}`}
+            >
+              Fecha levantamiento
+            </button>
+            <button
+              type="button"
+              onClick={() => setFechaField('fecha_entrega')}
+              className={`text-xs px-2.5 py-1 rounded ${fechaField === 'fecha_entrega' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'}`}
+            >
+              Fecha entrega
+            </button>
+          </div>
+        </div>
         <div className="space-y-1">
           <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Rango de fechas</Label>
           <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
