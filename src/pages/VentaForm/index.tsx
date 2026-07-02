@@ -260,6 +260,13 @@ export default function VentaFormPage() {
       promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
       saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
       pagos: (pagosData ?? []).map((p: any) => ({ metodo: (p.cobros as any)?.metodo_pago ?? 'efectivo', monto: Number(p.monto_aplicado ?? 0), fecha: fmtDate((p.cobros as any)?.fecha ?? ''), referencia: (p.cobros as any)?.referencia })),
+      devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
+        nombre: d.producto?.nombre ?? 'Producto',
+        cantidad: Number(d.cantidad) || 0,
+        motivo: d.motivo,
+        accion: d.accion,
+        monto: Number(d.monto_credito ?? 0) || 0,
+      })),
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
     printTicket(td, { ticketAncho });
