@@ -552,52 +552,104 @@ export default function ConcentradoSurtidoPage() {
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           {viewMode === 'pedidos' ? (
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs text-muted-foreground">
-                <tr>
-                  <th className="text-left px-3 py-2">Fecha entrega</th>
-                  <th className="text-left px-3 py-2">Folio</th>
-                  <th className="text-left px-3 py-2">Cliente</th>
-                  <th className="text-left px-3 py-2">Estado pedido</th>
-                  <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Surtido</th>
-                  <th className="text-right px-3 py-2">Falta surtir</th>
-                  <th className="text-left px-3 py-2">Estado surtido</th>
-                  <th className="text-right px-3 py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && (
-                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
-                )}
-                {!isLoading && (data?.pedidos ?? []).length === 0 && (
-                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los estados seleccionados.</td></tr>
-                )}
-                {(data?.pedidos ?? []).map(p => {
-                  const badge = {
-                    surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
-                    parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
-                    pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
-                    sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
-                  }[p.surtido_status];
-                  return (
-                    <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
-                      <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
-                      <td className="px-3 py-2 font-medium">{p.cliente}</td>
-                      <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
-                      <td className="px-3 py-2 text-right">{p.requerido}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
-                      <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
-                      <td className="px-3 py-2">
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">{fmtMoney(p.total)}</td>
+            (() => {
+              const pedidos = data?.pedidos ?? [];
+              const surtidoLabel: Record<PedidoRow['surtido_status'], string> = {
+                surtido: 'Surtido completo',
+                parcial: 'Surtido parcial',
+                pendiente: 'Sin surtir',
+                sin_lineas: 'Sin líneas',
+              };
+              const keyOf = (p: PedidoRow): string => {
+                if (groupBy === 'vendedor') return p.vendedor || '— Sin vendedor —';
+                if (groupBy === 'cliente') return p.cliente || '— Sin cliente —';
+                if (groupBy === 'estado') return p.status || '—';
+                if (groupBy === 'estado_surtido') return surtidoLabel[p.surtido_status];
+                return '';
+              };
+              const grouped = new Map<string, PedidoRow[]>();
+              for (const p of pedidos) {
+                const k = keyOf(p);
+                if (!grouped.has(k)) grouped.set(k, []);
+                grouped.get(k)!.push(p);
+              }
+              const groups = Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+              const colSpan = 10;
+              const renderRow = (p: PedidoRow) => {
+                const badge = {
+                  surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
+                  parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
+                  pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                  sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
+                }[p.surtido_status];
+                return (
+                  <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
+                    <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
+                    <td className="px-3 py-2 font-medium">{p.cliente}</td>
+                    <td className="px-3 py-2 text-xs">{p.vendedor}</td>
+                    <td className="px-3 py-2 text-xs capitalize">{p.tipo === 'venta_directa' ? 'Venta directa' : (p.tipo ?? 'pedido')}</td>
+                    <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
+                    <td className="px-3 py-2 text-right">{p.requerido}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
+                    <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                    </td>
+                  </tr>
+                );
+              };
+              return (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-3 py-2">Fecha entrega</th>
+                      <th className="text-left px-3 py-2">Folio</th>
+                      <th className="text-left px-3 py-2">Cliente</th>
+                      <th className="text-left px-3 py-2">Vendedor</th>
+                      <th className="text-left px-3 py-2">Tipo</th>
+                      <th className="text-left px-3 py-2">Estado pedido</th>
+                      <th className="text-right px-3 py-2">Requerido</th>
+                      <th className="text-right px-3 py-2">Surtido</th>
+                      <th className="text-right px-3 py-2">Falta surtir</th>
+                      <th className="text-left px-3 py-2">Estado surtido</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {isLoading && (
+                      <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                    )}
+                    {!isLoading && pedidos.length === 0 && (
+                      <tr><td colSpan={colSpan} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los filtros seleccionados.</td></tr>
+                    )}
+                    {!isLoading && groupBy === 'none' && pedidos.map(renderRow)}
+                    {!isLoading && groupBy !== 'none' && groups.map(([label, items]) => {
+                      const open = openGroups.has(label);
+                      const totReq = items.reduce((s, p) => s + p.requerido, 0);
+                      const totEnt = items.reduce((s, p) => s + p.entregado, 0);
+                      const totPend = items.reduce((s, p) => s + p.pendiente, 0);
+                      return (
+                        <>
+                          <tr key={`g-${label}`} className="bg-muted/60 cursor-pointer" onClick={() => toggleGroup(label)}>
+                            <td colSpan={6} className="px-3 py-2 text-xs font-semibold">
+                              <span className="inline-flex items-center gap-1">
+                                {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                {label} <span className="text-muted-foreground font-normal">({items.length})</span>
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold">{totReq}</td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">{totEnt}</td>
+                            <td className={`px-3 py-2 text-right text-xs font-semibold ${totPend > 0 ? 'text-destructive' : ''}`}>{totPend}</td>
+                            <td className="px-3 py-2" />
+                          </tr>
+                          {open && items.map(renderRow)}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
