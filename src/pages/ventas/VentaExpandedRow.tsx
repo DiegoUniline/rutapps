@@ -47,6 +47,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const [printingTicket, setPrintingTicket] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const { data: promocionesActivas } = usePromocionesActivas();
 
   useEffect(() => {
     let cancelled = false;
