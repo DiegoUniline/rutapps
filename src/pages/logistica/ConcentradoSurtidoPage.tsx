@@ -426,55 +426,126 @@ export default function ConcentradoSurtidoPage() {
         </div>
       )}
 
+      {/* Toggle vista */}
+      <div className="flex items-center gap-1 bg-muted/30 border border-border rounded-lg p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setViewMode('pedidos')}
+          className={`text-xs px-3 py-1.5 rounded-md transition ${
+            viewMode === 'pedidos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
+          }`}
+        >
+          Por pedido
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('productos')}
+          className={`text-xs px-3 py-1.5 rounded-md transition ${
+            viewMode === 'productos' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'
+          }`}
+        >
+          Por producto
+        </button>
+      </div>
+
       {/* Tabla */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs text-muted-foreground">
-              <tr>
-                <th className="text-left px-3 py-2">Código</th>
-                <th className="text-left px-3 py-2">Producto</th>
-                <th className="text-right px-3 py-2">Requerido</th>
-                <th className="text-right px-3 py-2">Ya entregado</th>
-                <th className="text-right px-3 py-2">A surtir</th>
-                <th className="text-right px-3 py-2">Stock actual</th>
-                <th className="text-right px-3 py-2">Faltante</th>
-                <th className="text-left px-3 py-2">Proveedor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
-              )}
-              {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin pedidos pendientes a entregar en este rango.</td></tr>
-              )}
-              {rows.map(r => {
-                const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
-                const tieneFaltante = r.faltante > 0;
-                return (
-                  <tr key={r.producto_id} className={tieneFaltante ? 'bg-destructive/5' : 'hover:bg-muted/20'}>
-                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.codigo}</td>
-                    <td className="px-3 py-2 font-medium">{r.nombre}</td>
-                    <td className="px-3 py-2 text-right">{r.requerido}</td>
-                    <td className="px-3 py-2 text-right text-muted-foreground">{r.entregado || '—'}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{r.pendiente}</td>
-                    <td className={`px-3 py-2 text-right ${r.stock < r.pendiente ? 'text-destructive font-semibold' : ''}`}>{r.stock}</td>
-                    <td className="px-3 py-2 text-right">
-                      {tieneFaltante ? (
-                        <Badge variant="destructive" className="font-mono">{r.faltante}</Badge>
-                      ) : (
-                        <span className="text-success">✓</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {prov?.nombre ?? (r.proveedor_preferido_id ? '—' : <span className="text-destructive/80">Sin proveedor</span>)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {viewMode === 'pedidos' ? (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2">Fecha entrega</th>
+                  <th className="text-left px-3 py-2">Folio</th>
+                  <th className="text-left px-3 py-2">Cliente</th>
+                  <th className="text-left px-3 py-2">Estado pedido</th>
+                  <th className="text-right px-3 py-2">Requerido</th>
+                  <th className="text-right px-3 py-2">Entregado</th>
+                  <th className="text-right px-3 py-2">Pendiente</th>
+                  <th className="text-left px-3 py-2">Surtido</th>
+                  <th className="text-right px-3 py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                )}
+                {!isLoading && (data?.pedidos ?? []).length === 0 && (
+                  <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin pedidos en este rango con los estados seleccionados.</td></tr>
+                )}
+                {(data?.pedidos ?? []).map(p => {
+                  const badge = {
+                    surtido:   { label: 'Surtido',   cls: 'bg-success/15 text-success border-success/30' },
+                    parcial:   { label: 'Parcial',   cls: 'bg-warning/15 text-warning border-warning/30' },
+                    pendiente: { label: 'Por surtir',cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                    sin_lineas:{ label: 'Sin líneas',cls: 'bg-muted text-muted-foreground border-border' },
+                  }[p.surtido_status];
+                  return (
+                    <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
+                      <td className="px-3 py-2 text-xs">{p.fecha_entrega ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{p.folio ?? '—'}</td>
+                      <td className="px-3 py-2 font-medium">{p.cliente}</td>
+                      <td className="px-3 py-2 text-xs capitalize">{p.status}</td>
+                      <td className="px-3 py-2 text-right">{p.requerido}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">{p.entregado || '—'}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${p.pendiente > 0 ? 'text-destructive' : ''}`}>{p.pendiente}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">{fmtMoney(p.total)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                <tr>
+                  <th className="text-left px-3 py-2">Código</th>
+                  <th className="text-left px-3 py-2">Producto</th>
+                  <th className="text-right px-3 py-2">Requerido</th>
+                  <th className="text-right px-3 py-2">Ya entregado</th>
+                  <th className="text-right px-3 py-2">A surtir</th>
+                  <th className="text-right px-3 py-2">Stock actual</th>
+                  <th className="text-right px-3 py-2">Faltante</th>
+                  <th className="text-left px-3 py-2">Proveedor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+                )}
+                {!isLoading && rows.length === 0 && (
+                  <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin productos pendientes a surtir en este rango.</td></tr>
+                )}
+                {rows.map(r => {
+                  const prov = proveedores?.find(p => p.id === r.proveedor_preferido_id);
+                  const tieneFaltante = r.faltante > 0;
+                  return (
+                    <tr key={r.producto_id} className={tieneFaltante ? 'bg-destructive/5' : 'hover:bg-muted/20'}>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.codigo}</td>
+                      <td className="px-3 py-2 font-medium">{r.nombre}</td>
+                      <td className="px-3 py-2 text-right">{r.requerido}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">{r.entregado || '—'}</td>
+                      <td className="px-3 py-2 text-right font-semibold">{r.pendiente}</td>
+                      <td className={`px-3 py-2 text-right ${r.stock < r.pendiente ? 'text-destructive font-semibold' : ''}`}>{r.stock}</td>
+                      <td className="px-3 py-2 text-right">
+                        {tieneFaltante ? (
+                          <Badge variant="destructive" className="font-mono">{r.faltante}</Badge>
+                        ) : (
+                          <span className="text-success">✓</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {prov?.nombre ?? (r.proveedor_preferido_id ? '—' : <span className="text-destructive/80">Sin proveedor</span>)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
