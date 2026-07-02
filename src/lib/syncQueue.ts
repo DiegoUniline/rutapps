@@ -145,6 +145,9 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       const isConflict = err?.code === '23505';
       const isFkMissing = err?.code === '23503';
       const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
+      // Update cuya fila destino aún no existe (su insert no ha sincronizado):
+      // se difiere y reintenta, NO se pierde ni se manda a dead-letter de inmediato.
+      const isRowNotYet = err?.code === 'ROW_NOT_YET';
       const CHILD_TABLES_RLS_DEFER = ['devoluciones', 'devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
       const isRlsViolation = err?.code === '42501' && CHILD_TABLES_RLS_DEFER.includes(item.table);
       const isDevolucionEnumIssue = (err?.code === '22P02' || err?.code === '23514') && (item.table === 'devoluciones' || item.table === 'devolucion_lineas');
@@ -156,7 +159,7 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isFkMissing || isRlsViolation || isDevolucionEnumIssue) {
+      if (isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet) {
         await offlineDb.syncQueue.update(item.id!, {
           retries: newRetries,
           createdAt: Date.now() + 1000,
@@ -258,6 +261,15 @@ async function processItem(item: SyncQueueItem) {
         if (localTable) {
           await localTable.put(returned[0]);
         }
+      } else {
+        // 0 filas afectadas: el registro aún NO existe en el servidor (su INSERT
+        // todavía no se sincronizó). NO dar el update por bueno — antes se borraba
+        // como "éxito" y el cambio se perdía. Caso real: el saldo_pendiente = (total
+        // − cobrado) de una venta quedaba sin aplicar, así que una venta YA PAGADA
+        // aparecía debiendo el total. Se difiere y se reintenta tras su INSERT.
+        const e: any = new Error(`Update sin fila destino en ${table} (${keyValue}); se reintenta tras su insert`);
+        e.code = 'ROW_NOT_YET';
+        throw e;
       }
       break;
     }
