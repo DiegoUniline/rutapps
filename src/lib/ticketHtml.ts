@@ -261,6 +261,21 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     }
   }
 
+  // ── Devoluciones ──
+  if (devoluciones && devoluciones.length > 0) {
+    add(div);
+    add('DEVOLUCIONES');
+    for (const d of devoluciones) {
+      const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
+      const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
+      const nombre = `${d.cantidad}x ${d.nombre}`;
+      add(nombre.substring(0, COLS));
+      const right = (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion;
+      add(pad(`  ${motivo}`, right));
+    }
+  }
+
+
   add('');
   add(centerText('Gracias por su compra'));
   if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
