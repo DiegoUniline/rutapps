@@ -174,22 +174,20 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(div);
 
+  const totalPromo = (promociones ?? []).reduce((s, p) => s + p.descuento, 0);
   add('');
   if (showTax) {
     add(pad('Subtotal', fmt(subtotal)));
+    if (totalPromo > 0) add(pad('Descuento', `-${fmt(totalPromo)}`));
     if (iva > 0) add(pad('IVA', fmt(iva)));
     if (ieps > 0) add(pad('IEPS', fmt(ieps)));
     add(div);
+  } else if (totalPromo > 0) {
+    add(pad('Subtotal', fmt(subtotal)));
+    add(pad('Descuento', `-${fmt(totalPromo)}`));
+    add(div);
   }
-  add(pad('TOTAL', fmt(showTax ? total : subtotal)));
-
-  // ── Ahorro total por promociones ──
-  if (promociones && promociones.length > 0) {
-    const totalPromo = promociones.reduce((s, p) => s + p.descuento, 0);
-    if (totalPromo > 0) {
-      add(pad('Ahorro promos', `-${fmt(totalPromo)}`));
-    }
-  }
+  add(pad('TOTAL', fmt(showTax ? total : Math.max(0, subtotal - totalPromo))));
 
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
