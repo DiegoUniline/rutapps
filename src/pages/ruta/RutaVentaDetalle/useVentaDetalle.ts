@@ -393,6 +393,13 @@ export function useVentaDetalle() {
         descuento: p.descuento ?? 0,
         producto_id: p.producto_id,
       })),
+      devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
+        nombre: d.producto?.nombre ?? 'Producto',
+        cantidad: Number(d.cantidad) || 0,
+        motivo: d.motivo,
+        accion: d.accion,
+        monto: Number(d.monto_credito ?? 0) || 0,
+      })),
     };
   };
 
