@@ -138,7 +138,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, descuento = 0, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, pagos } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
