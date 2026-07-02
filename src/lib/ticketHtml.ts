@@ -50,6 +50,14 @@ export interface TicketPago {
   referencia?: string | null;
 }
 
+export interface TicketDevolucion {
+  nombre: string;
+  cantidad: number;
+  motivo: string;
+  accion: string;
+  monto?: number;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
@@ -71,7 +79,17 @@ export interface TicketData {
   saldoNuevo?: number;
   promociones?: TicketPromo[];
   pagos?: TicketPago[];
+  devoluciones?: TicketDevolucion[];
 }
+
+export const MOTIVO_DEVOLUCION_LABELS: Record<string, string> = {
+  no_vendido: 'No vendido', vencido: 'Vencido', caducado: 'Caducado',
+  danado: 'Danado', cambio: 'Cambio', error_pedido: 'Error pedido', otro: 'Otro',
+};
+export const ACCION_DEVOLUCION_LABELS: Record<string, string> = {
+  reposicion: 'Reposicion', nota_credito: 'Nota credito',
+  devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
+};
 
 export interface TicketTotalsSummary {
   descuentoTotal: number;
