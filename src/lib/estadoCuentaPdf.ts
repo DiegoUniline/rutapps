@@ -147,7 +147,7 @@ function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
 }
 
 export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promise<Blob> {
-  const { empresa, logoBase64, cliente, ventas, cobros } = params;
+  const { empresa, logoBase64, cliente, ventas, cobros, productosVendidos = [], productosDevueltos = [] } = params;
   const { default: jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
