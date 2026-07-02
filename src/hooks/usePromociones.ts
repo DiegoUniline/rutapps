@@ -226,7 +226,9 @@ export function evaluatePromociones(
     });
 
     for (const item of matchingItems) {
-      if (item.cantidad < (promo.cantidad_minima || 0)) continue;
+      const cantMinRaw = Number(promo.cantidad_minima) || 0;
+      const cantMinEffective = Math.max(0, cantMinRaw);
+      if (item.cantidad < cantMinEffective) continue;
 
       let descuento = 0;
       let descripcion = '';
@@ -252,8 +254,9 @@ export function evaluatePromociones(
           break;
 
         case 'producto_gratis': {
-          const cantGratis = promo.cantidad_gratis || 1;
-          const sets = Math.floor(item.cantidad / (promo.cantidad_minima || 1));
+          const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
+          const compraMin = Math.max(1, cantMinEffective || 1);
+          const sets = Math.floor(item.cantidad / compraMin);
           const totalGratis = sets * cantGratis;
           if (totalGratis <= 0) continue;
 
