@@ -61,8 +61,9 @@ export default function ConcentradoSurtidoPage() {
 
   const today = todayLocal();
   const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(addDays(today, 1));
+  const [hasta, setHasta] = useState(today);
   const [generando, setGenerando] = useState(false);
+  const [fechaField, setFechaField] = useState<'fecha' | 'fecha_entrega'>('fecha');
 
   const STATUS_OPTIONS: { value: string; label: string }[] = [
     { value: 'borrador', label: 'Borrador' },
@@ -78,10 +79,9 @@ export default function ConcentradoSurtidoPage() {
   const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // 1) Pedidos en rango por fecha_entrega
       const statuses = statusFilter.length > 0
         ? statusFilter
         : ['confirmado', 'entregado', 'facturado'];
@@ -89,10 +89,10 @@ export default function ConcentradoSurtidoPage() {
         supabase.from('ventas')
           .select('id, folio, fecha_entrega, fecha, status, empresa_id, total, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
-          .gte('fecha_entrega', desde)
-          .lte('fecha_entrega', hasta)
+          .gte(fechaField, desde)
+          .lte(fechaField, hasta)
           .in('status', statuses as any)
-          .order('fecha_entrega', { ascending: true })
+          .order(fechaField, { ascending: true })
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
