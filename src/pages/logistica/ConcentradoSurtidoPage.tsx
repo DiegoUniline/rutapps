@@ -451,6 +451,55 @@ export default function ConcentradoSurtidoPage() {
               : `Filtrando por ${statusFilter.length} estado(s).`}
           </p>
         </div>
+
+        {/* Fila 2: Tipo + Vendedor + Agrupar */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 border-t border-border">
+          <div className="space-y-1 pt-2">
+            <Label className="text-xs">Tipo de documento</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIPO_OPTIONS.map(opt => {
+                const active = tipoFilter === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTipoFilter(opt.value as any)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                      active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="pt-1">
+            <EntityMultiSelect
+              label="Vendedor"
+              placeholder="Todos los vendedores"
+              loading={loadingVendedores}
+              options={vendedoresList.map(v => ({ id: v.id, label: v.nombre || '—' }))}
+              value={vendedorFilter}
+              onChange={setVendedorFilter}
+            />
+          </div>
+          <div className="space-y-1 pt-2">
+            <Label className="text-xs">Agrupar por</Label>
+            <Select value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setOpenGroups(new Set()); }}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin agrupar</SelectItem>
+                <SelectItem value="vendedor">Vendedor</SelectItem>
+                <SelectItem value="cliente">Cliente</SelectItem>
+                <SelectItem value="estado">Estado del pedido</SelectItem>
+                <SelectItem value="estado_surtido">Estado de surtido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* KPIs */}
