@@ -112,7 +112,7 @@ export default function ConcentradoSurtidoPage() {
         supabase.from('entrega_lineas')
           .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
           .in('entregas.pedido_id', ventaIds)
-          .eq('entregas.status', 'hecho' as any)
+          .in('entregas.status', ['cargado', 'hecho'] as any)
           .range(from, to)
       );
 
