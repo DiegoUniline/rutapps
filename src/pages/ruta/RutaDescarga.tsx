@@ -12,6 +12,7 @@ import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
 import { newLocalId } from '@/lib/localId';
+import { Switch } from '@/components/ui/switch';
 import {
   fetchMyProfileWithFallback,
   fetchCargaActivaWithFallback,
@@ -38,6 +39,9 @@ export default function RutaDescarga() {
   const [fotoFinPreview, setFotoFinPreview] = useState<string>('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Descarga de camión (conteo físico de producto) — opcional en el corte.
+  const [descargarCamion, setDescargarCamion] = useState(false);
+  const [conteoReal, setConteoReal] = useState<Record<string, number>>({});
 
   const { data: sesionActiva } = useRutaSesionActiva();
   const cerrarSesion = useCerrarRutaSesion();
@@ -120,6 +124,26 @@ export default function RutaDescarga() {
     }),
   });
 
+  // Stock del camión del vendedor (para el conteo físico al descargar).
+  const vendedorProfileId = cargaActiva?.vendedor_id ?? myProfile?.id ?? null;
+  const { data: camionStock } = useQuery({
+    queryKey: ['ruta-camion-stock', empresa?.id, vendedorProfileId, descargarCamion],
+    networkMode: 'always',
+    enabled: !!empresa?.id && !!vendedorProfileId && descargarCamion,
+    queryFn: async () => {
+      const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorProfileId).maybeSingle();
+      const almId = (prof as any)?.almacen_id as string | null;
+      if (!almId) return [];
+      const { data } = await supabase
+        .from('stock_almacen')
+        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .eq('almacen_id', almId)
+        .neq('cantidad', 0)
+        .order('cantidad', { ascending: false });
+      return (data ?? []) as any[];
+    },
+  });
+
   // Calculate effective total from bill/coin counter
   const totalEfectivo = useMemo(() => {
     return Object.entries(conteo).reduce((sum, [denom, qty]) => sum + (Number(denom) * qty), 0);
@@ -170,12 +194,26 @@ export default function RutaDescarga() {
         fecha_fin: today,
         fecha: today,
         status: 'pendiente',
+        descargo_camion: descargarCamion,
       };
       if (cargaActiva) insertData.carga_id = cargaActiva.id;
 
+      // Líneas del conteo físico (Sistema=esperada, Físico=real). El movimiento de
+      // inventario lo hace el trigger al APROBAR (con la bodega que elige el admin).
+      const lineasConteo = (descargarCamion ? (camionStock ?? []) : []).map((it: any) => {
+        const sistema = Number(it.cantidad) || 0;
+        const real = conteoReal[it.producto_id] ?? sistema;
+        return { producto_id: it.producto_id, cantidad_esperada: sistema, cantidad_real: real, diferencia: real - sistema };
+      });
+
       if (online) {
-        const { error } = await supabase.from('descarga_ruta').insert(insertData).select().single();
+        const { data: nueva, error } = await supabase.from('descarga_ruta').insert(insertData).select('id').single();
         if (error) throw error;
+        if (lineasConteo.length > 0) {
+          const { error: linErr } = await supabase.from('descarga_ruta_lineas')
+            .insert(lineasConteo.map(l => ({ ...l, descarga_id: (nueva as any).id })));
+          if (linErr) throw linErr;
+        }
 
         // Close route session (requires foto upload — only online)
         if (sesionActiva && fotoFin) {
@@ -196,6 +234,10 @@ export default function RutaDescarga() {
         // Offline: encolar con id sintético; al sincronizar se hace upsert.
         const localId = newLocalId();
         await queueOperation('descarga_ruta', 'insert', { id: localId, ...insertData });
+        // Encolar las líneas del conteo como hijas (descarga_id se remapea al sincronizar).
+        for (const l of lineasConteo) {
+          await queueOperation('descarga_ruta_lineas', 'insert', { id: newLocalId(), descarga_id: localId, ...l });
+        }
       }
     },
     onSuccess: () => {
@@ -428,6 +470,61 @@ export default function RutaDescarga() {
             </div>
           </div>
         )}
+
+        {/* Descargar camión: conteo físico */}
+        <div className="bg-card border border-border rounded-xl p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                <Truck className="h-3.5 w-3.5" /> Descargar camión
+              </p>
+              <p className="text-[10px] text-muted-foreground">Si hoy sí bajas el producto, cuéntalo. Si no, déjalo apagado.</p>
+            </div>
+            <Switch checked={descargarCamion} onCheckedChange={setDescargarCamion} />
+          </div>
+
+          {descargarCamion && (
+            (camionStock?.length ?? 0) === 0 ? (
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {camionStock ? 'No hay producto en tu camión.' : 'Cargando…'}
+              </p>
+            ) : (
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center text-[9px] text-muted-foreground uppercase tracking-wider px-1">
+                  <span className="flex-1">Producto</span>
+                  <span className="w-12 text-right">Sistema</span>
+                  <span className="w-14 text-center">Físico</span>
+                  <span className="w-12 text-right">Dif.</span>
+                </div>
+                {(camionStock ?? []).map((it: any) => {
+                  const sistema = Number(it.cantidad) || 0;
+                  const real = conteoReal[it.producto_id] ?? sistema;
+                  const dif = real - sistema;
+                  return (
+                    <div key={it.producto_id} className="flex items-center gap-1 border-b border-border/40 py-1">
+                      <span className="flex-1 min-w-0 truncate text-[11px] text-foreground">{it.productos?.nombre ?? '—'}</span>
+                      <span className="w-12 text-right text-[11px] text-muted-foreground tabular-nums">{sistema}</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="w-14 text-center text-[12px] font-semibold bg-accent/40 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={real}
+                        onChange={e => {
+                          const v = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0);
+                          setConteoReal(prev => ({ ...prev, [it.producto_id]: v }));
+                        }}
+                      />
+                      <span className={`w-12 text-right text-[11px] font-semibold tabular-nums ${dif === 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
+                        {dif > 0 ? `+${dif}` : dif}
+                      </span>
+                    </div>
+                  );
+                })}
+                <p className="text-[10px] text-muted-foreground pt-1">El admin revisa las diferencias y elige la bodega al aprobar.</p>
+              </div>
+            )
+          )}
+        </div>
 
         {/* Notes */}
         <div className="bg-card border border-border rounded-xl p-3">

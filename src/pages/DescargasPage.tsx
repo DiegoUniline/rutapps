@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
@@ -84,9 +85,37 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [editingEfectivo, setEditingEfectivo] = useState(false);
   const [efectivoDraft, setEfectivoDraft] = useState('');
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
+  // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
+  const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
+
+  // Almacenes destino posibles (todos menos el camión del vendedor). Default: uno
+  // que se llame "General/Principal" si existe.
+  const { data: destinoOpts } = useQuery({
+    queryKey: ['descarga-destino-almacenes', descarga.empresa_id, descarga.vendedor_id],
+    enabled: !!descarga.descargo_camion,
+    queryFn: async () => {
+      const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', descarga.vendedor_id).maybeSingle();
+      const camionId = (prof as any)?.almacen_id as string | null;
+      const { data } = await supabase
+        .from('almacenes')
+        .select('id, nombre, es_merma')
+        .eq('empresa_id', descarga.empresa_id)
+        .order('nombre');
+      const items = (data ?? []).filter((a: any) => a.id !== camionId && !a.es_merma);
+      return items as { id: string; nombre: string }[];
+    },
+  });
+
+  useEffect(() => {
+    if (descarga.almacen_destino_id) { setDestinoAlmacenId(descarga.almacen_destino_id); return; }
+    if (!destinoAlmacenId && destinoOpts && destinoOpts.length > 0) {
+      const general = destinoOpts.find(a => /general|principal|bodega|central/i.test(a.nombre));
+      setDestinoAlmacenId((general ?? destinoOpts[0]).id);
+    }
+  }, [destinoOpts, descarga.almacen_destino_id]);
 
   // All ventas (including cancelled)
   const { data: ventasDia } = useQuery({
@@ -353,14 +382,22 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       if (accion === 'rechazada' && !notasSupervisor.trim()) {
         throw new Error('Agrega una nota antes de rechazar');
       }
+      // Si se descargó el camión, exigir bodega destino al aprobar (a ahí regresa el físico).
+      if (accion === 'aprobada' && descarga.descargo_camion && !destinoAlmacenId) {
+        throw new Error('Elige la bodega destino para descargar el camión');
+      }
+      const payload: any = {
+        status: accion,
+        aprobado_por: profile!.id,
+        fecha_aprobacion: new Date().toISOString(),
+        notas_supervisor: notasSupervisor || null,
+      };
+      if (accion === 'aprobada' && descarga.descargo_camion) {
+        payload.almacen_destino_id = destinoAlmacenId;
+      }
       const { error } = await supabase
         .from('descarga_ruta')
-        .update({
-          status: accion,
-          aprobado_por: profile!.id,
-          fecha_aprobacion: new Date().toISOString(),
-          notas_supervisor: notasSupervisor || null,
-        } as any)
+        .update(payload)
         .eq('id', descarga.id);
       if (error) throw error;
 
@@ -1074,6 +1111,22 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         {/* ═══ ADMIN ACTIONS ═══ */}
         {isPendiente && (
           <div className="p-5 border-t border-border space-y-3">
+            {descarga.descargo_camion && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                <label className="text-[11px] font-semibold text-amber-800 uppercase block mb-1 flex items-center gap-1">
+                  <Truck className="h-3.5 w-3.5" /> Bodega destino del producto (descarga de camión)
+                </label>
+                <SearchableSelect
+                  options={(destinoOpts ?? []).map(a => ({ value: a.id, label: a.nombre }))}
+                  value={destinoAlmacenId}
+                  onChange={setDestinoAlmacenId}
+                  placeholder="Elige la bodega a donde regresa el producto..."
+                />
+                <p className="text-[11px] text-amber-700 mt-1">
+                  Al aprobar, el producto físico entra a esta bodega, el camión queda en 0 y las diferencias se registran como ajuste para revisar.
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas del administrador</label>
               <textarea
@@ -1084,7 +1137,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => aprobarMutation.mutate('aprobada')} disabled={aprobarMutation.isPending} className="flex-1">
+              <Button onClick={() => aprobarMutation.mutate('aprobada')}
+                disabled={aprobarMutation.isPending || (!!descarga.descargo_camion && !destinoAlmacenId)}
+                className="flex-1">
                 <CheckCircle2 className="h-4 w-4 mr-1" /> Aprobar liquidación
               </Button>
               <Button variant="outline" onClick={() => aprobarMutation.mutate('rechazada')} disabled={aprobarMutation.isPending}
@@ -1117,6 +1172,10 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const [notas, setNotas] = useState('');
   const [fechaInicio, setFechaInicio] = useState(() => todayLocal());
   const [fechaFin, setFechaFin] = useState(() => todayLocal());
+  // Conteo físico del camión (opcional): al liquidar, el vendedor/admin puede
+  // "descargar el camión" y cuadrar el producto físico contra el stock del sistema.
+  const [descargarCamion, setDescargarCamion] = useState(false);
+  const [conteoReal, setConteoReal] = useState<Record<string, number>>({});
 
   // All active users
   const { data: usuarios } = useQuery({
@@ -1166,6 +1225,27 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   });
 
   const yaLiquidado = !!existingLiq;
+
+  // Stock que el sistema tiene HOY en el camión del vendedor (fuente de verdad:
+  // ya incluye cargas, ventas, devoluciones, traspasos, compras y ajustes).
+  const { data: camionStock } = useQuery({
+    queryKey: ['camion-stock-liq', empresa?.id, vendedorId],
+    enabled: !!empresa?.id && !!vendedorId && descargarCamion,
+    queryFn: async () => {
+      const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorId).maybeSingle();
+      const almId = (prof as any)?.almacen_id as string | null;
+      if (!almId) return { almId: null as string | null, items: [] as any[] };
+      const rows = await fetchAllPages((from, to) =>
+        supabase.from('stock_almacen')
+          .select('producto_id, cantidad, productos(nombre, codigo)')
+          .eq('almacen_id', almId)
+          .neq('cantidad', 0)
+          .range(from, to)
+      );
+      return { almId, items: (rows ?? []) as any[] };
+    },
+  });
+
   const { data: ventasPreview } = useQuery({
     queryKey: ['liquidar-ventas', empresa?.id, vendedorId, fechaInicio, fechaFin],
     enabled: canCalc,
@@ -1258,14 +1338,34 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         notas: notas || null,
         fecha_inicio: fechaInicio || null,
         fecha_fin: fechaFin || null,
+        descargo_camion: descargarCamion,
       };
 
-      const { error } = await supabase
+      const { data: nueva, error } = await supabase
         .from('descarga_ruta')
         .insert(insertData)
-        .select()
+        .select('id')
         .single();
       if (error) throw error;
+
+      // Conteo físico del camión: guardar líneas (Sistema=esperada, Físico=real).
+      // El movimiento de inventario lo hace el trigger al APROBAR (con la bodega
+      // destino que elija el admin); aquí solo se guarda el conteo.
+      if (descargarCamion && (camionStock?.items?.length ?? 0) > 0) {
+        const lineas = (camionStock!.items as any[]).map((it: any) => {
+          const sistema = Number(it.cantidad) || 0;
+          const real = conteoReal[it.producto_id] ?? sistema;
+          return {
+            descarga_id: (nueva as any).id,
+            producto_id: it.producto_id,
+            cantidad_esperada: sistema,
+            cantidad_real: real,
+            diferencia: real - sistema,
+          };
+        });
+        const { error: linErr } = await supabase.from('descarga_ruta_lineas').insert(lineas);
+        if (linErr) throw linErr;
+      }
     },
     onSuccess: () => {
       toast.success(hayDiferencias ? 'Liquidación enviada para aprobación' : 'Liquidación completada');
@@ -1497,6 +1597,79 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             </table>
           ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
         </SectionCard>
+      )}
+
+      {/* Descargar camión: conteo físico de producto (opcional) */}
+      {canCalc && !yaLiquidado && (
+        <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Truck className="h-4 w-4" /> Descargar camión
+              </h3>
+              <p className="text-[11px] text-muted-foreground">
+                Cuenta el producto físico que trae el vendedor. Si no descarga hoy, déjalo apagado (el stock se queda en el camión).
+              </p>
+            </div>
+            <Switch checked={descargarCamion} onCheckedChange={setDescargarCamion} />
+          </div>
+
+          {descargarCamion && (
+            (camionStock?.items?.length ?? 0) === 0 ? (
+              <p className="text-[13px] text-muted-foreground py-2">
+                {camionStock ? 'El camión del vendedor no tiene producto en el sistema.' : 'Cargando stock del camión…'}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                      <th className="text-left py-2 px-2 font-medium">Producto</th>
+                      <th className="text-right py-2 px-2 font-medium">Sistema</th>
+                      <th className="text-right py-2 px-2 font-medium">Físico</th>
+                      <th className="text-right py-2 px-2 font-medium">Diferencia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(camionStock?.items ?? []).map((it: any) => {
+                      const sistema = Number(it.cantidad) || 0;
+                      const real = conteoReal[it.producto_id] ?? sistema;
+                      const dif = real - sistema;
+                      return (
+                        <tr key={it.producto_id} className="border-b border-border/50">
+                          <td className="py-1.5 px-2">
+                            <div className="font-medium text-foreground">{it.productos?.nombre ?? '—'}</div>
+                            {it.productos?.codigo && <div className="text-[10px] text-muted-foreground">{it.productos.codigo}</div>}
+                          </td>
+                          <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{sistema}</td>
+                          <td className="py-1.5 px-2 text-right">
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              className="h-8 w-20 text-right ml-auto"
+                              value={real}
+                              onChange={e => {
+                                const v = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
+                                setConteoReal(prev => ({ ...prev, [it.producto_id]: v }));
+                              }}
+                            />
+                          </td>
+                          <td className={cn('py-1.5 px-2 text-right font-semibold tabular-nums',
+                            dif === 0 ? 'text-muted-foreground' : 'text-destructive')}>
+                            {dif > 0 ? `+${dif}` : dif}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Al aprobar, el producto físico entra a la bodega que elija el administrador y las diferencias quedan marcadas para revisar.
+                </p>
+              </div>
+            )
+          )}
+        </div>
       )}
 
       {/* Notes & submit */}
