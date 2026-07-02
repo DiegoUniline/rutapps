@@ -61,18 +61,33 @@ export default function ConcentradoSurtidoPage() {
   const [hasta, setHasta] = useState(addDays(today, 1));
   const [generando, setGenerando] = useState(false);
 
+  const STATUS_OPTIONS: { value: string; label: string }[] = [
+    { value: 'borrador', label: 'Borrador' },
+    { value: 'confirmado', label: 'Confirmado / Por surtir' },
+    { value: 'entregado', label: 'Surtido / Entregado' },
+    { value: 'facturado', label: 'Facturado' },
+    { value: 'cancelado', label: 'Cancelado' },
+  ];
+  const [statusFilter, setStatusFilter] = useState<string[]>(['confirmado']);
+  const toggleStatus = (v: string) => {
+    setStatusFilter(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+  };
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
     enabled: !!empresa?.id,
     queryFn: async () => {
       // 1) Pedidos en rango por fecha_entrega
+      const statuses = statusFilter.length > 0
+        ? statusFilter
+        : ['confirmado', 'entregado', 'facturado'];
       const ventas = await fetchAllPages<VentaLite>((from, to) =>
         supabase.from('ventas')
           .select('id, folio, fecha_entrega, fecha, status, empresa_id')
           .eq('empresa_id', empresa!.id)
           .gte('fecha_entrega', desde)
           .lte('fecha_entrega', hasta)
-          .not('status', 'in', '(cancelado,borrador)')
+          .in('status', statuses)
           .range(from, to)
       );
       const ventaIds = ventas.map(v => v.id);
