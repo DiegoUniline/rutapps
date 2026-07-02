@@ -73,6 +73,39 @@ export interface TicketData {
   pagos?: TicketPago[];
 }
 
+export interface TicketTotalsSummary {
+  descuentoTotal: number;
+  impuestosTotal: number;
+  totalPagado: number;
+  saldo: number;
+}
+
+export function getTicketTotalsSummary(data: TicketData): TicketTotalsSummary {
+  const totalPromo = (data.promociones ?? []).reduce((s, p) => s + (Number(p.descuento) || 0), 0);
+  const descuentoTotal = Math.max(Number(data.descuento ?? 0), totalPromo, 0);
+  const impuestosTotal = Math.max((Number(data.iva) || 0) + (Number(data.ieps ?? 0) || 0), 0);
+  const pagosTotal = (data.pagos ?? []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+  const recibidoNeto = data.montoRecibido != null
+    ? Math.max((Number(data.montoRecibido) || 0) - (Number(data.cambio ?? 0) || 0), 0)
+    : 0;
+  const pagoAplicado = Math.max(Number(data.pagoAplicado ?? 0) || 0, 0);
+  const totalVenta = Math.max(Number(data.total) || 0, 0);
+  const totalPagado = pagosTotal > 0
+    ? pagosTotal
+    : pagoAplicado > 0
+      ? pagoAplicado
+      : recibidoNeto > 0
+        ? recibidoNeto
+        : data.condicionPago === 'credito'
+          ? 0
+          : totalVenta;
+  const saldo = data.saldoNuevo != null
+    ? Math.max(Number(data.saldoNuevo) || 0, 0)
+    : Math.max(totalVenta - Math.min(totalPagado, totalVenta), 0);
+
+  return { descuentoTotal, impuestosTotal, totalPagado, saldo };
+}
+
 const COLS = 32;
 
 function pad(left: string, right: string, cols = COLS): string {
@@ -105,7 +138,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, descuento = 0, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -175,21 +208,14 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(div);
 
-  const totalPromo = (promociones ?? []).reduce((s, p) => s + p.descuento, 0);
-  const totalDescuento = Math.max(descuento, totalPromo, 0);
+  const summary = getTicketTotalsSummary(data);
   add('');
-  if (showTax) {
-    add(pad('Subtotal', fmt(subtotal)));
-    if (totalDescuento > 0) add(pad('Descuento', `-${fmt(totalDescuento)}`));
-    if (iva > 0) add(pad('IVA', fmt(iva)));
-    if (ieps > 0) add(pad('IEPS', fmt(ieps)));
-    add(div);
-  } else if (totalDescuento > 0) {
-    add(pad('Subtotal', fmt(subtotal)));
-    add(pad('Descuento', `-${fmt(totalDescuento)}`));
-    add(div);
-  }
-  add(pad('TOTAL', fmt(total)));
+  add(pad('Sub total', fmt(subtotal)));
+  add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
+  add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
+  add(div);
+  add(pad('Total pagado', fmt(summary.totalPagado)));
+  add(pad('Saldo', fmt(summary.saldo)));
 
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
