@@ -155,7 +155,39 @@ export default function ConcentradoSurtidoPage() {
       }).filter(r => r.pendiente > 0)
         .sort((a, b) => (b.faltante - a.faltante) || a.nombre.localeCompare(b.nombre));
 
-      return { rows, ventas };
+      // Agregación por pedido
+      const reqPorVenta = new Map<string, number>();
+      for (const l of lineas) reqPorVenta.set(l.venta_id, (reqPorVenta.get(l.venta_id) ?? 0) + Number(l.cantidad || 0));
+      const entPorVenta = new Map<string, number>();
+      for (const el of entregaLineas) {
+        const vid = el.entregas?.pedido_id;
+        if (!vid) continue;
+        entPorVenta.set(vid, (entPorVenta.get(vid) ?? 0) + Number(el.cantidad_entregada || 0));
+      }
+      const pedidos: PedidoRow[] = ventas.map(v => {
+        const req = reqPorVenta.get(v.id) ?? 0;
+        const ent = entPorVenta.get(v.id) ?? 0;
+        const pend = Math.max(0, req - ent);
+        let surtido_status: PedidoRow['surtido_status'];
+        if (req === 0) surtido_status = 'sin_lineas';
+        else if (ent <= 0) surtido_status = 'pendiente';
+        else if (pend <= 0) surtido_status = 'surtido';
+        else surtido_status = 'parcial';
+        return {
+          id: v.id,
+          folio: v.folio,
+          fecha_entrega: v.fecha_entrega,
+          status: v.status,
+          cliente: v.clientes?.nombre ?? '—',
+          total: Number(v.total ?? 0),
+          requerido: req,
+          entregado: ent,
+          pendiente: pend,
+          surtido_status,
+        };
+      }).sort((a, b) => (a.fecha_entrega ?? '').localeCompare(b.fecha_entrega ?? '') || (a.folio ?? '').localeCompare(b.folio ?? ''));
+
+      return { rows, ventas, pedidos };
     },
   });
 
