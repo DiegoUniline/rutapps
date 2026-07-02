@@ -50,6 +50,14 @@ export interface TicketPago {
   referencia?: string | null;
 }
 
+export interface TicketDevolucion {
+  nombre: string;
+  cantidad: number;
+  motivo: string;
+  accion: string;
+  monto?: number;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
@@ -71,7 +79,17 @@ export interface TicketData {
   saldoNuevo?: number;
   promociones?: TicketPromo[];
   pagos?: TicketPago[];
+  devoluciones?: TicketDevolucion[];
 }
+
+export const MOTIVO_DEVOLUCION_LABELS: Record<string, string> = {
+  no_vendido: 'No vendido', vencido: 'Vencido', caducado: 'Caducado',
+  danado: 'Danado', cambio: 'Cambio', error_pedido: 'Error pedido', otro: 'Otro',
+};
+export const ACCION_DEVOLUCION_LABELS: Record<string, string> = {
+  reposicion: 'Reposicion', nota_credito: 'Nota credito',
+  devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
+};
 
 export interface TicketTotalsSummary {
   descuentoTotal: number;
@@ -138,7 +156,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos, devoluciones } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -242,6 +260,21 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
       add(pad(label.substring(0, COLS - 12), fmt(p.monto)));
     }
   }
+
+  // ── Devoluciones ──
+  if (devoluciones && devoluciones.length > 0) {
+    add(div);
+    add('DEVOLUCIONES');
+    for (const d of devoluciones) {
+      const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
+      const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
+      const nombre = `${d.cantidad}x ${d.nombre}`;
+      add(nombre.substring(0, COLS));
+      const right = (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion;
+      add(pad(`  ${motivo}`, right));
+    }
+  }
+
 
   add('');
   add(centerText('Gracias por su compra'));

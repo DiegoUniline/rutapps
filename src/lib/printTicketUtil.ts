@@ -120,6 +120,7 @@ export function buildTicketDataFromVenta(params: {
   pagoAplicado?: number;
   saldoNuevo?: number;
   pagos?: { metodo: string; monto: number; referencia?: string | null }[];
+  devoluciones?: { nombre: string; cantidad: number; motivo: string; accion: string; monto?: number }[];
 }): TicketData {
   const { empresa, venta, clienteNombre, lineas } = params;
   return {
@@ -168,5 +169,6 @@ export function buildTicketDataFromVenta(params: {
     saldoNuevo: params.saldoNuevo ?? ((venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined),
     promociones: params.promociones,
     pagos: params.pagos,
+    devoluciones: params.devoluciones,
   };
 }

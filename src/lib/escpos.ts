@@ -2,7 +2,7 @@
  * ESC/POS command builder for 58mm and 80mm thermal printers.
  * Fixed-width column layout to prevent price overflow / line jumping.
  */
-import { getTicketTotalsSummary, type TicketData } from './ticketHtml';
+import { getTicketTotalsSummary, MOTIVO_DEVOLUCION_LABELS, ACCION_DEVOLUCION_LABELS, type TicketData } from './ticketHtml';
 import { getCurrencyConfig } from './currency';
 
 const COLS_58 = 32;
@@ -319,7 +319,21 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     }
   }
 
-  // ── FOOTER ──
+  // ── DEVOLUCIONES ──
+  if (data.devoluciones && data.devoluciones.length > 0) {
+    ln(divider(W));
+    add(BOLD_ON);
+    ln('DEVOLUCIONES');
+    add(BOLD_OFF);
+    for (const d of data.devoluciones) {
+      const accion = ACCION_DEVOLUCION_LABELS[d.accion] || d.accion;
+      const motivo = MOTIVO_DEVOLUCION_LABELS[d.motivo] || d.motivo;
+      ln(clean(`${d.cantidad}x ${d.nombre}`).slice(0, W));
+      const right = (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion;
+      ln(row(`  ${motivo}`, right, W));
+    }
+  }
+
   add(LF);
   add(ALIGN_CENTER);
   ln('Gracias por su compra');

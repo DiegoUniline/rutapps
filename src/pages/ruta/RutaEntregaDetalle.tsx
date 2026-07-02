@@ -98,6 +98,25 @@ export default function RutaEntregaDetalle() {
     queryFn: async () => fetchOtrasPendientesWithFallback(clienteId!),
   });
 
+  const ventaId = (venta as any)?.id ?? pedidoId;
+  const { data: devolucionesVenta } = useQuery({
+    queryKey: ['ruta-entrega-devoluciones', ventaId],
+    enabled: !!ventaId,
+    networkMode: 'always',
+    queryFn: async () => {
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', ventaId!);
+      const ids = (heads ?? []).map((h: any) => h.id);
+      if (ids.length === 0) return [] as any[];
+      const { data } = await supabase
+        .from('devolucion_lineas')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .in('devolucion_id', ids);
+      return data ?? [];
+    },
+  });
+
+
+
   // Auto-marcar como entregado si la venta ya fue cobrada totalmente
   const autoMarkedRef = useRef(false);
   useEffect(() => {
@@ -326,6 +345,13 @@ export default function RutaEntregaDetalle() {
         saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
         promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
           descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
+        })),
+        devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
+          nombre: d.producto?.nombre ?? 'Producto',
+          cantidad: Number(d.cantidad) || 0,
+          motivo: d.motivo,
+          accion: d.accion,
+          monto: Number(d.monto_credito ?? 0) || 0,
         })),
       };
     }
