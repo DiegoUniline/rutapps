@@ -160,6 +160,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           accion: d.accion,
           monto: Number(d.monto_credito ?? 0) || 0,
         })),
+        promociones: promoResults.filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
       });
       await printTicket(td);
     } catch (err: any) {
