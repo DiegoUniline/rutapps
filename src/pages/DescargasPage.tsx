@@ -397,6 +397,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onSuccess: (_, accion) => {
       toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
@@ -421,6 +422,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       setEditingEfectivo(true);
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -1168,6 +1170,10 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const { data: existingLiq } = useQuery({
     queryKey: ['liq-overlap-check', empresa?.id, vendedorId, fechaInicio, fechaFin],
     enabled: canCalc,
+    // Gatea una acción que puede duplicar la liquidación: siempre datos frescos,
+    // sin caché de 45s, para que refleje al instante una liquidación ya creada/aprobada.
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: async () => {
       // Check if any descarga_ruta overlaps: existing.fecha_inicio <= fechaFin AND existing.fecha_fin >= fechaInicio
       const { data } = await supabase
@@ -1288,6 +1294,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     onSuccess: () => {
       toast.success(hayDiferencias ? 'Liquidación enviada para aprobación' : 'Liquidación completada');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
