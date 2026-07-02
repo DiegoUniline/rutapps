@@ -92,6 +92,7 @@ export function buildTicketDataFromVenta(params: {
     folio?: string | null;
     fecha: string;
     subtotal?: number;
+    descuento_total?: number | null;
     iva_total?: number;
     ieps_total?: number;
     total?: number;
@@ -154,6 +155,7 @@ export function buildTicketDataFromVenta(params: {
       precio_sugerido_publico: l.precio_sugerido_publico,
     })),
     subtotal: venta.subtotal ?? 0,
+    descuento: venta.descuento_total ?? 0,
     iva: venta.iva_total ?? 0,
     ieps: venta.ieps_total ?? 0,
     total: venta.total ?? 0,
