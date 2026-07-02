@@ -8,6 +8,7 @@ import { fmtDate, fmtDateTime } from '@/lib/utils';
 import { CONDICION_LABELS } from './ventasConstants';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { usePromocionesActivas, n as evaluatePromos, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
