@@ -64,7 +64,8 @@ export function useVentaDetalle() {
   });
 
   const { data: ventasPendientesCredito } = useQuery({
-    queryKey: ['ruta-saldo-total-credito', clienteId], enabled: !!clienteId && view === 'editar',
+    queryKey: ['ruta-saldo-total-credito', clienteId, id],
+    enabled: !!clienteId && !!id,
     queryFn: async () => { const { data } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!); return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0); },
   });
 
