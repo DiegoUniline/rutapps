@@ -474,25 +474,10 @@ export function useCancelarEntrega() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (entregaId: string) => {
-      // Restore stock for surtidas lines before cancelling
-      const { data: lineas } = await supabase
-        .from('entrega_lineas')
-        .select('producto_id, cantidad_entregada, hecho, almacen_origen_id')
-        .eq('entrega_id', entregaId);
-
-      const { data: ent } = await supabase.from('entregas').select('empresa_id').eq('id', entregaId).single();
-
-      for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0 && l.almacen_origen_id)) {
-        const { data: existing } = await supabase.from('stock_almacen')
-          .select('id, cantidad').eq('empresa_id', ent!.empresa_id)
-          .eq('almacen_id', l.almacen_origen_id).eq('producto_id', l.producto_id).maybeSingle();
-        if (existing) {
-          await supabase.from('stock_almacen').update({ cantidad: existing.cantidad + l.cantidad_entregada } as any).eq('id', existing.id);
-        } else {
-          await supabase.from('stock_almacen').insert({ empresa_id: ent!.empresa_id, almacen_id: l.almacen_origen_id, producto_id: l.producto_id, cantidad: l.cantidad_entregada } as any);
-        }
-      }
-
+      // El inventario al cancelar lo maneja la BD (trigger apply_entrega_cargado_inventory):
+      // el producto se QUEDA en el almacén del vendedor (camión) y se reconcilia en la
+      // descarga. Antes este código sumaba el stock a la bodega desde el front, lo que
+      // (a) duplicaba el reingreso junto con el trigger y (b) contradecía esa regla.
       const { error } = await supabase.from('entregas').update({ status: 'cancelado' } as any).eq('id', entregaId);
       if (error) throw error;
     },
