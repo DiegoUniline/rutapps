@@ -254,8 +254,9 @@ export function evaluatePromociones(
           break;
 
         case 'producto_gratis': {
-          const cantGratis = promo.cantidad_gratis || 1;
-          const sets = Math.floor(item.cantidad / (promo.cantidad_minima || 1));
+          const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
+          const compraMin = Math.max(1, cantMinEffective || 1);
+          const sets = Math.floor(item.cantidad / compraMin);
           const totalGratis = sets * cantGratis;
           if (totalGratis <= 0) continue;
 
