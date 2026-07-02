@@ -409,7 +409,8 @@ export function useVentaDetalle() {
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
     const total = Number(venta.total ?? 0);
     const saldoPendiente = Number(venta.saldo_pendiente ?? 0);
-    const saldoAnterior = totalPagado + saldoPendiente; // = total en la mayoría de casos
+    // Saldo anterior = suma de saldos pendientes de OTRAS ventas del cliente (excluye la actual)
+    const saldoAnterior = Number(ventasPendientesCredito ?? 0);
 
     return {
       empresa: {
