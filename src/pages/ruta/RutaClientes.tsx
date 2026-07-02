@@ -177,13 +177,26 @@ export default function RutaClientes() {
   const { ordenMap } = useClienteOrdenRuta(effectiveVendedorId, diaFiltro);
   const invalidateOrdenRuta = useInvalidateOrdenRuta();
 
+  // Clientes que tienen entregas asignadas al usuario actual como REPARTIDOR (vendedor_ruta_id).
+  // Un cliente solo tiene un vendedor, pero puede tener varios repartidores, así que
+  // en modo 'propios' también deben verse los clientes de sus entregas asignadas.
+  const clientesComoRepartidor = useMemo(() => {
+    const set = new Set<string>();
+    const uid = effectiveVendedorId ?? profile?.id;
+    if (!uid) return set;
+    (allEntregas ?? []).forEach((e: any) => {
+      if (e.vendedor_ruta_id === uid && e.cliente_id) set.add(e.cliente_id);
+    });
+    return set;
+  }, [allEntregas, effectiveVendedorId, profile?.id]);
+
   // Filter by vendedor assignment when visibility is 'propios'
   const myClientes = (clientes ?? []).filter((c: any) => {
     if (isSAOverride && effectiveVendedorId) {
-      return c.vendedor_id === effectiveVendedorId;
+      return c.vendedor_id === effectiveVendedorId || clientesComoRepartidor.has(c.id);
     }
     if (clientesVisibilidad === 'propios' && profile?.id) {
-      return c.vendedor_id === profile.id;
+      return c.vendedor_id === profile.id || clientesComoRepartidor.has(c.id);
     }
     return true;
   });
