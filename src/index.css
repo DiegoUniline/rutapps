@@ -609,4 +609,12 @@ table[data-no-odoo] tbody td {
     top: 0;
     z-index: 3;
   }
+
+  /* Ancho completo en vistas de LISTA: si un contenedor con tope de ancho
+     (max-w-*) envuelve una tabla, se le quita el tope para que la tabla y
+     sus columnas usen todo el ancho del monitor. Los formularios (sin tabla)
+     conservan su tope para que se lean bien. Opt-out: data-keep-width. */
+  [class*="max-w-"]:has(table):not([data-keep-width]) {
+    max-width: none;
+  }
 }
