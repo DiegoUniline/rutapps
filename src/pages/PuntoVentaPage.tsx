@@ -706,16 +706,18 @@ export default function PuntoVentaPage() {
       const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
       const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
       const chargedLineTotal = getChargedLineTotal(item);
-      const breakdown = splitFinalGross(item, chargedLineTotal);
+      const lineDiscount = lp.effectiveDiscount;
+      const grossBeforeDiscount = r2(chargedLineTotal + lineDiscount);
+      const breakdown = splitFinalGross(item, grossBeforeDiscount);
 
       subtotal += breakdown.subtotal;
       iva += breakdown.iva;
       ieps += breakdown.ieps;
-      descuento += lp.effectiveDiscount;
-      total += chargedLineTotal;
+      descuento += lineDiscount;
+      total += grossBeforeDiscount;
       items += item.cantidad;
     });
-    const finalTotal = sinImpuestos ? r2(subtotal - descuento) : r2(total);
+    const finalTotal = r2(Math.max(0, total - descuento));
     return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: finalTotal, items };
   }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross, sinImpuestos]);
 
