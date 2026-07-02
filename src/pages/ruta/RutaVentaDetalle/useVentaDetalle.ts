@@ -16,6 +16,7 @@ import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
+import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 
 export function useVentaDetalle() {
   const { id } = useParams();
