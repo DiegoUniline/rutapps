@@ -340,6 +340,25 @@ export default function ConcentradoSurtidoPage() {
       {/* Filtros */}
       <div className="bg-card border border-border rounded-lg p-3 flex flex-wrap items-end gap-3">
         <div className="space-y-1">
+          <Label className="text-xs">Filtrar por</Label>
+          <div className="flex gap-1 bg-muted/30 border border-border rounded-md p-0.5">
+            <button
+              type="button"
+              onClick={() => setFechaField('fecha')}
+              className={`text-xs px-2.5 py-1 rounded ${fechaField === 'fecha' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'}`}
+            >
+              Fecha levantamiento
+            </button>
+            <button
+              type="button"
+              onClick={() => setFechaField('fecha_entrega')}
+              className={`text-xs px-2.5 py-1 rounded ${fechaField === 'fecha_entrega' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted/60'}`}
+            >
+              Fecha entrega
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1">
           <Label className="text-xs flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Rango de fechas</Label>
           <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
         </div>
