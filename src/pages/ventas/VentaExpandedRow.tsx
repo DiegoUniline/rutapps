@@ -8,6 +8,7 @@ import { fmtDate, fmtDateTime } from '@/lib/utils';
 import { CONDICION_LABELS } from './ventasConstants';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
@@ -46,6 +47,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const [printingTicket, setPrintingTicket] = useState(false);
   const [cobroOpen, setCobroOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const { data: promocionesActivas } = usePromocionesActivas();
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +110,19 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           .in('devolucion_id', devIds);
         devLineas = data ?? [];
       }
+      // Compute promotions applied to this cart
+      const cartForPromo: CartItemForPromo[] = lineas.filter((l: any) => l.producto_id).map((l: any) => {
+        const prod: any = productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          producto_id: l.producto_id,
+          clasificacion_id: prod?.clasificacion_id ?? undefined,
+          precio_unitario: Number(l.precio_unitario) || 0,
+          cantidad: Number(l.cantidad) || 0,
+        };
+      });
+      const promoResults = (promocionesActivas && cartForPromo.length > 0)
+        ? evaluatePromociones(promocionesActivas as any, cartForPromo, venta.cliente_id ?? undefined, undefined, (empresa as any)?.zona_horaria)
+        : [];
       const td = buildTicketDataFromVenta({
         empresa: empresa ?? {},
         venta: {
@@ -145,6 +160,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           accion: d.accion,
           monto: Number(d.monto_credito ?? 0) || 0,
         })),
+        promociones: promoResults.filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
       });
       await printTicket(td);
     } catch (err: any) {
