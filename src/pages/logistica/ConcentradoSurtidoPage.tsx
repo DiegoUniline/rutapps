@@ -29,10 +29,13 @@ interface VentaLite {
   fecha_entrega: string | null;
   fecha: string;
   status: string;
+  tipo: string | null;
   empresa_id: string;
   total: number | null;
   cliente_id: string | null;
+  vendedor_id: string | null;
   clientes: { nombre: string | null } | null;
+  vendedor: { id: string; nombre: string | null } | null;
 }
 interface LineaRow {
   producto_id: string;
