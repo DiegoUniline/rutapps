@@ -621,7 +621,10 @@ interface PedidoRow {
   folio: string | null;
   fecha_entrega: string | null;
   status: string;
+  tipo: string | null;
   cliente: string;
+  vendedor_id: string | null;
+  vendedor: string;
   total: number;
   requerido: number;
   entregado: number;
