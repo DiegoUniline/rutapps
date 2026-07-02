@@ -135,6 +135,11 @@ function checkPageBreak(doc: jsPDF, y: number, needed = 40): number {
   return y;
 }
 
+function getLastTableY(doc: jsPDF): number {
+  const docWithTable = doc as jsPDF & { lastAutoTable?: { finalY?: number } };
+  return docWithTable.lastAutoTable?.finalY ?? 20;
+}
+
 function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
   // Barra vertical + título
   doc.setFillColor(...PRIMARY);
@@ -153,7 +158,31 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const contentW = rightX - ML;
   const sym = getCurrencyConfig(empresa.moneda).symbol;
+
+  const ventasCol = {
+    fecha: 25,
+    total: 34,
+    estado: 34,
+    folio: contentW - 25 - 34 - 34,
+  };
+  const pagosCol = {
+    fecha: 28,
+    metodo: 42,
+    monto: 34,
+    referencia: contentW - 28 - 42 - 34,
+  };
+  const productosCol = {
+    cantidad: 28,
+    importe: 34,
+    producto: contentW - 28 - 34,
+  };
+  const devolucionesCol = {
+    motivo: 48,
+    cantidad: 28,
+    producto: contentW - 48 - 28,
+  };
 
   // ═════════════════ HEADER ═════════════════
   let y = 18;
@@ -316,14 +345,23 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8,
       cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
     },
+    foot: [['', 'Subtotal', `${sym}${fmtCurrency(subtotalVentas)}`, '']],
+    footStyles: {
+      fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9,
+      cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 },
+    },
     columnStyles: {
-      0: { fontStyle: 'bold', textColor: PRIMARY },
-      2: { halign: 'right', fontStyle: 'bold' },
-      3: { halign: 'left', cellWidth: 40 },
+      0: { fontStyle: 'bold', textColor: PRIMARY, cellWidth: ventasCol.folio },
+      1: { cellWidth: ventasCol.fecha },
+      2: { halign: 'right', fontStyle: 'bold', cellWidth: ventasCol.total },
+      3: { halign: 'left', cellWidth: ventasCol.estado },
     },
     didParseCell: (data) => {
       if (data.section === 'body' && data.column.index === 3) {
         data.cell.text = ['']; // dibujamos pill manualmente
+      }
+      if (data.section === 'foot' && data.column.index === 1) {
+        data.cell.styles.halign = 'right';
       }
     },
     didDrawCell: (data) => {
@@ -340,17 +378,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       }
     },
   });
-  y = (doc as any).lastAutoTable.finalY;
-
-  // Subtotal
-  doc.setFillColor(...CARD_BG);
-  doc.rect(ML, y, rightX - ML, 7, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...TEXT);
-  doc.text('Subtotal', ML + 3, y + 4.7);
-  doc.text(`${sym}${fmtCurrency(subtotalVentas)}`, rightX - 3, y + 4.7, { align: 'right' });
-  y += 12;
+  y = getLastTableY(doc) + 8;
 
   // ═════════════════ PAGOS RECIBIDOS ═════════════════
   y = checkPageBreak(doc, y, 50);
@@ -375,12 +403,20 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8,
         cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
       },
+      foot: [['', '', 'Total cobrado', `${sym}${fmtCurrency(totalCobrado)}`]],
+      footStyles: {
+        fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9,
+        cellPadding: { top: 2.8, bottom: 2.8, left: 3, right: 3 },
+      },
       columnStyles: {
-        1: { cellWidth: 45 },
-        3: { halign: 'right', fontStyle: 'bold' },
+        0: { cellWidth: pagosCol.fecha },
+        1: { cellWidth: pagosCol.metodo },
+        2: { cellWidth: pagosCol.referencia },
+        3: { halign: 'right', fontStyle: 'bold', cellWidth: pagosCol.monto },
       },
       didParseCell: (data) => {
         if (data.section === 'body' && data.column.index === 1) data.cell.text = [''];
+        if (data.section === 'foot' && data.column.index === 2) data.cell.styles.halign = 'right';
       },
       didDrawCell: (data) => {
         if (data.section === 'body') {
@@ -395,16 +431,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY;
-
-    doc.setFillColor(...CARD_BG);
-    doc.rect(ML, y, rightX - ML, 7, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...TEXT);
-    doc.text('Total cobrado', ML + 3, y + 4.7);
-    doc.text(`${sym}${fmtCurrency(totalCobrado)}`, rightX - 3, y + 4.7, { align: 'right' });
-    y += 12;
+    y = getLastTableY(doc) + 8;
   } else {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
@@ -476,8 +503,9 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       headStyles: { fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8 },
       footStyles: { fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9 },
       columnStyles: {
-        1: { halign: 'right', cellWidth: 30 },
-        2: { halign: 'right', cellWidth: 35, fontStyle: 'bold' },
+        0: { cellWidth: productosCol.producto },
+        1: { halign: 'right', cellWidth: productosCol.cantidad },
+        2: { halign: 'right', cellWidth: productosCol.importe, fontStyle: 'bold' },
       },
       didDrawCell: (data) => {
         if (data.section === 'body') {
@@ -487,7 +515,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 6;
+    y = getLastTableY(doc) + 6;
   }
 
   if (productosDevueltos.length > 0) {
@@ -510,8 +538,9 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       headStyles: { fillColor: PRIMARY_SOFT, textColor: PRIMARY, fontStyle: 'bold', fontSize: 8 },
       footStyles: { fillColor: CARD_BG, textColor: TEXT, fontStyle: 'bold', fontSize: 9 },
       columnStyles: {
-        1: { cellWidth: 45 },
-        2: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+        0: { cellWidth: devolucionesCol.producto },
+        1: { cellWidth: devolucionesCol.motivo },
+        2: { halign: 'right', cellWidth: devolucionesCol.cantidad, fontStyle: 'bold' },
       },
       didDrawCell: (data) => {
         if (data.section === 'body') {
@@ -521,7 +550,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 6;
+    y = getLastTableY(doc) + 6;
   }
 
   const pageH = doc.internal.pageSize.getHeight();
