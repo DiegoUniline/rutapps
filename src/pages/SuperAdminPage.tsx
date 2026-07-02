@@ -176,7 +176,7 @@ export default function SuperAdminPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 max-w-full md:max-w-[1400px] overflow-x-hidden">
+        <main className="flex-1 min-w-0 px-3 sm:px-6 py-4 sm:py-6 max-w-full overflow-x-hidden">
           {selectedEmpresaId ? (
             <AdminEmpresaDetail empresaId={selectedEmpresaId} initialTab={selectedEmpresaTab} onBack={() => setSelectedEmpresaId(null)} />
           ) : (
