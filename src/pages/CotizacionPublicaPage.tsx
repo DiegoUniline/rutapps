@@ -27,18 +27,21 @@ export default function CotizacionPublicaPage() {
   useEffect(() => {
     (async () => {
       if (!token) { setError('Token inválido'); setLoading(false); return; }
-      const { data: cot, error: e1 } = await supabase
-        .from('cotizaciones')
-        .select('*')
-        .eq('token_publico', token)
-        .maybeSingle();
-      if (e1 || !cot) { setError('No se encontró la cotización'); setLoading(false); return; }
-      const [{ data: lineas }, { data: empresa }, { data: cliente }] = await Promise.all([
-        supabase.from('cotizacion_lineas').select('*').eq('cotizacion_id', cot.id).order('orden'),
-        supabase.from('empresas').select('nombre, telefono, email, direccion, ciudad, estado, rfc, logo_url, moneda').eq('id', cot.empresa_id).maybeSingle(),
-        cot.cliente_id ? supabase.from('clientes').select('nombre, telefono, rfc, direccion').eq('id', cot.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
-      ]);
-      setData({ cotizacion: cot, lineas: lineas ?? [], empresa: empresa ?? null, cliente: cliente ?? null });
+      // La cotización pública se sirve por token desde una edge function con
+      // service-role (filtrada en el servidor). Antes se leía directo de la tabla
+      // con `anon`, lo que exponía las cotizaciones de todas las empresas.
+      const { data: res, error: fnErr } = await supabase.functions.invoke('cotizacion-publica', {
+        body: { token },
+      });
+      if (fnErr || !res || res.error || !res.cotizacion) {
+        setError('No se encontró la cotización'); setLoading(false); return;
+      }
+      setData({
+        cotizacion: res.cotizacion,
+        lineas: res.lineas ?? [],
+        empresa: res.empresa ?? null,
+        cliente: res.cliente ?? null,
+      });
       setLoading(false);
     })();
   }, [token]);
