@@ -43,13 +43,51 @@ Deno.serve(async (req) => {
     // Get subscription
     const { data: sub } = await supabase
       .from("subscriptions")
-      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios, status")
+      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios, status, plan_id, legacy_pricing")
       .eq("empresa_id", profile.empresa_id)
       .maybeSingle();
     if (!sub) throw new Error("Sin suscripción");
 
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+
+    // Cargar el plan para saber si es de DOS renglones (base + extras). Antes se
+    // tocaba siempre items.data[0] (la BASE), lo que en planes nuevos cobraba
+    // base × usuarios en vez de base + (usuarios extra). Se replica el patrón ya
+    // probado de billing-cycle Parte 5.
+    let planRow: any = null;
+    if ((sub as any).plan_id) {
+      const { data: sp } = await supabase
+        .from("subscription_plans")
+        .select("slug, usuarios_incluidos, stripe_price_id, stripe_price_id_extra")
+        .eq("id", (sub as any).plan_id)
+        .maybeSingle();
+      planRow = sp;
+    }
+    const isTwoItem = !!planRow?.slug && !!planRow?.stripe_price_id_extra && (sub as any).legacy_pricing !== true;
+
+    // Construye el arreglo de items de Stripe para llevar la suscripción a `qty`
+    // usuarios, SIN cobrar de más. Devuelve [] si no encuentra los renglones
+    // (mejor errar que cobrar mal).
+    function buildItemsForQty(stripeSub: Stripe.Subscription, qty: number): any[] {
+      if (isTwoItem) {
+        const baseItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id);
+        const extraItem = stripeSub.items.data.find((it: any) => it.price?.id === planRow.stripe_price_id_extra);
+        const desiredExtras = Math.max(0, qty - (planRow.usuarios_incluidos || 0));
+        const items: any[] = [];
+        if (baseItem) items.push({ id: baseItem.id, quantity: 1 });
+        if (extraItem) {
+          if (desiredExtras === 0) items.push({ id: extraItem.id, deleted: true });
+          else items.push({ id: extraItem.id, quantity: desiredExtras });
+        } else if (desiredExtras > 0) {
+          items.push({ price: planRow.stripe_price_id_extra, quantity: desiredExtras });
+        }
+        return baseItem ? items : [];
+      }
+      // Plan viejo de 1 renglón: precio × cantidad (comportamiento original)
+      const item = stripeSub.items.data[0];
+      return item ? [{ id: item.id, quantity: qty }] : [];
+    }
 
     // Helper: count active users for the empresa
     async function countActiveUsers(): Promise<number> {
@@ -95,14 +133,14 @@ Deno.serve(async (req) => {
 
       if (sub.stripe_subscription_id) {
         const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
-        const itemId = stripeSub.items.data[0]?.id;
-        if (itemId) {
+        const previewItems = buildItemsForQty(stripeSub, qty);
+        if (previewItems.length) {
           // Use Stripe upcoming invoice preview to compute prorated charge/credit
           try {
             const upcoming = await stripe.invoices.createPreview({
               subscription: sub.stripe_subscription_id,
               subscription_details: {
-                items: [{ id: itemId, quantity: qty }],
+                items: previewItems,
                 proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
               },
             });
@@ -148,8 +186,8 @@ Deno.serve(async (req) => {
 
       if (sub.stripe_subscription_id) {
         const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
-        const itemId = stripeSub.items.data[0]?.id;
-        if (!itemId) throw new Error("No subscription item found");
+        const items = buildItemsForQty(stripeSub, qty);
+        if (!items.length) throw new Error("No se encontró el renglón de la suscripción");
 
         if (isUpgrade) {
           // STRICT: charge immediately. If payment fails, do NOT activate extra users.
@@ -157,7 +195,7 @@ Deno.serve(async (req) => {
           // right away, Stripe rejects the update with an error and quantity stays the same.
           try {
             await stripe.subscriptions.update(sub.stripe_subscription_id, {
-              items: [{ id: itemId, quantity: qty }],
+              items,
               proration_behavior: "always_invoice",
               payment_behavior: "error_if_incomplete",
             });
@@ -186,7 +224,7 @@ Deno.serve(async (req) => {
 
         // Downgrade => no charge, just credit for next invoice. Apply immediately.
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
-          items: [{ id: itemId, quantity: qty }],
+          items,
           proration_behavior: "create_prorations",
         });
       }
