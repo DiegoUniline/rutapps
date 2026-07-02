@@ -1,0 +1,1 @@
+UPDATE promociones SET cantidad_minima = 1 WHERE tipo = 'producto_gratis' AND cantidad_minima <= 0;
