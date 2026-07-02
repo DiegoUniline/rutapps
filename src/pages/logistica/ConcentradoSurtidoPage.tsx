@@ -112,7 +112,7 @@ export default function ConcentradoSurtidoPage() {
         supabase.from('entrega_lineas')
           .select('producto_id, cantidad_entregada, entregas!inner(pedido_id, status)')
           .in('entregas.pedido_id', ventaIds)
-          .eq('entregas.status', 'hecho' as any)
+          .in('entregas.status', ['cargado', 'hecho'] as any)
           .range(from, to)
       );
 
@@ -477,9 +477,9 @@ export default function ConcentradoSurtidoPage() {
                   <th className="text-left px-3 py-2">Cliente</th>
                   <th className="text-left px-3 py-2">Estado pedido</th>
                   <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Entregado</th>
-                  <th className="text-right px-3 py-2">Pendiente</th>
-                  <th className="text-left px-3 py-2">Surtido</th>
+                  <th className="text-right px-3 py-2">Surtido</th>
+                  <th className="text-right px-3 py-2">Falta surtir</th>
+                  <th className="text-left px-3 py-2">Estado surtido</th>
                   <th className="text-right px-3 py-2">Total</th>
                 </tr>
               </thead>
@@ -492,10 +492,10 @@ export default function ConcentradoSurtidoPage() {
                 )}
                 {(data?.pedidos ?? []).map(p => {
                   const badge = {
-                    surtido:   { label: 'Surtido',   cls: 'bg-success/15 text-success border-success/30' },
-                    parcial:   { label: 'Parcial',   cls: 'bg-warning/15 text-warning border-warning/30' },
-                    pendiente: { label: 'Por surtir',cls: 'bg-destructive/15 text-destructive border-destructive/30' },
-                    sin_lineas:{ label: 'Sin líneas',cls: 'bg-muted text-muted-foreground border-border' },
+                    surtido:   { label: 'Surtido completo', cls: 'bg-success/15 text-success border-success/30' },
+                    parcial:   { label: 'Surtido parcial',  cls: 'bg-warning/15 text-warning border-warning/30' },
+                    pendiente: { label: 'Sin surtir',       cls: 'bg-destructive/15 text-destructive border-destructive/30' },
+                    sin_lineas:{ label: 'Sin líneas',       cls: 'bg-muted text-muted-foreground border-border' },
                   }[p.surtido_status];
                   return (
                     <tr key={p.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/ventas/${p.id}`)}>
@@ -522,10 +522,10 @@ export default function ConcentradoSurtidoPage() {
                   <th className="text-left px-3 py-2">Código</th>
                   <th className="text-left px-3 py-2">Producto</th>
                   <th className="text-right px-3 py-2">Requerido</th>
-                  <th className="text-right px-3 py-2">Ya entregado</th>
-                  <th className="text-right px-3 py-2">A surtir</th>
+                  <th className="text-right px-3 py-2">Ya surtido</th>
+                  <th className="text-right px-3 py-2">Falta surtir</th>
                   <th className="text-right px-3 py-2">Stock actual</th>
-                  <th className="text-right px-3 py-2">Faltante</th>
+                  <th className="text-right px-3 py-2">Faltante compra</th>
                   <th className="text-left px-3 py-2">Proveedor</th>
                 </tr>
               </thead>
