@@ -452,7 +452,7 @@ export function useVentaDetalle() {
       metodoPago: (venta as any).metodo_pago ?? (pagos.length ? pagos.map(p => p.metodo).join(', ') : undefined),
       saldoAnterior,
       pagoAplicado: totalPagado,
-      saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
+      saldoNuevo: (saldoAnterior + saldoPendiente) > 0 ? (saldoAnterior + saldoPendiente) : undefined,
       pagos,
       promociones: promoResults
         .filter((r: any) => r.descuento > 0)
