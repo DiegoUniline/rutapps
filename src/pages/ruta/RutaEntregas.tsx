@@ -145,6 +145,17 @@ export default function RutaEntregas() {
     no_entregado: entregas.filter((e: any) => e.status === 'no_entregado').length,
   }), [entregas]);
 
+  // Clientes donde el usuario actual es repartidor (vendedor_ruta_id) en alguna entrega.
+  // Un cliente solo tiene un vendedor pero puede tener varios repartidores.
+  const clientesComoRepartidor = useMemo(() => {
+    const set = new Set<string>();
+    if (!vendedorId) return set;
+    (allEntregas ?? []).forEach((e: any) => {
+      if (e.vendedor_ruta_id === vendedorId && e.cliente_id) set.add(e.cliente_id);
+    });
+    return set;
+  }, [allEntregas, vendedorId]);
+
   const paradasNavegablesHoy = useMemo(() => {
     const entregasHoy = entregas.filter((e: any) =>
       (e.status === 'cargado' || e.status === 'en_ruta') &&
@@ -153,11 +164,13 @@ export default function RutaEntregas() {
     ).length;
     const clientesHoy = (clientes ?? []).filter((c: any) => {
       if (c.status !== 'activo' || !c.gps_lat || !c.gps_lng || !clienteTieneDia(c, diaHoy)) return false;
-      if (clientesVisibilidad === 'propios' && vendedorId) return c.vendedor_id === vendedorId;
+      if (clientesVisibilidad === 'propios' && vendedorId) {
+        return c.vendedor_id === vendedorId || clientesComoRepartidor.has(c.id);
+      }
       return true;
     }).length;
     return entregasHoy + clientesHoy;
-  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId]);
+  }, [entregas, clientes, today, diaHoy, clientesVisibilidad, vendedorId, clientesComoRepartidor]);
 
   const visible = useMemo(() => {
     let list: any[] = entregas;
