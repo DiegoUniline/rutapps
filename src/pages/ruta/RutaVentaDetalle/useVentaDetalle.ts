@@ -16,6 +16,7 @@ import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
+import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -81,6 +82,36 @@ export function useVentaDetalle() {
       return (data ?? []) as any;
     },
   });
+
+  // Pagos aplicados a esta venta (cobros)
+  const { data: pagosVenta } = useQuery({
+    queryKey: ['ruta-venta-pagos', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
+        .eq('venta_id', id!)
+        .order('created_at');
+      return data ?? [];
+    },
+  });
+
+  // Clasificaciones de productos de la venta (para evaluar promociones en vivo)
+  const productoIdsVenta = useMemo(() => {
+    const ids = new Set<string>();
+    ((venta as any)?.venta_lineas ?? []).forEach((l: any) => { if (l.producto_id) ids.add(l.producto_id); });
+    return Array.from(ids);
+  }, [venta]);
+  const { data: productosClasif } = useQuery({
+    queryKey: ['ruta-venta-productos-clasif', id, productoIdsVenta.join(',')],
+    enabled: productoIdsVenta.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from('productos').select('id, clasificacion_id').in('id', productoIdsVenta);
+      return data ?? [];
+    },
+  });
+  const { data: promocionesActivas } = usePromocionesActivas();
 
 
 
@@ -350,6 +381,35 @@ export function useVentaDetalle() {
   const getTicketData = (): TicketData | null => {
     if (!venta) return null;
     const e = empresa as any;
+    const lineasVenta = ((venta as any).venta_lineas ?? []) as any[];
+
+    // Promociones en vivo (misma lógica que /Ventas)
+    const cartForPromo: CartItemForPromo[] = lineasVenta
+      .filter((l: any) => l.producto_id)
+      .map((l: any) => {
+        const prod: any = (productosClasif ?? []).find((p: any) => p.id === l.producto_id);
+        return {
+          producto_id: l.producto_id,
+          clasificacion_id: prod?.clasificacion_id ?? undefined,
+          precio_unitario: Number(l.precio_unitario) || 0,
+          cantidad: Number(l.cantidad) || 0,
+        };
+      });
+    const promoResults = (promocionesActivas && cartForPromo.length > 0)
+      ? evaluatePromociones(promocionesActivas as any, cartForPromo, (venta as any).cliente_id ?? undefined, undefined, e?.zona_horaria)
+      : [];
+
+    // Pagos aplicados (cobros)
+    const pagos = (pagosVenta ?? []).map((p: any) => ({
+      metodo: (p.cobros as any)?.metodo_pago ?? '',
+      monto: Number(p.monto_aplicado) || 0,
+      referencia: (p.cobros as any)?.referencia ?? undefined,
+    }));
+    const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
+    const total = Number(venta.total ?? 0);
+    const saldoPendiente = Number(venta.saldo_pendiente ?? 0);
+    const saldoAnterior = totalPagado + saldoPendiente; // = total en la mayoría de casos
+
     return {
       empresa: {
         nombre: e?.nombre ?? '',
@@ -370,7 +430,8 @@ export function useVentaDetalle() {
       folio: venta.folio ?? 'Sin folio',
       fecha: fmtDate(venta.fecha),
       clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
-      lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({
+      vendedorNombre: (venta as any).vendedores?.nombre ?? '',
+      lineas: lineasVenta.map((l: any) => ({
         nombre: l.productos?.nombre ?? l.descripcion ?? '—',
         cantidad: l.cantidad,
         precio: l.precio_unitario ?? 0,
@@ -384,15 +445,16 @@ export function useVentaDetalle() {
       descuento: (venta as any).descuento_total ?? 0,
       iva: venta.iva_total ?? 0,
       ieps: (venta as any).ieps_total ?? 0,
-      total: venta.total ?? 0,
+      total,
       condicionPago: venta.condicion_pago,
-      metodoPago: (venta as any).metodo_pago ?? undefined,
-      saldoNuevo: (venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined,
-      promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
-        descripcion: p.descripcion ?? p.nombre ?? '',
-        descuento: p.descuento ?? 0,
-        producto_id: p.producto_id,
-      })),
+      metodoPago: (venta as any).metodo_pago ?? (pagos.length ? pagos.map(p => p.metodo).join(', ') : undefined),
+      saldoAnterior,
+      pagoAplicado: totalPagado,
+      saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
+      pagos,
+      promociones: promoResults
+        .filter((r: any) => r.descuento > 0)
+        .map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
       devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
         nombre: d.producto?.nombre ?? 'Producto',
         cantidad: Number(d.cantidad) || 0,
@@ -402,6 +464,7 @@ export function useVentaDetalle() {
       })),
     };
   };
+
 
   const handleWhatsAppSend = async () => {
     if (!waPhone.trim() || !venta) return;
