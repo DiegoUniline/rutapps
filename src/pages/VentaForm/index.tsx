@@ -79,7 +79,23 @@ export default function VentaFormPage() {
     },
   });
 
-  // Count of CFDIs issued for this venta (used in Facturas tab label)
+  // Devoluciones de esta venta (para ticket/impresión)
+  const { data: devolucionesVenta } = useQuery({
+    queryKey: ['venta-devoluciones-ticket', form.id],
+    enabled: !!form.id && !isNew,
+    queryFn: async () => {
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', form.id!);
+      const ids = (heads ?? []).map((h: any) => h.id);
+      if (ids.length === 0) return [] as any[];
+      const { data } = await supabase
+        .from('devolucion_lineas')
+        .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+        .in('devolucion_id', ids);
+      return data ?? [];
+    },
+  });
+
+
   const { data: cfdisCount } = useQuery({
     queryKey: ['cfdis-count-venta', form.id],
     enabled: !!form.id && !isNew,
@@ -244,6 +260,13 @@ export default function VentaFormPage() {
       promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
       saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
       pagos: (pagosData ?? []).map((p: any) => ({ metodo: (p.cobros as any)?.metodo_pago ?? 'efectivo', monto: Number(p.monto_aplicado ?? 0), fecha: fmtDate((p.cobros as any)?.fecha ?? ''), referencia: (p.cobros as any)?.referencia })),
+      devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
+        nombre: d.producto?.nombre ?? 'Producto',
+        cantidad: Number(d.cantidad) || 0,
+        motivo: d.motivo,
+        accion: d.accion,
+        monto: Number(d.monto_credito ?? 0) || 0,
+      })),
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
     printTicket(td, { ticketAncho });

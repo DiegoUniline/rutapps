@@ -97,6 +97,17 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const handleTicket = async () => {
     setPrintingTicket(true);
     try {
+      // Fetch devoluciones for this venta
+      const { data: heads } = await supabase.from('devoluciones').select('id').eq('venta_id', venta.id);
+      const devIds = (heads ?? []).map((h: any) => h.id);
+      let devLineas: any[] = [];
+      if (devIds.length > 0) {
+        const { data } = await supabase
+          .from('devolucion_lineas')
+          .select('cantidad, motivo, accion, monto_credito, producto:productos(nombre)')
+          .in('devolucion_id', devIds);
+        devLineas = data ?? [];
+      }
       const td = buildTicketDataFromVenta({
         empresa: empresa ?? {},
         venta: {
@@ -126,6 +137,13 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           metodo: (p.cobros as any)?.metodo_pago ?? '',
           monto: p.monto_aplicado ?? 0,
           referencia: (p.cobros as any)?.referencia,
+        })),
+        devoluciones: devLineas.map((d: any) => ({
+          nombre: d.producto?.nombre ?? 'Producto',
+          cantidad: Number(d.cantidad) || 0,
+          motivo: d.motivo,
+          accion: d.accion,
+          monto: Number(d.monto_credito ?? 0) || 0,
         })),
       });
       await printTicket(td);
