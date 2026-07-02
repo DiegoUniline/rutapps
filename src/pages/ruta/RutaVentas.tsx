@@ -11,14 +11,14 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 
-type Tab = 'todas' | 'por_cobrar';
+type Tab = 'directas' | 'pedidos' | 'por_cobrar';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile, user, overrideVendedorId } = useAuth();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<Tab>('todas');
+  const [tab, setTab] = useState<Tab>('directas');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   // Super admin impersonando: usa el vendedor seleccionado en el switcher "Viendo:"
   const isSA = isSuperAdminEmail(user?.email);
@@ -65,7 +65,18 @@ export default function RutaVentas() {
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
 
-  const totalVentas = enrichedTodas.reduce((s, v: any) => s + (v.total ?? 0), 0);
+  // Separar ventas directas (cerradas) de pedidos (aún se pueden modificar/cancelar).
+  const ventasDirectas = useMemo(
+    () => enrichedTodas.filter((v: any) => v.tipo !== 'pedido'),
+    [enrichedTodas],
+  );
+  const pedidos = useMemo(
+    () => enrichedTodas.filter((v: any) => v.tipo === 'pedido'),
+    [enrichedTodas],
+  );
+
+  const totalDirectas = ventasDirectas.reduce((s, v: any) => s + (v.total ?? 0), 0);
+  const totalPedidos = pedidos.reduce((s, v: any) => s + (v.total ?? 0), 0);
 
   const statusColors: Record<string, string> = {
     borrador: 'bg-card/50 text-muted-foreground',
@@ -75,7 +86,8 @@ export default function RutaVentas() {
     cancelado: 'bg-destructive/10 text-destructive',
   };
 
-  const sourceList: any[] = tab === 'por_cobrar' ? porCobrar : enrichedTodas;
+  const sourceList: any[] =
+    tab === 'por_cobrar' ? porCobrar : tab === 'pedidos' ? pedidos : ventasDirectas;
   const filtered = sourceList.filter((v: any) =>
     !search || v.folio?.toLowerCase().includes(search.toLowerCase()) ||
     v._clienteNombre?.toLowerCase().includes(search.toLowerCase())
@@ -101,10 +113,21 @@ export default function RutaVentas() {
         {/* Tabs */}
         <div className="flex gap-1 mb-2 bg-accent rounded-lg p-[3px] border-0">
           <button
-            onClick={() => setTab('todas')}
-            className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'todas' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
+            onClick={() => setTab('directas')}
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${tab === 'directas' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
           >
-            Todas
+            Ventas
+          </button>
+          <button
+            onClick={() => setTab('pedidos')}
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${tab === 'pedidos' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25' : 'text-muted-foreground'}`}
+          >
+            Pedidos
+            {pedidos.length > 0 && (
+              <span className="bg-warning text-warning-foreground text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px]">
+                {pedidos.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setTab('por_cobrar')}
@@ -129,11 +152,11 @@ export default function RutaVentas() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        {tab === 'todas' && (
+        {tab === 'directas' && (
           <>
             <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
             <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
-            {enrichedTodas.length > 0 && (
+            {ventasDirectas.length > 0 && (
               <div className="mt-2 bg-card rounded-xl p-3 shadow-sm flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
@@ -141,10 +164,31 @@ export default function RutaVentas() {
                   </div>
                   <div className="flex flex-col">
                     <p className="text-[11px] font-bold text-primary/70 uppercase tracking-wider">Total vendido</p>
-                    <p className="text-xl font-bold text-primary tabular-nums">{fmt(totalVentas)}</p>
+                    <p className="text-xl font-bold text-primary tabular-nums">{fmt(totalDirectas)}</p>
                   </div>
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground">{enrichedTodas.length} ventas</p>
+                <p className="text-xs font-semibold text-muted-foreground">{ventasDirectas.length} ventas</p>
+              </div>
+            )}
+          </>
+        )}
+        {tab === 'pedidos' && (
+          <>
+            <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            <DatePresetButtons desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+            {pedidos.length > 0 && (
+              <div className="mt-2 bg-warning/8 border border-warning/20 rounded-xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10">
+                    <ShoppingCart className="h-5 w-5 text-warning" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-[11px] font-bold text-warning/80 uppercase tracking-wider">Total en pedidos</p>
+                    <p className="text-xl font-bold text-warning tabular-nums">{fmt(totalPedidos)}</p>
+                    <p className="text-[10px] text-muted-foreground">No son ventas cerradas · pueden cambiar</p>
+                  </div>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">{pedidos.length} pedidos</p>
               </div>
             )}
           </>
@@ -221,7 +265,7 @@ export default function RutaVentas() {
         })}
         {!isLoading && filtered.length === 0 && (
           <p className="text-center text-muted-foreground text-[13px] py-8">
-            {tab === 'por_cobrar' ? 'Sin cuentas por cobrar 🎉' : 'No hay ventas'}
+            {tab === 'por_cobrar' ? 'Sin cuentas por cobrar 🎉' : tab === 'pedidos' ? 'No hay pedidos' : 'No hay ventas'}
           </p>
         )}
       </div>
