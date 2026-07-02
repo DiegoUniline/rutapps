@@ -75,6 +75,7 @@ export default function ConcentradoSurtidoPage() {
   const toggleStatus = (v: string) => {
     setStatusFilter(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   };
+  const [viewMode, setViewMode] = useState<'pedidos' | 'productos'>('pedidos');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(',')],
