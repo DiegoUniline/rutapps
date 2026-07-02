@@ -93,3 +93,6 @@ verify_jwt = false
 
 [functions.admin-backfill-facturas]
 verify_jwt = false
+
+[functions.cotizacion-publica]
+verify_jwt = false
