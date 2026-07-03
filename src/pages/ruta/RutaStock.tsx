@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Search, Package, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -14,6 +15,20 @@ export default function RutaStock() {
   const [search, setSearch] = useState('');
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);
   const almacenId = profile?.almacen_id;
+
+  // Filtro con/sin stock, persistente por usuario hasta que él lo cambie.
+  const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
+  useEffect(() => {
+    if (!profile?.id) return;
+    try {
+      const v = localStorage.getItem(`ruta-stock-filter-${profile.id}`);
+      if (v === 'con' || v === 'sin' || v === 'todos') setStockFilter(v);
+    } catch { /* ignore */ }
+  }, [profile?.id]);
+  const changeStockFilter = (v: 'todos' | 'con' | 'sin') => {
+    setStockFilter(v);
+    if (profile?.id) { try { localStorage.setItem(`ruta-stock-filter-${profile.id}`, v); } catch { /* ignore */ } }
+  };
 
   const { data: productos, isLoading } = useOfflineQuery('productos', {
     empresa_id: empresa?.id,
@@ -40,10 +55,13 @@ export default function RutaStock() {
     }));
   }, [stockAlmacen, productos, almacenId]);
 
-  const filtered = productosConStock.filter((p: any) =>
-    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    p.codigo.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = productosConStock.filter((p: any) => {
+    const qty = p.stockRuta ?? 0;
+    if (stockFilter === 'con' && qty <= 0) return false;
+    if (stockFilter === 'sin' && qty > 0) return false;
+    return !search || p.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      p.codigo.toLowerCase().includes(search.toLowerCase());
+  });
 
   const getStockTextColor = (qty: number) => {
     if (qty <= 0) return 'text-destructive';
@@ -68,10 +86,28 @@ export default function RutaStock() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span><strong className="text-foreground">{productosConStock.length}</strong> productos</span>
-          <span className="text-success">●<strong className="ml-1 text-foreground">{conStock}</strong> con stock</span>
-          <span className="text-destructive">●<strong className="ml-1 text-foreground">{sinStock}</strong> sin stock</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => changeStockFilter('todos')}
+            className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors',
+              stockFilter === 'todos' ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent text-muted-foreground')}
+          >
+            Todos <span className="opacity-80">({productosConStock.length})</span>
+          </button>
+          <button
+            onClick={() => changeStockFilter('con')}
+            className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors',
+              stockFilter === 'con' ? 'bg-success text-white shadow-sm' : 'bg-accent text-muted-foreground')}
+          >
+            Con stock <span className="opacity-80">({conStock})</span>
+          </button>
+          <button
+            onClick={() => changeStockFilter('sin')}
+            className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors',
+              stockFilter === 'sin' ? 'bg-destructive text-white shadow-sm' : 'bg-accent text-muted-foreground')}
+          >
+            Sin stock <span className="opacity-80">({sinStock})</span>
+          </button>
         </div>
       </div>
 
