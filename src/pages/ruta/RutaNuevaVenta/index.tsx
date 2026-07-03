@@ -6,6 +6,7 @@ import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
 import type { TicketData } from '@/lib/ticketHtml';
+import { fmtDate } from '@/lib/utils';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
 import { StepCliente } from './StepCliente';
