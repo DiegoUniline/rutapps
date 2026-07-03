@@ -80,12 +80,14 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       if (!cancelled) {
         setLineas(lRes.data ?? []);
         setPagos(pRes.data ?? []);
-        // Cadena de respaldo del nombre de la lista: tarifa de la venta →
-        // lista del cliente → lista principal de la empresa.
-        const tarifaNombre = (tRes as any)?.data?.nombre ?? null;
+        // Cadena de respaldo del NOMBRE DE LISTA (columna "Lista"). Debe ser una
+        // lista de precio, no una tarifa: lista asignada al cliente
+        // (clientes.lista_precio_id) → lista principal de la empresa → como
+        // último recurso el nombre de la tarifa de la venta.
         const clienteListaNombre = (cRes as any)?.data?.lista_precios?.nombre ?? null;
         const principalNombre = (plRes as any)?.data?.[0]?.nombre ?? null;
-        setVentaListaNombre(tarifaNombre ?? clienteListaNombre ?? principalNombre ?? null);
+        const tarifaNombre = (tRes as any)?.data?.nombre ?? null;
+        setVentaListaNombre(clienteListaNombre ?? principalNombre ?? tarifaNombre ?? null);
         setLoading(false);
       }
     }
