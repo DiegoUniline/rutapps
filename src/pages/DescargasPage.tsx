@@ -104,7 +104,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .select('id, nombre, es_merma')
         .eq('empresa_id', descarga.empresa_id)
         .order('nombre');
-      const items = (data ?? []).filter((a: any) => a.id !== camionId && !a.es_merma);
+      const esBodega = (n: string) => /general|principal|bodega|central|matriz/i.test(n || '');
+      const items = (data ?? [])
+        .filter((a: any) => a.id !== camionId && !a.es_merma)
+        // Bodegas (general/principal/central/…) primero para elegir fácil el destino.
+        .sort((a: any, b: any) => (esBodega(b.nombre) ? 1 : 0) - (esBodega(a.nombre) ? 1 : 0) || String(a.nombre).localeCompare(String(b.nombre)));
       return items as { id: string; nombre: string }[];
     },
   });
