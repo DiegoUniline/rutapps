@@ -38,10 +38,14 @@ interface Props {
 
 export function DetalleView(p: Props) {
   const { symbol: s } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
   const [showTax, setShowTax] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const canCancelar = hasPermisoMovil('ruta.cancelar_venta');
+  const showCancelChip = canCancelar && (p.venta.status === 'confirmado' || p.venta.status === 'entregado' || p.venta.status === 'borrador');
   return (
     <div className="min-h-[100dvh] bg-background">
-      <Header {...p} />
+      <Header {...p} showCancelChip={showCancelChip} onCancelClick={() => setShowCancelModal(true)} />
       <WADialog {...p} s={s} />
       <div className="p-4 space-y-4 pb-28">
         <ActionsBar {...p} />
@@ -65,20 +69,39 @@ export function DetalleView(p: Props) {
         </div>
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
+      <CancelModal
+        open={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        venta={p.venta}
+        lineas={p.lineas}
+        saving={p.saving}
+        handleCancelar={p.handleCancelar}
+        fmt={p.fmt}
+      />
       <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={p.clienteData?.telefono ?? ''} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
 }
 
-function Header({ venta, onBack }: Props) {
+function Header({ venta, onBack, showCancelChip, onCancelClick }: Props & { showCancelChip: boolean; onCancelClick: () => void }) {
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
       <button onClick={onBack} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
       <div className="flex-1 min-w-0"><h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1><p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p></div>
       <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>{venta.status}</span>
+      {showCancelChip && (
+        <button
+          onClick={onCancelClick}
+          className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg bg-destructive/10 text-destructive text-[12px] font-semibold active:scale-95 transition-all shrink-0"
+        >
+          <X className="h-3.5 w-3.5" />
+          Cancelar
+        </button>
+      )}
     </div>
   );
 }
+
 
 function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
   const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
