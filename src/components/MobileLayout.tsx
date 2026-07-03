@@ -225,13 +225,20 @@ export default function MobileLayout() {
             <Eye className="h-5 w-5" />
           </button>
           <button
-            onClick={() => navigate('/ruta/sincronizar')}
-            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-            title="Sincronizar"
-            aria-label="Sincronizar"
+            onClick={forceUpdate}
+            disabled={!isOnline}
+            className={cn(
+              "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
+              !isOnline
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            title={isOnline ? "Actualizar app" : "Sin conexión"}
+            aria-label="Actualizar app"
           >
             <RefreshCw className="h-5 w-5" />
           </button>
+
 
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
