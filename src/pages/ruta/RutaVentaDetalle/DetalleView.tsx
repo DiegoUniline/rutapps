@@ -208,14 +208,14 @@ function BottomActions({ venta, initCobrar, onBack, fmt }: Props & { s: string }
       <div className="flex gap-2">
         <button
           onClick={onBack}
-          className={`${showCobrar ? 'flex-1' : 'w-full'} bg-card border border-border text-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5`}
+          className={`${showCobrar ? 'flex-1' : 'w-full'} bg-brand-orange text-brand-orange-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-1.5`}
         >
           <ArrowLeft className="h-5 w-5" /> Salir
         </button>
         {showCobrar && (
           <button
             onClick={initCobrar}
-            className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
           >
             <Banknote className="h-5 w-5" /> Cobrar {fmt(venta.saldo_pendiente ?? 0)}
           </button>
