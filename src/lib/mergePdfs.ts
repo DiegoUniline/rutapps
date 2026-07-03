@@ -1,9 +1,11 @@
-import { PDFDocument } from 'pdf-lib';
+// pdf-lib (≈la mayor parte del peso de VentasListPage) se carga DIFERIDO: solo
+// se descarga cuando el usuario realmente combina/imprime PDFs en lote.
 
 /**
  * Merge multiple PDF Blobs into a single PDF Blob.
  */
 export async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
+  const { PDFDocument } = await import('pdf-lib');
   const merged = await PDFDocument.create();
   for (const b of blobs) {
     if (!b) continue;
