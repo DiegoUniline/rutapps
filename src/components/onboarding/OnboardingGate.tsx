@@ -14,7 +14,7 @@ export default function OnboardingGate() {
   const { data } = useQuery({
     queryKey: ['onboarding-gate', empresa?.id],
     enabled: !!empresa?.id,
-    staleTime: 30_000,
+    staleTime: 15 * 60_000, // el conteo de productos/clientes casi no cambia; 15 min basta
     queryFn: async () => {
       const eid = empresa!.id;
       const [emp, prod, cli] = await Promise.all([

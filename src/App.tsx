@@ -204,7 +204,12 @@ const JornadasRutaPage = lazy(() => import("@/pages/JornadasRutaPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 45 * 1000,
+      // 3 min de frescura: como las tablas clave ya tienen Realtime (que refresca
+      // al instante cuando algo cambia de verdad), no necesitamos re-consultar en
+      // cada navegación/remonta. Esto corta el "volumen de llamadas" (N+1) que
+      // domina el costo de la base de datos, SIN mostrar datos viejos: un cambio
+      // real invalida el caché por Realtime aunque el staleTime no haya vencido.
+      staleTime: 3 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
