@@ -15,6 +15,7 @@ const CATALOG_STALE = CATALOG_STALE_TIME;
 /** Paginated clients for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false) {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
@@ -23,7 +24,13 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)';
+      // Se removieron los LEFT JOIN LATERAL (zonas(nombre), listas(nombre),
+      // vendedores(nombre), cobradores(nombre), tarifas(nombre)) porque
+      // multiplicaban el costo CPU en Postgres. Los nombres se resuelven en
+      // el cliente con `enrichClientes` a partir de los catálogos pequeños
+      // ya cacheados por useBootstrapPrefetch. La forma de la fila se
+      // preserva: consumidores siguen leyendo cliente.zonas?.nombre, etc.
+      const SELECT = 'id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('codigo', { ascending: true });
         if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
@@ -50,15 +57,17 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       };
 
       if (fetchAll) {
-        const rows = await fetchAllPages((from, to) => applyFilters(supabase.from('clientes').select(SELECT).range(from, to)));
-        return { rows: (rows ?? []) as unknown as Cliente[], total: rows?.length ?? 0 };
+        const rows = await fetchAllPages<any>((from, to) => applyFilters(supabase.from('clientes').select(SELECT).range(from, to)));
+        const enriched = enrichClientes(rows ?? [], qc, empresa!.id);
+        return { rows: enriched as unknown as Cliente[], total: enriched.length };
       }
 
       let q = supabase.from('clientes').select(SELECT, { count: 'exact' }).range((page - 1) * pageSize, page * pageSize - 1);
       q = applyFilters(q);
       const { data, error, count } = await q;
       if (error) throw error;
-      return { rows: (data ?? []) as unknown as Cliente[], total: count ?? 0 };
+      const enriched = enrichClientes((data ?? []) as any[], qc, empresa!.id);
+      return { rows: enriched as unknown as Cliente[], total: count ?? 0 };
     },
   });
 }
@@ -66,14 +75,16 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
 /** All clients (for lookups/selectors — not for list pages) */
 export function useClientes(search?: string, statusFilter?: string) {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['clientes', empresa?.id, search, statusFilter],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return fetchAllPages((from, to) => {
+      // Mismo motivo que useClientesPaginated: joins fuera, enriquecer en cliente.
+      const rows = await fetchAllPages<any>((from, to) => {
         let q = supabase.from('clientes')
-          .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
+          .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
           .eq('empresa_id', empresa!.id)
           .order('codigo', { ascending: true })
           .range(from, to);
@@ -84,10 +95,12 @@ export function useClientes(search?: string, statusFilter?: string) {
           else q = q.eq('status', statusFilter as Cliente['status']);
         }
         return q;
-      }) as Promise<Cliente[]>;
+      });
+      return enrichClientes(rows ?? [], qc, empresa!.id) as unknown as Cliente[];
     },
   });
 }
+
 
 export function useCliente(id?: string) {
   return useQuery({
