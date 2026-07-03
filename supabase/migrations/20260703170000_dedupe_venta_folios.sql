@@ -23,14 +23,11 @@ DECLARE
   p text;
   v_empresa uuid;
 BEGIN
-  -- Resolver la empresa objetivo por nombre.
-  SELECT id INTO v_empresa
-  FROM public.empresas
-  WHERE nombre ILIKE 'Distribuidora Tampico'
-  LIMIT 1;
+  -- Empresa objetivo: Distribuidora Tampico (id fijo, más seguro que por nombre).
+  v_empresa := '41cdb6df-40c0-4a95-89de-a54bf8eba0de';
 
-  IF v_empresa IS NULL THEN
-    RAISE NOTICE 'Empresa "Distribuidora Tampico" no encontrada; no se renumeró nada.';
+  IF NOT EXISTS (SELECT 1 FROM public.empresas WHERE id = v_empresa) THEN
+    RAISE NOTICE 'Empresa % no encontrada; no se renumeró nada.', v_empresa;
     RETURN;
   END IF;
 
