@@ -6,6 +6,7 @@ import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
 import type { TicketData } from '@/lib/ticketHtml';
+import { fmtDate } from '@/lib/utils';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
 import { StepCliente } from './StepCliente';
@@ -27,7 +28,7 @@ export default function RutaNuevaVenta() {
     return <MobileNoAccess titulo="Sin permiso para vender" mensaje="Tu rol no permite crear ventas desde la ruta." />;
   }
 
-  const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
+  const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '58';
 
   const handlePrintTicket = useCallback(async () => {
     if (!h.ticketInfo) return;
@@ -37,20 +38,32 @@ export default function RutaNuevaVenta() {
       const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
       return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, total: lineSub + lineIva + lineIeps, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, esCambio: item.es_cambio, producto_id: item.producto_id };
     });
+    const totalPagadoAhora = h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0);
+    const saldoRestanteEstaVenta = h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - totalPagadoAhora) : 0;
+    const saldoAnteriorRestante = Math.max(0, h.saldoPendienteTotal - h.totalAplicarCuentas);
+    const saldoNuevoCalc = saldoAnteriorRestante + saldoRestanteEstaVenta;
     const td: TicketData = {
       empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, moneda: (h.empresa as any)?.moneda, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos },
-      folio: h.ticketInfo.folio, fecha: h.ticketInfo.fecha, clienteNombre: h.clienteNombre,
+      folio: h.ticketInfo.folio, fecha: fmtDate(h.ticketInfo.fecha), clienteNombre: h.clienteNombre,
       vendedorNombre: h.profile?.nombre ?? '',
-      lineas, subtotal: h.totals.subtotal, iva: h.totals.iva, ieps: h.totals.ieps, total: h.totals.total,
+      lineas,
+      subtotal: h.totals.subtotal,
+      descuento: h.totals.descuentoDevolucion ?? 0,
+      iva: h.totals.iva,
+      ieps: h.totals.ieps,
+      total: h.totals.total,
       condicionPago: h.condicionPago, metodoPago: h.pagos.map(p => p.metodo_pago).join(', '),
       montoRecibido: h.montoRecibidoNum, cambio: h.cambio,
-      saldoAnterior: h.saldoPendienteTotal, pagoAplicado: h.totalAplicarCuentas,
-      saldoNuevo: h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - (h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0))) : 0),
+      saldoAnterior: h.saldoPendienteTotal,
+      pagoAplicado: h.totalAplicarCuentas + totalPagadoAhora,
+      saldoNuevo: saldoNuevoCalc > 0 ? saldoNuevoCalc : undefined,
       promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
-      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha })),
+      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: fmtDate(h.ticketInfo.fecha), referencia: (p as any).referencia ?? undefined })),
+      devoluciones: h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: Number(d.cantidad) || 0, motivo: d.motivo, accion: d.accion, monto: (d.precio_unitario ?? 0) * (Number(d.cantidad) || 0) })),
     };
     await printTicket(td, { ticketAncho });
-  }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, ticketAncho]);
+  }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
+
 
   if (h.ticketInfo) {
     return (
