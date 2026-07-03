@@ -336,8 +336,12 @@ export default function AdminEmpresaDetail({ empresaId, onBack, initialTab = 'us
     }
     setCreatingSubInvoice(true);
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      let { data: { session } } = await supabase.auth.getSession();
+      // Refresh to avoid session_not_found (403) when the cached token has been revoked
+      const refreshed = await supabase.auth.refreshSession();
+      if (refreshed.data.session) session = refreshed.data.session;
+      const token = session?.access_token;
+      if (!token) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_subscription_invoice`,
         {
