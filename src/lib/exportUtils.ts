@@ -1,7 +1,10 @@
 /**
  * Professional export utilities — Odoo-style clean Excel & PDF
+ *
+ * xlsx (≈424 KB) y jspdf se cargan de forma DIFERIDA (import dinámico dentro de
+ * cada función), así que NO pesan en la carga inicial: solo se descargan cuando
+ * el usuario realmente exporta. No cambia el resultado del export.
  */
-import * as XLSX from 'xlsx';
 import { getCurrencyConfig } from '@/lib/currency';
 // ─── Types ──────────────────────────────────────────────────────
 export interface ExportColumn {
@@ -87,9 +90,10 @@ const makeFmt = (currencyCode?: string | null) => {
 
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
-export function exportToExcel(options: ExportOptions) {
+export async function exportToExcel(options: ExportOptions) {
   const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, groups, groupByLabel } = options;
 
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
 
@@ -449,5 +453,5 @@ export function exportTableToExcel(
   fileName: string,
   title: string,
 ) {
-  exportToExcel({ fileName, title, columns, data });
+  return exportToExcel({ fileName, title, columns, data });
 }

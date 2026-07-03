@@ -5,7 +5,8 @@
  * - Upserts by codigo (updates if exists, inserts if not)
  * - Multi-tenant: all records scoped to empresa_id
  */
-import * as XLSX from 'xlsx';
+// xlsx (≈424 KB) se carga de forma DIFERIDA (import dinámico dentro de cada
+// función que lo usa), para no pesar en la carga inicial.
 import { supabase } from '@/integrations/supabase/client';
 import { todayLocal } from '@/lib/utils';
 
@@ -66,7 +67,8 @@ export const CLIENT_IMPORT_COLUMNS: ImportColumn[] = [
 ];
 
 // ─── Template generation ────────────────────────────────────────
-export function downloadTemplate(columns: ImportColumn[], fileName: string) {
+export async function downloadTemplate(columns: ImportColumn[], fileName: string) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   // Header row + example row
   const headers = columns.map(c => c.header);
@@ -79,6 +81,7 @@ export function downloadTemplate(columns: ImportColumn[], fileName: string) {
 
 // ─── File parsing ───────────────────────────────────────────────
 export async function parseFile(file: File): Promise<Record<string, any>[]> {
+  const XLSX = await import('xlsx');
   const ext = file.name.split('.').pop()?.toLowerCase();
   const buffer = await file.arrayBuffer();
 
