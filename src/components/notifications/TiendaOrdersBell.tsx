@@ -42,7 +42,9 @@ export default function TiendaOrdersBell() {
   const { data: pedidos = [] } = useQuery<TiendaPedido[]>({
     queryKey: ['tienda-pedidos-bell', empresaId],
     enabled: !!empresaId,
-    refetchInterval: 30_000,
+    // El realtime (INSERT en ventas origen tienda_web) empuja los pedidos nuevos.
+    // El poll queda solo como red de seguridad amplia.
+    refetchInterval: 5 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThumb } from '@/hooks/useThumb';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -95,6 +96,7 @@ function SheetActionButton({
 
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
+  const thumb = useThumb();
   const { empresa, user, profile, overrideEmpresaId, signOut } = useAuth();
   // Realtime: refresca stock y catálogo del POS al cambiar desde otra terminal
   useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['pos-stock-almacen']] });
@@ -1390,7 +1392,7 @@ export default function PuntoVentaPage() {
                       )}
                       {p.imagen_url ? (
                         <div className="w-full aspect-[4/3] rounded bg-accent/50 mb-1 flex items-center justify-center overflow-hidden">
-                          <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          <img src={thumb(p.imagen_url, 240)} alt="" className="w-full h-full object-cover" loading="lazy" />
                         </div>
                       ) : null}
                       <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>

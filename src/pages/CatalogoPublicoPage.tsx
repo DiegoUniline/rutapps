@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, ShoppingCart, X, Send, Filter, Package } from 'lucide-react';
+import { useThumb } from '@/hooks/useThumb';
 
 
 interface Producto {
@@ -29,6 +30,7 @@ interface CatalogData {
 }
 
 export default function CatalogoPublicoPage() {
+  const thumb = useThumb();
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<CatalogData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -216,7 +218,7 @@ export default function CatalogoPublicoPage() {
                   {/* Image */}
                   <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
                     {p.imagen_url ? (
-                      <img src={p.imagen_url} alt={p.nombre} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${sinStock ? 'grayscale' : ''}`} loading="lazy" />
+                      <img src={thumb(p.imagen_url, 400)} alt={p.nombre} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${sinStock ? 'grayscale' : ''}`} loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Package className="h-10 w-10 text-slate-200" />
@@ -300,7 +302,7 @@ export default function CatalogoPublicoPage() {
                 <div key={c.producto.id} className="flex gap-3 bg-slate-50 rounded-xl p-3">
                   <div className="w-14 h-14 rounded-lg bg-white overflow-hidden shrink-0 border border-slate-100">
                     {c.producto.imagen_url ? (
-                      <img src={c.producto.imagen_url} alt="" className="w-full h-full object-cover" />
+                      <img src={thumb(c.producto.imagen_url, 112)} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-slate-200" /></div>
                     )}

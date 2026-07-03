@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePermisos } from '@/hooks/usePermisos';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThumb } from '@/hooks/useThumb';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -88,6 +89,7 @@ function useProductoFilterOptions() {
 
 export default function ProductosListPage() {
   const navigate = useNavigate();
+  const thumb = useThumb();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
@@ -252,7 +254,7 @@ export default function ProductosListPage() {
               </td>
               <td className="py-1.5 px-2">
                 {p.imagen_url ? (
-                  <img src={p.imagen_url} alt="" className="h-7 w-7 rounded object-cover" />
+                  <img src={thumb(p.imagen_url, 64)} alt="" className="h-7 w-7 rounded object-cover" />
                 ) : (
                   <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>
                 )}
@@ -443,7 +445,7 @@ export default function ProductosListPage() {
               badge={<StatusChip status={p.status} />}
               onClick={() => navigate(`/productos/${p.id}`)}
               leading={p.imagen_url ? (
-                <img src={p.imagen_url} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
+                <img src={thumb(p.imagen_url, 96)} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
               ) : (
                 <div className="h-10 w-10 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground shrink-0">—</div>
               )}
