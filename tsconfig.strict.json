@@ -1,0 +1,21 @@
+{
+  "//": "Chequeo de tipos ESTRICTO, acotado a la lógica crítica (dinero/inventario). Corre APARTE (npm run typecheck:strict), NO afecta el build/CI principal. Se van agregando archivos a `include` conforme se limpian, hasta poder prender el estricto global.",
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noEmit": true,
+    "types": ["vitest/globals", "vite/client"]
+  },
+  "include": [
+    "src/lib/posPricing.ts",
+    "src/lib/stockPresentacion.ts",
+    "src/lib/priceResolver.ts",
+    "src/lib/taxUtils.ts",
+    "src/lib/currency.ts",
+    "src/lib/paymentDistribution.ts",
+    "src/lib/saldoFavor.ts",
+    "src/pages/CompraForm/types.ts"
+  ]
+}
