@@ -2646,9 +2646,11 @@ export type Database = {
       }
       descarga_ruta: {
         Row: {
+          almacen_destino_id: string | null
           aprobado_por: string | null
           carga_id: string | null
           created_at: string
+          descargo_camion: boolean
           diferencia_efectivo: number
           efectivo_entregado: number
           efectivo_esperado: number
@@ -2665,9 +2667,11 @@ export type Database = {
           vendedor_id: string | null
         }
         Insert: {
+          almacen_destino_id?: string | null
           aprobado_por?: string | null
           carga_id?: string | null
           created_at?: string
+          descargo_camion?: boolean
           diferencia_efectivo?: number
           efectivo_entregado?: number
           efectivo_esperado?: number
@@ -2684,9 +2688,11 @@ export type Database = {
           vendedor_id?: string | null
         }
         Update: {
+          almacen_destino_id?: string | null
           aprobado_por?: string | null
           carga_id?: string | null
           created_at?: string
+          descargo_camion?: boolean
           diferencia_efectivo?: number
           efectivo_entregado?: number
           efectivo_esperado?: number
@@ -2703,6 +2709,13 @@ export type Database = {
           vendedor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "descarga_ruta_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "descarga_ruta_aprobado_por_profiles_fkey"
             columns: ["aprobado_por"]
@@ -2841,6 +2854,38 @@ export type Database = {
             columns: ["reemplazo_producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devolucion_motivo_config: {
+        Row: {
+          a_mermas: boolean
+          empresa_id: string
+          id: string
+          motivo: string
+          updated_at: string | null
+        }
+        Insert: {
+          a_mermas?: boolean
+          empresa_id: string
+          id?: string
+          motivo: string
+          updated_at?: string | null
+        }
+        Update: {
+          a_mermas?: boolean
+          empresa_id?: string
+          id?: string
+          motivo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolucion_motivo_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
