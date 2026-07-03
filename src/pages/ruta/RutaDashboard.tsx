@@ -147,8 +147,12 @@ export default function RutaDashboard() {
 
   // Totales del rango
   const ventasActivasRango = ventasFiltradas.filter((v: any) => !isCancelado(v.status));
+  // Separar ventas reales (venta_directa) de pedidos (aún no cerrados / pueden cambiar).
+  const ventasDirectasRango = ventasActivasRango.filter((v: any) => v.tipo !== 'pedido');
+  const pedidosRango = ventasActivasRango.filter((v: any) => v.tipo === 'pedido');
   const entregasFinalizadasRango = entregasFiltradas.filter((e: any) => isEntregaFinalizada(e.status));
-  const ventaIdsRango = useMemo(() => ventasActivasRango.map((v: any) => v.id).filter(Boolean), [ventasActivasRango]);
+  // Utilidad/costo se calculan SOLO sobre ventas reales (no pedidos).
+  const ventaIdsRango = useMemo(() => ventasDirectasRango.map((v: any) => v.id).filter(Boolean), [ventasDirectasRango]);
 
   // Costo de ventas (utilidad bruta) — venta_lineas filtradas por ventas del rango
   const { data: ventaLineasRango } = useOfflineQuery('venta_lineas', { venta_id: ventaIdsRango }, { enabled: ventaIdsRango.length > 0 });
@@ -166,7 +170,8 @@ export default function RutaDashboard() {
     }, 0);
   }, [ventaLineasRango, productoCosto]);
 
-  const totalVentasRango = ventasActivasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+  const totalVentasRango = ventasDirectasRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+  const totalPedidosRango = pedidosRango.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
   const totalGastosRango = gastosFiltrados.reduce((s: number, g: any) => s + (g.monto ?? 0), 0);
   const utilidadBruta = totalVentasRango - costoVentasRango;
   const utilidadNeta = utilidadBruta - totalGastosRango;
@@ -174,7 +179,9 @@ export default function RutaDashboard() {
 
   const rangoTotales = {
     ventas: totalVentasRango,
-    ventasCount: ventasActivasRango.length,
+    ventasCount: ventasDirectasRango.length,
+    pedidos: totalPedidosRango,
+    pedidosCount: pedidosRango.length,
     cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
     gastos: totalGastosRango,
     entregas: entregasFinalizadasRango.length,
@@ -194,10 +201,16 @@ export default function RutaDashboard() {
       <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-4 w-4" />
-          <span className="text-[13px] font-medium opacity-90">Vendido en rango</span>
+          <span className="text-[13px] font-medium opacity-90">Vendido en rango (ventas reales)</span>
         </div>
         <div className="text-[26px] font-bold leading-tight">{fmt(rangoTotales.ventas)}</div>
         <p className="text-[12px] opacity-80">{rangoTotales.ventasCount} ventas · {rangoTotales.clientesVisitados} clientes visitados</p>
+        {rangoTotales.pedidosCount > 0 && (
+          <div className="mt-2 pt-2 border-t border-primary-foreground/20 flex items-center justify-between">
+            <span className="text-[11px] opacity-80">+ {fmt(rangoTotales.pedidos)} en pedidos ({rangoTotales.pedidosCount})</span>
+            <span className="text-[10px] opacity-70">no cerrados · pueden cambiar</span>
+          </div>
+        )}
       </div>
 
 
@@ -313,7 +326,7 @@ export default function RutaDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
                 <div>
-                  <p className="text-[9px] text-muted-foreground">Ventas</p>
+                  <p className="text-[9px] text-muted-foreground">Ventas reales</p>
                   <p className="text-[12px] font-bold text-foreground">{fmt(totalVentasRango)}</p>
                 </div>
                 <div>
@@ -332,8 +345,12 @@ export default function RutaDashboard() {
               <p className="text-[11px] text-muted-foreground font-medium mb-2">Totales del rango</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] text-muted-foreground">Ventas</p>
+                  <p className="text-[10px] text-muted-foreground">Ventas reales</p>
                   <p className="text-[16px] font-bold text-foreground">{fmt(rangoTotales.ventas)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Pedidos <span className="opacity-70">(no cerrados)</span></p>
+                  <p className="text-[16px] font-bold text-warning">{fmt(rangoTotales.pedidos)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground">Cobrado</p>
