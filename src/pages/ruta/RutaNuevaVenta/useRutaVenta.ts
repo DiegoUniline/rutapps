@@ -629,21 +629,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     setSaving(true);
     try {
       const ventaId = crypto.randomUUID();
-      let localFolio = '';
-      // Try to get folio from server first (prevents duplicates between offline vendors)
-      try {
-        const { data: folioData } = await (supabase.rpc as any)('generate_folio', {
-          p_empresa_id: empresa.id,
-          p_tipo: tipoVenta === 'pedido' ? 'PED' : 'VTA',
-        });
-        if (folioData) localFolio = String(folioData);
-      } catch {}
-
-      // Offline fallback: use UUID-based folio, will NOT collide
-      if (!localFolio) {
-        const prefix = tipoVenta === 'pedido' ? 'PED' : 'VTA';
-        localFolio = `${prefix}-${ventaId.slice(0, 8).toUpperCase()}`;
-      }
+      // El folio lo asigna EXCLUSIVAMENTE el trigger de la BD (auto_folio_venta)
+      // al insertar. Es la única fuente confiable y ya es seguro ante
+      // concurrencia (advisory lock por empresa/prefijo).
+      //
+      // Antes se generaba aquí en el cliente y se enviaba ya asignado, por lo
+      // que el trigger lo respetaba y NO lo corregía. Eso producía el desorden:
+      //   - RPC generate_folio (MAX+1 sin lock) → duplicados (p. ej. VTA-4210).
+      //   - Fallback offline `VTA-<hex del uuid>` → folios sin lógica; y si el
+      //     hex salía todo numérico, envenenaba el MAX (folios de 7-8 dígitos).
+      // Ahora enviamos folio=null: estando offline la UI muestra un placeholder
+      // (el id) hasta que sincroniza y el servidor asigna el consecutivo real.
 
       // NOTE: Devoluciones block moved AFTER ventas/venta_lineas enqueue to
       // guarantee parent→child order in the sync queue (avoids FK 23503 on
@@ -681,7 +677,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
       const extraAmtSaved = (totals as any).descuentoExtra ?? 0;
       const extraValSaved = canApplyDiscount && descuentoExtraValor > 0 ? descuentoExtraValor : 0;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
@@ -817,7 +813,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
-      setTicketInfo({ folio: localFolio, fecha: new Date().toLocaleDateString('es-MX') });
+      // El folio real lo asigna el servidor al sincronizar; en el ticket
+      // mostramos una referencia provisional basada en el id de la venta.
+      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 

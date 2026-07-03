@@ -443,6 +443,41 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ── Auto-cerrar solicitudes de pago por transferencia que este cobro ya cubre ──
+        // Escenario: el cliente pidió pagar por transferencia (se creó una fila en
+        // `solicitudes_pago` con status='pendiente') pero el cobro terminó saliendo
+        // por Stripe. Antes esa solicitud quedaba pendiente para siempre y el cliente
+        // seguía viendo "Se activará tu servicio cuando confirmemos el pago por
+        // transferencia" aunque YA había pagado. Aquí la cerramos automáticamente.
+        //
+        // Coincidencia por MONTO EXACTO (centavos) para no cerrar transferencias
+        // legítimas de otro concepto. No mueve dinero: solo actualiza el estado local.
+        try {
+          const montoPagado = invoice.amount_paid ?? invoice.total ?? 0; // centavos
+          if (montoPagado > 0) {
+            const folio = (invoice as any).number || invoice.id;
+            const { data: closed, error: closeErr } = await supabase
+              .from("solicitudes_pago")
+              .update({
+                status: "aprobado",
+                fecha_aprobacion: new Date().toISOString(),
+                notas_admin: `Cubierto automáticamente por pago Stripe ${folio}`,
+              })
+              .eq("empresa_id", empresa_id)
+              .eq("tipo", "suscripcion")
+              .eq("status", "pendiente")
+              .eq("monto_centavos", montoPagado)
+              .select("id");
+            if (closeErr) {
+              log("Auto-cierre solicitudes error", closeErr.message);
+            } else if (closed?.length) {
+              log("Solicitudes transferencia auto-cerradas", { empresa_id, count: closed.length, folio });
+            }
+          }
+        } catch (e) {
+          console.error("[STRIPE-WEBHOOK] Auto-cierre de solicitudes falló:", e);
+        }
+
         log("Access renewed via invoice", { empresa_id, venc, meses, planIdMeta, descPermanente });
 
         // ── Notify client + admins (real-time, per attempt) ──

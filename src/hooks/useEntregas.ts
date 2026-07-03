@@ -497,7 +497,9 @@ export function useVendedoresList() {
     queryKey: ['vendedores-list', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      // Solo usuarios activos: los dados de baja/archivados no deben poder
+      // elegirse al crear/asignar entregas (solo aparecen en Usuarios → Baja).
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
     },
   });
