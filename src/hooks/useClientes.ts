@@ -6,9 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
+import { enrichClientes } from '@/lib/catalogEnrich';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
+
 
 /** Paginated clients for list views. When fetchAll=true, returns all matching rows (used for grouping). */
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string, fetchAll = false) {
