@@ -5,7 +5,7 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
-import { enrichProductos } from '@/lib/catalogEnrich';
+import { enrichProductos, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
@@ -433,6 +433,7 @@ export function useProductosForSelect() {
         .eq('status', 'activo')
         .order('nombre')
         .range(from, to));
+      await ensureCatalogsForEnrich(qc, empresa!.id);
       return enrichProductos(rows ?? [], qc, empresa!.id);
     },
   });
