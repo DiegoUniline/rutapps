@@ -198,22 +198,33 @@ function TotalesCard({ venta, fmt, s, showTax, setShowTax }: { venta: any; fmt: 
   );
 }
 
-function BottomActions({ venta, initCobrar, fmt }: Props & { s: string }) {
+function BottomActions({ venta, initCobrar, onBack, fmt }: Props & { s: string }) {
   const { hasPermisoMovil } = usePermisos();
   const canCobrar = hasPermisoMovil('ruta.cobrar');
-  if (!canCobrar || (venta.saldo_pendiente ?? 0) <= 0 || venta.status === 'cancelado') return null;
+  const showCobrar = canCobrar && (venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado';
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-      <button
-        onClick={initCobrar}
-        className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"
-      >
-        <Banknote className="h-5 w-5" /> Cobrar {fmt(venta.saldo_pendiente ?? 0)}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={onBack}
+          className={`${showCobrar ? 'flex-1' : 'w-full'} bg-card border border-border text-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5`}
+        >
+          <ArrowLeft className="h-5 w-5" /> Salir
+        </button>
+        {showCobrar && (
+          <button
+            onClick={initCobrar}
+            className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"
+          >
+            <Banknote className="h-5 w-5" /> Cobrar {fmt(venta.saldo_pendiente ?? 0)}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
+
 
 function CancelModal({
   open, onClose, venta, lineas, saving, handleCancelar, fmt,
