@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,9 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
   const [referencia, setReferencia] = useState('');
   const [fecha, setFecha] = useState<string>(() => todayInTimezone(empresa?.zona_horaria));
   const [saving, setSaving] = useState(false);
+  // Guardia síncrona: evita que un doble-clic (antes de que el botón se
+  // deshabilite por re-render) registre el cobro dos veces.
+  const savingRef = useRef(false);
 
   const montoNum = roundMoney(Math.max(0, Number(monto) || 0));
   const exceedsSaldo = montoNum > saldo;
@@ -42,6 +45,8 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
   const submit = async () => {
     if (!user || !empresa?.id) return;
     if (montoNum <= 0) { toast.error('Monto inválido'); return; }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const aplicado = Math.min(montoNum, saldo);
@@ -80,6 +85,7 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
       toast.error(e?.message ?? 'Error al registrar el cobro');
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
