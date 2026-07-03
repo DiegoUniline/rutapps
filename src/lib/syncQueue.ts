@@ -26,36 +26,29 @@ export async function queueOperation(
   keyField: string = 'id',
 ) {
   const keyValue = data[keyField];
-
-  // 1. Update local IndexedDB immediately
   const localTable = getOfflineTable(table);
-  if (localTable) {
-    if (operation === 'delete') {
-      await localTable.delete(keyValue);
-    } else {
-      await localTable.put(data);
+
+  // El put local + el encolado deben ser ATÓMICOS: si el put pasa pero el enqueue
+  // falla (cuota de IndexedDB, etc.), la venta se vería en pantalla pero nunca
+  // subiría (pérdida silenciosa). Se hacen dentro de una sola transacción.
+  const enqueue = async () => {
+    if (localTable) {
+      if (operation === 'delete') await localTable.delete(keyValue);
+      else await localTable.put(data);
     }
-  }
-
-  // 2. Deduplicate: if same table+key+operation pending, replace data
-  const existing = await offlineDb.syncQueue
-    .where('table').equals(table)
-    .filter(item => item.keyValue === keyValue && item.operation === operation)
-    .first();
-
-  if (existing && existing.id) {
-    await offlineDb.syncQueue.update(existing.id, { data, createdAt: Date.now(), retries: 0 });
-  } else {
-    await offlineDb.syncQueue.add({
-      table,
-      operation,
-      data,
-      keyField,
-      keyValue,
-      createdAt: Date.now(),
-      retries: 0,
-    });
-  }
+    // Deduplicate: if same table+key+operation pending, replace data
+    const existing = await offlineDb.syncQueue
+      .where('table').equals(table)
+      .filter(item => item.keyValue === keyValue && item.operation === operation)
+      .first();
+    if (existing && existing.id) {
+      await offlineDb.syncQueue.update(existing.id, { data, createdAt: Date.now(), retries: 0 });
+    } else {
+      await offlineDb.syncQueue.add({ table, operation, data, keyField, keyValue, createdAt: Date.now(), retries: 0 });
+    }
+  };
+  const txTables: any[] = localTable ? [localTable, offlineDb.syncQueue] : [offlineDb.syncQueue];
+  await offlineDb.transaction('rw', txTables, enqueue);
 
   // 3. Try to sync immediately if online AND auto-sync is enabled AND data saver is off
   const autoSync = localStorage.getItem('uniline_auto_sync');
@@ -71,7 +64,17 @@ export async function queueOperation(
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
   if (activeProcessPromise) return activeProcessPromise;
 
-  activeProcessPromise = processSyncQueueInternal().finally(() => {
+  // Candado ENTRE PESTAÑAS: si el vendedor tiene 2 pestañas/instancias abiertas,
+  // solo una procesa la cola a la vez (evita trabajo doble y carreras). Los datos
+  // no se duplicarían igual (upsert idempotente), pero esto lo hace limpio.
+  const run = () => processSyncQueueInternal();
+  activeProcessPromise = (async () => {
+    const locks = (navigator as any)?.locks;
+    if (locks?.request) {
+      return await locks.request('uniline-sync-queue', { mode: 'exclusive' }, run);
+    }
+    return await run();
+  })().finally(() => {
     activeProcessPromise = null;
   });
   return activeProcessPromise;
@@ -159,28 +162,55 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      if (isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet) {
+      // TRANSITORIO (red caída, timeout, 5xx, sin conexión): NO es culpa del dato.
+      // Reintentar indefinidamente con backoff SIN gastar el presupuesto de
+      // dead-letter → una venta/cobro nunca se marca "muerto" por mala señal.
+      const httpStatus = err?.status ?? err?.originalError?.status;
+      const isTransient = !err?.code && (
+        httpStatus === undefined || httpStatus === 0 || httpStatus >= 500 || httpStatus === 408 || httpStatus === 429 ||
+        /failed to fetch|network\s?error|networkerror|timeout|load failed|fetch failed|ECONN|ENOTFOUND|dns/i.test(errorMsg)
+      );
+      // DIFERIBLE (el padre aún no sincroniza / RLS en cascada): esperar al padre,
+      // pero CON TOPE — si tras N intentos el padre nunca llega, mandar a dead-letter
+      // (antes giraba para siempre y el badge de fallidos nunca se limpiaba).
+      const isDeferrable = isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet;
+
+      if (isTransient) {
         await offlineDb.syncQueue.update(item.id!, {
-          retries: newRetries,
-          createdAt: Date.now() + 1000,
-          lastError: errorMsg,
-          lastAttemptAt: Date.now(),
-        });
-        if (item.id) deferredIds.push(item.id);
-      } else if (isNotFound || newRetries >= MAX_RETRIES) {
-        console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
-        await offlineDb.syncQueue.update(item.id!, {
-          retries: MAX_RETRIES + 1,
+          retries: Math.min(newRetries, MAX_RETRIES), // acota el backoff; nunca marca dead-letter
           createdAt: Date.now(),
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
+        });
+        // No cuenta como "failed": está esperando red, no falló el dato.
+        return { handled: true };
+      }
+
+      if (isDeferrable) {
+        if (newRetries >= MAX_RETRIES) {
+          console.error(`Huérfano ${item.table}/${item.id}: el padre no llegó tras ${MAX_RETRIES} intentos → dead-letter`);
+          await offlineDb.syncQueue.update(item.id!, {
+            retries: MAX_RETRIES + 1, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
+          });
+          failed++;
+        } else {
+          await offlineDb.syncQueue.update(item.id!, {
+            retries: newRetries, createdAt: Date.now() + 1000, lastError: errorMsg, lastAttemptAt: Date.now(),
+          });
+          if (item.id) deferredIds.push(item.id);
+          // Diferido a la espera del padre: no cuenta como "failed" todavía.
+        }
+        return { handled: true };
+      }
+
+      if (isNotFound || newRetries >= MAX_RETRIES) {
+        console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: MAX_RETRIES + 1, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
         });
       } else {
         await offlineDb.syncQueue.update(item.id!, {
-          retries: newRetries,
-          createdAt: Date.now(),
-          lastError: errorMsg,
-          lastAttemptAt: Date.now(),
+          retries: newRetries, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
         });
       }
       failed++;
@@ -204,8 +234,11 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
     }
   }
 
-  // Clear backup if everything succeeded
-  if (failed === 0 && success > 0) {
+  // Limpiar el respaldo SOLO cuando la cola quedó completamente vacía (nada
+  // pendiente ni diferido). Antes se limpiaba con failed===0 aunque quedaran
+  // ítems diferidos → se perdía la red de seguridad con cosas aún sin subir.
+  const remaining = await offlineDb.syncQueue.count();
+  if (remaining === 0) {
     clearStorageBackup();
   }
 

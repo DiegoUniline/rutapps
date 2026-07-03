@@ -6,7 +6,6 @@
 // rely on the host CDN's cache headers so new deploys appear immediately.
 
 let registered = false;
-let controllerListenerAttached = false;
 
 function isRefusedContext(): boolean {
   if (!import.meta.env.PROD) return true;
@@ -47,17 +46,6 @@ async function unregisterAppSW() {
   }
 }
 
-async function clearAppShellCaches() {
-  if (!("caches" in window)) return;
-  try {
-    const names = await caches.keys();
-    const toDelete = names.filter((n) => /precache-v\d+|workbox-|html-pages|static-assets/.test(n));
-    await Promise.all(toDelete.map((n) => caches.delete(n)));
-  } catch {
-    // ignore
-  }
-}
-
 /**
  * Register the PWA service worker. Safe to call multiple times.
  * Refuses to register in dev, Lovable preview, iframes, or with ?sw=off.
@@ -75,11 +63,19 @@ export async function registerAppSW() {
 
   try {
     const { registerSW } = await import("virtual:pwa-register");
-    const { notifyAppUpdateAvailable, refreshAppVersion } = await import('@/lib/appUpdate');
+    const { notifyAppUpdateAvailable } = await import('@/lib/appUpdate');
 
-    // Auto-apply the update when it's safe (no input focused, no open modal/dialog,
-    // no dirty form). Otherwise notify and try again later. This way published
-    // changes appear without users needing to Ctrl+Shift+R.
+    // updateSW(true) = método LIMPIO y rápido: le dice al worker nuevo que active
+    // (skipWaiting) y recarga la página cuando toma control. Cambia el shell
+    // COMPLETO (index.html + chunks) de golpe a la versión nueva. No borra el
+    // offline (a diferencia del refresh pesado anterior).
+    let updateSWFn: ((reloadPage?: boolean) => Promise<void>) | null = null;
+
+    // Solo evitamos auto-recargar si el usuario está CAPTURANDO (input enfocado o
+    // un diálogo abierto), para no interrumpir una venta a medias. En ese caso se
+    // reintenta cada pocos segundos: en cuanto suelta el teclado, se actualiza.
+    // Ya NO se bloquea /ruta: el vendedor también debe tener siempre la última
+    // versión (la cola offline sobrevive a la recarga, no se pierde nada).
     const isSafeToReload = (): boolean => {
       try {
         const ae = document.activeElement as HTMLElement | null;
@@ -88,12 +84,9 @@ export async function registerAppSW() {
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
           if (ae.isContentEditable) return false;
         }
-        // Any open Radix dialog / sheet / popover means the user is mid-task.
         if (document.querySelector('[role="dialog"][data-state="open"], [data-state="open"][role="alertdialog"]')) {
           return false;
         }
-        // Mobile route view: never auto-reload (they may be offline capturing sales).
-        if (location.pathname.startsWith('/ruta')) return false;
         return true;
       } catch {
         return false;
@@ -105,54 +98,38 @@ export async function registerAppSW() {
       if (autoApplyTimer != null) return;
       const tick = () => {
         autoApplyTimer = null;
-        if (isSafeToReload()) {
-          refreshAppVersion().catch(() => {});
+        if (isSafeToReload() && updateSWFn) {
+          updateSWFn(true).catch(() => {});
         } else {
-          // Try again in 30s while still showing the manual prompt as fallback.
-          autoApplyTimer = window.setTimeout(tick, 30_000);
+          // Reintentar pronto: en cuanto el vendedor deje de escribir, se aplica.
+          autoApplyTimer = window.setTimeout(tick, 5_000);
         }
       };
-      autoApplyTimer = window.setTimeout(tick, 2_000);
+      autoApplyTimer = window.setTimeout(tick, 1_500);
     };
 
-    const updateSW = registerSW({
+    updateSWFn = registerSW({
       immediate: false,
       onNeedRefresh() {
-        notifyAppUpdateAvailable();
-        scheduleAutoApply();
+        notifyAppUpdateAvailable(); // banner de respaldo por si acaso
+        scheduleAutoApply();        // pero se auto-aplica solo, casi al instante
       },
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
         const check = () => registration.update().catch(() => {});
-        // Polling: setInterval gets throttled/paused on mobile background,
-        // so we keep it short AND add several event-driven triggers below.
+        // setInterval se frena en background móvil, por eso además hay triggers
+        // por evento (foco, reconexión, reapertura de la PWA).
         setInterval(check, 30_000);
         window.addEventListener('focus', check);
         window.addEventListener('online', check);
-        // pageshow fires when the PWA is brought back from the bfcache on
-        // mobile (the common "reopen the app icon" path on iOS/Android).
         window.addEventListener('pageshow', check);
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') check();
         });
-        // Allow any component to force a check (e.g. the mobile sync button,
-        // route changes, the "Eye" version button).
         window.addEventListener('uniline:check-sw-update', check);
-        // Expose for ad-hoc debugging.
         (window as any).__checkSWUpdate = check;
       },
     });
-
-    // If a new worker takes control after the user accepts the update, remove
-    // only the app-shell caches. Do not auto-reload here; active forms/POS stay usable.
-    if (!controllerListenerAttached) {
-      controllerListenerAttached = true;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        clearAppShellCaches().catch(() => {});
-      });
-    }
-
-    void updateSW;
   } catch (err) {
     console.warn("[pwa] SW registration skipped:", err);
   }
