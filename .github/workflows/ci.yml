@@ -42,6 +42,13 @@ jobs:
       - name: Tests (vitest)
         run: npm test
 
+      # Chequeo de tipos ESTRICTO sobre la lógica crítica (dinero/inventario).
+      # Obligatorio: si un cambio rompe la seguridad de tipos de ese núcleo, el
+      # PR se pone rojo. Se agregan más archivos a tsconfig.strict.json conforme
+      # se van limpiando (Fase 2 hacia estricto global).
+      - name: Typecheck estricto (núcleo crítico)
+        run: npm run typecheck:strict
+
       - name: Build (vite)
         run: npm run build
 
