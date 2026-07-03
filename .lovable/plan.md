@@ -1,55 +1,35 @@
+# Unificar ticket impreso de "Nueva venta" con el de "Detalle de venta"
 
-## Diagnóstico
+## Problema
 
-Los 2 errores del screenshot vienen del **orden** en que se encolan las operaciones al guardar una venta con devoluciones en `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`:
+El ticket impreso desde `/ruta/ventas/nueva` (al terminar una venta) no coincide con el impreso desde `/ruta/ventas/:id` (detalle). Ambas rutas ya usan `printTicket(td)` de `src/lib/printTicketUtil.ts`, así que el HTML/ESC-POS base es el mismo. Las diferencias vienen de **cómo se arma el `TicketData`** y del **ancho por defecto**.
 
-```
-queueOperation('devoluciones', insert, { venta_id: ventaId, … })   ← línea 626
-queueOperation('devolucion_lineas', insert, { devolucion_id, … })  ← línea 629
-… (más items) …
-queueOperation('ventas', insert, { id: ventaId, … })               ← línea 734
-queueOperation('venta_lineas', …)                                  ← línea 737
-```
+## Diferencias detectadas
 
-El `syncQueue` procesa por `createdAt` ascendente, así que en el primer pase:
+| Campo | Detalle (`useVentaDetalle.getTicketData`) | Nueva venta (`RutaNuevaVenta.handlePrintTicket`) |
+|---|---|---|
+| `ticketAncho` default | `empresa.ticket_ancho ?? '58'` | `empresa.ticket_ancho ?? '80'` |
+| `fecha` | `fmtDate(venta.fecha)` (DD/MM/YYYY) | `ticketInfo.fecha` crudo |
+| `descuento` | `venta.descuento_total ?? 0` | ausente |
+| `devoluciones` | array completo desde BD | ausente en `printTicket` (sí está en pantalla) |
+| `saldoNuevo` | `saldoAnterior + saldoPendiente` cuando > 0, si no `undefined` | fórmula distinta que suma condicional |
+| `pagos[].referencia` | incluido | ausente |
+| líneas | `descuento_pct` desde `descuento_porcentaje` | siempre `0` |
 
-1. **`devoluciones`** se envía **antes** que `ventas` → Postgres rechaza con `23503` (FK `devoluciones_venta_id_fkey`) porque la venta aún no existe en el servidor. Se difiere correctamente (`isFkMissing`), pero **queda con `createdAt = Date.now() + 1000`**.
-2. **`devolucion_lineas`** se envía antes que su padre devolución exista en servidor → `42501` RLS. También se difiere.
-3. La `ventas` sí se sube bien y desaparece de la cola — por eso en el screenshot **solo quedan** la devolución y su línea.
+## Cambios (solo `src/pages/ruta/RutaNuevaVenta/index.tsx`)
 
-A partir de ahí el reintento automático **no se vuelve a disparar** solo: `processSyncQueue()` arranca por `queueOperation` (no hay más) o por `useOnlineReconnect` (no hay cambio de red). El usuario está online y mirando la página, pero no pasa nada — por eso ves "Intentos: 1, hace 55s" permanentes. El stock sí se restauró porque ese path es el trigger BD sobre `devolucion_lineas`, pero aplicado **localmente** en IndexedDB; en servidor sigue pendiente.
+Modificar únicamente `handlePrintTicket` (la vista `TicketVenta` en pantalla no se toca):
 
-## Plan de corrección (mínimo, sin tocar UI ni lógica de negocio)
+1. Cambiar el default de `ticketAncho` de `'80'` a `'58'` para el ticket impreso (mantener `'80'` solo si `empresa.ticket_ancho` así lo indica).
+2. Formatear `fecha` con `fmtDate(...)` igual que detalle.
+3. Añadir `descuento: h.totals.descuentoDevolucion ?? 0` y `devoluciones` mapeando `h.devoluciones` con la misma forma que detalle.
+4. Recalcular `saldoNuevo` con la misma regla: `(saldoAnterior + saldoRestanteDeEstaVenta) > 0 ? esa suma : undefined`.
+5. Añadir `referencia` a cada `pago`.
+6. En las líneas, mantener el resto pero dejarlas listas para incluir `descuento_pct` si en el futuro se agrega (por ahora sigue en 0, aquí no hay descuentos por línea manuales).
 
-### 1) `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` — orden de encolado
-Mover el bloque `if (devoluciones.length > 0 && clienteId) { … }` (líneas 623–700) para que se ejecute **después** del `queueOperation('ventas', 'insert', …)` de la línea 734 (y también después del loop de `venta_lineas` para mantener coherencia padre→hijo). Así el primer pase ya encuentra la venta en servidor y la devolución entra a la primera.
+Nada más se toca: ni la UI de `TicketVenta` en pantalla, ni la lógica de guardado, ni los cálculos de totales, ni los otros pasos del wizard.
 
-No se cambia ningún cálculo, ni el restablecimiento de stock local, ni el contenido de los payloads — solo se reordena la inserción en la cola.
+## Cómo verificar
 
-### 2) `src/lib/syncQueue.ts` — orden topológico padre→hijo
-Antes de iterar `items`, ordenar usando una prioridad por tabla (padres primero), con `createdAt` como desempate:
-
-```
-PRIORIDAD: ventas, cargas, devoluciones, cobros, entregas, compras, cotizaciones, traspasos, mermas, descarga_ruta, cfdis, conteos_fisicos, auditorias, ...
-HIJOS:     venta_lineas, carga_lineas, devolucion_lineas, cobro_aplicaciones, entrega_lineas, compra_lineas, ...
-```
-
-Esto cubre cualquier futuro path donde alguien encole un hijo antes del padre sin que el síncer se atore.
-
-### 3) `src/lib/syncQueue.ts` — reintento inmediato dentro del mismo pase
-Cuando un item se difiere por `isFkMissing` o RLS y dentro del **mismo pase** se sincroniza un item de la tabla padre que faltaba, hacer un segundo barrido de los items diferidos al final del loop. Evita esperar 30s a la siguiente ventana.
-
-### 4) `src/pages/ruta/PendientesSincronizarPage.tsx` — re-trigger periódico
-Mientras la página esté visible y haya items, llamar `processSyncQueue()` cada 15s si `isOnline`. Es un seguro para casos viejos ya en cola por bugs anteriores, sin requerir que el usuario presione "Reintentar todo".
-
-### Recuperación de los 2 items del screenshot
-Tras subir el fix, esos 2 items se reintentan solos en el siguiente pase (paso 4) o al tocar "Reintentar todo". No requieren limpieza manual: la venta ya existe en servidor, así que la devolución y su línea pasarán a la primera.
-
-## Detalles técnicos
-
-- Solo se editan 2 archivos de lógica (`useRutaVenta.ts`, `syncQueue.ts`) y 1 de UI mínima (`PendientesSincronizarPage.tsx`).
-- Nada cambia en el esquema BD, RLS, triggers ni en los componentes de devoluciones.
-- El restablecimiento de stock al almacén del vendedor sigue idéntico (lo aplica el trigger BD `trg_apply_devolucion_linea_inventory` cuando la línea sube; localmente ya se reflejó vía IndexedDB).
-- Se bumpea `src/version.ts` para forzar refresco PWA.
-
-¿Procedo?
+1. Terminar una venta desde `/ruta/ventas/nueva` → botón "Imprimir" → el ticket impreso/PDF debe tener el mismo layout, ancho y bloques (Saldo Anterior/Nuevo, devoluciones, pagos con referencia, descuento) que el que sale desde `/ruta/ventas/:id` → "Imprimir".
+2. La pantalla verde de éxito (`TicketVenta`) sigue viéndose igual — no se modifica.
