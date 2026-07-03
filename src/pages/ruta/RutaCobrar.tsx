@@ -1,5 +1,5 @@
 import { todayLocal } from '@/lib/utils';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,6 +55,10 @@ export default function RutaCobrar() {
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
+  // Guardia síncrona contra doble-envío: setSaving() re-renderiza con retraso,
+  // así que un doble-toque rápido (u offline sin feedback) alcanzaba a crear
+  // dos cobros distintos. El ref bloquea la segunda llamada de inmediato.
+  const savingRef = useRef(false);
 
   // Offline-compatible: read clients and ventas from local cache
   const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
@@ -189,6 +193,8 @@ export default function RutaCobrar() {
       toast.error(`Saldo a favor insuficiente. Disponible: ${fmtC(saldoFavorDisp)}`);
       return;
     }
+    if (savingRef.current) return;   // ya hay un cobro en curso → ignora el doble-toque
+    savingRef.current = true;
     setSaving(true);
     try {
       const cobroId = crypto.randomUUID();
@@ -226,6 +232,7 @@ export default function RutaCobrar() {
       toast.error(err.message);
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
