@@ -52,7 +52,8 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [lRes, pRes, tRes] = await Promise.all([
+      const eidLoad = empresaId || venta.empresa_id;
+      const [lRes, pRes, tRes, cRes, plRes] = await Promise.all([
         supabase
           .from('venta_lineas')
           .select('id, cantidad, precio_unitario, descuento_pct, subtotal, iva_monto, ieps_monto, total, producto_id, unidad_id, lista_precio_id, precio_manual, productos(nombre, es_granel, unidad_granel, unidades_venta:unidades!unidad_venta_id(abreviatura, nombre)), unidades(abreviatura, nombre), lista_precios(nombre, es_principal)')
@@ -66,11 +67,25 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
         venta.tarifa_id
           ? supabase.from('tarifas').select('nombre').eq('id', venta.tarifa_id).maybeSingle()
           : Promise.resolve({ data: null } as any),
+        // Lista de precio asignada al cliente (las ventas de ruta no guardan
+        // lista_precio_id por línea, así que sin esto la columna "Lista" queda vacía).
+        venta.cliente_id
+          ? supabase.from('clientes').select('lista_precios(nombre)').eq('id', venta.cliente_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        // Último respaldo: la lista principal de la empresa.
+        eidLoad
+          ? supabase.from('lista_precios').select('nombre').eq('empresa_id', eidLoad).eq('es_principal', true).eq('activa', true).order('created_at').limit(1)
+          : Promise.resolve({ data: null } as any),
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
         setPagos(pRes.data ?? []);
-        setVentaListaNombre((tRes as any)?.data?.nombre ?? null);
+        // Cadena de respaldo del nombre de la lista: tarifa de la venta →
+        // lista del cliente → lista principal de la empresa.
+        const tarifaNombre = (tRes as any)?.data?.nombre ?? null;
+        const clienteListaNombre = (cRes as any)?.data?.lista_precios?.nombre ?? null;
+        const principalNombre = (plRes as any)?.data?.[0]?.nombre ?? null;
+        setVentaListaNombre(tarifaNombre ?? clienteListaNombre ?? principalNombre ?? null);
         setLoading(false);
       }
     }
