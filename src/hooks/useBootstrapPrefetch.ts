@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { enrichClientes, enrichProductos } from '@/lib/catalogEnrich';
 
 /**
  * Bootstrap prefetch: on login, pre-warm React Query cache with all base catalogs
@@ -23,7 +24,14 @@ export function useBootstrapPrefetch() {
     // Catálogos LIGEROS (tablas chicas): se precargan de inmediato. Poblan el
     // caché de React Query para que useVendedores(), useAlmacenes(), etc.
     // encuentren los datos ya listos.
-    void Promise.all([
+    //
+    // IMPORTANTE: los catálogos ligeros deben resolverse ANTES que los pesados
+    // (productos/clientes), porque estos últimos ya no piden los joins de
+    // nombres (zonas/listas/vendedores/cobradores/tarifas/unidades) desde
+    // Postgres — los resuelven en el cliente con estos catálogos. Ver
+    // src/lib/catalogEnrich.ts. Esto quita LEFT JOIN LATERAL x5/x6 en la BD
+    // (slow queries #4 y #8) sin cambiar la forma de las filas.
+    const lightCatalogsReady = Promise.all([
       qc.prefetchQuery({
         queryKey: ['vendedores', eid],
         staleTime: CATALOG_STALE_TIME,
@@ -88,6 +96,16 @@ export function useBootstrapPrefetch() {
           return data ?? [];
         },
       }),
+      // Tarifas: se piden aquí (además de useTarifasForSelect) porque
+      // enrichClientes las lee para resolver `cliente.tarifas.nombre`.
+      qc.prefetchQuery({
+        queryKey: ['tarifas-select', eid],
+        staleTime: CATALOG_STALE_TIME,
+        queryFn: async () => {
+          const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', eid).eq('activa', true).order('nombre');
+          return data ?? [];
+        },
+      }),
     ]);
 
     // Catálogos PESADOS (productos y clientes): pueden ser miles de filas. Se
@@ -101,29 +119,33 @@ export function useBootstrapPrefetch() {
           queryKey: ['productos-select', eid],
           staleTime: CATALOG_STALE_TIME,
           queryFn: async () => {
-            return fetchAllPages((from, to) =>
+            // Esperar a los catálogos ligeros para poder enriquecer con nombres.
+            await lightCatalogsReady;
+            const rows = await fetchAllPages<any>((from, to) =>
               supabase.from('productos')
-                .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
+                .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos')
                 .eq('empresa_id', eid)
                 .eq('status', 'activo')
                 .order('nombre')
                 .range(from, to)
             );
+            return enrichProductos(rows, qc, eid);
           },
         }),
         qc.prefetchQuery({
           queryKey: ['clientes', eid, '', 'activo'],
           staleTime: CATALOG_STALE_TIME,
           queryFn: async () => {
-            const data = await fetchAllPages((from, to) =>
+            await lightCatalogsReady;
+            const rows = await fetchAllPages<any>((from, to) =>
               supabase.from('clientes')
-                .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
+                .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
                 .eq('empresa_id', eid)
                 .eq('status', 'activo')
                 .order('orden', { ascending: true })
                 .range(from, to)
             );
-            return data ?? [];
+            return enrichClientes(rows, qc, eid);
           },
         }),
       ]);
@@ -143,3 +165,4 @@ export function useBootstrapPrefetch() {
     };
   }, [empresa?.id, qc]);
 }
+
