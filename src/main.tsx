@@ -4,6 +4,10 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
+import { initObservability } from "./lib/observability";
+
+// Monitoreo de errores en producción (no-op si no hay VITE_SENTRY_DSN).
+initObservability();
 
 // Start auto-backup of pending sync items & restore if needed
 restoreFromStorageBackup().then(count => {

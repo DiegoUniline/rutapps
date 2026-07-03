@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, Re
 import { supabase } from '@/lib/supabase';
 import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
+import { setObservabilityUser } from '@/lib/observability';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
 
@@ -186,6 +187,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch { /* ignore */ }
   }, [realEmpresa, user?.id]);
+
+  // Asociar usuario/empresa (solo IDs, sin datos personales) al monitoreo de
+  // errores para depurar incidentes en producción.
+  useEffect(() => {
+    setObservabilityUser(user?.id ?? null, empresa?.id ?? null);
+  }, [user?.id, empresa?.id]);
 
   const initialisedRef = useRef(false);
 
