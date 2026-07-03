@@ -59,14 +59,19 @@ export function useDashboardVentaLineasIS(range: DateRange, vendedorId?: string)
         if (vendedorId) q = q.eq('ventas.vendedor_id', vendedorId);
         return q;
       });
-      // Fetch costos for involved productos
+      // Fetch costos for involved productos. Los batches se piden EN PARALELO
+      // (antes iban en serie, uno esperando al anterior) → el estado de
+      // resultados carga más rápido. Mismo resultado (mismo costMap).
       const ids = Array.from(new Set(lineas.map((l: any) => l.producto_id).filter(Boolean)));
       const costMap = new Map<string, number>();
-      for (let i = 0; i < ids.length; i += 500) {
-        const batch = ids.slice(i, i + 500);
-        const { data: prods } = await supabase.from('productos').select('id, costo').in('id', batch);
-        (prods ?? []).forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0));
-      }
+      const batches: string[][] = [];
+      for (let i = 0; i < ids.length; i += 500) batches.push(ids.slice(i, i + 500));
+      const results = await Promise.all(
+        batches.map((batch) => supabase.from('productos').select('id, costo').in('id', batch))
+      );
+      results.forEach(({ data: prods }) =>
+        (prods ?? []).forEach((p: any) => costMap.set(p.id, Number(p.costo) || 0))
+      );
       return { lineas, costMap };
     },
   });
