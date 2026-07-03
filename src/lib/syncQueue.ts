@@ -4,6 +4,7 @@ import { markAsSynced } from './syncVerify';
 import { isDataSaverEnabled } from './dataSaver';
 import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
 import { hasRealConnection } from './connectivity';
+import { classifySyncError } from './syncErrorClassify';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -146,15 +147,6 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       console.error(`Sync failed for ${item.table}/${item.operation}:`, err);
 
       const isConflict = err?.code === '23505';
-      const isFkMissing = err?.code === '23503';
-      const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
-      // Update cuya fila destino aún no existe (su insert no ha sincronizado):
-      // se difiere y reintenta, NO se pierde ni se manda a dead-letter de inmediato.
-      const isRowNotYet = err?.code === 'ROW_NOT_YET';
-      const CHILD_TABLES_RLS_DEFER = ['devoluciones', 'devolucion_lineas', 'venta_lineas', 'entrega_lineas', 'cobro_aplicaciones', 'compra_lineas', 'cotizacion_lineas', 'merma_lineas', 'traspaso_lineas', 'carga_lineas', 'descarga_ruta_lineas', 'cfdi_lineas', 'movimientos_inventario'];
-      const isRlsViolation = err?.code === '42501' && CHILD_TABLES_RLS_DEFER.includes(item.table);
-      const isDevolucionEnumIssue = (err?.code === '22P02' || err?.code === '23514') && (item.table === 'devoluciones' || item.table === 'devolucion_lineas');
-
       const newRetries = (item.retries ?? 0) + 1;
       const errorMsg = (err?.message || err?.error_description || String(err)).slice(0, 300);
 
@@ -162,57 +154,53 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
         console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
 
-      // TRANSITORIO (red caída, timeout, 5xx, sin conexión): NO es culpa del dato.
-      // Reintentar indefinidamente con backoff SIN gastar el presupuesto de
-      // dead-letter → una venta/cobro nunca se marca "muerto" por mala señal.
-      const httpStatus = err?.status ?? err?.originalError?.status;
-      const isTransient = !err?.code && (
-        httpStatus === undefined || httpStatus === 0 || httpStatus >= 500 || httpStatus === 408 || httpStatus === 429 ||
-        /failed to fetch|network\s?error|networkerror|timeout|load failed|fetch failed|ECONN|ENOTFOUND|dns/i.test(errorMsg)
-      );
-      // DIFERIBLE (el padre aún no sincroniza / RLS en cascada): esperar al padre,
-      // pero CON TOPE — si tras N intentos el padre nunca llega, mandar a dead-letter
-      // (antes giraba para siempre y el badge de fallidos nunca se limpiaba).
-      const isDeferrable = isFkMissing || isRlsViolation || isDevolucionEnumIssue || isRowNotYet;
+      // Decisión centralizada en una función PURA (testeada en syncQueueClassify.test.ts).
+      const action = classifySyncError({ err, table: item.table, newRetries, maxRetries: MAX_RETRIES });
 
-      if (isTransient) {
+      if (action === 'transient') {
+        // Falla de RED: reintentar con backoff acotado, SIN gastar el presupuesto
+        // de dead-letter. No cuenta como "failed": una venta/cobro nunca se pierde
+        // por mala señal.
         await offlineDb.syncQueue.update(item.id!, {
-          retries: Math.min(newRetries, MAX_RETRIES), // acota el backoff; nunca marca dead-letter
+          retries: Math.min(newRetries, MAX_RETRIES),
           createdAt: Date.now(),
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
-        // No cuenta como "failed": está esperando red, no falló el dato.
         return { handled: true };
       }
 
-      if (isDeferrable) {
-        if (newRetries >= MAX_RETRIES) {
-          console.error(`Huérfano ${item.table}/${item.id}: el padre no llegó tras ${MAX_RETRIES} intentos → dead-letter`);
-          await offlineDb.syncQueue.update(item.id!, {
-            retries: MAX_RETRIES + 1, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
-          });
-          failed++;
-        } else {
-          await offlineDb.syncQueue.update(item.id!, {
-            retries: newRetries, createdAt: Date.now() + 1000, lastError: errorMsg, lastAttemptAt: Date.now(),
-          });
-          if (item.id) deferredIds.push(item.id);
-          // Diferido a la espera del padre: no cuenta como "failed" todavía.
-        }
+      if (action === 'defer') {
+        // El padre aún no sincroniza: reintentar en el segundo barrido de la pasada.
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: newRetries,
+          createdAt: Date.now() + 1000,
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
+        });
+        if (item.id) deferredIds.push(item.id);
+        return { handled: true }; // aún no cuenta como "failed"
+      }
+
+      if (action === 'dead-letter') {
+        console.error(`Item ${item.table}/${item.id} → dead-letter: ${errorMsg}`);
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: MAX_RETRIES + 1,
+          createdAt: Date.now(),
+          lastError: errorMsg,
+          lastAttemptAt: Date.now(),
+        });
+        failed++;
         return { handled: true };
       }
 
-      if (isNotFound || newRetries >= MAX_RETRIES) {
-        console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
-        await offlineDb.syncQueue.update(item.id!, {
-          retries: MAX_RETRIES + 1, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
-        });
-      } else {
-        await offlineDb.syncQueue.update(item.id!, {
-          retries: newRetries, createdAt: Date.now(), lastError: errorMsg, lastAttemptAt: Date.now(),
-        });
-      }
+      // 'retry': error de dato desconocido, aún con reintentos disponibles.
+      await offlineDb.syncQueue.update(item.id!, {
+        retries: newRetries,
+        createdAt: Date.now(),
+        lastError: errorMsg,
+        lastAttemptAt: Date.now(),
+      });
       failed++;
       return { handled: true };
     }
