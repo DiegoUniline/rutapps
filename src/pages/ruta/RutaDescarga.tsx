@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +12,7 @@ import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
-import { newLocalId } from '@/lib/localId';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { Switch } from '@/components/ui/switch';
 import {
   fetchMyProfileWithFallback,
@@ -167,6 +167,10 @@ export default function RutaDescarga() {
     setConteo(prev => ({ ...prev, [denom]: Math.max(0, val) }));
   };
 
+  // Guardia síncrona contra doble-envío de la liquidación (el botón se
+  // deshabilita con isPending, pero el re-render tiene retraso).
+  const savingRef = useRef(false);
+
   const submitMutation = useMutation({
     networkMode: 'always',
     mutationFn: async () => {
@@ -237,12 +241,14 @@ export default function RutaDescarga() {
           } finally { setUploading(false); }
         }
       } else {
-        // Offline: encolar con id sintético; al sincronizar se hace upsert.
-        const localId = newLocalId();
+        // Offline: id DETERMINÍSTICO por (empresa, vendedor, carga, día). Si la
+        // liquidación se reenvía (doble-toque, reintento o resync), el upsert la
+        // trata como la MISMA y NO duplica el cierre de ruta ni su conteo.
+        const localId = await deterministicUuid('descarga', empresa!.id, vId, cargaActiva?.id, today);
         await queueOperation('descarga_ruta', 'insert', { id: localId, ...insertData });
         // Encolar las líneas del conteo como hijas (descarga_id se remapea al sincronizar).
         for (const l of lineasConteo) {
-          await queueOperation('descarga_ruta_lineas', 'insert', { id: newLocalId(), descarga_id: localId, ...l });
+          await queueOperation('descarga_ruta_lineas', 'insert', { id: await deterministicUuid('descarga_linea', localId, l.producto_id), descarga_id: localId, ...l });
         }
       }
     },
@@ -255,6 +261,7 @@ export default function RutaDescarga() {
       nav('/ruta');
     },
     onError: (e: any) => toast.error(e.message),
+    onSettled: () => { savingRef.current = false; },
   });
 
   // Already submitted
@@ -548,7 +555,7 @@ export default function RutaDescarga() {
       {/* Submit */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <button
-          onClick={() => { if (!checkAlmacen()) return; submitMutation.mutate(); }}
+          onClick={() => { if (savingRef.current || submitMutation.isPending) return; if (!checkAlmacen()) return; savingRef.current = true; submitMutation.mutate(); }}
           disabled={!hasConteo || submitMutation.isPending || uploading || (!!sesionActiva && !kmFin) || (!!sesionActiva && navigator.onLine && !fotoFin)}
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >

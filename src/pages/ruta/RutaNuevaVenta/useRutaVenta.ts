@@ -776,19 +776,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           }
         }
 
-        // Update saldo_pendiente for the current sale based on actual payments applied
-        const appliedToSale = (condicionPago === 'contado' ? totals.total : 0) - saleRemaining;
-        if (appliedToSale > 0) {
-          await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: Math.max(0, totals.total - appliedToSale) });
-        }
-
-        // Update saldo_pendiente for pending accounts using tracked amounts
+        // El saldo_pendiente lo recalcula EXCLUSIVAMENTE el trigger de BD
+        // (recalc_venta_saldo, AFTER INSERT/UPDATE/DELETE en cobro_aplicaciones)
+        // a partir de las aplicaciones ya encoladas arriba. NO lo escribimos
+        // desde el cliente para no competir con el trigger ni pisar el valor
+        // correcto (mismo criterio que RutaCobrar). Solo refrescamos la caché
+        // local para mostrar el abono al instante mientras sincroniza.
         for (const cuenta of cuentasSnapshot) {
           const applied = accountApplied.get(cuenta.id) ?? 0;
           if (applied > 0) {
             const nuevoSaldo = Math.max(0, cuenta.saldo_pendiente - applied);
-            await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: nuevoSaldo });
-            // Update local offline cache immediately
             try {
               const ventasTable = getOfflineTable('ventas');
               if (ventasTable) {
@@ -800,9 +797,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             } catch {}
           }
         }
-      } else if (condicionPago === 'contado' && totals.total === 0) {
-        // Zero-total sale, mark as paid
-        await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: 0 });
       }
 
       await updateCargaVendidaOffline(cart);
