@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
 import TiendaShell from "./TiendaShell";
 import { useMemo } from "react";
+import { useThumb } from "@/hooks/useThumb";
 
 const CATEGORY_TILES: { match: RegExp; label: string; img: string; tint: string }[] = [
   { match: /botana|snack|fritura|papas/i, label: "Botanas y Snacks", img: "/tienda/cat-botanas.webp", tint: "#ff7a00" },
@@ -179,6 +180,7 @@ function HomeInner() {
 }
 
 export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moneda?: string; highlight?: "oferta" | "nuevo" }) {
+  const thumb = useThumb();
   const t = useTienda();
   const enStock = p.stock > 0 || p.vender_sin_stock;
   const cur = moneda ?? t.empresa?.moneda ?? "MXN";
@@ -195,7 +197,7 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
       <Link
         to={detalleHref}
         className="tienda-card-img"
-        style={p.imagen_url ? { backgroundImage: `url(${p.imagen_url})` } : {}}
+        style={p.imagen_url ? { backgroundImage: `url(${thumb(p.imagen_url, 400)})` } : {}}
       >
         {!p.imagen_url && <div className="tienda-card-img-placeholder">📦</div>}
       </Link>

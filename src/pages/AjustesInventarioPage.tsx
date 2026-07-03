@@ -13,6 +13,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -46,6 +47,13 @@ interface ProductRow {
 export default function AjustesInventarioPage() {
   const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
+  // Tiempo real: escuchamos la CABECERA (ajustes_inventario), no
+  // movimientos_inventario (alto volumen), para no inflar el egress.
+  useRealtimeInvalidate({
+    table: 'ajustes_inventario',
+    empresaId: empresa?.id,
+    queryKeys: [['ajustes-historial'], ['productos-ajuste']],
+  });
   const { data: almacenes } = useAlmacenes();
   const [almacenId, setAlmacenId] = useState('');
   const [search, setSearch] = useState('');

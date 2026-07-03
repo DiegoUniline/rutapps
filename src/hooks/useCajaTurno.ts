@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 export interface CajaTurno {
   id: string;
@@ -39,6 +40,10 @@ export interface CajaMovimiento {
 export function useCajaTurno() {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
+
+  // Tiempo real de caja (turno + movimientos) en vez de depender solo de staleTime.
+  useRealtimeInvalidate({ table: 'caja_turnos', empresaId: empresa?.id, queryKeys: [['caja-turno-activo']] });
+  useRealtimeInvalidate({ table: 'caja_movimientos', empresaId: empresa?.id, queryKeys: [['caja-movimientos']] });
 
   // Fetch the empresa-level flag directly to avoid relying on the cached AuthContext object,
   // which doesn't include `pos_turnos_habilitado` in its SELECT.

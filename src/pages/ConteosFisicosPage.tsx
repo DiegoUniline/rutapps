@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import CrearConteoDialog from '@/components/conteos/CrearConteoDialog';
 import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   abierto: { label: 'Abierto', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
@@ -32,6 +33,11 @@ export default function ConteosFisicosPage() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  useRealtimeInvalidate({
+    table: 'conteos_fisicos',
+    empresaId: empresa?.id,
+    queryKeys: [['conteos-fisicos']],
+  });
 
   const { data: conteos, isLoading } = useQuery({
     queryKey: ['conteos-fisicos', empresa?.id],

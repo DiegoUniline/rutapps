@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate } from '@/lib/utils';
 import { usePermisos } from '@/hooks/usePermisos';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { MermaConfigDialog } from '@/components/devoluciones/MermaConfigDialog';
 
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
@@ -26,6 +27,11 @@ export default function DevolucionesListPage() {
   const { hasPermiso } = usePermisos();
   const canConfig = hasPermiso('ventas.devoluciones', 'editar');
   const [mermaConfigOpen, setMermaConfigOpen] = useState(false);
+  useRealtimeInvalidate({
+    table: 'devoluciones',
+    empresaId: empresa?.id,
+    queryKeys: [['devoluciones-list-all']],
+  });
 
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string>('all');

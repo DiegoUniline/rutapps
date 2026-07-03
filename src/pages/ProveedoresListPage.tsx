@@ -8,6 +8,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 const PAGE_SIZE = 50;
 
@@ -19,6 +20,11 @@ export default function ProveedoresListPage() {
   const canCreate = hasPermiso('catalogo.proveedores', 'crear');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  useRealtimeInvalidate({
+    table: 'proveedores',
+    empresaId,
+    queryKeys: [['proveedores-full']],
+  });
 
   const { data: proveedores, isLoading } = useQuery({
     queryKey: ['proveedores-full', empresaId, search],

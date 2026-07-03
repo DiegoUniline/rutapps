@@ -330,7 +330,10 @@ export function usePermisos(): UsePermisosReturn {
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
-    refetchInterval: 30_000, // poll cada 30s para reflejar cambios sin recargar
+    // El realtime de role_permisos + el refetch al enfocar cubren los cambios al
+    // instante. Dejamos un poll de red-de-seguridad amplio (5 min) solo por si
+    // reasignan el ROL del usuario (otro role_id que el canal actual no escucha).
+    refetchInterval: 5 * 60_000,
   });
 
   // Refetch when admin updates permissions (cross-tab via storage / same-tab via event)

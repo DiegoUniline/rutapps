@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 import { useRutaSesionActiva, useCerrarRutaSesion } from '@/hooks/useRutaSesion';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
@@ -31,6 +32,11 @@ export default function RutaDescarga() {
   const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
   const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
   const qc = useQueryClient();
+  useRealtimeInvalidate({
+    table: 'descarga_ruta',
+    empresaId: empresa?.id,
+    queryKeys: [['mi-descarga-hoy']],
+  });
 
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');

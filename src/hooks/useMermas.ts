@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
 
 export interface MermaMotivo { id: string; nombre: string; activo: boolean; }
@@ -60,6 +61,11 @@ export function useDeleteMermaMotivo() {
 
 export function useMermas(filters?: { desde?: string; hasta?: string }) {
   const { empresa } = useAuth();
+  useRealtimeInvalidate({
+    table: 'mermas',
+    empresaId: empresa?.id,
+    queryKeys: [['mermas']],
+  });
   return useQuery({
     queryKey: ['mermas', empresa?.id, filters?.desde, filters?.hasta],
     enabled: !!empresa?.id,

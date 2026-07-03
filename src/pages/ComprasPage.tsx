@@ -18,6 +18,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
@@ -128,6 +129,11 @@ export default function ComprasPage() {
   const navigate = useNavigate();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
+  useRealtimeInvalidate({
+    table: 'compras',
+    empresaId: empresa?.id,
+    queryKeys: [['compras']],
+  });
   const [viewMode, setViewMode] = useState<'compras' | 'detalle'>('compras');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
