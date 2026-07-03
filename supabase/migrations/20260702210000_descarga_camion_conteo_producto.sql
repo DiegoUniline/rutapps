@@ -60,10 +60,10 @@ BEGIN
 
   IF v_camion IS NULL OR v_bodega IS NULL THEN
     RAISE EXCEPTION 'Descarga %: falta almacén de camión o bodega destino (camión=%, bodega=%)',
-      COALESCE(NEW.folio, NEW.id::text), v_camion, v_bodega;
+      NEW.id, v_camion, v_bodega;
   END IF;
   IF v_camion = v_bodega THEN
-    RAISE EXCEPTION 'Descarga %: la bodega destino no puede ser el mismo almacén del camión', COALESCE(NEW.folio, NEW.id::text);
+    RAISE EXCEPTION 'Descarga %: la bodega destino no puede ser el mismo almacén del camión', NEW.id;
   END IF;
 
   FOR v_linea IN
