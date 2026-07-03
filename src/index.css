@@ -611,10 +611,11 @@ table[data-no-odoo] tbody td {
   }
 
   /* Ancho completo en vistas de LISTA: si un contenedor con tope de ancho
-     (max-w-*) envuelve una tabla, se le quita el tope para que la tabla y
-     sus columnas usen todo el ancho del monitor. Los formularios (sin tabla)
-     conservan su tope para que se lean bien. Opt-out: data-keep-width. */
-  [class*="max-w-"]:has(table):not([data-keep-width]) {
+     ARBITRARIO (ej. max-w-[1200px], con corchetes) envuelve una tabla, se le
+     quita el tope para que la tabla use todo el ancho del monitor. Se excluyen
+     a propósito los tamaños con nombre (max-w-5xl, max-w-lg, etc.) que usan los
+     MODALES/diálogos, para no estirarlos a pantalla completa. Opt-out: data-keep-width. */
+  [class*="max-w-["]:has(table):not([data-keep-width]) {
     max-width: none;
   }
 }
