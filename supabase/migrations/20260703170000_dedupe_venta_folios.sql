@@ -37,18 +37,19 @@ BEGIN
 
   FOREACH p IN ARRAY ARRAY['VTA','PED','SAL'] LOOP
     -- K = tope del bloque contiguo 1..K entre los folios numéricos del prefijo.
+    -- Se calcula con una función ventana (num vs su posición ordenada), SIN
+    -- generate_series: éste, con un MAX envenenado (p. ej. 4.2M por un folio
+    -- basura), generaría millones de filas y agotaría el timeout sin guardar.
     WITH nums AS (
       SELECT DISTINCT CAST(SUBSTRING(folio FROM LENGTH(p) + 2) AS INT) AS n
       FROM public.ventas
       WHERE empresa_id = v_empresa
         AND folio ~ ('^' || p || '-[0-9]+$')
+    ),
+    seq AS (
+      SELECT n, row_number() OVER (ORDER BY n) AS rn FROM nums
     )
-    SELECT COALESCE(
-      (SELECT MIN(g) - 1
-         FROM generate_series(1, COALESCE((SELECT MAX(n) FROM nums), 0)) g
-        WHERE g NOT IN (SELECT n FROM nums)),
-      COALESCE((SELECT MAX(n) FROM nums), 0)
-    ) INTO v_k;
+    SELECT COALESCE(MAX(n) FILTER (WHERE n = rn), 0) INTO v_k FROM seq;
 
     -- Renumerar la basura (no numérica o numérica > K) a partir de K+1.
     WITH junk AS (
