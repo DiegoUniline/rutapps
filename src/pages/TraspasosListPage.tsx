@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate, fmtNum, cn } from '@/lib/utils';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
 
 const TIPO_LABELS: Record<string, string> = {
@@ -102,6 +103,11 @@ export default function TraspasosListPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const qc = useQueryClient();
+  useRealtimeInvalidate({
+    table: 'traspasos',
+    empresaId: empresa?.id,
+    queryKeys: [['traspasos'], ['traspaso-lineas-all']],
+  });
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');

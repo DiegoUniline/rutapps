@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { toast } from 'sonner';
 
 export type CotizacionEstado =
@@ -87,6 +88,11 @@ const SELECT_FULL = `
 
 export function useCotizaciones() {
   const { empresa } = useAuth();
+  useRealtimeInvalidate({
+    table: 'cotizaciones',
+    empresaId: empresa?.id,
+    queryKeys: [['cotizaciones'], ['cotizacion']],
+  });
   return useQuery({
     queryKey: ['cotizaciones', empresa?.id],
     enabled: !!empresa?.id,

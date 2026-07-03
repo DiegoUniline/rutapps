@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
@@ -236,6 +237,7 @@ export function useDeleteProducto() {
 // Tarifas
 export function useTarifas() {
   const { empresa } = useAuth();
+  useRealtimeInvalidate({ table: 'tarifas', empresaId: empresa?.id, queryKeys: [['tarifas'], ['tarifa']] });
   return useQuery({
     queryKey: ['tarifas', empresa?.id],
     staleTime: CATALOG_STALE,
@@ -546,6 +548,7 @@ export interface ListaPrecioLinea {
 }
 
 export function useAllListasPrecios(empresaId?: string) {
+  useRealtimeInvalidate({ table: 'lista_precios', empresaId, queryKeys: [['lista_precios_all']] });
   return useQuery({
     queryKey: ['lista_precios_all', empresaId],
     staleTime: CATALOG_STALE,

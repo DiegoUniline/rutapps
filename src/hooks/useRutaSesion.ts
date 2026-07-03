@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 import { todayLocal } from '@/lib/utils';
 
 export interface RutaSesion {
@@ -32,10 +33,19 @@ export function useRutaSesionActiva() {
   const { profile, empresa } = useAuth();
   const vendedorId = profile?.id;
 
+  // Tiempo real: en vez de consultar cada 60s, escuchamos cambios de la sesión
+  // de ruta. Mantenemos un refetch de red-de-seguridad amplio (5 min) por si el
+  // canal realtime se cae en segundo plano en el celular.
+  useRealtimeInvalidate({
+    table: 'ruta_sesiones',
+    empresaId: empresa?.id,
+    queryKeys: [['ruta-sesion-activa'], ['ruta-sesiones']],
+  });
+
   return useQuery({
     queryKey: ['ruta-sesion-activa', empresa?.id, vendedorId],
     enabled: !!empresa?.id && !!vendedorId,
-    refetchInterval: 60_000,
+    refetchInterval: 5 * 60_000,
     queryFn: async (): Promise<RutaSesion | null> => {
       const { data, error } = await supabase
         .from('ruta_sesiones')

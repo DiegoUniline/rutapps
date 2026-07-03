@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
 
 export interface DescargaLinea {
   producto_id: string;
@@ -98,6 +99,11 @@ export function useDescargaCalculos(cargaId: string | null) {
 
 export function useDescargasListDesktop() {
   const { empresa } = useAuth();
+  useRealtimeInvalidate({
+    table: 'descarga_ruta',
+    empresaId: empresa?.id,
+    queryKeys: [['descargas-list']],
+  });
   return useQuery({
     queryKey: ['descargas-list', empresa?.id],
     enabled: !!empresa?.id,
