@@ -20,6 +20,32 @@
  * mismo que antes cuando la relación era null.
  */
 import type { QueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+
+const CATALOG_STALE = 15 * 60 * 1000; // igual que CATALOG_STALE_TIME del bootstrap
+
+/**
+ * Garantiza que los catálogos chicos usados por enrichClientes/enrichProductos
+ * estén en el caché ANTES de enriquecer.
+ *
+ * Por qué: las listas (useClientesPaginated, useProductosForSelect) resuelven
+ * los nombres (zona, vendedor, lista, cobrador, tarifa, unidad) desde el caché.
+ * Si el usuario hace recarga dura parado en la lista, la consulta de la lista
+ * puede resolver ANTES que los catálogos → nombres en blanco hasta el siguiente
+ * refresco. Con esto, si ya están (prefetch del bootstrap) regresa al instante;
+ * si no, los pide (deduplicado con el bootstrap por misma queryKey). Las
+ * queryFn/keys son idénticas a las del bootstrap para no duplicar fetches.
+ */
+export async function ensureCatalogsForEnrich(qc: QueryClient, empresaId: string): Promise<void> {
+  await Promise.all([
+    qc.ensureQueryData({ queryKey: ['zonas', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true).order('nombre')).data ?? [] }),
+    qc.ensureQueryData({ queryKey: ['listas', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('listas').select('id, nombre').eq('empresa_id', empresaId).eq('activo', true).order('nombre')).data ?? [] }),
+    qc.ensureQueryData({ queryKey: ['vendedores', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId).order('nombre')).data ?? [] }),
+    qc.ensureQueryData({ queryKey: ['cobradores', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId).eq('estado', 'activo').order('nombre')).data ?? [] }),
+    qc.ensureQueryData({ queryKey: ['tarifas-select', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('tarifas').select('id, nombre, tipo, activa, moneda').eq('empresa_id', empresaId).eq('activa', true).order('nombre')).data ?? [] }),
+    qc.ensureQueryData({ queryKey: ['unidades', empresaId], staleTime: CATALOG_STALE, queryFn: async () => (await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre')).data ?? [] }),
+  ]);
+}
 
 type CatalogRow = { id: string; nombre?: string | null; abreviatura?: string | null };
 

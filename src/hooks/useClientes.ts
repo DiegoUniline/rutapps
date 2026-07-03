@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
-import { enrichClientes } from '@/lib/catalogEnrich';
+import { enrichClientes, ensureCatalogsForEnrich } from '@/lib/catalogEnrich';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
@@ -56,6 +56,10 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         return q;
       };
 
+      // Garantiza los catálogos en caché antes de resolver nombres (evita
+      // nombres en blanco en recarga dura parado en la lista).
+      await ensureCatalogsForEnrich(qc, empresa!.id);
+
       if (fetchAll) {
         const rows = await fetchAllPages<any>((from, to) => applyFilters(supabase.from('clientes').select(SELECT).range(from, to)));
         const enriched = enrichClientes(rows ?? [], qc, empresa!.id);
@@ -96,6 +100,7 @@ export function useClientes(search?: string, statusFilter?: string) {
         }
         return q;
       });
+      await ensureCatalogsForEnrich(qc, empresa!.id);
       return enrichClientes(rows ?? [], qc, empresa!.id) as unknown as Cliente[];
     },
   });
