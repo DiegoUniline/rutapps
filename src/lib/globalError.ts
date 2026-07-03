@@ -4,6 +4,8 @@
  * The ErrorModalProvider in App.tsx subscribes to this.
  */
 
+import { captureAppError } from '@/lib/observability';
+
 type ErrorListener = (error: unknown) => void;
 
 let _listener: ErrorListener | null = null;
@@ -14,6 +16,9 @@ export function subscribeErrorModal(listener: ErrorListener) {
 }
 
 export function showAppError(error: unknown) {
+  // Reportar a monitoreo (no-op si no hay Sentry configurado). Los errores de red
+  // ya se filtran en la config de Sentry (ignoreErrors).
+  captureAppError(error);
   if (_listener) {
     _listener(error);
   } else {

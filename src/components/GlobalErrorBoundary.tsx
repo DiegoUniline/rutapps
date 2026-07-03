@@ -1,5 +1,6 @@
-import { Component, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, WifiOff, RefreshCw } from 'lucide-react';
+import { captureAppError } from '@/lib/observability';
 
 interface Props {
   children: ReactNode;
@@ -30,6 +31,14 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Reportar a monitoreo (no los errores de "chunk offline", que son esperados
+    // sin señal y no son bugs). No-op si no hay Sentry configurado.
+    if (!isChunkLoadError(error) && navigator.onLine) {
+      captureAppError(error, { componentStack: errorInfo.componentStack, boundary: 'GlobalErrorBoundary' });
+    }
   }
 
   handleReload = () => {
