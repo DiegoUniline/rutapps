@@ -1,64 +1,76 @@
 -- ============================================================================
--- Limpieza única: renumera folios de venta DUPLICADOS (varios VTA-4210, etc.)
--- que dejó la carrera de concurrencia previa al advisory lock (migración
--- 20260703160000). ACOTADO A UNA EMPRESA: Distribuidora Tampico.
+-- Limpieza única de folios de venta para Distribuidora Tampico.
 -- ----------------------------------------------------------------------------
--- Estrategia por prefijo (VTA, PED, SAL), solo dentro de esa empresa:
---   - Agrupa las ventas por folio.
---   - CONSERVA la más antigua (created_at, id) con su folio original.
---   - A las copias les asigna un consecutivo nuevo por encima del MAX actual
---     del prefijo, en orden cronológico → número real, único y ordenado.
---   - No toca folios que no están duplicados.
+-- Contexto: convivían tres generadores de folio (trigger de BD, RPC
+-- generate_folio y un fallback cliente `VTA-<hex>`). Eso dejó, para VTA:
+--   - un bloque limpio y contiguo VTA-0001..VTA-0276,
+--   - VTA-4210 repetido 42 veces (RPC MAX+1 sin lock, concurrencia),
+--   - VTA-4210908 (hex que salió todo numérico → envenenó el MAX),
+--   - varios VTA-<hex> sin lógica.
 --
--- Seguro: las referencias entre tablas (cobros, entregas, etc.) van por `id`,
--- no por folio. Idempotente: al re-correr no hay duplicados y no hace nada.
+-- Estrategia QUIRÚRGICA por prefijo (VTA, PED, SAL), solo en esta empresa:
+--   1. K = mayor número del bloque contiguo 1..K (folios legítimos). Se
+--      conservan intactos.
+--   2. La "basura" (folios no numéricos, o numéricos > K: duplicados y
+--      atípicos) se renumera a K+1, K+2, … en orden cronológico → secuencia
+--      continua, sin huecos absurdos ni duplicados.
+--
+-- Seguro: las referencias entre tablas van por `id`, no por folio.
+-- Idempotente: tras correr, no queda basura (todo ≤ K nuevo) y no hace nada.
 --
 -- NOTA: el índice único global ventas(empresa_id, folio) se deja para una
--- migración posterior, cuando TODAS las empresas estén sin duplicados. El
--- advisory lock de la 160000 ya evita duplicados nuevos en todas las empresas.
+-- migración posterior, cuando TODAS las empresas estén limpias. El advisory
+-- lock (20260703160000) + que la venta de ruta ya manda folio=null evitan
+-- duplicados nuevos.
 -- ============================================================================
 
 DO $$
 DECLARE
+  v_empresa uuid := '41cdb6df-40c0-4a95-89de-a54bf8eba0de';  -- Distribuidora Tampico
   p text;
-  v_empresa uuid;
+  v_k int;
 BEGIN
-  -- Empresa objetivo: Distribuidora Tampico (id fijo, más seguro que por nombre).
-  v_empresa := '41cdb6df-40c0-4a95-89de-a54bf8eba0de';
-
   IF NOT EXISTS (SELECT 1 FROM public.empresas WHERE id = v_empresa) THEN
     RAISE NOTICE 'Empresa % no encontrada; no se renumeró nada.', v_empresa;
     RETURN;
   END IF;
 
   FOREACH p IN ARRAY ARRAY['VTA','PED','SAL'] LOOP
-    WITH dups AS (
-      SELECT id, folio, created_at,
-             row_number() OVER (PARTITION BY folio ORDER BY created_at, id) AS rn
+    -- K = tope del bloque contiguo 1..K entre los folios numéricos del prefijo.
+    WITH nums AS (
+      SELECT DISTINCT CAST(SUBSTRING(folio FROM LENGTH(p) + 2) AS INT) AS n
       FROM public.ventas
       WHERE empresa_id = v_empresa
         AND folio ~ ('^' || p || '-[0-9]+$')
-    ),
-    to_fix AS (
-      SELECT id, created_at FROM dups WHERE rn > 1   -- todas menos el original
-    ),
-    maxnum AS (
-      SELECT COALESCE(MAX(CAST(SUBSTRING(folio FROM 5) AS INT)), 0) AS maxn
+    )
+    SELECT COALESCE(
+      (SELECT MIN(g) - 1
+         FROM generate_series(1, COALESCE((SELECT MAX(n) FROM nums), 0)) g
+        WHERE g NOT IN (SELECT n FROM nums)),
+      COALESCE((SELECT MAX(n) FROM nums), 0)
+    ) INTO v_k;
+
+    -- Renumerar la basura (no numérica o numérica > K) a partir de K+1.
+    WITH junk AS (
+      SELECT id, created_at,
+             CASE WHEN folio ~ ('^' || p || '-[0-9]+$')
+                  THEN CAST(SUBSTRING(folio FROM LENGTH(p) + 2) AS INT)
+             END AS num
       FROM public.ventas
       WHERE empresa_id = v_empresa
-        AND folio ~ ('^' || p || '-[0-9]+$')
+        AND folio LIKE (p || '-%')
     ),
-    numbered AS (
-      -- Consecutivo nuevo por encima del MAX, en orden cronológico.
-      SELECT tf.id,
-             (SELECT maxn FROM maxnum) + row_number() OVER (ORDER BY tf.created_at, tf.id) AS newn
-      FROM to_fix tf
+    ren AS (
+      SELECT id,
+             v_k + row_number() OVER (ORDER BY created_at, id) AS newn
+      FROM junk
+      WHERE num IS NULL OR num > v_k
     )
     UPDATE public.ventas v
-    SET folio = p || '-' || LPAD(n.newn::TEXT, 4, '0')
-    FROM numbered n
-    WHERE v.id = n.id;
+    SET folio = p || '-' || LPAD(r.newn::TEXT, 4, '0')
+    FROM ren r
+    WHERE v.id = r.id;
 
-    RAISE NOTICE 'Prefijo %: duplicados renumerados para Distribuidora Tampico.', p;
+    RAISE NOTICE 'Prefijo %: bloque limpio 1..%, basura renumerada desde %.', p, v_k, v_k + 1;
   END LOOP;
 END $$;
