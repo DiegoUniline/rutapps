@@ -1,9 +1,10 @@
 import { todayLocal } from '@/lib/utils';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useSaldoFavor } from '@/hooks/useSaldoFavor';
@@ -55,6 +56,10 @@ export default function RutaCobrar() {
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
+  // Guardia síncrona contra doble-envío: setSaving() re-renderiza con retraso,
+  // así que un doble-toque rápido (u offline sin feedback) alcanzaba a crear
+  // dos cobros distintos. El ref bloquea la segunda llamada de inmediato.
+  const savingRef = useRef(false);
 
   // Offline-compatible: read clients and ventas from local cache
   const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
@@ -189,9 +194,21 @@ export default function RutaCobrar() {
       toast.error(`Saldo a favor insuficiente. Disponible: ${fmtC(saldoFavorDisp)}`);
       return;
     }
+    if (savingRef.current) return;   // ya hay un cobro en curso → ignora el doble-toque
+    savingRef.current = true;
     setSaving(true);
     try {
-      const cobroId = crypto.randomUUID();
+      const fecha = todayLocal();
+      const aplicaciones = cuentas.filter(c => c.montoAplicar > 0);
+      // Id DETERMINÍSTICO del cobro: derivado del contenido del pago (cliente,
+      // fecha, método, y las ventas+montos que cubre). Si el MISMO pago se
+      // manda dos veces (doble-toque, reintento offline, resync), el id
+      // coincide y el upsert lo trata como el mismo cobro → NO duplica.
+      const firma = aplicaciones
+        .map(a => `${a.id}:${a.montoAplicar}`)
+        .sort()
+        .join(',');
+      const cobroId = await deterministicUuid('cobro', empresa.id, clienteId, fecha, metodoPago, totalAplicado, firma);
       await queueOperation('cobros', 'insert', {
         id: cobroId,
         empresa_id: empresa.id,
@@ -201,14 +218,14 @@ export default function RutaCobrar() {
         referencia: referencia || null,
         notas: notas || null,
         user_id: user.id,
-        fecha: todayLocal(),
+        fecha,
         created_at: new Date().toISOString(),
       });
 
-      const aplicaciones = cuentas.filter(c => c.montoAplicar > 0);
       for (const app of aplicaciones) {
         await queueOperation('cobro_aplicaciones', 'insert', {
-          id: crypto.randomUUID(),
+          // Id determinístico por (cobro, venta) → reenvíos no duplican la aplicación.
+          id: await deterministicUuid('capp', cobroId, app.id),
           cobro_id: cobroId,
           venta_id: app.id,
           monto_aplicado: app.montoAplicar,
@@ -226,6 +243,7 @@ export default function RutaCobrar() {
       toast.error(err.message);
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
