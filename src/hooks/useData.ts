@@ -416,20 +416,28 @@ export function useUnidadesSat() {
 }
 export function useProductosForSelect() {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['productos-select', empresa?.id, 'nombres-contextuales'],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      return fetchAllPages((from, to) => supabase.from('productos')
-        .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
+      // Se removieron los LEFT JOIN LATERAL a `unidades` (venta y compra):
+      // multiplicaban el costo CPU en Postgres. Los objetos
+      // `unidades_venta` / `unidades_compra` se rehidratan en el cliente
+      // desde el catálogo ['unidades', eid] ya prefetch-eado, para no
+      // cambiar la forma de la fila que consumen POS, formularios, etc.
+      const rows = await fetchAllPages<any>((from, to) => supabase.from('productos')
+        .select('id, codigo, nombre, nombre_compra, nombre_venta, nombre_ticket, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, es_granel, unidad_granel, vender_sin_stock, usa_listas_precio')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre')
         .range(from, to));
+      return enrichProductos(rows ?? [], qc, empresa!.id);
     },
   });
 }
+
 export function useTarifasForSelect() {
   const { empresa } = useAuth();
   return useQuery({
