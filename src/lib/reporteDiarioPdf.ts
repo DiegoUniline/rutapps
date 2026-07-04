@@ -38,8 +38,16 @@ export interface ReporteDiarioPdfData {
     countGastos: number;
     countDevoluciones: number;
   };
-  ventasActivas: { folio?: string | null; cliente?: string; condicion_pago?: string; total: number }[];
+  ventasActivas: { folio?: string | null; cliente?: string; condicion_pago?: string; tipo?: string | null; total: number }[];
   ventasCanceladas: { folio?: string | null; cliente?: string; total: number }[];
+  entregas?: {
+    items: { folio?: string | null; pedido?: string | null; cliente?: string; estado: string; total: number }[];
+    hechas: number;
+    pendientes: number;
+    noEntregadas: number;
+    totalEntregado: number;
+    totalProgramado: number;
+  };
   productos: { codigo: string; nombre: string; cantidad: number; total: number }[];
   cobros: { cliente?: string; metodo_pago?: string; referencia?: string | null; monto: number }[];
   gastos: { concepto?: string; notas?: string | null; monto: number }[];
@@ -184,14 +192,32 @@ export async function generarReporteDiarioPdf(data: ReporteDiarioPdfData): Promi
   if (data.ventasActivas.length > 0) {
     sectionTitle(`Ventas (${data.ventasActivas.length})`);
     drawTable(
-      ['Folio', 'Cliente', 'Pago', 'Total'],
+      ['Folio', 'Cliente', 'Tipo', 'Pago', 'Total'],
       data.ventasActivas.map(v => [
         v.folio ?? '—',
         v.cliente ?? '—',
+        v.tipo === 'pedido' ? 'Pedido' : 'Directa',
         v.condicion_pago ?? '',
         { content: fmt(v.total), styles: { halign: 'right' } },
       ]),
-      ['', '', { content: 'Total', styles: { halign: 'right' } }, { content: fmt(data.totals.totalVentas), styles: { halign: 'right' } }],
+      ['', '', '', { content: 'Total', styles: { halign: 'right' } }, { content: fmt(data.totals.totalVentas), styles: { halign: 'right' } }],
+    );
+  }
+
+  // ── Entregas programadas ──
+  if (data.entregas && data.entregas.items.length > 0) {
+    const en = data.entregas;
+    sectionTitle(`Entregas programadas (${en.items.length}) — ${en.hechas} entregadas · ${en.pendientes} pend.${en.noEntregadas ? ` · ${en.noEntregadas} no entreg.` : ''}`);
+    drawTable(
+      ['Entrega', 'Pedido', 'Cliente', 'Estado', 'Total pedido'],
+      en.items.map(e => [
+        e.folio ?? '—',
+        e.pedido ?? '—',
+        e.cliente ?? '—',
+        e.estado,
+        { content: fmt(e.total), styles: { halign: 'right' } },
+      ]),
+      ['', '', '', { content: 'Entregado / Programado', styles: { halign: 'right' } }, { content: `${fmt(en.totalEntregado)} / ${fmt(en.totalProgramado)}`, styles: { halign: 'right' } }],
     );
   }
 
