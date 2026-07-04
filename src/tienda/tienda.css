@@ -699,3 +699,53 @@
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* ============================================================
+   PLANTILLAS DE TIENDA (data-plantilla). 'clasica' = default.
+   Cada empresa elige su plantilla en Config de tienda.
+   ============================================================ */
+
+/* ---- BOUTIQUE: moda, editorial, minimal, esquinas rectas ---- */
+.tienda-root[data-plantilla="boutique"] .tx-hero,
+.tienda-root[data-plantilla="boutique"] .tienda-card,
+.tienda-root[data-plantilla="boutique"] .tx-cat-tile,
+.tienda-root[data-plantilla="boutique"] .tienda-card-img,
+.tienda-root[data-plantilla="boutique"] .tienda-btn { border-radius: 0 !important; }
+.tienda-root[data-plantilla="boutique"] .tx-hero-content h1,
+.tienda-root[data-plantilla="boutique"] .tienda-hero h1 { text-transform: uppercase; letter-spacing: -0.01em; font-weight: 800; }
+.tienda-root[data-plantilla="boutique"] .tx-section-head h2 { text-transform: uppercase; letter-spacing: 0.18em; font-size: 15px; font-weight: 800; }
+.tienda-root[data-plantilla="boutique"] .tienda-card { border: none; box-shadow: none; background: transparent; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-img { aspect-ratio: 3 / 4; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-name { font-weight: 700; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-brand { letter-spacing: 0.16em; }
+.tienda-root[data-plantilla="boutique"] .tx-cat-tile { text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
+.tienda-root[data-plantilla="boutique"] .tienda-nav-chip { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; }
+
+/* ---- BAZAR: marketplace, redondeado, colorido, dinámico ---- */
+.tienda-root[data-plantilla="bazar"] .tienda-card { border-radius: 16px; }
+.tienda-root[data-plantilla="bazar"] .tienda-card-img { border-radius: 16px 16px 0 0; }
+.tienda-root[data-plantilla="bazar"] .tienda-card:hover { transform: translateY(-4px); box-shadow: 0 18px 34px -18px rgba(0,0,0,.35); }
+.tienda-root[data-plantilla="bazar"] .tx-cat-tile { border-radius: 18px; }
+.tienda-root[data-plantilla="bazar"] .tx-hero { border-radius: 20px; }
+.tienda-root[data-plantilla="bazar"] .tienda-card-price { color: var(--tienda-primary); }
+.tienda-root[data-plantilla="bazar"] .tx-section-head h2 { font-weight: 900; }
+
+/* ---- AHORRERA: mayoreo, oscuro industrial, precio protagonista ---- */
+.tienda-root[data-plantilla="ahorrera"] { --tienda-primary: #FFD400; --tienda-secondary: #FF3B30; background: #14161B; color: #F2F2EF; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-header,
+.tienda-root[data-plantilla="ahorrera"] .tienda-footer { background: #0E1013; color: #F2F2EF; border-color: #2a2e38; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-header-top { background: #0E1013; border-bottom: 2px solid #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-nav-chip { background: #1E2129; color: #cfd3da; border-color: #2a2e38; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-nav-chip.active { background: #FFD400; color: #111; border-color: #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-search input { background: #1E2129; color: #fff; border-color: #2a2e38; }
+.tienda-root[data-plantilla="ahorrera"] .tx-hero { background: linear-gradient(120deg, #1E2129, #14161B); }
+.tienda-root[data-plantilla="ahorrera"] .tx-hero-eyebrow { color: #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tx-section-head h2 { color: #fff; text-transform: uppercase; font-weight: 900; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card { background: #1E2129; border: 1px solid #2a2e38; border-radius: 12px; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-name { color: #F2F2EF; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-brand { color: #9aa0ab; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-price,
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-price small { color: #fff; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-price { font-size: 26px; font-weight: 900; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-btn-primary { background: #FF3B30; color: #fff; }
+.tienda-root[data-plantilla="ahorrera"] .tx-cat-tile { border-radius: 12px; }

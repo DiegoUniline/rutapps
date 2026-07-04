@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg, error } = await supabase
       .from("tienda_config")
-      .select("id, empresa_id, slug, activa, nombre_tienda, banner_url, logo_url, color_primario, color_secundario, whatsapp_pedidos, lista_precios_default_id, permitir_invitados, mensaje_bienvenida, beneficios, usar_lista_cliente")
+      .select("id, empresa_id, slug, activa, nombre_tienda, banner_url, logo_url, color_primario, color_secundario, whatsapp_pedidos, lista_precios_default_id, permitir_invitados, mensaje_bienvenida, beneficios, usar_lista_cliente, plantilla")
       .eq("slug", slug)
       .maybeSingle();
 

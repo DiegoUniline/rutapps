@@ -23,6 +23,7 @@ interface TiendaConfig {
   usar_lista_cliente: boolean;
   mensaje_bienvenida: string | null;
   beneficios: Beneficio[];
+  plantilla: string;
 }
 
 interface Beneficio { icon: string; title: string; subtitle: string; enabled: boolean; }
@@ -87,7 +88,7 @@ export default function TiendaConfigPage() {
       setEmpresa(emp ?? null);
       const autoSlug = slugify(emp?.nombre ?? "mi-tienda");
       if (existing) {
-        setCfg({ ...(existing as any), slug: (existing as any).slug || autoSlug, beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS } as TiendaConfig);
+        setCfg({ ...(existing as any), slug: (existing as any).slug || autoSlug, beneficios: (existing as any).beneficios ?? DEFAULT_BENEFICIOS, plantilla: (existing as any).plantilla ?? "clasica" } as TiendaConfig);
       } else {
         setCfg({
           empresa_id: empresaId,
@@ -105,6 +106,7 @@ export default function TiendaConfigPage() {
           usar_lista_cliente: true,
           mensaje_bienvenida: null,
           beneficios: DEFAULT_BENEFICIOS,
+          plantilla: "clasica",
         });
       }
       setLoading(false);
@@ -269,6 +271,28 @@ export default function TiendaConfigPage() {
               )}
             </div>
             <div className="text-xs text-gray-500 mt-1">Se convierte automáticamente a WebP optimizado. Tamaño ideal: 1920×600 px.</div>
+          </Field>
+          <Field label="Diseño de la tienda">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { v: "clasica", name: "Clásica", desc: "La actual", emoji: "🏪" },
+                { v: "boutique", name: "Boutique", desc: "Ropa y zapatos", emoji: "👗" },
+                { v: "bazar", name: "Bazar", desc: "Productos en general", emoji: "🛒" },
+                { v: "ahorrera", name: "Ahorrera", desc: "Mayoreo / tiendas", emoji: "📦" },
+              ].map((p) => (
+                <button
+                  key={p.v}
+                  type="button"
+                  onClick={() => setCfg({ ...cfg, plantilla: p.v })}
+                  className={`text-left border rounded-lg p-3 transition ${cfg.plantilla === p.v ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-gray-200 hover:border-gray-300"}`}
+                >
+                  <div className="text-2xl leading-none">{p.emoji}</div>
+                  <div className="font-semibold text-sm mt-1.5">{p.name}</div>
+                  <div className="text-xs text-gray-500">{p.desc}</div>
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Elige cómo se ve tu tienda en línea. La puedes cambiar cuando quieras.</div>
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Color primario">
