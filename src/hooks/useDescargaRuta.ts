@@ -164,8 +164,8 @@ export interface CuadreVivo {
  * la lista muestre sobrantes/faltantes fantasma. Aquí replicamos exactamente
  * la fórmula del detalle:  esperado = cobros efectivo − gastos.
  *
- * - Cobros: por el user_id de la descarga (quien cobró); si falta, se usa el
- *   user_id del perfil del vendedor como respaldo (descargas viejas).
+ * - Cobros: por el user_id del PERFIL del vendedor (quien cobró en la ruta); si
+ *   la descarga no tiene vendedor, se cae a descarga.user_id como respaldo.
  * - Gastos: por vendedor_id, en el mismo rango de fechas de la descarga.
  *
  * Devuelve un Map descarga.id → { esperado, diferencia }.
@@ -206,7 +206,7 @@ export function useDescargasLiveCuadre(descargas: any[] | undefined) {
       for (const d of list) {
         const fIni = d.fecha_inicio || d.fecha;
         const fFin = d.fecha_fin || d.fecha;
-        const uid = d.user_id ?? (d.vendedor_id ? profMap.get(d.vendedor_id) : null) ?? null;
+        const uid = (d.vendedor_id ? profMap.get(d.vendedor_id) : null) ?? d.user_id ?? null;
         const cob = uid
           ? cobros.filter((c: any) => c.user_id === uid && c.fecha >= fIni && c.fecha <= fFin)
               .reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0)

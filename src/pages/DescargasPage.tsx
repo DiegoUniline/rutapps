@@ -164,20 +164,21 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   });
 
   // Cobros recibidos — para el corte SOLO importan los pagos (lo que se cobró),
-  // y un cobro se guarda con el user_id de QUIEN cobró. Por eso los buscamos por
-  // descarga.user_id (la cuenta que hizo la liquidación) — así funciona aunque
-  // vendedor_id sea NULL o quien cobró no sea "vendedor" (repartidor/admin).
-  // El perfil del vendedor queda solo como respaldo para descargas viejas.
+  // y un cobro se guarda con el user_id de QUIEN cobró = la cuenta del vendedor
+  // que hizo la ruta. Por eso los buscamos por el user_id del PERFIL del vendedor,
+  // NO por descarga.user_id (que es quien CREÓ la liquidación y puede ser un admin
+  // desde la oficina, con una cuenta distinta a la que registró los cobros).
+  // Solo si la descarga no tiene vendedor caemos a descarga.user_id.
   const { data: vendedorProfile } = useQuery({
     queryKey: ['vendedor-profile', descarga.vendedor_id],
-    enabled: !!descarga.vendedor_id && !descarga.user_id,
+    enabled: !!descarga.vendedor_id,
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
 
-  const cobrosUserId = descarga.user_id ?? vendedorProfile?.user_id ?? null;
+  const cobrosUserId = vendedorProfile?.user_id ?? descarga.user_id ?? null;
 
   const { data: cobros } = useQuery({
     queryKey: ['descarga-cobros', descarga.empresa_id, fInicio, fFin, cobrosUserId],
