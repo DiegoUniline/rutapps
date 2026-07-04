@@ -1,9 +1,9 @@
 import { useParams } from 'react-router-dom';
 import CatalogCRUD, { type CatalogColumn } from '@/components/CatalogCRUD';
 
-const CATALOGS: Record<string, { title: string; tableName: string; queryKey: string; columns: CatalogColumn[] }> = {
+const CATALOGS: Record<string, { title: string; tableName: string; queryKey: string; columns: CatalogColumn[]; imageColumn?: string }> = {
   marcas: { title: 'Marcas', tableName: 'marcas', queryKey: 'marcas', columns: [{ key: 'nombre', label: 'Nombre' }] },
-  clasificaciones: { title: 'Categorías', tableName: 'clasificaciones', queryKey: 'clasificaciones', columns: [{ key: 'nombre', label: 'Nombre' }] },
+  clasificaciones: { title: 'Categorías', tableName: 'clasificaciones', queryKey: 'clasificaciones', columns: [{ key: 'nombre', label: 'Nombre' }], imageColumn: 'imagen_url' },
   proveedores: { title: 'Proveedores', tableName: 'proveedores', queryKey: 'proveedores', columns: [{ key: 'nombre', label: 'Nombre' }] },
   unidades: { title: 'Unidades', tableName: 'unidades', queryKey: 'unidades', columns: [{ key: 'nombre', label: 'Nombre' }, { key: 'abreviatura', label: 'Abreviatura' }] },
   zonas: { title: 'Zonas', tableName: 'zonas', queryKey: 'zonas', columns: [{ key: 'nombre', label: 'Nombre' }] },
@@ -27,6 +27,7 @@ export default function CatalogPage() {
         tableName={config.tableName}
         queryKey={config.queryKey}
         columns={config.columns}
+        imageColumn={config.imageColumn}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { InlineEditCell } from '@/components/InlineEditCell';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { compressPhoto } from '@/lib/imageCompressor';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -19,13 +20,40 @@ interface CatalogCRUDProps {
   tableName: string;
   columns: CatalogColumn[];
   queryKey: string;
+  /** Columna de imagen a mostrar/subir por fila (p. ej. 'imagen_url'). */
+  imageColumn?: string;
 }
 
-export default function CatalogCRUD({ title, tableName, columns, queryKey }: CatalogCRUDProps) {
+export default function CatalogCRUD({ title, tableName, columns, queryKey, imageColumn }: CatalogCRUDProps) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
   const [showInactive, setShowInactive] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const handleUploadImage = async (id: string, file: File) => {
+    if (!empresa?.id || !imageColumn) return;
+    setUploadingId(id);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
+      const path = `${empresa.id}/${tableName}/${id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      const url = `${urlData.publicUrl}?t=${Date.now()}`;
+      const { error } = await (supabase.from as any)(tableName).update({ [imageColumn]: url }).eq('id', id);
+      if (error) throw error;
+      qc.setQueriesData<any[]>({ queryKey: [queryKey] }, (old) =>
+        old?.map(it => it.id === id ? { ...it, [imageColumn]: url } : it));
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      toast.success('Imagen cargada');
+    } catch (err: any) {
+      toast.error('Error al subir imagen: ' + err.message);
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   const { data: items, isLoading } = useQuery({
     queryKey: [queryKey, empresa?.id, showInactive],
@@ -121,6 +149,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                 {columns.map(c => (
                   <th key={c.key} className="th-odoo text-left">{c.label}</th>
                 ))}
+                {imageColumn && <th className="th-odoo text-left w-40">Imagen</th>}
                 <th className="th-odoo w-20 text-right">Acciones</th>
               </tr>
             </thead>
@@ -137,6 +166,27 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                       />
                     </td>
                   ))}
+                  {imageColumn && (
+                    <td className="py-1 px-3">
+                      <div className="flex items-center gap-2">
+                        {item[imageColumn] ? (
+                          <img src={item[imageColumn]} alt="" className="h-9 w-9 rounded object-cover border border-border" />
+                        ) : (
+                          <div className="h-9 w-9 rounded bg-muted flex items-center justify-center text-muted-foreground text-[10px]">Sin</div>
+                        )}
+                        <label className="text-[11px] text-primary hover:underline cursor-pointer">
+                          {uploadingId === item.id ? 'Subiendo…' : (item[imageColumn] ? 'Cambiar' : 'Subir')}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingId === item.id}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadImage(item.id, f); e.target.value = ''; }}
+                          />
+                        </label>
+                      </div>
+                    </td>
+                  )}
                   <td className="py-1.5 px-3 text-right">
                     <button
                       className={cn(
@@ -154,7 +204,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                 </tr>
               ))}
               {displayItems.length === 0 && (
-                <tr><td colSpan={columns.length + 1} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                <tr><td colSpan={columns.length + 1 + (imageColumn ? 1 : 0)} className="px-4 py-8 text-center text-muted-foreground text-sm">
                   {showInactive ? 'No hay registros inactivos' : 'No hay registros activos'}
                 </td></tr>
               )}
@@ -173,6 +223,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                       />
                     </td>
                   ))}
+                  {imageColumn && <td className="py-1.5 px-3 text-[11px] text-muted-foreground italic">Guarda y luego sube la imagen ↑</td>}
                   <td className="py-1.5 px-3 text-right">
                     <button className="text-primary hover:text-primary/80 p-1" onClick={handleAdd}>
                       <Plus className="h-3.5 w-3.5" />
