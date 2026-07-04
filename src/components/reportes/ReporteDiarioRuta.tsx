@@ -407,8 +407,19 @@ export default function ReporteDiarioRuta() {
           countDevoluciones: (devoluciones || []).length,
         },
         ventasActivas: ventasActivas.map((v: any) => ({
-          folio: v.folio, cliente: v.clientes?.nombre, condicion_pago: v.condicion_pago, total: Number(v.total) || 0,
+          folio: v.folio, cliente: v.clientes?.nombre, condicion_pago: v.condicion_pago, tipo: v.tipo, total: Number(v.total) || 0,
         })),
+        entregas: entregasList.length > 0 ? {
+          items: entregasList.map((e: any) => ({
+            folio: e.folio, pedido: e.ventas?.folio, cliente: e.clientes?.nombre,
+            estado: ENTREGA_STATUS_LABELS[e.status] ?? e.status, total: Number(e.ventas?.total) || 0,
+          })),
+          hechas: entregasHechas.length,
+          pendientes: entregasPendientes.length,
+          noEntregadas: entregasNoEntregadas.length,
+          totalEntregado,
+          totalProgramado: totalEntregasProg,
+        } : undefined,
         ventasCanceladas: ventasCanceladas.map((v: any) => ({
           folio: v.folio, cliente: v.clientes?.nombre, total: Number(v.total) || 0,
         })),
@@ -777,6 +788,10 @@ export default function ReporteDiarioRuta() {
               ))}
             </div>
           )}
+
+          {/* Secciones. En "Ver todo" se acomodan en 2 columnas (mosaico) para
+              ver más sin scroll; en tabs, una sola columna (una sección activa). */}
+          <div className={cn(vistaTabs ? "space-y-4" : "columns-1 lg:columns-2 gap-x-6 [&>*]:mb-4 [&>*]:break-inside-avoid")}>
 
           {/* Stock en almacén */}
           {verSec('stock') && incluirStock && stockItems.length > 0 && (
@@ -1198,6 +1213,7 @@ export default function ReporteDiarioRuta() {
             </div>
           </div>
           )}
+          </div>
         </div>
       )}
     </div>
