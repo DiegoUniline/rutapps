@@ -27,7 +27,11 @@ function HomeInner() {
   });
 
   const productos: TiendaProducto[] = data?.productos ?? [];
-  const categorias: string[] = data?.categorias ?? [];
+  // categorias puede venir como string[] (versión vieja del backend) o como
+  // { nombre, imagen_url }[] (nueva). Normalizamos a objetos para usar la imagen.
+  const categorias: { nombre: string; imagen_url: string | null }[] = (data?.categorias ?? []).map((c: any) =>
+    typeof c === 'string' ? { nombre: c, imagen_url: null } : { nombre: c.nombre, imagen_url: c.imagen_url ?? null },
+  );
 
   const destacados = useMemo(() => productos.slice(0, 10), [productos]);
   const masVendidos = useMemo(
@@ -97,15 +101,15 @@ function HomeInner() {
           </div>
           <div className="tx-categories">
             {categorias.slice(0, 8).map((c) => {
-              const tile = pickTile(c);
+              const img = c.imagen_url || pickTile(c.nombre)?.img;
               return (
                 <Link
-                  key={c}
-                  to={`${base}/productos?cat=${encodeURIComponent(c)}`}
+                  key={c.nombre}
+                  to={`${base}/productos?cat=${encodeURIComponent(c.nombre)}`}
                   className="tx-cat-tile"
-                  style={tile ? { backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(0,0,0,.7)), url(${tile.img})` } : { background: `linear-gradient(135deg, var(--tienda-primary), var(--tienda-secondary))` }}
+                  style={img ? { backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(0,0,0,.7)), url(${img})` } : { background: `linear-gradient(135deg, var(--tienda-primary), var(--tienda-secondary))` }}
                 >
-                  <span>{c}</span>
+                  <span>{c.nombre}</span>
                 </Link>
               );
             })}

@@ -122,12 +122,13 @@ Deno.serve(async (req) => {
     };
 
     const [cR, mR, uR, sR] = await Promise.all([
-      clasifIds.length ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds) : { data: [] },
+      clasifIds.length ? supabase.from("clasificaciones").select("id, nombre, imagen_url").in("id", clasifIds) : { data: [] },
       marcaIds.length ? supabase.from("marcas").select("id, nombre").in("id", marcaIds) : { data: [] },
       unidadIds.length ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds) : { data: [] },
       fetchStock(),
     ]);
     const cMap = new Map((cR.data ?? []).map((x: any) => [x.id, x.nombre]));
+    const cImgMap = new Map((cR.data ?? []).map((x: any) => [x.nombre, x.imagen_url ?? null]));
     const mMap = new Map((mR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const uMap = new Map((uR.data ?? []).map((x: any) => [x.id, x.abreviatura]));
     const stock = new Map<string, number>();
@@ -155,7 +156,9 @@ Deno.serve(async (req) => {
       };
     }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
-    const categorias = [...new Set(enriched.map((p: any) => p.categoria).filter(Boolean))].sort();
+    const categorias = [...new Set(enriched.map((p: any) => p.categoria).filter(Boolean))]
+      .sort()
+      .map((nombre: any) => ({ nombre, imagen_url: cImgMap.get(nombre) ?? null }));
     const marcas = [...new Set(enriched.map((p: any) => p.marca).filter(Boolean))].sort();
 
     return json({ cliente, lista_nombre: listaNombre, productos: enriched, categorias, marcas });
