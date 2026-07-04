@@ -7,7 +7,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
@@ -1721,6 +1721,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 export default function DescargasPage() {
   const { symbol: cs, fmt } = useCurrency();
   const { data: descargas, isLoading } = useDescargasListDesktop();
+  // Cuadre EN VIVO desde los cobros reales (reemplaza el efectivo_esperado congelado).
+  const { data: cuadreVivo } = useDescargasLiveCuadre(descargas);
   const { data: vendedores } = useVendedores();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -1730,6 +1732,15 @@ export default function DescargasPage() {
   const [showNew, setShowNew] = useState(false);
   const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
+  // Esperado/diferencia EN VIVO (cae al valor guardado mientras carga el cálculo).
+  const cuadreDe = (d: any) => {
+    const v = cuadreVivo?.get(d.id);
+    return {
+      esperado: v ? v.esperado : (Number(d.efectivo_esperado) || 0),
+      diferencia: v ? v.diferencia : (Number(d.diferencia_efectivo) || 0),
+    };
+  };
+
   const filtered = useMemo(() => {
     return (descargas || []).filter((d: any) => {
       const matchesStatus = filterStatus === 'all' || d.status === filterStatus;
@@ -1737,11 +1748,11 @@ export default function DescargasPage() {
       const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
       const tipo = d.carga_id ? 'carga' : hasRange ? 'periodo' : 'efectivo';
       const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
-      const dif = Number(d.diferencia_efectivo) || 0;
-      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? dif !== 0 : dif === 0);
+      const dif = cuadreVivo?.get(d.id)?.diferencia ?? (Number(d.diferencia_efectivo) || 0);
+      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? Math.abs(dif) >= 0.005 : Math.abs(dif) < 0.005);
       return matchesStatus && matchesVendedor && matchesTipo && matchesDif;
     });
-  }, [descargas, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+  }, [descargas, cuadreVivo, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
 
   const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all';
 
@@ -1752,9 +1763,9 @@ export default function DescargasPage() {
     setFilterDiferencia('all');
   };
 
-  const totalEsperado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_esperado) || 0), 0);
+  const totalEsperado = filtered.reduce((s, d: any) => s + cuadreDe(d).esperado, 0);
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
-  const totalDiferencia = filtered.reduce((s, d: any) => s + (Number(d.diferencia_efectivo) || 0), 0);
+  const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
@@ -1888,7 +1899,8 @@ export default function DescargasPage() {
             <tbody>
               {filtered.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
-                const dif = Number(d.diferencia_efectivo);
+                const cv = cuadreDe(d);
+                const dif = cv.diferencia;
                 const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
                 const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
                 return (
@@ -1900,7 +1912,7 @@ export default function DescargasPage() {
                     <td className="py-2.5 px-4">
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border font-medium">{tipoLabel}</span>
                     </td>
-                    <td className="py-2.5 px-4 text-right">{fmt(Number(d.efectivo_esperado))}</td>
+                    <td className="py-2.5 px-4 text-right">{fmt(cv.esperado)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold">{fmt(Number(d.efectivo_entregado))}</td>
                     <td className={cn(
                       "py-2.5 px-4 text-right font-bold",
