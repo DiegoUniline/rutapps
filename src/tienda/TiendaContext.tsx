@@ -17,6 +17,7 @@ export interface TiendaConfig {
   mensaje_bienvenida: string | null;
   beneficios?: Beneficio[] | null;
   usar_lista_cliente?: boolean;
+  plantilla?: string | null;
 }
 
 export interface Beneficio {

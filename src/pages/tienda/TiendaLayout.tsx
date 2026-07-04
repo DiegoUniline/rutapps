@@ -83,7 +83,7 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   const isActive = (path: string) => loc.pathname === path;
 
   return (
-    <div className="tienda-root">
+    <div className="tienda-root" data-plantilla={t.config.plantilla || "clasica"}>
       <header className="tienda-header">
         <div className="tienda-header-top">
           <span>📦 Envíos a domicilio · Pedidos al mayoreo</span>
