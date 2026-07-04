@@ -84,6 +84,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [incluirStock, setIncluirStock] = useState(false);
   const [editingEfectivo, setEditingEfectivo] = useState(false);
   const [efectivoDraft, setEfectivoDraft] = useState('');
+  const [editingFecha, setEditingFecha] = useState(false);
+  const [fechaDraft, setFechaDraft] = useState('');
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
   const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
@@ -380,10 +382,15 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
   const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
 
+  // Corte de un solo día (no ligado a carga, sin rango) → se puede editar la fecha.
+  const esCorteDeUnDia = !descarga.carga_id && (!descarga.fecha_inicio || !descarga.fecha_fin || descarga.fecha_inicio === descarga.fecha_fin);
+
   useEffect(() => {
     setStatusOverride(null);
     setEditingEfectivo(false);
     setEfectivoDraft('');
+    setEditingFecha(false);
+    setFechaDraft('');
   }, [descarga.id]);
 
   useEffect(() => {
@@ -472,7 +479,30 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       toast.success('Monto reportado actualizado');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
       setEditingEfectivo(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Editar la FECHA del corte (liquidación de un solo día). Cambiar la fecha
+  // hace que el cuadre vuelva a contar los cobros del día correcto — clave
+  // cuando una liquidación quedó mal fechada (p. ej. con fecha futura).
+  const editFechaMutation = useMutation({
+    mutationFn: async (nuevaFecha: string) => {
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({ fecha: nuevaFecha, fecha_inicio: nuevaFecha, fecha_fin: nuevaFecha } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Fecha del corte actualizada');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
+      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
+      setEditingFecha(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -737,6 +767,53 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
                 )}
               </div>
+              {/* Fecha del corte (editable en cortes de un día) */}
+              {esCorteDeUnDia && (
+                <div className="bg-card rounded-md p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] text-muted-foreground">Fecha del corte</div>
+                    {!editingFecha && isPendiente && (
+                      <button
+                        type="button"
+                        onClick={() => { setFechaDraft(descarga.fecha || descarga.fecha_inicio || ''); setEditingFecha(true); }}
+                        className="text-[10px] text-primary hover:underline font-semibold"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    {!editingFecha && !isPendiente && (
+                      <span className="text-[10px] text-muted-foreground italic">Reabre la liquidación para editar</span>
+                    )}
+                  </div>
+                  {editingFecha ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="date"
+                        value={fechaDraft}
+                        onChange={(e) => setFechaDraft(e.target.value)}
+                        className="h-9 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (!fechaDraft) { toast.error('Selecciona una fecha'); return; }
+                          editFechaMutation.mutate(fechaDraft);
+                        }}
+                        disabled={editFechaMutation.isPending}
+                        className="h-9 text-xs"
+                      >
+                        Guardar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
+                        Cancelar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-semibold text-foreground">{fmtDate(descarga.fecha || descarga.fecha_inicio)}</div>
+                  )}
+                </div>
+              )}
               {descarga.notas && (
                 <div className="bg-card rounded-md p-3">
                   <div className="text-[10px] text-muted-foreground uppercase mb-1">Observaciones</div>
