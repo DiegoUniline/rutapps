@@ -161,25 +161,31 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Cobros recibidos — vendedor_id now IS profiles.id, so look up user_id directly
+  // Cobros recibidos — para el corte SOLO importan los pagos (lo que se cobró),
+  // y un cobro se guarda con el user_id de QUIEN cobró. Por eso los buscamos por
+  // descarga.user_id (la cuenta que hizo la liquidación) — así funciona aunque
+  // vendedor_id sea NULL o quien cobró no sea "vendedor" (repartidor/admin).
+  // El perfil del vendedor queda solo como respaldo para descargas viejas.
   const { data: vendedorProfile } = useQuery({
     queryKey: ['vendedor-profile', descarga.vendedor_id],
-    enabled: !!descarga.vendedor_id,
+    enabled: !!descarga.vendedor_id && !descarga.user_id,
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
 
+  const cobrosUserId = descarga.user_id ?? vendedorProfile?.user_id ?? null;
+
   const { data: cobros } = useQuery({
-    queryKey: ['descarga-cobros', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin, vendedorProfile?.user_id],
-    enabled: !!vendedorProfile?.user_id,
+    queryKey: ['descarga-cobros', descarga.empresa_id, fInicio, fFin, cobrosUserId],
+    enabled: !!cobrosUserId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
         .select('id, monto, metodo_pago, fecha, cliente_id, clientes(nombre), referencia')
         .eq('empresa_id', descarga.empresa_id)
-        .eq('user_id', vendedorProfile!.user_id)
+        .eq('user_id', cobrosUserId!)
         .neq('status', 'cancelado')
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
