@@ -76,9 +76,9 @@ export default function RutaDescarga() {
 
   // Get user's profile id (profile.id IS the vendedor_id now)
   const { data: myProfile } = useQuery({
-    queryKey: ['mi-profile-vendedor', user?.id],
+    queryKey: ['mi-profile-vendedor', user?.id, empresa?.id],
     networkMode: 'always',
-    queryFn: () => fetchMyProfileWithFallback(user!.id),
+    queryFn: () => fetchMyProfileWithFallback(user!.id, empresa?.id),
     enabled: !!user?.id,
   });
 
@@ -90,7 +90,9 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  const vendedorId = cargaActiva?.vendedor_id || myProfile?.id;
+  // El vendedor de la liquidación es el USUARIO LOGUEADO (su perfil). La carga
+  // activa es solo respaldo — se consulta a nivel empresa y podría ser de otro.
+  const vendedorId = myProfile?.id || cargaActiva?.vendedor_id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
   const today = useMemo(() => {
@@ -124,14 +126,14 @@ export default function RutaDescarga() {
     enabled: !!user?.id,
     queryFn: () => fetchExistingDescargaWithFallback({
       cargaId: cargaActiva?.id ?? null,
-      vendedorId: cargaActiva?.vendedor_id ?? myProfile?.id ?? null,
+      vendedorId: myProfile?.id ?? cargaActiva?.vendedor_id ?? null,
       userId: user!.id,
       today,
     }),
   });
 
   // Stock del camión del vendedor (para el conteo físico al descargar).
-  const vendedorProfileId = cargaActiva?.vendedor_id ?? myProfile?.id ?? null;
+  const vendedorProfileId = myProfile?.id ?? cargaActiva?.vendedor_id ?? null;
   const { data: camionStock } = useQuery({
     queryKey: ['ruta-camion-stock', empresa?.id, vendedorProfileId, descargarCamion],
     networkMode: 'always',
@@ -190,12 +192,23 @@ export default function RutaDescarga() {
       }
 
       const diferencia = totalEfectivo - efectivoEsperado;
-      const vId = cargaActiva?.vendedor_id || myProfile?.id || null;
+      // El vendedor es el USUARIO LOGUEADO (su perfil). Respaldo: la carga activa.
+      let vId = myProfile?.id || cargaActiva?.vendedor_id || null;
+      // Respaldo DEFINITIVO: si hay internet, resolvemos el perfil del usuario
+      // logueado directamente. Con sesión activa y conexión, esto SIEMPRE existe,
+      // así que la liquidación no puede quedar sin vendedor.
+      if (!vId && (typeof navigator === 'undefined' || navigator.onLine)) {
+        const { data: prof } = await supabase
+          .from('profiles').select('id')
+          .eq('user_id', user!.id).eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: true }).limit(1);
+        vId = (prof && prof[0]?.id) || null;
+      }
       // Sin vendedor NO se puede liquidar: una descarga con vendedor_id NULL
       // hace que el corte (DescargasPage) no filtre y sume las ventas de TODA
       // la empresa → liquidación "Sin vendedor" con cifras falsas.
       if (!vId) {
-        throw new Error('No se pudo identificar tu vendedor. Sincroniza (o vuelve a iniciar sesión) e inténtalo de nuevo.');
+        throw new Error('No se pudo identificar tu vendedor. Revisa tu conexión y vuelve a intentarlo (o cierra y abre sesión).');
       }
 
       const insertData: any = {
@@ -212,7 +225,9 @@ export default function RutaDescarga() {
         status: 'pendiente',
         descargo_camion: descargarCamion,
       };
-      if (cargaActiva) insertData.carga_id = cargaActiva.id;
+      // Solo ligamos la carga si es del mismo vendedor (la carga activa se
+      // consulta a nivel empresa y podría pertenecer a otro).
+      if (cargaActiva && cargaActiva.vendedor_id === vId) insertData.carga_id = cargaActiva.id;
 
       // Líneas del conteo físico (Sistema=esperada, Físico=real). El movimiento de
       // inventario lo hace el trigger al APROBAR (con la bodega que elige el admin).

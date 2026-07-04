@@ -273,17 +273,26 @@ export async function fetchCargaActivaWithFallback(empresaId: string) {
   return first ? { id: first.id, fecha: first.fecha, vendedor_id: first.vendedor_id } : null;
 }
 
-/** Profile id (=vendedor_id) por user_id. */
-export async function fetchMyProfileWithFallback(userId: string) {
+/**
+ * Profile id (=vendedor_id) del usuario logueado. Robusto a propósito:
+ * - NO usa .maybeSingle() (que truena si el usuario tiene perfiles duplicados);
+ *   toma el primero por created_at.
+ * - Filtra por empresa cuando se da (un usuario puede tener perfil en varias).
+ * - Si el server no responde o no encuentra, cae a la caché offline.
+ */
+export async function fetchMyProfileWithFallback(userId: string, empresaId?: string) {
   if (isOnline()) {
     try {
-      const { data } = await supabase.from('profiles').select('id').eq('user_id', userId).maybeSingle();
-      if (data !== undefined) return data;
+      let q = supabase.from('profiles').select('id').eq('user_id', userId);
+      if (empresaId) q = q.eq('empresa_id', empresaId);
+      const { data, error } = await q.order('created_at', { ascending: true }).limit(1);
+      if (!error && data && data.length > 0) return { id: (data[0] as any).id };
     } catch (err) {
       console.warn('[fetchMyProfileWithFallback] server failed, using cache:', err);
     }
   }
   const all = await localTableToArray<any>('profiles');
-  const hit = all.find((p: any) => p.user_id === userId);
+  const hit = all.find((p: any) => p.user_id === userId && (!empresaId || p.empresa_id === empresaId))
+    ?? all.find((p: any) => p.user_id === userId);
   return hit ? { id: hit.id } : null;
 }
