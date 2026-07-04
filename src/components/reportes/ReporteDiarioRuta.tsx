@@ -3,7 +3,7 @@ import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Printer, FileText, ShoppingCart, CreditCard, TrendingDown, XCircle, MapPin, RotateCcw, Package, Download } from 'lucide-react';
+import { Printer, FileText, ShoppingCart, CreditCard, TrendingDown, XCircle, MapPin, RotateCcw, Package, Truck, Download } from 'lucide-react';
 import { generarReporteDiarioPdf } from '@/lib/reporteDiarioPdf';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,27 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       let q = (supabase as any).from('ventas')
-        .select('id, folio, total, condicion_pago, status, fecha, cliente_id, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
+        .select('id, folio, total, condicion_pago, status, tipo, fecha, cliente_id, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       if (!isAll) q = q.eq('vendedor_id', selectedVendedorId);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  // --- Entregas programadas (pedidos a entregar en el rango) ---
+  const { data: entregas } = useQuery<any[]>({
+    queryKey: ['rpt-diario-entregas', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
+    enabled,
+    queryFn: async () => {
+      let q = (supabase as any).from('entregas')
+        .select('id, folio, status, fecha, fecha_entrega, pedido_id, vendedor_id, vendedor_ruta_id, clientes(nombre), ventas:pedido_id(folio, total, saldo_pendiente, condicion_pago)')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+        .order('created_at');
+      if (!isAll) q = q.or(`vendedor_ruta_id.eq.${selectedVendedorId},vendedor_id.eq.${selectedVendedorId}`);
       const { data } = await q;
       return data ?? [];
     },
@@ -211,6 +227,26 @@ export default function ReporteDiarioRuta() {
   const ventasCanceladas = (ventas || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
   const ventasCredito = ventasActivas.filter((v: any) => v.condicion_pago === 'credito');
+
+  // Venta directa vs pedido (tipo). Un pedido se levanta hoy y se entrega/cobra
+  // después mediante una entrega.
+  const pedidosLevantados = ventasActivas.filter((v: any) => v.tipo === 'pedido');
+  const ventasDirectas = ventasActivas.filter((v: any) => v.tipo !== 'pedido');
+  const totalPedidos = pedidosLevantados.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const TIPO_LABEL: Record<string, string> = { pedido: 'Pedido', venta_directa: 'Directa' };
+
+  // --- Entregas programadas + estado ---
+  const ENTREGA_STATUS_LABELS: Record<string, string> = {
+    borrador: 'Borrador', surtido: 'Surtido', asignado: 'Asignado', cargado: 'Cargado',
+    en_ruta: 'En ruta', listo: 'Listo', hecho: 'Entregado', cancelado: 'Cancelado', no_entregado: 'No entregado',
+  };
+  const entregasList = (entregas || []);
+  const entregasHechas = entregasList.filter((e: any) => e.status === 'hecho');
+  const entregasNoEntregadas = entregasList.filter((e: any) => e.status === 'no_entregado');
+  const entregasCanceladas = entregasList.filter((e: any) => e.status === 'cancelado');
+  const entregasPendientes = entregasList.filter((e: any) => !['hecho', 'cancelado', 'no_entregado'].includes(e.status));
+  const totalEntregasProg = entregasList.reduce((s: number, e: any) => s + (Number(e.ventas?.total) || 0), 0);
+  const totalEntregado = entregasHechas.reduce((s: number, e: any) => s + (Number(e.ventas?.total) || 0), 0);
 
   const totalContado = ventasContado.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
   const totalCredito = ventasCredito.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
@@ -436,10 +472,19 @@ export default function ReporteDiarioRuta() {
 
     // Ventas
     const ventasHtml = ventasActivas.length > 0
-      ? sec(`Ventas (${ventasActivas.length})`, makeTable(
-          ['Folio', 'Cliente', 'Pago', 'Total'],
-          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `${fmt(Number(v.total))}`]),
-          ['', '', 'Total', `${fmt(totalVentas)}`]
+      ? sec(`Ventas (${ventasActivas.length}) — ${ventasDirectas.length} directas · ${pedidosLevantados.length} pedidos`, makeTable(
+          ['Folio', 'Cliente', 'Tipo', 'Pago', 'Total'],
+          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', TIPO_LABEL[v.tipo] ?? v.tipo ?? 'Directa', v.condicion_pago, `${fmt(Number(v.total))}`]),
+          ['', '', '', 'Total', `${fmt(totalVentas)}`]
+        ))
+      : '';
+
+    // Entregas programadas
+    const entregasHtml = entregasList.length > 0
+      ? sec(`Entregas programadas (${entregasList.length}) — ✅ ${entregasHechas.length} entregadas · ⏳ ${entregasPendientes.length} pend.${entregasNoEntregadas.length ? ` · ❌ ${entregasNoEntregadas.length} no entreg.` : ''}`, makeTable(
+          ['Entrega', 'Pedido', 'Cliente', 'Estado', 'Total pedido'],
+          entregasList.map((e: any) => [e.folio ?? '—', e.ventas?.folio ?? '—', e.clientes?.nombre ?? '—', ENTREGA_STATUS_LABELS[e.status] ?? e.status, `${fmt(Number(e.ventas?.total) || 0)}`]),
+          ['', '', '', 'Entregado / Programado', `${fmt(totalEntregado)} / ${fmt(totalEntregasProg)}`]
         ))
       : '';
 
@@ -584,6 +629,7 @@ export default function ReporteDiarioRuta() {
       ${summaryHtml}
       ${stockHtml}
       ${ventasHtml}
+      ${entregasHtml}
       ${cancelHtml}
       ${prodsHtml}
       ${cobrosHtml}
@@ -744,6 +790,7 @@ export default function ReporteDiarioRuta() {
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
                     <th className="text-left py-1.5">Folio</th>
                     <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Tipo</th>
                     <th className="text-left py-1.5">Pago</th>
                     <th className="text-right py-1.5">Total</th>
                   </tr>
@@ -755,6 +802,11 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
                       <td className="py-1">
                         <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold",
+                          v.tipo === 'pedido' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
+                        )}>{TIPO_LABEL[v.tipo] ?? v.tipo ?? 'Directa'}</span>
+                      </td>
+                      <td className="py-1">
+                        <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold",
                           v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                         )}>{v.condicion_pago}</span>
                       </td>
@@ -764,12 +816,65 @@ export default function ReporteDiarioRuta() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
-                    <td colSpan={3} className="py-1.5 text-right text-muted-foreground text-[10px]">Total:</td>
+                    <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Total ({ventasDirectas.length} directas · {pedidosLevantados.length} pedidos):</td>
                     <td className="py-1.5 text-right">{fmt(totalVentas)}</td>
                   </tr>
                 </tfoot>
               </table>
             ) : <p className="text-[11px] text-muted-foreground">Sin ventas</p>}
+          </div>
+
+          {/* Entregas programadas */}
+          <div>
+            <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+              <Truck className="h-3.5 w-3.5" /> Entregas programadas ({entregasList.length})
+            </h2>
+            {entregasList.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2 mb-2 text-[10px]">
+                  <span className="px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">✅ Entregadas: {entregasHechas.length} ({fmt(totalEntregado)})</span>
+                  <span className="px-2 py-1 rounded bg-amber-100 text-amber-700 font-semibold">⏳ Pendientes: {entregasPendientes.length}</span>
+                  {entregasNoEntregadas.length > 0 && <span className="px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">❌ No entregadas: {entregasNoEntregadas.length}</span>}
+                  {entregasCanceladas.length > 0 && <span className="px-2 py-1 rounded bg-slate-100 text-slate-600 font-semibold">Canceladas: {entregasCanceladas.length}</span>}
+                </div>
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                      <th className="text-left py-1.5">Entrega</th>
+                      <th className="text-left py-1.5">Pedido</th>
+                      <th className="text-left py-1.5">Cliente</th>
+                      <th className="text-left py-1.5">Estado</th>
+                      <th className="text-right py-1.5">Total pedido</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entregasList.map((e: any) => {
+                      const hecha = e.status === 'hecho';
+                      const fallida = e.status === 'no_entregado' || e.status === 'cancelado';
+                      return (
+                        <tr key={e.id} className="border-b border-border/50">
+                          <td className="py-1 font-mono">{e.folio ?? '—'}</td>
+                          <td className="py-1 font-mono text-muted-foreground">{e.ventas?.folio ?? '—'}</td>
+                          <td className="py-1">{e.clientes?.nombre ?? '—'}</td>
+                          <td className="py-1">
+                            <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold",
+                              hecha ? "bg-green-100 text-green-700" : fallida ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                            )}>{ENTREGA_STATUS_LABELS[e.status] ?? e.status}</span>
+                          </td>
+                          <td className="py-1 text-right font-semibold">{fmt(Number(e.ventas?.total) || 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-border font-bold">
+                      <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Programado / Entregado:</td>
+                      <td className="py-1.5 text-right">{fmt(totalEntregado)} / {fmt(totalEntregasProg)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </>
+            ) : <p className="text-[11px] text-muted-foreground">Sin entregas programadas en el rango</p>}
           </div>
 
           {/* Canceladas */}
