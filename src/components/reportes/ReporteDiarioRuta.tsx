@@ -23,6 +23,8 @@ export default function ReporteDiarioRuta() {
   const [fechaFin, setFechaFin] = useState(today);
   const [usuarioId, setUsuarioId] = useState<string>('');
   const [incluirStock, setIncluirStock] = useState(false);
+  const [vistaTabs, setVistaTabs] = useState(false);
+  const [tabActivo, setTabActivo] = useState('ventas');
   const printRef = useRef<HTMLDivElement>(null);
 
   const { data: usuarios } = useQuery<any[]>({
@@ -355,6 +357,24 @@ export default function ReporteDiarioRuta() {
     : (usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '');
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
+  // Tabs disponibles para el modo "ver por tabs" (solo secciones con datos).
+  const tabs = ([
+    { key: 'ventas', label: 'Ventas' },
+    { key: 'entregas', label: 'Entregas' },
+    (incluirStock && stockItems.length > 0) ? { key: 'stock', label: 'Stock' } : null,
+    ventasCanceladas.length > 0 ? { key: 'canceladas', label: 'Canceladas' } : null,
+    productosArr.length > 0 ? { key: 'productos', label: 'Productos' } : null,
+    (cobros || []).length > 0 ? { key: 'cobros', label: 'Cobros' } : null,
+    (gastos || []).length > 0 ? { key: 'gastos', label: 'Gastos' } : null,
+    devLineas.length > 0 ? { key: 'devoluciones', label: 'Devoluciones' } : null,
+    visitasSinCompra.length > 0 ? { key: 'visitas', label: 'Visitas' } : null,
+    abonosCreditoPrevio.length > 0 ? { key: 'abonos', label: 'Abonos' } : null,
+    { key: 'resumen', label: 'Resumen' },
+  ].filter(Boolean)) as { key: string; label: string }[];
+  const tabActivoReal = tabs.some(t => t.key === tabActivo) ? tabActivo : (tabs[0]?.key ?? 'ventas');
+  // En modo "todo" muestra todas; en modo tabs, solo la sección activa.
+  const verSec = (key: string) => !vistaTabs || tabActivoReal === key;
+
   const handleDownloadPdf = async () => {
     try {
       toast.loading('Generando PDF...', { id: 'pdf-diario' });
@@ -667,6 +687,9 @@ export default function ReporteDiarioRuta() {
         </div>
         {enabled && (
           <>
+            <Button variant="outline" size="sm" onClick={() => setVistaTabs(v => !v)}>
+              {vistaTabs ? 'Ver todo' : 'Ver por tabs'}
+            </Button>
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir
             </Button>
@@ -737,8 +760,26 @@ export default function ReporteDiarioRuta() {
             )}
           </div>
 
+          {/* Barra de tabs (solo en modo "ver por tabs") */}
+          {vistaTabs && (
+            <div className="flex flex-wrap gap-1 border-b border-border pb-2 print:hidden">
+              {tabs.map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setTabActivo(t.key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    tabActivoReal === t.key ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Stock en almacén */}
-          {incluirStock && stockItems.length > 0 && (
+          {verSec('stock') && incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <Package className="h-3.5 w-3.5" /> {stockTitulo} — {rptAlmacenNombre}
@@ -770,7 +811,7 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
-          {incluirStock && stockItems.length === 0 && (
+          {verSec('stock') && incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
               {stockEsHistorico
                 ? `Sin movimientos de inventario registrados para ${fechaInicio === fechaFin ? fechaFin : `${fechaInicio} → ${fechaFin}`}.`
@@ -780,6 +821,7 @@ export default function ReporteDiarioRuta() {
 
 
           {/* Ventas activas */}
+          {verSec('ventas') && (
           <div>
             <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
               <ShoppingCart className="h-3.5 w-3.5" /> Ventas ({ventasActivas.length})
@@ -823,8 +865,10 @@ export default function ReporteDiarioRuta() {
               </table>
             ) : <p className="text-[11px] text-muted-foreground">Sin ventas</p>}
           </div>
+          )}
 
           {/* Entregas programadas */}
+          {verSec('entregas') && (
           <div>
             <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
               <Truck className="h-3.5 w-3.5" /> Entregas programadas ({entregasList.length})
@@ -876,9 +920,10 @@ export default function ReporteDiarioRuta() {
               </>
             ) : <p className="text-[11px] text-muted-foreground">Sin entregas programadas en el rango</p>}
           </div>
+          )}
 
           {/* Canceladas */}
-          {ventasCanceladas.length > 0 && (
+          {verSec('canceladas') && ventasCanceladas.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-destructive uppercase flex items-center gap-1.5 mb-2 border-b border-destructive/30 pb-1">
                 <XCircle className="h-3.5 w-3.5" /> Canceladas ({ventasCanceladas.length})
@@ -911,7 +956,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Productos vendidos */}
-          {productosArr.length > 0 && (
+          {verSec('productos') && productosArr.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 Productos vendidos ({productosArr.length})
@@ -940,7 +985,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Cobros */}
-          {(cobros || []).length > 0 && (
+          {verSec('cobros') && (cobros || []).length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <CreditCard className="h-3.5 w-3.5" /> Cobros ({(cobros || []).length})
@@ -982,7 +1027,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Gastos */}
-          {(gastos || []).length > 0 && (
+          {verSec('gastos') && (gastos || []).length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <TrendingDown className="h-3.5 w-3.5" /> Gastos ({(gastos || []).length})
@@ -1015,7 +1060,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Devoluciones */}
-          {devLineas.length > 0 && (
+          {verSec('devoluciones') && devLineas.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <RotateCcw className="h-3.5 w-3.5" /> Devoluciones ({totalDevUnidades} uds en {(devoluciones || []).length} registros)
@@ -1058,7 +1103,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Visitas sin compra */}
-          {visitasSinCompra.length > 0 && (
+          {verSec('visitas') && visitasSinCompra.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <MapPin className="h-3.5 w-3.5" /> Visitas sin compra ({visitasSinCompra.length})
@@ -1085,7 +1130,7 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Abonos a crédito previo */}
-          {abonosCreditoPrevio.length > 0 && (
+          {verSec('abonos') && abonosCreditoPrevio.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <CreditCard className="h-3.5 w-3.5" /> Abonos a crédito previo ({abonosCreditoPrevio.length}) — {clientesQueAbonaron} cliente(s)
@@ -1128,6 +1173,7 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
+          {verSec('resumen') && (
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
@@ -1151,6 +1197,7 @@ export default function ReporteDiarioRuta() {
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
     </div>
