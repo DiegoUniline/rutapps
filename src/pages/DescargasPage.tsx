@@ -7,7 +7,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
+import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
@@ -84,6 +84,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const [incluirStock, setIncluirStock] = useState(false);
   const [editingEfectivo, setEditingEfectivo] = useState(false);
   const [efectivoDraft, setEfectivoDraft] = useState('');
+  const [editingFecha, setEditingFecha] = useState(false);
+  const [fechaDraft, setFechaDraft] = useState('');
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   // Bodega destino a la que regresa el producto físico al aprobar (si se descargó el camión).
   const [destinoAlmacenId, setDestinoAlmacenId] = useState<string>('');
@@ -161,7 +163,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Cobros recibidos — vendedor_id now IS profiles.id, so look up user_id directly
+  // Cobros recibidos — para el corte SOLO importan los pagos (lo que se cobró),
+  // y un cobro se guarda con el user_id de QUIEN cobró = la cuenta del vendedor
+  // que hizo la ruta. Por eso los buscamos por el user_id del PERFIL del vendedor,
+  // NO por descarga.user_id (que es quien CREÓ la liquidación y puede ser un admin
+  // desde la oficina, con una cuenta distinta a la que registró los cobros).
+  // Solo si la descarga no tiene vendedor caemos a descarga.user_id.
   const { data: vendedorProfile } = useQuery({
     queryKey: ['vendedor-profile', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id,
@@ -171,15 +178,17 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
+  const cobrosUserId = vendedorProfile?.user_id ?? descarga.user_id ?? null;
+
   const { data: cobros } = useQuery({
-    queryKey: ['descarga-cobros', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin, vendedorProfile?.user_id],
-    enabled: !!vendedorProfile?.user_id,
+    queryKey: ['descarga-cobros', descarga.empresa_id, fInicio, fFin, cobrosUserId],
+    enabled: !!cobrosUserId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
         .select('id, monto, metodo_pago, fecha, cliente_id, clientes(nombre), referencia')
         .eq('empresa_id', descarga.empresa_id)
-        .eq('user_id', vendedorProfile!.user_id)
+        .eq('user_id', cobrosUserId!)
         .neq('status', 'cancelado')
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
@@ -374,10 +383,15 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
   const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
 
+  // Corte de un solo día (no ligado a carga, sin rango) → se puede editar la fecha.
+  const esCorteDeUnDia = !descarga.carga_id && (!descarga.fecha_inicio || !descarga.fecha_fin || descarga.fecha_inicio === descarga.fecha_fin);
+
   useEffect(() => {
     setStatusOverride(null);
     setEditingEfectivo(false);
     setEfectivoDraft('');
+    setEditingFecha(false);
+    setFechaDraft('');
   }, [descarga.id]);
 
   useEffect(() => {
@@ -466,7 +480,30 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       toast.success('Monto reportado actualizado');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
       setEditingEfectivo(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Editar la FECHA del corte (liquidación de un solo día). Cambiar la fecha
+  // hace que el cuadre vuelva a contar los cobros del día correcto — clave
+  // cuando una liquidación quedó mal fechada (p. ej. con fecha futura).
+  const editFechaMutation = useMutation({
+    mutationFn: async (nuevaFecha: string) => {
+      const { error } = await supabase
+        .from('descarga_ruta')
+        .update({ fecha: nuevaFecha, fecha_inicio: nuevaFecha, fecha_fin: nuevaFecha } as any)
+        .eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Fecha del corte actualizada');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['descarga-detalle', descarga.id] });
+      qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
+      qc.invalidateQueries({ queryKey: ['liq-overlap-check'] });
+      setEditingFecha(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -731,6 +768,53 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   <div className="text-xl font-bold text-foreground">{fmt(Number(descarga.efectivo_entregado))}</div>
                 )}
               </div>
+              {/* Fecha del corte (editable en cortes de un día) */}
+              {esCorteDeUnDia && (
+                <div className="bg-card rounded-md p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] text-muted-foreground">Fecha del corte</div>
+                    {!editingFecha && isPendiente && (
+                      <button
+                        type="button"
+                        onClick={() => { setFechaDraft(descarga.fecha || descarga.fecha_inicio || ''); setEditingFecha(true); }}
+                        className="text-[10px] text-primary hover:underline font-semibold"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    {!editingFecha && !isPendiente && (
+                      <span className="text-[10px] text-muted-foreground italic">Reabre la liquidación para editar</span>
+                    )}
+                  </div>
+                  {editingFecha ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="date"
+                        value={fechaDraft}
+                        onChange={(e) => setFechaDraft(e.target.value)}
+                        className="h-9 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (!fechaDraft) { toast.error('Selecciona una fecha'); return; }
+                          editFechaMutation.mutate(fechaDraft);
+                        }}
+                        disabled={editFechaMutation.isPending}
+                        className="h-9 text-xs"
+                      >
+                        Guardar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingFecha(false)} className="h-9 text-xs">
+                        Cancelar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-semibold text-foreground">{fmtDate(descarga.fecha || descarga.fecha_inicio)}</div>
+                  )}
+                </div>
+              )}
               {descarga.notas && (
                 <div className="bg-card rounded-md p-3">
                   <div className="text-[10px] text-muted-foreground uppercase mb-1">Observaciones</div>
@@ -1715,6 +1799,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 export default function DescargasPage() {
   const { symbol: cs, fmt } = useCurrency();
   const { data: descargas, isLoading } = useDescargasListDesktop();
+  // Cuadre EN VIVO desde los cobros reales (reemplaza el efectivo_esperado congelado).
+  const { data: cuadreVivo } = useDescargasLiveCuadre(descargas);
   const { data: vendedores } = useVendedores();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -1724,6 +1810,15 @@ export default function DescargasPage() {
   const [showNew, setShowNew] = useState(false);
   const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
+  // Esperado/diferencia EN VIVO (cae al valor guardado mientras carga el cálculo).
+  const cuadreDe = (d: any) => {
+    const v = cuadreVivo?.get(d.id);
+    return {
+      esperado: v ? v.esperado : (Number(d.efectivo_esperado) || 0),
+      diferencia: v ? v.diferencia : (Number(d.diferencia_efectivo) || 0),
+    };
+  };
+
   const filtered = useMemo(() => {
     return (descargas || []).filter((d: any) => {
       const matchesStatus = filterStatus === 'all' || d.status === filterStatus;
@@ -1731,11 +1826,11 @@ export default function DescargasPage() {
       const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
       const tipo = d.carga_id ? 'carga' : hasRange ? 'periodo' : 'efectivo';
       const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
-      const dif = Number(d.diferencia_efectivo) || 0;
-      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? dif !== 0 : dif === 0);
+      const dif = cuadreVivo?.get(d.id)?.diferencia ?? (Number(d.diferencia_efectivo) || 0);
+      const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? Math.abs(dif) >= 0.005 : Math.abs(dif) < 0.005);
       return matchesStatus && matchesVendedor && matchesTipo && matchesDif;
     });
-  }, [descargas, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+  }, [descargas, cuadreVivo, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
 
   const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all';
 
@@ -1746,9 +1841,9 @@ export default function DescargasPage() {
     setFilterDiferencia('all');
   };
 
-  const totalEsperado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_esperado) || 0), 0);
+  const totalEsperado = filtered.reduce((s, d: any) => s + cuadreDe(d).esperado, 0);
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
-  const totalDiferencia = filtered.reduce((s, d: any) => s + (Number(d.diferencia_efectivo) || 0), 0);
+  const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
@@ -1882,7 +1977,8 @@ export default function DescargasPage() {
             <tbody>
               {filtered.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
-                const dif = Number(d.diferencia_efectivo);
+                const cv = cuadreDe(d);
+                const dif = cv.diferencia;
                 const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
                 const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
                 return (
@@ -1894,7 +1990,7 @@ export default function DescargasPage() {
                     <td className="py-2.5 px-4">
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border font-medium">{tipoLabel}</span>
                     </td>
-                    <td className="py-2.5 px-4 text-right">{fmt(Number(d.efectivo_esperado))}</td>
+                    <td className="py-2.5 px-4 text-right">{fmt(cv.esperado)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold">{fmt(Number(d.efectivo_entregado))}</td>
                     <td className={cn(
                       "py-2.5 px-4 text-right font-bold",
