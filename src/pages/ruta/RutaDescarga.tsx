@@ -191,6 +191,12 @@ export default function RutaDescarga() {
 
       const diferencia = totalEfectivo - efectivoEsperado;
       const vId = cargaActiva?.vendedor_id || myProfile?.id || null;
+      // Sin vendedor NO se puede liquidar: una descarga con vendedor_id NULL
+      // hace que el corte (DescargasPage) no filtre y sume las ventas de TODA
+      // la empresa → liquidación "Sin vendedor" con cifras falsas.
+      if (!vId) {
+        throw new Error('No se pudo identificar tu vendedor. Sincroniza (o vuelve a iniciar sesión) e inténtalo de nuevo.');
+      }
 
       const insertData: any = {
         empresa_id: empresa!.id,
