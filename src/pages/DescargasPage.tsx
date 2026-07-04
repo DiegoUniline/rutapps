@@ -10,7 +10,7 @@ import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, useDescargasLiveCuadre, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useVendedores } from '@/hooks/useClientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText, Truck, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -508,6 +508,24 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Eliminar la liquidación. Borra primero las líneas de conteo. El inventario
+  // del descargo de camión se aplica al APROBAR, así que eliminar una pendiente
+  // no afecta stock; en aprobadas se avisa que ese movimiento no se revierte.
+  const eliminarMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from('descarga_ruta_lineas').delete().eq('descarga_id', descarga.id);
+      const { error } = await supabase.from('descarga_ruta').delete().eq('id', descarga.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Liquidación eliminada');
+      qc.invalidateQueries({ queryKey: ['descargas-list'] });
+      qc.invalidateQueries({ queryKey: ['descargas-live-cuadre'] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90dvh] overflow-auto">
@@ -667,6 +685,20 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 <RefreshCw className="h-3.5 w-3.5" /> Reabrir para editar
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+              disabled={eliminarMutation.isPending}
+              onClick={() => {
+                const msg = currentStatus === 'aprobada'
+                  ? 'Esta liquidación está APROBADA. Si se descargó camión, el inventario ya se aplicó y NO se revierte al eliminar. ¿Eliminar de todos modos?'
+                  : '¿Eliminar esta liquidación? Esta acción no se puede deshacer.';
+                if (window.confirm(msg)) eliminarMutation.mutate();
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Eliminar
+            </Button>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
           </div>
         </div>
