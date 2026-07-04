@@ -31,6 +31,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
   const navigate = useNavigate();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
+  const [cobradores, setCobradores] = useState<Record<string, string>>({});
   const [ventaListaNombre, setVentaListaNombre] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -61,7 +62,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           .order('created_at'),
         supabase
           .from('cobro_aplicaciones')
-          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status)')
+          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia, status, user_id)')
           .eq('venta_id', venta.id)
           .order('created_at'),
         venta.tarifa_id
@@ -79,7 +80,21 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
-        setPagos(pRes.data ?? []);
+        const pagosData = pRes.data ?? [];
+        setPagos(pagosData);
+        // Resolver el nombre de quien registró cada pago (cobros.user_id → profiles.nombre).
+        // No hay FK directa cobros→profiles, por eso se resuelve aparte.
+        const cobradorUids = Array.from(new Set(pagosData.map((p: any) => p.cobros?.user_id).filter(Boolean))) as string[];
+        if (cobradorUids.length) {
+          const { data: cobProfs } = await supabase
+            .from('profiles').select('user_id, nombre')
+            .eq('empresa_id', eidLoad).in('user_id', cobradorUids);
+          const cmap: Record<string, string> = {};
+          (cobProfs ?? []).forEach((pr: any) => { if (pr.user_id && !cmap[pr.user_id]) cmap[pr.user_id] = pr.nombre ?? '—'; });
+          if (!cancelled) setCobradores(cmap);
+        } else {
+          setCobradores({});
+        }
         // Cadena de respaldo del NOMBRE DE LISTA (columna "Lista"). Debe ser una
         // lista de precio, no una tarifa: lista asignada al cliente
         // (clientes.lista_precio_id) → lista principal de la empresa → como
@@ -325,6 +340,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                       <thead>
                         <tr className="border-b border-border text-muted-foreground">
                           <th className="text-left py-1 font-medium">Método</th>
+                          <th className="text-left py-1 font-medium">Cobrador</th>
                           <th className="text-left py-1 font-medium">Referencia</th>
                           <th className="text-left py-1 font-medium">Fecha</th>
                           <th className="text-right py-1 font-medium">Monto</th>
@@ -337,6 +353,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                           return (
                             <tr key={p.id} className={`border-b border-border/40 ${cancelado ? 'opacity-50 line-through' : ''}`}>
                               <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}{cancelado && <span className="ml-1 text-[10px] text-destructive no-underline">(cancelado)</span>}</td>
+                              <td className="py-1.5 text-muted-foreground">{cobradores[cobro?.user_id] ?? '—'}</td>
                               <td className="py-1.5 text-muted-foreground">{cobro?.referencia || '—'}</td>
                               <td className="py-1.5 text-muted-foreground">{fmtDate(cobro?.fecha)}</td>
                               <td className="py-1.5 text-right font-medium tabular-nums">{fmt(p.monto_aplicado)}</td>
@@ -346,7 +363,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                       </tbody>
                       <tfoot>
                         <tr className="border-t border-border font-semibold">
-                          <td colSpan={3} className="py-1.5">Total pagado</td>
+                          <td colSpan={4} className="py-1.5">Total pagado</td>
                           <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (((p.cobros?.status ?? 'activo') !== 'cancelado') ? Number(p.monto_aplicado ?? 0) : 0), 0))}</td>
                         </tr>
                       </tfoot>
