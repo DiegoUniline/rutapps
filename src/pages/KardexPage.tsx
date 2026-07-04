@@ -25,6 +25,7 @@ const REFERENCIA_LABELS: Record<string, string> = {
   devolucion: 'Devolución',
   descarga: 'Descarga ruta',
   cancelacion_venta: 'Cancel. venta',
+  reverso_borrador: 'Vuelta a borrador',
   conteo: 'Conteo físico',
   manual: 'Manual',
 };
@@ -41,6 +42,7 @@ function getReferenciaRoute(tipo: string | null, id: string | null): string | nu
     case 'venta':
     case 'venta_ruta':
     case 'cancelacion_venta':
+    case 'reverso_borrador':
       return `/ventas/${id}`;
     case 'compra':
       return `/almacen/compras/${id}`;
@@ -168,7 +170,7 @@ export default function KardexPage() {
         destino: cli ? `Cliente: ${cli.nombre}` : 'Cliente',
       };
     }
-    if (refTipo === 'cancelacion_venta') {
+    if (refTipo === 'cancelacion_venta' || refTipo === 'reverso_borrador') {
       const cli = refId ? refInfo?.ventaCliente?.[refId] : undefined;
       return {
         origen: cli ? `Cliente: ${cli.nombre}` : 'Cliente',

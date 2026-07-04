@@ -19,6 +19,7 @@ const REFERENCIA_LABELS: Record<string, string> = {
   devolucion: 'Devolución',
   descarga: 'Descarga ruta',
   cancelacion_venta: 'Cancel. venta',
+  reverso_borrador: 'Vuelta a borrador',
   conteo: 'Conteo físico',
   manual: 'Manual',
 };

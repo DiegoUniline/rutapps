@@ -125,14 +125,18 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: ventasDia } = useQuery({
     queryKey: ['descarga-ventas-full', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
+      // Sin vendedor NO se agrega nada: antes, si vendedor_id era null, el
+      // filtro se omitía y el corte sumaba las ventas de TODA la empresa
+      // (liquidación "Sin vendedor" con cifras falsas). Mejor vacío que mentira.
+      if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('ventas')
         .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
+        .eq('vendedor_id', descarga.vendedor_id)
         .order('created_at', { ascending: true });
-      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -143,13 +147,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: devoluciones } = useQuery({
     queryKey: ['descarga-devoluciones', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
+      if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('devoluciones')
         .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
-        .lte('fecha', fFin);
-      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+        .lte('fecha', fFin)
+        .eq('vendedor_id', descarga.vendedor_id);
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -188,13 +193,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: gastos } = useQuery({
     queryKey: ['descarga-gastos-full', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
+      if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('gastos')
         .select('id, monto, concepto, fecha, notas')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
-        .lte('fecha', fFin);
-      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+        .lte('fecha', fFin)
+        .eq('vendedor_id', descarga.vendedor_id);
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -481,6 +487,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   : fmtDate(descarga.fecha)
               }
             </p>
+            {!descarga.vendedor_id && (
+              <p className="text-xs font-semibold text-destructive mt-1">
+                ⚠️ Liquidación SIN vendedor — el corte NO es confiable (no se puede filtrar por vendedor). Recomendado: elimínala y vuelve a liquidar desde la ruta.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {(() => {
