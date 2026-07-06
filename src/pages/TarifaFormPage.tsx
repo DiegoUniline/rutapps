@@ -262,10 +262,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
         };
 
         const pricing = resolveProductPricing(rules, producto);
-        if (!pricing.appliedRule) return null;
-
         const rule = pricing.appliedRule;
-        const basePrecio = rule.base_precio ?? 'sin_impuestos';
+        const basePrecio = rule?.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
         const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
 
@@ -277,20 +275,18 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
         const precioFinal = pricing.displayPrice;
         const ganancia = r2(precioNeto - p.costo);
 
-        // Raw rule price for display
-        const precioRegla = pricing.rawDisplayPrice != null
-          ? r2(basePrecio === 'con_impuestos' ? pricing.rawUnitPrice * ((1 + iepsPct / 100) * (1 + ivaPct / 100)) : pricing.rawUnitPrice)
-          : precioNeto;
-
         // Costo con impuestos
         const costoIeps = r2(p.costo * iepsPct / 100);
         const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
         const costoConImp = r2(p.costo + costoIeps + costoIva);
 
         // Regla label
-        let reglaLabel = 'Fijo';
-        if (rule.tipo_calculo === 'margen_costo') reglaLabel = `+${rule.margen_pct}%`;
-        else if (rule.tipo_calculo === 'descuento_precio') reglaLabel = `-${rule.descuento_pct}%`;
+        let reglaLabel = '—';
+        if (rule) {
+          reglaLabel = 'Fijo';
+          if (rule.tipo_calculo === 'margen_costo') reglaLabel = `+${rule.margen_pct}%`;
+          else if (rule.tipo_calculo === 'descuento_precio') reglaLabel = `-${rule.descuento_pct}%`;
+        }
 
         return {
           ...p,
@@ -303,11 +299,11 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           ganancia,
           costo_con_imp: costoConImp,
           regla: reglaLabel,
-          redondeo_tipo: rule.redondeo ?? 'ninguno',
-          comision_pct: (rule as any).comision_pct ?? 0,
+          redondeo_tipo: rule?.redondeo ?? 'ninguno',
+          comision_pct: (rule as any)?.comision_pct ?? 0,
           base_precio: basePrecio,
         };
-      }).filter(Boolean);
+      });
     },
   });
 
