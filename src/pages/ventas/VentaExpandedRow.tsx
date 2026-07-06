@@ -11,6 +11,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
@@ -371,6 +372,14 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                   ) : (
                     <p className="text-xs text-muted-foreground py-2">Sin pagos registrados</p>
                   )}
+                </div>
+
+                {/* Historial completo: quién creó/editó/canceló/pagó y cuándo */}
+                <div>
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Historial</h4>
+                  <div className="bg-accent/20 rounded-lg border border-border">
+                    <VentaHistorialTab ventaId={venta.id} />
+                  </div>
                 </div>
               </div>
             )}

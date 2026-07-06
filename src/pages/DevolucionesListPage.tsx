@@ -56,6 +56,32 @@ export default function DevolucionesListPage() {
     },
   });
 
+  // Almacén DESTINO de cada devolución (a dónde entró el producto: Mermas o vendible).
+  // Se toma de los movimientos de inventario ligados a la devolución.
+  const { data: destinoMap = {} } = useQuery({
+    queryKey: ['devoluciones-destinos', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const [movRes, almRes] = await Promise.all([
+        (supabase as any).from('movimientos_inventario')
+          .select('referencia_id, almacen_destino_id')
+          .eq('empresa_id', empresa!.id)
+          .in('referencia_tipo', ['devolucion_aplicada', 'devolucion'])
+          .gt('cantidad', 0),
+        (supabase as any).from('almacenes').select('id, nombre, es_merma').eq('empresa_id', empresa!.id),
+      ]);
+      const almById = new Map<string, any>((almRes.data ?? []).map((a: any) => [a.id, a]));
+      const map: Record<string, { nombre: string; es_merma: boolean }[]> = {};
+      for (const m of (movRes.data ?? [])) {
+        const a = almById.get(m.almacen_destino_id);
+        if (!a) continue;
+        const arr = map[m.referencia_id] ?? (map[m.referencia_id] = []);
+        if (!arr.some((x) => x.nombre === a.nombre)) arr.push({ nombre: a.nombre, es_merma: !!a.es_merma });
+      }
+      return map;
+    },
+  });
+
   const { clientes, vendedores } = useMemo(() => {
     const cm = new Map<string, string>();
     const vm = new Map<string, string>();
@@ -193,15 +219,16 @@ export default function DevolucionesListPage() {
               <th className="text-right py-2.5 px-3 font-medium">Uds.</th>
               <th className="text-left py-2.5 px-3 font-medium">Motivo</th>
               <th className="text-left py-2.5 px-3 font-medium">Acción</th>
+              <th className="text-left py-2.5 px-3 font-medium">Destino</th>
               <th className="text-right py-2.5 px-3 font-medium">Crédito</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
             )}
             {!isLoading && paged.length === 0 && (
-              <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">
+              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">
                 {hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}
               </td></tr>
             )}
@@ -239,6 +266,15 @@ export default function DevolucionesListPage() {
                       </span>
                     ))}
                   </td>
+                  <td className="py-2 px-3">
+                    {((destinoMap as any)[d.id] ?? []).length > 0
+                      ? ((destinoMap as any)[d.id] as any[]).map((a) => (
+                          <span key={a.nombre} className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium mr-1 ${a.es_merma ? 'bg-amber-100 text-amber-700' : 'bg-card border border-border text-muted-foreground'}`}>
+                            {a.nombre}
+                          </span>
+                        ))
+                      : <span className="text-muted-foreground">—</span>}
+                  </td>
                   <td className="py-2 px-3 text-right font-semibold">
                     {tCred > 0 ? <span className="text-destructive">{fmt(tCred)}</span> : '—'}
                   </td>
@@ -251,7 +287,7 @@ export default function DevolucionesListPage() {
               <tr className="border-t-2 border-border bg-muted/30 font-bold">
                 <td colSpan={5} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
                 <td className="py-2 px-3 text-right tabular-nums">{totalUds}</td>
-                <td colSpan={2}></td>
+                <td colSpan={3}></td>
                 <td className="py-2 px-3 text-right text-destructive tabular-nums">{fmt(totalCredito)}</td>
               </tr>
             </tfoot>
