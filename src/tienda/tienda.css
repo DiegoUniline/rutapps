@@ -705,47 +705,88 @@
    Cada empresa elige su plantilla en Config de tienda.
    ============================================================ */
 
-/* ---- BOUTIQUE: moda, editorial, minimal, esquinas rectas ---- */
+/* ============================================================
+   BOUTIQUE — moda editorial: blanco hueso, tipografía serif para
+   nombres/marca, todo en mayúsculas tracked, esquinas rectas,
+   tarjetas sin marco con foto alta 3:4. Aire y minimalismo.
+   ============================================================ */
+.tienda-root[data-plantilla="boutique"] { background: #FBFAF7; color: #16130F; }
 .tienda-root[data-plantilla="boutique"] .tx-hero,
 .tienda-root[data-plantilla="boutique"] .tienda-card,
 .tienda-root[data-plantilla="boutique"] .tx-cat-tile,
 .tienda-root[data-plantilla="boutique"] .tienda-card-img,
-.tienda-root[data-plantilla="boutique"] .tienda-btn { border-radius: 0 !important; }
+.tienda-root[data-plantilla="boutique"] .tienda-btn,
+.tienda-root[data-plantilla="boutique"] .tienda-btn-primary,
+.tienda-root[data-plantilla="boutique"] .tienda-search { border-radius: 0 !important; }
+/* Header minimal */
+.tienda-root[data-plantilla="boutique"] .tienda-header { background: #FBFAF7; border-bottom: 1px solid #E7E1D7; box-shadow: none; }
+.tienda-root[data-plantilla="boutique"] .tienda-logo-text { font-family: Georgia, 'Times New Roman', serif; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.tienda-root[data-plantilla="boutique"] .tienda-nav-chip { background: transparent !important; border: none !important; text-transform: uppercase; letter-spacing: .18em; font-size: 11px; color: #6B6155; padding-left: 0; padding-right: 18px; }
+.tienda-root[data-plantilla="boutique"] .tienda-nav-chip.active { color: #16130F; }
+/* Hero editorial (respeta banner si hay; si no, tono hueso) */
+.tienda-root[data-plantilla="boutique"] .tx-hero-eyebrow { text-transform: uppercase; letter-spacing: .35em; font-size: 11px; font-weight: 700; }
 .tienda-root[data-plantilla="boutique"] .tx-hero-content h1,
-.tienda-root[data-plantilla="boutique"] .tienda-hero h1 { text-transform: uppercase; letter-spacing: -0.01em; font-weight: 800; }
-.tienda-root[data-plantilla="boutique"] .tx-section-head h2 { text-transform: uppercase; letter-spacing: 0.18em; font-size: 15px; font-weight: 800; }
-.tienda-root[data-plantilla="boutique"] .tienda-card { border: none; box-shadow: none; background: transparent; }
+.tienda-root[data-plantilla="boutique"] .tienda-hero h1 { text-transform: uppercase; letter-spacing: -.02em; font-weight: 800; font-size: clamp(38px, 7vw, 76px); line-height: .92; }
+.tienda-root[data-plantilla="boutique"] .tx-hero-cta { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; background: #16130F; color: #fff; }
+/* Encabezados de sección: fino, tracked */
+.tienda-root[data-plantilla="boutique"] .tx-section-head h2 { text-transform: uppercase; letter-spacing: .22em; font-size: 13px; font-weight: 800; }
+.tienda-root[data-plantilla="boutique"] .tx-link { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; }
+/* Categorías altas y editoriales */
+.tienda-root[data-plantilla="boutique"] .tx-cat-tile { aspect-ratio: 3 / 4; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; font-size: 13px; }
+/* Producto: sin marco, foto alta, nombre serif */
+.tienda-root[data-plantilla="boutique"] .tienda-card { border: none !important; box-shadow: none !important; background: transparent; }
 .tienda-root[data-plantilla="boutique"] .tienda-card-img { aspect-ratio: 3 / 4; }
-.tienda-root[data-plantilla="boutique"] .tienda-card-name { font-weight: 700; }
-.tienda-root[data-plantilla="boutique"] .tienda-card-brand { letter-spacing: 0.16em; }
-.tienda-root[data-plantilla="boutique"] .tx-cat-tile { text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
-.tienda-root[data-plantilla="boutique"] .tienda-nav-chip { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-brand { text-transform: uppercase; letter-spacing: .18em; font-size: 10px; color: #8A7F70; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-name { font-family: Georgia, 'Times New Roman', serif; font-weight: 600; font-size: 15px; color: #16130F; }
+.tienda-root[data-plantilla="boutique"] .tienda-card-price { font-weight: 500; font-size: 15px; color: #16130F; }
+.tienda-root[data-plantilla="boutique"] .tienda-btn-primary { background: #16130F; color: #fff; }
+.tienda-root[data-plantilla="boutique"] .tienda-footer { background: #F1EBE1; }
 
-/* ---- BAZAR: marketplace, redondeado, colorido, dinámico ---- */
-.tienda-root[data-plantilla="bazar"] .tienda-card { border-radius: 16px; }
-.tienda-root[data-plantilla="bazar"] .tienda-card-img { border-radius: 16px 16px 0 0; }
-.tienda-root[data-plantilla="bazar"] .tienda-card:hover { transform: translateY(-4px); box-shadow: 0 18px 34px -18px rgba(0,0,0,.35); }
-.tienda-root[data-plantilla="bazar"] .tx-cat-tile { border-radius: 18px; }
-.tienda-root[data-plantilla="bazar"] .tx-hero { border-radius: 20px; }
-.tienda-root[data-plantilla="bazar"] .tienda-card-price { color: var(--tienda-primary); }
-.tienda-root[data-plantilla="bazar"] .tx-section-head h2 { font-weight: 900; }
+/* ============================================================
+   BAZAR — marketplace vibrante: fondo gris claro para que las
+   tarjetas blancas "floten", todo redondeado, sombras suaves,
+   hover con elevación, precio grande a color. Denso y dinámico.
+   ============================================================ */
+.tienda-root[data-plantilla="bazar"] { background: #F3F5F9; }
+.tienda-root[data-plantilla="bazar"] .tienda-header { box-shadow: 0 2px 14px -8px rgba(20,26,46,.28); }
+.tienda-root[data-plantilla="bazar"] .tienda-search { border-radius: 14px; }
+.tienda-root[data-plantilla="bazar"] .tienda-nav-chip { border-radius: 999px; }
+.tienda-root[data-plantilla="bazar"] .tx-hero { border-radius: 22px; overflow: hidden; }
+.tienda-root[data-plantilla="bazar"] .tx-hero-content h1,
+.tienda-root[data-plantilla="bazar"] .tienda-hero h1 { font-weight: 900; letter-spacing: -.025em; }
+.tienda-root[data-plantilla="bazar"] .tx-section-head h2 { font-weight: 900; font-size: 20px; letter-spacing: -.01em; }
+.tienda-root[data-plantilla="bazar"] .tx-cat-tile { border-radius: 18px; box-shadow: 0 8px 20px -12px rgba(20,26,46,.35); }
+.tienda-root[data-plantilla="bazar"] .tienda-card { border: none; border-radius: 18px; background: #fff; box-shadow: 0 8px 22px -14px rgba(20,26,46,.3); overflow: hidden; transition: transform .16s ease, box-shadow .16s ease; }
+.tienda-root[data-plantilla="bazar"] .tienda-card:hover { transform: translateY(-5px); box-shadow: 0 26px 46px -20px rgba(20,26,46,.4); }
+.tienda-root[data-plantilla="bazar"] .tienda-card-img { border-radius: 18px 18px 0 0; }
+.tienda-root[data-plantilla="bazar"] .tienda-card-name { font-weight: 600; }
+.tienda-root[data-plantilla="bazar"] .tienda-card-price { color: var(--tienda-primary); font-weight: 900; font-size: 22px; }
+.tienda-root[data-plantilla="bazar"] .tienda-btn-primary { border-radius: 12px; font-weight: 800; }
+.tienda-root[data-plantilla="bazar"] .tienda-footer { background: #10182B; color: #cdd6e6; }
 
-/* ---- AHORRERA: mayoreo, oscuro industrial, precio protagonista ---- */
+/* ============================================================
+   AHORRERA — mayoreo oscuro industrial: fondo negro, acentos
+   amarillo/rojo, precio enorme. El ahorro manda.
+   ============================================================ */
 .tienda-root[data-plantilla="ahorrera"] { --tienda-primary: #FFD400; --tienda-secondary: #FF3B30; background: #14161B; color: #F2F2EF; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-header,
 .tienda-root[data-plantilla="ahorrera"] .tienda-footer { background: #0E1013; color: #F2F2EF; border-color: #2a2e38; }
-.tienda-root[data-plantilla="ahorrera"] .tienda-header-top { background: #0E1013; border-bottom: 2px solid #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-header-top { background: #0E1013; border-bottom: 2px solid #FFD400; color: #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-logo-text { text-transform: uppercase; font-weight: 900; letter-spacing: -.01em; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-nav-chip { background: #1E2129; color: #cfd3da; border-color: #2a2e38; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-nav-chip.active { background: #FFD400; color: #111; border-color: #FFD400; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-search input { background: #1E2129; color: #fff; border-color: #2a2e38; }
 .tienda-root[data-plantilla="ahorrera"] .tx-hero { background: linear-gradient(120deg, #1E2129, #14161B); }
-.tienda-root[data-plantilla="ahorrera"] .tx-hero-eyebrow { color: #FFD400; }
-.tienda-root[data-plantilla="ahorrera"] .tx-section-head h2 { color: #fff; text-transform: uppercase; font-weight: 900; }
+.tienda-root[data-plantilla="ahorrera"] .tx-hero-eyebrow { color: #FFD400; text-transform: uppercase; letter-spacing: .2em; font-weight: 800; }
+.tienda-root[data-plantilla="ahorrera"] .tx-hero-content h1,
+.tienda-root[data-plantilla="ahorrera"] .tienda-hero h1 { text-transform: uppercase; font-weight: 900; letter-spacing: -.03em; }
+.tienda-root[data-plantilla="ahorrera"] .tx-section-head h2 { color: #fff; text-transform: uppercase; font-weight: 900; letter-spacing: -.01em; }
+.tienda-root[data-plantilla="ahorrera"] .tx-cat-tile { border-radius: 12px; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-card { background: #1E2129; border: 1px solid #2a2e38; border-radius: 12px; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-card-name { color: #F2F2EF; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-card-brand { color: #9aa0ab; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-card-price,
-.tienda-root[data-plantilla="ahorrera"] .tienda-card-price small { color: #fff; }
-.tienda-root[data-plantilla="ahorrera"] .tienda-card-price { font-size: 26px; font-weight: 900; }
-.tienda-root[data-plantilla="ahorrera"] .tienda-btn-primary { background: #FF3B30; color: #fff; }
-.tienda-root[data-plantilla="ahorrera"] .tx-cat-tile { border-radius: 12px; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-price small { color: #FFD400; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-price { font-size: 28px; font-weight: 900; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-btn-primary { background: #FF3B30; color: #fff; font-weight: 800; }
+.tienda-root[data-plantilla="ahorrera"] .tienda-card-stock { color: #7ee0a3; }
