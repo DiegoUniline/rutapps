@@ -288,7 +288,7 @@ const Email = ({
                                     <Img src={ICON.whatsapp} width="18" height="18" alt="" style={iconImg} />
                                   </td>
                                   <td valign="middle" style={{ verticalAlign: 'middle' }}>
-                                    <Text style={footerLine}>317 128 8029</Text>
+                                    <Text style={footerLine}>+52 1 317 104 5954</Text>
                                   </td>
                                 </tr>
                               </tbody>
