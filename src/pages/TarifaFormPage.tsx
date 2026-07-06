@@ -271,7 +271,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           ieps_tipo: p.ieps_tipo,
         };
 
-        const pricing = resolveProductPricing(rules, producto);
+        const pricing = resolveProductPricing(rules, producto, listaSeleccionadaId);
         const rule = pricing.appliedRule;
         const basePrecio = rule?.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
