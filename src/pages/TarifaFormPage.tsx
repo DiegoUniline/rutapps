@@ -480,6 +480,22 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        {listasPrecio.length > 1 && (
+          <select
+            value={listaSeleccionada?.nombre ?? ''}
+            onChange={(e) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('lista', e.target.value);
+              setSearchParams(next, { replace: true });
+            }}
+            className="px-2.5 py-1.5 rounded-md border border-input bg-background text-[12px] text-foreground"
+            title="Lista de precios"
+          >
+            {listasPrecio.map(l => (
+              <option key={l.id} value={l.nombre}>{l.nombre}{l.es_principal ? ' ★' : ''}</option>
+            ))}
+          </select>
+        )}
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
         <div className="ml-auto flex items-center gap-2">
           {(() => {
