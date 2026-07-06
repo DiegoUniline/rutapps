@@ -206,14 +206,24 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean }> }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Resolve selected lista: URL ?lista=<nombre> → matched id, fallback to principal, fallback to first
+  const listaFromUrl = searchParams.get('lista');
+  const listaSeleccionada =
+    (listaFromUrl && listasPrecio.find(l => l.nombre === listaFromUrl)) ||
+    listasPrecio.find(l => l.es_principal) ||
+    listasPrecio[0] ||
+    null;
+  const listaSeleccionadaId = listaSeleccionada?.id ?? null;
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId, empresaId],
+    queryKey: ['precios_preview_tarifa', tarifaId, empresaId, listaSeleccionadaId],
     enabled: !!tarifaId && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
@@ -229,9 +239,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
 
       if (!prods || !lineas) return [];
 
-      // Convert DB lineas to TarifaLineaRule format for the resolver
+      // Include rules matching the selected lista OR global (null lista_precio_id)
       const rules: TarifaLineaRule[] = lineas
-        .filter((l: any) => !l.lista_precio_id)
+        .filter((l: any) => !l.lista_precio_id || l.lista_precio_id === listaSeleccionadaId)
         .map((l: any) => ({
           aplica_a: l.aplica_a,
           producto_ids: l.producto_ids ?? [],
@@ -243,7 +253,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           descuento_pct: l.descuento_pct,
           redondeo: l.redondeo ?? 'ninguno',
           base_precio: l.base_precio ?? 'sin_impuestos',
-          lista_precio_id: null,
+          lista_precio_id: l.lista_precio_id ?? null,
         }));
 
       const r2 = (v: number) => Math.round(v * 100) / 100;
