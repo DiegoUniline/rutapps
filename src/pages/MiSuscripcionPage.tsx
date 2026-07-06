@@ -733,6 +733,11 @@ export default function MiSuscripcionPage() {
 
   // Pending invoices
   const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
+  // Facturas que TODAVÍA se pueden pagar: pendientes y también VENCIDAS (una
+  // factura vencida sigue debiéndose, así que debe poder pagarse).
+  const PAYABLE_ESTADOS = ['pendiente', 'vencida', 'vencido', 'past_due'];
+  const isPayableFactura = (estado: string) => PAYABLE_ESTADOS.includes((estado || '').toLowerCase());
+  const payableFacturas = facturas.filter(f => isPayableFactura(f.estado));
 
   const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
@@ -938,8 +943,8 @@ export default function MiSuscripcionPage() {
                 </CardContent>
               </Card>
 
-              {/* ⚠️ PROMINENT: Pending Invoice Banner */}
-              {pendingFacturas.length > 0 && (
+              {/* ⚠️ PROMINENT: Pending/overdue Invoice Banner */}
+              {payableFacturas.length > 0 && (
                 <Card className="border-2 border-destructive/60 bg-destructive/5">
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -949,10 +954,10 @@ export default function MiSuscripcionPage() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-destructive">
-                            Tienes {pendingFacturas.length} factura{pendingFacturas.length > 1 ? 's' : ''} pendiente{pendingFacturas.length > 1 ? 's' : ''} de pago
+                            Tienes {payableFacturas.length} factura{payableFacturas.length > 1 ? 's' : ''} por pagar
                           </p>
                           <p className="text-lg font-black text-foreground">
-                            ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
+                            ${payableFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                           </p>
                         </div>
                       </div>
@@ -960,7 +965,7 @@ export default function MiSuscripcionPage() {
                         size="lg"
                         className="h-12 text-base font-bold gap-2 shrink-0 w-full sm:w-auto"
                         disabled={payingInvoice !== null}
-                        onClick={() => handlePayInvoice(pendingFacturas[0])}
+                        onClick={() => handlePayInvoice(payableFacturas[0])}
                       >
                         {payingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
                         Pagar ahora
@@ -1022,7 +1027,7 @@ export default function MiSuscripcionPage() {
                                 </span>
                               </td>
                               <td className="py-2.5 px-2 text-center">
-                                {f.estado === 'pendiente' && (
+                                {isPayableFactura(f.estado) && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1294,7 +1299,7 @@ export default function MiSuscripcionPage() {
                               </td>
                               <td className="py-2.5 px-2 text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  {f.estado === 'pendiente' && (
+                                  {isPayableFactura(f.estado) && (
                                     <Button
                                       size="sm"
                                       variant="outline"
