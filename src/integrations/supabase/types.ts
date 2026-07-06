@@ -3282,6 +3282,7 @@ export type Database = {
           entrega_id: string
           hecho: boolean
           id: string
+          motivo_no_entrega: string | null
           paquetes: number | null
           presentacion_factor: number | null
           presentacion_id: string | null
@@ -3297,6 +3298,7 @@ export type Database = {
           entrega_id: string
           hecho?: boolean
           id?: string
+          motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
@@ -3312,6 +3314,7 @@ export type Database = {
           entrega_id?: string
           hecho?: boolean
           id?: string
+          motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
