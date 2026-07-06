@@ -206,14 +206,24 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean }> }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Resolve selected lista: URL ?lista=<nombre> → matched id, fallback to principal, fallback to first
+  const listaFromUrl = searchParams.get('lista');
+  const listaSeleccionada =
+    (listaFromUrl && listasPrecio.find(l => l.nombre === listaFromUrl)) ||
+    listasPrecio.find(l => l.es_principal) ||
+    listasPrecio[0] ||
+    null;
+  const listaSeleccionadaId = listaSeleccionada?.id ?? null;
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId, empresaId],
+    queryKey: ['precios_preview_tarifa', tarifaId, empresaId, listaSeleccionadaId],
     enabled: !!tarifaId && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
@@ -229,9 +239,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
 
       if (!prods || !lineas) return [];
 
-      // Convert DB lineas to TarifaLineaRule format for the resolver
+      // Include rules matching the selected lista OR global (null lista_precio_id)
       const rules: TarifaLineaRule[] = lineas
-        .filter((l: any) => !l.lista_precio_id)
+        .filter((l: any) => !l.lista_precio_id || l.lista_precio_id === listaSeleccionadaId)
         .map((l: any) => ({
           aplica_a: l.aplica_a,
           producto_ids: l.producto_ids ?? [],
@@ -243,7 +253,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           descuento_pct: l.descuento_pct,
           redondeo: l.redondeo ?? 'ninguno',
           base_precio: l.base_precio ?? 'sin_impuestos',
-          lista_precio_id: null,
+          lista_precio_id: l.lista_precio_id ?? null,
         }));
 
       const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -261,11 +271,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           ieps_tipo: p.ieps_tipo,
         };
 
-        const pricing = resolveProductPricing(rules, producto);
-        if (!pricing.appliedRule) return null;
-
+        const pricing = resolveProductPricing(rules, producto, listaSeleccionadaId);
         const rule = pricing.appliedRule;
-        const basePrecio = rule.base_precio ?? 'sin_impuestos';
+        const basePrecio = rule?.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
         const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
 
@@ -277,20 +285,18 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
         const precioFinal = pricing.displayPrice;
         const ganancia = r2(precioNeto - p.costo);
 
-        // Raw rule price for display
-        const precioRegla = pricing.rawDisplayPrice != null
-          ? r2(basePrecio === 'con_impuestos' ? pricing.rawUnitPrice * ((1 + iepsPct / 100) * (1 + ivaPct / 100)) : pricing.rawUnitPrice)
-          : precioNeto;
-
         // Costo con impuestos
         const costoIeps = r2(p.costo * iepsPct / 100);
         const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
         const costoConImp = r2(p.costo + costoIeps + costoIva);
 
         // Regla label
-        let reglaLabel = 'Fijo';
-        if (rule.tipo_calculo === 'margen_costo') reglaLabel = `+${rule.margen_pct}%`;
-        else if (rule.tipo_calculo === 'descuento_precio') reglaLabel = `-${rule.descuento_pct}%`;
+        let reglaLabel = '—';
+        if (rule) {
+          reglaLabel = 'Fijo';
+          if (rule.tipo_calculo === 'margen_costo') reglaLabel = `+${rule.margen_pct}%`;
+          else if (rule.tipo_calculo === 'descuento_precio') reglaLabel = `-${rule.descuento_pct}%`;
+        }
 
         return {
           ...p,
@@ -303,11 +309,11 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           ganancia,
           costo_con_imp: costoConImp,
           regla: reglaLabel,
-          redondeo_tipo: rule.redondeo ?? 'ninguno',
-          comision_pct: (rule as any).comision_pct ?? 0,
+          redondeo_tipo: rule?.redondeo ?? 'ninguno',
+          comision_pct: (rule as any)?.comision_pct ?? 0,
           base_precio: basePrecio,
         };
-      }).filter(Boolean);
+      });
     },
   });
 
@@ -474,6 +480,22 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        {listasPrecio.length > 1 && (
+          <select
+            value={listaSeleccionada?.nombre ?? ''}
+            onChange={(e) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('lista', e.target.value);
+              setSearchParams(next, { replace: true });
+            }}
+            className="px-2.5 py-1.5 rounded-md border border-input bg-background text-[12px] text-foreground"
+            title="Lista de precios"
+          >
+            {listasPrecio.map(l => (
+              <option key={l.id} value={l.nombre}>{l.nombre}{l.es_principal ? ' ★' : ''}</option>
+            ))}
+          </select>
+        )}
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
         <div className="ml-auto flex items-center gap-2">
           {(() => {

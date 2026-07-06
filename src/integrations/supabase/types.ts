@@ -1397,6 +1397,7 @@ export type Database = {
           created_at: string
           empresa_id: string
           id: string
+          imagen_url: string | null
           nombre: string
         }
         Insert: {
@@ -1404,6 +1405,7 @@ export type Database = {
           created_at?: string
           empresa_id: string
           id?: string
+          imagen_url?: string | null
           nombre: string
         }
         Update: {
@@ -1411,6 +1413,7 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           id?: string
+          imagen_url?: string | null
           nombre?: string
         }
         Relationships: [
@@ -6909,6 +6912,7 @@ export type Database = {
           mensaje_bienvenida: string | null
           nombre_tienda: string
           permitir_invitados: boolean
+          plantilla: string
           slug: string
           updated_at: string
           usar_lista_cliente: boolean
@@ -6929,6 +6933,7 @@ export type Database = {
           mensaje_bienvenida?: string | null
           nombre_tienda: string
           permitir_invitados?: boolean
+          plantilla?: string
           slug: string
           updated_at?: string
           usar_lista_cliente?: boolean
@@ -6949,6 +6954,7 @@ export type Database = {
           mensaje_bienvenida?: string | null
           nombre_tienda?: string
           permitir_invitados?: boolean
+          plantilla?: string
           slug?: string
           updated_at?: string
           usar_lista_cliente?: boolean
