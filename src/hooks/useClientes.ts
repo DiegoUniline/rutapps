@@ -90,7 +90,7 @@ export function useClientes(search?: string, statusFilter?: string) {
         let q = supabase.from('clientes')
           .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, lista_precio_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url')
           .eq('empresa_id', empresa!.id)
-          .order('codigo', { ascending: true })
+          .order('nombre', { ascending: true })
           .range(from, to);
         if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
         if (statusFilter && statusFilter !== 'todos') {
