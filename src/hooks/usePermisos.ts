@@ -254,6 +254,7 @@ export const MODULOS_MOVIL: ModuloMovilDef[] = [
   { id: 'ruta.resumen', label: 'Resumen (dashboard)', group: 'Vistas', description: 'Pestaña "Resumen" del dashboard de ruta' },
   { id: 'ruta.clientes', label: 'Clientes (pestaña principal)', group: 'Vistas', description: 'Pestaña inferior "Clientes"' },
   { id: 'ruta.entregas', label: 'Entregas / Pedidos', group: 'Vistas', description: 'Sub-pestaña dentro de Clientes' },
+  { id: 'ruta.editar_entrega', label: 'Editar entrega (quitar productos)', group: 'Vistas', description: 'Permite quitar/reducir productos de una entrega que el cliente rechazó, antes de marcarla como entregada' },
   { id: 'ruta.mapa', label: 'Mapa / Navegación', group: 'Vistas', description: 'Sub-pestaña de Navegación y mapa' },
   { id: 'ruta.ventas_hist', label: 'Ventas (historial)', group: 'Vistas', description: 'Pestaña inferior "Ventas"' },
   { id: 'ruta.cobros_hist', label: 'Cobros (historial)', group: 'Vistas', description: 'Sub-pestaña dentro de Ventas' },

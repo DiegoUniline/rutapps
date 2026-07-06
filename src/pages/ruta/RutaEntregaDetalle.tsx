@@ -17,9 +17,11 @@ import { queueOperation } from '@/lib/syncQueue';
 import {
   ArrowLeft, Check, User, Package, MapPin, Calendar,
   Banknote, FileText, Download, Printer, Share2, MessageCircle,
-  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle, CalendarClock
+  Receipt, X, Truck, Loader2, Clock, XCircle, AlertTriangle, CalendarClock,
+  Pencil, Minus, Plus, PackageX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePermisos } from '@/hooks/usePermisos';
 
 const statusColors: Record<string, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -48,6 +50,8 @@ export default function RutaEntregaDetalle() {
   const { empresa, user } = useAuth();
   const queryClient = useQueryClient();
   const { symbol: s, fmt } = useCurrency();
+  const { hasPermisoMovil } = usePermisos();
+  const canEditEntrega = hasPermisoMovil('ruta.editar_entrega');
 
   const [saving, setSaving] = useState(false);
   const [showWADialog, setShowWADialog] = useState(false);
@@ -64,6 +68,10 @@ export default function RutaEntregaDetalle() {
   const [showReprogramarModal, setShowReprogramarModal] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState('');
   const [savingReprog, setSavingReprog] = useState(false);
+  const [editLinea, setEditLinea] = useState<any | null>(null);
+  const [editCantidad, setEditCantidad] = useState(0);
+  const [editMotivo, setEditMotivo] = useState('');
+  const [savingLinea, setSavingLinea] = useState(false);
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ['ruta-entrega-detalle', id],
@@ -295,6 +303,54 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
     } catch (err: any) { toast.error(err.message); }
     finally { setSavingReprog(false); }
+  };
+
+  const openEditLinea = (l: any) => {
+    setEditLinea(l);
+    setEditCantidad(Number(l.cantidad_entregada) || 0);
+    setEditMotivo(l.motivo_no_entrega ?? '');
+  };
+
+  const guardarLineaEditada = async () => {
+    if (!editLinea) return;
+    const cargada = Number(editLinea.cantidad_entregada) || 0;
+    const nueva = Math.max(0, Math.min(editCantidad, cargada));
+    const quitada = cargada - nueva;
+    if (quitada <= 0) { setEditLinea(null); return; }
+    const motivo = editMotivo.trim();
+    if (!motivo) { toast.error('Indica el motivo por el que se quita el producto'); return; }
+    setSavingLinea(true);
+    try {
+      // Reducir cantidad_entregada deja el producto en el camión (no se descuenta
+      // del inventario al marcar 'hecho', porque el trigger descuenta por
+      // cantidad_entregada). Registramos el motivo por línea.
+      const payload = {
+        id: editLinea.id,
+        cantidad_entregada: nueva,
+        hecho: nueva > 0,
+        motivo_no_entrega: motivo,
+      };
+      if (navigator.onLine) {
+        const { error } = await supabase.from('entrega_lineas').update({
+          cantidad_entregada: nueva,
+          hecho: nueva > 0,
+          motivo_no_entrega: motivo,
+        } as any).eq('id', editLinea.id);
+        if (error) throw error;
+      } else {
+        await queueOperation('entrega_lineas', 'update', payload);
+        toast.message('Sin conexión: cambio guardado localmente, se sincronizará');
+      }
+      const prod = editLinea.productos?.nombre ?? 'Producto';
+      toast.success(nueva === 0
+        ? `${prod} quitado de la entrega (regresa al camión)`
+        : `${prod}: ${quitada} ${quitada === 1 ? 'pieza' : 'piezas'} regresan al camión`);
+      setEditLinea(null);
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
+      queryClient.invalidateQueries({ queryKey: ['entregas'] });
+      queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSavingLinea(false); }
   };
 
   const getTicketData = (): TicketData | null => {
@@ -557,16 +613,34 @@ export default function RutaEntregaDetalle() {
               const pedida = Number(vl?.cantidad) || 0;
               const ratio = pedida > 0 ? cant / pedida : 1;
               const total = vl ? Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1) : precio * cant;
+              const pedidaLinea = Number(vl?.cantidad ?? l.cantidad) || 0;
+              const reducida = pedidaLinea > 0 && cant < pedidaLinea;
               return (
                 <div key={l.id} className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{prod?.nombre ?? '—'}</p>
                       <p className="text-[11px] text-muted-foreground">{cant} × {fmt(precio)}</p>
+                      {reducida && (
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                          Pedido {pedidaLinea} · se entregan {cant}
+                          {l.motivo_no_entrega ? ` · ${l.motivo_no_entrega}` : ''}
+                        </p>
+                      )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[14px] font-bold text-foreground">{fmt(total)}</p>
-                      {l.hecho && <span className="text-[9px] text-green-600 font-medium">✓ Surtido</span>}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="text-right">
+                        <p className="text-[14px] font-bold text-foreground">{fmt(total)}</p>
+                        {l.hecho && <span className="text-[9px] text-green-600 font-medium">✓ Surtido</span>}
+                      </div>
+                      {canEditEntrega && !isClosedState && (
+                        <button
+                          onClick={() => openEditLinea(l)}
+                          title="Quitar o reducir este producto"
+                          className="p-1.5 rounded-lg border border-border text-muted-foreground active:bg-accent active:scale-95 transition-transform">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -765,6 +839,68 @@ export default function RutaEntregaDetalle() {
           </div>
         </div>
       )}
+
+      {editLinea && (() => {
+        const cargada = Number(editLinea.cantidad_entregada) || 0;
+        const nueva = Math.max(0, Math.min(editCantidad, cargada));
+        const quitada = cargada - nueva;
+        return (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center" onClick={() => !savingLinea && setEditLinea(null)}>
+            <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[15px] font-bold text-foreground flex items-center gap-2"><PackageX className="h-4 w-4 text-amber-500" /> Quitar producto</h3>
+                <button onClick={() => setEditLinea(null)} disabled={savingLinea} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+              </div>
+              <div>
+                <p className="text-[14px] font-medium text-foreground">{editLinea.productos?.nombre ?? '—'}</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">El cliente rechazó parte o todo este producto. Lo que quites regresa al camión y no se cobra.</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-muted-foreground">Cantidad a entregar</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setEditCantidad(Math.max(0, nueva - 1))}
+                    disabled={nueva <= 0}
+                    className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-foreground active:bg-accent disabled:opacity-30">
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="text-[18px] font-bold text-foreground w-8 text-center">{nueva}</span>
+                  <button
+                    onClick={() => setEditCantidad(Math.min(cargada, nueva + 1))}
+                    disabled={nueva >= cargada}
+                    className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-foreground active:bg-accent disabled:opacity-30">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <button onClick={() => setEditCantidad(0)} className="text-amber-600 dark:text-amber-400 font-medium">Quitar todo ({cargada})</button>
+                <span className="text-muted-foreground">Cargado: {cargada}{quitada > 0 ? ` · regresan ${quitada}` : ''}</span>
+              </div>
+              {quitada > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-muted-foreground font-medium">Motivo</label>
+                  <input
+                    type="text"
+                    value={editMotivo}
+                    onChange={e => setEditMotivo(e.target.value)}
+                    placeholder="Ej. cliente no lo quiso, producto dañado…"
+                    className="w-full bg-accent/40 rounded-lg px-3 py-2.5 text-[13px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40" />
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setEditLinea(null)} disabled={savingLinea}
+                  className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-2.5 text-[13px] font-medium">Cancelar</button>
+                <button onClick={guardarLineaEditada} disabled={savingLinea || quitada <= 0 || !editMotivo.trim()}
+                  className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-[13px] font-bold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
+                  {savingLinea ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={cliente?.telefono ?? ''} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
     </div>
