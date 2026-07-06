@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { buildSalePricingSnapshot } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
@@ -221,7 +222,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
       }
       const r = resolveProductPricing(rules, pf, clienteListaPrecioId);
-      return { unitPrice: r.unitPrice, rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' };
+      // Igual que el escritorio: el precio_unitario guardado se deriva del
+      // display YA REDONDEADO (buildSalePricingSnapshot). Antes el móvil usaba
+      // r.unitPrice (neto SIN redondeo), por eso el redondeo de la lista no se
+      // respetaba en la app móvil.
+      const snap = buildSalePricingSnapshot(pf, r);
+      return { unitPrice: snap.unitPrice, rawUnitPrice: snap.rawUnitPrice, rawDisplayPrice: snap.rawDisplayPrice, basePrecio: snap.basePrecio, redondeo: snap.redondeo };
     };
   }, [tarifaLineasOffline, clienteListaPrecioId]);
 

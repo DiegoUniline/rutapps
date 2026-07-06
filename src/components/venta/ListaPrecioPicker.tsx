@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { buildSalePricingSnapshot } from '@/lib/salePricing';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
@@ -95,13 +96,16 @@ export function ListaPrecioPicker({
       if (!tarifa) continue;
       const tarifaRules = (rules as TarifaLineaRule[]).filter((r: any) => r.tarifa_id === tarifa.id);
       const r = resolveProductPricing(tarifaRules, pf, lista.id);
+      // unitPrice guardado = neto derivado del display YA REDONDEADO, para que
+      // al aplicar esta lista el redondeo se respete (igual que el escritorio).
+      const snap = buildSalePricingSnapshot(pf, r);
       result.push({
         lista_precio_id: lista.id,
         lista_nombre: lista.nombre,
         tarifa_id: tarifa.id,
         tarifa_nombre: tarifa.nombre,
         es_principal: !!lista.es_principal,
-        unitPrice: r.unitPrice,
+        unitPrice: snap.unitPrice,
         displayPrice: r.displayPrice,
         hasRule: !!r.appliedRule,
       });
