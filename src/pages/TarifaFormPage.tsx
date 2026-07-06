@@ -206,14 +206,24 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean }> }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Resolve selected lista: URL ?lista=<nombre> → matched id, fallback to principal, fallback to first
+  const listaFromUrl = searchParams.get('lista');
+  const listaSeleccionada =
+    (listaFromUrl && listasPrecio.find(l => l.nombre === listaFromUrl)) ||
+    listasPrecio.find(l => l.es_principal) ||
+    listasPrecio[0] ||
+    null;
+  const listaSeleccionadaId = listaSeleccionada?.id ?? null;
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId, empresaId],
+    queryKey: ['precios_preview_tarifa', tarifaId, empresaId, listaSeleccionadaId],
     enabled: !!tarifaId && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
@@ -229,9 +239,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
 
       if (!prods || !lineas) return [];
 
-      // Convert DB lineas to TarifaLineaRule format for the resolver
+      // Include rules matching the selected lista OR global (null lista_precio_id)
       const rules: TarifaLineaRule[] = lineas
-        .filter((l: any) => !l.lista_precio_id)
+        .filter((l: any) => !l.lista_precio_id || l.lista_precio_id === listaSeleccionadaId)
         .map((l: any) => ({
           aplica_a: l.aplica_a,
           producto_ids: l.producto_ids ?? [],
@@ -243,7 +253,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
           descuento_pct: l.descuento_pct,
           redondeo: l.redondeo ?? 'ninguno',
           base_precio: l.base_precio ?? 'sin_impuestos',
-          lista_precio_id: null,
+          lista_precio_id: l.lista_precio_id ?? null,
         }));
 
       const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -470,6 +480,22 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        {listasPrecio.length > 1 && (
+          <select
+            value={listaSeleccionada?.nombre ?? ''}
+            onChange={(e) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('lista', e.target.value);
+              setSearchParams(next, { replace: true });
+            }}
+            className="px-2.5 py-1.5 rounded-md border border-input bg-background text-[12px] text-foreground"
+            title="Lista de precios"
+          >
+            {listasPrecio.map(l => (
+              <option key={l.id} value={l.nombre}>{l.nombre}{l.es_principal ? ' ★' : ''}</option>
+            ))}
+          </select>
+        )}
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
         <div className="ml-auto flex items-center gap-2">
           {(() => {
