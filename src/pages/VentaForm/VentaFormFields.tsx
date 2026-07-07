@@ -59,7 +59,8 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </div>
     );
 
-  const tarifaNombre = tarifaOptions.find(t => t.value === form.tarifa_id)?.label;
+  const listaNombre = listasPrecios?.find(l => l.id === form.lista_precio_id)?.nombre
+    ?? tarifaOptions.find(t => t.value === form.tarifa_id)?.label;
   const renderCliente = () => (
     <div className="space-y-1">
       {readOnly
