@@ -7651,7 +7651,7 @@ export type Database = {
           detalles: Json | null
           empresa_id: string
           id: string
-          user_id: string
+          user_id: string | null
           user_nombre: string
           venta_id: string
         }
@@ -7661,7 +7661,7 @@ export type Database = {
           detalles?: Json | null
           empresa_id: string
           id?: string
-          user_id: string
+          user_id?: string | null
           user_nombre?: string
           venta_id: string
         }
@@ -7671,7 +7671,7 @@ export type Database = {
           detalles?: Json | null
           empresa_id?: string
           id?: string
-          user_id?: string
+          user_id?: string | null
           user_nombre?: string
           venta_id?: string
         }
@@ -8496,7 +8496,9 @@ export type Database = {
       }
     }
     Functions: {
+      _current_user_nombre: { Args: never; Returns: string }
       _inotif_cliente_nombre: { Args: { _id: string }; Returns: string }
+      _map_entrega_status: { Args: { _s: string }; Returns: string }
       _mover_stock_entre_almacenes: {
         Args: {
           p_almacen_destino: string
@@ -8732,6 +8734,15 @@ export type Database = {
       }
       is_sandbox_empresa: { Args: { p_empresa_id: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
+      log_venta_historial: {
+        Args: {
+          _accion: string
+          _detalles?: Json
+          _empresa_id: string
+          _venta_id: string
+        }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
