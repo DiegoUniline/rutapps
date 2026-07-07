@@ -92,7 +92,7 @@ export function VentaHistorialTab({ ventaId }: Props) {
         .from('venta_historial')
         .select('*')
         .eq('venta_id', ventaId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
@@ -109,79 +109,84 @@ export function VentaHistorialTab({ ventaId }: Props) {
     );
   }
 
-  return (
-    <div className="p-4 space-y-0">
-      <div className="relative">
-        {/* Timeline line */}
-        <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
-        
-        {historial.map((entry: any, idx: number) => {
-          const Icon = ACCION_ICONS[entry.accion] || Clock;
-          const color = ACCION_COLORS[entry.accion] || 'bg-muted text-muted-foreground';
-          const label = ACCION_LABELS[entry.accion] || entry.accion;
-          const detalles = entry.detalles;
-          const fecha = new Date(entry.created_at);
-
+  const renderDetalles = (detalles: any) => {
+    if (!detalles) return null;
+    if (Array.isArray(detalles)) {
+      return detalles.map((d: any, i: number) => (
+        <span key={i} className="mr-2">{typeof d === 'string' ? d : JSON.stringify(d)}</span>
+      ));
+    }
+    if (typeof detalles !== 'object') return String(detalles);
+    const entries = Object.entries(detalles);
+    if (!entries.length) return null;
+    return (
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {entries.map(([key, val]: [string, any]) => {
+          const isChange = val && typeof val === 'object' && !Array.isArray(val) && ('anterior' in val || 'nuevo' in val);
           return (
-            <div key={entry.id} className="relative pl-12 pb-6 last:pb-0">
-              {/* Icon circle */}
-              <div className={`absolute left-2.5 w-5 h-5 rounded-full flex items-center justify-center ${color} ring-2 ring-background`}>
-                <Icon className="h-3 w-3" />
-              </div>
-              
-              <div>
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[13px] font-semibold text-foreground">{label}</p>
-                  <p className="text-[10px] text-muted-foreground shrink-0">
-                    {fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} {fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  por {entry.user_nombre || 'Sistema'}
-                </p>
-
-                {/* Show change details */}
-                {detalles && typeof detalles === 'object' && !Array.isArray(detalles) && Object.keys(detalles).length > 0 && (
-                  <div className="mt-2 bg-accent/40 rounded-lg p-2.5 space-y-1">
-                    {Object.entries(detalles).map(([key, val]: [string, any]) => {
-                      const isChangeObj = val && typeof val === 'object' && !Array.isArray(val) && ('anterior' in val || 'nuevo' in val);
-                      return (
-                        <div key={key} className="text-[11px]">
-                          <span className="text-muted-foreground">{key}: </span>
-                          {isChangeObj ? (
-                            <span>
-                              {'anterior' in val && val.anterior !== null && val.anterior !== undefined && (
-                                <>
-                                  <span className="line-through text-destructive/70">{String(val.anterior)}</span>
-                                  {' → '}
-                                </>
-                              )}
-                              <span className="font-medium text-foreground">{String(val.nuevo ?? '')}</span>
-                            </span>
-                          ) : val && typeof val === 'object' ? (
-                            <span className="font-medium text-foreground">{JSON.stringify(val)}</span>
-                          ) : (
-                            <span className="font-medium text-foreground">{String(val)}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {Array.isArray(detalles) && detalles.length > 0 && (
-                  <div className="mt-2 bg-accent/40 rounded-lg p-2.5 space-y-1">
-                    {detalles.map((d: any, i: number) => (
-                      <p key={i} className="text-[11px] text-foreground">
-                        {typeof d === 'string' ? d : JSON.stringify(d)}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <span key={key} className="text-[11px]">
+              <span className="text-muted-foreground">{key}: </span>
+              {isChange ? (
+                <>
+                  {'anterior' in val && val.anterior !== null && val.anterior !== undefined && (
+                    <>
+                      <span className="line-through text-destructive/70">{String(val.anterior)}</span>
+                      {' → '}
+                    </>
+                  )}
+                  <span className="font-medium text-foreground">{String(val.nuevo ?? '')}</span>
+                </>
+              ) : val && typeof val === 'object' ? (
+                <span className="font-medium text-foreground">{JSON.stringify(val)}</span>
+              ) : (
+                <span className="font-medium text-foreground">{String(val)}</span>
+              )}
+            </span>
           );
         })}
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-3">
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
+        <table className="w-full text-[12px]">
+          <thead className="bg-accent/60">
+            <tr className="text-left text-muted-foreground">
+              <th className="px-3 py-2 font-semibold w-10">#</th>
+              <th className="px-3 py-2 font-semibold w-44">Fecha</th>
+              <th className="px-3 py-2 font-semibold w-56">Evento</th>
+              <th className="px-3 py-2 font-semibold w-40">Usuario</th>
+              <th className="px-3 py-2 font-semibold">Detalles</th>
+            </tr>
+          </thead>
+          <tbody>
+            {historial.map((entry: any, idx: number) => {
+              const Icon = ACCION_ICONS[entry.accion] || Clock;
+              const color = ACCION_COLORS[entry.accion] || 'bg-muted text-muted-foreground';
+              const label = ACCION_LABELS[entry.accion] || entry.accion;
+              const fecha = new Date(entry.created_at);
+              return (
+                <tr key={entry.id} className="border-t border-border hover:bg-accent/30">
+                  <td className="px-3 py-2 text-muted-foreground tabular-nums">{idx + 1}</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                    {fecha.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' })}{' '}
+                    {fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-medium ${color}`}>
+                      <Icon className="h-3 w-3" />
+                      {label}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-foreground">{entry.user_nombre || 'Sistema'}</td>
+                  <td className="px-3 py-2">{renderDetalles(entry.detalles)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
