@@ -75,7 +75,7 @@ export function VentaFormHeader({
           </button>
         )}
         {canCreateEntrega && (
-          <button onClick={onCreateEntrega} disabled={isCreatingEntrega} className="btn-odoo-primary">
+          <button onClick={onCreateEntrega} disabled={isCreatingEntrega} className="btn-odoo-action">
             <Truck className="h-3.5 w-3.5" /> Crear entrega{hayEntregas ? ' parcial' : ''}
           </button>
         )}
