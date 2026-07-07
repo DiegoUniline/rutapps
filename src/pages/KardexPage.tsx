@@ -465,7 +465,8 @@ export default function KardexPage() {
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
