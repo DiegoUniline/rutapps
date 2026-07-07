@@ -203,6 +203,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const selectedClienteData = clientes?.find(c => c.id === clienteId);
   const clienteTarifaId = selectedClienteData?.tarifa_id || tarifasOffline?.find((t: any) => t.tipo === 'general')?.id;
   const clienteListaPrecioId = (selectedClienteData as any)?.lista_precio_id || null;
+  const { data: listasPreciosOffline } = useOfflineQuery('lista_precios', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const clienteListaNombre = (listasPreciosOffline as any[])?.find(l => l.id === clienteListaPrecioId)?.nombre
+    ?? tarifasOffline?.find((t: any) => t.id === clienteTarifaId)?.nombre
+    ?? null;
   const { data: tarifaLineasOffline } = useOfflineQuery('tarifa_lineas', { tarifa_id: clienteTarifaId }, { enabled: !!clienteTarifaId });
 
   // Enriquecer clasificacion_id desde Supabase (cuando hay internet): el cache
