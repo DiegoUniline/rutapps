@@ -63,6 +63,8 @@ const navItems: NavItem[] = [
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
       { label: 'Comisiones', path: '/comisiones' },
+      { label: 'Metas', path: '/administracion/metas' },
+      { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
       { label: 'Reporte diario', path: '/ventas/reporte-diario' },
     ],
   },
@@ -101,6 +103,8 @@ const navItems: NavItem[] = [
       { label: 'Jornadas de ruta', path: '/logistica/jornadas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
+      { label: 'Zonas', path: '/catalogos/zonas' },
+      { label: 'Vehículos', path: '/configuracion/vehiculos' },
       { label: 'Reportes', path: '/logistica/reportes' },
     ],
   },
@@ -117,6 +121,7 @@ const navItems: NavItem[] = [
       { label: 'Categorías', path: '/catalogos/clasificaciones' },
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Unidades', path: '/catalogos/unidades' },
+      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
       { label: 'Proveedores', path: '/proveedores' },
     ],
   },
@@ -148,6 +153,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
       { label: 'Gastos', path: '/finanzas/gastos' },
+      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
     ],
   },
 
@@ -159,28 +165,22 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Generales', path: '/reportes' },
       { label: 'Personalizados', path: '/reportes/personalizados' },
+      { label: 'Control', path: '/control' },
     ],
   },
 
-  // ── Configuración (Datos maestros · violeta) ──
+  // ── Canales (Integraciones con clientes · teal) ──
   {
-    label: 'Configuración',
-    icon: Settings,
-    path: '/configuracion',
-    highlight: 'violet',
+    label: 'Canales',
+    icon: Smartphone,
+    path: '/configuracion/tienda',
+    highlight: 'teal',
     children: [
-      { label: 'Zonas', path: '/catalogos/zonas' },
-      { label: 'Vehículos', path: '/configuracion/vehiculos' },
-      { label: 'Homologación catálogo', path: '/configuracion/homologacion' },
+      { label: 'Tienda en línea 🛒', path: '/configuracion/tienda' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
       { label: 'Bot WhatsApp ✨', path: '/configuracion/wa-bot' },
-      { label: 'Tienda en línea 🛒', path: '/configuracion/tienda' },
-      { label: 'General', path: '/configuracion' },
     ],
   },
-
-
-
 
   {
     label: 'Facturación',
@@ -198,6 +198,16 @@ const navItems: NavItem[] = [
     ],
   },
 
+  // ── Configuración (solo ajustes del sistema · violeta) ──
+  {
+    label: 'Configuración',
+    icon: Settings,
+    path: '/configuracion',
+    highlight: 'violet',
+    children: [
+      { label: 'General', path: '/configuracion' },
+    ],
+  },
 
   {
     label: 'Administración',
@@ -205,15 +215,7 @@ const navItems: NavItem[] = [
     path: '/administracion/usuarios',
     highlight: 'violet',
     children: [
-      // Equipo y objetivos
-      { label: 'Usuarios', path: '/administracion/usuarios' },
-      { label: 'Metas', path: '/administracion/metas' },
-      { label: 'Avance metas', path: '/administracion/metas/seguimiento' },
-      // Operación
-      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
-      { label: 'Control', path: '/control' },
-      // Cuenta
-
+      { label: 'Usuarios y permisos', path: '/administracion/usuarios' },
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
       { label: 'Tutoriales', path: '/tutoriales' },
     ],
@@ -221,6 +223,7 @@ const navItems: NavItem[] = [
 
   { label: 'Actualizaciones', icon: Sparkles, path: '/actualizaciones', highlight: 'cyan' },
   { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
+
 
 ];
 
