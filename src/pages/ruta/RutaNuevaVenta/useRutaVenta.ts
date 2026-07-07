@@ -19,6 +19,7 @@ import { useClienteInsights } from '@/hooks/useClienteInsights';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
+import { nextVisitDate } from '@/lib/nextVisitDate';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
