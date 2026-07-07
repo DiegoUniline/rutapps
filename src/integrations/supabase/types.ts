@@ -3162,6 +3162,7 @@ export type Database = {
           onboarding_completado: boolean | null
           owner_user_id: string | null
           partner_owner_id: string | null
+          politica_cobro: string
           pos_turnos_habilitado: boolean
           razon_social: string | null
           regimen_fiscal: string | null
@@ -3203,6 +3204,7 @@ export type Database = {
           onboarding_completado?: boolean | null
           owner_user_id?: string | null
           partner_owner_id?: string | null
+          politica_cobro?: string
           pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
@@ -3244,6 +3246,7 @@ export type Database = {
           onboarding_completado?: boolean | null
           owner_user_id?: string | null
           partner_owner_id?: string | null
+          politica_cobro?: string
           pos_turnos_habilitado?: boolean
           razon_social?: string | null
           regimen_fiscal?: string | null
@@ -3282,6 +3285,7 @@ export type Database = {
           entrega_id: string
           hecho: boolean
           id: string
+          motivo_no_entrega: string | null
           paquetes: number | null
           presentacion_factor: number | null
           presentacion_id: string | null
@@ -3297,6 +3301,7 @@ export type Database = {
           entrega_id: string
           hecho?: boolean
           id?: string
+          motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
@@ -3312,6 +3317,7 @@ export type Database = {
           entrega_id?: string
           hecho?: boolean
           id?: string
+          motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
           presentacion_id?: string | null
@@ -7841,6 +7847,7 @@ export type Database = {
           notas: string | null
           origen: string | null
           pedido_origen_id: string | null
+          politica_cobro: string | null
           requiere_factura: boolean | null
           saldo_pendiente: number | null
           status: Database["public"]["Enums"]["status_venta"]
@@ -7875,6 +7882,7 @@ export type Database = {
           notas?: string | null
           origen?: string | null
           pedido_origen_id?: string | null
+          politica_cobro?: string | null
           requiere_factura?: boolean | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
@@ -7909,6 +7917,7 @@ export type Database = {
           notas?: string | null
           origen?: string | null
           pedido_origen_id?: string | null
+          politica_cobro?: string | null
           requiere_factura?: boolean | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]

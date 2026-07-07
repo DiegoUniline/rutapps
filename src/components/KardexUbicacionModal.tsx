@@ -182,6 +182,8 @@ export default function KardexUbicacionModal({
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
+                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
+                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground font-semibold">Saldo</th>
@@ -190,9 +192,9 @@ export default function KardexUbicacionModal({
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-[12px] text-muted-foreground">
+                <tr><td colSpan={9} className="py-8 text-center text-[12px] text-muted-foreground">
                   {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                 </td></tr>
               ) : (
@@ -215,6 +217,12 @@ export default function KardexUbicacionModal({
                       </td>
                       <td className="py-1.5 px-3 text-[12px]">
                         {REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—'}
+                      </td>
+                      <td className="py-1.5 px-3 text-[12px] text-foreground">
+                        {row.origen_nombre ?? <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="py-1.5 px-3 text-[12px] text-foreground">
+                        {row.destino_nombre ?? <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="py-1.5 px-3 text-right font-mono text-[12px]">
                         {row.delta > 0 ? <span className="text-green-600 font-semibold">+{row.delta}</span> : ''}

@@ -19,6 +19,8 @@ export interface KardexUbicacionRow {
   almacen_origen_id: string | null;
   almacen_destino_id: string | null;
   vendedor_destino_id: string | null;
+  origen_nombre: string | null;
+  destino_nombre: string | null;
 }
 
 /**
@@ -55,16 +57,12 @@ export function useKardexUbicacion(
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
       if (ubicacionId) {
-        if (ubicacionTipo === 'almacen') {
-          // Only fetch movements relevant to THIS almacen's perspective:
-          // - tipo=salida WHERE almacen_origen = this (stock left here)
-          // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
-          q = q.or(
-            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-          );
-        } else {
-          q = q.eq('vendedor_destino_id', ubicacionId);
-        }
+        // Camiones de ruta también son registros en `almacenes` (tipo='ruta')
+        // y sus movimientos usan almacen_origen_id/almacen_destino_id.
+        // Filtramos por almacén tanto para 'almacen' como para 'camion'.
+        q = q.or(
+          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+        );
       }
 
       const { data, error } = await q;
@@ -73,28 +71,42 @@ export function useKardexUbicacion(
     },
   });
 
+  const almacenesQuery = useQuery({
+    queryKey: ['kardex-almacenes-map', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('almacenes')
+        .select('id, nombre, tipo')
+        .eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      const map: Record<string, { nombre: string; tipo: string }> = {};
+      for (const a of data ?? []) map[a.id] = { nombre: a.nombre, tipo: a.tipo };
+      return map;
+    },
+  });
+
   const rows = useMemo<KardexUbicacionRow[]>(() => {
     if (!query.data) return [];
+    const almMap = almacenesQuery.data ?? {};
     // Saldo corrido solo cuando hay producto + ubicacion
     const computeSaldo = !!productoId && !!ubicacionId;
     let saldo = 0;
     return query.data.map((m: any) => {
       let delta = 0;
-      if (ubicacionTipo === 'almacen') {
-        if (ubicacionId) {
-          // entrada/salida relative to the selected almacen (filtered above)
-          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
-        } else {
-          // global view: signo "natural" del movimiento
-          delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
-        }
+      if (ubicacionId) {
+        // entrada/salida relative to the selected almacen (filtered above)
+        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
       } else {
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
       if (computeSaldo) saldo += delta;
-      return { ...m, delta, saldo: computeSaldo ? saldo : 0 };
+      const origen_nombre = m.almacen_origen_id && almMap[m.almacen_origen_id] ? almMap[m.almacen_origen_id].nombre : null;
+      const destino_nombre = m.almacen_destino_id && almMap[m.almacen_destino_id] ? almMap[m.almacen_destino_id].nombre : null;
+      return { ...m, delta, saldo: computeSaldo ? saldo : 0, origen_nombre, destino_nombre };
     });
-  }, [query.data, ubicacionId, ubicacionTipo, productoId]);
+  }, [query.data, almacenesQuery.data, ubicacionId, ubicacionTipo, productoId]);
 
   return { ...query, rows };
 }
+

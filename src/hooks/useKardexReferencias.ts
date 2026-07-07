@@ -7,6 +7,7 @@ export interface KardexRefInfo {
   ventaCliente?: Record<string, { nombre: string; folio?: string | null }>;
   compraProveedor?: Record<string, { nombre: string; folio?: string | null }>;
   entregaCliente?: Record<string, { nombre: string }>;
+  traspasoAlmacenes?: Record<string, { origen_id: string | null; destino_id: string | null; folio?: string | null }>;
   almacenes?: Record<string, string>; // id -> nombre
   productos?: Record<string, { nombre: string; codigo?: string | null }>;
   usuarios?: Record<string, string>; // user_id -> nombre
@@ -31,6 +32,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       const ventaIds = new Set<string>();
       const compraIds = new Set<string>();
       const entregaIds = new Set<string>();
+      const traspasoIds = new Set<string>();
       const almacenIds = new Set<string>();
       const productoIds = new Set<string>();
       const userIds = new Set<string>();
@@ -43,6 +45,8 @@ export function useKardexReferencias(rows: any[] | undefined) {
             compraIds.add(r.referencia_id);
           } else if (r.referencia_tipo === 'entrega') {
             entregaIds.add(r.referencia_id);
+          } else if (r.referencia_tipo === 'traspaso') {
+            traspasoIds.add(r.referencia_id);
           }
         }
         if (r.almacen_origen_id) almacenIds.add(r.almacen_origen_id);
@@ -55,6 +59,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
         ventaCliente: {},
         compraProveedor: {},
         entregaCliente: {},
+        traspasoAlmacenes: {},
         almacenes: {},
         productos: {},
         usuarios: {},
@@ -112,6 +117,24 @@ export function useKardexReferencias(rows: any[] | undefined) {
           })()
         );
       }
+
+      if (traspasoIds.size) {
+        const { data } = await supabase
+          .from('traspasos')
+          .select('id, folio, almacen_origen_id, almacen_destino_id')
+          .eq('empresa_id', empresa!.id)
+          .in('id', Array.from(traspasoIds));
+        (data ?? []).forEach((t: any) => {
+          result.traspasoAlmacenes![t.id] = {
+            origen_id: t.almacen_origen_id ?? null,
+            destino_id: t.almacen_destino_id ?? null,
+            folio: t.folio,
+          };
+          if (t.almacen_origen_id) almacenIds.add(t.almacen_origen_id);
+          if (t.almacen_destino_id) almacenIds.add(t.almacen_destino_id);
+        });
+      }
+
 
       if (almacenIds.size) {
         tasks.push(

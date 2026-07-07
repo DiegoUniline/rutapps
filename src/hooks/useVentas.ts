@@ -394,10 +394,13 @@ export function useDeleteVenta() {
     },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ['ventas'] });
-      const prev = qc.getQueriesData<any[]>({ queryKey: ['ventas'] });
-      qc.setQueriesData<any[]>({ queryKey: ['ventas'] }, (old) =>
-        old?.filter(v => v.id !== id)
-      );
+      const prev = qc.getQueriesData<any>({ queryKey: ['ventas'] });
+      qc.setQueriesData<any>({ queryKey: ['ventas'] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((v: any) => v.id !== id);
+        if (Array.isArray(old?.rows)) return { ...old, rows: old.rows.filter((v: any) => v.id !== id), total: Math.max(0, (old.total ?? old.rows.length) - 1) };
+        return old;
+      });
       return { prev };
     },
     onError: (_err, _vars, ctx) => {

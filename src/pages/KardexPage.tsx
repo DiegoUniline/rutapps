@@ -193,11 +193,15 @@ export default function KardexPage() {
         destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
       };
     }
-    // Traspasos: usar almacenes origen/destino
+    // Traspasos: usar almacenes origen/destino del propio traspaso (los movimientos vienen
+    // en filas separadas, cada una con solo un lado poblado).
     if (refTipo === 'traspaso') {
+      const t = refId ? refInfo?.traspasoAlmacenes?.[refId] : undefined;
+      const origenId = row.almacen_origen_id || t?.origen_id || null;
+      const destinoId = row.almacen_destino_id || t?.destino_id || null;
       return {
-        origen: almNombre(row.almacen_origen_id) || '—',
-        destino: almNombre(row.almacen_destino_id) || '—',
+        origen: (origenId ? almNombre(origenId) : '') || '—',
+        destino: (destinoId ? almNombre(destinoId) : '') || '—',
       };
     }
     // Devoluciones: cliente → almacén
@@ -465,7 +469,8 @@ export default function KardexPage() {
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
-                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen → Destino</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Destino</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Usuario</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                   <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
@@ -477,9 +482,9 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={11} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={11} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
@@ -537,12 +542,11 @@ export default function KardexPage() {
                             );
                           })()}
                         </td>
-                        <td className="py-1.5 px-3 text-[11px] max-w-[260px]">
-                          <div className="flex items-center gap-1 truncate" title={`${od.origen} → ${od.destino}`}>
-                            <span className="truncate">{od.origen}</span>
-                            <span className="text-muted-foreground">→</span>
-                            <span className="truncate font-medium">{od.destino}</span>
-                          </div>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[180px]">
+                          <span className="truncate block" title={od.origen}>{od.origen || '—'}</span>
+                        </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[180px] font-medium">
+                          <span className="truncate block" title={od.destino}>{od.destino || '—'}</span>
                         </td>
                         <td className="py-1.5 px-3 text-[11px] max-w-[160px]">
                           <span className="truncate block" title={usuario}>{usuario}</span>
