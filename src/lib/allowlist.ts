@@ -18,7 +18,7 @@ export const PRODUCTO_COLUMNS = [
   'cantidad','imagen_url','se_puede_comprar','se_puede_vender','vender_sin_stock','se_puede_inventariar',
   'es_combo','min','max','factor_conversion','permitir_descuento','monto_maximo',
   'tiene_comision','tipo_comision','pct_comision','status','almacenes','tiene_iva','tiene_ieps',
-  'es_granel','unidad_granel',
+  'es_granel','unidad_granel','maneja_lote',
   'calculo_costo','codigo_sat','iva_pct','ieps_pct','ieps_tipo',
   'costo_incluye_impuestos','usa_listas_precio','usa_presentaciones','marca_id','clasificacion_id','lista_id','tarifa_id',
   'unidad_venta_id','unidad_compra_id','udem_sat_id','created_at',

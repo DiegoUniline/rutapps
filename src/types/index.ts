@@ -58,6 +58,7 @@ export interface Producto {
   udem_sat_id?: string;
   es_granel: boolean;
   unidad_granel: string;
+  maneja_lote?: boolean;
   modo_compra_sugerida?: 'maximo' | 'medio' | 'minimo' | 'cobertura';
   dias_cobertura?: number;
   lead_time_dias?: number;
@@ -181,6 +182,7 @@ export interface Empresa {
   owner_user_id?: string;
   apartar_stock_pedidos?: boolean;
   apartado_almacenes_ids?: string[];
+  maneja_lotes?: boolean;
 }
 
 export interface Gasto {
