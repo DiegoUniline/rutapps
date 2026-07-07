@@ -4,6 +4,8 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { OdooTabs } from '@/components/OdooTabs';
@@ -206,11 +208,12 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; tarifaEmpresaId?: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
-  const empresaId = profile?.empresa_id;
+  const empresaId = tarifaEmpresaId ?? profile?.empresa_id;
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Resolve selected lista: URL ?lista=<nombre> → matched id, fallback to principal, fallback to first
@@ -231,13 +234,17 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
         .select('*')
         .eq('tarifa_id', tarifaId!);
 
-      const { data: prods } = await supabase.from('productos')
-        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
-        .eq('empresa_id', empresaId!)
-        .eq('status', 'activo')
-        .order('nombre');
+      const prods = await fetchAllPages<any>((from, to) =>
+        supabase.from('productos')
+          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+          .eq('empresa_id', empresaId!)
+          .eq('status', 'activo')
+          .order('nombre')
+          .range(from, to)
+      );
 
       if (!prods || !lineas) return [];
+
 
       // Include rules matching the selected lista OR global (null lista_precio_id)
       const rules: TarifaLineaRule[] = lineas
@@ -371,7 +378,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;
-    const rows = items.slice(0, 200);
+    const rows = items;
     return (
       <div className="border border-border rounded overflow-hidden">
         <div className="px-3 py-2 text-[11px] font-semibold flex items-center gap-2 bg-primary/5 text-foreground">
@@ -463,7 +470,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tari
             })}
           </tbody>
         </table>
-        {items.length > 200 && <p className="text-[11px] text-muted-foreground px-3 py-2">Mostrando 200 de {items.length}.</p>}
+        {/* No cap: se muestran todos los productos */}
       </div>
     );
   };
@@ -1193,7 +1200,7 @@ export default function TarifaFormPage() {
             {
               key: 'precios',
               label: 'Vista Precios',
-              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} listasPrecio={listasPrecios ?? []} />,
+              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} tarifaEmpresaId={(existing as any)?.empresa_id} listasPrecio={listasPrecios ?? []} />,
             },
             {
               key: 'info',

@@ -63,14 +63,17 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     ? <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenOptions.find(a => a.value === form.almacen_id)?.label || 'Sin almacén'}</div>
     : <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Buscar almacén..." />;
 
+  const requiereFechaEntrega = form.tipo !== 'venta_directa' && !form.entrega_inmediata;
+
   const renderEntrega = () => (
     <>
-      <label className="label-odoo">Entrega</label>
-      {form.tipo === 'venta_directa'
+      <label className="label-odoo">
+        {requiereFechaEntrega ? <>Fecha de entrega <span className="text-destructive">*</span></> : 'Entrega'}
+      </label>
+      {form.tipo === 'venta_directa' || form.entrega_inmediata
         ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
-        : form.entrega_inmediata
-          ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
-          : readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
+        : readOnly
+          ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega ? fmtDate(form.fecha_entrega) : '—'}</div>
           : <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
       }
     </>

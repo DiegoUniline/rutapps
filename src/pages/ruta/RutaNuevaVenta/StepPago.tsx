@@ -127,8 +127,10 @@ export function StepPago(props: Props) {
             <div className="flex items-start gap-2">
               <CalendarDays className="h-3.5 w-3.5 text-muted-foreground mt-1.5 shrink-0" />
               <div className="flex-1">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Fecha de entrega</p>
-                <input type="date" className="w-full bg-accent/40 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Fecha de entrega <span className="text-destructive">*</span>
+                </p>
+                <input required type="date" className={`w-full bg-accent/40 border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 ${fechaEntrega ? 'border-border' : 'border-destructive/60'}`} value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
               </div>
             </div>
           </section>

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { CreditCard, Banknote, Plus, Upload, Trash2 } from 'lucide-react';
+import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -97,6 +98,7 @@ export default function CuentasCobrarPage() {
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [cobrarVenta, setCobrarVenta] = useState<any | null>(null);
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -296,7 +298,7 @@ export default function CuentasCobrarPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-right">Pagado</TableHead>
               <TableHead className="text-[11px] text-right">Pendiente</TableHead>
-              <TableHead className="text-[11px] w-10"></TableHead>
+              <TableHead className="text-[11px] w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -324,15 +326,25 @@ export default function CuentasCobrarPage() {
                   <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
                   <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   <TableCell>
-                    {canDelete && (
-                      <button
-                        onClick={() => setDeleteId(v.id)}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Eliminar saldo inicial"
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 gap-1 text-[11px] border-success/40 text-success hover:bg-success/10 hover:text-success"
+                        onClick={(e) => { e.stopPropagation(); setCobrarVenta(v); }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                        <Banknote className="h-3.5 w-3.5" /> Cobrar
+                      </Button>
+                      {canDelete && (
+                        <button
+                          onClick={() => setDeleteId(v.id)}
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Eliminar saldo inicial"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -393,6 +405,25 @@ export default function CuentasCobrarPage() {
         </AlertDialogContent>
       </AlertDialog>
       <PinDialog />
+      {cobrarVenta && (
+        <VentaCobroQuickModal
+          open={!!cobrarVenta}
+          onClose={() => setCobrarVenta(null)}
+          venta={{
+            id: cobrarVenta.id,
+            folio: cobrarVenta.folio,
+            cliente_id: cobrarVenta.cliente_id ?? (cobrarVenta.clientes as any)?.id,
+            saldo_pendiente: cobrarVenta.saldo_pendiente,
+            total: cobrarVenta.total,
+            status: cobrarVenta.status,
+          }}
+          fmt={fmt}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
+            qc.invalidateQueries({ queryKey: ['saldos-iniciales'] });
+          }}
+        />
+      )}
     </div>
   );
 }

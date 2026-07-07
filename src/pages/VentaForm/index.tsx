@@ -25,6 +25,7 @@ import { generarVentaPdf } from './VentaPdfHandler';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
+import { nextVisitDate } from '@/lib/nextVisitDate';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -280,6 +281,11 @@ export default function VentaFormPage() {
     if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
     else set('lista_precio_id', null);
     if (c?.requiere_factura) set('requiere_factura', true);
+    // Auto-fill fecha de entrega según los días de visita del cliente
+    if (form.tipo === 'pedido' && !form.entrega_inmediata && !form.fecha_entrega) {
+      const dias = (c as any)?.dia_visita as string[] | null | undefined;
+      set('fecha_entrega', nextVisitDate(dias));
+    }
   };
 
   const billingEnabled = isSuperAdminEmail(user?.email);
