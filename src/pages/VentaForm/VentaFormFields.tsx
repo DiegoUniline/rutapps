@@ -24,6 +24,8 @@ interface Props {
 export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
+  const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
 
   const condicionBtns = [
     { value: 'contado', label: 'Contado' },
