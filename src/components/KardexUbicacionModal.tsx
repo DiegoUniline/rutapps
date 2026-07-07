@@ -217,6 +217,9 @@ export default function KardexUbicacionModal({
                       <td className="py-1.5 px-3 text-[12px]">
                         {REFERENCIA_LABELS[row.referencia_tipo ?? ''] ?? row.referencia_tipo ?? '—'}
                       </td>
+                      <td className="py-1.5 px-3 text-[12px] text-foreground">
+                        {row.contraparte_nombre ?? <span className="text-muted-foreground">—</span>}
+                      </td>
                       <td className="py-1.5 px-3 text-right font-mono text-[12px]">
                         {row.delta > 0 ? <span className="text-green-600 font-semibold">+{row.delta}</span> : ''}
                       </td>
