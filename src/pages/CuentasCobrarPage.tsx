@@ -98,6 +98,7 @@ export default function CuentasCobrarPage() {
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [cobrarVenta, setCobrarVenta] = useState<any | null>(null);
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
