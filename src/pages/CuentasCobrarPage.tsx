@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { CreditCard, Banknote, Plus, Upload, Trash2 } from 'lucide-react';
+import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
