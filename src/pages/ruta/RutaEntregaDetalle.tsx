@@ -349,6 +349,10 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+      // Refrescar el saldo del pedido y las cuentas del cliente: en política
+      // 'entregado' el trigger baja el saldo al editar, y la UI debe reflejarlo.
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-venta'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-cuentas'] });
     } catch (err: any) { toast.error(err.message); }
     finally { setSavingLinea(false); }
   };
