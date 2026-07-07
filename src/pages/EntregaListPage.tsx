@@ -515,7 +515,7 @@ export default function EntregaListPage() {
               <Package className="h-4 w-4" />
               Asignar ruta ({selectedIds.size})
             </Button>
-            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} className="gap-1.5">
+            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} className="gap-1.5 btn-orange-action">
               <Zap className="h-4 w-4" />
               Asignar y cargar ({selectedIds.size})
             </Button>
@@ -524,7 +524,7 @@ export default function EntregaListPage() {
 
         {/* Cargar camión — only when all selected are asignado */}
         {selectedIds.size > 0 && allAsignado && (
-          <Button onClick={handleBulkCargar} className="gap-1.5" disabled={bulkCargarMut.isPending}>
+          <Button onClick={handleBulkCargar} className="gap-1.5 btn-orange-action" disabled={bulkCargarMut.isPending}>
             <Truck className="h-4 w-4" />
             Cargar camión ({selectedIds.size})
           </Button>
