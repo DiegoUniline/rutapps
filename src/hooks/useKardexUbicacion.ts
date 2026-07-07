@@ -19,6 +19,7 @@ export interface KardexUbicacionRow {
   almacen_origen_id: string | null;
   almacen_destino_id: string | null;
   vendedor_destino_id: string | null;
+  contraparte_nombre: string | null;
 }
 
 /**
