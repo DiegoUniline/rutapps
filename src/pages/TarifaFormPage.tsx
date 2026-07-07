@@ -206,11 +206,12 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; tarifaEmpresaId?: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean; es_principal?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
-  const empresaId = profile?.empresa_id;
+  const empresaId = tarifaEmpresaId ?? profile?.empresa_id;
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Resolve selected lista: URL ?lista=<nombre> → matched id, fallback to principal, fallback to first
