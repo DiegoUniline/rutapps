@@ -4,6 +4,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
 import { Percent, DollarSign } from 'lucide-react';
+import { useAllListasPrecios } from '@/hooks/useData';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   form: Record<string, any>;
@@ -22,6 +24,8 @@ interface Props {
 export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
+  const { data: listasPrecios } = useAllListasPrecios(empresa?.id);
 
   const condicionBtns = [
     { value: 'contado', label: 'Contado' },
@@ -55,15 +59,16 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </div>
     );
 
-  const tarifaNombre = tarifaOptions.find(t => t.value === form.tarifa_id)?.label;
+  const listaNombre = listasPrecios?.find(l => l.id === form.lista_precio_id)?.nombre
+    ?? tarifaOptions.find(t => t.value === form.tarifa_id)?.label;
   const renderCliente = () => (
     <div className="space-y-1">
       {readOnly
         ? <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
         : <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={onClienteChange} placeholder="Buscar cliente..." />}
-      {tarifaNombre && (
+      {listaNombre && (
         <div className="text-[11px] text-muted-foreground px-1">
-          Lista: <span className="font-medium text-foreground">{tarifaNombre}</span>
+          Lista: <span className="font-medium text-foreground">{listaNombre}</span>
         </div>
       )}
     </div>
