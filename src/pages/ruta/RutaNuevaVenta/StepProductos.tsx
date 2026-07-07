@@ -14,6 +14,7 @@ import { useApartadoAlmacenes, useDisponiblePorAlmacen } from '@/hooks/useAparta
 
 interface Props {
   clienteNombre: string;
+  clienteListaNombre?: string | null;
   devoluciones: DevolucionItem[];
   searchProducto: string;
   setSearchProducto: (v: string) => void;
