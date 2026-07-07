@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildSalePricingSnapshot } from '@/lib/salePricing';
@@ -205,19 +205,39 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const clienteListaPrecioId = (selectedClienteData as any)?.lista_precio_id || null;
   const { data: tarifaLineasOffline } = useOfflineQuery('tarifa_lineas', { tarifa_id: clienteTarifaId }, { enabled: !!clienteTarifaId });
 
+  // Enriquecer clasificacion_id desde Supabase (cuando hay internet): el cache
+  // offline puede traerlo vacío (productos sincronizados con un select viejo, y
+  // el delta del sync es por created_at, así que no re-baja productos existentes).
+  // Sin clasificacion_id la regla de precio por CATEGORÍA no aplica y cae a
+  // "todos" → precio equivocado. Con el mapa fresco eso ya no pasa online.
+  const { data: claseFresh } = useQuery({
+    queryKey: ['productos-clase-fresh', empresa?.id],
+    enabled: !!empresa?.id && (typeof navigator === 'undefined' || navigator.onLine),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase.from('productos').select('id, clasificacion_id').eq('empresa_id', empresa!.id);
+      return (data ?? []) as { id: string; clasificacion_id: string | null }[];
+    },
+  });
+  const claseMap = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const r of (claseFresh ?? [])) m.set(r.id, r.clasificacion_id ?? null);
+    return m;
+  }, [claseFresh]);
+
   const resolvePrice = useMemo(() => {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any): number => {
       if (!rules.length) return producto.precio_principal ?? 0;
-      return resolveProductPrice(rules, { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio }, clienteListaPrecioId);
+      return resolveProductPrice(rules, { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: claseMap.get(producto.id) ?? producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio }, clienteListaPrecioId);
     };
-  }, [tarifaLineasOffline, clienteListaPrecioId]);
+  }, [tarifaLineasOffline, clienteListaPrecioId, claseMap]);
 
   /** Full pricing info for building cart items with raw data */
   const resolvePricingFull = useMemo(() => {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any) => {
-      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio };
+      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: claseMap.get(producto.id) ?? producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio };
       if (!rules.length) {
         const fallback = pf.precio_principal;
         return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
@@ -230,7 +250,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       const snap = buildSalePricingSnapshot(pf, r);
       return { unitPrice: snap.unitPrice, rawUnitPrice: snap.rawUnitPrice, rawDisplayPrice: snap.rawDisplayPrice, basePrecio: snap.basePrecio, redondeo: snap.redondeo };
     };
-  }, [tarifaLineasOffline, clienteListaPrecioId]);
+  }, [tarifaLineasOffline, clienteListaPrecioId, claseMap]);
 
   // Recalculate cart prices when client tarifa changes
   useEffect(() => {
