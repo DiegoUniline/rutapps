@@ -182,6 +182,7 @@ export default function KardexUbicacionModal({
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                 <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
+                <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Contraparte</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Entrada</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground">Salida</th>
                 <th className="text-right text-[11px] font-medium px-3 py-2 text-muted-foreground font-semibold">Saldo</th>
