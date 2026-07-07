@@ -326,15 +326,25 @@ export default function CuentasCobrarPage() {
                   <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
                   <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   <TableCell>
-                    {canDelete && (
-                      <button
-                        onClick={() => setDeleteId(v.id)}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Eliminar saldo inicial"
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 gap-1 text-[11px] border-success/40 text-success hover:bg-success/10 hover:text-success"
+                        onClick={(e) => { e.stopPropagation(); setCobrarVenta(v); }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                        <Banknote className="h-3.5 w-3.5" /> Cobrar
+                      </Button>
+                      {canDelete && (
+                        <button
+                          onClick={() => setDeleteId(v.id)}
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Eliminar saldo inicial"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
