@@ -1194,7 +1194,7 @@ export default function TarifaFormPage() {
             {
               key: 'precios',
               label: 'Vista Precios',
-              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} listasPrecio={listasPrecios ?? []} />,
+              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} tarifaEmpresaId={(existing as any)?.empresa_id} listasPrecio={listasPrecios ?? []} />,
             },
             {
               key: 'info',
