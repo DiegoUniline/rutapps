@@ -263,6 +263,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   useEffect(() => { setBannerDismissed(false); }, [clienteId]);
 
+  // Auto-fill fecha_entrega for pedidos based on client's route days
+  useEffect(() => {
+    if (tipoVenta !== 'pedido') return;
+    if (fechaEntrega) return;
+    const dias = (selectedClienteData as any)?.dia_visita as string[] | null | undefined;
+    setFechaEntrega(nextVisitDate(dias));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoVenta, clienteId]);
+
   // Data visibility: si la empresa tiene 'propios' y el usuario no tiene 'ver_todos',
   // solo mostrar los clientes asignados a este vendedor.
   const { seeAll: seeAllClientes, clientesVisibilidad } = useDataVisibility('clientes');
