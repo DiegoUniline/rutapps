@@ -19,7 +19,7 @@ interface Props {
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
 
