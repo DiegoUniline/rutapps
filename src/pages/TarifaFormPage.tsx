@@ -378,7 +378,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;
-    const rows = items.slice(0, 200);
+    const rows = items;
     return (
       <div className="border border-border rounded overflow-hidden">
         <div className="px-3 py-2 text-[11px] font-semibold flex items-center gap-2 bg-primary/5 text-foreground">
