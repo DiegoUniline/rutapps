@@ -217,12 +217,21 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Usuarios y permisos', path: '/administracion/usuarios' },
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
-      { label: 'Tutoriales', path: '/tutoriales' },
     ],
   },
 
-  { label: 'Actualizaciones', icon: Sparkles, path: '/actualizaciones', highlight: 'cyan' },
-  { label: 'Soporte', icon: LifeBuoy, path: '/soporte' },
+  // ── Ayuda (Soporte + material · cyan) ──
+  {
+    label: 'Ayuda',
+    icon: LifeBuoy,
+    path: '/soporte',
+    highlight: 'cyan',
+    children: [
+      { label: 'Soporte', path: '/soporte' },
+      { label: 'Tutoriales', path: '/tutoriales' },
+      { label: 'Novedades ✨', path: '/actualizaciones' },
+    ],
+  },
 
 
 ];
