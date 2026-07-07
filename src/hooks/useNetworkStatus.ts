@@ -6,6 +6,9 @@ import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 import { hasRealConnection } from '@/lib/connectivity';
+import { APP_VERSION } from '@/version';
+
+const SYNCED_APP_VERSION_KEY = 'uniline_synced_app_version';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 type SyncNowResult = { ok: boolean; rowsDownloaded: number; pendingCount: number; reason?: string };
@@ -171,6 +174,33 @@ export function useNetworkStatus() {
       setIsSyncing(false);
     }
   }, [empresa?.id, pendingCount]);
+
+  // Al actualizar el CÓDIGO de la app (nueva versión), forzar UNA descarga
+  // COMPLETA para limpiar cualquier dato viejo en caché (precios, categorías,
+  // clientes…) sin que el vendedor tenga que tocar "Descargar todo" a mano.
+  // Se corre una sola vez por versión: si tiene éxito, se guarda la versión;
+  // si falla, no se guarda y se reintenta en el próximo arranque.
+  useEffect(() => {
+    if (!isOnline || !empresa?.id || !autoSync) return;
+    if (localStorage.getItem(SYNCED_APP_VERSION_KEY) === APP_VERSION) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const online = await hasRealConnection();
+        if (!online || cancelled) return;
+        await downloadAllData(empresa.id, true);
+        if (cancelled) return;
+        localStorage.setItem(SYNCED_APP_VERSION_KEY, APP_VERSION);
+        const t = await getLastSyncTime();
+        setLastSync(t);
+        // Avisar a los useOfflineQuery para que reflejen los datos frescos.
+        window.dispatchEvent(new Event('uniline:sync-complete'));
+      } catch (e) {
+        console.warn('[app-update] refresco completo falló, se reintentará', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOnline, empresa?.id, autoSync]);
 
   // Initial data download if cache is stale (respects autoSync & data saver)
   useEffect(() => {
