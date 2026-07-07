@@ -130,14 +130,21 @@ export function StepProductos(props: Props) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
-        <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
-          <span className="text-[10px] text-muted-foreground">Cliente:</span>
-          <span className="text-[10.5px] font-semibold text-foreground">{clienteNombre}</span>
-        </div>
-        {devoluciones.length > 0 && (
+      <div className="px-3 pt-2 pb-1 flex flex-col gap-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
-            <RotateCcw className="h-2.5 w-2.5 text-muted-foreground" /><span className="text-[10px] text-muted-foreground">{devoluciones.length} dev.</span>
+            <span className="text-[10px] text-muted-foreground">Cliente:</span>
+            <span className="text-[10.5px] font-semibold text-foreground">{clienteNombre}</span>
+          </div>
+          {devoluciones.length > 0 && (
+            <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
+              <RotateCcw className="h-2.5 w-2.5 text-muted-foreground" /><span className="text-[10px] text-muted-foreground">{devoluciones.length} dev.</span>
+            </div>
+          )}
+        </div>
+        {clienteListaNombre && (
+          <div className="text-[10px] text-muted-foreground px-1">
+            Lista: <span className="font-medium text-foreground">{clienteListaNombre}</span>
           </div>
         )}
       </div>
