@@ -55,9 +55,19 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
       </div>
     );
 
-  const renderCliente = () => readOnly
-    ? <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
-    : <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={onClienteChange} placeholder="Buscar cliente..." />;
+  const tarifaNombre = tarifaOptions.find(t => t.value === form.tarifa_id)?.label;
+  const renderCliente = () => (
+    <div className="space-y-1">
+      {readOnly
+        ? <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
+        : <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={onClienteChange} placeholder="Buscar cliente..." />}
+      {tarifaNombre && (
+        <div className="text-[11px] text-muted-foreground px-1">
+          Lista: <span className="font-medium text-foreground">{tarifaNombre}</span>
+        </div>
+      )}
+    </div>
+  );
 
   const renderAlmacen = () => readOnly
     ? <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenOptions.find(a => a.value === form.almacen_id)?.label || 'Sin almacén'}</div>
