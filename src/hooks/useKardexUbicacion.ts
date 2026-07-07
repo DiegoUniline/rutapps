@@ -55,16 +55,12 @@ export function useKardexUbicacion(
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
       if (ubicacionId) {
-        if (ubicacionTipo === 'almacen') {
-          // Only fetch movements relevant to THIS almacen's perspective:
-          // - tipo=salida WHERE almacen_origen = this (stock left here)
-          // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
-          q = q.or(
-            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-          );
-        } else {
-          q = q.eq('vendedor_destino_id', ubicacionId);
-        }
+        // Camiones de ruta también son registros en `almacenes` (tipo='ruta')
+        // y sus movimientos usan almacen_origen_id/almacen_destino_id.
+        // Filtramos por almacén tanto para 'almacen' como para 'camion'.
+        q = q.or(
+          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+        );
       }
 
       const { data, error } = await q;
