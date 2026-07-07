@@ -405,6 +405,25 @@ export default function CuentasCobrarPage() {
         </AlertDialogContent>
       </AlertDialog>
       <PinDialog />
+      {cobrarVenta && (
+        <VentaCobroQuickModal
+          open={!!cobrarVenta}
+          onClose={() => setCobrarVenta(null)}
+          venta={{
+            id: cobrarVenta.id,
+            folio: cobrarVenta.folio,
+            cliente_id: cobrarVenta.cliente_id ?? (cobrarVenta.clientes as any)?.id,
+            saldo_pendiente: cobrarVenta.saldo_pendiente,
+            total: cobrarVenta.total,
+            status: cobrarVenta.status,
+          }}
+          fmt={fmt}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
+            qc.invalidateQueries({ queryKey: ['saldos-iniciales'] });
+          }}
+        />
+      )}
     </div>
   );
 }
