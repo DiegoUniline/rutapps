@@ -372,14 +372,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
               <Button onClick={() => setShowAsignarDialog(true)} size="sm" variant="outline">
                 <Package className="h-3.5 w-3.5" /> Asignar ruta
               </Button>
-              <Button onClick={() => setShowExpressDialog(true)} size="sm" variant="default">
+              <Button onClick={() => setShowExpressDialog(true)} size="sm" variant="default" className="btn-orange-action">
                 <Zap className="h-3.5 w-3.5" /> Asignar y cargar
               </Button>
             </>
           )}
           {/* Cargar — only when asignado */}
           {!isNew && isAsignado && (
-            <Button onClick={handleCargar} size="sm" disabled={cargarMut.isPending}>
+            <Button onClick={handleCargar} size="sm" disabled={cargarMut.isPending} className="btn-orange-action">
               <Truck className="h-3.5 w-3.5" /> Cargar camión
             </Button>
           )}

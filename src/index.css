@@ -267,6 +267,15 @@ html, body, #root {
            disabled:opacity-50 disabled:pointer-events-none;
     box-shadow: var(--shadow-xs);
   }
+  .btn-odoo-action {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-brand-orange text-brand-orange-foreground hover:opacity-90 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-orange-action {
+    @apply bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90 border-brand-orange;
+  }
   .btn-odoo-secondary {
     @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium
            bg-card text-foreground border border-border hover:bg-accent transition-all
