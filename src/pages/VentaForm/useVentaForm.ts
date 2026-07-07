@@ -434,6 +434,11 @@ export function useVentaForm() {
     savingRef.current = true;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
+    if (form.tipo !== 'venta_directa' && !form.entrega_inmediata && !form.fecha_entrega) {
+      toast.error('La fecha de entrega es obligatoria');
+      savingRef.current = false;
+      return;
+    }
     // Preserve original vendedor on edits — never overwrite with the current viewer.
     // Only fall back to the current user when creating a brand-new venta.
     const vendedorId = (form.vendedor_id as string | undefined) || profile?.id;

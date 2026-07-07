@@ -19,6 +19,7 @@ import { useClienteInsights } from '@/hooks/useClienteInsights';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
+import { nextVisitDate } from '@/lib/nextVisitDate';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
@@ -261,6 +262,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const insights = useClienteInsights(clienteId, selectedClienteData);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   useEffect(() => { setBannerDismissed(false); }, [clienteId]);
+
+  // Auto-fill fecha_entrega for pedidos based on client's route days
+  useEffect(() => {
+    if (tipoVenta !== 'pedido') return;
+    if (fechaEntrega) return;
+    const dias = (selectedClienteData as any)?.dia_visita as string[] | null | undefined;
+    setFechaEntrega(nextVisitDate(dias));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoVenta, clienteId]);
 
   // Data visibility: si la empresa tiene 'propios' y el usuario no tiene 'ver_todos',
   // solo mostrar los clientes asignados a este vendedor.
@@ -631,6 +641,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       return;
     }
     if (savingRef.current) return;
+    if (tipoVenta === 'pedido' && !fechaEntrega) {
+      toast.error('La fecha de entrega es obligatoria');
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
     try {
