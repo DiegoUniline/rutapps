@@ -55,16 +55,12 @@ export function useKardexUbicacion(
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
       if (ubicacionId) {
-        if (ubicacionTipo === 'almacen') {
-          // Only fetch movements relevant to THIS almacen's perspective:
-          // - tipo=salida WHERE almacen_origen = this (stock left here)
-          // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
-          q = q.or(
-            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-          );
-        } else {
-          q = q.eq('vendedor_destino_id', ubicacionId);
-        }
+        // Camiones de ruta también son registros en `almacenes` (tipo='ruta')
+        // y sus movimientos usan almacen_origen_id/almacen_destino_id.
+        // Filtramos por almacén tanto para 'almacen' como para 'camion'.
+        q = q.or(
+          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+        );
       }
 
       const { data, error } = await q;
@@ -80,14 +76,9 @@ export function useKardexUbicacion(
     let saldo = 0;
     return query.data.map((m: any) => {
       let delta = 0;
-      if (ubicacionTipo === 'almacen') {
-        if (ubicacionId) {
-          // entrada/salida relative to the selected almacen (filtered above)
-          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
-        } else {
-          // global view: signo "natural" del movimiento
-          delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
-        }
+      if (ubicacionId) {
+        // entrada/salida relative to the selected almacen (filtered above)
+        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
       } else {
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
