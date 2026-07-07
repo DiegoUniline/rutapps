@@ -7,6 +7,7 @@ export interface KardexRefInfo {
   ventaCliente?: Record<string, { nombre: string; folio?: string | null }>;
   compraProveedor?: Record<string, { nombre: string; folio?: string | null }>;
   entregaCliente?: Record<string, { nombre: string }>;
+  traspasoAlmacenes?: Record<string, { origen_id: string | null; destino_id: string | null; folio?: string | null }>;
   almacenes?: Record<string, string>; // id -> nombre
   productos?: Record<string, { nombre: string; codigo?: string | null }>;
   usuarios?: Record<string, string>; // user_id -> nombre
