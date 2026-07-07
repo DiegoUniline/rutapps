@@ -4,6 +4,8 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { OdooTabs } from '@/components/OdooTabs';
