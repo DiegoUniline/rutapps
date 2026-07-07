@@ -470,7 +470,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
             })}
           </tbody>
         </table>
-        {items.length > 200 && <p className="text-[11px] text-muted-foreground px-3 py-2">Mostrando 200 de {items.length}.</p>}
+        {/* No cap: se muestran todos los productos */}
       </div>
     );
   };
