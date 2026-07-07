@@ -298,7 +298,7 @@ export default function CuentasCobrarPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-right">Pagado</TableHead>
               <TableHead className="text-[11px] text-right">Pendiente</TableHead>
-              <TableHead className="text-[11px] w-10"></TableHead>
+              <TableHead className="text-[11px] w-32 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
