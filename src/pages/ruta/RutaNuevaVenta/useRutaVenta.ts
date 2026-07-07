@@ -641,6 +641,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       return;
     }
     if (savingRef.current) return;
+    if (tipoVenta === 'pedido' && !fechaEntrega) {
+      toast.error('La fecha de entrega es obligatoria');
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
     try {
