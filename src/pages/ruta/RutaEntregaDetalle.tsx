@@ -864,7 +864,22 @@ export default function RutaEntregaDetalle() {
                     className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-foreground active:bg-accent disabled:opacity-30">
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="text-[18px] font-bold text-foreground w-8 text-center">{nueva}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={nueva}
+                    min={0}
+                    max={cargada}
+                    onFocus={e => e.currentTarget.select()}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      if (raw === '') { setEditCantidad(0); return; }
+                      const n = Math.floor(Number(raw));
+                      if (Number.isNaN(n)) return;
+                      setEditCantidad(Math.max(0, Math.min(n, cargada)));
+                    }}
+                    className="text-[18px] font-bold text-foreground w-16 text-center bg-accent/40 rounded-lg py-1.5 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                  />
                   <button
                     onClick={() => setEditCantidad(Math.min(cargada, nueva + 1))}
                     disabled={nueva >= cargada}
