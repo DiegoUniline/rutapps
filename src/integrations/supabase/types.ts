@@ -3158,6 +3158,7 @@ export type Database = {
           moneda: string
           monthly_sales_goal: number
           nombre: string
+          maneja_lotes: boolean
           notas_ticket: string | null
           onboarding_completado: boolean | null
           owner_user_id: string | null
@@ -3200,6 +3201,7 @@ export type Database = {
           moneda?: string
           monthly_sales_goal?: number
           nombre: string
+          maneja_lotes?: boolean
           notas_ticket?: string | null
           onboarding_completado?: boolean | null
           owner_user_id?: string | null
@@ -3242,6 +3244,7 @@ export type Database = {
           moneda?: string
           monthly_sales_goal?: number
           nombre?: string
+          maneja_lotes?: boolean
           notas_ticket?: string | null
           onboarding_completado?: boolean | null
           owner_user_id?: string | null

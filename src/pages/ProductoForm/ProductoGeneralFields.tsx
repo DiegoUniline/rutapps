@@ -4,6 +4,7 @@ import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSa
 
 interface TarifaOption { id: string; nombre: string; tarifa_id?: string }
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   form: Partial<Producto>;
@@ -32,6 +33,7 @@ const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Últ
 
 export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
+  const { empresa } = useAuth();
   const isNew = !form.id;
   const selectedListaId = tarifasDisp?.find(t => t.tarifa_id === (form as any).tarifa_id)?.id ?? '';
   return (
@@ -76,6 +78,18 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
             <span className="text-[11px] text-muted-foreground">Activa precios distintos por caja, six-pack, etc.</span>
           </div>
         </div>
+        {(empresa as any)?.maneja_lotes && (
+          <div className="odoo-field-row">
+            <span className="odoo-field-label">Maneja por lote</span>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => set('maneja_lote' as any, !(form as any).maneja_lote)}
+                className={`relative w-9 h-5 rounded-full transition-colors ${(form as any).maneja_lote ? 'bg-primary' : 'bg-border'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${(form as any).maneja_lote ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+              <span className="text-[11px] text-muted-foreground">Controla caducidad y trazabilidad por lote (compras, surtido, etc.)</span>
+            </div>
+          </div>
+        )}
       </div>
       <div>
         <div className="odoo-field-row">
