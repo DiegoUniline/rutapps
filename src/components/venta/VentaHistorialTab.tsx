@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, RotateCcw, Check, Pencil, Plus, Trash2, Banknote, X, FileText } from 'lucide-react';
+import { Clock, RotateCcw, Check, Pencil, Plus, Trash2, Banknote, X, FileText, Truck, Package, MapPin, AlertCircle } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
 
 const ACCION_ICONS: Record<string, any> = {
@@ -17,6 +17,16 @@ const ACCION_ICONS: Record<string, any> = {
   linea_eliminada: Trash2,
   entregada: Check,
   facturada: FileText,
+  entrega_creada: Truck,
+  entrega_surtida: Package,
+  entrega_asignada: Package,
+  entrega_cargada: Truck,
+  entrega_en_ruta: MapPin,
+  entrega_lista: Check,
+  entrega_hecha: Check,
+  entrega_editada: Pencil,
+  entrega_cancelada: X,
+  entrega_no_entregada: AlertCircle,
 };
 
 const ACCION_COLORS: Record<string, string> = {
@@ -29,6 +39,19 @@ const ACCION_COLORS: Record<string, string> = {
   pago_eliminado: 'bg-destructive/10 text-destructive',
   entregada: 'bg-success/10 text-success',
   facturada: 'bg-primary/10 text-primary',
+  linea_agregada: 'bg-primary/10 text-primary',
+  linea_editada: 'bg-warning/10 text-warning',
+  linea_eliminada: 'bg-destructive/10 text-destructive',
+  entrega_creada: 'bg-brand-orange/15 text-brand-orange',
+  entrega_surtida: 'bg-brand-orange/15 text-brand-orange',
+  entrega_asignada: 'bg-brand-orange/15 text-brand-orange',
+  entrega_cargada: 'bg-brand-orange/15 text-brand-orange',
+  entrega_en_ruta: 'bg-brand-orange/15 text-brand-orange',
+  entrega_lista: 'bg-brand-orange/15 text-brand-orange',
+  entrega_hecha: 'bg-success/10 text-success',
+  entrega_editada: 'bg-warning/10 text-warning',
+  entrega_cancelada: 'bg-destructive/10 text-destructive',
+  entrega_no_entregada: 'bg-destructive/10 text-destructive',
 };
 
 const ACCION_LABELS: Record<string, string> = {
@@ -44,6 +67,16 @@ const ACCION_LABELS: Record<string, string> = {
   linea_eliminada: 'Producto eliminado',
   entregada: 'Venta entregada',
   facturada: 'Venta facturada',
+  entrega_creada: 'Entrega creada',
+  entrega_surtida: 'Entrega surtida',
+  entrega_asignada: 'Entrega asignada a ruta',
+  entrega_cargada: 'Entrega cargada al camión',
+  entrega_en_ruta: 'Entrega en ruta',
+  entrega_lista: 'Entrega lista',
+  entrega_hecha: 'Entrega completada',
+  entrega_editada: 'Entrega editada',
+  entrega_cancelada: 'Entrega cancelada',
+  entrega_no_entregada: 'Entrega no realizada',
 };
 
 interface Props {
