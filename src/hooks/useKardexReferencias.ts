@@ -32,6 +32,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       const ventaIds = new Set<string>();
       const compraIds = new Set<string>();
       const entregaIds = new Set<string>();
+      const traspasoIds = new Set<string>();
       const almacenIds = new Set<string>();
       const productoIds = new Set<string>();
       const userIds = new Set<string>();
@@ -44,6 +45,8 @@ export function useKardexReferencias(rows: any[] | undefined) {
             compraIds.add(r.referencia_id);
           } else if (r.referencia_tipo === 'entrega') {
             entregaIds.add(r.referencia_id);
+          } else if (r.referencia_tipo === 'traspaso') {
+            traspasoIds.add(r.referencia_id);
           }
         }
         if (r.almacen_origen_id) almacenIds.add(r.almacen_origen_id);
@@ -56,6 +59,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
         ventaCliente: {},
         compraProveedor: {},
         entregaCliente: {},
+        traspasoAlmacenes: {},
         almacenes: {},
         productos: {},
         usuarios: {},
