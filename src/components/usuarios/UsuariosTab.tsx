@@ -39,10 +39,25 @@ export default function UsuariosTab({
   showArchived, setShowArchived,
   onNewUser, onEditUser, onSetPassword, onArchive, onReactivate, onForceSignOut,
 }: Props) {
-  const visibleProfiles = showArchived
-    ? profiles
-    : profiles.filter(p => p.estado === 'activo');
-  return (
+  const [search, setSearch] = useState('');
+  const visibleProfiles = useMemo(() => {
+    const base = showArchived ? profiles : profiles.filter(p => p.estado === 'activo');
+    const q = search.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(p => {
+      const email = authUsers.find(au => au.id === p.user_id)?.email || '';
+      const userRole = userRoles.find(ur => ur.user_id === p.user_id);
+      const rolName = userRole ? (roles.find(r => r.id === userRole.role_id)?.nombre || '') : '';
+      const alm = almacenes.find(a => a.id === p.almacen_id)?.nombre || '';
+      return (
+        (p.nombre || '').toLowerCase().includes(q) ||
+        (p.telefono || '').toLowerCase().includes(q) ||
+        email.toLowerCase().includes(q) ||
+        rolName.toLowerCase().includes(q) ||
+        alm.toLowerCase().includes(q)
+      );
+    });
+  }, [profiles, showArchived, search, authUsers, userRoles, roles, almacenes]);
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
