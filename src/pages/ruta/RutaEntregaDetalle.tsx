@@ -349,6 +349,10 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
       queryClient.invalidateQueries({ queryKey: ['entregas-list'] });
+      // Refrescar el saldo del pedido y las cuentas del cliente: en política
+      // 'entregado' el trigger baja el saldo al editar, y la UI debe reflejarlo.
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-venta'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-entrega-cuentas'] });
     } catch (err: any) { toast.error(err.message); }
     finally { setSavingLinea(false); }
   };
@@ -867,17 +871,18 @@ export default function RutaEntregaDetalle() {
                   <input
                     type="number"
                     inputMode="numeric"
+                    value={nueva}
                     min={0}
                     max={cargada}
-                    value={editCantidad}
+                    onFocus={e => e.currentTarget.select()}
                     onChange={e => {
-                      const v = e.target.value;
-                      if (v === '') { setEditCantidad(0); return; }
-                      const n = Number(v);
-                      if (Number.isFinite(n)) setEditCantidad(Math.max(0, Math.min(cargada, n)));
+                      const raw = e.target.value;
+                      if (raw === '') { setEditCantidad(0); return; }
+                      const n = Math.floor(Number(raw));
+                      if (Number.isNaN(n)) return;
+                      setEditCantidad(Math.max(0, Math.min(n, cargada)));
                     }}
-                    onFocus={e => e.target.select()}
-                    className="w-16 h-9 text-[18px] font-bold text-foreground text-center bg-accent/40 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                    className="text-[18px] font-bold text-foreground w-16 text-center bg-accent/40 rounded-lg py-1.5 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
                   />
                   <button
                     onClick={() => setEditCantidad(Math.min(cargada, nueva + 1))}
