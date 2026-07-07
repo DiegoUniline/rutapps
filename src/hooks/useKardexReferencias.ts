@@ -119,24 +119,20 @@ export function useKardexReferencias(rows: any[] | undefined) {
       }
 
       if (traspasoIds.size) {
-        tasks.push(
-          (async () => {
-            const { data } = await supabase
-              .from('traspasos')
-              .select('id, folio, almacen_origen_id, almacen_destino_id')
-              .eq('empresa_id', empresa!.id)
-              .in('id', Array.from(traspasoIds));
-            (data ?? []).forEach((t: any) => {
-              result.traspasoAlmacenes![t.id] = {
-                origen_id: t.almacen_origen_id ?? null,
-                destino_id: t.almacen_destino_id ?? null,
-                folio: t.folio,
-              };
-              if (t.almacen_origen_id) almacenIds.add(t.almacen_origen_id);
-              if (t.almacen_destino_id) almacenIds.add(t.almacen_destino_id);
-            });
-          })()
-        );
+        const { data } = await supabase
+          .from('traspasos')
+          .select('id, folio, almacen_origen_id, almacen_destino_id')
+          .eq('empresa_id', empresa!.id)
+          .in('id', Array.from(traspasoIds));
+        (data ?? []).forEach((t: any) => {
+          result.traspasoAlmacenes![t.id] = {
+            origen_id: t.almacen_origen_id ?? null,
+            destino_id: t.almacen_destino_id ?? null,
+            folio: t.folio,
+          };
+          if (t.almacen_origen_id) almacenIds.add(t.almacen_origen_id);
+          if (t.almacen_destino_id) almacenIds.add(t.almacen_destino_id);
+        });
       }
 
 
