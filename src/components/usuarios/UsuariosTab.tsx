@@ -58,7 +58,28 @@ export default function UsuariosTab({
       );
     });
   }, [profiles, showArchived, search, authUsers, userRoles, roles, almacenes]);
+  return (
     <div className="space-y-4">
+      <div className="relative">
+        <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nombre, email, teléfono, rol o almacén..."
+          className="input-odoo w-full pl-8 pr-8 text-sm"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute right-2 top-2 p-0.5 rounded hover:bg-accent text-muted-foreground"
+            title="Limpiar"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
