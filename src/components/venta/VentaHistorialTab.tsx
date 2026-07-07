@@ -143,20 +143,29 @@ export function VentaHistorialTab({ ventaId }: Props) {
                 {/* Show change details */}
                 {detalles && typeof detalles === 'object' && !Array.isArray(detalles) && Object.keys(detalles).length > 0 && (
                   <div className="mt-2 bg-accent/40 rounded-lg p-2.5 space-y-1">
-                    {Object.entries(detalles).map(([key, val]: [string, any]) => (
-                      <div key={key} className="text-[11px]">
-                        <span className="text-muted-foreground">{key}: </span>
-                        {val && typeof val === 'object' && 'anterior' in val ? (
-                          <span>
-                            <span className="line-through text-destructive/70">{String(val.anterior)}</span>
-                            {' → '}
-                            <span className="font-medium text-foreground">{String(val.nuevo)}</span>
-                          </span>
-                        ) : (
-                          <span className="font-medium text-foreground">{String(val)}</span>
-                        )}
-                      </div>
-                    ))}
+                    {Object.entries(detalles).map(([key, val]: [string, any]) => {
+                      const isChangeObj = val && typeof val === 'object' && !Array.isArray(val) && ('anterior' in val || 'nuevo' in val);
+                      return (
+                        <div key={key} className="text-[11px]">
+                          <span className="text-muted-foreground">{key}: </span>
+                          {isChangeObj ? (
+                            <span>
+                              {'anterior' in val && val.anterior !== null && val.anterior !== undefined && (
+                                <>
+                                  <span className="line-through text-destructive/70">{String(val.anterior)}</span>
+                                  {' → '}
+                                </>
+                              )}
+                              <span className="font-medium text-foreground">{String(val.nuevo ?? '')}</span>
+                            </span>
+                          ) : val && typeof val === 'object' ? (
+                            <span className="font-medium text-foreground">{JSON.stringify(val)}</span>
+                          ) : (
+                            <span className="font-medium text-foreground">{String(val)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
