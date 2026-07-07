@@ -3,8 +3,9 @@ import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaCo
 import { Link } from "react-router-dom";
 import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
 import TiendaShell from "./TiendaShell";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useThumb } from "@/hooks/useThumb";
+import TiendaPresentacionModal from "./TiendaPresentacionModal";
 
 const CATEGORY_TILES: { match: RegExp; label: string; img: string; tint: string }[] = [
   { match: /botana|snack|fritura|papas/i, label: "Botanas y Snacks", img: "/tienda/cat-botanas.webp", tint: "#ff7a00" },
@@ -186,8 +187,10 @@ function HomeInner() {
 export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moneda?: string; highlight?: "oferta" | "nuevo" }) {
   const thumb = useThumb();
   const t = useTienda();
+  const [presOpen, setPresOpen] = useState(false);
   const enStock = p.stock > 0 || p.vender_sin_stock;
   const cur = moneda ?? t.empresa?.moneda ?? "MXN";
+  const tienePresentaciones = (p.presentaciones?.length ?? 0) > 0;
   const tieneDescuento = p.precio_base && p.precio < p.precio_base;
   const pct = tieneDescuento ? Math.round(((p.precio_base - p.precio) / p.precio_base) * 100) : 0;
   const detalleHref = `/tienda/${t.slug}/producto/${p.id}`;
@@ -222,19 +225,23 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
           <button
             className="tienda-btn tienda-btn-primary"
             disabled={!enStock}
-            onClick={() => t.addToCart({
-              producto_id: p.id,
-              nombre: p.nombre,
-              imagen_url: p.imagen_url,
-              precio_unitario: p.precio,
-              cantidad: 1,
-              unidad: p.unidad_venta,
-            })}
+            onClick={() => {
+              if (tienePresentaciones) { setPresOpen(true); return; }
+              t.addToCart({
+                producto_id: p.id,
+                nombre: p.nombre,
+                imagen_url: p.imagen_url,
+                precio_unitario: p.precio,
+                cantidad: 1,
+                unidad: p.unidad_venta,
+              });
+            }}
           >
             <ShoppingCart size={14} /> Agregar
           </button>
         </div>
       </div>
+      {presOpen && <TiendaPresentacionModal producto={p} moneda={cur} onClose={() => setPresOpen(false)} />}
     </div>
   );
 }

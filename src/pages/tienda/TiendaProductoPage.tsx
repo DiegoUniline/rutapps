@@ -4,6 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
 import { ProductCard } from "./TiendaHomePage";
 import TiendaShell from "./TiendaShell";
+import TiendaPresentacionModal from "./TiendaPresentacionModal";
 import { ShoppingCart, ChevronLeft, Minus, Plus, ShieldCheck, Truck, Tag } from "lucide-react";
 
 function Inner() {
@@ -13,6 +14,7 @@ function Inner() {
   const qc = useQueryClient();
   const base = `/tienda/${t.slug}`;
   const [qty, setQty] = useState(1);
+  const [presOpen, setPresOpen] = useState(false);
 
   // Build placeholder from existing catalog cache (instant render if user came from home/list)
   const catalog: any = qc.getQueryData(["tienda-catalog", t.slug, t.token]);
@@ -57,6 +59,7 @@ function Inner() {
   );
 
   const enStock = p.stock > 0 || p.vender_sin_stock;
+  const tienePresentaciones = (p.presentaciones?.length ?? 0) > 0;
   const tieneDescuento = p.precio_base && p.precio < p.precio_base;
   const pct = tieneDescuento ? Math.round(((p.precio_base - p.precio) / p.precio_base) * 100) : 0;
 
@@ -92,29 +95,39 @@ function Inner() {
           </div>
 
           {enStock && (
-            <div className="tx-pdp-qty-row">
-              <div className="tx-pdp-qty">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={14}/></button>
-                <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} />
-                <button onClick={() => setQty((q) => q + 1)}><Plus size={14}/></button>
-              </div>
+            tienePresentaciones ? (
               <button
                 className="tienda-btn tienda-btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => {
-                  t.addToCart({
-                    producto_id: p.id,
-                    nombre: p.nombre,
-                    imagen_url: p.imagen_url,
-                    precio_unitario: p.precio,
-                    cantidad: qty,
-                    unidad: p.unidad_venta,
-                  });
-                }}
+                style={{ width: "100%" }}
+                onClick={() => setPresOpen(true)}
               >
-                <ShoppingCart size={16}/> Agregar al carrito
+                <ShoppingCart size={16}/> Elegir presentación
               </button>
-            </div>
+            ) : (
+              <div className="tx-pdp-qty-row">
+                <div className="tx-pdp-qty">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus size={14}/></button>
+                  <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} />
+                  <button onClick={() => setQty((q) => q + 1)}><Plus size={14}/></button>
+                </div>
+                <button
+                  className="tienda-btn tienda-btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    t.addToCart({
+                      producto_id: p.id,
+                      nombre: p.nombre,
+                      imagen_url: p.imagen_url,
+                      precio_unitario: p.precio,
+                      cantidad: qty,
+                      unidad: p.unidad_venta,
+                    });
+                  }}
+                >
+                  <ShoppingCart size={16}/> Agregar al carrito
+                </button>
+              </div>
+            )
           )}
 
           <div className="tx-pdp-perks">
@@ -149,6 +162,8 @@ function Inner() {
           </div>
         </>
       )}
+
+      {presOpen && <TiendaPresentacionModal producto={p} moneda={moneda} onClose={() => setPresOpen(false)} />}
     </main>
   );
 }

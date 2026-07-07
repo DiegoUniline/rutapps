@@ -469,8 +469,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       toast.error('Sin stock disponible');
       return;
     }
+    // Unidad base: granel usa unidad_granel; no-granel usa la abreviatura de la
+    // unidad de venta (pz por defecto). Antes caía siempre en 'kg' y etiquetaba
+    // mal los productos por pieza con presentaciones.
+    const unidadBase = p.es_granel
+      ? (p.unidad_granel || p.unidades?.abreviatura || 'kg')
+      : (p.unidades?.abreviatura || 'pz');
     if (!noLimit && cantidadBase > maxQty) {
-      toast.error(`No puedes vender más de ${maxQty.toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${p.unidad_granel || 'kg'} disponibles`);
+      toast.error(`No puedes vender más de ${maxQty.toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${unidadBase} disponibles`);
       return;
     }
     const capped = cantidadBase;
@@ -480,7 +486,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
       precio_unitario: precioUnitario,
       cantidad: capped,
-      unidad: p.unidad_granel || 'kg',
+      unidad: unidadBase,
       unidad_id: p.unidad_venta_id ?? undefined,
       tiene_iva: p.tiene_iva ?? false,
       iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,

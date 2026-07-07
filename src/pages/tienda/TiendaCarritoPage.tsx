@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fnPost, formatMoney, useTienda } from "@/tienda/TiendaContext";
+import { fnPost, formatMoney, useTienda, cartLineKey } from "@/tienda/TiendaContext";
 import { Trash2, ChevronDown, ChevronUp, ShoppingBag, Package } from "lucide-react";
 import TiendaShell from "./TiendaShell";
 
@@ -25,7 +25,7 @@ function Inner() {
       const res = await fnPost("tienda-checkout", {
         slug: t.slug,
         token: t.token,
-        items: t.cart.map((c) => ({ producto_id: c.producto_id, cantidad: c.cantidad, precio_unitario: c.precio_unitario })),
+        items: t.cart.map((c) => ({ producto_id: c.producto_id, cantidad: c.cantidad, precio_unitario: c.precio_unitario, presentacion_id: c.presentacion_id ?? null })),
         notas,
         fecha_entrega: fechaEntrega || null,
       });
@@ -84,8 +84,10 @@ function Inner() {
 
       <div className="tienda-cart-page">
         <div className="tienda-cart-list">
-          {t.cart.map((c) => (
-            <div className="tienda-cart-row" key={c.producto_id}>
+          {t.cart.map((c) => {
+            const lk = cartLineKey(c);
+            return (
+            <div className="tienda-cart-row" key={lk}>
               {c.imagen_url ? (
                 <img src={c.imagen_url} alt={c.nombre} />
               ) : (
@@ -93,24 +95,28 @@ function Inner() {
               )}
               <div>
                 <div className="name">{c.nombre}</div>
-                <div className="price">{formatMoney(c.precio_unitario, moneda)} {c.unidad && `/ ${c.unidad}`}</div>
+                <div className="price">
+                  {formatMoney(c.precio_unitario, moneda)} {c.unidad && `/ ${c.unidad}`}
+                  {c.presentacion_id && c.factor_base ? <span style={{ color: "#888" }}> · {c.factor_base} pz c/u</span> : null}
+                </div>
                 <div className="tienda-cart-row-subtotal">
                   Subtotal: <strong>{formatMoney(c.precio_unitario * c.cantidad, moneda)}</strong>
                 </div>
               </div>
               <div className="tienda-qty">
-                <button onClick={() => t.updateQty(c.producto_id, c.cantidad - 1)} aria-label="Disminuir">−</button>
-                <input value={c.cantidad} onChange={(e) => t.updateQty(c.producto_id, Number(e.target.value) || 0)} />
-                <button onClick={() => t.updateQty(c.producto_id, c.cantidad + 1)} aria-label="Aumentar">+</button>
+                <button onClick={() => t.updateQty(lk, c.cantidad - 1)} aria-label="Disminuir">−</button>
+                <input value={c.cantidad} onChange={(e) => t.updateQty(lk, Number(e.target.value) || 0)} />
+                <button onClick={() => t.updateQty(lk, c.cantidad + 1)} aria-label="Aumentar">+</button>
               </div>
               <div className="tienda-cart-row-actions">
                 <div className="tienda-cart-row-total-desktop">{formatMoney(c.precio_unitario * c.cantidad, moneda)}</div>
-                <button className="tienda-btn tienda-btn-ghost" onClick={() => t.removeFromCart(c.producto_id)} title="Quitar">
+                <button className="tienda-btn tienda-btn-ghost" onClick={() => t.removeFromCart(lk)} title="Quitar">
                   <Trash2 size={16} />
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Acción seguir comprando - visible en móvil al final del listado */}
           <div className="tienda-cart-keep-shopping">

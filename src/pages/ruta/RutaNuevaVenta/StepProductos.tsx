@@ -76,9 +76,14 @@ export function StepProductos(props: Props) {
   const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>('con');
 
 
-  // Wrap addToCart: if producto es_granel, abrir selector en lugar de añadir directo
+  // Wrap addToCart: abrir el selector si es granel O si el producto tiene
+  // presentaciones (caja/paquete) — igual que el POS de escritorio. Sin
+  // presentaciones y no-granel, se agrega directo por pieza.
   const handleAdd = (p: any, esCambio?: boolean) => {
-    if (!esCambio && p?.es_granel) { setGranelFor(p); return; }
+    const tienePresentaciones = (allPresentaciones ?? []).some(
+      (pr: any) => pr.producto_id === p?.id && pr.activo !== false
+    );
+    if (!esCambio && (p?.es_granel || tienePresentaciones)) { setGranelFor(p); return; }
     addToCart(p, esCambio);
   };
   const [detalleProducto, setDetalleProducto] = useState<any | null>(null);

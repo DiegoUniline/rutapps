@@ -69,6 +69,22 @@ Deno.serve(async (req) => {
     if (!prods || prods.length === 0) return json({ error: "Productos inválidos" }, 400);
     const prodMap = new Map(prods.map((p: any) => [p.id, p]));
 
+    // Presentaciones (caja/paquete). Se validan en el servidor para NO confiar en
+    // el factor/precio que manda el cliente. Todo se convierte a unidad base para
+    // que el inventario descuente correcto (igual que escritorio y móvil).
+    const presIds = [...new Set(items.map((i: any) => i.presentacion_id).filter(Boolean))];
+    const presMap = new Map<string, any>();
+    if (presIds.length) {
+      const { data: pres } = await supabase
+        .from("producto_presentaciones")
+        .select("id, producto_id, factor_base, precio_especial, activo")
+        .in("id", presIds);
+      (pres ?? []).forEach((pr: any) => presMap.set(pr.id, pr));
+    }
+    const taxMult = (p: any) =>
+      (1 + (p.tiene_ieps ? Number(p.ieps_pct) || 0 : 0) / 100) *
+      (1 + (p.tiene_iva ? Number(p.iva_pct) || 0 : 0) / 100);
+
     let subtotal = 0;
     let iva_total = 0;
     let ieps_total = 0;
@@ -77,11 +93,30 @@ Deno.serve(async (req) => {
     for (const item of items as any[]) {
       const p: any = prodMap.get(item.producto_id);
       if (!p) continue;
-      const cantidad = Number(item.cantidad) || 0;
+      let cantidad = Number(item.cantidad) || 0;
       if (cantidad <= 0) continue;
 
       // Server-side authoritative price — ignore client-supplied precio
-      const precioNeto = resolveNetPrice(rules, p as Prod, listaPrecioId);
+      let precioNeto = resolveNetPrice(rules, p as Prod, listaPrecioId);
+
+      // Si la línea trae presentación (caja/paquete), la validamos en el servidor
+      // y convertimos a unidad base: cantidad_base = paquetes × factor. El precio
+      // por unidad base sale del precio_especial (tratado como bruto, se le baja el
+      // impuesto) o, si no hay, del precio de lista por unidad.
+      if (item.presentacion_id) {
+        const pr = presMap.get(item.presentacion_id);
+        if (!pr || pr.producto_id !== p.id || pr.activo === false) {
+          return json({ error: "Presentación inválida para el producto " + p.nombre }, 400);
+        }
+        const factor = Number(pr.factor_base) || 1;
+        cantidad = cantidad * factor;
+        if (pr.precio_especial != null) {
+          const tm = taxMult(p);
+          const grossUnit = Number(pr.precio_especial) / factor; // por unidad base, bruto
+          precioNeto = Math.round((tm > 0 ? grossUnit / tm : grossUnit) * 100) / 100;
+        }
+      }
+
       const sub = precioNeto * cantidad;
       const ieps_m = p.tiene_ieps ? sub * (Number(p.ieps_pct) / 100) : 0;
       const iva_m = p.tiene_iva ? (sub + ieps_m) * (Number(p.iva_pct) / 100) : 0;
