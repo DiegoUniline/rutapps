@@ -70,8 +70,24 @@ export function useKardexUbicacion(
     },
   });
 
+  const almacenesQuery = useQuery({
+    queryKey: ['kardex-almacenes-map', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('almacenes')
+        .select('id, nombre, tipo')
+        .eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      const map: Record<string, { nombre: string; tipo: string }> = {};
+      for (const a of data ?? []) map[a.id] = { nombre: a.nombre, tipo: a.tipo };
+      return map;
+    },
+  });
+
   const rows = useMemo<KardexUbicacionRow[]>(() => {
     if (!query.data) return [];
+    const almMap = almacenesQuery.data ?? {};
     // Saldo corrido solo cuando hay producto + ubicacion
     const computeSaldo = !!productoId && !!ubicacionId;
     let saldo = 0;
@@ -84,9 +100,15 @@ export function useKardexUbicacion(
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
       if (computeSaldo) saldo += delta;
-      return { ...m, delta, saldo: computeSaldo ? saldo : 0 };
+      // Contraparte: para salida mostramos el destino; para entrada el origen
+      let contraparteId: string | null = null;
+      if (m.tipo === 'salida') contraparteId = m.almacen_destino_id ?? null;
+      else if (m.tipo === 'entrada') contraparteId = m.almacen_origen_id ?? null;
+      const contraparte_nombre = contraparteId && almMap[contraparteId] ? almMap[contraparteId].nombre : null;
+      return { ...m, delta, saldo: computeSaldo ? saldo : 0, contraparte_nombre };
     });
-  }, [query.data, ubicacionId, ubicacionTipo, productoId]);
+  }, [query.data, almacenesQuery.data, ubicacionId, ubicacionTipo, productoId]);
 
   return { ...query, rows };
 }
+
