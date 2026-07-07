@@ -76,14 +76,9 @@ export function useKardexUbicacion(
     let saldo = 0;
     return query.data.map((m: any) => {
       let delta = 0;
-      if (ubicacionTipo === 'almacen') {
-        if (ubicacionId) {
-          // entrada/salida relative to the selected almacen (filtered above)
-          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
-        } else {
-          // global view: signo "natural" del movimiento
-          delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
-        }
+      if (ubicacionId) {
+        // entrada/salida relative to the selected almacen (filtered above)
+        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
       } else {
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
