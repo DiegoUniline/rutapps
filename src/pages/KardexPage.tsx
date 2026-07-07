@@ -193,11 +193,15 @@ export default function KardexPage() {
         destino: ent ? `Cliente: ${ent.nombre}` : 'Cliente',
       };
     }
-    // Traspasos: usar almacenes origen/destino
+    // Traspasos: usar almacenes origen/destino del propio traspaso (los movimientos vienen
+    // en filas separadas, cada una con solo un lado poblado).
     if (refTipo === 'traspaso') {
+      const t = refId ? refInfo?.traspasoAlmacenes?.[refId] : undefined;
+      const origenId = row.almacen_origen_id || t?.origen_id || null;
+      const destinoId = row.almacen_destino_id || t?.destino_id || null;
       return {
-        origen: almNombre(row.almacen_origen_id) || '—',
-        destino: almNombre(row.almacen_destino_id) || '—',
+        origen: (origenId ? almNombre(origenId) : '') || '—',
+        destino: (destinoId ? almNombre(destinoId) : '') || '—',
       };
     }
     // Devoluciones: cliente → almacén
