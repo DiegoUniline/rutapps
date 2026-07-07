@@ -232,13 +232,17 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
         .select('*')
         .eq('tarifa_id', tarifaId!);
 
-      const { data: prods } = await supabase.from('productos')
-        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
-        .eq('empresa_id', empresaId!)
-        .eq('status', 'activo')
-        .order('nombre');
+      const prods = await fetchAllPages<any>((from, to) =>
+        supabase.from('productos')
+          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+          .eq('empresa_id', empresaId!)
+          .eq('status', 'activo')
+          .order('nombre')
+          .range(from, to)
+      );
 
       if (!prods || !lineas) return [];
+
 
       // Include rules matching the selected lista OR global (null lista_precio_id)
       const rules: TarifaLineaRule[] = lineas
