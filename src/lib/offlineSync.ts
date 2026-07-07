@@ -147,7 +147,18 @@ const RECENT_TABLES = new Set([
 // Tables where delta-by-created_at misses real changes (admin edits / UPDATE-in-place
 // or DELETE+INSERT cycles that leave stale rows in IndexedDB). Always full-refresh
 // these — they're small and critical for operational correctness on mobile.
+//
+// IMPORTANTE: `productos`, `clientes` y `empresas` son datos maestros que el admin
+// EDITA seguido (precio_principal, IVA, lista_precio_id del cliente, política de
+// cobro de la empresa…). La tabla `productos` ni siquiera tiene `updated_at`, así
+// que un delta por `created_at` NUNCA vuelve a bajar un producto editado: el móvil
+// se queda con el precio viejo hasta un "Descargar todo" manual. Por eso van aquí:
+// se refrescan completos en cada sync (incluida la sync rápida) y los cambios de
+// precio/cliente/empresa siempre llegan.
 const NO_DELTA_TABLES = new Set([
+  'productos',
+  'clientes',
+  'empresas',
   'cargas',
   'carga_lineas',
   'entregas',
