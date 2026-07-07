@@ -538,12 +538,11 @@ export default function KardexPage() {
                             );
                           })()}
                         </td>
-                        <td className="py-1.5 px-3 text-[11px] max-w-[260px]">
-                          <div className="flex items-center gap-1 truncate" title={`${od.origen} → ${od.destino}`}>
-                            <span className="truncate">{od.origen}</span>
-                            <span className="text-muted-foreground">→</span>
-                            <span className="truncate font-medium">{od.destino}</span>
-                          </div>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[180px]">
+                          <span className="truncate block" title={od.origen}>{od.origen || '—'}</span>
+                        </td>
+                        <td className="py-1.5 px-3 text-[11px] max-w-[180px] font-medium">
+                          <span className="truncate block" title={od.destino}>{od.destino || '—'}</span>
                         </td>
                         <td className="py-1.5 px-3 text-[11px] max-w-[160px]">
                           <span className="truncate block" title={usuario}>{usuario}</span>
