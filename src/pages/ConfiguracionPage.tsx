@@ -317,6 +317,7 @@ export default function ConfiguracionPage() {
   const [permiteSinVehiculo, setPermiteSinVehiculo] = useState(false);
   const [apartarStockPedidos, setApartarStockPedidos] = useState(false);
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
+  const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -374,13 +375,14 @@ export default function ConfiguracionPage() {
     setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
     setApartarStockPedidos(!!(config as any).apartar_stock_pedidos);
     setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
+    setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -426,6 +428,7 @@ export default function ConfiguracionPage() {
         jornada_permite_sin_vehiculo: permiteSinVehiculo,
         apartar_stock_pedidos: apartarStockPedidos,
         apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
+        politica_cobro: politicaCobro,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -687,6 +690,45 @@ export default function ConfiguracionPage() {
               <p className="text-[11px] text-muted-foreground">
                 <strong>Ventas, cobros y entregas</strong> siempre se filtran: cada usuario solo ve los registros donde es vendedor asignado o los que él creó. Los usuarios con permiso "Ver todos" ven todo.
               </p>
+            </div>
+          </div>
+
+          {/* Política de cobro de pedidos */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Receipt className="h-4 w-4" /> Política de cobro de pedidos
+            </h3>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Define de dónde sale el saldo a cobrar cuando entregas un pedido. Solo aplica a <strong>pedidos nuevos</strong>; los pedidos ya creados conservan su política.
+            </p>
+            <div className="space-y-2">
+              {([
+                { v: 'pedido', t: 'Cobrar cantidades pedidas', d: 'Se cobra el total del pedido completo, aunque el cliente rechace productos. (Comportamiento actual.)' },
+                { v: 'entregado', t: 'Cobrar cantidades entregadas', d: 'Se cobra solo lo que realmente se entregó. Si el cliente rechaza un producto, no se le cobra.' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setPoliticaCobro(opt.v)}
+                  className={cn(
+                    'w-full text-left rounded-lg border p-3 transition-colors',
+                    politicaCobro === opt.v
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border bg-card hover:bg-accent/40',
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'h-4 w-4 rounded-full border flex items-center justify-center shrink-0',
+                      politicaCobro === opt.v ? 'border-primary' : 'border-muted-foreground/40',
+                    )}>
+                      {politicaCobro === opt.v && <span className="h-2 w-2 rounded-full bg-primary" />}
+                    </span>
+                    <span className="text-[13px] font-medium text-foreground">{opt.t}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1 ml-6">{opt.d}</p>
+                </button>
+              ))}
             </div>
           </div>
         </TabsContent>
