@@ -66,9 +66,9 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       {readOnly
         ? <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
         : <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={onClienteChange} placeholder="Buscar cliente..." />}
-      {tarifaNombre && (
+      {listaNombre && (
         <div className="text-[11px] text-muted-foreground px-1">
-          Lista: <span className="font-medium text-foreground">{tarifaNombre}</span>
+          Lista: <span className="font-medium text-foreground">{listaNombre}</span>
         </div>
       )}
     </div>
