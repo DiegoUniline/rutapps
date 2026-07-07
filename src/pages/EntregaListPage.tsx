@@ -834,7 +834,7 @@ export default function EntregaListPage() {
               size="sm"
               onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
               disabled={!vendedorRutaId || bulkAsignarMut.isPending}
-              className="gap-1.5"
+              className="gap-1.5 btn-orange-action"
             >
               <Zap className="h-3.5 w-3.5" />
               Asignar y cargar
