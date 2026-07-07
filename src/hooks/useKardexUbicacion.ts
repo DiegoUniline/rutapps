@@ -19,7 +19,8 @@ export interface KardexUbicacionRow {
   almacen_origen_id: string | null;
   almacen_destino_id: string | null;
   vendedor_destino_id: string | null;
-  contraparte_nombre: string | null;
+  origen_nombre: string | null;
+  destino_nombre: string | null;
 }
 
 /**
@@ -100,12 +101,9 @@ export function useKardexUbicacion(
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
       if (computeSaldo) saldo += delta;
-      // Contraparte: para salida mostramos el destino; para entrada el origen
-      let contraparteId: string | null = null;
-      if (m.tipo === 'salida') contraparteId = m.almacen_destino_id ?? null;
-      else if (m.tipo === 'entrada') contraparteId = m.almacen_origen_id ?? null;
-      const contraparte_nombre = contraparteId && almMap[contraparteId] ? almMap[contraparteId].nombre : null;
-      return { ...m, delta, saldo: computeSaldo ? saldo : 0, contraparte_nombre };
+      const origen_nombre = m.almacen_origen_id && almMap[m.almacen_origen_id] ? almMap[m.almacen_origen_id].nombre : null;
+      const destino_nombre = m.almacen_destino_id && almMap[m.almacen_destino_id] ? almMap[m.almacen_destino_id].nombre : null;
+      return { ...m, delta, saldo: computeSaldo ? saldo : 0, origen_nombre, destino_nombre };
     });
   }, [query.data, almacenesQuery.data, ubicacionId, ubicacionTipo, productoId]);
 
