@@ -89,17 +89,26 @@ Deno.serve(async (req) => {
       rules = (tr ?? []) as Rule[];
     }
 
-    const [cR, mR, uR, sR] = await Promise.all([
+    const [cR, mR, uR, sR, pR] = await Promise.all([
       clasifIds.length ? supabase.from("clasificaciones").select("id, nombre").in("id", clasifIds) : { data: [] },
       marcaIds.length ? supabase.from("marcas").select("id, nombre").in("id", marcaIds) : { data: [] },
       unidadIds.length ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds) : { data: [] },
       (cfg.almacen_id
         ? supabase.from("stock_almacen").select("producto_id, cantidad").eq("almacen_id", cfg.almacen_id).in("producto_id", prodIds)
         : supabase.from("stock_almacen").select("producto_id, cantidad").in("producto_id", prodIds)),
+      supabase.from("producto_presentaciones")
+        .select("id, producto_id, nombre, factor_base, precio_especial")
+        .in("producto_id", prodIds).eq("activo", true).order("factor_base", { ascending: true }),
     ]);
     const cMap = new Map((cR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const mMap = new Map((mR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const uMap = new Map((uR.data ?? []).map((x: any) => [x.id, x.abreviatura]));
+    const presMap = new Map<string, any[]>();
+    (pR.data ?? []).forEach((pr: any) => {
+      const arr = presMap.get(pr.producto_id) ?? [];
+      arr.push({ id: pr.id, nombre: pr.nombre, factor_base: Number(pr.factor_base) || 1, precio_especial: pr.precio_especial });
+      presMap.set(pr.producto_id, arr);
+    });
     const stock = new Map<string, number>();
     (sR.data ?? []).forEach((s: any) => stock.set(s.producto_id, (stock.get(s.producto_id) ?? 0) + Number(s.cantidad ?? 0)));
 
@@ -120,6 +129,7 @@ Deno.serve(async (req) => {
       iva_pct: x.iva_pct,
       tiene_ieps: x.tiene_ieps,
       ieps_pct: x.ieps_pct,
+      presentaciones: presMap.get(x.id) ?? [],
     });
 
     return json({

@@ -121,12 +121,35 @@ Deno.serve(async (req) => {
       return { data: out };
     };
 
-    const [cR, mR, uR, sR] = await Promise.all([
+    // Presentaciones (caja/paquete) activas por producto — para que la tienda
+    // pueda ofrecer "vender por caja" igual que el escritorio y el móvil.
+    const fetchPresentaciones = async () => {
+      const out: any[] = [];
+      const CHUNK = 300;
+      for (let i = 0; i < prodIds.length; i += CHUNK) {
+        const ids = prodIds.slice(i, i + CHUNK);
+        const { data, error } = await supabase.from("producto_presentaciones")
+          .select("id, producto_id, nombre, factor_base, precio_especial")
+          .in("producto_id", ids).eq("activo", true).order("factor_base", { ascending: true });
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return { data: out };
+    };
+
+    const [cR, mR, uR, sR, pR] = await Promise.all([
       clasifIds.length ? supabase.from("clasificaciones").select("id, nombre, imagen_url").in("id", clasifIds) : { data: [] },
       marcaIds.length ? supabase.from("marcas").select("id, nombre").in("id", marcaIds) : { data: [] },
       unidadIds.length ? supabase.from("unidades").select("id, abreviatura").in("id", unidadIds) : { data: [] },
       fetchStock(),
+      fetchPresentaciones(),
     ]);
+    const presMap = new Map<string, any[]>();
+    (pR.data ?? []).forEach((pr: any) => {
+      const arr = presMap.get(pr.producto_id) ?? [];
+      arr.push({ id: pr.id, nombre: pr.nombre, factor_base: Number(pr.factor_base) || 1, precio_especial: pr.precio_especial });
+      presMap.set(pr.producto_id, arr);
+    });
     const cMap = new Map((cR.data ?? []).map((x: any) => [x.id, x.nombre]));
     const cImgMap = new Map((cR.data ?? []).map((x: any) => [x.nombre, x.imagen_url ?? null]));
     const mMap = new Map((mR.data ?? []).map((x: any) => [x.id, x.nombre]));
@@ -153,6 +176,7 @@ Deno.serve(async (req) => {
         iva_pct: p.iva_pct,
         tiene_ieps: p.tiene_ieps,
         ieps_pct: p.ieps_pct,
+        presentaciones: presMap.get(p.id) ?? [],
       };
     }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 

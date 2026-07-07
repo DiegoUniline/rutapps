@@ -34,6 +34,13 @@ export interface TiendaEmpresa {
   moneda: string | null;
 }
 
+export interface TiendaPresentacion {
+  id: string;
+  nombre: string;
+  factor_base: number;
+  precio_especial: number | null;
+}
+
 export interface TiendaProducto {
   id: string;
   nombre: string;
@@ -51,6 +58,7 @@ export interface TiendaProducto {
   iva_pct: number;
   tiene_ieps: boolean;
   ieps_pct: number;
+  presentaciones?: TiendaPresentacion[];
 }
 
 export interface CartItem {
@@ -60,7 +68,19 @@ export interface CartItem {
   precio_unitario: number;
   cantidad: number;
   unidad: string | null;
+  /** Presentación elegida (caja/paquete). null = unidad base. */
+  presentacion_id?: string | null;
+  /** Piezas por presentación (para convertir a unidad base en el checkout). */
+  factor_base?: number;
 }
+
+/** Identidad de la línea del carrito: producto + presentación.
+ *  Para unidad base (sin presentación) la llave es solo el producto_id, así
+ *  los carritos guardados antes de presentaciones siguen funcionando. */
+export function cartKeyOf(producto_id: string, presentacion_id?: string | null) {
+  return presentacion_id ? `${producto_id}::${presentacion_id}` : producto_id;
+}
+export const cartLineKey = (c: CartItem) => cartKeyOf(c.producto_id, c.presentacion_id);
 
 interface TiendaCtx {
   slug: string;
@@ -75,8 +95,8 @@ interface TiendaCtx {
   logout: () => void;
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
-  updateQty: (producto_id: string, cantidad: number) => void;
-  removeFromCart: (producto_id: string) => void;
+  updateQty: (lineKey: string, cantidad: number) => void;
+  removeFromCart: (lineKey: string) => void;
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
@@ -170,7 +190,8 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
 
   const addToCart = useCallback((item: CartItem) => {
     setCart((prev) => {
-      const idx = prev.findIndex((x) => x.producto_id === item.producto_id);
+      const key = cartLineKey(item);
+      const idx = prev.findIndex((x) => cartLineKey(x) === key);
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = { ...next[idx], cantidad: next[idx].cantidad + item.cantidad };
@@ -180,12 +201,12 @@ export function TiendaProvider({ slug, children }: { slug: string; children: Rea
     });
   }, []);
 
-  const updateQty = useCallback((producto_id: string, cantidad: number) => {
-    setCart((prev) => prev.map((x) => x.producto_id === producto_id ? { ...x, cantidad: Math.max(0, cantidad) } : x).filter((x) => x.cantidad > 0));
+  const updateQty = useCallback((lineKey: string, cantidad: number) => {
+    setCart((prev) => prev.map((x) => cartLineKey(x) === lineKey ? { ...x, cantidad: Math.max(0, cantidad) } : x).filter((x) => x.cantidad > 0));
   }, []);
 
-  const removeFromCart = useCallback((producto_id: string) => {
-    setCart((prev) => prev.filter((x) => x.producto_id !== producto_id));
+  const removeFromCart = useCallback((lineKey: string) => {
+    setCart((prev) => prev.filter((x) => cartLineKey(x) !== lineKey));
   }, []);
 
   const clearCart = useCallback(() => setCart([]), []);
