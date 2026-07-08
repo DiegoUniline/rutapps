@@ -625,125 +625,134 @@ export default function AjustesInventarioPage() {
             </div>
           </div>
 
-          {/* Action bar */}
-          <div className="flex items-center justify-between flex-wrap gap-3 bg-card border border-border/40 rounded-lg px-4 py-2.5">
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-muted-foreground">{filteredRows.length} productos</span>
-              {changedRows.length > 0 && (
-                <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5">
-                  {changedRows.length} con cambios
-                </Badge>
-              )}
+          {!almacenId ? (
+            <div className="border border-dashed border-border rounded-lg py-16 text-center text-muted-foreground">
+              <MapPin className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium text-foreground">Selecciona un almacén para comenzar</p>
+              <p className="text-xs mt-1">Los productos y sus existencias aparecerán una vez elijas el almacén a ajustar.</p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!almacenId || !productos || productos.length === 0} className="gap-1.5">
-                <Download className="h-4 w-4" /> Descargar plantilla
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!almacenId} className="gap-1.5">
-                <Upload className="h-4 w-4" /> Cargar archivo
-              </Button>
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-              {rows.length > 0 && (
-                <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
-                  <FileText className="h-4 w-4 mr-1" /> PDF
-                </Button>
-              )}
-              {manejaLotes && (
-                loteSel ? (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/30 text-[13px]">
-                    <Boxes className="h-3.5 w-3.5 text-primary" />
-                    <span className="font-medium text-foreground">Lote: {loteSel.codigo}</span>
-                    <button onClick={() => setShowLoteModal(true)} className="text-primary hover:underline text-[12px]">editar</button>
-                    <button onClick={() => setLoteSel(null)} className="text-muted-foreground hover:text-destructive" title="Quitar lote"><X className="h-3.5 w-3.5" /></button>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setShowLoteModal(true)} className="gap-1.5">
-                    <Boxes className="h-4 w-4" /> Elegir / crear lote
+          ) : (
+            <>
+              {/* Action bar */}
+              <div className="flex items-center justify-between flex-wrap gap-3 bg-card border border-border/40 rounded-lg px-4 py-2.5">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">{filteredRows.length} productos</span>
+                  {changedRows.length > 0 && (
+                    <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5">
+                      {changedRows.length} con cambios
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!almacenId || !productos || productos.length === 0} className="gap-1.5">
+                    <Download className="h-4 w-4" /> Descargar plantilla
                   </Button>
-                )
-              )}
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowResetDialog(true)}
-                className="gap-1.5"
-              >
-                <RotateCcw className="h-4 w-4" /> Reiniciar a ceros
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => (loteSel ? setShowLoteConfirm(true) : applyAdjustments())}
-                disabled={applying || (changedRows.length === 0 && !loteSel) || !almacenId}
-                className="gap-1.5"
-              >
-                <Save className="h-4 w-4" />
-                {applying ? 'Aplicando...'
-                  : loteSel ? `Aplicar${changedRows.length > 0 ? ` ${changedRows.length} ajuste(s) +` : ''} lote`
-                  : `Aplicar ${changedRows.length} ajuste(s)`}
-              </Button>
-            </div>
-          </div>
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!almacenId} className="gap-1.5">
+                    <Upload className="h-4 w-4" /> Cargar archivo
+                  </Button>
+                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+                  {rows.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+                      <FileText className="h-4 w-4 mr-1" /> PDF
+                    </Button>
+                  )}
+                  {manejaLotes && (
+                    loteSel ? (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/30 text-[13px]">
+                        <Boxes className="h-3.5 w-3.5 text-primary" />
+                        <span className="font-medium text-foreground">Lote: {loteSel.codigo}</span>
+                        <button onClick={() => setShowLoteModal(true)} className="text-primary hover:underline text-[12px]">editar</button>
+                        <button onClick={() => setLoteSel(null)} className="text-muted-foreground hover:text-destructive" title="Quitar lote"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => setShowLoteModal(true)} className="gap-1.5">
+                        <Boxes className="h-4 w-4" /> Elegir / crear lote
+                      </Button>
+                    )
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowResetDialog(true)}
+                    className="gap-1.5"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Reiniciar a ceros
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => (loteSel ? setShowLoteConfirm(true) : applyAdjustments())}
+                    disabled={applying || (changedRows.length === 0 && !loteSel) || !almacenId}
+                    className="gap-1.5"
+                  >
+                    <Save className="h-4 w-4" />
+                    {applying ? 'Aplicando...'
+                      : loteSel ? `Aplicar${changedRows.length > 0 ? ` ${changedRows.length} ajuste(s) +` : ''} lote`
+                      : `Aplicar ${changedRows.length} ajuste(s)`}
+                  </Button>
+                </div>
+              </div>
 
-          {/* Products table */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <div className="max-h-[calc(100dvh-380px)] overflow-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-card z-10">
-                  <TableRow>
-                     <TableHead className="w-[100px]">Código</TableHead>
-                     <TableHead>Producto</TableHead>
-                     <TableHead className="w-[80px]">Unidad</TableHead>
-                     <TableHead className="w-[140px]">Categoría</TableHead>
-                     <TableHead className="text-right w-[110px]">En sistema</TableHead>
-                     <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
-                     <TableHead className="text-right w-[100px]">Diferencia</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingProducts && (
-                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
-                  )}
-                  {!loadingProducts && filteredRows.length === 0 && (
-                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">
-                       <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                       {!almacenId ? 'Selecciona un almacén'
-                         : (manejaLotes && loteSel) ? 'No hay productos que manejen lote. Marca "Maneja por lote" en el producto y aparecerán aquí.'
-                         : (manejaLotes && !loteSel) ? 'No hay productos sin lote. Los que manejan lote se ajustan eligiendo un lote arriba.'
-                         : 'No hay productos'}
-                     </TableCell></TableRow>
-                  )}
-                  {filteredRows.map(row => {
-                    const diff = row.touched && row.cantidadReal !== null ? row.cantidadReal - row.cantidadSistema : 0;
-                    return (
-                      <TableRow
-                        key={row.id}
-                        className={row.touched && diff !== 0 ? 'bg-primary/5' : ''}
-                      >
-                         <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
-                         <TableCell className="text-sm">{row.nombre}</TableCell>
-                         <TableCell className="text-xs text-muted-foreground">{row.unidad}</TableCell>
-                         <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">{row.clasificacionNombre || '—'}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{row.cantidadSistema}</TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            min={0}
-                            className="w-[100px] ml-auto text-right font-mono h-8 text-sm"
-                            placeholder={String(row.cantidadSistema)}
-                            value={row.cantidadReal ?? ''}
-                            onChange={e => updateRow(row.id, e.target.value === '' ? row.cantidadSistema : Number(e.target.value))}
-                          />
-                        </TableCell>
-                        <TableCell className={`text-right font-mono text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {row.touched && diff !== 0 ? `${diff > 0 ? '+' : ''}${diff}` : '—'}
-                        </TableCell>
+              {/* Products table */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="max-h-[calc(100dvh-380px)] overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                         <TableHead className="w-[100px]">Código</TableHead>
+                         <TableHead>Producto</TableHead>
+                         <TableHead className="w-[80px]">Unidad</TableHead>
+                         <TableHead className="w-[140px]">Categoría</TableHead>
+                         <TableHead className="text-right w-[110px]">En sistema</TableHead>
+                         <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
+                         <TableHead className="text-right w-[100px]">Diferencia</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingProducts && (
+                         <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
+                      )}
+                      {!loadingProducts && filteredRows.length === 0 && (
+                         <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                           <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                           {(manejaLotes && loteSel) ? 'No hay productos que manejen lote. Marca "Maneja por lote" en el producto y aparecerán aquí.'
+                             : (manejaLotes && !loteSel) ? 'No hay productos sin lote. Los que manejan lote se ajustan eligiendo un lote arriba.'
+                             : 'No hay productos'}
+                         </TableCell></TableRow>
+                      )}
+                      {filteredRows.map(row => {
+                        const diff = row.touched && row.cantidadReal !== null ? row.cantidadReal - row.cantidadSistema : 0;
+                        return (
+                          <TableRow
+                            key={row.id}
+                            className={row.touched && diff !== 0 ? 'bg-primary/5' : ''}
+                          >
+                             <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
+                             <TableCell className="text-sm">{row.nombre}</TableCell>
+                             <TableCell className="text-xs text-muted-foreground">{row.unidad}</TableCell>
+                             <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">{row.clasificacionNombre || '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{row.cantidadSistema}</TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                min={0}
+                                className="w-[100px] ml-auto text-right font-mono h-8 text-sm"
+                                placeholder={String(row.cantidadSistema)}
+                                value={row.cantidadReal ?? ''}
+                                onChange={e => updateRow(row.id, e.target.value === '' ? row.cantidadSistema : Number(e.target.value))}
+                              />
+                            </TableCell>
+                            <TableCell className={`text-right font-mono text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {row.touched && diff !== 0 ? `${diff > 0 ? '+' : ''}${diff}` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
+          )}
         </TabsContent>
 
          <TabsContent value="historial" className="mt-4 space-y-3">
