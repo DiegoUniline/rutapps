@@ -381,7 +381,7 @@ export default function ReporteDiarioRuta() {
     (incluirStock && stockItems.length > 0) ? { key: 'stock', label: 'Stock' } : null,
     ventasCanceladas.length > 0 ? { key: 'canceladas', label: 'Canceladas' } : null,
     productosArr.length > 0 ? { key: 'productos', label: 'Productos' } : null,
-    (cobros || []).length > 0 ? { key: 'cobros', label: 'Cobros' } : null,
+    { key: 'cobros', label: 'Cobranza' },
     (gastos || []).length > 0 ? { key: 'gastos', label: 'Gastos' } : null,
     devLineas.length > 0 ? { key: 'devoluciones', label: 'Devoluciones' } : null,
     visitasSinCompra.length > 0 ? { key: 'visitas', label: 'Visitas' } : null,
