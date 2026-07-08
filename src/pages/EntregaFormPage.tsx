@@ -182,7 +182,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       return;
     }
     try {
-      await surtirTodoMut.mutateAsync({
+      const resultados = await surtirTodoMut.mutateAsync({
         entregaId: form.id,
         lineas: pendientes.map((l: any) => ({
           id: l.id,
@@ -194,13 +194,38 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         empresaId: empresa!.id,
         almacenDefaultId: surtirAlmacenId,
       });
-      const idsSurtidos = new Set(pendientes.map((l: any) => l.id));
-      setLineas(prev => prev.map(l => idsSurtidos.has(l.id) ? { ...l, hecho: true, cantidad_entregada: l.cantidad_pedida } : l));
-      if (conLote.length > 0) {
-        toast.success(`Surtido lo que no maneja lote. Faltan ${conLote.length} línea(s) con lote: súrtelas una por una.`);
-      } else {
-        toast.success('Todas las líneas surtidas');
+
+      // Aplicar resultados por línea: surtido > 0 marca la línea; surtido = 0
+      // (sin stock) deja la línea pendiente para surtirla después.
+      const resById = new Map((resultados ?? []).map(r => [r.id, r]));
+      const nuevasLineas = lineas.map((l: any) => {
+        const r = resById.get(l.id);
+        if (r && r.surtido > 0) {
+          return { ...l, hecho: true, cantidad_entregada: r.surtido, almacen_origen_id: l.almacen_origen_id || surtirAlmacenId };
+        }
+        return l;
+      });
+      setLineas(nuevasLineas);
+
+      const completas = (resultados ?? []).filter(r => r.surtido >= r.pedida).length;
+      const parciales = (resultados ?? []).filter(r => r.surtido > 0 && r.surtido < r.pedida).length;
+      const sinStock = (resultados ?? []).filter(r => r.surtido <= 0).length;
+
+      // La entrega pasa a 'surtido' solo si TODAS las líneas quedaron completas.
+      const todoCompleto = nuevasLineas.length > 0 &&
+        nuevasLineas.every((l: any) => l.hecho && Number(l.cantidad_entregada) >= Number(l.cantidad_pedida));
+
+      if (todoCompleto) {
+        await supabase.from('entregas').update({ status: 'surtido', almacen_id: surtirAlmacenId } as any).eq('id', form.id);
         setForm((p: any) => ({ ...p, status: 'surtido', almacen_id: surtirAlmacenId }));
+        toast.success('Todas las líneas surtidas');
+      } else {
+        const partes: string[] = [];
+        if (completas > 0) partes.push(`${completas} completa(s)`);
+        if (parciales > 0) partes.push(`${parciales} parcial(es)`);
+        if (sinStock > 0) partes.push(`${sinStock} sin stock (pendiente(s))`);
+        if (conLote.length > 0) partes.push(`${conLote.length} con lote (surtir una por una)`);
+        toast.success(`Surtido: ${partes.join(', ')}.`);
       }
       setShowSurtirDialog(false);
     } catch (e: any) {
