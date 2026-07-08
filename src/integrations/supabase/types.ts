@@ -3288,6 +3288,7 @@ export type Database = {
           entrega_id: string
           hecho: boolean
           id: string
+          lote_id: string | null
           motivo_no_entrega: string | null
           paquetes: number | null
           presentacion_factor: number | null
@@ -3304,6 +3305,7 @@ export type Database = {
           entrega_id: string
           hecho?: boolean
           id?: string
+          lote_id?: string | null
           motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
@@ -3320,6 +3322,7 @@ export type Database = {
           entrega_id?: string
           hecho?: boolean
           id?: string
+          lote_id?: string | null
           motivo_no_entrega?: string | null
           paquetes?: number | null
           presentacion_factor?: number | null
@@ -7805,6 +7808,7 @@ export type Database = {
           iva_monto: number | null
           iva_pct: number | null
           lista_precio_id: string | null
+          lote_id: string | null
           notas: string | null
           paquetes: number | null
           precio_manual: boolean
@@ -7833,6 +7837,7 @@ export type Database = {
           iva_monto?: number | null
           iva_pct?: number | null
           lista_precio_id?: string | null
+          lote_id?: string | null
           notas?: string | null
           paquetes?: number | null
           precio_manual?: boolean
@@ -7861,6 +7866,7 @@ export type Database = {
           iva_monto?: number | null
           iva_pct?: number | null
           lista_precio_id?: string | null
+          lote_id?: string | null
           notas?: string | null
           paquetes?: number | null
           precio_manual?: boolean
@@ -8593,6 +8599,16 @@ export type Database = {
       }
     }
     Functions: {
+      _aplica_stock_lote: {
+        Args: {
+          p_almacen: string
+          p_delta: number
+          p_empresa: string
+          p_lote: string
+          p_producto: string
+        }
+        Returns: undefined
+      }
       _current_user_nombre: { Args: never; Returns: string }
       _inotif_cliente_nombre: { Args: { _id: string }; Returns: string }
       _map_entrega_status: { Args: { _s: string }; Returns: string }
@@ -8651,6 +8667,19 @@ export type Database = {
       archivar_usuario: {
         Args: { p_force?: boolean; p_motivo?: string; p_profile_id: string }
         Returns: Json
+      }
+      asignar_lote_masivo: {
+        Args: {
+          p_almacen_id: string
+          p_caducidad: string
+          p_codigo: string
+          p_costo: number
+          p_empresa_id: string
+          p_fabricacion: string
+          p_items: Json
+          p_user_id: string
+        }
+        Returns: number
       }
       calc_audit_stock_teorico: {
         Args: { p_linea_id: string }
@@ -8903,6 +8932,7 @@ export type Database = {
           p_empresa_id: string
           p_folio: string
           p_linea_id: string
+          p_lote_id?: string
           p_piezas: number
           p_user_id: string
         }
