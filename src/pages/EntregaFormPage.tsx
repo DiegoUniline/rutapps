@@ -714,7 +714,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       {surtirLoteFor && empresa?.id && (
         <LoteSurtidoModal
           empresaId={empresa.id}
-          almacenId={(lineas[surtirLoteFor.idx]?.almacen_origen_id) as string}
+          almacenId={(lineas[surtirLoteFor.idx]?.almacen_origen_id ?? form.almacen_id) as string}
           producto={surtirLoteFor.producto}
           cantidadObjetivo={surtirLoteFor.cantidad}
           onClose={() => setSurtirLoteFor(null)}
