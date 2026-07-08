@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
+import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -84,13 +85,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
   const allLinesDone = lineas.length > 0 && lineas.every((l: any) => l.hecho);
 
-  // Surtir individual line
-  const handleSurtirLinea = async (idx: number) => {
+  // Producto que maneja lote → al surtir se pide de qué lotes (FEFO).
+  const esProductoLote = (pid: string) => !!(productosList?.find((p: any) => p.id === pid) as any)?.maneja_lote;
+  const [surtirLoteFor, setSurtirLoteFor] = useState<{ idx: number; producto: { id: string; nombre: string }; cantidad: number } | null>(null);
+
+  const doSurtirLinea = async (idx: number, asignacionLotes?: { lote_id: string; cantidad: number }[]) => {
     const l = lineas[idx];
-    if (!l.id || !l.almacen_origen_id) {
-      toast.error('Selecciona el almacén origen');
-      return;
-    }
+    if (!l.id || !l.almacen_origen_id) { toast.error('Selecciona el almacén origen'); return; }
     const cant = Number(l.cantidad_entregada) || Number(l.cantidad_pedida);
     try {
       await surtirLineaMut.mutateAsync({
@@ -100,16 +101,33 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         cantidadSurtida: cant,
         entregaId: form.id,
         empresaId: empresa!.id,
+        asignacionLotes,
       });
+      const total = asignacionLotes ? asignacionLotes.reduce((s, it) => s + it.cantidad, 0) : cant;
       toast.success('Línea surtida');
       setLineas(prev => {
         const next = [...prev];
-        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: cant };
+        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: total };
         return next;
       });
     } catch (e: any) {
       toast.error(e.message);
     }
+  };
+
+  // Surtir individual line
+  const handleSurtirLinea = async (idx: number) => {
+    const l = lineas[idx];
+    if (!l.id || !l.almacen_origen_id) { toast.error('Selecciona el almacén origen'); return; }
+    if (esProductoLote(l.producto_id)) {
+      setSurtirLoteFor({
+        idx,
+        producto: { id: l.producto_id, nombre: l.descripcion ?? (productosList?.find((p: any) => p.id === l.producto_id) as any)?.nombre ?? 'Producto' },
+        cantidad: Number(l.cantidad_entregada) || Number(l.cantidad_pedida),
+      });
+      return;
+    }
+    await doSurtirLinea(idx);
   };
 
   // Open surtir todo dialog
@@ -151,7 +169,15 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       toast.error('Selecciona un almacén origen');
       return;
     }
-    const pendientes = lineas.filter((l: any) => !l.hecho);
+    // Los productos por lote se surten uno por uno (para elegir sus lotes).
+    const pendientesTodos = lineas.filter((l: any) => !l.hecho);
+    const conLote = pendientesTodos.filter((l: any) => esProductoLote(l.producto_id));
+    const pendientes = pendientesTodos.filter((l: any) => !esProductoLote(l.producto_id));
+    if (pendientes.length === 0) {
+      toast.info('Todas las líneas pendientes manejan lote: súrtelas una por una con el botón "Surtir" para elegir sus lotes.');
+      setShowSurtirDialog(false);
+      return;
+    }
     try {
       await surtirTodoMut.mutateAsync({
         entregaId: form.id,
@@ -165,9 +191,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         empresaId: empresa!.id,
         almacenDefaultId: surtirAlmacenId,
       });
-      toast.success('Todas las líneas surtidas');
-      setForm((p: any) => ({ ...p, status: 'surtido', almacen_id: surtirAlmacenId }));
-      setLineas(prev => prev.map(l => ({ ...l, hecho: true, cantidad_entregada: l.cantidad_pedida })));
+      const idsSurtidos = new Set(pendientes.map((l: any) => l.id));
+      setLineas(prev => prev.map(l => idsSurtidos.has(l.id) ? { ...l, hecho: true, cantidad_entregada: l.cantidad_pedida } : l));
+      if (conLote.length > 0) {
+        toast.success(`Surtido lo que no maneja lote. Faltan ${conLote.length} línea(s) con lote: súrtelas una por una.`);
+      } else {
+        toast.success('Todas las líneas surtidas');
+        setForm((p: any) => ({ ...p, status: 'surtido', almacen_id: surtirAlmacenId }));
+      }
       setShowSurtirDialog(false);
     } catch (e: any) {
       toast.error(e.message);
@@ -677,6 +708,21 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           </div>
         </div>
       </div>
+
+      {surtirLoteFor && empresa?.id && (
+        <LoteSurtidoModal
+          empresaId={empresa.id}
+          almacenId={(lineas[surtirLoteFor.idx]?.almacen_origen_id) as string}
+          producto={surtirLoteFor.producto}
+          cantidadObjetivo={surtirLoteFor.cantidad}
+          onClose={() => setSurtirLoteFor(null)}
+          onConfirm={(asignacion) => {
+            const idx = surtirLoteFor.idx;
+            setSurtirLoteFor(null);
+            doSurtirLinea(idx, asignacion);
+          }}
+        />
+      )}
 
       {/* ─── Dialog: Surtir todo (confirmar almacén) ─── */}
       <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>

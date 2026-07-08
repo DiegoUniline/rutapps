@@ -98,14 +98,29 @@ export function useSurtirLinea() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ lineaId, productoId, almacenOrigenId, cantidadSurtida, entregaId, empresaId }: {
+    mutationFn: async ({ lineaId, productoId, almacenOrigenId, cantidadSurtida, entregaId, empresaId, asignacionLotes }: {
       lineaId: string;
       productoId: string;
       almacenOrigenId: string;
       cantidadSurtida: number;
       entregaId: string;
       empresaId: string;
+      asignacionLotes?: { lote_id: string; cantidad: number }[];
     }) => {
+      // Surtido por lote (asignación multi-lote) o surtido normal.
+      if (asignacionLotes && asignacionLotes.length > 0) {
+        const { error } = await supabase.rpc('surtir_linea_entrega_lotes' as any, {
+          p_linea_id: lineaId,
+          p_producto_id: productoId,
+          p_almacen_origen_id: almacenOrigenId,
+          p_entrega_id: entregaId,
+          p_empresa_id: empresaId,
+          p_user_id: user?.id,
+          p_asignacion: asignacionLotes,
+        });
+        if (error) throw new Error(error.message);
+        return;
+      }
       // Atomic stock deduction via DB function (prevents race conditions)
       const { error } = await supabase.rpc('surtir_linea_entrega', {
         p_linea_id: lineaId,
