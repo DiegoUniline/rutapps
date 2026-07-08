@@ -87,11 +87,12 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
   // Producto que maneja lote → al surtir se pide de qué lotes (FEFO).
   const esProductoLote = (pid: string) => !!(productosList?.find((p: any) => p.id === pid) as any)?.maneja_lote;
+  const getLineaAlmacenOrigenId = (linea: any) => (linea?.almacen_origen_id || form.almacen_id || '') as string;
   const [surtirLoteFor, setSurtirLoteFor] = useState<{ idx: number; producto: { id: string; nombre: string }; cantidad: number } | null>(null);
 
   const doSurtirLinea = async (idx: number, asignacionLotes?: { lote_id: string; cantidad: number }[]) => {
     const l = lineas[idx];
-    const almacenOrigenId = l.almacen_origen_id ?? form.almacen_id;
+    const almacenOrigenId = getLineaAlmacenOrigenId(l);
     if (!l.id || !almacenOrigenId) { toast.error('Selecciona el almacén origen'); return; }
     const cant = Number(l.cantidad_entregada) || Number(l.cantidad_pedida);
     try {
@@ -119,7 +120,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   // Surtir individual line
   const handleSurtirLinea = async (idx: number) => {
     const l = lineas[idx];
-    const almacenOrigenId = l.almacen_origen_id ?? form.almacen_id;
+    const almacenOrigenId = getLineaAlmacenOrigenId(l);
     if (!l.id || !almacenOrigenId) { toast.error('Selecciona el almacén origen'); return; }
     if (esProductoLote(l.producto_id)) {
       setSurtirLoteFor({
@@ -134,7 +135,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
   // Open surtir todo dialog
   const openSurtirTodoDialog = () => {
-    setSurtirAlmacenId(form.almacen_id ?? '');
+    setSurtirAlmacenId(form.almacen_id || '');
     setShowSurtirDialog(true);
   };
 
@@ -325,7 +326,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
   // Stock per (almacen_origen_id) selected in lines — fallback to entrega.almacen_id so stock se ve sin re-seleccionar
   const lineaOrigenIds = Array.from(new Set(
-    lineas.map((l: any) => l.almacen_origen_id ?? form.almacen_id).filter(Boolean)
+    lineas.map((l: any) => getLineaAlmacenOrigenId(l)).filter(Boolean)
   )) as string[];
   const { data: stockPorAlmacenLineas } = useQuery({
     queryKey: ['stock_almacen_lineas', lineaOrigenIds.sort().join(',')],
@@ -559,13 +560,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
               <tbody>
                 {lineas.map((l: any, idx: number) => {
                   const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
-                  const origenId = l.almacen_origen_id ?? form.almacen_id ?? null;
+                  const origenId = getLineaAlmacenOrigenId(l) || null;
                   const stock = origenId && l.producto_id
                     ? (stockLineasMap.get(`${origenId}:${l.producto_id}`) ?? 0)
                     : null;
                   const cantPedida = Number(l.cantidad_pedida) || 0;
                   const cantEntregada = Number(l.cantidad_entregada) || 0;
-                  const almNombre = l.almacenes?.nombre;
+                  const almNombre = l.almacenes?.nombre ?? almacenesList?.find((a: any) => a.id === origenId)?.nombre;
 
                   return (
                     <tr key={l.id ?? idx} className={cn(
@@ -606,7 +607,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                         ) : isBorrador || isNew ? (
                           <SearchableSelect
                             options={almacenOptions}
-                            value={l.almacen_origen_id ?? form.almacen_id ?? ''}
+                            value={getLineaAlmacenOrigenId(l)}
                             onChange={v => updateLineaLocal(idx, 'almacen_origen_id', v)}
                             placeholder="Origen..."
                           />
@@ -714,7 +715,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       {surtirLoteFor && empresa?.id && (
         <LoteSurtidoModal
           empresaId={empresa.id}
-          almacenId={(lineas[surtirLoteFor.idx]?.almacen_origen_id ?? form.almacen_id) as string}
+          almacenId={getLineaAlmacenOrigenId(lineas[surtirLoteFor.idx])}
           producto={surtirLoteFor.producto}
           cantidadObjetivo={surtirLoteFor.cantidad}
           onClose={() => setSurtirLoteFor(null)}
