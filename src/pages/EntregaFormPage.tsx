@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
+import { LotesAsignadosModal } from '@/components/lotes/LotesAsignadosModal';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -89,6 +90,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const esProductoLote = (pid: string) => !!(productosList?.find((p: any) => p.id === pid) as any)?.maneja_lote;
   const getLineaAlmacenOrigenId = (linea: any) => (linea?.almacen_origen_id || form.almacen_id || '') as string;
   const [surtirLoteFor, setSurtirLoteFor] = useState<{ idx: number; producto: { id: string; nombre: string }; cantidad: number } | null>(null);
+  const [verLotesFor, setVerLotesFor] = useState<{ producto: { id: string; nombre: string } } | null>(null);
 
   const doSurtirLinea = async (idx: number, asignacionLotes?: { lote_id: string; cantidad: number }[]) => {
     const l = lineas[idx];
@@ -620,8 +622,13 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                             readOnly={readOnly}
                           />
                         ) : (
-                          <span className="text-[12px]">
+                          <span className="text-[12px] inline-flex items-center gap-1.5">
                             {prod ? `${prod.codigo} · ${prod.nombre}` : '—'}
+                            {esProductoLote(l.producto_id) && (
+                              <Badge variant="outline" className="text-[9px] py-0 px-1 gap-0.5 border-amber-500/40 text-amber-600">
+                                <Boxes className="h-2.5 w-2.5" /> Lote
+                              </Badge>
+                            )}
                           </span>
                         )}
                       </td>
@@ -719,7 +726,20 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                           <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
                         )}
                         {l.hecho && cantEntregada > 0 && (
-                          <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">Surtido</Badge>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">Surtido</Badge>
+                            {esProductoLote(l.producto_id) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2"
+                                title="Ver los lotes con los que se surtió"
+                                onClick={() => setVerLotesFor({ producto: { id: l.producto_id, nombre: prod?.nombre ?? '' } })}
+                              >
+                                <Boxes className="h-3 w-3 mr-1" /> Ver lotes
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -749,6 +769,15 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
             setSurtirLoteFor(null);
             doSurtirLinea(idx, asignacion);
           }}
+        />
+      )}
+
+      {verLotesFor && empresa?.id && form.id && (
+        <LotesAsignadosModal
+          empresaId={empresa.id}
+          entregaId={form.id}
+          producto={verLotesFor.producto}
+          onClose={() => setVerLotesFor(null)}
         />
       )}
 
