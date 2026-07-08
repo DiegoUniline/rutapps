@@ -91,13 +91,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
 
   const doSurtirLinea = async (idx: number, asignacionLotes?: { lote_id: string; cantidad: number }[]) => {
     const l = lineas[idx];
-    if (!l.id || !l.almacen_origen_id) { toast.error('Selecciona el almacén origen'); return; }
+    const almacenOrigenId = l.almacen_origen_id ?? form.almacen_id;
+    if (!l.id || !almacenOrigenId) { toast.error('Selecciona el almacén origen'); return; }
     const cant = Number(l.cantidad_entregada) || Number(l.cantidad_pedida);
     try {
       await surtirLineaMut.mutateAsync({
         lineaId: l.id,
         productoId: l.producto_id,
-        almacenOrigenId: l.almacen_origen_id,
+        almacenOrigenId,
         cantidadSurtida: cant,
         entregaId: form.id,
         empresaId: empresa!.id,
@@ -107,7 +108,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       toast.success('Línea surtida');
       setLineas(prev => {
         const next = [...prev];
-        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: total };
+        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: total, almacen_origen_id: almacenOrigenId };
         return next;
       });
     } catch (e: any) {
@@ -118,7 +119,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   // Surtir individual line
   const handleSurtirLinea = async (idx: number) => {
     const l = lineas[idx];
-    if (!l.id || !l.almacen_origen_id) { toast.error('Selecciona el almacén origen'); return; }
+    const almacenOrigenId = l.almacen_origen_id ?? form.almacen_id;
+    if (!l.id || !almacenOrigenId) { toast.error('Selecciona el almacén origen'); return; }
     if (esProductoLote(l.producto_id)) {
       setSurtirLoteFor({
         idx,
