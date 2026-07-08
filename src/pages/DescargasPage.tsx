@@ -60,9 +60,16 @@ const MOTIVOS = [
 ];
 
 function getTimezoneOffsetMinutes(date: Date, timeZone: string): number {
-  const tzName = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'shortOffset' })
-    .formatToParts(date)
-    .find(part => part.type === 'timeZoneName')?.value ?? 'GMT';
+  let tzName = 'GMT';
+  try {
+    tzName = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'shortOffset' })
+      .formatToParts(date)
+      .find(part => part.type === 'timeZoneName')?.value ?? 'GMT';
+  } catch {
+    tzName = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Mexico_City', timeZoneName: 'shortOffset' })
+      .formatToParts(date)
+      .find(part => part.type === 'timeZoneName')?.value ?? 'GMT';
+  }
   if (tzName === 'GMT') return 0;
   const match = tzName.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
   if (!match) return 0;
