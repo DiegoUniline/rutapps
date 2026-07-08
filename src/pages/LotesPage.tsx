@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 interface AlmacenStock { almacen_id: string; nombre: string; tipo: string; cantidad: number; }
@@ -324,34 +325,30 @@ export default function LotesPage() {
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
-            <button
-              onClick={() => setAlmacenFilters(new Set())}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent text-left"
-            >
-              <div className="h-4 w-4 flex items-center justify-center">
-                {almacenFilters.size === 0 && <Check className="h-3.5 w-3.5 text-primary" />}
-              </div>
+            <label className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer">
+              <Checkbox
+                checked={almacenFilters.size === 0}
+                onCheckedChange={() => setAlmacenFilters(new Set())}
+              />
               <span className="font-medium">Todos</span>
-            </button>
+            </label>
             <div className="my-1 border-t border-border" />
             {almacenesList.map(a => {
               const on = almacenFilters.has(a.id);
               return (
-                <button
+                <label
                   key={a.id}
-                  onClick={() => toggleAlmacen(a.id)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent text-left"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent cursor-pointer"
                 >
-                  <div className="h-4 w-4 flex items-center justify-center">
-                    {on && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </div>
+                  <Checkbox checked={on} onCheckedChange={() => toggleAlmacen(a.id)} />
                   {a.tipo === 'ruta' ? <Truck className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <Warehouse className="h-3.5 w-3.5 text-primary shrink-0" />}
                   <span className="truncate">{a.nombre}</span>
-                </button>
+                </label>
               );
             })}
           </PopoverContent>
         </Popover>
+
 
         {/* Stock: segmentado */}
         <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
