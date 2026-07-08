@@ -195,6 +195,11 @@ export default function LotesPage() {
 
   const lotesVisibles = (lotes ?? []).filter(l => {
     if (!matchSearchVenc(l)) return false;
+    // Filtro por almacén(es): sólo lotes con existencia en alguno de los seleccionados.
+    if (almacenFilters.size > 0) {
+      const detalle = stockDetalle?.get(l.id) ?? [];
+      if (!detalle.some(d => almacenFilters.has(d.almacen_id))) return false;
+    }
     if (stockFilter !== 'todos') {
       const q = stockDe(l.id);
       if (stockFilter === 'con' && q <= 0) return false;
