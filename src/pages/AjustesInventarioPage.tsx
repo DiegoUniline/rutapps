@@ -539,7 +539,18 @@ export default function AjustesInventarioPage() {
           <div className="flex flex-wrap gap-3 items-end">
             <div className="space-y-1 min-w-[200px]">
               <Label className="text-xs text-muted-foreground">Almacén</Label>
-              <Select value={almacenId} onValueChange={setAlmacenId}>
+              <Select
+                value={almacenId}
+                onValueChange={(next) => {
+                  if (next === almacenId) return;
+                  const pending = rows.filter(r => r.touched).length;
+                  if (pending > 0) {
+                    const ok = window.confirm(`Tienes ${pending} cantidad(es) capturadas sin guardar. Si cambias de almacén se perderán. ¿Continuar?`);
+                    if (!ok) return;
+                  }
+                  setAlmacenId(next);
+                }}
+              >
                 <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Selecciona almacén" />
                 </SelectTrigger>
