@@ -74,6 +74,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
   const [showReabrirDialog, setShowReabrirDialog] = useState(false);
+  const [showNoSurtirSinStockDialog, setShowNoSurtirSinStockDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -205,6 +206,31 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       toast.error(e.message);
     } finally {
       setNoSurtirIdx(null);
+    }
+  };
+
+  // Marcar como "no surtido" en masa todas las líneas pendientes sin stock.
+  const handleNoSurtirSinStock = async () => {
+    const ids = lineasSinStock.map((l: any) => l.id).filter(Boolean);
+    if (ids.length === 0) {
+      toast.info('No hay líneas pendientes sin stock');
+      setShowNoSurtirSinStockDialog(false);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('entrega_lineas')
+        .update({ cantidad_entregada: 0, hecho: true } as any)
+        .in('id', ids);
+      if (error) throw error;
+      const idSet = new Set(ids);
+      setLineas(prev => prev.map(l => idSet.has(l.id) ? { ...l, hecho: true, cantidad_entregada: 0 } : l));
+      toast.success(`${ids.length} línea(s) sin stock marcadas como no surtidas`);
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setShowNoSurtirSinStockDialog(false);
     }
   };
 
@@ -425,6 +451,14 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     (stockPorAlmacenLineas ?? []).map((s: any) => [`${s.almacen_id}:${s.producto_id}`, Number(s.cantidad) ?? 0])
   );
 
+  // Líneas pendientes cuyo almacén origen no tiene stock (para "No surtir" masivo).
+  const lineasSinStock = lineas.filter((l: any) => {
+    if (l.hecho || !l.id) return false;
+    const origenId = getLineaAlmacenOrigenId(l);
+    const stock = origenId ? (stockLineasMap.get(`${origenId}:${l.producto_id}`) ?? 0) : 0;
+    return stock <= 0;
+  });
+
   if (!isNew && isLoading) {
     return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
@@ -471,6 +505,12 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           {!isNew && isBorrador && lineas.length > 0 && !allLinesDone && (
             <Button onClick={openSurtirTodoDialog} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
               <PackageCheck className="h-3.5 w-3.5" /> Surtir todo
+            </Button>
+          )}
+          {/* No surtir sin stock — masivo, solo en borrador cuando hay pendientes sin stock */}
+          {!isNew && isBorrador && lineasSinStock.length > 0 && (
+            <Button onClick={() => setShowNoSurtirSinStockDialog(true)} size="sm" variant="outline" className="text-muted-foreground text-xs">
+              <X className="h-3.5 w-3.5" /> No surtir sin stock ({lineasSinStock.length})
             </Button>
           )}
           {/* Mark surtido if all lines done but status still borrador */}
@@ -1023,6 +1063,22 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmNoSurtirLinea}>Sí, no surtir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Dialog: No surtir sin stock (masivo) ─── */}
+      <AlertDialog open={showNoSurtirSinStockDialog} onOpenChange={(o) => { if (!o) setShowNoSurtirSinStockDialog(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Marcar como no surtidas las líneas sin stock?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se marcarán como <strong>no surtidas</strong> las <strong>{lineasSinStock.length}</strong> línea(s) pendientes cuyo almacén origen no tiene existencia (cantidad surtida 0, sin descontar stock). Las líneas con stock no se tocan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNoSurtirSinStock}>Sí, no surtir sin stock</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
