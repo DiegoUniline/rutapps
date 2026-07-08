@@ -23,21 +23,38 @@ export function LoteSurtidoModal({ empresaId, almacenId, producto, cantidadObjet
   const [lotes, setLotes] = useState<LoteRow[]>([]);
   const [asign, setAsign] = useState<Record<string, string>>({}); // lote_id -> cantidad (string)
   const [loading, setLoading] = useState(true);
+  // Stock general del almacén (lo que valida el RPC) y si el producto puede ir a
+  // negativo. Se usa para topar el total y no dejar asignar más de lo que el
+  // surtido aceptará (evita el error tardío "Stock insuficiente en almacén").
+  const [stockGeneral, setStockGeneral] = useState(0);
+  const [venderSinStock, setVenderSinStock] = useState(false);
 
   useEffect(() => {
     if (!producto || !almacenId) return;
     setLoading(true);
     (async () => {
-      const { data } = await (supabase.from as any)('stock_lotes')
-        .select('lote_id, cantidad, lotes(codigo, fecha_caducidad, producto_id, activo)')
-        .eq('empresa_id', empresaId).eq('almacen_id', almacenId).eq('producto_id', producto.id).gt('cantidad', 0);
-      const list: LoteRow[] = (data ?? [])
+      const [lotesRes, saRes, prodRes] = await Promise.all([
+        (supabase.from as any)('stock_lotes')
+          .select('lote_id, cantidad, lotes(codigo, fecha_caducidad, producto_id, activo)')
+          .eq('empresa_id', empresaId).eq('almacen_id', almacenId).eq('producto_id', producto.id).gt('cantidad', 0),
+        (supabase.from as any)('stock_almacen')
+          .select('cantidad')
+          .eq('empresa_id', empresaId).eq('almacen_id', almacenId).eq('producto_id', producto.id).maybeSingle(),
+        (supabase.from as any)('productos').select('vender_sin_stock').eq('id', producto.id).maybeSingle(),
+      ]);
+      const list: LoteRow[] = (lotesRes.data ?? [])
         .filter((r: any) => r.lotes?.activo !== false)
         .map((r: any) => ({ lote_id: r.lote_id, codigo: r.lotes?.codigo ?? '—', fecha_caducidad: r.lotes?.fecha_caducidad ?? null, disponible: Number(r.cantidad) || 0 }))
         .sort((a: LoteRow, b: LoteRow) => (a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
+      const general = Number(saRes.data?.cantidad ?? 0);
+      const vss = !!prodRes.data?.vender_sin_stock;
+      setStockGeneral(general);
+      setVenderSinStock(vss);
       setLotes(list);
-      // Autollenado FEFO hasta la cantidad objetivo.
-      let restante = cantidadObjetivo;
+      // Autollenado FEFO hasta la cantidad objetivo, sin pasar del stock general
+      // (salvo que el producto se pueda vender sin stock).
+      const tope = vss ? cantidadObjetivo : Math.min(cantidadObjetivo, general);
+      let restante = tope;
       const auto: Record<string, string> = {};
       for (const l of list) {
         if (restante <= 0) break;
@@ -55,11 +72,14 @@ export function LoteSurtidoModal({ empresaId, almacenId, producto, cantidadObjet
   const fmtCad = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'sin caducidad';
   const totalAsignado = lotes.reduce((s, l) => s + (Number(asign[l.lote_id]) || 0), 0);
   const excedeAlguno = lotes.some(l => (Number(asign[l.lote_id]) || 0) > l.disponible);
+  // El total no puede superar el stock general del almacén (lo que valida el RPC),
+  // salvo productos que se venden sin stock.
+  const excedeGeneral = !venderSinStock && totalAsignado > stockGeneral;
 
   const setCant = (loteId: string, v: string) => setAsign(prev => ({ ...prev, [loteId]: v }));
 
   const confirmar = () => {
-    if (excedeAlguno) return;
+    if (excedeAlguno || excedeGeneral) return;
     const items = lotes
       .map(l => ({ lote_id: l.lote_id, cantidad: Number(asign[l.lote_id]) || 0 }))
       .filter(it => it.cantidad > 0);
@@ -104,12 +124,18 @@ export function LoteSurtidoModal({ empresaId, almacenId, producto, cantidadObjet
             {totalAsignado.toLocaleString('es-MX', { maximumFractionDigits: 3 })} / {cantidadObjetivo}
           </span>
         </div>
-        {totalAsignado < cantidadObjetivo && !loading && lotes.length > 0 && (
+        {excedeGeneral && !loading && (
+          <div className="px-5 text-[11px] text-destructive flex items-start gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>No puedes surtir más que el stock del almacén ({stockGeneral.toLocaleString('es-MX', { maximumFractionDigits: 3 })}). Baja la cantidad.</span>
+          </div>
+        )}
+        {!excedeGeneral && totalAsignado < cantidadObjetivo && !loading && lotes.length > 0 && (
           <div className="px-5 text-[11px] text-amber-600">Ojo: se surtirá menos de lo pedido (no alcanza el stock por lote).</div>
         )}
         <div className="p-5 border-t border-border flex gap-2 justify-end">
           <button onClick={onClose} className="btn-odoo text-sm">Cancelar</button>
-          <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={excedeAlguno || totalAsignado <= 0}>
+          <button onClick={confirmar} className="btn-odoo-primary text-sm" disabled={excedeAlguno || excedeGeneral || totalAsignado <= 0}>
             Surtir {totalAsignado > 0 ? totalAsignado.toLocaleString('es-MX', { maximumFractionDigits: 3 }) : ''}
           </button>
         </div>
