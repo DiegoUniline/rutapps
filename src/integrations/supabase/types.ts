@@ -8698,6 +8698,21 @@ export type Database = {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
       }
+      check_stock_lote_paridad: {
+        Args: { p_empresa_id?: string }
+        Returns: {
+          almacen_id: string
+          almacen_nombre: string
+          caso: string
+          codigo: string
+          diferencia: number
+          empresa_id: string
+          nombre: string
+          producto_id: string
+          stock_general: number
+          suma_lotes: number
+        }[]
+      }
       cleanup_old_vendedor_historial: { Args: never; Returns: undefined }
       cleanup_stale_vendedor_ubicaciones: { Args: never; Returns: undefined }
       close_audit_line: {
