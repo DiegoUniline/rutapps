@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Boxes, Plus, Pencil, AlertTriangle } from 'lucide-react';
+import { useState, Fragment } from 'react';
+import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { cn } from '@/lib/utils';
+
+interface AlmacenStock { almacen_id: string; nombre: string; tipo: string; cantidad: number; }
 
 interface LoteRow {
   id: string;
@@ -38,6 +40,10 @@ export default function LotesPage() {
   const { fmt } = useCurrency();
   const [edit, setEdit] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => setExpanded(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   // Productos que manejan lote (para el selector).
   const { data: productos } = useQuery({
@@ -70,24 +76,67 @@ export default function LotesPage() {
     },
   });
 
-  // Stock por lote (suma en todos los almacenes).
-  const { data: stockPorLote } = useQuery({
-    queryKey: ['stock-lotes-total', empresa?.id],
+  // Almacenes (para nombrar dónde está cada lote — incluye rutas).
+  const { data: almacenesMap } = useQuery({
+    queryKey: ['lotes-almacenes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)('stock_lotes')
-        .select('lote_id, cantidad')
+      const { data, error } = await supabase.from('almacenes')
+        .select('id, nombre, tipo')
         .eq('empresa_id', empresa!.id);
       if (error) throw error;
-      const map = new Map<string, number>();
-      (data ?? []).forEach((r: any) => map.set(r.lote_id, (map.get(r.lote_id) ?? 0) + Number(r.cantidad ?? 0)));
-      return map;
+      const m = new Map<string, { nombre: string; tipo: string }>();
+      (data ?? []).forEach((a: any) => m.set(a.id, { nombre: a.nombre, tipo: (a as any).tipo ?? 'almacen' }));
+      return m;
     },
   });
+
+  // Stock por lote: total + desglose por almacén/ruta.
+  const { data: stock } = useQuery({
+    queryKey: ['stock-lotes', empresa?.id, almacenesMap?.size ?? 0],
+    enabled: !!empresa?.id && !!almacenesMap,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)('stock_lotes')
+        .select('lote_id, almacen_id, cantidad')
+        .eq('empresa_id', empresa!.id);
+      if (error) throw error;
+      const total = new Map<string, number>();
+      const detalle = new Map<string, AlmacenStock[]>();
+      (data ?? []).forEach((r: any) => {
+        const q = Number(r.cantidad ?? 0);
+        total.set(r.lote_id, (total.get(r.lote_id) ?? 0) + q);
+        if (q !== 0) {
+          const info = almacenesMap?.get(r.almacen_id);
+          const arr = detalle.get(r.lote_id) ?? [];
+          arr.push({ almacen_id: r.almacen_id, nombre: info?.nombre ?? 'Almacén', tipo: info?.tipo ?? 'almacen', cantidad: q });
+          detalle.set(r.lote_id, arr);
+        }
+      });
+      return { total, detalle };
+    },
+  });
+  const stockPorLote = stock?.total;
+  const stockDetalle = stock?.detalle;
 
   const fmtFecha = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const estaVencido = (d: string | null) => !!d && new Date(d + 'T00:00:00') < hoy;
+  const DIAS_POR_VENCER = 30; // umbral "próximo a vencer"
+
+  // Días para vencer (negativo = ya venció). null si el lote no tiene caducidad.
+  const diasParaVencer = (d: string | null): number | null => {
+    if (!d) return null;
+    return Math.round((new Date(d + 'T00:00:00').getTime() - hoy.getTime()) / 86400000);
+  };
+  // { texto, clase } para pintar el estado de caducidad.
+  const estadoVencimiento = (d: string | null) => {
+    const dias = diasParaVencer(d);
+    if (dias === null) return { texto: 'Sin caducidad', clase: 'text-muted-foreground' };
+    if (dias < 0) return { texto: `Vencido hace ${Math.abs(dias)} día(s)`, clase: 'text-destructive font-medium' };
+    if (dias === 0) return { texto: 'Vence hoy', clase: 'text-destructive font-medium' };
+    if (dias <= DIAS_POR_VENCER) return { texto: `Faltan ${dias} día(s)`, clase: 'text-amber-600 dark:text-amber-400 font-medium' };
+    return { texto: `Faltan ${dias} día(s)`, clase: 'text-emerald-600 dark:text-emerald-400' };
+  };
 
   const openNew = () => setEdit({ ...emptyEdit });
   const openEdit = (l: LoteRow) => setEdit({
@@ -138,6 +187,14 @@ export default function LotesPage() {
   };
 
   const noHayProductos = (productos?.length ?? 0) === 0;
+  const resumen = (lotes ?? []).reduce((a, l) => {
+    const dias = diasParaVencer(l.fecha_caducidad);
+    if (dias !== null) {
+      if (dias < 0) a.vencidos++;
+      else if (dias <= DIAS_POR_VENCER) a.porVencer++;
+    }
+    return a;
+  }, { vencidos: 0, porVencer: 0 });
 
   return (
     <div className="p-4 space-y-4 min-h-full">
@@ -157,6 +214,21 @@ export default function LotesPage() {
         </div>
       )}
 
+      {(resumen.vencidos > 0 || resumen.porVencer > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {resumen.vencidos > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/30 text-[13px] text-destructive font-medium">
+              <AlertTriangle className="h-4 w-4" /> {resumen.vencidos} lote(s) vencido(s)
+            </span>
+          )}
+          {resumen.porVencer > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[13px] text-amber-700 dark:text-amber-400 font-medium">
+              <AlertTriangle className="h-4 w-4" /> {resumen.porVencer} por vencer (≤ {DIAS_POR_VENCER} días)
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="bg-card border border-border rounded overflow-x-auto">
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
@@ -164,38 +236,75 @@ export default function LotesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-table-border">
+                <th className="th-odoo w-8"></th>
                 <th className="th-odoo text-left">Producto</th>
                 <th className="th-odoo text-left w-32">Código lote</th>
                 <th className="th-odoo text-left w-32">Caducidad</th>
-                <th className="th-odoo text-left w-32">Fabricación</th>
+                <th className="th-odoo text-left w-40">Vence</th>
+                <th className="th-odoo text-left w-28">Fabricación</th>
                 <th className="th-odoo text-right w-24">Costo</th>
                 <th className="th-odoo text-right w-24">Stock</th>
                 <th className="th-odoo w-16 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {(lotes ?? []).map(l => (
-                <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover transition-colors group">
-                  <td className="py-1.5 px-3">
-                    <div className="text-foreground">{l.productos?.nombre ?? '—'}</div>
-                    {l.productos?.codigo && <div className="text-[11px] text-muted-foreground">{l.productos.codigo}</div>}
-                  </td>
-                  <td className="py-1.5 px-3 font-medium text-foreground">{l.codigo}</td>
-                  <td className={cn("py-1.5 px-3", estaVencido(l.fecha_caducidad) && "text-destructive font-medium")}>
-                    {fmtFecha(l.fecha_caducidad)}{estaVencido(l.fecha_caducidad) && ' ⚠️'}
-                  </td>
-                  <td className="py-1.5 px-3 text-muted-foreground">{fmtFecha(l.fecha_fabricacion)}</td>
-                  <td className="py-1.5 px-3 text-right tabular-nums">{l.costo != null ? fmt(l.costo) : '—'}</td>
-                  <td className="py-1.5 px-3 text-right tabular-nums">{(stockPorLote?.get(l.id) ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 3 })}</td>
-                  <td className="py-1.5 px-3 text-right">
-                    <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {(lotes ?? []).map(l => {
+                const total = stockPorLote?.get(l.id) ?? 0;
+                const detalle = stockDetalle?.get(l.id) ?? [];
+                const isOpen = expanded.has(l.id);
+                const est = estadoVencimiento(l.fecha_caducidad);
+                return (
+                  <Fragment key={l.id}>
+                    <tr className={cn("border-b border-table-border hover:bg-table-hover transition-colors group", isOpen && "bg-table-hover/50")}>
+                      <td className="py-1.5 px-2 text-center">
+                        {detalle.length > 0 ? (
+                          <button onClick={() => toggleExpand(l.id)} className="p-0.5 text-muted-foreground hover:text-foreground" title="Ver dónde está">
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </button>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-3">
+                        <div className="text-foreground">{l.productos?.nombre ?? '—'}</div>
+                        {l.productos?.codigo && <div className="text-[11px] text-muted-foreground">{l.productos.codigo}</div>}
+                      </td>
+                      <td className="py-1.5 px-3 font-medium text-foreground">{l.codigo}</td>
+                      <td className={cn("py-1.5 px-3", estaVencido(l.fecha_caducidad) && "text-destructive font-medium")}>
+                        {fmtFecha(l.fecha_caducidad)}
+                      </td>
+                      <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
+                      <td className="py-1.5 px-3 text-muted-foreground">{fmtFecha(l.fecha_fabricacion)}</td>
+                      <td className="py-1.5 px-3 text-right tabular-nums">{l.costo != null ? fmt(l.costo) : '—'}</td>
+                      <td className="py-1.5 px-3 text-right tabular-nums font-medium">
+                        {total.toLocaleString('es-MX', { maximumFractionDigits: 3 })}
+                      </td>
+                      <td className="py-1.5 px-3 text-right">
+                        <button className="p-1 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openEdit(l)} title="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && detalle.length > 0 && (
+                      <tr className="bg-muted/30 border-b border-table-border">
+                        <td></td>
+                        <td colSpan={8} className="px-3 py-2">
+                          <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Dónde está este lote</div>
+                          <div className="flex flex-wrap gap-2">
+                            {detalle.sort((a, b) => b.cantidad - a.cantidad).map(d => (
+                              <span key={d.almacen_id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-card border border-border text-[12px]">
+                                {d.tipo === 'ruta' ? <Truck className="h-3 w-3 text-amber-500" /> : <Warehouse className="h-3 w-3 text-primary" />}
+                                <span className="text-foreground">{d.nombre}</span>
+                                <span className="font-semibold tabular-nums">{d.cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
               {(lotes?.length ?? 0) === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">
                   Aún no hay lotes. Crea el primero con "Nuevo lote".
                 </td></tr>
               )}
