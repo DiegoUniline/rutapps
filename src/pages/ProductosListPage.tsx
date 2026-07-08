@@ -108,11 +108,11 @@ export default function ProductosListPage() {
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
   const { clasificaciones, marcas, proveedores } = useProductoFilterOptions();
-  const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const { hasPermiso } = usePermisos();
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
   const { empresa } = useAuth();
+  const manejaLotes = !!(empresa as any)?.maneja_lotes;
   // Realtime: refresca productos al cambiar desde otro dispositivo (precios, stock)
   useRealtimeInvalidate({ table: 'productos', empresaId: empresa?.id, queryKeys: [['productos']] });
   useRealtimeInvalidate({ table: 'stock_almacen', empresaId: empresa?.id, queryKeys: [['productos']] });
