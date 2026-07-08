@@ -1020,15 +1020,46 @@ export default function ReporteDiarioRuta() {
           {verSec('cobros') && (cobros || []).length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <CreditCard className="h-3.5 w-3.5" /> Cobros ({(cobros || []).length})
+                <CreditCard className="h-3.5 w-3.5" /> Cobros recibidos ({(cobros || []).length})
               </h2>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {Object.entries(cobrosPorMetodo).map(([m, t]) => (
-                  <span key={m} className="text-[10px] bg-card rounded px-2 py-1">
-                    <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">{fmt(t)}</span>
-                  </span>
-                ))}
+
+              {/* Resumen de cobros por método de pago */}
+              <div className="mb-3 bg-card border border-border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 border-b border-border bg-muted/30">
+                  <h3 className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">
+                    Resumen por método de pago
+                  </h3>
+                </div>
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
+                      <th className="text-left py-1.5 px-3">Método</th>
+                      <th className="text-right py-1.5 px-3 w-20">Cobros</th>
+                      <th className="text-right py-1.5 px-3">Total</th>
+                      <th className="text-right py-1.5 px-3 w-16">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cobrosResumenMetodo.map((r) => (
+                      <tr key={r.metodo} className="border-b border-border/30 last:border-0">
+                        <td className="py-1.5 px-3 font-medium">{r.label}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">{r.count}</td>
+                        <td className="py-1.5 px-3 text-right font-semibold">{fmt(r.total)}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">{r.pct.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-border font-bold bg-muted/20">
+                      <td className="py-1.5 px-3">Total</td>
+                      <td className="py-1.5 px-3 text-right">{(cobros || []).length}</td>
+                      <td className="py-1.5 px-3 text-right">{fmt(totalCobros)}</td>
+                      <td className="py-1.5 px-3 text-right">100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
+
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
