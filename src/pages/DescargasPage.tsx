@@ -1151,6 +1151,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <div className="space-y-3">
               {entregasList.map((e: any) => {
                 const lineas = (e.entrega_lineas || []) as any[];
+                const fechaRealEntrega = e.validado_at || e.fecha_entrega || e.fecha;
                 const udsEntregadas = lineas.filter(l => l.hecho).reduce((s, l) => s + (Number(l.cantidad_entregada) || 0), 0);
                 const udsNoEntregadas = lineas.filter(l => !l.hecho).reduce((s, l) => s + (Number(l.cantidad ?? l.cantidad_entregada) || 0), 0);
                 return (
@@ -1160,7 +1161,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         <span className="font-mono font-semibold text-foreground">{e.folio ?? '—'}</span>
                         <span className="text-muted-foreground">Pedido <span className="font-mono">{e.ventas?.folio ?? '—'}</span></span>
                         <span className="text-foreground">{e.clientes?.nombre ?? '—'}</span>
-                        <span className="text-muted-foreground">{e.validado_at || e.fecha_entrega ? fmtDate(e.validado_at || e.fecha_entrega) : '—'}</span>
+                        <span className="text-muted-foreground">{fmtDate(fechaRealEntrega)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-[11px]">
                         <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{udsEntregadas} entregadas</span>
