@@ -59,6 +59,27 @@ const MOTIVOS = [
   { value: 'otro', label: 'Otro' },
 ];
 
+function getTimezoneOffsetMinutes(date: Date, timeZone: string): number {
+  const tzName = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'shortOffset' })
+    .formatToParts(date)
+    .find(part => part.type === 'timeZoneName')?.value ?? 'GMT';
+  if (tzName === 'GMT') return 0;
+  const match = tzName.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  return sign * (Number(match[2]) * 60 + Number(match[3] ?? 0));
+}
+
+function zonedDateTimeToUtcIso(dateISO: string, time: string, timeZone?: string | null): string {
+  const zone = timeZone || 'America/Mexico_City';
+  const localAsUtc = new Date(`${dateISO}T${time}Z`);
+  const firstOffset = getTimezoneOffsetMinutes(localAsUtc, zone);
+  let utcMs = localAsUtc.getTime() - firstOffset * 60_000;
+  const secondOffset = getTimezoneOffsetMinutes(new Date(utcMs), zone);
+  if (secondOffset !== firstOffset) utcMs = localAsUtc.getTime() - secondOffset * 60_000;
+  return new Date(utcMs).toISOString();
+}
+
 /* ─── Section Card helper ─── */
 function SectionCard({ title, icon: Icon, children, className }: { title: string; icon: React.ElementType; children: React.ReactNode; className?: string }) {
   return (
@@ -222,11 +243,11 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   // momento operativo real; se usa solo como respaldo. Como último fallback,
   // si no existe ninguna fecha de cierre, usamos la fecha programada.
   const { data: entregas } = useQuery({
-    queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin, empresa?.zona_horaria],
     enabled: !!descarga.vendedor_id,
     queryFn: async () => {
-      const inicioTs = `${fInicio} 00:00:00`;
-      const finTs = `${fFin} 23:59:59.999`;
+      const inicioTs = zonedDateTimeToUtcIso(fInicio, '00:00:00.000', empresa?.zona_horaria);
+      const finTs = zonedDateTimeToUtcIso(fFin, '23:59:59.999', empresa?.zona_horaria);
       const { data, error } = await supabase
         .from('entregas')
         .select('id, folio, status, fecha_entrega, validado_at, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
