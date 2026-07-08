@@ -41,6 +41,7 @@ export default function LotesPage() {
   const [edit, setEdit] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [vista, setVista] = useState<'lote' | 'almacen'>('lote');
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
@@ -102,6 +103,7 @@ export default function LotesPage() {
       if (error) throw error;
       const total = new Map<string, number>();
       const detalle = new Map<string, AlmacenStock[]>();
+      const rows: { lote_id: string; almacen_id: string; cantidad: number }[] = [];
       (data ?? []).forEach((r: any) => {
         const q = Number(r.cantidad ?? 0);
         total.set(r.lote_id, (total.get(r.lote_id) ?? 0) + q);
@@ -110,13 +112,30 @@ export default function LotesPage() {
           const arr = detalle.get(r.lote_id) ?? [];
           arr.push({ almacen_id: r.almacen_id, nombre: info?.nombre ?? 'Almacén', tipo: info?.tipo ?? 'almacen', cantidad: q });
           detalle.set(r.lote_id, arr);
+          rows.push({ lote_id: r.lote_id, almacen_id: r.almacen_id, cantidad: q });
         }
       });
-      return { total, detalle };
+      return { total, detalle, rows };
     },
   });
   const stockPorLote = stock?.total;
   const stockDetalle = stock?.detalle;
+
+  // Agrupación POR ALMACÉN/RUTA: almacen_id -> lotes que tiene dentro.
+  const porAlmacen = (() => {
+    const lotesById = new Map((lotes ?? []).map(l => [l.id, l]));
+    const grupos = new Map<string, { nombre: string; tipo: string; items: { lote: LoteRow; cantidad: number }[] }>();
+    (stock?.rows ?? []).forEach(r => {
+      const lote = lotesById.get(r.lote_id);
+      if (!lote) return;
+      const info = almacenesMap?.get(r.almacen_id);
+      const g = grupos.get(r.almacen_id) ?? { nombre: info?.nombre ?? 'Almacén', tipo: info?.tipo ?? 'almacen', items: [] };
+      g.items.push({ lote, cantidad: r.cantidad });
+      grupos.set(r.almacen_id, g);
+    });
+    return Array.from(grupos.entries()).map(([id, g]) => ({ id, ...g }))
+      .sort((a, b) => (a.tipo === b.tipo ? a.nombre.localeCompare(b.nombre) : a.tipo === 'almacen' ? -1 : 1));
+  })();
 
   const fmtFecha = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -229,6 +248,19 @@ export default function LotesPage() {
         </div>
       )}
 
+      {/* Switch de vista */}
+      <div className="flex gap-1 bg-accent/40 p-1 rounded-lg w-fit">
+        <button onClick={() => setVista('lote')}
+          className={cn("px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors", vista === 'lote' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
+          Por lote
+        </button>
+        <button onClick={() => setVista('almacen')}
+          className={cn("px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors", vista === 'almacen' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground')}>
+          Por almacén / ruta
+        </button>
+      </div>
+
+      {vista === 'lote' && (
       <div className="bg-card border border-border rounded overflow-x-auto">
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={5} cols={6} /></div>
@@ -312,6 +344,57 @@ export default function LotesPage() {
           </table>
         )}
       </div>
+      )}
+
+      {vista === 'almacen' && (
+        <div className="space-y-3">
+          {porAlmacen.length === 0 ? (
+            <div className="bg-card border border-border rounded p-8 text-center text-muted-foreground text-sm">
+              Todavía no hay stock por lote en ningún almacén. Entrará al recibir compras por lote.
+            </div>
+          ) : porAlmacen.map(alm => {
+            const totalAlm = alm.items.reduce((s, it) => s + it.cantidad, 0);
+            return (
+              <div key={alm.id} className="bg-card border border-border rounded overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                  {alm.tipo === 'ruta' ? <Truck className="h-4 w-4 text-amber-500" /> : <Warehouse className="h-4 w-4 text-primary" />}
+                  <span className="font-semibold text-foreground">{alm.nombre}</span>
+                  <span className="text-[11px] text-muted-foreground">{alm.tipo === 'ruta' ? 'Ruta' : 'Almacén'}</span>
+                  <span className="ml-auto text-[12px] text-muted-foreground">Total: <strong className="text-foreground tabular-nums">{totalAlm.toLocaleString('es-MX', { maximumFractionDigits: 3 })}</strong></span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-table-border">
+                      <th className="th-odoo text-left">Producto</th>
+                      <th className="th-odoo text-left w-32">Lote</th>
+                      <th className="th-odoo text-left w-40">Vence</th>
+                      <th className="th-odoo text-right w-24">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* FEFO: lo que caduca primero, arriba */}
+                    {alm.items.slice().sort((a, b) => {
+                      const da = a.lote.fecha_caducidad ?? '9999-12-31';
+                      const db = b.lote.fecha_caducidad ?? '9999-12-31';
+                      return da.localeCompare(db);
+                    }).map(({ lote, cantidad }) => {
+                      const est = estadoVencimiento(lote.fecha_caducidad);
+                      return (
+                        <tr key={lote.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                          <td className="py-1.5 px-3 text-foreground">{lote.productos?.nombre ?? '—'}</td>
+                          <td className={cn("py-1.5 px-3 font-medium", estaVencido(lote.fecha_caducidad) ? 'text-destructive' : 'text-foreground')}>{lote.codigo}</td>
+                          <td className={cn("py-1.5 px-3 text-[12px]", est.clase)}>{est.texto}</td>
+                          <td className="py-1.5 px-3 text-right tabular-nums font-medium">{cantidad.toLocaleString('es-MX', { maximumFractionDigits: 3 })}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal crear/editar */}
       {edit && (
