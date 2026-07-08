@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes, RotateCcw } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
@@ -12,11 +12,12 @@ import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import {
-  useEntrega, useSurtirLinea, useSurtirTodo, useRevertirSurtido,
+  useEntrega, useSurtirLinea, useSurtirTodo, useRevertirSurtido, useReabrirEntrega,
   useAsignarEntrega, useCargarEntrega, useAsignarYCargar,
   useCancelarEntrega, useVendedoresList,
   type StatusEntrega,
 } from '@/hooks/useEntregas';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
@@ -55,6 +56,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const surtirLineaMut = useSurtirLinea();
   const surtirTodoMut = useSurtirTodo();
   const revertirSurtidoMut = useRevertirSurtido();
+  const reabrirMut = useReabrirEntrega();
+  const isSuperAdmin = useIsSuperAdmin();
   const asignarMut = useAsignarEntrega();
   const cargarMut = useCargarEntrega();
   const asignarYCargarMut = useAsignarYCargar();
@@ -70,6 +73,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const [form, setForm] = useState<any>({});
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
+  const [showReabrirDialog, setShowReabrirDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -281,6 +285,17 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     toast.success('Entrega marcada como surtida');
   };
 
+  // Reabrir entrega en 'hecho' (super admin): revierte inventario y regresa a borrador.
+  const handleReabrir = async () => {
+    try {
+      await reabrirMut.mutateAsync({ entregaId: form.id });
+      setForm((p: any) => ({ ...p, status: 'borrador' }));
+      setLineas(prev => prev.map(l => ({ ...l, hecho: false, cantidad_entregada: 0 })));
+      toast.success('Entrega reabierta en borrador — corrige y vuelve a surtir');
+      setShowReabrirDialog(false);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   // Assign to route
   const handleAsignar = async () => {
     if (!selectedVendedorRuta) { toast.error('Selecciona un repartidor'); return; }
@@ -490,6 +505,18 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           {/* Cancel */}
           {!isNew && !readOnly && (
             <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
+          )}
+          {/* Reabrir — solo super admin sobre entregas ya entregadas */}
+          {!isNew && form.status === 'hecho' && isSuperAdmin && (
+            <Button
+              onClick={() => setShowReabrirDialog(true)}
+              size="sm"
+              variant="outline"
+              className="text-amber-600 border-amber-500/40 hover:text-amber-700 text-xs"
+              disabled={reabrirMut.isPending}
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Reabrir (admin)
+            </Button>
           )}
         </div>
       </div>
@@ -996,6 +1023,22 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmNoSurtirLinea}>Sí, no surtir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Dialog: Reabrir entrega (super admin) ─── */}
+      <AlertDialog open={showReabrirDialog} onOpenChange={(o) => { if (!o) setShowReabrirDialog(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir esta entrega?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se revertirá <strong>todo</strong> el inventario de esta entrega (se repone el stock y los lotes descontados) y regresará a <strong>borrador</strong>, con todas las líneas pendientes para corregir y volver a surtir. Úsalo solo para corregir errores en una entrega ya realizada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReabrir} disabled={reabrirMut.isPending}>Sí, reabrir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
