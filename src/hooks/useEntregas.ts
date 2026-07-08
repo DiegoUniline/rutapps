@@ -165,23 +165,27 @@ export function useSurtirTodo() {
         }
       }
 
-      // Process all via atomic DB function (each call locks the product row)
+      // Surtir cada línea con lo que alcance el stock (parcial). El RPC devuelve
+      // la cantidad realmente surtida: 0 = sin stock, la línea queda pendiente.
+      const resultados: { id: string; producto_id: string; pedida: number; surtido: number }[] = [];
       for (const l of pendientes) {
         const almId = l.almacen_origen_id || almacenDefaultId!;
-        const { error } = await supabase.rpc('surtir_linea_entrega', {
+        const { data, error } = await supabase.rpc('surtir_linea_entrega_parcial' as any, {
           p_linea_id: l.id,
           p_producto_id: l.producto_id,
           p_almacen_origen_id: almId,
-          p_cantidad_surtida: l.cantidad_pedida,
+          p_cantidad_pedida: l.cantidad_pedida,
           p_entrega_id: entregaId,
           p_empresa_id: empresaId,
           p_user_id: user?.id,
         });
         if (error) throw new Error(error.message);
+        resultados.push({ id: l.id, producto_id: l.producto_id, pedida: Number(l.cantidad_pedida), surtido: Number(data ?? 0) });
       }
 
-      // Update entrega status to surtido + almacen
-      await supabase.from('entregas').update({ status: 'surtido', almacen_id: almacenDefaultId } as any).eq('id', entregaId);
+      // El estado de la entrega lo decide el caller (solo pasa a 'surtido' si
+      // todas las líneas quedaron completas).
+      return resultados;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
