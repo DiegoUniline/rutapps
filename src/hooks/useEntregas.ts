@@ -237,6 +237,32 @@ export function useSurtirTodo() {
   });
 }
 
+/** Revertir el surtido de una línea (des-surtir / cambiar lote).
+ *  Repone stock_almacen y stock_lotes de la capa 'entrega' y deja la línea
+ *  pendiente. Solo cubre la capa de surtido (no 'entrega_hecho'). */
+export function useRevertirSurtido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ lineaId, entregaId, empresaId }: { lineaId: string; entregaId: string; empresaId: string }) => {
+      const { error } = await supabase.rpc('revertir_surtido_linea' as any, {
+        p_linea_id: lineaId,
+        p_entrega_id: entregaId,
+        p_empresa_id: empresaId,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
+  });
+}
+
 /** Assign entrega to a route (vendedor_ruta) */
 export function useAsignarEntrega() {
   const qc = useQueryClient();

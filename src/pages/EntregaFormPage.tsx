@@ -12,7 +12,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import {
-  useEntrega, useSurtirLinea, useSurtirTodo,
+  useEntrega, useSurtirLinea, useSurtirTodo, useRevertirSurtido,
   useAsignarEntrega, useCargarEntrega, useAsignarYCargar,
   useCancelarEntrega, useVendedoresList,
   type StatusEntrega,
@@ -54,6 +54,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const { data: entrega, isLoading } = useEntrega(isNew ? undefined : id);
   const surtirLineaMut = useSurtirLinea();
   const surtirTodoMut = useSurtirTodo();
+  const revertirSurtidoMut = useRevertirSurtido();
   const asignarMut = useAsignarEntrega();
   const cargarMut = useCargarEntrega();
   const asignarYCargarMut = useAsignarYCargar();
@@ -76,6 +77,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const isSurtido = form.status === 'surtido';
   const isAsignado = form.status === 'asignado';
   const isBorrador = form.status === 'borrador';
+  // Corregir surtido (cambiar lote / des-surtir): solo antes de cargar al camión.
+  const puedeCorregir = isBorrador || isSurtido;
 
   useEffect(() => {
     if (entrega) {
@@ -133,6 +136,39 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       return;
     }
     await doSurtirLinea(idx);
+  };
+
+  // Revertir el surtido de una línea (des-surtir) y, si reabrir=true, reabrir el
+  // modal de lote para reasignar (cambiar lote). Solo capa de surtido.
+  const handleRevertirLinea = async (idx: number, reabrir: boolean) => {
+    const l = lineas[idx];
+    if (!l?.id) return;
+    const nombreProd = l.descripcion ?? (productosList?.find((p: any) => p.id === l.producto_id) as any)?.nombre ?? 'Producto';
+    try {
+      await revertirSurtidoMut.mutateAsync({ lineaId: l.id, entregaId: form.id, empresaId: empresa!.id });
+      setLineas(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], hecho: false, cantidad_entregada: 0 };
+        return next;
+      });
+      // Si la entrega ya estaba 'surtido', regresa a borrador (ya no está completa).
+      if (form.status === 'surtido') {
+        await supabase.from('entregas').update({ status: 'borrador' } as any).eq('id', form.id);
+        setForm((p: any) => ({ ...p, status: 'borrador' }));
+      }
+      if (reabrir && esProductoLote(l.producto_id)) {
+        toast.success('Surtido revertido — elige el nuevo lote');
+        setSurtirLoteFor({
+          idx,
+          producto: { id: l.producto_id, nombre: nombreProd },
+          cantidad: Number(l.cantidad_pedida) || Number(l.cantidad_entregada) || 0,
+        });
+      } else {
+        toast.success('Línea des-surtida');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   // Open surtir todo dialog
@@ -724,7 +760,21 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                           </div>
                         )}
                         {l.hecho && cantEntregada === 0 && (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                            {puedeCorregir && l.id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-muted-foreground hover:text-foreground"
+                                title="Deshacer y regresar la línea a pendiente"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, false)}
+                              >
+                                Deshacer
+                              </Button>
+                            )}
+                          </div>
                         )}
                         {l.hecho && cantEntregada > 0 && (
                           <div className="flex items-center gap-1 justify-end">
@@ -738,6 +788,30 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                                 onClick={() => setVerLotesFor({ producto: { id: l.producto_id, nombre: prod?.nombre ?? '' } })}
                               >
                                 <Boxes className="h-3 w-3 mr-1" /> Ver lotes
+                              </Button>
+                            )}
+                            {puedeCorregir && l.id && esProductoLote(l.producto_id) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-amber-600 hover:text-amber-700"
+                                title="Revertir y elegir otro lote"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, true)}
+                              >
+                                Cambiar lote
+                              </Button>
+                            )}
+                            {puedeCorregir && l.id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-muted-foreground hover:text-destructive"
+                                title="Deshacer el surtido y regresar la línea a pendiente"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, false)}
+                              >
+                                Des-surtir
                               </Button>
                             )}
                           </div>
