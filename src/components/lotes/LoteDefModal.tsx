@@ -47,10 +47,13 @@ export function LoteDefModal({ empresaId, initial, onClose, onConfirm }: Props) 
         .eq('empresa_id', empresaId)
         .eq('activo', true)
         .order('created_at', { ascending: false });
-      const byCode = new Map<string, CodigoExistente>();
+      // La identidad del lote es código + caducidad, así que deduplicamos por esa
+      // combinación (el mismo código con distinta caducidad son lotes distintos).
+      const byKey = new Map<string, CodigoExistente>();
       (data ?? []).forEach((r: any) => {
-        if (!byCode.has(r.codigo)) {
-          byCode.set(r.codigo, {
+        const key = `${r.codigo}|${r.fecha_caducidad ?? ''}`;
+        if (!byKey.has(key)) {
+          byKey.set(key, {
             codigo: r.codigo,
             caducidad: r.fecha_caducidad ?? '',
             fabricacion: r.fecha_fabricacion ?? '',
@@ -58,18 +61,18 @@ export function LoteDefModal({ empresaId, initial, onClose, onConfirm }: Props) 
           });
         }
       });
-      const list = Array.from(byCode.values());
+      const list = Array.from(byKey.values());
       setExistentes(list);
       if (list.length > 0 && !initial) {
         setMode('existente');
-        setCodigoSel(list[0].codigo);
+        setCodigoSel(`${list[0].codigo}|${list[0].caducidad}`);
       }
     })();
   }, [empresaId]);
 
   const confirmar = () => {
     if (mode === 'existente') {
-      const e = existentes.find(x => x.codigo === codigoSel);
+      const e = existentes.find(x => `${x.codigo}|${x.caducidad}` === codigoSel);
       if (!e) { toast.error('Elige un lote'); return; }
       onConfirm({ codigo: e.codigo, caducidad: e.caducidad, fabricacion: e.fabricacion, costo: e.costo });
       return;
@@ -107,7 +110,9 @@ export function LoteDefModal({ empresaId, initial, onClose, onConfirm }: Props) 
               <label className="label-odoo">Lote</label>
               <select className="input-odoo w-full" value={codigoSel} onChange={e => setCodigoSel(e.target.value)}>
                 {existentes.map(e => (
-                  <option key={e.codigo} value={e.codigo}>{e.codigo}{e.caducidad ? ` · caduca ${e.caducidad}` : ''}</option>
+                  <option key={`${e.codigo}|${e.caducidad}`} value={`${e.codigo}|${e.caducidad}`}>
+                    {e.codigo}{e.caducidad ? ` · caduca ${e.caducidad}` : ' · sin caducidad'}
+                  </option>
                 ))}
               </select>
               <p className="text-[11px] text-muted-foreground mt-1">Se usará su caducidad, fabricación y costo.</p>
