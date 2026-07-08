@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText, Boxes, RotateCcw } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { LoteSurtidoModal } from '@/components/lotes/LoteSurtidoModal';
@@ -12,11 +12,12 @@ import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import {
-  useEntrega, useSurtirLinea, useSurtirTodo,
+  useEntrega, useSurtirLinea, useSurtirTodo, useRevertirSurtido, useReabrirEntrega,
   useAsignarEntrega, useCargarEntrega, useAsignarYCargar,
   useCancelarEntrega, useVendedoresList,
   type StatusEntrega,
 } from '@/hooks/useEntregas';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
@@ -54,6 +55,9 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const { data: entrega, isLoading } = useEntrega(isNew ? undefined : id);
   const surtirLineaMut = useSurtirLinea();
   const surtirTodoMut = useSurtirTodo();
+  const revertirSurtidoMut = useRevertirSurtido();
+  const reabrirMut = useReabrirEntrega();
+  const isSuperAdmin = useIsSuperAdmin();
   const asignarMut = useAsignarEntrega();
   const cargarMut = useCargarEntrega();
   const asignarYCargarMut = useAsignarYCargar();
@@ -69,6 +73,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const [form, setForm] = useState<any>({});
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
+  const [showReabrirDialog, setShowReabrirDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -76,6 +81,8 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
   const isSurtido = form.status === 'surtido';
   const isAsignado = form.status === 'asignado';
   const isBorrador = form.status === 'borrador';
+  // Corregir surtido (cambiar lote / des-surtir): solo antes de cargar al camión.
+  const puedeCorregir = isBorrador || isSurtido;
 
   useEffect(() => {
     if (entrega) {
@@ -133,6 +140,39 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       return;
     }
     await doSurtirLinea(idx);
+  };
+
+  // Revertir el surtido de una línea (des-surtir) y, si reabrir=true, reabrir el
+  // modal de lote para reasignar (cambiar lote). Solo capa de surtido.
+  const handleRevertirLinea = async (idx: number, reabrir: boolean) => {
+    const l = lineas[idx];
+    if (!l?.id) return;
+    const nombreProd = l.descripcion ?? (productosList?.find((p: any) => p.id === l.producto_id) as any)?.nombre ?? 'Producto';
+    try {
+      await revertirSurtidoMut.mutateAsync({ lineaId: l.id, entregaId: form.id, empresaId: empresa!.id });
+      setLineas(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], hecho: false, cantidad_entregada: 0 };
+        return next;
+      });
+      // Si la entrega ya estaba 'surtido', regresa a borrador (ya no está completa).
+      if (form.status === 'surtido') {
+        await supabase.from('entregas').update({ status: 'borrador' } as any).eq('id', form.id);
+        setForm((p: any) => ({ ...p, status: 'borrador' }));
+      }
+      if (reabrir && esProductoLote(l.producto_id)) {
+        toast.success('Surtido revertido — elige el nuevo lote');
+        setSurtirLoteFor({
+          idx,
+          producto: { id: l.producto_id, nombre: nombreProd },
+          cantidad: Number(l.cantidad_pedida) || Number(l.cantidad_entregada) || 0,
+        });
+      } else {
+        toast.success('Línea des-surtida');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   // Open surtir todo dialog
@@ -243,6 +283,17 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
     qc.invalidateQueries({ queryKey: ['entrega'] });
     qc.invalidateQueries({ queryKey: ['entregas-list'] });
     toast.success('Entrega marcada como surtida');
+  };
+
+  // Reabrir entrega en 'hecho' (super admin): revierte inventario y regresa a borrador.
+  const handleReabrir = async () => {
+    try {
+      await reabrirMut.mutateAsync({ entregaId: form.id });
+      setForm((p: any) => ({ ...p, status: 'borrador' }));
+      setLineas(prev => prev.map(l => ({ ...l, hecho: false, cantidad_entregada: 0 })));
+      toast.success('Entrega reabierta en borrador — corrige y vuelve a surtir');
+      setShowReabrirDialog(false);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   // Assign to route
@@ -454,6 +505,18 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           {/* Cancel */}
           {!isNew && !readOnly && (
             <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
+          )}
+          {/* Reabrir — solo super admin sobre entregas ya entregadas */}
+          {!isNew && form.status === 'hecho' && isSuperAdmin && (
+            <Button
+              onClick={() => setShowReabrirDialog(true)}
+              size="sm"
+              variant="outline"
+              className="text-amber-600 border-amber-500/40 hover:text-amber-700 text-xs"
+              disabled={reabrirMut.isPending}
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Reabrir (admin)
+            </Button>
           )}
         </div>
       </div>
@@ -724,7 +787,21 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                           </div>
                         )}
                         {l.hecho && cantEntregada === 0 && (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">No surtido</Badge>
+                            {puedeCorregir && l.id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-muted-foreground hover:text-foreground"
+                                title="Deshacer y regresar la línea a pendiente"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, false)}
+                              >
+                                Deshacer
+                              </Button>
+                            )}
+                          </div>
                         )}
                         {l.hecho && cantEntregada > 0 && (
                           <div className="flex items-center gap-1 justify-end">
@@ -738,6 +815,30 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
                                 onClick={() => setVerLotesFor({ producto: { id: l.producto_id, nombre: prod?.nombre ?? '' } })}
                               >
                                 <Boxes className="h-3 w-3 mr-1" /> Ver lotes
+                              </Button>
+                            )}
+                            {puedeCorregir && l.id && esProductoLote(l.producto_id) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-amber-600 hover:text-amber-700"
+                                title="Revertir y elegir otro lote"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, true)}
+                              >
+                                Cambiar lote
+                              </Button>
+                            )}
+                            {puedeCorregir && l.id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[11px] h-7 px-2 text-muted-foreground hover:text-destructive"
+                                title="Deshacer el surtido y regresar la línea a pendiente"
+                                disabled={revertirSurtidoMut.isPending}
+                                onClick={() => handleRevertirLinea(idx, false)}
+                              >
+                                Des-surtir
                               </Button>
                             )}
                           </div>
@@ -922,6 +1023,22 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmNoSurtirLinea}>Sí, no surtir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Dialog: Reabrir entrega (super admin) ─── */}
+      <AlertDialog open={showReabrirDialog} onOpenChange={(o) => { if (!o) setShowReabrirDialog(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir esta entrega?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se revertirá <strong>todo</strong> el inventario de esta entrega (se repone el stock y los lotes descontados) y regresará a <strong>borrador</strong>, con todas las líneas pendientes para corregir y volver a surtir. Úsalo solo para corregir errores en una entrega ya realizada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReabrir} disabled={reabrirMut.isPending}>Sí, reabrir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -237,6 +237,58 @@ export function useSurtirTodo() {
   });
 }
 
+/** Revertir el surtido de una línea (des-surtir / cambiar lote).
+ *  Repone stock_almacen y stock_lotes de la capa 'entrega' y deja la línea
+ *  pendiente. Solo cubre la capa de surtido (no 'entrega_hecho'). */
+export function useRevertirSurtido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ lineaId, entregaId, empresaId }: { lineaId: string; entregaId: string; empresaId: string }) => {
+      const { error } = await supabase.rpc('revertir_surtido_linea' as any, {
+        p_linea_id: lineaId,
+        p_entrega_id: entregaId,
+        p_empresa_id: empresaId,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
+  });
+}
+
+/** Reabrir una entrega en 'hecho' (solo super admin): regresa a borrador,
+ *  lo que dispara la reversa de inventario (repone stock y borra los
+ *  movimientos), y deja las líneas pendientes para corregir y re-surtir. */
+export function useReabrirEntrega() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ entregaId }: { entregaId: string }) => {
+      // 1. status → borrador dispara trg_apply_entrega_hecho_inventory (reversa).
+      const { error: e1 } = await supabase.from('entregas').update({ status: 'borrador' } as any).eq('id', entregaId);
+      if (e1) throw new Error(e1.message);
+      // 2. Regresar las líneas a pendiente (el stock ya fue repuesto por la reversa).
+      const { error: e2 } = await supabase.from('entrega_lineas').update({ hecho: false, cantidad_entregada: 0 } as any).eq('entrega_id', entregaId);
+      if (e2) throw new Error(e2.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entrega'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
+  });
+}
+
 /** Assign entrega to a route (vendedor_ruta) */
 export function useAsignarEntrega() {
   const qc = useQueryClient();
