@@ -43,9 +43,13 @@ export default function LotesPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [vista, setVista] = useState<'lote' | 'almacen'>('lote');
   const [search, setSearch] = useState('');
-  const [almacenFilter, setAlmacenFilter] = useState('');            // '' = todos
+  const [almacenFilters, setAlmacenFilters] = useState<Set<string>>(new Set()); // vacío = todos
+  const toggleAlmacen = (id: string) => setAlmacenFilters(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
   const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
-  const [vencFilter, setVencFilter] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
+  const [vencMode, setVencMode] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
+  const [vencDias, setVencDias] = useState('30'); // umbral editable de "por vencer"
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
@@ -168,20 +172,21 @@ export default function LotesPage() {
 
   // Stock relevante de un lote: total, o el del almacén filtrado.
   const stockDe = (loteId: string): number => {
-    if (!almacenFilter) return stockPorLote?.get(loteId) ?? 0;
-    return (stockDetalle?.get(loteId) ?? []).filter(d => d.almacen_id === almacenFilter).reduce((s, d) => s + d.cantidad, 0);
+    if (almacenFilters.size === 0) return stockPorLote?.get(loteId) ?? 0;
+    return (stockDetalle?.get(loteId) ?? []).filter(d => almacenFilters.has(d.almacen_id)).reduce((s, d) => s + d.cantidad, 0);
   };
 
   // Predicado búsqueda + vencimiento (reutilizado en ambas vistas).
+  const vencDiasNum = Number(vencDias) || 0;
   const matchSearchVenc = (l: LoteRow): boolean => {
     if (search.trim()) {
       const s = search.toLowerCase();
       if (!(l.codigo.toLowerCase().includes(s) || (l.productos?.nombre ?? '').toLowerCase().includes(s) || (l.productos?.codigo ?? '').toLowerCase().includes(s))) return false;
     }
-    if (vencFilter !== 'todos') {
+    if (vencMode !== 'todos') {
       const dias = diasParaVencer(l.fecha_caducidad);
-      if (vencFilter === 'vencido' && !(dias !== null && dias < 0)) return false;
-      if (vencFilter === 'porvencer' && !(dias !== null && dias >= 0 && dias <= DIAS_POR_VENCER)) return false;
+      if (vencMode === 'vencido' && !(dias !== null && dias < 0)) return false;
+      if (vencMode === 'porvencer' && !(dias !== null && dias >= 0 && dias <= vencDiasNum)) return false;
     }
     return true;
   };
@@ -197,7 +202,7 @@ export default function LotesPage() {
   });
 
   const porAlmacenVisible = porAlmacen
-    .filter(g => !almacenFilter || g.id === almacenFilter)
+    .filter(g => almacenFilters.size === 0 || almacenFilters.has(g.id))
     .map(g => ({ ...g, items: g.items.filter(it => matchSearchVenc(it.lote)) }))
     .filter(g => g.items.length > 0);
 
@@ -292,9 +297,9 @@ export default function LotesPage() {
         </div>
       )}
 
-      {/* Filtros */}
+      {/* Filtros — todo en una barra */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
@@ -302,22 +307,54 @@ export default function LotesPage() {
             className="input-odoo w-full pl-8"
           />
         </div>
-        <select className="input-odoo" value={almacenFilter} onChange={e => setAlmacenFilter(e.target.value)}>
-          <option value="">Todos los almacenes</option>
-          {almacenesList.map(a => (
-            <option key={a.id} value={a.id}>{a.tipo === 'ruta' ? '🚛 ' : '🏢 '}{a.nombre}</option>
+
+        {/* Almacenes: botones multi-selección (vacío = todos) */}
+        <div className="flex flex-wrap items-center gap-1">
+          <button onClick={() => setAlmacenFilters(new Set())}
+            className={cn("px-2.5 py-1 rounded-md text-[12px] border transition-colors",
+              almacenFilters.size === 0 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
+            Todos
+          </button>
+          {almacenesList.map(a => {
+            const on = almacenFilters.has(a.id);
+            return (
+              <button key={a.id} onClick={() => toggleAlmacen(a.id)}
+                className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] border transition-colors",
+                  on ? "bg-primary/10 border-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/40")}>
+                {a.tipo === 'ruta' ? <Truck className="h-3 w-3 text-amber-500" /> : <Warehouse className="h-3 w-3 text-primary" />}
+                {a.nombre}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Stock: segmentado */}
+        <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
+          {([['todos', 'Con y sin'], ['con', 'Con stock'], ['sin', 'Sin stock']] as const).map(([v, l]) => (
+            <button key={v} onClick={() => setStockFilter(v)}
+              className={cn("px-2.5 py-1 transition-colors", stockFilter === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
+              {l}
+            </button>
           ))}
-        </select>
-        <select className="input-odoo" value={stockFilter} onChange={e => setStockFilter(e.target.value as any)}>
-          <option value="todos">Con y sin stock</option>
-          <option value="con">Solo con stock</option>
-          <option value="sin">Solo sin stock</option>
-        </select>
-        <select className="input-odoo" value={vencFilter} onChange={e => setVencFilter(e.target.value as any)}>
-          <option value="todos">Cualquier vencimiento</option>
-          <option value="porvencer">Por vencer (≤ {DIAS_POR_VENCER} días)</option>
-          <option value="vencido">Vencidos</option>
-        </select>
+        </div>
+
+        {/* Vencimiento: segmentado + días editables */}
+        <div className="inline-flex items-center gap-1">
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
+            {([['todos', 'Todos'], ['porvencer', 'Por vencer'], ['vencido', 'Vencidos']] as const).map(([v, l]) => (
+              <button key={v} onClick={() => setVencMode(v)}
+                className={cn("px-2.5 py-1 transition-colors", vencMode === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {vencMode === 'porvencer' && (
+            <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground">
+              ≤ <input type="number" min={0} value={vencDias} onChange={e => setVencDias(e.target.value)}
+                className="input-odoo w-14 py-1 text-center" /> días
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Switch de vista */}
@@ -347,7 +384,7 @@ export default function LotesPage() {
                 <th className="th-odoo text-left w-40">Vence</th>
                 <th className="th-odoo text-left w-28">Fabricación</th>
                 <th className="th-odoo text-right w-24">Costo</th>
-                <th className="th-odoo text-right w-28">Stock{almacenFilter ? ' (filtrado)' : ''}</th>
+                <th className="th-odoo text-right w-28">Stock{almacenFilters.size > 0 ? ' (filtrado)' : ''}</th>
                 <th className="th-odoo w-16 text-right">Acciones</th>
               </tr>
             </thead>

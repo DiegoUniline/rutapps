@@ -84,7 +84,16 @@ function useProductoFilterOptions() {
       return (data ?? []) as { id: string; nombre: string }[];
     },
   });
-  return { clasificaciones, marcas };
+  const { data: proveedores } = useQuery({
+    queryKey: ['proveedores-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('proveedores') as any).select('id, nombre').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+  return { clasificaciones, marcas, proveedores };
 }
 
 export default function ProductosListPage() {
@@ -98,7 +107,8 @@ export default function ProductosListPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
-  const { clasificaciones, marcas } = useProductoFilterOptions();
+  const { clasificaciones, marcas, proveedores } = useProductoFilterOptions();
+  const manejaLotes = !!(empresa as any)?.maneja_lotes;
   const { hasPermiso } = usePermisos();
   const canDelete = hasPermiso('productos', 'eliminar');
   const qc = useQueryClient();
@@ -183,13 +193,17 @@ export default function ProductosListPage() {
   const FILTER_OPTIONS = useMemo(() => [
     { key: 'clasificacion', label: 'Categoría', options: (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre })) },
     { key: 'marca', label: 'Marca', options: (marcas ?? []).map(m => ({ value: m.id, label: m.nombre })) },
-  ], [clasificaciones, marcas]);
+    { key: 'proveedor', label: 'Proveedor', options: (proveedores ?? []).map(p => ({ value: p.id, label: p.nombre })) },
+    ...(manejaLotes ? [{ key: 'maneja_lote', label: 'Maneja lote', options: [{ value: 'si', label: 'Sí' }, { value: 'no', label: 'No' }] }] : []),
+  ], [clasificaciones, marcas, proveedores, manejaLotes]);
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'activo';
   const clasificacionFilter = filters.clasificacion?.length ? filters.clasificacion.join(',') : 'todos';
   const marcaFilter = filters.marca?.length ? filters.marca.join(',') : 'todos';
+  const proveedorFilter = filters.proveedor?.length ? filters.proveedor.join(',') : 'todos';
+  const manejaLoteFilter = filters.maneja_lote?.[0] ?? '';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter, !!groupBy);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -242,6 +256,7 @@ export default function ProductosListPage() {
              <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
              <th className="th-odoo text-left hidden md:table-cell">Marca</th>
              <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
+             {manejaLotes && <th className="th-odoo text-center hidden lg:table-cell">Lote</th>}
              <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
              <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
              <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
@@ -293,6 +308,13 @@ export default function ProductosListPage() {
               <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
+               {manejaLotes && (
+                 <td className="py-1.5 px-3 hidden lg:table-cell text-center">
+                   {(p as any).maneja_lote
+                     ? <span className="inline-flex items-center gap-1 text-[11px] text-primary"><Boxes className="h-3 w-3" /> Sí</span>
+                     : <span className="text-[11px] text-muted-foreground">—</span>}
+                 </td>
+               )}
                <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
                <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
                <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>

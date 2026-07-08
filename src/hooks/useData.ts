@@ -81,14 +81,14 @@ export function useProductosRealtime() {
 }
 
 /** Paginated products for list views. When fetchAll=true, returns all matching rows (used for grouping). */
-export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false) {
+export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string, fetchAll = false, proveedorFilter?: string, manejaLoteFilter?: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll],
+    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter, fetchAll, proveedorFilter, manejaLoteFilter],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)';
+      const SELECT = 'id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, maneja_lote, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_preferido_id, proveedores!productos_proveedor_preferido_id_fkey(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)';
       const applyFilters = (q: any) => {
         q = q.eq('empresa_id', empresa!.id).order('nombre', { ascending: true });
         if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
@@ -107,6 +107,13 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
           if (arr.length > 1) q = q.in('marca_id', arr as any);
           else q = q.eq('marca_id', marcaFilter);
         }
+        if (proveedorFilter && proveedorFilter !== 'todos') {
+          const arr = proveedorFilter.split(',');
+          if (arr.length > 1) q = q.in('proveedor_preferido_id', arr as any);
+          else q = q.eq('proveedor_preferido_id', proveedorFilter);
+        }
+        if (manejaLoteFilter === 'si') q = q.eq('maneja_lote', true);
+        else if (manejaLoteFilter === 'no') q = q.or('maneja_lote.is.null,maneja_lote.eq.false');
         return q;
       };
 
