@@ -278,10 +278,27 @@ export default function ReporteDiarioRuta() {
 
   // Cobros by method
   const cobrosPorMetodo: Record<string, number> = {};
+  const cobrosCountPorMetodo: Record<string, number> = {};
   (cobros || []).forEach((c: any) => {
     const m = c.metodo_pago || 'efectivo';
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto);
+    cobrosCountPorMetodo[m] = (cobrosCountPorMetodo[m] || 0) + 1;
   });
+  const METODO_PAGO_LABELS: Record<string, string> = {
+    efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta',
+    cheque: 'Cheque', deposito: 'Depósito', otro: 'Otro',
+  };
+  const cobrosResumenMetodo = Object.entries(cobrosPorMetodo)
+    .map(([metodo, total]) => ({
+      metodo,
+      label: METODO_PAGO_LABELS[metodo] ?? metodo,
+      count: cobrosCountPorMetodo[metodo] || 0,
+      total,
+      pct: (cobros || []).length > 0 && total > 0
+        ? (total / (cobros || []).reduce((s: number, c: any) => s + Number(c.monto || 0), 0)) * 100
+        : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 
   // Dev lines
   const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
