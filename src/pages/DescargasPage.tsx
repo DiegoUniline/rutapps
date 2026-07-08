@@ -216,9 +216,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Entregas realizadas (hechas) por el vendedor en el periodo
-  // Filtramos por `fecha_entrega` (cuándo se completó) y no por `fecha` (fecha programada),
-  // porque una entrega pudo programarse antes del rango pero completarse dentro de él.
+  // Entregas realizadas (hechas) por el vendedor en el periodo.
+  // Regla:
+  //  - Si `fecha_entrega` está en el rango, cuenta (caso normal, entregas nuevas).
+  //  - Si `fecha_entrega` es NULL (entregas viejas marcadas hechas antes de que
+  //    el trigger poblara ese campo, o entregas cerradas con caches PWA
+  //    antiguos), caemos a la `fecha` programada. Sin este fallback, esas
+  //    entregas nunca aparecen en la liquidación y el conteo sale en 0.
   const { data: entregas } = useQuery({
     queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     enabled: !!descarga.vendedor_id,
@@ -231,13 +235,13 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .eq('empresa_id', descarga.empresa_id)
         .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
         .eq('status', 'hecho')
-        .gte('fecha_entrega', inicioTs)
-        .lte('fecha_entrega', finTs)
-        .order('fecha_entrega', { ascending: true });
+        .or(`and(fecha_entrega.gte.${inicioTs},fecha_entrega.lte.${finTs}),and(fecha_entrega.is.null,fecha.gte.${fInicio},fecha.lte.${fFin})`)
+        .order('fecha', { ascending: true });
       if (error) throw error;
       return data;
     },
   });
+
 
 
   // --- Stock del almacén asignado al vendedor ---
