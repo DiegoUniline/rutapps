@@ -3154,11 +3154,11 @@ export type Database = {
           is_partner_sandbox: boolean
           jornada_permite_sin_vehiculo: boolean
           logo_url: string | null
+          maneja_lotes: boolean
           metodo_pago_sat: string | null
           moneda: string
           monthly_sales_goal: number
           nombre: string
-          maneja_lotes: boolean
           notas_ticket: string | null
           onboarding_completado: boolean | null
           owner_user_id: string | null
@@ -3197,11 +3197,11 @@ export type Database = {
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
+          maneja_lotes?: boolean
           metodo_pago_sat?: string | null
           moneda?: string
           monthly_sales_goal?: number
           nombre: string
-          maneja_lotes?: boolean
           notas_ticket?: string | null
           onboarding_completado?: boolean | null
           owner_user_id?: string | null
@@ -3240,11 +3240,11 @@ export type Database = {
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           logo_url?: string | null
+          maneja_lotes?: boolean
           metodo_pago_sat?: string | null
           moneda?: string
           monthly_sales_goal?: number
           nombre?: string
-          maneja_lotes?: boolean
           notas_ticket?: string | null
           onboarding_completado?: boolean | null
           owner_user_id?: string | null
@@ -3922,6 +3922,56 @@ export type Database = {
           },
         ]
       }
+      lotes: {
+        Row: {
+          activo: boolean
+          codigo: string
+          costo: number | null
+          created_at: string
+          empresa_id: string
+          fecha_caducidad: string | null
+          fecha_fabricacion: string | null
+          id: string
+          notas: string | null
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          costo?: number | null
+          created_at?: string
+          empresa_id: string
+          fecha_caducidad?: string | null
+          fecha_fabricacion?: string | null
+          id?: string
+          notas?: string | null
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          costo?: number | null
+          created_at?: string
+          empresa_id?: string
+          fecha_caducidad?: string | null
+          fecha_fabricacion?: string | null
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_log: {
         Row: {
           duracion_ms: number
@@ -4237,6 +4287,7 @@ export type Database = {
           empresa_id: string
           fecha: string
           id: string
+          lote_id: string | null
           notas: string | null
           producto_id: string | null
           referencia_id: string | null
@@ -4254,6 +4305,7 @@ export type Database = {
           empresa_id: string
           fecha?: string
           id?: string
+          lote_id?: string | null
           notas?: string | null
           producto_id?: string | null
           referencia_id?: string | null
@@ -4271,6 +4323,7 @@ export type Database = {
           empresa_id?: string
           fecha?: string
           id?: string
+          lote_id?: string | null
           notas?: string | null
           producto_id?: string | null
           referencia_id?: string | null
@@ -5323,6 +5376,7 @@ export type Database = {
           iva_pct: number
           lead_time_dias: number
           lista_id: string | null
+          maneja_lote: boolean
           marca_id: string | null
           max: number | null
           min: number | null
@@ -5379,6 +5433,7 @@ export type Database = {
           iva_pct?: number
           lead_time_dias?: number
           lista_id?: string | null
+          maneja_lote?: boolean
           marca_id?: string | null
           max?: number | null
           min?: number | null
@@ -5435,6 +5490,7 @@ export type Database = {
           iva_pct?: number
           lead_time_dias?: number
           lista_id?: string | null
+          maneja_lote?: boolean
           marca_id?: string | null
           max?: number | null
           min?: number | null
@@ -6393,6 +6449,44 @@ export type Database = {
             columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_lotes: {
+        Row: {
+          almacen_id: string
+          cantidad: number
+          empresa_id: string
+          id: string
+          lote_id: string
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          almacen_id: string
+          cantidad?: number
+          empresa_id: string
+          id?: string
+          lote_id: string
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          almacen_id?: string
+          cantidad?: number
+          empresa_id?: string
+          id?: string
+          lote_id?: string
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_lotes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
             referencedColumns: ["id"]
           },
         ]
