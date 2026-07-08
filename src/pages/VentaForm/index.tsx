@@ -16,6 +16,7 @@ import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
+import { LoteVentaModal } from '@/components/lotes/LoteVentaModal';
 import { toast } from 'sonner';
 import type { StatusVenta } from '@/types';
 import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVentaForm';
@@ -332,6 +333,19 @@ export default function VentaFormPage() {
       <DocumentPreviewModal open={showPdfModal} onClose={() => { setShowPdfModal(false); setPdfBlob(null); }} pdfBlob={pdfBlob} fileName={`${form.folio ?? 'pedido'}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''} caption={`Documento ${form.folio}`} tipo="pedido" referencia_id={form.id} />
       {billingEnabled && showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
+
+      {h.loteParaLinea && empresa?.id && form.almacen_id && (
+        <LoteVentaModal
+          empresaId={empresa.id}
+          almacenId={form.almacen_id as string}
+          producto={h.loteParaLinea.producto}
+          onClose={() => h.setLoteParaLinea(null)}
+          onConfirm={(loteId, codigo) => {
+            h.setLineaLote(h.loteParaLinea!.idx, loteId, codigo);
+            h.setLoteParaLinea(null);
+          }}
+        />
+      )}
 
       {/* Checkout modal for Venta Directa */}
       {(() => {

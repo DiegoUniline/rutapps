@@ -63,6 +63,12 @@ export function useVentaForm() {
   const crearEntrega = useCrearEntrega();
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
+  // Selección de lote al vender (venta directa de producto por lote).
+  const [loteParaLinea, setLoteParaLinea] = useState<{ idx: number; producto: { id: string; nombre: string } } | null>(null);
+  const setLineaLote = (idx: number, loteId: string, codigo: string) => {
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], lote_id: loteId, lote_codigo: codigo } as any; return next; });
+    setDirty(true);
+  };
   const [dirty, setDirty] = useState(false);
   const loadedVentaIdRef = useRef<string | null>(null);
   const savingRef = useRef(false);
@@ -367,8 +373,12 @@ export function useVentaForm() {
     const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
     const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
     const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false } as any; return next; });
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
+    // Producto por lote en venta directa → pedir el lote (FEFO).
+    if ((producto as any).maneja_lote && form.tipo === 'venta_directa') {
+      setLoteParaLinea({ idx, producto: { id: productoId, nombre: producto.nombre } });
+    }
   };
 
   const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
@@ -434,6 +444,19 @@ export function useVentaForm() {
     savingRef.current = true;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
+    // Venta directa: los productos por lote exigen lote elegido en la línea.
+    if (form.tipo === 'venta_directa') {
+      const faltaLote = lineas.some(l => {
+        if (!l.producto_id || Number(l.cantidad) <= 0) return false;
+        const prod = productosList?.find((p: any) => p.id === l.producto_id) as any;
+        return prod?.maneja_lote && !(l as any).lote_id;
+      });
+      if (faltaLote) {
+        toast.error('Elige el lote de los productos que manejan lote antes de guardar.');
+        savingRef.current = false;
+        return;
+      }
+    }
     if (form.tipo !== 'venta_directa' && !form.entrega_inmediata && !form.fecha_entrega) {
       toast.error('La fecha de entrega es obligatoria');
       savingRef.current = false;
@@ -684,5 +707,6 @@ export function useVentaForm() {
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
+    loteParaLinea, setLoteParaLinea, setLineaLote,
   };
 }
