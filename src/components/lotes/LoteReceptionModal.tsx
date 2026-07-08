@@ -76,8 +76,8 @@ export function LoteReceptionModal({ empresaId, producto, piezas, onClose, onCon
       if (error) throw error;
       onConfirm((data as any).id);
     } catch (err: any) {
-      if (String(err?.message ?? '').includes('uq_lote_codigo')) {
-        toast.error('Ya existe un lote con ese código para este producto. Elígelo en "Lote existente".');
+      if (String(err?.message ?? '').includes('uq_lote')) {
+        toast.error('Ya existe ese lote (código + caducidad) para este producto. Elígelo en "Lote existente".');
       } else {
         toast.error(err?.message ?? 'Error al crear el lote');
       }

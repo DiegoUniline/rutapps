@@ -194,9 +194,9 @@ export default function LotesPage() {
       toast.success('Lote guardado');
       setEdit(null);
     } catch (err: any) {
-      // Choque de código repetido para el mismo producto.
-      if (String(err?.message ?? '').includes('uq_lote_codigo')) {
-        toast.error('Ya existe un lote con ese código para este producto');
+      // Choque de código + caducidad repetido para el mismo producto.
+      if (String(err?.message ?? '').includes('uq_lote')) {
+        toast.error('Ya existe un lote con ese código y caducidad para este producto');
       } else {
         toast.error(err?.message ?? 'Error al guardar');
       }
