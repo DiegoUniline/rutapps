@@ -43,6 +43,7 @@ interface ProductRow {
   cantidadSistema: number;
   cantidadReal: number | null;
   touched: boolean;
+  manejaLote: boolean;
 }
 
 export default function AjustesInventarioPage() {
@@ -122,7 +123,7 @@ export default function AjustesInventarioPage() {
         fetchAllPages<any>((from, to) =>
           supabase
             .from('productos')
-            .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+            .select('id, codigo, nombre, cantidad, se_puede_inventariar, maneja_lote, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
             .eq('empresa_id', empresa!.id)
             .in('status', ['activo'] as any[])
             .order('nombre')
@@ -227,14 +228,25 @@ export default function AjustesInventarioPage() {
       cantidadSistema: p.cantidad ?? 0,
       cantidadReal: null,
       touched: false,
+      manejaLote: !!p.maneja_lote,
     })));
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { initRows(); }, [productos]);
 
+  // Modo lote: si la empresa maneja lotes, separamos los mundos —
+  //  • con un lote elegido → solo productos que manejan lote
+  //  • sin lote (ajuste normal) → solo productos que NO manejan lote
+  // Así no se ajusta directo el total de un producto por lote ni se asigna
+  // lote a uno que no lo maneja.
+  const modeRows = useMemo(() => {
+    if (!manejaLotes) return rows;
+    return rows.filter(r => (loteSel ? r.manejaLote : !r.manejaLote));
+  }, [rows, manejaLotes, loteSel]);
+
   const filteredRows = useMemo(() => {
-    let result = rows;
+    let result = modeRows;
     if (selectedCats.length > 0) {
       result = result.filter(r => r.clasificacionId && selectedCats.includes(r.clasificacionId));
     }
@@ -243,9 +255,9 @@ export default function AjustesInventarioPage() {
       result = result.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
     }
     return result;
-  }, [rows, search, selectedCats]);
+  }, [modeRows, search, selectedCats]);
 
-  const changedRows = (rows ?? []).filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
+  const changedRows = modeRows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
 
   const updateRow = (id: string, cantidadReal: number) => {
     setRows(prev => prev.map(r =>
@@ -406,7 +418,7 @@ export default function AjustesInventarioPage() {
       // existencia = cantidad contada (SET). Cuadra con el stock del almacén.
       let loteMsg = '';
       if (loteSel) {
-        const items = (rows ?? [])
+        const items = filteredRows
           .map(r => ({ producto_id: r.id, cantidad: (r.cantidadReal ?? r.cantidadSistema) ?? 0 }))
           .filter(it => it.cantidad > 0);
         if (items.length > 0) {
@@ -683,7 +695,10 @@ export default function AjustesInventarioPage() {
                   {!loadingProducts && filteredRows.length === 0 && (
                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                        <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                       {almacenId ? 'No hay productos' : 'Selecciona un almacén'}
+                       {!almacenId ? 'Selecciona un almacén'
+                         : (manejaLotes && loteSel) ? 'No hay productos que manejen lote. Marca "Maneja por lote" en el producto y aparecerán aquí.'
+                         : (manejaLotes && !loteSel) ? 'No hay productos sin lote. Los que manejan lote se ajustan eligiendo un lote arriba.'
+                         : 'No hay productos'}
                      </TableCell></TableRow>
                   )}
                   {filteredRows.map(row => {
@@ -1065,7 +1080,7 @@ export default function AjustesInventarioPage() {
             <DialogTitle>Asignar lote a los productos</DialogTitle>
             <DialogDescription>
               {(() => {
-                const n = (rows ?? []).filter(r => ((r.cantidadReal ?? r.cantidadSistema) ?? 0) > 0).length;
+                const n = filteredRows.filter(r => ((r.cantidadReal ?? r.cantidadSistema) ?? 0) > 0).length;
                 return <>Se creará/asignará el lote <strong>{loteSel?.codigo}</strong> a <strong>{n}</strong> producto(s) con existencia, fijando su cantidad por lote a la cantidad contada en <strong>{(almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre ?? 'este almacén'}</strong>. Esos productos pasarán a manejar lote.{changedRows.length > 0 && <> También se aplicarán {changedRows.length} ajuste(s) de cantidad.</>}</>;
               })()}
             </DialogDescription>
