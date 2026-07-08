@@ -174,12 +174,11 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       toast.error('Selecciona un almacén origen');
       return;
     }
-    // Los productos por lote se surten uno por uno (para elegir sus lotes).
-    const pendientesTodos = lineas.filter((l: any) => !l.hecho);
-    const conLote = pendientesTodos.filter((l: any) => esProductoLote(l.producto_id));
-    const pendientes = pendientesTodos.filter((l: any) => !esProductoLote(l.producto_id));
+    // Se surten todas las líneas pendientes: las de lote auto-asignan por FEFO,
+    // las demás con lo que alcance el stock (parcial).
+    const pendientes = lineas.filter((l: any) => !l.hecho);
     if (pendientes.length === 0) {
-      toast.info('Todas las líneas pendientes manejan lote: súrtelas una por una con el botón "Surtir" para elegir sus lotes.');
+      toast.info('No hay líneas pendientes por surtir.');
       setShowSurtirDialog(false);
       return;
     }
@@ -192,6 +191,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
           cantidad_pedida: Number(l.cantidad_pedida),
           almacen_origen_id: l.almacen_origen_id || surtirAlmacenId,
           hecho: l.hecho,
+          maneja_lote: esProductoLote(l.producto_id),
         })),
         empresaId: empresa!.id,
         almacenDefaultId: surtirAlmacenId,
@@ -209,9 +209,10 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
       });
       setLineas(nuevasLineas);
 
-      const completas = (resultados ?? []).filter(r => r.surtido >= r.pedida).length;
-      const parciales = (resultados ?? []).filter(r => r.surtido > 0 && r.surtido < r.pedida).length;
-      const sinStock = (resultados ?? []).filter(r => r.surtido <= 0).length;
+      const completas = (resultados ?? []).filter(r => !r.error && r.surtido >= r.pedida).length;
+      const parciales = (resultados ?? []).filter(r => !r.error && r.surtido > 0 && r.surtido < r.pedida).length;
+      const sinStock = (resultados ?? []).filter(r => !r.error && r.surtido <= 0).length;
+      const errores = (resultados ?? []).filter(r => r.error).length;
 
       // La entrega pasa a 'surtido' solo si TODAS las líneas quedaron completas.
       const todoCompleto = nuevasLineas.length > 0 &&
@@ -226,7 +227,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         if (completas > 0) partes.push(`${completas} completa(s)`);
         if (parciales > 0) partes.push(`${parciales} parcial(es)`);
         if (sinStock > 0) partes.push(`${sinStock} sin stock (pendiente(s))`);
-        if (conLote.length > 0) partes.push(`${conLote.length} con lote (surtir una por una)`);
+        if (errores > 0) partes.push(`${errores} con error`);
         toast.success(`Surtido: ${partes.join(', ')}.`);
       }
       setShowSurtirDialog(false);

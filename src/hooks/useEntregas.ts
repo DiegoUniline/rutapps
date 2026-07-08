@@ -152,7 +152,7 @@ export function useSurtirTodo() {
   return useMutation({
     mutationFn: async ({ entregaId, lineas, empresaId, almacenDefaultId }: {
       entregaId: string;
-      lineas: { id: string; producto_id: string; cantidad_pedida: number; almacen_origen_id?: string; hecho?: boolean }[];
+      lineas: { id: string; producto_id: string; cantidad_pedida: number; almacen_origen_id?: string; hecho?: boolean; maneja_lote?: boolean }[];
       empresaId: string;
       almacenDefaultId?: string;
     }) => {
@@ -165,26 +165,64 @@ export function useSurtirTodo() {
         }
       }
 
-      // Surtir cada línea con lo que alcance el stock (parcial). El RPC devuelve
-      // la cantidad realmente surtida: 0 = sin stock, la línea queda pendiente.
-      const resultados: { id: string; producto_id: string; pedida: number; surtido: number }[] = [];
+      // Surtir cada línea con lo que alcance el stock. El estado de la entrega lo
+      // decide el caller (solo pasa a 'surtido' si todas quedaron completas).
+      // Si una línea falla, se registra el error y se continúa con las demás.
+      const resultados: { id: string; producto_id: string; pedida: number; surtido: number; maneja_lote: boolean; error?: string }[] = [];
       for (const l of pendientes) {
         const almId = l.almacen_origen_id || almacenDefaultId!;
-        const { data, error } = await supabase.rpc('surtir_linea_entrega_parcial' as any, {
-          p_linea_id: l.id,
-          p_producto_id: l.producto_id,
-          p_almacen_origen_id: almId,
-          p_cantidad_pedida: l.cantidad_pedida,
-          p_entrega_id: entregaId,
-          p_empresa_id: empresaId,
-          p_user_id: user?.id,
-        });
-        if (error) throw new Error(error.message);
-        resultados.push({ id: l.id, producto_id: l.producto_id, pedida: Number(l.cantidad_pedida), surtido: Number(data ?? 0) });
+        const pedida = Number(l.cantidad_pedida);
+        try {
+          if (l.maneja_lote) {
+            // Producto con lote: auto-asignar lotes por FEFO (caduca primero)
+            // hasta la cantidad pedida o lo que alcance el stock por lote.
+            const { data: sl } = await (supabase.from as any)('stock_lotes')
+              .select('lote_id, cantidad, lotes(fecha_caducidad, activo)')
+              .eq('empresa_id', empresaId).eq('almacen_id', almId).eq('producto_id', l.producto_id).gt('cantidad', 0);
+            const disponibles = (sl ?? [])
+              .filter((r: any) => r.lotes?.activo !== false)
+              .map((r: any) => ({ lote_id: r.lote_id, disponible: Number(r.cantidad) || 0, cad: r.lotes?.fecha_caducidad ?? '9999-12-31' }))
+              .sort((a: any, b: any) => String(a.cad).localeCompare(String(b.cad)));
+            let restante = pedida;
+            const asignacion: { lote_id: string; cantidad: number }[] = [];
+            for (const lote of disponibles) {
+              if (restante <= 0) break;
+              const usar = Math.min(lote.disponible, restante);
+              if (usar > 0) { asignacion.push({ lote_id: lote.lote_id, cantidad: usar }); restante -= usar; }
+            }
+            const surtido = asignacion.reduce((s, it) => s + it.cantidad, 0);
+            if (surtido > 0) {
+              const { error } = await supabase.rpc('surtir_linea_entrega_lotes' as any, {
+                p_linea_id: l.id,
+                p_producto_id: l.producto_id,
+                p_almacen_origen_id: almId,
+                p_entrega_id: entregaId,
+                p_empresa_id: empresaId,
+                p_user_id: user?.id,
+                p_asignacion: asignacion,
+              });
+              if (error) throw new Error(error.message);
+            }
+            resultados.push({ id: l.id, producto_id: l.producto_id, pedida, surtido, maneja_lote: true });
+          } else {
+            // Producto sin lote: surtir lo que alcance el stock (parcial).
+            const { data, error } = await supabase.rpc('surtir_linea_entrega_parcial' as any, {
+              p_linea_id: l.id,
+              p_producto_id: l.producto_id,
+              p_almacen_origen_id: almId,
+              p_cantidad_pedida: pedida,
+              p_entrega_id: entregaId,
+              p_empresa_id: empresaId,
+              p_user_id: user?.id,
+            });
+            if (error) throw new Error(error.message);
+            resultados.push({ id: l.id, producto_id: l.producto_id, pedida, surtido: Number(data ?? 0), maneja_lote: false });
+          }
+        } catch (e: any) {
+          resultados.push({ id: l.id, producto_id: l.producto_id, pedida, surtido: 0, maneja_lote: !!l.maneja_lote, error: e?.message });
+        }
       }
 
-      // El estado de la entrega lo decide el caller (solo pasa a 'surtido' si
-      // todas las líneas quedaron completas).
       return resultados;
     },
     onSuccess: () => {
