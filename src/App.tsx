@@ -67,6 +67,7 @@ const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
 const InteligenciaAlmacenPage = lazy(() => import("@/pages/InteligenciaAlmacenPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
+const LotesPage = lazy(() => import("@/pages/LotesPage"));
 const KardexPage = lazy(() => import("@/pages/KardexPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
 const CompraFormPage = lazy(() => import("@/pages/CompraForm"));
@@ -796,6 +797,7 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/almacen/inventario" element={<InventarioPage />} />
       <Route path="/almacen/inteligencia" element={<InteligenciaAlmacenPage />} />
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
+      <Route path="/almacen/lotes" element={<LotesPage />} />
       <Route path="/almacen/kardex" element={<KardexPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
       <Route path="/almacen/compras/sugeridas" element={<ComprasSugeridasPage />} />

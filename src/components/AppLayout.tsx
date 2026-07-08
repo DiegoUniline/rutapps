@@ -140,6 +140,7 @@ const navItems: NavItem[] = [
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
       { label: 'Control · Ajustes · Conteos · Mermas', path: '/almacen/ajustes' },
+      { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
@@ -684,12 +685,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
     const dashIdx = baseVisibleNavItems.findIndex(i => i.path === '/dashboard');
     const insertAt = dashIdx >= 0 ? dashIdx + 1 : 0;
+    // Lotes solo se muestra si la empresa tiene el módulo de lotes activado.
+    const manejaLotes = !!(empresa as any)?.maneja_lotes;
+    const withLoteGate = baseVisibleNavItems.map(it => {
+      if (!it.children) return it;
+      const children = it.children.filter(c => c.path !== '/almacen/lotes' || manejaLotes);
+      return { ...it, children };
+    });
     return [
-      ...baseVisibleNavItems.slice(0, insertAt),
+      ...withLoteGate.slice(0, insertAt),
       favItem,
-      ...baseVisibleNavItems.slice(insertAt),
+      ...withLoteGate.slice(insertAt),
     ];
-  }, [baseVisibleNavItems, favorites]);
+  }, [baseVisibleNavItems, favorites, (empresa as any)?.maneja_lotes]);
 
   const closeMobile = () => setMobileOpen(false);
 
