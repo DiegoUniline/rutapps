@@ -217,23 +217,28 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   });
 
   // Entregas realizadas (hechas) por el vendedor en el periodo
+  // Filtramos por `fecha_entrega` (cuándo se completó) y no por `fecha` (fecha programada),
+  // porque una entrega pudo programarse antes del rango pero completarse dentro de él.
   const { data: entregas } = useQuery({
     queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     enabled: !!descarga.vendedor_id,
     queryFn: async () => {
+      const inicioTs = `${fInicio} 00:00:00`;
+      const finTs = `${fFin} 23:59:59.999`;
       const { data, error } = await supabase
         .from('entregas')
         .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
         .eq('empresa_id', descarga.empresa_id)
         .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
         .eq('status', 'hecho')
-        .gte('fecha', fInicio)
-        .lte('fecha', fFin)
+        .gte('fecha_entrega', inicioTs)
+        .lte('fecha_entrega', finTs)
         .order('fecha_entrega', { ascending: true });
       if (error) throw error;
       return data;
     },
   });
+
 
   // --- Stock del almacén asignado al vendedor ---
   const { data: vendedorAlmacen } = useQuery({
