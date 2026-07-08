@@ -381,7 +381,7 @@ export default function ReporteDiarioRuta() {
     (incluirStock && stockItems.length > 0) ? { key: 'stock', label: 'Stock' } : null,
     ventasCanceladas.length > 0 ? { key: 'canceladas', label: 'Canceladas' } : null,
     productosArr.length > 0 ? { key: 'productos', label: 'Productos' } : null,
-    (cobros || []).length > 0 ? { key: 'cobros', label: 'Cobros' } : null,
+    { key: 'cobros', label: 'Cobranza' },
     (gastos || []).length > 0 ? { key: 'gastos', label: 'Gastos' } : null,
     devLineas.length > 0 ? { key: 'devoluciones', label: 'Devoluciones' } : null,
     visitasSinCompra.length > 0 ? { key: 'visitas', label: 'Visitas' } : null,
@@ -1017,7 +1017,15 @@ export default function ReporteDiarioRuta() {
           )}
 
           {/* Cobros */}
-          {verSec('cobros') && (cobros || []).length > 0 && (
+          {verSec('cobros') && (
+            (cobros || []).length === 0 ? (
+              <div>
+                <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                  <CreditCard className="h-3.5 w-3.5" /> Cobranza
+                </h2>
+                <p className="text-[11px] text-muted-foreground py-2">Sin cobros registrados en el rango.</p>
+              </div>
+            ) : (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
                 <CreditCard className="h-3.5 w-3.5" /> Cobros recibidos ({(cobros || []).length})
@@ -1087,6 +1095,7 @@ export default function ReporteDiarioRuta() {
                 </tfoot>
               </table>
             </div>
+            )
           )}
 
           {/* Gastos */}
