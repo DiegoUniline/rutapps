@@ -36,6 +36,11 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string }> =
   transferencia: { label: 'Transferencia', icon: RefreshCw, color: 'text-primary' },
 };
 
+function fmtCad(d: string | null): string {
+  if (!d) return 'sin caducidad';
+  return new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+}
+
 function getReferenciaRoute(tipo: string | null, id: string | null): string | null {
   if (!tipo || !id) return null;
   switch (tipo) {
@@ -87,13 +92,21 @@ export default function KardexPage() {
   const fechaHasta = searchParams.get('fh') ?? '';
   const filterTipo = searchParams.get('ft') ?? 'todos';
   const search = searchParams.get('q') ?? '';
+  const loteId = searchParams.get('lote') ?? '';
 
   const setAlmacenId = (v: string) => updateParam('alm', v);
-  const setProductoId = (v: string) => updateParam('prod', v);
+  // Al cambiar de producto se limpia el filtro de lote (los lotes son por producto).
+  const setProductoId = (v: string) => setSearchParams(prev => {
+    const next = new URLSearchParams(prev);
+    if (v) next.set('prod', v); else next.delete('prod');
+    next.delete('lote');
+    return next;
+  }, { replace: true });
   const setFechaDesde = (v: string) => updateParam('fd', v);
   const setFechaHasta = (v: string) => updateParam('fh', v);
   const setFilterTipo = (v: string) => updateParam('ft', v === 'todos' ? '' : v);
   const setSearch = (v: string) => updateParam('q', v);
+  const setLoteId = (v: string) => updateParam('lote', v);
 
   const [productoSearch, setProductoSearch] = useState('');
   const [productoDropdownOpen, setProductoDropdownOpen] = useState(false);
@@ -141,12 +154,29 @@ export default function KardexPage() {
     },
   });
 
+  // Lotes del producto seleccionado, para el filtro por lote.
+  const { data: lotesProducto } = useQuery({
+    queryKey: ['kardex-lotes-producto', empresa?.id, productoId],
+    enabled: !!empresa?.id && !!productoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lotes')
+        .select('id, codigo, fecha_caducidad')
+        .eq('empresa_id', empresa!.id)
+        .eq('producto_id', productoId)
+        .order('fecha_caducidad', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const { rows, isLoading, refetch } = useKardexUbicacion(
     productoId || null,
     almacenId || null,
     'almacen',
     fechaDesde || undefined,
     fechaHasta || undefined,
+    loteId || undefined,
   );
 
   const { data: refInfo } = useKardexReferencias(rows);
@@ -257,7 +287,7 @@ export default function KardexPage() {
   const handleExportCSV = () => {
     if (filtered.length === 0) return;
     const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
-    const header = 'Fecha,Producto,Codigo,Tipo,Referencia,Origen,Destino,Usuario,Entrada,Salida,Saldo,Notas';
+    const header = 'Fecha,Producto,Codigo,Lote,Caducidad,Tipo,Referencia,Origen,Destino,Usuario,Entrada,Salida,Saldo,Notas';
     const csvRows = filtered.map(r => {
       const fecha = new Date(r.created_at).toLocaleString('es-MX');
       const tipo = REFERENCIA_LABELS[r.referencia_tipo ?? ''] ?? r.referencia_tipo ?? '';
@@ -269,10 +299,13 @@ export default function KardexPage() {
         ? (refInfo?.productos?.[r.producto_id] ?? (r.producto_id === productoSel?.id ? { nombre: productoSel?.nombre, codigo: productoSel?.codigo } : null))
         : null;
       const usuario = r.user_id ? (refInfo?.usuarios?.[r.user_id] ?? `ID ${r.user_id.slice(0, 8)}`) : 'Sistema';
+      const lote = r.lote_id ? refInfo?.lotes?.[r.lote_id] : null;
       return [
         esc(fecha),
         esc(prodInfo?.nombre ?? ''),
         esc(prodInfo?.codigo ?? ''),
+        esc(lote?.codigo ?? ''),
+        esc(lote?.fecha_caducidad ?? ''),
         esc(tipo),
         esc(r.referencia_id ?? ''),
         esc(od.origen),
@@ -370,8 +403,13 @@ export default function KardexPage() {
               size="sm"
               className="h-8 text-[12px]"
               onClick={() => {
-                setAlmacenId('');
-                setProductoId('');
+                setSearchParams(prev => {
+                  const next = new URLSearchParams(prev);
+                  next.delete('alm');
+                  next.delete('prod');
+                  next.delete('lote');
+                  return next;
+                }, { replace: true });
                 setProductoSearch('');
               }}
             >
@@ -439,6 +477,21 @@ export default function KardexPage() {
                 ))}
               </optgroup>
             </select>
+            {productoId && (lotesProducto?.length ?? 0) > 0 && (
+              <select
+                className="h-8 text-[12px] border border-border rounded px-2 bg-background"
+                value={loteId}
+                onChange={e => setLoteId(e.target.value)}
+                title="Filtrar por lote"
+              >
+                <option value="">Todos los lotes</option>
+                {(lotesProducto ?? []).map((l: any) => (
+                  <option key={l.id} value={l.id}>
+                    {l.codigo}{l.fecha_caducidad ? ` · cad. ${fmtCad(l.fecha_caducidad)}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
             <Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={() => refetch()}>
               <RefreshCw className="h-3 w-3 mr-1" /> Actualizar
             </Button>
@@ -467,6 +520,7 @@ export default function KardexPage() {
                 <tr className="border-b border-border">
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Fecha</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Producto</th>
+                  <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Lote</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Tipo</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Referencia</th>
                   <th className="text-left text-[11px] font-medium px-3 py-2 text-muted-foreground">Origen</th>
@@ -482,9 +536,9 @@ export default function KardexPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={11} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
+                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">Cargando kardex...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="py-8 text-center text-[12px] text-muted-foreground">
+                  <tr><td colSpan={13} className="py-8 text-center text-[12px] text-muted-foreground">
                     {rows.length === 0 ? 'Sin movimientos registrados' : 'Sin resultados con los filtros actuales'}
                   </td></tr>
                 ) : (
@@ -498,6 +552,7 @@ export default function KardexPage() {
                     const usuario = row.user_id
                       ? (refInfo?.usuarios?.[row.user_id] ?? `ID ${row.user_id.slice(0, 8)}`)
                       : 'Sistema';
+                    const lote = row.lote_id ? refInfo?.lotes?.[row.lote_id] : null;
                     return (
                       <tr key={row.id} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
                         <td className="py-1.5 px-3 text-[12px] whitespace-nowrap">
@@ -509,6 +564,16 @@ export default function KardexPage() {
                         <td className="py-1.5 px-3 text-[12px] max-w-[200px]">
                           <div className="truncate font-medium" title={prodInfo?.nombre ?? ''}>{prodInfo?.nombre ?? '—'}</div>
                           <div className="text-[10px] text-muted-foreground truncate">{prodInfo?.codigo ?? ''}</div>
+                        </td>
+                        <td className="py-1.5 px-3 text-[12px] max-w-[140px]">
+                          {row.lote_id && lote ? (
+                            <>
+                              <div className="truncate font-medium" title={lote.codigo}>{lote.codigo}</div>
+                              <div className="text-[10px] text-muted-foreground truncate">cad. {fmtCad(lote.fecha_caducidad)}</div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="py-1.5 px-3">
                           <span className={cn("flex items-center gap-1 text-[12px] font-medium", cfg.color)}>
