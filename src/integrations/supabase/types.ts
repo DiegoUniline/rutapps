@@ -9040,6 +9040,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      surtir_linea_entrega_lotes: {
+        Args: {
+          p_almacen_origen_id: string
+          p_asignacion: Json
+          p_empresa_id: string
+          p_entrega_id: string
+          p_linea_id: string
+          p_producto_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       tiene_cobertura_vigente: {
         Args: { p_empresa_id: string }
         Returns: boolean
