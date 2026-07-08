@@ -510,9 +510,11 @@ export function useValidarEntrega() {
       }
 
       // DB trigger `trg_apply_entrega_hecho_inventory` deducts stock. Frontend only flips status.
+      const now = new Date().toISOString();
       const { error } = await supabase.from('entregas').update({
         status: 'hecho',
-        validado_at: new Date().toISOString(),
+        validado_at: now,
+        fecha_entrega: now,
       } as any).eq('id', entregaId);
       if (error) throw error;
     },
