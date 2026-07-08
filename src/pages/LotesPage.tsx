@@ -1,5 +1,5 @@
 import { useState, Fragment } from 'react';
-import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck } from 'lucide-react';
+import { Boxes, Plus, Pencil, AlertTriangle, ChevronRight, ChevronDown, Warehouse, Truck, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,6 +42,10 @@ export default function LotesPage() {
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [vista, setVista] = useState<'lote' | 'almacen'>('lote');
+  const [search, setSearch] = useState('');
+  const [almacenFilter, setAlmacenFilter] = useState('');            // '' = todos
+  const [stockFilter, setStockFilter] = useState<'todos' | 'con' | 'sin'>('todos');
+  const [vencFilter, setVencFilter] = useState<'todos' | 'porvencer' | 'vencido'>('todos');
   const toggleExpand = (id: string) => setExpanded(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
@@ -157,6 +161,46 @@ export default function LotesPage() {
     return { texto: `Faltan ${dias} día(s)`, clase: 'text-emerald-600 dark:text-emerald-400' };
   };
 
+  // Lista de almacenes para el filtro (almacenes primero, rutas después).
+  const almacenesList = Array.from((almacenesMap ?? new Map()).entries())
+    .map(([id, a]: any) => ({ id, nombre: a.nombre, tipo: a.tipo }))
+    .sort((a, b) => (a.tipo === b.tipo ? a.nombre.localeCompare(b.nombre) : a.tipo === 'almacen' ? -1 : 1));
+
+  // Stock relevante de un lote: total, o el del almacén filtrado.
+  const stockDe = (loteId: string): number => {
+    if (!almacenFilter) return stockPorLote?.get(loteId) ?? 0;
+    return (stockDetalle?.get(loteId) ?? []).filter(d => d.almacen_id === almacenFilter).reduce((s, d) => s + d.cantidad, 0);
+  };
+
+  // Predicado búsqueda + vencimiento (reutilizado en ambas vistas).
+  const matchSearchVenc = (l: LoteRow): boolean => {
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      if (!(l.codigo.toLowerCase().includes(s) || (l.productos?.nombre ?? '').toLowerCase().includes(s) || (l.productos?.codigo ?? '').toLowerCase().includes(s))) return false;
+    }
+    if (vencFilter !== 'todos') {
+      const dias = diasParaVencer(l.fecha_caducidad);
+      if (vencFilter === 'vencido' && !(dias !== null && dias < 0)) return false;
+      if (vencFilter === 'porvencer' && !(dias !== null && dias >= 0 && dias <= DIAS_POR_VENCER)) return false;
+    }
+    return true;
+  };
+
+  const lotesVisibles = (lotes ?? []).filter(l => {
+    if (!matchSearchVenc(l)) return false;
+    if (stockFilter !== 'todos') {
+      const q = stockDe(l.id);
+      if (stockFilter === 'con' && q <= 0) return false;
+      if (stockFilter === 'sin' && q > 0) return false;
+    }
+    return true;
+  });
+
+  const porAlmacenVisible = porAlmacen
+    .filter(g => !almacenFilter || g.id === almacenFilter)
+    .map(g => ({ ...g, items: g.items.filter(it => matchSearchVenc(it.lote)) }))
+    .filter(g => g.items.length > 0);
+
   const openNew = () => setEdit({ ...emptyEdit });
   const openEdit = (l: LoteRow) => setEdit({
     id: l.id,
@@ -248,6 +292,34 @@ export default function LotesPage() {
         </div>
       )}
 
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por producto o código de lote…"
+            className="input-odoo w-full pl-8"
+          />
+        </div>
+        <select className="input-odoo" value={almacenFilter} onChange={e => setAlmacenFilter(e.target.value)}>
+          <option value="">Todos los almacenes</option>
+          {almacenesList.map(a => (
+            <option key={a.id} value={a.id}>{a.tipo === 'ruta' ? '🚛 ' : '🏢 '}{a.nombre}</option>
+          ))}
+        </select>
+        <select className="input-odoo" value={stockFilter} onChange={e => setStockFilter(e.target.value as any)}>
+          <option value="todos">Con y sin stock</option>
+          <option value="con">Solo con stock</option>
+          <option value="sin">Solo sin stock</option>
+        </select>
+        <select className="input-odoo" value={vencFilter} onChange={e => setVencFilter(e.target.value as any)}>
+          <option value="todos">Cualquier vencimiento</option>
+          <option value="porvencer">Por vencer (≤ {DIAS_POR_VENCER} días)</option>
+          <option value="vencido">Vencidos</option>
+        </select>
+      </div>
+
       {/* Switch de vista */}
       <div className="flex gap-1 bg-accent/40 p-1 rounded-lg w-fit">
         <button onClick={() => setVista('lote')}
@@ -275,13 +347,13 @@ export default function LotesPage() {
                 <th className="th-odoo text-left w-40">Vence</th>
                 <th className="th-odoo text-left w-28">Fabricación</th>
                 <th className="th-odoo text-right w-24">Costo</th>
-                <th className="th-odoo text-right w-24">Stock</th>
+                <th className="th-odoo text-right w-28">Stock{almacenFilter ? ' (filtrado)' : ''}</th>
                 <th className="th-odoo w-16 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {(lotes ?? []).map(l => {
-                const total = stockPorLote?.get(l.id) ?? 0;
+              {lotesVisibles.map(l => {
+                const total = stockDe(l.id);
                 const detalle = stockDetalle?.get(l.id) ?? [];
                 const isOpen = expanded.has(l.id);
                 const est = estadoVencimiento(l.fecha_caducidad);
@@ -335,9 +407,9 @@ export default function LotesPage() {
                   </Fragment>
                 );
               })}
-              {(lotes?.length ?? 0) === 0 && (
+              {lotesVisibles.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">
-                  Aún no hay lotes. Crea el primero con "Nuevo lote".
+                  {(lotes?.length ?? 0) === 0 ? 'Aún no hay lotes. Crea el primero con "Nuevo lote".' : 'Ningún lote coincide con los filtros.'}
                 </td></tr>
               )}
             </tbody>
@@ -348,11 +420,11 @@ export default function LotesPage() {
 
       {vista === 'almacen' && (
         <div className="space-y-3">
-          {porAlmacen.length === 0 ? (
+          {porAlmacenVisible.length === 0 ? (
             <div className="bg-card border border-border rounded p-8 text-center text-muted-foreground text-sm">
-              Todavía no hay stock por lote en ningún almacén. Entrará al recibir compras por lote.
+              {porAlmacen.length === 0 ? 'Todavía no hay stock por lote en ningún almacén. Entrará al recibir compras o al asignar lotes.' : 'Ningún lote coincide con los filtros.'}
             </div>
-          ) : porAlmacen.map(alm => {
+          ) : porAlmacenVisible.map(alm => {
             const totalAlm = alm.items.reduce((s, it) => s + it.cantidad, 0);
             return (
               <div key={alm.id} className="bg-card border border-border rounded overflow-hidden">
