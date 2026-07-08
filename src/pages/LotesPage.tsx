@@ -309,50 +309,74 @@ export default function LotesPage() {
           />
         </div>
 
-        {/* Almacenes: botones multi-selección (vacío = todos) */}
-        <div className="flex flex-wrap items-center gap-1">
-          <button onClick={() => setAlmacenFilters(new Set())}
-            className={cn("px-2.5 py-1 rounded-md text-[12px] border transition-colors",
-              almacenFilters.size === 0 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
-            Todos
-          </button>
-          {almacenesList.map(a => {
-            const on = almacenFilters.has(a.id);
-            return (
-              <button key={a.id} onClick={() => toggleAlmacen(a.id)}
-                className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] border transition-colors",
-                  on ? "bg-primary/10 border-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/40")}>
-                {a.tipo === 'ruta' ? <Truck className="h-3 w-3 text-amber-500" /> : <Warehouse className="h-3 w-3 text-primary" />}
-                {a.nombre}
-              </button>
-            );
-          })}
-        </div>
+        {/* Almacenes: dropdown multi-selección (vacío = todos) */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] border transition-colors",
+              almacenFilters.size > 0 ? "bg-primary/10 border-primary text-foreground" : "border-border text-muted-foreground hover:border-primary/40"
+            )}>
+              <Warehouse className="h-3.5 w-3.5" />
+              {almacenFilters.size === 0
+                ? 'Todos los almacenes'
+                : `${almacenFilters.size} almacén${almacenFilters.size !== 1 ? 'es' : ''}`}
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
+            <button
+              onClick={() => setAlmacenFilters(new Set())}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent text-left"
+            >
+              <div className="h-4 w-4 flex items-center justify-center">
+                {almacenFilters.size === 0 && <Check className="h-3.5 w-3.5 text-primary" />}
+              </div>
+              <span className="font-medium">Todos</span>
+            </button>
+            <div className="my-1 border-t border-border" />
+            {almacenesList.map(a => {
+              const on = almacenFilters.has(a.id);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => toggleAlmacen(a.id)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[13px] hover:bg-accent text-left"
+                >
+                  <div className="h-4 w-4 flex items-center justify-center">
+                    {on && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </div>
+                  {a.tipo === 'ruta' ? <Truck className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <Warehouse className="h-3.5 w-3.5 text-primary shrink-0" />}
+                  <span className="truncate">{a.nombre}</span>
+                </button>
+              );
+            })}
+          </PopoverContent>
+        </Popover>
 
         {/* Stock: segmentado */}
         <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
           {([['todos', 'Con y sin'], ['con', 'Con stock'], ['sin', 'Sin stock']] as const).map(([v, l]) => (
             <button key={v} onClick={() => setStockFilter(v)}
-              className={cn("px-2.5 py-1 transition-colors", stockFilter === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
+              className={cn("px-2.5 py-1.5 transition-colors", stockFilter === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
               {l}
             </button>
           ))}
         </div>
 
         {/* Vencimiento: segmentado + días editables */}
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex items-center gap-2">
           <div className="inline-flex rounded-md border border-border overflow-hidden text-[12px]">
             {([['todos', 'Todos'], ['porvencer', 'Por vencer'], ['vencido', 'Vencidos']] as const).map(([v, l]) => (
               <button key={v} onClick={() => setVencMode(v)}
-                className={cn("px-2.5 py-1 transition-colors", vencMode === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
+                className={cn("px-2.5 py-1.5 transition-colors", vencMode === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent/50")}>
                 {l}
               </button>
             ))}
           </div>
           {vencMode === 'porvencer' && (
-            <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground whitespace-nowrap">
               ≤ <input type="number" min={0} value={vencDias} onChange={e => setVencDias(e.target.value)}
-                className="input-odoo w-14 py-1 text-center" /> días
+                className="input-odoo w-20 py-1.5 text-center" /> días
             </span>
           )}
         </div>
