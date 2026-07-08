@@ -11,6 +11,7 @@ export interface KardexRefInfo {
   almacenes?: Record<string, string>; // id -> nombre
   productos?: Record<string, { nombre: string; codigo?: string | null }>;
   usuarios?: Record<string, string>; // user_id -> nombre
+  lotes?: Record<string, { codigo: string; fecha_caducidad: string | null }>; // lote_id -> lote
 }
 
 /**
@@ -25,7 +26,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       'kardex-referencias',
       empresa?.id,
       // stable hash of refs
-      (rows ?? []).map(r => `${r.referencia_tipo}:${r.referencia_id}:${r.producto_id}:${r.user_id}`).join('|'),
+      (rows ?? []).map(r => `${r.referencia_tipo}:${r.referencia_id}:${r.producto_id}:${r.user_id}:${r.lote_id}`).join('|'),
     ],
     enabled: !!empresa?.id && !!rows && rows.length > 0,
     queryFn: async (): Promise<KardexRefInfo> => {
@@ -36,6 +37,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
       const almacenIds = new Set<string>();
       const productoIds = new Set<string>();
       const userIds = new Set<string>();
+      const loteIds = new Set<string>();
 
       for (const r of rows ?? []) {
         if (r.referencia_id) {
@@ -53,6 +55,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
         if (r.almacen_destino_id) almacenIds.add(r.almacen_destino_id);
         if (r.producto_id) productoIds.add(r.producto_id);
         if (r.user_id) userIds.add(r.user_id);
+        if (r.lote_id) loteIds.add(r.lote_id);
       }
 
       const result: KardexRefInfo = {
@@ -63,6 +66,7 @@ export function useKardexReferencias(rows: any[] | undefined) {
         almacenes: {},
         productos: {},
         usuarios: {},
+        lotes: {},
       };
 
       const tasks: Promise<any>[] = [];
@@ -161,6 +165,21 @@ export function useKardexReferencias(rows: any[] | undefined) {
               .in('id', Array.from(productoIds));
             (data ?? []).forEach((p: any) => {
               result.productos![p.id] = { nombre: p.nombre, codigo: p.codigo };
+            });
+          })()
+        );
+      }
+
+      if (loteIds.size) {
+        tasks.push(
+          (async () => {
+            const { data } = await supabase
+              .from('lotes')
+              .select('id, codigo, fecha_caducidad')
+              .eq('empresa_id', empresa!.id)
+              .in('id', Array.from(loteIds));
+            (data ?? []).forEach((l: any) => {
+              result.lotes![l.id] = { codigo: l.codigo, fecha_caducidad: l.fecha_caducidad ?? null };
             });
           })()
         );

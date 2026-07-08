@@ -19,6 +19,7 @@ export interface KardexUbicacionRow {
   almacen_origen_id: string | null;
   almacen_destino_id: string | null;
   vendedor_destino_id: string | null;
+  lote_id: string | null;
   origen_nombre: string | null;
   destino_nombre: string | null;
 }
@@ -38,21 +39,23 @@ export function useKardexUbicacion(
   ubicacionTipo: 'almacen' | 'camion',
   fechaDesde?: string,
   fechaHasta?: string,
+  loteId?: string,
 ) {
   const { empresa } = useAuth();
 
   const query = useQuery({
-    queryKey: ['kardex-ubicacion', productoId, ubicacionId, ubicacionTipo, empresa?.id, fechaDesde, fechaHasta],
+    queryKey: ['kardex-ubicacion', productoId, ubicacionId, ubicacionTipo, empresa?.id, fechaDesde, fechaHasta, loteId],
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('movimientos_inventario')
-        .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id')
+        .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id, lote_id')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: true })
         .limit(2000);
 
       if (productoId) q = q.eq('producto_id', productoId);
+      if (loteId) q = q.eq('lote_id', loteId);
       if (fechaDesde) q = q.gte('fecha', fechaDesde);
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
