@@ -217,12 +217,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   });
 
   // Entregas realizadas (hechas) por el vendedor en el periodo.
-  // Regla:
-  //  - Si `fecha_entrega` está en el rango, cuenta (caso normal, entregas nuevas).
-  //  - Si `fecha_entrega` es NULL (entregas viejas marcadas hechas antes de que
-  //    el trigger poblara ese campo, o entregas cerradas con caches PWA
-  //    antiguos), caemos a la `fecha` programada. Sin este fallback, esas
-  //    entregas nunca aparecen en la liquidación y el conteo sale en 0.
+  // La fecha real de cierre es `validado_at` (cuando se marcó como hecho).
+  // `fecha_entrega` puede venir nula en registros viejos o no representar el
+  // momento operativo real; se usa solo como respaldo. Como último fallback,
+  // si no existe ninguna fecha de cierre, usamos la fecha programada.
   const { data: entregas } = useQuery({
     queryKey: ['descarga-entregas', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     enabled: !!descarga.vendedor_id,
@@ -231,12 +229,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       const finTs = `${fFin} 23:59:59.999`;
       const { data, error } = await supabase
         .from('entregas')
-        .select('id, folio, status, fecha_entrega, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
+        .select('id, folio, status, fecha_entrega, validado_at, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
         .eq('empresa_id', descarga.empresa_id)
         .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
         .eq('status', 'hecho')
-        .or(`and(fecha_entrega.gte.${inicioTs},fecha_entrega.lte.${finTs}),and(fecha_entrega.is.null,fecha.gte.${fInicio},fecha.lte.${fFin})`)
-        .order('fecha', { ascending: true });
+        .or(`and(validado_at.gte.${inicioTs},validado_at.lte.${finTs}),and(validado_at.is.null,fecha_entrega.gte.${inicioTs},fecha_entrega.lte.${finTs}),and(validado_at.is.null,fecha_entrega.is.null,fecha.gte.${fInicio},fecha.lte.${fFin})`)
+        .order('validado_at', { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -1134,7 +1132,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         <span className="font-mono font-semibold text-foreground">{e.folio ?? '—'}</span>
                         <span className="text-muted-foreground">Pedido <span className="font-mono">{e.ventas?.folio ?? '—'}</span></span>
                         <span className="text-foreground">{e.clientes?.nombre ?? '—'}</span>
-                        <span className="text-muted-foreground">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</span>
+                        <span className="text-muted-foreground">{e.validado_at || e.fecha_entrega ? fmtDate(e.validado_at || e.fecha_entrega) : '—'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-[11px]">
                         <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{udsEntregadas} entregadas</span>
