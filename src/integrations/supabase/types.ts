@@ -9003,6 +9003,10 @@ export type Database = {
         Args: { p_empresa_id: string; p_user_id: string }
         Returns: string
       }
+      revertir_surtido_linea: {
+        Args: { p_empresa_id: string; p_entrega_id: string; p_linea_id: string }
+        Returns: undefined
+      }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
       stock_almacen_at_eod: {
         Args: { p_almacen_id: string; p_fecha: string }
