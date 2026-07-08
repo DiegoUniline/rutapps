@@ -6,7 +6,8 @@ import { useClasificaciones } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
-import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload, ChevronDown, ChevronRight, User, Calendar, MapPin, List } from 'lucide-react';
+import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload, ChevronDown, ChevronRight, User, Calendar, MapPin, List, Boxes, X } from 'lucide-react';
+import { LoteDefModal, type LoteDef } from '@/components/lotes/LoteDefModal';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -62,6 +63,10 @@ export default function AjustesInventarioPage() {
   const { data: clasificaciones } = useClasificaciones();
   const [motivo, setMotivo] = useState('Conteo físico');
   const [applying, setApplying] = useState(false);
+  const manejaLotes = !!(empresa as any)?.maneja_lotes;
+  const [loteSel, setLoteSel] = useState<LoteDef | null>(null);
+  const [showLoteModal, setShowLoteModal] = useState(false);
+  const [showLoteConfirm, setShowLoteConfirm] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetMotivo, setResetMotivo] = useState('Reinicio general de stock');
   const [resetting, setResetting] = useState(false);
@@ -349,8 +354,8 @@ export default function AjustesInventarioPage() {
   // Apply all changes
   const applyAdjustments = async () => {
     if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
-    if (changedRows.length === 0) { toast.info('No hay cambios'); return; }
-    if (!motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
+    if (changedRows.length === 0 && !loteSel) { toast.info('No hay cambios'); return; }
+    if (changedRows.length > 0 && !motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
     try {
       const today = todayLocal();
@@ -395,9 +400,34 @@ export default function AjustesInventarioPage() {
         }
       }
 
-      await syncProductTotals(changedRows.map(row => row.id));
+      if (changedRows.length > 0) await syncProductTotals(changedRows.map(row => row.id));
 
-      toast.success(`${changedRows.length} producto(s) ajustados`);
+      // Asignación masiva de lote: crea/reutiliza el lote por producto y fija su
+      // existencia = cantidad contada (SET). Cuadra con el stock del almacén.
+      let loteMsg = '';
+      if (loteSel) {
+        const items = (rows ?? [])
+          .map(r => ({ producto_id: r.id, cantidad: (r.cantidadReal ?? r.cantidadSistema) ?? 0 }))
+          .filter(it => it.cantidad > 0);
+        if (items.length > 0) {
+          const { data: n, error: loteErr } = await supabase.rpc('asignar_lote_masivo' as any, {
+            p_empresa_id: empresa!.id,
+            p_almacen_id: almacenId,
+            p_codigo: loteSel.codigo,
+            p_caducidad: loteSel.caducidad || null,
+            p_fabricacion: loteSel.fabricacion || null,
+            p_costo: loteSel.costo?.trim() ? Number(loteSel.costo) : null,
+            p_items: items,
+            p_user_id: user?.id,
+          });
+          if (loteErr) throw loteErr;
+          loteMsg = ` · Lote ${loteSel.codigo} asignado a ${n ?? items.length} producto(s)`;
+          qc.invalidateQueries({ queryKey: ['lotes'] });
+          qc.invalidateQueries({ queryKey: ['stock-lotes'] });
+        }
+      }
+
+      toast.success((changedRows.length > 0 ? `${changedRows.length} producto(s) ajustados` : 'Aplicado') + loteMsg);
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
       qc.invalidateQueries({ queryKey: ['ajustes-historial'] });
@@ -595,6 +625,20 @@ export default function AjustesInventarioPage() {
                   <FileText className="h-4 w-4 mr-1" /> PDF
                 </Button>
               )}
+              {manejaLotes && (
+                loteSel ? (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/30 text-[13px]">
+                    <Boxes className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-medium text-foreground">Lote: {loteSel.codigo}</span>
+                    <button onClick={() => setShowLoteModal(true)} className="text-primary hover:underline text-[12px]">editar</button>
+                    <button onClick={() => setLoteSel(null)} className="text-muted-foreground hover:text-destructive" title="Quitar lote"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setShowLoteModal(true)} className="gap-1.5">
+                    <Boxes className="h-4 w-4" /> Elegir / crear lote
+                  </Button>
+                )
+              )}
               <Button
                 variant="destructive"
                 size="sm"
@@ -605,12 +649,14 @@ export default function AjustesInventarioPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={applyAdjustments}
-                disabled={applying || changedRows.length === 0 || !almacenId}
+                onClick={() => (loteSel ? setShowLoteConfirm(true) : applyAdjustments())}
+                disabled={applying || (changedRows.length === 0 && !loteSel) || !almacenId}
                 className="gap-1.5"
               >
                 <Save className="h-4 w-4" />
-                {applying ? 'Aplicando...' : `Aplicar ${changedRows.length} ajuste(s)`}
+                {applying ? 'Aplicando...'
+                  : loteSel ? `Aplicar${changedRows.length > 0 ? ` ${changedRows.length} ajuste(s) +` : ''} lote`
+                  : `Aplicar ${changedRows.length} ajuste(s)`}
               </Button>
             </div>
           </div>
@@ -1001,6 +1047,34 @@ export default function AjustesInventarioPage() {
                 {resetting ? 'Reiniciando...' : 'Confirmar reinicio'}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {showLoteModal && (
+        <LoteDefModal
+          initial={loteSel}
+          onClose={() => setShowLoteModal(false)}
+          onConfirm={(def) => { setLoteSel(def); setShowLoteModal(false); }}
+        />
+      )}
+
+      <Dialog open={showLoteConfirm} onOpenChange={setShowLoteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar lote a los productos</DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const n = (rows ?? []).filter(r => ((r.cantidadReal ?? r.cantidadSistema) ?? 0) > 0).length;
+                return <>Se creará/asignará el lote <strong>{loteSel?.codigo}</strong> a <strong>{n}</strong> producto(s) con existencia, fijando su cantidad por lote a la cantidad contada en <strong>{(almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre ?? 'este almacén'}</strong>. Esos productos pasarán a manejar lote.{changedRows.length > 0 && <> También se aplicarán {changedRows.length} ajuste(s) de cantidad.</>}</>;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowLoteConfirm(false)} disabled={applying}>Cancelar</Button>
+            <Button onClick={() => { setShowLoteConfirm(false); applyAdjustments(); }} disabled={applying}>
+              {applying ? 'Aplicando…' : 'Sí, asignar'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
