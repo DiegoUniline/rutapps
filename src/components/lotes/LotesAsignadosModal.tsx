@@ -23,21 +23,35 @@ export function LotesAsignadosModal({ empresaId, entregaId, producto, onClose }:
     if (!producto) return;
     setLoading(true);
     (async () => {
-      const { data } = await (supabase.from as any)('movimientos_inventario')
-        .select('cantidad, lote_id, lotes(codigo, fecha_caducidad)')
+      const { data: mvs } = await (supabase.from as any)('movimientos_inventario')
+        .select('cantidad, lote_id')
         .eq('empresa_id', empresaId)
         .eq('referencia_tipo', 'entrega')
         .eq('referencia_id', entregaId)
         .eq('producto_id', producto.id)
         .eq('tipo', 'salida')
         .not('lote_id', 'is', null);
-      const list: LoteMov[] = (data ?? [])
-        .map((r: any) => ({ codigo: r.lotes?.codigo ?? '—', fecha_caducidad: r.lotes?.fecha_caducidad ?? null, cantidad: Number(r.cantidad) || 0 }))
-        .sort((a: LoteMov, b: LoteMov) => (a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
+      const rows = (mvs ?? []) as { cantidad: number; lote_id: string }[];
+      const loteIds = Array.from(new Set(rows.map(r => r.lote_id).filter(Boolean)));
+      let lotesById: Record<string, { codigo: string; fecha_caducidad: string | null }> = {};
+      if (loteIds.length > 0) {
+        const { data: lts } = await (supabase.from as any)('lotes')
+          .select('id, codigo, fecha_caducidad')
+          .in('id', loteIds);
+        lotesById = Object.fromEntries((lts ?? []).map((l: any) => [l.id, { codigo: l.codigo ?? '—', fecha_caducidad: l.fecha_caducidad ?? null }]));
+      }
+      const list: LoteMov[] = rows
+        .map(r => ({
+          codigo: lotesById[r.lote_id]?.codigo ?? '—',
+          fecha_caducidad: lotesById[r.lote_id]?.fecha_caducidad ?? null,
+          cantidad: Number(r.cantidad) || 0,
+        }))
+        .sort((a, b) => (a.fecha_caducidad ?? '9999-12-31').localeCompare(b.fecha_caducidad ?? '9999-12-31'));
       setMovs(list);
       setLoading(false);
     })();
   }, [producto?.id, entregaId, empresaId]);
+
 
   if (!producto) return null;
 
