@@ -3,7 +3,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, Trash2, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Plus, Upload, Trash2, CheckCircle2, FileSpreadsheet, Boxes } from 'lucide-react';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -157,6 +157,26 @@ export default function ProductosListPage() {
       toast.error(e?.message || 'Error al activar');
     } finally {
       setBulkActivating(false);
+    }
+  };
+
+  const [bulkLote, setBulkLote] = useState(false);
+  const handleBulkManejaLote = async (value: boolean) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!empresa?.id) { toast.error('No se pudo identificar la empresa actual'); return; }
+    setBulkLote(true);
+    try {
+      const { error } = await supabase.from('productos').update({ maneja_lote: value } as any).in('id', ids).eq('empresa_id', empresa.id);
+      if (error) throw error;
+      toast.success(`${ids.length} producto${ids.length !== 1 ? 's' : ''} ${value ? 'ahora manejan lote' : 'ya no manejan lote'}`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al actualizar');
+    } finally {
+      setBulkLote(false);
     }
   };
 
@@ -488,6 +508,10 @@ export default function ProductosListPage() {
               toast.success(`${sel.length} productos exportados`);
             },
           },
+          ...((empresa as any)?.maneja_lotes ? [
+            { label: bulkLote ? 'Aplicando…' : 'Maneja lote', icon: Boxes, onClick: () => handleBulkManejaLote(true) },
+            { label: 'Quitar lote', icon: Boxes, onClick: () => handleBulkManejaLote(false) },
+          ] : []),
           statusFilter === 'inactivo'
             ? { label: 'Activar', icon: CheckCircle2, onClick: () => setConfirmActivateOpen(true), hidden: !canDelete }
             : { label: 'Dar de baja', icon: Trash2, variant: 'destructive', onClick: () => setConfirmDeleteOpen(true), hidden: !canDelete },

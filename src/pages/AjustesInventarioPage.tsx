@@ -1068,6 +1068,7 @@ export default function AjustesInventarioPage() {
 
       {showLoteModal && (
         <LoteDefModal
+          empresaId={empresa?.id}
           initial={loteSel}
           onClose={() => setShowLoteModal(false)}
           onConfirm={(def) => { setLoteSel(def); setShowLoteModal(false); }}
