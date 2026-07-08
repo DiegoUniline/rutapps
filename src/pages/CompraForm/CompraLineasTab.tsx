@@ -6,6 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import type { CompraLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { getNombreCompra } from '@/lib/productoNombres';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoteReceptionModal } from '@/components/lotes/LoteReceptionModal';
 
 interface Props {
   lineas: Partial<CompraLinea>[];
@@ -15,14 +17,26 @@ interface Props {
   updateLinea: (idx: number, key: string, val: any) => void;
   addLine: () => void;
   removeLine: (idx: number) => void;
-  onRecibirLinea: (lineaId: string) => void;
+  onRecibirLinea: (lineaId: string, loteId?: string | null) => void;
 }
 
 export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibir, updateLinea, addLine, removeLine, onRecibirLinea }: Props) {
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickIdx, setQuickIdx] = useState<number | null>(null);
   const [quickName, setQuickName] = useState('');
+  // Recepción por lote: línea pendiente de asignar lote.
+  const [loteFor, setLoteFor] = useState<{ lineaId: string; producto: { id: string; nombre: string }; piezas: number } | null>(null);
+
+  // Al recibir una línea: si el producto maneja lote, abrir el modal; si no, recibir directo.
+  const recibirLinea = (line: any, pendiente: number) => {
+    if (line.productos?.maneja_lote) {
+      setLoteFor({ lineaId: line.id, producto: { id: line.producto_id, nombre: line.productos?.nombre ?? 'Producto' }, piezas: pendiente });
+    } else {
+      onRecibirLinea(line.id);
+    }
+  };
   const [quickCosto, setQuickCosto] = useState(0);
 
   const triggerQuickCreate = (idx: number, name: string) => {
@@ -95,7 +109,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                       {isEditable && <button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80" title="Eliminar línea"><X className="h-3.5 w-3.5" /></button>}
                       {!isEditable && puedeRecibir && pendiente > 0 && line.id && (
                         <button
-                          onClick={() => onRecibirLinea(line.id!)}
+                          onClick={() => recibirLinea(line, pendiente)}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"
                           title={`Recibir ${pendiente} pieza(s) pendiente(s)`}
                         >
@@ -185,7 +199,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
                 </div>
               )}
               {!isEditable && puedeRecibir && pendiente > 0 && line.id && (
-                <button onClick={() => onRecibirLinea(line.id!)} className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95">
+                <button onClick={() => recibirLinea(line, pendiente)} className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95">
                   <PackageCheck className="h-3.5 w-3.5" /> Recibir {pendiente} pza(s)
                 </button>
               )}
@@ -214,6 +228,19 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           if (prod.factor_conversion) updateLinea(quickIdx, '_factor_conversion', prod.factor_conversion);
         }}
       />
+      {loteFor && empresa?.id && (
+        <LoteReceptionModal
+          empresaId={empresa.id}
+          producto={loteFor.producto}
+          piezas={loteFor.piezas}
+          onClose={() => setLoteFor(null)}
+          onConfirm={(loteId) => {
+            const lineaId = loteFor.lineaId;
+            setLoteFor(null);
+            onRecibirLinea(lineaId, loteId);
+          }}
+        />
+      )}
     </div>
   );
 }

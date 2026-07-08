@@ -11,7 +11,7 @@ import { emptyLine, calcLineTotals, type CompraLinea } from './types';
 import { confirmDialog as confirmAsync } from '@/lib/confirm';
 
 function useCompra(id?: string) {
-  return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
+  return useQuery({ queryKey: ['compra', id], queryFn: async () => { const { data, error } = await supabase.from('compras').select('*, proveedores(nombre), almacenes(nombre), compra_lineas(*, productos(id, codigo, nombre, nombre_compra, costo, maneja_lote))').eq('id', id!).single(); if (error) throw error; return data; }, enabled: !!id });
 }
 
 function usePagosCompra(compraId?: string) {
@@ -139,7 +139,7 @@ export function useCompraForm() {
   };
 
   // Recibe una línea (todo el pendiente). Si p_piezas viene null el RPC recibe exactamente lo que falta.
-  const recibirLineaPendiente = async (lineaId: string) => {
+  const recibirLineaPendiente = async (lineaId: string, loteId?: string | null) => {
     if (!form.id || !empresa?.id) return;
     if (!form.almacen_id) { toast.error('La compra no tiene almacén destino'); return; }
     const { error } = await supabase.rpc('recibir_compra_linea_parcial' as any, {
@@ -150,6 +150,7 @@ export function useCompraForm() {
       p_compra_id: form.id,
       p_folio: form.folio ?? form.id.slice(0, 8),
       p_user_id: user?.id,
+      p_lote_id: loteId ?? null,
     });
     if (error) { toast.error(error.message); return; }
     toast.success('Línea recibida');
@@ -173,8 +174,16 @@ export function useCompraForm() {
       return totalPz - recibido > 0;
     });
     if (!pendientes.length) { toast.info('No hay mercancía pendiente por recibir'); return; }
+    // Los productos por lote se reciben uno por uno (para capturar el lote).
+    // "Recibir todo" solo procesa los que NO manejan lote.
+    const conLote = pendientes.filter(l => (l as any).productos?.maneja_lote);
+    const sinLote = pendientes.filter(l => !(l as any).productos?.maneja_lote);
+    if (!sinLote.length) {
+      toast.info('Todos los pendientes manejan lote: recíbelos uno por uno con el botón "Recibir" de cada línea para asignar su lote.');
+      return;
+    }
     try {
-      for (const l of pendientes) {
+      for (const l of sinLote) {
         const { error } = await supabase.rpc('recibir_compra_linea_parcial' as any, {
           p_linea_id: l.id!,
           p_piezas: null,
@@ -183,10 +192,13 @@ export function useCompraForm() {
           p_compra_id: form.id,
           p_folio: form.folio ?? form.id.slice(0, 8),
           p_user_id: user?.id,
+          p_lote_id: null,
         });
         if (error) throw new Error(error.message);
       }
-      toast.success('Mercancía recibida');
+      toast.success(conLote.length
+        ? `Recibido lo que no maneja lote. Faltan ${conLote.length} línea(s) con lote: recíbelas una por una.`
+        : 'Mercancía recibida');
       await Promise.all([
         qc.refetchQueries({ queryKey: ['compra', form.id] }),
         qc.invalidateQueries({ queryKey: ['compras'] }),
