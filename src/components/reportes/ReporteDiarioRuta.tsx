@@ -1095,6 +1095,7 @@ export default function ReporteDiarioRuta() {
                 </tfoot>
               </table>
             </div>
+            )
           )}
 
           {/* Gastos */}
