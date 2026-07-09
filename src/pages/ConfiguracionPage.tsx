@@ -31,7 +31,7 @@ const DEFAULT_CAMPOS: Record<string, boolean> = {
   // Bloques adicionales
   promociones: true, pagos_recibidos: true, devoluciones: true,
   // Pie
-  notas_ticket: true, firmas: true, mensaje_gracias: true, pie_rutapp: true,
+  notas_ticket: true, firmas: true, mensaje_gracias: true,
 };
 
 const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
