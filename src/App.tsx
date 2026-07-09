@@ -109,6 +109,7 @@ const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
 const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
+const AjustesMermasPage = lazy(() => import("@/pages/AjustesMermasPage"));
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
 const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
