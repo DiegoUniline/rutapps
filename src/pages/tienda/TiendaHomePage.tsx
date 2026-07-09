@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
+import { fnGet, TiendaProducto, useTienda, formatMoney, expandProductosConPresentaciones } from "@/tienda/TiendaContext";
 import { Link } from "react-router-dom";
-import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
+import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone, Check } from "lucide-react";
 import TiendaShell from "./TiendaShell";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useThumb } from "@/hooks/useThumb";
-import TiendaPresentacionModal from "./TiendaPresentacionModal";
 
 const CATEGORY_TILES: { match: RegExp; label: string; img: string; tint: string }[] = [
   { match: /botana|snack|fritura|papas/i, label: "Botanas y Snacks", img: "/tienda/cat-botanas.webp", tint: "#ff7a00" },
