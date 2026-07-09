@@ -63,7 +63,11 @@ export interface TicketData {
   folio: string;
   fecha: string;
   clienteNombre: string;
+  clienteRfc?: string | null;
+  clienteTelefono?: string | null;
+  clienteDireccion?: string | null;
   vendedorNombre?: string;
+  vendedorTelefono?: string | null;
   lineas: TicketLinea[];
   subtotal: number;
   descuento?: number;
