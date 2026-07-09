@@ -5372,6 +5372,7 @@ export type Database = {
           es_combo: boolean | null
           es_granel: boolean
           factor_conversion: number | null
+          formula: string | null
           id: string
           ieps_pct: number
           ieps_tipo: string
@@ -5429,6 +5430,7 @@ export type Database = {
           es_combo?: boolean | null
           es_granel?: boolean
           factor_conversion?: number | null
+          formula?: string | null
           id?: string
           ieps_pct?: number
           ieps_tipo?: string
@@ -5486,6 +5488,7 @@ export type Database = {
           es_combo?: boolean | null
           es_granel?: boolean
           factor_conversion?: number | null
+          formula?: string | null
           id?: string
           ieps_pct?: number
           ieps_tipo?: string

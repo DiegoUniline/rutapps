@@ -34,6 +34,11 @@ const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Últ
 export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
   const { empresa } = useAuth();
+  const EMPRESAS_CON_FORMULA = new Set([
+    'ceddb9bd-9e49-43d0-9a4b-a83a3f1a55ec', // DIFASUR
+    '6d849e12-6437-4b24-917d-a89cc9b2fa88', // Mi Empresa Demo
+  ]);
+  const mostrarFormula = empresa?.id ? EMPRESAS_CON_FORMULA.has(empresa.id) : false;
   const isNew = !form.id;
   const selectedListaId = tarifasDisp?.find(t => t.tarifa_id === (form as any).tarifa_id)?.id ?? '';
   return (
@@ -44,6 +49,9 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Nombre en Compras" value={(form as any).nombre_compra ?? ''} onChange={v => set('nombre_compra' as any, v || null)} placeholder={form.nombre || 'Usa el nombre principal'} />
         <OdooField label="Nombre en Ventas" value={(form as any).nombre_venta ?? ''} onChange={v => set('nombre_venta' as any, v || null)} placeholder={form.nombre || 'Usa el nombre principal'} />
         <OdooField label="Nombre en Ticket" value={(form as any).nombre_ticket ?? ''} onChange={v => set('nombre_ticket' as any, v || null)} placeholder={form.nombre || 'Corto para impresora térmica'} />
+        {mostrarFormula && (
+          <OdooField label="Fórmula" value={(form as any).formula ?? ''} onChange={v => set('formula' as any, v || null)} placeholder="Componentes / fórmula (buscable)" />
+        )}
         <OdooField label="Marca" value={form.marca_id} type="select" options={marcas?.map(m => ({ value: m.id, label: m.nombre })) ?? []} onChange={v => set('marca_id', v || null)} format={() => findName(marcas, form.marca_id ?? undefined)} onCreateNew={createMarca} />
         <OdooField label="Categoría" value={form.clasificacion_id} type="select" options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []} onChange={v => set('clasificacion_id', v || null)} format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)} onCreateNew={createClasificacion} />
         <OdooField label="Unid. venta" value={form.unidad_venta_id} type="select" options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []} onChange={v => set('unidad_venta_id', v || null)} format={() => findUnit(unidades, form.unidad_venta_id ?? undefined)} onCreateNew={createUnidad} />
