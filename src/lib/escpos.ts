@@ -213,6 +213,25 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const showRfc = tc.rfc !== false;
   const showDir = tc.direccion !== false;
   const showTel = tc.telefono !== false;
+  const showEmail = tc.email !== false;
+  // New toggles (default true)
+  const showFolio = tc.folio !== false;
+  const showFecha = tc.fecha !== false;
+  const showCondicionPago = tc.condicion_pago !== false;
+  const showClienteNombre = tc.cliente_nombre !== false;
+  const showClienteRfc = tc.cliente_rfc !== false;
+  const showClienteTelefono = tc.cliente_telefono !== false;
+  const showClienteDireccion = tc.cliente_direccion !== false;
+  const showVendedorNombre = tc.vendedor_nombre !== false;
+  const showVendedorTelefono = tc.vendedor_telefono !== false;
+  const showDescuentos = tc.descuentos !== false;
+  const showSaldoCuenta = tc.saldo_cuenta !== false;
+  const showRecibidoCambio = tc.recibido_cambio !== false;
+  const showPromociones = tc.promociones !== false;
+  const showPagosRecibidos = tc.pagos_recibidos !== false;
+  const showDevoluciones = tc.devoluciones !== false;
+  const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showPieRutapp = tc.pie_rutapp !== false;
 
   // ── LOGO (raster image) ──
   if (showLogo && data.empresa.logo_url) {
@@ -240,18 +259,26 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const dir2Parts = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
   if (showDir && dir2Parts) ln(clean(dir2Parts).slice(0, W));
   if (showTel && data.empresa.telefono) ln(clean(`Tel: ${data.empresa.telefono}`).slice(0, W));
-  if (showDir && data.empresa.email) ln(clean(data.empresa.email).slice(0, W));
+  if (showEmail && data.empresa.email) ln(clean(data.empresa.email).slice(0, W));
   add(LF);
 
   // ── INFO (left) ──
   add(ALIGN_LEFT);
   ln(divider(W));
-  ln(`Folio: ${clean(data.folio).slice(0, W - 7)}`);
-  ln(`Fecha: ${clean(data.fecha).slice(0, W - 7)}`);
-  ln(`Cliente: ${clean(data.clienteNombre).slice(0, W - 9)}`);
-  if (data.vendedorNombre) ln(`Vendedor: ${clean(data.vendedorNombre).slice(0, W - 10)}`);
-  const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
-  ln(`Pago: ${pagoLabel}`);
+  if (showFolio) ln(`Folio: ${clean(data.folio).slice(0, W - 7)}`);
+  if (showFecha) ln(`Fecha: ${clean(data.fecha).slice(0, W - 7)}`);
+  if (showClienteNombre) ln(`Cliente: ${clean(data.clienteNombre).slice(0, W - 9)}`);
+  if (showClienteRfc && data.clienteRfc) ln(`RFC: ${clean(data.clienteRfc).slice(0, W - 5)}`);
+  if (showClienteTelefono && data.clienteTelefono) ln(`Tel: ${clean(data.clienteTelefono).slice(0, W - 5)}`);
+  if (showClienteDireccion && data.clienteDireccion) {
+    wrap(`Dir: ${data.clienteDireccion}`, W).forEach(l => ln(l.trim()));
+  }
+  if (showVendedorNombre && data.vendedorNombre) ln(`Vendedor: ${clean(data.vendedorNombre).slice(0, W - 10)}`);
+  if (showVendedorTelefono && data.vendedorTelefono) ln(`Tel. vend: ${clean(data.vendedorTelefono).slice(0, W - 11)}`);
+  if (showCondicionPago) {
+    const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
+    ln(`Pago: ${pagoLabel}${data.metodoPago ? ` (${clean(data.metodoPago)})` : ''}`);
+  }
   ln(divider(W));
 
   // ── PRODUCTOS ──
@@ -268,9 +295,11 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       ln(clean(det).slice(0, W));
     }
     // Per-product promotions
-    const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
-    for (const lp of linePromos) {
-      ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
+    if (showPromociones) {
+      const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+      for (const lp of linePromos) {
+        ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
+      }
     }
   }
   ln(divider(W));
@@ -278,7 +307,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   // ── TOTALES ──
   const summary = getTicketTotalsSummary(data);
   ln(row('Sub total', fmt(data.subtotal), W));
-  ln(row('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0), W));
+  if (showDescuentos) ln(row('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0), W));
   ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
   ln(divider(W));
   add(BOLD_ON);
@@ -286,13 +315,13 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   add(BOLD_OFF);
   ln(row('Saldo', fmt(summary.saldo), W));
 
-  if (data.montoRecibido && data.montoRecibido > 0) {
+  if (showRecibidoCambio && data.montoRecibido && data.montoRecibido > 0) {
     ln(row('Recibido', fmt(data.montoRecibido), W));
     if ((data.cambio ?? 0) > 0) ln(row('Cambio', fmt(data.cambio!), W));
   }
 
   // ── SALDO ──
-  {
+  if (showSaldoCuenta) {
     ln(divider(W));
     add(BOLD_ON);
     ln('EDO. CUENTA');
@@ -307,7 +336,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
 
   // ── PAGOS RECIBIDOS ──
-  if (data.pagos && data.pagos.length > 0) {
+  if (showPagosRecibidos && data.pagos && data.pagos.length > 0) {
     ln(divider(W));
     add(BOLD_ON);
     ln('PAGOS RECIBIDOS');
@@ -320,7 +349,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
 
   // ── DEVOLUCIONES ──
-  if (data.devoluciones && data.devoluciones.length > 0) {
+  if (showDevoluciones && data.devoluciones && data.devoluciones.length > 0) {
     ln(divider(W));
     add(BOLD_ON);
     ln('DEVOLUCIONES');
@@ -336,12 +365,12 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
 
   add(LF);
   add(ALIGN_CENTER);
-  ln('Gracias por su compra');
+  if (showMensajeGracias) ln('Gracias por su compra');
   if (tc.notas_ticket !== false && data.empresa.notas_ticket) {
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
-  ln('rutapp.mx');
+  if (showPieRutapp) ln('rutapp.mx');
   add(LF); add(LF); add(LF);
   add(CUT);
 

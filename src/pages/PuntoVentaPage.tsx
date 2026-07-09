@@ -263,7 +263,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
+        .select('id, codigo, nombre, telefono, rfc, direccion, colonia, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
@@ -799,7 +799,11 @@ export default function PuntoVentaPage() {
         empresa,
         venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
         clienteNombre: lastVentaData.clienteNombre,
+        clienteRfc: lastVentaData.clienteRfc,
+        clienteTelefono: lastVentaData.clienteTelefono,
+        clienteDireccion: lastVentaData.clienteDireccion,
         vendedorNombre: profile?.nombre ?? '',
+        vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
         lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
         saldoAnterior: lastVentaData.saldoAnterior,
@@ -1023,10 +1027,15 @@ export default function PuntoVentaPage() {
 
       // Save ticket data for display
       const metodosUsados = (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo' }]).map(s => s.metodo).join(' + ');
+      const clienteTicket = clienteId ? clientes?.find(c => c.id === clienteId) : null;
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
         fecha: today,
         clienteNombre,
+        clienteRfc: (clienteTicket as any)?.rfc ?? null,
+        clienteTelefono: (clienteTicket as any)?.telefono ?? null,
+        clienteDireccion: [(clienteTicket as any)?.direccion, (clienteTicket as any)?.colonia].filter(Boolean).join(', ') || null,
+        vendedorTelefono: profile?.telefono ?? null,
         lineas: cart.map(item => {
           const chargedLineTotal = getChargedLineTotal(item);
           const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
@@ -2028,7 +2037,11 @@ export default function PuntoVentaPage() {
                       metodo_pago: lastVentaData.metodoPago,
                     },
                     clienteNombre: lastVentaData.clienteNombre,
+                    clienteRfc: lastVentaData.clienteRfc,
+                    clienteTelefono: lastVentaData.clienteTelefono,
+                    clienteDireccion: lastVentaData.clienteDireccion,
                     vendedorNombre: profile?.nombre ?? '',
+                    vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
                     lineas: lastVentaData.lineas.map((l: any) => ({
                       nombre: l.nombre,
                       cantidad: l.cantidad,
@@ -2064,7 +2077,11 @@ export default function PuntoVentaPage() {
                     empresa,
                     venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
                     clienteNombre: lastVentaData.clienteNombre,
+                    clienteRfc: lastVentaData.clienteRfc,
+                    clienteTelefono: lastVentaData.clienteTelefono,
+                    clienteDireccion: lastVentaData.clienteDireccion,
                     vendedorNombre: profile?.nombre ?? '',
+                    vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
                     lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id, precio_sugerido_publico: l.precio_sugerido_publico })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,

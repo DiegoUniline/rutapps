@@ -63,7 +63,11 @@ export interface TicketData {
   folio: string;
   fecha: string;
   clienteNombre: string;
+  clienteRfc?: string | null;
+  clienteTelefono?: string | null;
+  clienteDireccion?: string | null;
   vendedorNombre?: string;
+  vendedorTelefono?: string | null;
   lineas: TicketLinea[];
   subtotal: number;
   descuento?: number;
@@ -156,7 +160,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos, devoluciones } = data;
+  const { empresa, folio, fecha, clienteNombre, clienteRfc, clienteTelefono, clienteDireccion, vendedorNombre, vendedorTelefono, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos, devoluciones } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -175,7 +179,26 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const showRfc = tc.rfc !== false;
   const showDir = tc.direccion !== false;
   const showTel = tc.telefono !== false;
+  const showEmail = tc.email !== false;
   const showNotas = tc.notas_ticket !== false;
+  // New toggles (default true to preserve current behavior)
+  const showFolio = tc.folio !== false;
+  const showFecha = tc.fecha !== false;
+  const showCondicionPago = tc.condicion_pago !== false;
+  const showClienteNombre = tc.cliente_nombre !== false;
+  const showClienteRfc = tc.cliente_rfc !== false;
+  const showClienteTelefono = tc.cliente_telefono !== false;
+  const showClienteDireccion = tc.cliente_direccion !== false;
+  const showVendedorNombre = tc.vendedor_nombre !== false;
+  const showVendedorTelefono = tc.vendedor_telefono !== false;
+  const showDescuentos = tc.descuentos !== false;
+  const showSaldoCuenta = tc.saldo_cuenta !== false;
+  const showRecibidoCambio = tc.recibido_cambio !== false;
+  const showPromociones = tc.promociones !== false;
+  const showPagosRecibidos = tc.pagos_recibidos !== false;
+  const showDevoluciones = tc.devoluciones !== false;
+  const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showPieRutapp = tc.pie_rutapp !== false;
 
   const hLines: string[] = [];
   if (showLogo && empresa.logo_url) {
@@ -189,7 +212,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
   if (showDir && dir2) hLines.push(`<div style="font-size:13px">${dir2}</div>`);
   if (showTel && empresa.telefono) hLines.push(`<div style="font-size:13px">Tel: ${empresa.telefono}</div>`);
-  if (showDir && empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
+  if (showEmail && empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
   const headerHtml = hLines.join('');
 
   // ── Body (monospace <pre> grid) ──
@@ -197,12 +220,20 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const add = (s: string) => rows.push(s);
 
   add(div);
-  add(`Folio: ${folio}`);
-  add(`Fecha: ${fecha}`);
-  add(`Cliente: ${clienteNombre}`.substring(0, COLS));
-  if (vendedorNombre) add(`Vendedor: ${vendedorNombre}`.substring(0, COLS));
-  const pagoLabel = condicionPago === 'credito' ? 'Credito' : condicionPago === 'contado' ? 'Contado' : 'P/definir';
-  add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
+  if (showFolio) add(`Folio: ${folio}`);
+  if (showFecha) add(`Fecha: ${fecha}`);
+  if (showClienteNombre) add(`Cliente: ${clienteNombre}`.substring(0, COLS));
+  if (showClienteRfc && clienteRfc) add(`RFC: ${clienteRfc}`.substring(0, COLS));
+  if (showClienteTelefono && clienteTelefono) add(`Tel: ${clienteTelefono}`.substring(0, COLS));
+  if (showClienteDireccion && clienteDireccion) {
+    for (const l of wrapText(`Dir: ${clienteDireccion}`, COLS)) add(l);
+  }
+  if (showVendedorNombre && vendedorNombre) add(`Vendedor: ${vendedorNombre}`.substring(0, COLS));
+  if (showVendedorTelefono && vendedorTelefono) add(`Tel. vend: ${vendedorTelefono}`.substring(0, COLS));
+  if (showCondicionPago) {
+    const pagoLabel = condicionPago === 'credito' ? 'Credito' : condicionPago === 'contado' ? 'Contado' : 'P/definir';
+    add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
+  }
   add(div);
 
   add(pad('Cant Producto', 'Importe'));
@@ -218,10 +249,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
     add(detParts.join(' ').substring(0, COLS));
     // Per-product promotions
-    const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
-    for (const lp of linePromos) {
-      const desc = fmt(lp.descuento);
-      add(pad(`  *${lp.descripcion}`, `-${desc}`));
+    if (showPromociones) {
+      const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+      for (const lp of linePromos) {
+        const desc = fmt(lp.descuento);
+        add(pad(`  *${lp.descripcion}`, `-${desc}`));
+      }
     }
   }
   add(div);
@@ -229,18 +262,18 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const summary = getTicketTotalsSummary(data);
   add('');
   add(pad('Sub total', fmt(subtotal)));
-  add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
+  if (showDescuentos) add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
   add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
   add(div);
   add(pad('Total pagado', fmt(summary.totalPagado)));
   add(pad('Saldo', fmt(summary.saldo)));
 
-  if (montoRecibido != null && montoRecibido > 0) {
+  if (showRecibidoCambio && montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
     if ((cambio ?? 0) > 0) add(pad('Cambio', fmt(cambio!)));
   }
 
-  {
+  if (showSaldoCuenta) {
     add(div);
     add('EDO. CUENTA');
     add(pad('Saldo ant', fmt(saldoAnterior ?? 0)));
@@ -251,7 +284,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
 
   // ── Pagos recibidos ──
-  if (pagos && pagos.length > 0) {
+  if (showPagosRecibidos && pagos && pagos.length > 0) {
     add(div);
     add('PAGOS RECIBIDOS');
     for (const p of pagos) {
@@ -262,7 +295,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
 
   // ── Devoluciones ──
-  if (devoluciones && devoluciones.length > 0) {
+  if (showDevoluciones && devoluciones && devoluciones.length > 0) {
     add(div);
     add('DEVOLUCIONES');
     for (const d of devoluciones) {
@@ -277,9 +310,9 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
 
 
   add('');
-  add(centerText('Gracias por su compra'));
+  if (showMensajeGracias) add(centerText('Gracias por su compra'));
   if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
-  add(centerText('rutapp.mx'));
+  if (showPieRutapp) add(centerText('rutapp.mx'));
 
   const bodyContent = rows.join('\n');
 

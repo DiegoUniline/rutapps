@@ -397,6 +397,11 @@ export default function RutaEntregaDetalle() {
         folio: venta.folio ?? 'Sin folio',
         fecha: fmtDate(venta.fecha),
         clienteNombre,
+        clienteRfc: (cliente as any)?.rfc ?? null,
+        clienteTelefono: (cliente as any)?.telefono ?? null,
+        clienteDireccion: [(cliente as any)?.direccion, (cliente as any)?.colonia].filter(Boolean).join(', ') || null,
+        vendedorNombre,
+        vendedorTelefono: ((entrega as any).vendedores?.telefono) ?? null,
         lineas: lineasTicket,
         subtotal: entregaTotals.subtotal, iva: entregaTotals.iva,
         ieps: entregaTotals.ieps, total: entregaTotal,
@@ -422,6 +427,11 @@ export default function RutaEntregaDetalle() {
       folio: entrega.folio ?? 'Sin folio',
       fecha: fmtDate(entrega.fecha),
       clienteNombre,
+      clienteRfc: (cliente as any)?.rfc ?? null,
+      clienteTelefono: (cliente as any)?.telefono ?? null,
+      clienteDireccion: [(cliente as any)?.direccion, (cliente as any)?.colonia].filter(Boolean).join(', ') || null,
+      vendedorNombre,
+      vendedorTelefono: ((entrega as any).vendedores?.telefono) ?? null,
       lineas: lineasSurtidas.map((l: any) => {
         const precio = l.productos?.precio_principal ?? 0;
         const cant = Number(l.cantidad_entregada) || 0;
