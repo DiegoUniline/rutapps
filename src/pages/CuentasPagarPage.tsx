@@ -14,6 +14,7 @@ import { fmtDate, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { useListPreferences } from '@/hooks/useListPreferences';
+import { CxPTabs } from '@/components/CxPTabs';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
