@@ -44,6 +44,7 @@ function useVendedores() {
         .from('profiles')
         .select('id,nombre')
         .eq('empresa_id', empresa!.id)
+        .eq('estado', 'activo')
         .order('nombre');
       if (error) throw error;
       return data ?? [];
