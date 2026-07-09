@@ -2037,7 +2037,11 @@ export default function PuntoVentaPage() {
                       metodo_pago: lastVentaData.metodoPago,
                     },
                     clienteNombre: lastVentaData.clienteNombre,
+                    clienteRfc: lastVentaData.clienteRfc,
+                    clienteTelefono: lastVentaData.clienteTelefono,
+                    clienteDireccion: lastVentaData.clienteDireccion,
                     vendedorNombre: profile?.nombre ?? '',
+                    vendedorTelefono: lastVentaData.vendedorTelefono ?? profile?.telefono ?? null,
                     lineas: lastVentaData.lineas.map((l: any) => ({
                       nombre: l.nombre,
                       cantidad: l.cantidad,
