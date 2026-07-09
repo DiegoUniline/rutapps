@@ -1023,10 +1023,15 @@ export default function PuntoVentaPage() {
 
       // Save ticket data for display
       const metodosUsados = (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo' }]).map(s => s.metodo).join(' + ');
+      const clienteTicket = clienteId ? clientes?.find(c => c.id === clienteId) : null;
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
         fecha: today,
         clienteNombre,
+        clienteRfc: (clienteTicket as any)?.rfc ?? null,
+        clienteTelefono: (clienteTicket as any)?.telefono ?? null,
+        clienteDireccion: [(clienteTicket as any)?.direccion, (clienteTicket as any)?.colonia].filter(Boolean).join(', ') || null,
+        vendedorTelefono: profile?.telefono ?? null,
         lineas: cart.map(item => {
           const chargedLineTotal = getChargedLineTotal(item);
           const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
