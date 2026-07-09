@@ -497,6 +497,7 @@ export default function SaldosProveedorPage() {
      ═══════════════════════════════════════════ */
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <CxPTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Truck className="h-5 w-5" /> Saldos por proveedor
       </h1>
