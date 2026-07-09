@@ -263,7 +263,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, rfc, direccion, colonia, ciudad, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
+        .select('id, codigo, nombre, telefono, rfc, direccion, colonia, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
