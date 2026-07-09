@@ -18,6 +18,7 @@ export interface Producto {
   nombre_compra?: string | null;
   nombre_venta?: string | null;
   nombre_ticket?: string | null;
+  formula?: string | null;
   clave_alterna?: string;
   marca_id?: string;
   
