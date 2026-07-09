@@ -584,10 +584,12 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
-    // Abrir selector solo si el producto vende por presentaciones (y tiene activas) o es a granel
+    // Abrir selector si el producto es a granel o tiene presentaciones activas
+    // (caja/paquete). Se ignora el flag legado `usa_presentaciones` porque la
+    // app móvil y la tienda en línea ya sólo miran las filas activas de
+    // `producto_presentaciones` — así el POS de escritorio queda alineado.
     const hasPres = (presByProducto.get(p.id) ?? []).some((x: any) => x.activo);
-    const usaPres = !!p?.usa_presentaciones && hasPres;
-    if (p?.es_granel || usaPres) {
+    if (p?.es_granel || hasPres) {
       setGranelFor(p);
       return;
     }
