@@ -26,7 +26,10 @@ function HomeInner() {
     staleTime: 60_000,
   });
 
-  const productos: TiendaProducto[] = data?.productos ?? [];
+  const productos: TiendaProducto[] = useMemo(
+    () => expandProductosConPresentaciones(data?.productos ?? []),
+    [data?.productos],
+  );
   // categorias puede venir como string[] (versión vieja del backend) o como
   // { nombre, imagen_url }[] (nueva). Normalizamos a objetos para usar la imagen.
   const categorias: { nombre: string; imagen_url: string | null }[] = (data?.categorias ?? []).map((c: any) =>
