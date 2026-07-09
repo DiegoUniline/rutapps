@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { OdooPagination } from '@/components/OdooPagination';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useTablePagination } from '@/hooks/useTablePagination';
+import { CxPTabs } from '@/components/CxPTabs';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
