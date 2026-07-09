@@ -17,6 +17,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useListPreferences } from '@/hooks/useListPreferences';
+import { CxPTabs } from '@/components/CxPTabs';
 
 /* ── types ── */
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
