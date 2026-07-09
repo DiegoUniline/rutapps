@@ -139,7 +139,7 @@ const navItems: NavItem[] = [
       { label: 'Kardex', path: '/almacen/kardex' },
       { label: 'Inteligencia', path: '/almacen/inteligencia' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
-      { label: 'Control · Ajustes · Conteos · Mermas', path: '/almacen/ajustes' },
+      { label: 'Ajustes y Mermas', path: '/almacen/ajustes-mermas' },
       { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
