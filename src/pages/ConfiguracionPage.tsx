@@ -593,16 +593,23 @@ export default function ConfiguracionPage() {
                   <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
                 </h3>
                 <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(CAMPO_LABELS).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-card cursor-pointer transition-colors">
-                      <Switch
-                        checked={campos[key] ?? true}
-                        onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
-                        className="scale-75"
-                      />
-                      <span className="text-[12px] text-foreground">{label}</span>
-                    </label>
+                <div className="space-y-4">
+                  {CAMPO_SECCIONES.map(sec => (
+                    <div key={sec.titulo}>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{sec.titulo}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {sec.claves.map(key => (
+                          <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-card cursor-pointer transition-colors">
+                            <Switch
+                              checked={campos[key] ?? true}
+                              onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
+                              className="scale-75"
+                            />
+                            <span className="text-[12px] text-foreground">{CAMPO_LABELS[key] ?? key}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
