@@ -17,15 +17,47 @@ import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
 const DEFAULT_CAMPOS: Record<string, boolean> = {
+  // Encabezado empresa
   logo: true, nombre: true, razon_social: true, rfc: true,
-  direccion: true, telefono: true, notas_ticket: true, firmas: true, impuestos: true,
+  direccion: true, telefono: true, email: true,
+  // Documento
+  folio: true, fecha: true, condicion_pago: true,
+  // Cliente
+  cliente_nombre: true, cliente_rfc: true, cliente_telefono: true, cliente_direccion: true,
+  // Vendedor
+  vendedor_nombre: true, vendedor_telefono: true,
+  // Totales y estado
+  impuestos: true, descuentos: true, saldo_cuenta: true, recibido_cambio: true,
+  // Bloques adicionales
+  promociones: true, pagos_recibidos: true, devoluciones: true,
+  // Pie
+  notas_ticket: true, firmas: true, mensaje_gracias: true, pie_rutapp: true,
 };
+
+const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
+  { titulo: 'Encabezado de la empresa', claves: ['logo', 'nombre', 'razon_social', 'rfc', 'direccion', 'telefono', 'email'] },
+  { titulo: 'Datos del documento', claves: ['folio', 'fecha', 'condicion_pago'] },
+  { titulo: 'Datos del cliente', claves: ['cliente_nombre', 'cliente_rfc', 'cliente_telefono', 'cliente_direccion'] },
+  { titulo: 'Datos del vendedor', claves: ['vendedor_nombre', 'vendedor_telefono'] },
+  { titulo: 'Totales y estado de cuenta', claves: ['impuestos', 'descuentos', 'saldo_cuenta', 'recibido_cambio'] },
+  { titulo: 'Bloques adicionales', claves: ['promociones', 'pagos_recibidos', 'devoluciones'] },
+  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias', 'pie_rutapp'] },
+];
 
 const CAMPO_LABELS: Record<string, string> = {
   logo: 'Logo', nombre: 'Nombre comercial', razon_social: 'Razón social',
-  rfc: 'RFC', direccion: 'Dirección', telefono: 'Teléfono',
+  rfc: 'RFC de la empresa', direccion: 'Dirección', telefono: 'Teléfono', email: 'Correo electrónico',
+  folio: 'Folio', fecha: 'Fecha', condicion_pago: 'Condición y método de pago',
+  cliente_nombre: 'Nombre del cliente', cliente_rfc: 'RFC del cliente',
+  cliente_telefono: 'Teléfono del cliente', cliente_direccion: 'Dirección del cliente',
+  vendedor_nombre: 'Nombre del vendedor', vendedor_telefono: 'Teléfono del vendedor',
+  impuestos: 'Desglose de impuestos (IVA/IEPS)', descuentos: 'Descuentos totales',
+  saldo_cuenta: 'Estado de cuenta (saldo anterior/nuevo)', recibido_cambio: 'Recibido y cambio',
+  promociones: 'Promociones aplicadas', pagos_recibidos: 'Historial de pagos recibidos',
+  devoluciones: 'Devoluciones',
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
-  impuestos: 'Desglose de impuestos (IVA/IEPS)',
+  mensaje_gracias: 'Mensaje "Gracias por su compra"', pie_rutapp: 'Pie "rutapp.mx"',
+};
 };
 
 function useEmpresaConfig() {
