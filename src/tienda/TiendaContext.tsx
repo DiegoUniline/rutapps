@@ -59,6 +59,47 @@ export interface TiendaProducto {
   tiene_ieps: boolean;
   ieps_pct: number;
   presentaciones?: TiendaPresentacion[];
+  /** Presentación embebida en una "tarjeta virtual" (para expandir en la tienda). */
+  _pres?: { id: string; nombre: string; factor_base: number } | null;
+}
+
+/**
+ * Expande cada producto con presentaciones en varias "tarjetas" independientes:
+ * una para la unidad base y una por cada presentación activa.
+ * Usado sólo en la tienda en línea. En móvil/POS se sigue usando el modal.
+ */
+export function expandProductosConPresentaciones(productos: TiendaProducto[]): TiendaProducto[] {
+  const out: TiendaProducto[] = [];
+  for (const p of productos) {
+    const pres = (p.presentaciones ?? []).filter((x) => Number(x.factor_base) > 0);
+    if (pres.length === 0) { out.push(p); continue; }
+    const unidadBase = p.unidad_venta ?? "pz";
+    // Tarjeta unidad base
+    out.push({
+      ...p,
+      presentaciones: [],
+      _pres: null,
+      nombre: `${p.nombre} — 1 ${unidadBase}`,
+    });
+    // Una tarjeta por presentación
+    for (const pr of pres) {
+      const factor = Number(pr.factor_base);
+      const precio = pr.precio_especial ?? p.precio * factor;
+      const precio_base = p.precio_base ? p.precio_base * factor : precio;
+      out.push({
+        ...p,
+        id: `${p.id}::${pr.id}`,
+        nombre: `${p.nombre} — ${pr.nombre}`,
+        precio,
+        precio_base,
+        stock: Math.floor((p.stock || 0) / factor),
+        unidad_venta: pr.nombre,
+        presentaciones: [],
+        _pres: { id: pr.id, nombre: pr.nombre, factor_base: factor },
+      });
+    }
+  }
+  return out;
 }
 
 export interface CartItem {

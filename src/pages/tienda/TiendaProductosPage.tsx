@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fnGet, TiendaProducto, useTienda } from "@/tienda/TiendaContext";
+import { fnGet, TiendaProducto, useTienda, expandProductosConPresentaciones } from "@/tienda/TiendaContext";
 import { ProductCard } from "./TiendaHomePage";
 import TiendaShell from "./TiendaShell";
 
@@ -19,7 +19,10 @@ function Inner() {
     staleTime: 60_000,
   });
 
-  const productos: TiendaProducto[] = data?.productos ?? [];
+  const productos: TiendaProducto[] = useMemo(
+    () => expandProductosConPresentaciones(data?.productos ?? []),
+    [data?.productos],
+  );
   // Soporta categorias como string[] (viejo) o { nombre, imagen_url }[] (nuevo).
   const categorias: string[] = (data?.categorias ?? []).map((c: any) => typeof c === 'string' ? c : c.nombre);
   const marcas: string[] = data?.marcas ?? [];

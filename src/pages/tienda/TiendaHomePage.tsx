@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { fnGet, TiendaProducto, useTienda, formatMoney } from "@/tienda/TiendaContext";
+import { fnGet, TiendaProducto, useTienda, formatMoney, expandProductosConPresentaciones } from "@/tienda/TiendaContext";
 import { Link } from "react-router-dom";
-import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone } from "lucide-react";
+import { ShoppingCart, ArrowRight, Truck, ShieldCheck, Headphones, Tag, Sparkles, Flame, Star, Award, Clock, CreditCard, Gift, Package, Phone, Check } from "lucide-react";
 import TiendaShell from "./TiendaShell";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useThumb } from "@/hooks/useThumb";
-import TiendaPresentacionModal from "./TiendaPresentacionModal";
 
 const CATEGORY_TILES: { match: RegExp; label: string; img: string; tint: string }[] = [
   { match: /botana|snack|fritura|papas/i, label: "Botanas y Snacks", img: "/tienda/cat-botanas.webp", tint: "#ff7a00" },
@@ -27,7 +26,10 @@ function HomeInner() {
     staleTime: 60_000,
   });
 
-  const productos: TiendaProducto[] = data?.productos ?? [];
+  const productos: TiendaProducto[] = useMemo(
+    () => expandProductosConPresentaciones(data?.productos ?? []),
+    [data?.productos],
+  );
   // categorias puede venir como string[] (versión vieja del backend) o como
   // { nombre, imagen_url }[] (nueva). Normalizamos a objetos para usar la imagen.
   const categorias: { nombre: string; imagen_url: string | null }[] = (data?.categorias ?? []).map((c: any) =>
@@ -187,15 +189,39 @@ function HomeInner() {
 export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moneda?: string; highlight?: "oferta" | "nuevo" }) {
   const thumb = useThumb();
   const t = useTienda();
-  const [presOpen, setPresOpen] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [flyBurst, setFlyBurst] = useState(0);
+  const timerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
+
   const enStock = p.stock > 0 || p.vender_sin_stock;
   const cur = moneda ?? t.empresa?.moneda ?? "MXN";
-  const tienePresentaciones = (p.presentaciones?.length ?? 0) > 0;
   const tieneDescuento = p.precio_base && p.precio < p.precio_base;
   const pct = tieneDescuento ? Math.round(((p.precio_base - p.precio) / p.precio_base) * 100) : 0;
-  const detalleHref = `/tienda/${t.slug}/producto/${p.id}`;
+  // Si es una tarjeta "expandida" de presentación, el id lleva "::presId".
+  const realId = p.id.includes("::") ? p.id.split("::")[0] : p.id;
+  const detalleHref = `/tienda/${t.slug}/producto/${realId}`;
+
+  const handleAdd = () => {
+    if (!enStock) return;
+    t.addToCart({
+      producto_id: realId,
+      nombre: p.nombre,
+      imagen_url: p.imagen_url,
+      precio_unitario: p.precio,
+      cantidad: 1,
+      unidad: p.unidad_venta,
+      presentacion_id: p._pres ? p._pres.id : null,
+      factor_base: p._pres ? p._pres.factor_base : 1,
+    });
+    setAdded(true);
+    setFlyBurst((n) => n + 1);
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setAdded(false), 1200);
+  };
+
   return (
-    <div className="tienda-card">
+    <div className={`tienda-card ${added ? "tx-card-added" : ""}`}>
       {(highlight || tieneDescuento) && (
         <div className={`tx-badge ${highlight === "nuevo" ? "tx-badge-new" : "tx-badge-sale"}`}>
           {highlight === "nuevo" ? "Nuevo" : tieneDescuento ? `-${pct}%` : "Oferta"}
@@ -207,6 +233,7 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
         style={p.imagen_url ? { backgroundImage: `url(${thumb(p.imagen_url, 400)})` } : {}}
       >
         {!p.imagen_url && <div className="tienda-card-img-placeholder">📦</div>}
+        {flyBurst > 0 && <span key={flyBurst} className="tx-fly-burst" aria-hidden>+1</span>}
       </Link>
       <div className="tienda-card-body">
         {p.marca && <div className="tienda-card-brand">{p.marca}</div>}
@@ -223,28 +250,18 @@ export function ProductCard({ p, moneda, highlight }: { p: TiendaProducto; moned
         </div>
         <div className="tienda-card-actions">
           <button
-            className="tienda-btn tienda-btn-primary"
+            className={`tienda-btn ${added ? "tienda-btn-added" : "tienda-btn-primary"}`}
             disabled={!enStock}
-            onClick={() => {
-              if (tienePresentaciones) { setPresOpen(true); return; }
-              t.addToCart({
-                producto_id: p.id,
-                nombre: p.nombre,
-                imagen_url: p.imagen_url,
-                precio_unitario: p.precio,
-                cantidad: 1,
-                unidad: p.unidad_venta,
-              });
-            }}
+            onClick={handleAdd}
           >
-            <ShoppingCart size={14} /> Agregar
+            {added ? (<><Check size={14} /> Agregado</>) : (<><ShoppingCart size={14} /> Agregar</>)}
           </button>
         </div>
       </div>
-      {presOpen && <TiendaPresentacionModal producto={p} moneda={cur} onClose={() => setPresOpen(false)} />}
     </div>
   );
 }
+
 
 export default function TiendaHomePage() {
   return <TiendaShell><HomeInner /></TiendaShell>;
