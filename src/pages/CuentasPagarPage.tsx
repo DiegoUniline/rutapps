@@ -125,6 +125,7 @@ export default function CuentasPagarPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
+      <CxPTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <TrendingDown className="h-5 w-5" /> Cuentas por pagar
         <HelpButton title={HELP.cuentasPagar.title} sections={HELP.cuentasPagar.sections} />
