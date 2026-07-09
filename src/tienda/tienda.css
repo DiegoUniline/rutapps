@@ -790,3 +790,42 @@
 .tienda-root[data-plantilla="ahorrera"] .tienda-card-price { font-size: 28px; font-weight: 900; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-btn-primary { background: #FF3B30; color: #fff; font-weight: 800; }
 .tienda-root[data-plantilla="ahorrera"] .tienda-card-stock { color: #7ee0a3; }
+
+/* ==== Feedback al agregar al carrito ==== */
+@keyframes tx-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.05); box-shadow: 0 12px 28px rgba(26,135,84,.25); }
+  100% { transform: scale(1); }
+}
+@keyframes tx-fly {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(.6); }
+  20% { opacity: 1; transform: translate(-50%, -12px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -70px) scale(1.1); }
+}
+@keyframes tx-check-in {
+  0% { transform: scale(.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.tx-card-added { animation: tx-pop .5s ease-out; }
+.tx-card-added { border-color: #1a8754 !important; }
+.tienda-btn-added {
+  background: #1a8754 !important;
+  color: #fff !important;
+  animation: tx-check-in .25s ease-out;
+}
+.tx-fly-burst {
+  position: absolute;
+  left: 50%; top: 12px;
+  transform: translate(-50%, 0);
+  background: #1a8754;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  animation: tx-fly 1s ease-out forwards;
+  z-index: 3;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.tienda-header-actions .tienda-btn-primary:has(.tienda-cart-badge-bump) { animation: tx-pop .4s ease-out; }
