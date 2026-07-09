@@ -58,7 +58,6 @@ const CAMPO_LABELS: Record<string, string> = {
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
   mensaje_gracias: 'Mensaje "Gracias por su compra"', pie_rutapp: 'Pie "rutapp.mx"',
 };
-};
 
 function useEmpresaConfig() {
   const { empresa } = useAuth();
