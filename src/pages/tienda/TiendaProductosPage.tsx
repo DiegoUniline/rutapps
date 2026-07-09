@@ -19,7 +19,10 @@ function Inner() {
     staleTime: 60_000,
   });
 
-  const productos: TiendaProducto[] = data?.productos ?? [];
+  const productos: TiendaProducto[] = useMemo(
+    () => expandProductosConPresentaciones(data?.productos ?? []),
+    [data?.productos],
+  );
   // Soporta categorias como string[] (viejo) o { nombre, imagen_url }[] (nuevo).
   const categorias: string[] = (data?.categorias ?? []).map((c: any) => typeof c === 'string' ? c : c.nombre);
   const marcas: string[] = data?.marcas ?? [];
