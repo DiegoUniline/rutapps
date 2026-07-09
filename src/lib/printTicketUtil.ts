@@ -101,7 +101,11 @@ export function buildTicketDataFromVenta(params: {
     metodo_pago?: string;
   };
   clienteNombre: string;
+  clienteRfc?: string | null;
+  clienteTelefono?: string | null;
+  clienteDireccion?: string | null;
   vendedorNombre?: string;
+  vendedorTelefono?: string | null;
   lineas: Array<{
     nombre: string;
     cantidad: number;
@@ -143,7 +147,11 @@ export function buildTicketDataFromVenta(params: {
     folio: venta.folio ?? 'Sin folio',
     fecha: venta.fecha,
     clienteNombre,
+    clienteRfc: params.clienteRfc ?? null,
+    clienteTelefono: params.clienteTelefono ?? null,
+    clienteDireccion: params.clienteDireccion ?? null,
     vendedorNombre: params.vendedorNombre,
+    vendedorTelefono: params.vendedorTelefono ?? null,
     lineas: lineas.map(l => ({
       nombre: l.nombre,
       cantidad: l.cantidad,
