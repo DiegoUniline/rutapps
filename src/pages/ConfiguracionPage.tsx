@@ -56,7 +56,7 @@ const CAMPO_LABELS: Record<string, string> = {
   promociones: 'Promociones aplicadas', pagos_recibidos: 'Historial de pagos recibidos',
   devoluciones: 'Devoluciones',
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
-  mensaje_gracias: 'Mensaje "Gracias por su compra"', pie_rutapp: 'Pie "rutapp.mx"',
+  mensaje_gracias: 'Mensaje "Gracias por su compra"',
 };
 
 function useEmpresaConfig() {
