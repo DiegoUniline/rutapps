@@ -497,7 +497,7 @@ export default function ConfiguracionPage() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
 
   return (
-    <div className="p-4 space-y-4 max-w-4xl">
+    <div className={cn("p-4 space-y-4", configTab === 'ticket' ? "max-w-[1600px]" : "max-w-4xl") }>
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Settings className="h-5 w-5" /> Configuración de empresa
         <HelpButton title={HELP.configuracion.title} sections={HELP.configuracion.sections} />
