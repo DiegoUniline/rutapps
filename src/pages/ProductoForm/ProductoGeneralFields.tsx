@@ -34,6 +34,11 @@ const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Últ
 export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
   const { empresa } = useAuth();
+  const EMPRESAS_CON_FORMULA = new Set([
+    'ceddb9bd-9e49-43d0-9a4b-a83a3f1a55ec', // DIFASUR
+    '6d849e12-6437-4b24-917d-a89cc9b2fa88', // Mi Empresa Demo
+  ]);
+  const mostrarFormula = empresa?.id ? EMPRESAS_CON_FORMULA.has(empresa.id) : false;
   const isNew = !form.id;
   const selectedListaId = tarifasDisp?.find(t => t.tarifa_id === (form as any).tarifa_id)?.id ?? '';
   return (
