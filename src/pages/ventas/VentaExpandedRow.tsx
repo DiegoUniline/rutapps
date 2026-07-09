@@ -170,7 +170,11 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           condicion_pago: venta.condicion_pago,
         },
         clienteNombre,
+        clienteRfc: (venta.clientes as any)?.rfc ?? null,
+        clienteTelefono: (venta.clientes as any)?.telefono ?? null,
+        clienteDireccion: [(venta.clientes as any)?.direccion, (venta.clientes as any)?.colonia].filter(Boolean).join(', ') || null,
         vendedorNombre: venta.vendedores?.nombre ?? '',
+        vendedorTelefono: (venta.vendedores as any)?.telefono ?? null,
         lineas: lineas.map((l: any) => ({
           nombre: (l.productos as any)?.nombre ?? '—',
           cantidad: l.cantidad,
