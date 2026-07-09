@@ -231,7 +231,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
-  const showPieRutapp = tc.pie_rutapp !== false;
+  // Pie Rutapp: siempre visible, no configurable
 
   // ── LOGO (raster image) ──
   if (showLogo && data.empresa.logo_url) {
@@ -370,7 +370,9 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
-  if (showPieRutapp) ln('rutapp.mx');
+  ln('Rutapp.mx');
+  ln('Sistema de Venta en ruta');
+  ln('Contrata al 317 104 5954');
   add(LF); add(LF); add(LF);
   add(CUT);
 

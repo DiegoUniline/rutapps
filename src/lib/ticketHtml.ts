@@ -198,7 +198,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
-  const showPieRutapp = tc.pie_rutapp !== false;
+  // Pie Rutapp: siempre visible, no configurable
 
   const hLines: string[] = [];
   if (showLogo && empresa.logo_url) {
@@ -312,7 +312,9 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add('');
   if (showMensajeGracias) add(centerText('Gracias por su compra'));
   if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
-  if (showPieRutapp) add(centerText('rutapp.mx'));
+  add(centerText('Rutapp.mx'));
+  add(centerText('Sistema de Venta en ruta'));
+  add(centerText('Contrata al 317 104 5954'));
 
   const bodyContent = rows.join('\n');
 

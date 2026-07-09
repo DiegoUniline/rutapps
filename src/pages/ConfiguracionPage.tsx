@@ -31,7 +31,7 @@ const DEFAULT_CAMPOS: Record<string, boolean> = {
   // Bloques adicionales
   promociones: true, pagos_recibidos: true, devoluciones: true,
   // Pie
-  notas_ticket: true, firmas: true, mensaje_gracias: true, pie_rutapp: true,
+  notas_ticket: true, firmas: true, mensaje_gracias: true,
 };
 
 const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
@@ -41,7 +41,7 @@ const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
   { titulo: 'Datos del vendedor', claves: ['vendedor_nombre', 'vendedor_telefono'] },
   { titulo: 'Totales y estado de cuenta', claves: ['impuestos', 'descuentos', 'saldo_cuenta', 'recibido_cambio'] },
   { titulo: 'Bloques adicionales', claves: ['promociones', 'pagos_recibidos', 'devoluciones'] },
-  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias', 'pie_rutapp'] },
+  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias'] },
 ];
 
 const CAMPO_LABELS: Record<string, string> = {
@@ -56,7 +56,7 @@ const CAMPO_LABELS: Record<string, string> = {
   promociones: 'Promociones aplicadas', pagos_recibidos: 'Historial de pagos recibidos',
   devoluciones: 'Devoluciones',
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
-  mensaje_gracias: 'Mensaje "Gracias por su compra"', pie_rutapp: 'Pie "rutapp.mx"',
+  mensaje_gracias: 'Mensaje "Gracias por su compra"',
 };
 
 function useEmpresaConfig() {
@@ -198,11 +198,11 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
       {campos.mensaje_gracias && (
         <div className="px-3 py-1 text-center text-[9px] text-gray-500">¡Gracias por su compra!</div>
       )}
-      {campos.pie_rutapp && (
-        <div className="border-t border-dashed border-gray-300 mx-3">
-          <div className="px-3 py-2 text-center text-[8px] text-gray-400">rutapp.mx</div>
+      <div className="border-t border-dashed border-gray-300 mx-3">
+        <div className="px-3 py-2 text-center text-[8px] text-gray-500 leading-tight">
+          Rutapp.mx<br/>Sistema de Venta en ruta<br/>Contrata al 317 104 5954
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -299,8 +299,8 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
         <div className="mx-3 my-2 p-2 bg-gray-50 rounded text-[9px] text-gray-500 text-center">{form.notas_ticket}</div>
       )}
 
-      <div className="text-center py-2 text-[8px] text-gray-300">
-        rutapp.mx
+      <div className="text-center py-2 text-[8px] text-gray-400 leading-tight">
+        Rutapp.mx · Sistema de Venta en ruta · Contrata al 317 104 5954
       </div>
     </div>
   );
