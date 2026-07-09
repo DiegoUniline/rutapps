@@ -82,6 +82,31 @@ export default function DevolucionesListPage() {
     },
   });
 
+  // Lote con el que reingresó cada producto devuelto (FEFO-in), por devolución+producto.
+  const { data: loteMapDev = {} } = useQuery({
+    queryKey: ['devoluciones-lotes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data: mvs } = await (supabase as any).from('movimientos_inventario')
+        .select('referencia_id, producto_id, lote_id')
+        .eq('empresa_id', empresa!.id)
+        .eq('referencia_tipo', 'devolucion_lote')
+        .not('lote_id', 'is', null);
+      const movs = mvs ?? [];
+      const loteIds = Array.from(new Set(movs.map((r: any) => r.lote_id).filter(Boolean)));
+      let lotesById: Record<string, string> = {};
+      if (loteIds.length > 0) {
+        const { data: lts } = await (supabase as any).from('lotes').select('id, codigo').in('id', loteIds as any);
+        lotesById = Object.fromEntries((lts ?? []).map((l: any) => [l.id, l.codigo ?? '—']));
+      }
+      const map: Record<string, Record<string, string>> = {};
+      for (const r of movs) {
+        (map[r.referencia_id] ??= {})[r.producto_id] = lotesById[r.lote_id] ?? '—';
+      }
+      return map;
+    },
+  });
+
   const { clientes, vendedores } = useMemo(() => {
     const cm = new Map<string, string>();
     const vm = new Map<string, string>();
@@ -238,7 +263,11 @@ export default function DevolucionesListPage() {
               const tCred = lineas.reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
               const motivos = [...new Set(lineas.map((l: any) => l.motivo))];
               const acciones = [...new Set(lineas.map((l: any) => l.accion))];
-              const productosText = lineas.map((l: any) => `${l.productos?.nombre ?? '?'} (${l.cantidad})`).join(', ');
+              const lotesDev: Record<string, string> = (loteMapDev as any)[d.id] ?? {};
+              const productosText = lineas.map((l: any) => {
+                const lote = lotesDev[l.producto_id];
+                return `${l.productos?.nombre ?? '?'} (${l.cantidad})${lote ? ` · lote ${lote}` : ''}`;
+              }).join(', ');
 
               return (
                 <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>

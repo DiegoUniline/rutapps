@@ -182,6 +182,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+      <td className="py-1.5 px-2 hidden md:table-cell">
+        {!isEmpty && (l as any).lote_codigo
+          ? <span className="text-[11px]"><span className="font-medium">{(l as any).lote_codigo}</span></span>
+          : (!isEmpty ? <span className="text-muted-foreground text-[11px]">—</span> : '')}
+      </td>
       <td className="py-1.5 px-2">
         {!readOnly && !isEmpty && <button onClick={() => onRemoveLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
       </td>

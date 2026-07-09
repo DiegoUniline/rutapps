@@ -6,6 +6,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
 import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
+import { useLotesPorReferencia, type LoteRef } from '@/hooks/useLotesPorReferencia';
 
 interface Props {
   venta: any;
@@ -43,6 +44,7 @@ export function DetalleView(p: Props) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const canCancelar = hasPermisoMovil('ruta.cancelar_venta');
   const showCancelChip = canCancelar && (p.venta.status === 'confirmado' || p.venta.status === 'entregado' || p.venta.status === 'borrador');
+  const { data: lotesVenta } = useLotesPorReferencia(p.venta?.id, ['venta', 'venta_lote']);
   return (
     <div className="min-h-[100dvh] bg-background">
       <Header {...p} showCancelChip={showCancelChip} onCancelClick={() => setShowCancelModal(true)} />
@@ -51,7 +53,7 @@ export function DetalleView(p: Props) {
         <ActionsBar {...p} />
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
-        <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
+        <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} lotes={lotesVenta} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
         {/* Historial de cambios */}
@@ -165,15 +167,18 @@ function InfoCard({ venta, clienteNombre, vendedorNombre }: { venta: any; client
   );
 }
 
-function ProductosCard({ lineas, fmt, s }: { lineas: any[]; fmt: (n: number) => string; s: string }) {
+function ProductosCard({ lineas, fmt, s, lotes }: { lineas: any[]; fmt: (n: number) => string; s: string; lotes?: Record<string, LoteRef[]> }) {
   return (
     <div>
       <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Productos ({lineas.length})</h2>
       <div className="bg-card border border-border rounded-xl divide-y divide-border">
         {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
-        {lineas.map((l: any) => (
-          <div key={l.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0"><p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p><p className="text-[11px] text-muted-foreground">{l.cantidad} × {fmt(l.precio_unitario ?? 0)}{l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}</p></div><p className="text-[14px] font-bold text-foreground shrink-0">{fmt(l.total ?? 0)}</p></div></div>
-        ))}
+        {lineas.map((l: any) => {
+          const ls = lotes?.[l.producto_id];
+          return (
+          <div key={l.id} className="p-3"><div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0"><p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p><p className="text-[11px] text-muted-foreground">{l.cantidad} × {fmt(l.precio_unitario ?? 0)}{l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}</p>{ls && ls.length > 0 && <p className="text-[11px] text-amber-600">Lote: {ls.map(x => x.codigo).join(', ')}</p>}</div><p className="text-[14px] font-bold text-foreground shrink-0">{fmt(l.total ?? 0)}</p></div></div>
+          );
+        })}
       </div>
     </div>
   );
