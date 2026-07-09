@@ -299,8 +299,8 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
         <div className="mx-3 my-2 p-2 bg-gray-50 rounded text-[9px] text-gray-500 text-center">{form.notas_ticket}</div>
       )}
 
-      <div className="text-center py-2 text-[8px] text-gray-300">
-        rutapp.mx
+      <div className="text-center py-2 text-[8px] text-gray-400 leading-tight">
+        Rutapp.mx · Sistema de Venta en ruta · Contrata al 317 104 5954
       </div>
     </div>
   );
