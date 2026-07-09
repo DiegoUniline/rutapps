@@ -136,7 +136,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
   if ((cuadre.cobrosTarjeta ?? 0) > 0) {
     cuadreRows.push(['Cobros tarjeta:', `${sym}${fmtCurrency(cuadre.cobrosTarjeta)}`]);
   }
-  cuadreRows.push(['− Gastos:', `-${sym}${fmtCurrency(cuadre.totalGastos)}`]);
+  cuadreRows.push(['- Gastos:', `-${sym}${fmtCurrency(cuadre.totalGastos)}`]);
 
   doc.setFontSize(9.5);
   for (const [lbl, val] of cuadreRows) {

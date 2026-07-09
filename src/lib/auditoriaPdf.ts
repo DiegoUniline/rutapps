@@ -76,7 +76,7 @@ export async function generarAuditoriaPdf(params: AuditoriaPdfParams): Promise<B
       { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
       { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
       { content: l.diferencia !== 0 ? (l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia)) : '0', styles: { halign: 'right', fontStyle: 'bold' } },
-      { content: l.ajustado ? '✓' : '—', styles: { halign: 'center' } },
+      { content: l.ajustado ? 'Sí' : '—', styles: { halign: 'center' } },
       l.notas || '',
     ]),
     {
@@ -97,7 +97,7 @@ export async function generarAuditoriaPdf(params: AuditoriaPdfParams): Promise<B
       }
       if (data.section === 'body' && data.column.index === 5) {
         const raw = data.cell.raw?.content || data.cell.raw;
-        if (raw === '✓') {
+        if (raw === 'Sí') {
           data.cell.styles.textColor = C.success;
           data.cell.styles.fontStyle = 'bold';
         }

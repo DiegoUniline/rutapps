@@ -36,9 +36,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const TIPO_LABELS: Record<string, string> = {
-  almacen_almacen: 'Almacén → Almacén',
-  almacen_ruta: 'Almacén → Ruta',
-  ruta_almacen: 'Ruta → Almacén',
+  almacen_almacen: 'Almacén a Almacén',
+  almacen_ruta: 'Almacén a Ruta',
+  ruta_almacen: 'Ruta a Almacén',
 };
 
 export async function generarTraspasoPdf(params: TraspasoPdfParams): Promise<Blob> {

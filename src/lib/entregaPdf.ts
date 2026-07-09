@@ -73,7 +73,7 @@ export async function generarEntregaPdf(params: EntregaPdfParams): Promise<Blob>
       l.almacen_origen || '—',
       { content: String(l.cantidad_pedida), styles: { halign: 'right' } },
       { content: String(l.cantidad_entregada), styles: { halign: 'right', fontStyle: 'bold' } },
-      { content: l.hecho ? '✓ Surtido' : 'Pendiente', styles: { fontStyle: 'bold' } },
+      { content: l.hecho ? 'Surtido' : 'Pendiente', styles: { fontStyle: 'bold' } },
     ]),
     {
       0: { cellWidth: 24 },
@@ -86,7 +86,7 @@ export async function generarEntregaPdf(params: EntregaPdfParams): Promise<Blob>
     (data: any) => {
       if (data.section === 'body' && data.column.index === 6) {
         const val = data.cell.raw?.content || data.cell.raw;
-        if (typeof val === 'string' && val.includes('✓')) {
+        if (typeof val === 'string' && val.includes('Surtido')) {
           data.cell.styles.textColor = C.success;
         } else {
           data.cell.styles.textColor = C.danger;
