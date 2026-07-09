@@ -38,7 +38,7 @@ export function useReporteEntityLists(empresaId?: string, enabled = true) {
         fetchAllPages<any>((from, to) =>
           supabase.from('clientes').select('id, codigo, nombre').eq('empresa_id', empresaId!).order('nombre').range(from, to)),
         fetchAllPages<any>((from, to) =>
-          supabase.from('profiles').select('id, nombre').eq('empresa_id', empresaId!).order('nombre').range(from, to)),
+          supabase.from('profiles').select('id, nombre, estado').eq('empresa_id', empresaId!).order('nombre').range(from, to)),
         fetchAllPages<any>((from, to) =>
           supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresaId!).order('nombre').range(from, to)),
         fetchAllPages<any>((from, to) =>
