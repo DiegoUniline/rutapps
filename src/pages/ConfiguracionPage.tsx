@@ -89,25 +89,32 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
   const fontSize = ticketAncho === '58' ? '9px' : '10px';
 
   return (
-    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width, fontFamily: "'Courier New', monospace" }}>
-      <div className="px-4 pt-4 pb-2 text-center">
+    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width, fontFamily: "'Courier New', monospace", fontSize }}>
+      <div className="px-3 pt-3 pb-2 text-center">
         {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
-        {campos.nombre && <div className="font-bold text-[13px]">{nombre}</div>}
+        {campos.nombre && <div className="font-bold text-[12px]">{nombre}</div>}
         {campos.razon_social && form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
         {campos.rfc && form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
         {campos.direccion && dir && <div className="text-[9px] text-gray-500">{dir}</div>}
         {campos.telefono && form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
+        {campos.email && form.email && <div className="text-[9px] text-gray-500">{form.email}</div>}
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-4 py-2">
-        <div className="flex justify-between text-[10px] text-gray-500">
-          <span>Folio: VTA-0001</span>
-          <span>14/03/2026</span>
+      <div className="px-3 py-2 space-y-0.5">
+        <div className="flex justify-between text-[10px] text-gray-600">
+          {campos.folio && <span>Folio: VTA-0001</span>}
+          {campos.fecha && <span>14/03/2026</span>}
         </div>
-        <div className="text-[10px] text-gray-600 mt-1">Cliente: <span className="font-medium">Juan Pérez</span></div>
+        {campos.cliente_nombre && <div className="text-[10px]">Cliente: <span className="font-medium">Juan Pérez</span></div>}
+        {campos.cliente_rfc && <div className="text-[9px] text-gray-500">RFC: XAXX010101000</div>}
+        {campos.cliente_telefono && <div className="text-[9px] text-gray-500">Tel: 555-123-4567</div>}
+        {campos.cliente_direccion && <div className="text-[9px] text-gray-500">Calle Reforma 456, Centro</div>}
+        {campos.vendedor_nombre && <div className="text-[9px] text-gray-500">Vendedor: María López</div>}
+        {campos.vendedor_telefono && <div className="text-[9px] text-gray-500">Tel vend: 555-987-6543</div>}
+        {campos.condicion_pago && <div className="text-[9px] text-gray-500">Contado - Efectivo</div>}
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-4 py-2 space-y-1">
+      <div className="px-3 py-2 space-y-1">
         <div className="flex justify-between text-[9px] font-bold text-gray-500 uppercase">
           <span className="flex-1">Producto</span>
           <span className="w-8 text-center">Qty</span>
@@ -126,24 +133,80 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
         ))}
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-4 py-2 space-y-0.5">
-        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>$ 515.00</span></div>}
-        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>}
-        <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
+      <div className="px-3 py-2 space-y-0.5">
+        <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>{fmt(515)}</span></div>
+        {campos.descuentos && <div className="flex justify-between text-[10px] text-gray-600"><span>Descuento</span><span>-{fmt(15)}</span></div>}
+        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>{fmt(82.4)}</span></div>}
+        <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>{fmt(597.4)}</span></div>
+        {campos.recibido_cambio && (
+          <>
+            <div className="flex justify-between text-[10px]"><span>Recibido</span><span>{fmt(600)}</span></div>
+            <div className="flex justify-between text-[10px]"><span>Cambio</span><span>{fmt(2.6)}</span></div>
+          </>
+        )}
       </div>
+      {campos.promociones && (
+        <>
+          <div className="border-t border-dashed border-gray-300 mx-3" />
+          <div className="px-3 py-2">
+            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Promociones aplicadas</div>
+            <div className="text-[9px] text-gray-600">2x1 Producto A · -{fmt(25)}</div>
+          </div>
+        </>
+      )}
+      {campos.saldo_cuenta && (
+        <>
+          <div className="border-t border-dashed border-gray-300 mx-3" />
+          <div className="px-3 py-2 space-y-0.5">
+            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Estado de cuenta</div>
+            <div className="flex justify-between text-[10px]"><span>Saldo anterior</span><span>{fmt(1200)}</span></div>
+            <div className="flex justify-between text-[10px]"><span>Esta venta</span><span>{fmt(597.4)}</span></div>
+            <div className="flex justify-between text-[10px] font-bold"><span>Saldo nuevo</span><span>{fmt(1797.4)}</span></div>
+          </div>
+        </>
+      )}
+      {campos.pagos_recibidos && (
+        <>
+          <div className="border-t border-dashed border-gray-300 mx-3" />
+          <div className="px-3 py-2">
+            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Pagos recibidos</div>
+            <div className="flex justify-between text-[10px]"><span>14/03/2026 Efectivo</span><span>{fmt(300)}</span></div>
+          </div>
+        </>
+      )}
+      {campos.devoluciones && (
+        <>
+          <div className="border-t border-dashed border-gray-300 mx-3" />
+          <div className="px-3 py-2">
+            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">Devoluciones</div>
+            <div className="flex justify-between text-[10px]"><span>1x Producto C</span><span>-{fmt(30)}</span></div>
+          </div>
+        </>
+      )}
       {campos.notas_ticket && form.notas_ticket && (
         <>
           <div className="border-t border-dashed border-gray-300 mx-3" />
-          <div className="px-4 py-2 text-center text-[9px] text-gray-500">{form.notas_ticket}</div>
+          <div className="px-3 py-2 text-center text-[9px] text-gray-500">{form.notas_ticket}</div>
         </>
       )}
-      <div className="border-t border-dashed border-gray-300 mx-3" />
-      <div className="px-4 py-2 text-center text-[8px] text-gray-400">
-        rutapp.mx
-      </div>
+      {campos.firmas && (
+        <div className="grid grid-cols-2 gap-4 px-4 pb-2 pt-4">
+          <div className="border-t border-gray-400 pt-1 text-center text-[8px] text-gray-400">Entregó</div>
+          <div className="border-t border-gray-400 pt-1 text-center text-[8px] text-gray-400">Recibió</div>
+        </div>
+      )}
+      {campos.mensaje_gracias && (
+        <div className="px-3 py-1 text-center text-[9px] text-gray-500">¡Gracias por su compra!</div>
+      )}
+      {campos.pie_rutapp && (
+        <div className="border-t border-dashed border-gray-300 mx-3">
+          <div className="px-3 py-2 text-center text-[8px] text-gray-400">rutapp.mx</div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
   const { fmt } = useCurrency();
