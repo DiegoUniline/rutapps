@@ -56,6 +56,7 @@ export function VentaLineasTab(props: Props) {
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
+                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 hidden md:table-cell">Lote</th>
                 <th className="py-2 px-2 w-8"></th>
               </tr>
             </thead>
