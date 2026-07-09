@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { fnGet, TiendaProducto, useTienda } from "@/tienda/TiendaContext";
+import { fnGet, TiendaProducto, useTienda, expandProductosConPresentaciones } from "@/tienda/TiendaContext";
 import { ProductCard } from "./TiendaHomePage";
 import TiendaShell from "./TiendaShell";
 
