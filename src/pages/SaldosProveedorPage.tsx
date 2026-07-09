@@ -17,6 +17,7 @@ import { StatusChip } from '@/components/StatusChip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { useListPreferences } from '@/hooks/useListPreferences';
+import { CxPTabs } from '@/components/CxPTabs';
 
 /* ── types ── */
 type MetodoPago = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -496,6 +497,7 @@ export default function SaldosProveedorPage() {
      ═══════════════════════════════════════════ */
   return (
     <div className="p-4 space-y-4 min-h-full">
+      <CxPTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Truck className="h-5 w-5" /> Saldos por proveedor
       </h1>

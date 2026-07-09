@@ -14,6 +14,7 @@ import { fmtDate, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { useListPreferences } from '@/hooks/useListPreferences';
+import { CxPTabs } from '@/components/CxPTabs';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -125,6 +126,7 @@ export default function CuentasPagarPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
+      <CxPTabs />
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <TrendingDown className="h-5 w-5" /> Cuentas por pagar
         <HelpButton title={HELP.cuentasPagar.title} sections={HELP.cuentasPagar.sections} />

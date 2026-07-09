@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { OdooPagination } from '@/components/OdooPagination';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
 import { useTablePagination } from '@/hooks/useTablePagination';
+import { CxPTabs } from '@/components/CxPTabs';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
@@ -120,6 +121,7 @@ export default function PagosProveedoresPage() {
 
   return (
     <div className="space-y-4">
+      <CxPTabs />
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
