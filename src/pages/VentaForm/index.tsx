@@ -248,7 +248,11 @@ export default function VentaFormPage() {
         condicion_pago: form.condicion_pago,
       },
       clienteNombre: clienteData?.nombre ?? 'Sin cliente',
+      clienteRfc: (clienteData as any)?.rfc ?? null,
+      clienteTelefono: (clienteData as any)?.telefono ?? null,
+      clienteDireccion: [(clienteData as any)?.direccion, (clienteData as any)?.colonia].filter(Boolean).join(', ') || null,
       vendedorNombre: vendedorNombreTicket,
+      vendedorTelefono: ((form as any).vendedores?.telefono) ?? profile?.telefono ?? null,
       lineas: lineas.filter(l => l.producto_id).map(l => ({
         nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? l.descripcion ?? '—',
         cantidad: Number(l.cantidad),
