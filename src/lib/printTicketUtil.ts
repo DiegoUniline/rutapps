@@ -26,14 +26,22 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
       toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
       return;
     } catch (err: any) {
-      if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled') || err?.message?.includes('User cancelled')) {
+      const msg = err?.message ?? '';
+      if (err?.name === 'NotFoundError' || msg.includes('cancelled') || msg.includes('User cancelled')) {
         toast.dismiss('bt-print');
         return;
       }
-      console.warn('[Print] BT failed, falling back to image:', err?.message);
-      toast.error('Bluetooth no disponible, generando imagen…', { id: 'bt-print' });
+      // Preview iframe blocks Web Bluetooth via Permissions Policy.
+      // Don't silently open the browser print dialog (looks like a PDF) — tell the user.
+      if (msg.includes('permissions policy') || msg.includes('disallowed')) {
+        toast.error('Bluetooth bloqueado en la vista previa. Abre la app publicada (rutapp.mx) para imprimir por Bluetooth.', { id: 'bt-print', duration: 6000 });
+        return;
+      }
+      console.warn('[Print] BT failed, falling back to browser print:', msg);
+      toast.error('Impresora no disponible, abriendo diálogo de impresión…', { id: 'bt-print' });
     }
   }
+
 
   // ── 2) Fallback: browser print dialog ──
   const html = buildTicketHTML(td, { ticketAncho, forPrint: true });
