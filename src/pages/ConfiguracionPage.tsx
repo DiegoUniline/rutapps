@@ -561,15 +561,15 @@ export default function ConfiguracionPage() {
 
         {/* ── TAB: Ticket ── */}
         <TabsContent value="ticket" className="mt-4">
-          <div className="flex gap-6">
-            <div className="flex-1 space-y-5 max-w-md">
+          <div className="flex gap-6 items-start">
+            <div className="flex-1 min-w-0 space-y-5">
               {/* Ancho de impresora */}
               <div className="bg-card border border-border rounded-lg p-5">
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Receipt className="h-4 w-4" /> Ancho de impresora
                 </h3>
                 <p className="text-[11px] text-muted-foreground mb-3">Selecciona el ancho del rollo de papel de tu impresora térmica.</p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 max-w-xs">
                   {([['58', '58 mm'], ['80', '80 mm']] as const).map(([val, label]) => (
                     <button
                       key={val}
@@ -592,20 +592,20 @@ export default function ConfiguracionPage() {
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
                 </h3>
-                <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
-                <div className="space-y-4">
+                <p className="text-[11px] text-muted-foreground mb-4">Elige qué información aparece en tus documentos impresos.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-5">
                   {CAMPO_SECCIONES.map(sec => (
-                    <div key={sec.titulo}>
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{sec.titulo}</p>
-                      <div className="grid grid-cols-2 gap-2">
+                    <div key={sec.titulo} className="min-w-0">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{sec.titulo}</p>
+                      <div className="flex flex-col gap-1">
                         {sec.claves.map(key => (
-                          <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-card cursor-pointer transition-colors">
+                          <label key={key} className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-secondary/50 cursor-pointer transition-colors">
                             <Switch
                               checked={campos[key] ?? true}
                               onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
-                              className="scale-75"
+                              className="scale-75 shrink-0"
                             />
-                            <span className="text-[12px] text-foreground">{CAMPO_LABELS[key] ?? key}</span>
+                            <span className="text-[12px] text-foreground truncate">{CAMPO_LABELS[key] ?? key}</span>
                           </label>
                         ))}
                       </div>
@@ -616,7 +616,7 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* Live Preview */}
-            <div className="w-full lg:w-[440px] lg:shrink-0">
+            <div className="w-[360px] shrink-0 lg:sticky lg:top-4 ml-auto">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Vista previa en tiempo real</span>
               </div>
@@ -650,6 +650,7 @@ export default function ConfiguracionPage() {
             </div>
           </div>
         </TabsContent>
+
 
         {/* ── TAB: Visibilidad ── */}
         <TabsContent value="visibilidad" className="space-y-5 mt-4 max-w-xl">
