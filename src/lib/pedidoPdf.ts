@@ -5,7 +5,7 @@ import {
   createDoc, ML, MR, C, fmtCurrency, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable, drawTotalsBlock,
   drawImporteConLetra, drawNotes, drawSignatures, drawFooter,
-  checkPageBreak, numberToWords,
+  drawSectionTitle, checkPageBreak, numberToWords,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
 import { getCurrencyConfig } from '@/lib/currency';
@@ -148,24 +148,24 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     for (const lp of linePromos) {
       tableRows.push([
         '',
-        { content: `🏷️ ${lp.descripcion}`, colSpan: showSugerido ? 7 : 6, styles: { textColor: [30, 130, 76], fontStyle: 'italic', fontSize: 7 } },
+        { content: `Promo: ${lp.descripcion}`, colSpan: showSugerido ? 7 : 6, styles: { textColor: C.muted, fontStyle: 'italic', fontSize: 7.5 } },
         '',
-        { content: `-${s}${fmtCurrency(lp.descuento)}`, styles: { halign: 'right', textColor: [30, 130, 76], fontStyle: 'bold', fontSize: 7 } },
+        { content: `-${s}${fmtCurrency(lp.descuento)}`, styles: { halign: 'right', textColor: C.text, fontStyle: 'bold', fontSize: 7.5 } },
       ]);
     }
   }
   y = await drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', ...(showSugerido ? ['Sug. público'] : []), 'Importe'],
+    ['Código', 'Producto', 'Cant', 'Unidad', 'P. Unit.', 'Desc', 'IVA', 'IEPS', ...(showSugerido ? ['Sug. púb.'] : []), 'Importe'],
     tableRows,
     {
-      0: { cellWidth: 20 },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 14, halign: 'center' },
-      6: { cellWidth: 14, halign: 'center' },
-      7: { cellWidth: 14, halign: 'center' },
-      ...(showSugerido ? { 8: { cellWidth: 22, halign: 'right' as const }, 9: { cellWidth: 22, halign: 'right' as const } } : { 8: { cellWidth: 24, halign: 'right' as const } }),
+      0: { cellWidth: 18 },
+      2: { cellWidth: 12, halign: 'center' },
+      3: { cellWidth: 15 },
+      4: { cellWidth: 20, halign: 'right' },
+      5: { cellWidth: 12, halign: 'center' },
+      6: { cellWidth: 12, halign: 'center' },
+      7: { cellWidth: 12, halign: 'center' },
+      ...(showSugerido ? { 8: { cellWidth: 20, halign: 'right' as const }, 9: { cellWidth: 22, halign: 'right' as const } } : { 8: { cellWidth: 24, halign: 'right' as const } }),
     },
   );
 
@@ -175,10 +175,11 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     if (totalAhorro > 0) {
       y = checkPageBreak(doc, y);
       doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 130, 76);
+      doc.setFont('helvetica', 'bolditalic');
+      doc.setTextColor(...C.muted);
       doc.text(`Ahorro total por promociones: ${s}${fmtCurrency(totalAhorro)}`, ML, y);
       y += 6;
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(...C.text);
     }
   }
@@ -216,6 +217,7 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   // ── ENTREGAS ──
   if (entregas.length > 0) {
     y = checkPageBreak(doc, y);
+    y = drawSectionTitle(doc, y, 'Entregas');
     y = await drawCleanTable(doc, y,
       ['Folio', 'Estado', 'Repartidor', 'Productos'],
       entregas.map(e => [
@@ -237,11 +239,12 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
     y = checkPageBreak(doc, y);
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
 
+    y = drawSectionTitle(doc, y, 'Pagos');
     y = await drawCleanTable(doc, y,
       ['Fecha', 'Método', 'Referencia', 'Monto'],
       pagos.map(p => [
         fmtDate(p.fecha),
-        p.metodo_pago,
+        p.metodo_pago ? p.metodo_pago.charAt(0).toUpperCase() + p.metodo_pago.slice(1) : '—',
         p.referencia || '—',
         { content: `${s}${fmtCurrency(p.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
