@@ -432,7 +432,11 @@ export function useVentaDetalle() {
       folio: venta.folio ?? 'Sin folio',
       fecha: fmtDate(venta.fecha),
       clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
+      clienteRfc: (venta as any).clientes?.rfc ?? null,
+      clienteTelefono: (venta as any).clientes?.telefono ?? null,
+      clienteDireccion: [(venta as any).clientes?.direccion, (venta as any).clientes?.colonia].filter(Boolean).join(', ') || null,
       vendedorNombre: (venta as any).vendedores?.nombre ?? '',
+      vendedorTelefono: (venta as any).vendedores?.telefono ?? null,
       lineas: lineasVenta.map((l: any) => ({
         nombre: l.productos?.nombre ?? l.descripcion ?? '—',
         cantidad: l.cantidad,
