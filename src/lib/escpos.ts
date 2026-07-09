@@ -370,7 +370,9 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
-  if (showPieRutapp) ln('rutapp.mx');
+  ln('Rutapp.mx');
+  ln('Sistema de Venta en ruta');
+  ln('Contrata al 317 104 5954');
   add(LF); add(LF); add(LF);
   add(CUT);
 
