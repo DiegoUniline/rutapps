@@ -109,6 +109,7 @@ const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
 const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
+const AjustesMermasPage = lazy(() => import("@/pages/AjustesMermasPage"));
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
 const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
@@ -807,6 +808,7 @@ function desktopRoutes(isBillingOwner: boolean, isFacturacionAdmin: boolean) {
       <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
       <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
       <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
+      <Route path="/almacen/ajustes-mermas" element={<AjustesMermasPage />} />
       <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
       <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
       <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
