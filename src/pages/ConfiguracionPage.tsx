@@ -198,11 +198,11 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
       {campos.mensaje_gracias && (
         <div className="px-3 py-1 text-center text-[9px] text-gray-500">¡Gracias por su compra!</div>
       )}
-      {campos.pie_rutapp && (
-        <div className="border-t border-dashed border-gray-300 mx-3">
-          <div className="px-3 py-2 text-center text-[8px] text-gray-400">rutapp.mx</div>
+      <div className="border-t border-dashed border-gray-300 mx-3">
+        <div className="px-3 py-2 text-center text-[8px] text-gray-500 leading-tight">
+          Rutapp.mx<br/>Sistema de Venta en ruta<br/>Contrata al 317 104 5954
         </div>
-      )}
+      </div>
     </div>
   );
 }
