@@ -41,7 +41,7 @@ const CAMPO_SECCIONES: { titulo: string; claves: string[] }[] = [
   { titulo: 'Datos del vendedor', claves: ['vendedor_nombre', 'vendedor_telefono'] },
   { titulo: 'Totales y estado de cuenta', claves: ['impuestos', 'descuentos', 'saldo_cuenta', 'recibido_cambio'] },
   { titulo: 'Bloques adicionales', claves: ['promociones', 'pagos_recibidos', 'devoluciones'] },
-  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias', 'pie_rutapp'] },
+  { titulo: 'Pie del ticket', claves: ['notas_ticket', 'firmas', 'mensaje_gracias'] },
 ];
 
 const CAMPO_LABELS: Record<string, string> = {
