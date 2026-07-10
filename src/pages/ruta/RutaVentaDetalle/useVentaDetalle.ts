@@ -16,7 +16,6 @@ import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
-import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -97,24 +96,6 @@ export function useVentaDetalle() {
       return data ?? [];
     },
   });
-
-  // Clasificaciones de productos de la venta (para evaluar promociones en vivo)
-  const productoIdsVenta = useMemo(() => {
-    const ids = new Set<string>();
-    ((venta as any)?.venta_lineas ?? []).forEach((l: any) => { if (l.producto_id) ids.add(l.producto_id); });
-    return Array.from(ids);
-  }, [venta]);
-  const { data: productosClasif } = useQuery({
-    queryKey: ['ruta-venta-productos-clasif', id, productoIdsVenta.join(',')],
-    enabled: productoIdsVenta.length > 0,
-    queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, clasificacion_id').in('id', productoIdsVenta);
-      return data ?? [];
-    },
-  });
-  const { data: promocionesActivas } = usePromocionesActivas();
-
-
 
   const editTotals = useMemo(() => {
     let subtotal = 0, iva = 0;
@@ -384,22 +365,6 @@ export function useVentaDetalle() {
     const e = empresa as any;
     const lineasVenta = ((venta as any).venta_lineas ?? []) as any[];
 
-    // Promociones en vivo (misma lógica que /Ventas)
-    const cartForPromo: CartItemForPromo[] = lineasVenta
-      .filter((l: any) => l.producto_id)
-      .map((l: any) => {
-        const prod: any = (productosClasif ?? []).find((p: any) => p.id === l.producto_id);
-        return {
-          producto_id: l.producto_id,
-          clasificacion_id: prod?.clasificacion_id ?? undefined,
-          precio_unitario: Number(l.precio_unitario) || 0,
-          cantidad: Number(l.cantidad) || 0,
-        };
-      });
-    const promoResults = (promocionesActivas && cartForPromo.length > 0)
-      ? evaluatePromociones(promocionesActivas as any, cartForPromo, (venta as any).cliente_id ?? undefined, undefined, e?.zona_horaria)
-      : [];
-
     // Pagos aplicados (cobros)
     const pagos = (pagosVenta ?? []).map((p: any) => ({
       metodo: (p.cobros as any)?.metodo_pago ?? '',
@@ -458,9 +423,11 @@ export function useVentaDetalle() {
       pagoAplicado: totalPagado,
       saldoNuevo: (saldoAnterior + saldoPendiente) > 0 ? (saldoAnterior + saldoPendiente) : undefined,
       pagos,
-      promociones: promoResults
-        .filter((r: any) => r.descuento > 0)
-        .map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+      // Opción B: el ticket usa los montos ya congelados en la venta (subtotal, descuento_total,
+      // total, saldo_pendiente). NO se recalculan promociones al imprimir, por lo que reimprimir
+      // un ticket viejo siempre coincide con la pantalla aunque la promo ya haya vencido.
+      // El desglose por nombre de promoción se mostrará cuando se persista en promocion_aplicada (Opción A).
+      promociones: [],
       devoluciones: (devolucionesVenta ?? []).map((d: any) => ({
         nombre: d.producto?.nombre ?? 'Producto',
         cantidad: Number(d.cantidad) || 0,
