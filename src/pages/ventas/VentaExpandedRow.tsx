@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, fmtDateTime } from '@/lib/utils';
@@ -21,6 +21,7 @@ interface Props {
   fmt: (v: number | null | undefined) => string;
   canDelete: boolean;
   onDeleteTarget: (id: string) => void;
+  onCancelTarget?: (id: string) => void;
   onCollapse: () => void;
   empresaId?: string;
   empresa?: any;
@@ -28,7 +29,7 @@ interface Props {
   productosList?: any[];
 }
 
-export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCollapse, empresaId, empresa, clientesList, productosList }: Props) {
+export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList }: Props) {
   const navigate = useNavigate();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
@@ -261,6 +262,11 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/ventas/${venta.id}`)}>
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>
+                {onCancelTarget && canDelete && venta.status !== 'borrador' && venta.status !== 'cancelado' && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" onClick={() => onCancelTarget(venta.id)}>
+                    <Ban className="h-3 w-3" /> Cancelar
+                  </Button>
+                )}
                 {(venta.status === 'borrador' || (venta.status === 'cancelado' && canDelete)) && (
                   <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive gap-1.5" onClick={() => onDeleteTarget(venta.id)}>
                     <Trash2 className="h-3 w-3" />

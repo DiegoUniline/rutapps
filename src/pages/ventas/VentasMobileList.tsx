@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, MessageCircle, FileText, Banknote, Loader2, Trash2 } from 'lucide-react';
+import { MoreVertical, MessageCircle, FileText, Banknote, Loader2, Trash2, Ban } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { MobileListCard } from '@/components/MobileListCard';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -17,9 +17,10 @@ interface Props {
   canDelete: boolean;
   fmtCurrency: (v: number) => string;
   onDeleteTarget: (id: string) => void;
+  onCancelTarget?: (id: string) => void;
 }
 
-export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget }: Props) {
+export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget, onCancelTarget }: Props) {
   const navigate = useNavigate();
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
@@ -77,6 +78,14 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
                       {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
                       {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                     </DropdownMenuItem>
+                    {onCancelTarget && canDelete && v.status !== 'borrador' && v.status !== 'cancelado' && (
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); onCancelTarget(v.id); }}
+                      >
+                        <Ban className="h-3.5 w-3.5 mr-2" /> Cancelar
+                      </DropdownMenuItem>
+                    )}
                     {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
