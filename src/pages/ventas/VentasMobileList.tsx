@@ -78,6 +78,14 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
                       {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
                       {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                     </DropdownMenuItem>
+                    {onCancelTarget && canDelete && v.status !== 'borrador' && v.status !== 'cancelado' && (
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); onCancelTarget(v.id); }}
+                      >
+                        <Ban className="h-3.5 w-3.5 mr-2" /> Cancelar
+                      </DropdownMenuItem>
+                    )}
                     {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
