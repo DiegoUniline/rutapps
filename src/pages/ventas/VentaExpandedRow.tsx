@@ -21,6 +21,7 @@ interface Props {
   fmt: (v: number | null | undefined) => string;
   canDelete: boolean;
   onDeleteTarget: (id: string) => void;
+  onCancelTarget?: (id: string) => void;
   onCollapse: () => void;
   empresaId?: string;
   empresa?: any;
@@ -28,7 +29,7 @@ interface Props {
   productosList?: any[];
 }
 
-export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCollapse, empresaId, empresa, clientesList, productosList }: Props) {
+export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCancelTarget, onCollapse, empresaId, empresa, clientesList, productosList }: Props) {
   const navigate = useNavigate();
   const [lineas, setLineas] = useState<any[]>([]);
   const [pagos, setPagos] = useState<any[]>([]);
