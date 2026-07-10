@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, FileText, Printer, MessageCircle, Loader2, Banknote, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, fmtDateTime } from '@/lib/utils';
