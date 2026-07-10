@@ -16,6 +16,7 @@ interface Props {
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onDeleteTarget: (id: string) => void;
+  onCancelTarget?: (id: string) => void;
   empresaId?: string;
   empresa?: any;
   clientesList?: any[];
@@ -23,7 +24,7 @@ interface Props {
   columnVisibility?: Record<string, boolean>;
 }
 
-export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, empresaId, empresa, clientesList, columnVisibility }: Props) {
+export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, onCancelTarget, empresaId, empresa, clientesList, columnVisibility }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const v = (key: string) => columnVisibility ? columnVisibility[key] !== false : true;
   const { sorted, sort, toggle } = useSortableTable(items, (r, k) => {
