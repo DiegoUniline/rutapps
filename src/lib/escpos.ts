@@ -276,7 +276,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   if (showVendedorNombre && data.vendedorNombre) ln(`Vendedor: ${clean(data.vendedorNombre).slice(0, W - 10)}`);
   if (showVendedorTelefono && data.vendedorTelefono) ln(`Tel. vend: ${clean(data.vendedorTelefono).slice(0, W - 11)}`);
   if (showCondicionPago) {
-    const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
+    const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : data.condicionPago === 'contado' ? 'Contado' : 'P/definir';
     ln(`Pago: ${pagoLabel}${data.metodoPago ? ` (${clean(data.metodoPago)})` : ''}`);
   }
   ln(divider(W));
