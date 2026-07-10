@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, MessageCircle, FileText, Banknote, Loader2, Trash2 } from 'lucide-react';
+import { MoreVertical, MessageCircle, FileText, Banknote, Loader2, Trash2, Ban } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { MobileListCard } from '@/components/MobileListCard';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
