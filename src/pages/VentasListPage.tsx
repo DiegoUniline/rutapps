@@ -340,6 +340,7 @@ export default function VentasListPage() {
       <VentasDesktopTable
         items={items} selected={selected} allSelected={allSelected} canDelete={canDelete}
         fmt={fmt} onToggleAll={toggleAll} onToggleOne={toggleOne} onDeleteTarget={setDeleteTarget}
+        onCancelTarget={handleCancelOne}
         empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
         columnVisibility={columnVisibility}
       />
