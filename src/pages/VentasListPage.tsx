@@ -268,6 +268,46 @@ export default function VentasListPage() {
     }
   };
 
+  // Cancelar una sola venta desde la lista, exige PIN de autorización
+  const handleCancelOne = (id: string) => {
+    const venta = ventas.find((v: any) => v.id === id);
+    if (!venta) return;
+    if ((venta as any).status === 'cancelado') {
+      toast.info('La venta ya está cancelada.');
+      return;
+    }
+    requestPin(
+      'Cancelar venta',
+      `Ingresa tu PIN de autorización para cancelar ${venta.folio || id.slice(0, 8)}.`,
+      async () => {
+        try {
+          // 1) Cancelar entregas activas → triggers devuelven stock
+          let stockRestored = 0;
+          try {
+            stockRestored = await cancelEntregasAndReturnStock([id]);
+          } catch (e: any) {
+            toast.error(`Algunas entregas no se pudieron revertir: ${e.message}`);
+          }
+          // 2) Desligar pagos aplicados
+          await supabase.from('cobro_aplicaciones').delete().eq('venta_id', id);
+          // 3) Marcar venta como cancelada
+          const { error } = await supabase.from('ventas').update({ status: 'cancelado' } as any).eq('id', id);
+          if (error) throw error;
+          toast.success(`Venta cancelada${stockRestored > 0 ? ` · stock devuelto de ${stockRestored} entrega(s)` : ''}.`);
+          qc.invalidateQueries({ queryKey: ['ventas'] });
+          qc.invalidateQueries({ queryKey: ['entregas'] });
+          qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
+          qc.invalidateQueries({ queryKey: ['cxc'] });
+          qc.invalidateQueries({ queryKey: ['saldos'] });
+          qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+          qc.invalidateQueries({ queryKey: ['productos'] });
+        } catch (e: any) {
+          toast.error(e.message || 'Error al cancelar');
+        }
+      }
+    );
+  };
+
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
