@@ -17,9 +17,10 @@ interface Props {
   canDelete: boolean;
   fmtCurrency: (v: number) => string;
   onDeleteTarget: (id: string) => void;
+  onCancelTarget?: (id: string) => void;
 }
 
-export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget }: Props) {
+export function VentasMobileList({ items, clientesList, empresaId, canDelete, fmtCurrency, onDeleteTarget, onCancelTarget }: Props) {
   const navigate = useNavigate();
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
