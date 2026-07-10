@@ -154,6 +154,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   fmt={fmt}
                   canDelete={canDelete}
                   onDeleteTarget={onDeleteTarget}
+                  onCancelTarget={onCancelTarget}
                   onCollapse={() => setExpandedId(null)}
                   empresaId={empresaId}
                   empresa={empresa}
