@@ -75,7 +75,7 @@ function calcTicketSummary(params: {
       ? pagoAplicado
       : recibidoNeto > 0
         ? recibidoNeto
-        : params.condicionPago === 'credito'
+        : params.condicionPago !== 'contado'
           ? 0
           : totalVenta;
   const saldo = params.saldoNuevo != null

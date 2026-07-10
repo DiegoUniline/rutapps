@@ -118,7 +118,7 @@ export function getTicketTotalsSummary(data: TicketData): TicketTotalsSummary {
       ? pagoAplicado
       : recibidoNeto > 0
         ? recibidoNeto
-        : data.condicionPago === 'credito'
+        : data.condicionPago !== 'contado'
           ? 0
           : totalVenta;
   const saldo = data.saldoNuevo != null
