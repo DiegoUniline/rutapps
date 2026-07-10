@@ -858,8 +858,23 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
       // El folio real lo asigna el servidor al sincronizar; en el ticket
-      // mostramos una referencia provisional basada en el id de la venta.
-      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
+      // mostramos una referencia provisional basada en el id de la venta
+      // y luego intentamos reemplazarla con el folio real de la BD.
+      const placeholderFolio = ventaId.slice(0, 8).toUpperCase();
+      setTicketInfo({ folio: placeholderFolio, fecha: new Date().toLocaleDateString('es-MX') });
+      // Poll (hasta ~10s) para obtener el folio asignado por el trigger de BD.
+      (async () => {
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, i === 0 ? 800 : 1200));
+          try {
+            const { data: vRow } = await supabase.from('ventas').select('folio').eq('id', ventaId).maybeSingle();
+            if (vRow?.folio) {
+              setTicketInfo(prev => prev ? { ...prev, folio: vRow.folio as string } : prev);
+              break;
+            }
+          } catch { /* offline, seguir intentando */ }
+        }
+      })();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 
