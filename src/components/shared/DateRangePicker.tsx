@@ -155,7 +155,8 @@ export function DateRangePicker({
               <div className="overflow-y-auto flex-1">
               <DayPicker
                 mode="range"
-                numberOfMonths={1}
+                numberOfMonths={isMobile ? 1 : 2}
+
                 locale={es}
                 weekStartsOn={1}
                 selected={draft}
