@@ -163,7 +163,7 @@ export function DateRangePicker({
                 onSelect={handleSelectRange}
                 defaultMonth={draft?.from ?? new Date()}
                 showOutsideDays
-                className="p-3 pointer-events-auto sm:[&_.rdp-months]:!flex-row [&_.rdp-months]:!flex-col"
+                className="p-3 pointer-events-auto"
                 classNames={{
                   months: 'flex flex-col sm:flex-row gap-4',
                   month: 'space-y-3',
