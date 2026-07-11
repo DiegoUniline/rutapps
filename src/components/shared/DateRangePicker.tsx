@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   formatDateDMY,
   normalizeDateISO,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/date-format';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
+
 
 export interface DateRangePickerProps {
   /** ISO yyyy-mm-dd */
@@ -61,7 +63,9 @@ export function DateRangePicker({
     return { from: f, to: t };
   }, [from, to]);
 
+  const isMobile = useIsMobile();
   const [draft, setDraft] = React.useState<DateRange | undefined>(initialRange);
+
   const [fromText, setFromText] = React.useState(from ? formatDateDMY(from) : '');
   const [toText, setToText] = React.useState(to ? formatDateDMY(to) : '');
 
@@ -131,26 +135,28 @@ export function DateRangePicker({
             <span>{buttonLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-          <div className="flex">
+        <PopoverContent className="w-[calc(100vw-1rem)] sm:w-auto max-w-[560px] p-0 pointer-events-auto max-h-[85vh] overflow-hidden" align="start" collisionPadding={8}>
+          <div className="flex flex-col sm:flex-row max-h-[85vh]">
             {/* Presets */}
-            <div className="flex flex-col gap-1 border-r border-border p-2 min-w-[140px]">
+            <div className="flex sm:flex-col gap-1 border-b sm:border-b-0 sm:border-r border-border p-2 sm:min-w-[140px] overflow-x-auto sm:overflow-x-visible shrink-0">
               {PRESETS.map(p => (
                 <button
                   key={p.label}
                   type="button"
                   onClick={() => handlePreset(p)}
-                  className="text-left text-sm px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+                  className="text-left text-sm px-3 py-1.5 rounded-md hover:bg-muted transition-colors whitespace-nowrap shrink-0"
                 >
                   {p.label}
                 </button>
               ))}
             </div>
             {/* Calendar + footer */}
-            <div className="flex flex-col pointer-events-auto">
+            <div className="flex flex-col pointer-events-auto flex-1 min-h-0 overflow-hidden">
+              <div className="overflow-y-auto flex-1">
               <DayPicker
                 mode="range"
-                numberOfMonths={2}
+                numberOfMonths={isMobile ? 1 : 2}
+
                 locale={es}
                 weekStartsOn={1}
                 selected={draft}
@@ -169,10 +175,10 @@ export function DateRangePicker({
                   nav_button_next: 'absolute right-1',
                   table: 'w-full border-collapse',
                   head_row: 'flex',
-                  head_cell: 'text-muted-foreground rounded-md w-10 font-normal text-[0.75rem]',
+                  head_cell: 'text-muted-foreground rounded-md w-9 sm:w-10 font-normal text-[0.75rem]',
                   row: 'flex w-full mt-1',
-                  cell: 'h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-primary/15 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md',
-                  day: cn(buttonVariants({ variant: 'ghost' }), 'h-10 w-10 p-0 font-normal tabular-nums aria-selected:opacity-100'),
+                  cell: 'h-9 w-9 sm:h-10 sm:w-10 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-primary/15 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md',
+                  day: cn(buttonVariants({ variant: 'ghost' }), 'h-9 w-9 sm:h-10 sm:w-10 p-0 font-normal tabular-nums aria-selected:opacity-100'),
                   day_range_start: 'day-range-start !bg-primary !text-primary-foreground rounded-l-md',
                   day_range_end: 'day-range-end !bg-primary !text-primary-foreground rounded-r-md',
                   day_range_middle: 'aria-selected:bg-primary/15 aria-selected:text-foreground',
@@ -187,7 +193,8 @@ export function DateRangePicker({
                   IconRight: () => <ChevronRight className="h-4 w-4" />,
                 }}
               />
-              <div className="border-t border-border p-3 flex flex-wrap items-center gap-2">
+              </div>
+              <div className="border-t border-border p-3 flex flex-wrap items-center gap-2 bg-background shrink-0">
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground">Inicio</label>
                   <Input
@@ -217,6 +224,7 @@ export function DateRangePicker({
             </div>
           </div>
         </PopoverContent>
+
       </Popover>
       {hasValue && (
         <button
