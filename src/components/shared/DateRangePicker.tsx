@@ -63,7 +63,9 @@ export function DateRangePicker({
     return { from: f, to: t };
   }, [from, to]);
 
+  const isMobile = useIsMobile();
   const [draft, setDraft] = React.useState<DateRange | undefined>(initialRange);
+
   const [fromText, setFromText] = React.useState(from ? formatDateDMY(from) : '');
   const [toText, setToText] = React.useState(to ? formatDateDMY(to) : '');
 
