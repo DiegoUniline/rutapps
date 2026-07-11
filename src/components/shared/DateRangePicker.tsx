@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   formatDateDMY,
   normalizeDateISO,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/date-format';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
+
 
 export interface DateRangePickerProps {
   /** ISO yyyy-mm-dd */
