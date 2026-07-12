@@ -351,6 +351,39 @@ export default function VentasListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /> <VideoHelpButton module="ventas" /></h1>
 
+      {!isMobile && (
+        <div className="border-b border-border -mx-4 px-4 sm:mx-0 sm:px-0">
+          <nav className="flex gap-6" role="tablist" aria-label="Vista de ventas">
+            <button
+              role="tab"
+              aria-selected={viewMode === 'ventas'}
+              onClick={() => { setViewMode('ventas'); setPage(1); }}
+              className={cn(
+                "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
+                viewMode === 'ventas'
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              )}
+            >
+              <List className="h-4 w-4" /> Ventas
+            </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === 'productos'}
+              onClick={() => { setViewMode('productos'); setPage(1); }}
+              className={cn(
+                "relative inline-flex items-center gap-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors border-b-2 -mb-px",
+                viewMode === 'productos'
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              )}
+            >
+              <Package className="h-4 w-4" /> Productos
+            </button>
+          </nav>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
@@ -366,33 +399,7 @@ export default function VentasListPage() {
           onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
         <div className="flex items-center gap-2 shrink-0">
-          {/* View toggle */}
-          {!isMobile && (
-            <div className="inline-flex items-center bg-accent rounded-lg p-[4px] gap-0">
-              <button
-                onClick={() => { setViewMode('ventas'); setPage(1); }}
-                className={cn(
-                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all",
-                  viewMode === 'ventas'
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                    : "bg-transparent text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                )}
-              >
-                <List className="h-3.5 w-3.5" /> Ventas
-              </button>
-              <button
-                onClick={() => { setViewMode('productos'); setPage(1); }}
-                className={cn(
-                  "inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all",
-                  viewMode === 'productos'
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                    : "bg-transparent text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                )}
-              >
-                <Package className="h-3.5 w-3.5" /> Productos
-              </button>
-            </div>
-          )}
+
           {!isMobile && (
             <ColumnVisibilityMenu
               columns={VENTAS_TABLE_COLUMNS}
