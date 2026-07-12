@@ -21,9 +21,9 @@ export function ReportLayout({ title, desde, hasta, filters, children, footer }:
   };
 
   return (
-    <div className="space-y-4">
-      {/* ─── Report Header — matches ReporteDiario style ─── */}
-      <div className="bg-card border border-border rounded-lg p-4 print:border-0 print:p-0">
+    <div className="space-y-3">
+      {/* Cabecera del reporte — solo visible al imprimir. En pantalla el título va en la barra superior. */}
+      <div className="hidden print:block bg-card border border-border rounded-lg p-4 print:border-0 print:p-0">
         <div className="flex items-start justify-between">
           <div>
             {empresa?.nombre && (
@@ -45,6 +45,7 @@ export function ReportLayout({ title, desde, hasta, filters, children, footer }:
         )}
         <p className="text-[9px] text-muted-foreground/50 mt-1">Generado: {generatedAt}</p>
       </div>
+
 
       {/* ─── Report Body ─── */}
       {children}
