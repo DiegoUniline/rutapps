@@ -27,7 +27,7 @@ html, body, #root {
 @layer base {
   :root {
     /* Core palette — Light, ultra-clean */
-    --background: 0 0% 98%;
+    --background: 0 0% 100%;
     --foreground: 220 14% 10%;
 
     --card: 0 0% 100%;
