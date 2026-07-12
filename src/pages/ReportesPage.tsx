@@ -307,9 +307,10 @@ export default function ReportesPage() {
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn(
-              "input-odoo text-[12px] h-8 flex items-center gap-1.5 min-w-[140px] max-w-[200px] truncate",
+              "input-odoo text-[12px] h-8 flex items-center gap-1.5 w-[150px] shrink-0 truncate",
               selectedVendedores.length > 0 && "border-primary/60 bg-primary/5"
             )}>
+
               <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">
                 {selectedVendedores.length === 0
@@ -359,9 +360,10 @@ export default function ReportesPage() {
           value={tipoFilter}
           onChange={e => setTipoFilter(e.target.value as any)}
           className={cn(
-            "input-odoo text-[12px] h-8 min-w-[120px]",
+            "input-odoo text-[12px] h-8 w-[130px] shrink-0",
             tipoFilter && "border-primary/60 bg-primary/5"
           )}
+
         >
           <option value="">Todos los tipos</option>
           <option value="pedido">Preventa</option>
@@ -372,9 +374,10 @@ export default function ReportesPage() {
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn(
-              "input-odoo text-[12px] h-8 flex items-center gap-1.5 min-w-[120px] max-w-[180px] truncate",
+              "input-odoo text-[12px] h-8 flex items-center gap-1.5 w-[140px] shrink-0 truncate",
               selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
             )}>
+
               <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">
                 {selectedStatuses.length === 0
@@ -415,7 +418,7 @@ export default function ReportesPage() {
         </Popover>
 
         {/* Acciones alineadas a la derecha */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto shrink-0">
           <ExportButton
             onExcel={() => handleExport('excel')}
             onPDF={() => handleExport('pdf')}
@@ -424,6 +427,7 @@ export default function ReportesPage() {
             <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>
         </div>
+
       </div>
 
       {/* Chips de filtros activos — solo si hay alguno */}
