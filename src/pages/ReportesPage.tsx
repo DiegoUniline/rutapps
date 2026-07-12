@@ -293,144 +293,145 @@ export default function ReportesPage() {
     .filter(Boolean);
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" /> Reportes
+    <div className="p-3 space-y-3 min-h-full">
+      {/* Barra superior compacta — título + filtros + acciones en una sola línea */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h1 className="text-base font-semibold text-foreground flex items-center gap-1.5 mr-1">
+          <BarChart3 className="h-4 w-4" /> Reportes
           <HelpButton title={HELP.reportes.title} sections={HELP.reportes.sections} />
         </h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
 
-          {/* Vendedor multi-select */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className={cn(
-                "input-odoo text-[13px] flex items-center gap-1.5 min-w-[140px] max-w-[220px] truncate",
-                selectedVendedores.length > 0 && "border-primary/60 bg-primary/5"
-              )}>
-                <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">
-                  {selectedVendedores.length === 0
-                    ? 'Todos los usuarios'
-                    : selectedVendedores.length === 1
-                      ? vendedorNames[0]
-                      : `${selectedVendedores.length} usuarios`}
-                </span>
-                <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-0" align="end">
-              <div className="max-h-60 overflow-y-auto p-1">
-                {vendedoresList?.map(v => (
-                  <label
-                    key={v.id}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedVendedores.includes(v.id)}
-                      onChange={() => toggleVendedor(v.id)}
-                      className="rounded border-input"
-                    />
-                    <span className="truncate">{v.nombre}</span>
-                  </label>
-                ))}
-                {(!vendedoresList || vendedoresList.length === 0) && (
-                  <p className="text-[12px] text-muted-foreground p-3 text-center">Sin usuarios</p>
-                )}
-              </div>
-              {selectedVendedores.length > 0 && (
-                <div className="border-t border-border p-1.5">
-                  <button
-                    onClick={() => setSelectedVendedores([])}
-                    className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
-                  >
-                    <X className="h-3 w-3" /> Limpiar filtro
-                  </button>
-                </div>
+        <DateRangePicker from={desde} to={hasta} onChange={(f, t) => { setDesde(f); setHasta(t); }} />
+
+        {/* Vendedor multi-select */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
+              "input-odoo text-[12px] h-8 flex items-center gap-1.5 min-w-[140px] max-w-[200px] truncate",
+              selectedVendedores.length > 0 && "border-primary/60 bg-primary/5"
+            )}>
+              <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">
+                {selectedVendedores.length === 0
+                  ? 'Todos los usuarios'
+                  : selectedVendedores.length === 1
+                    ? vendedorNames[0]
+                    : `${selectedVendedores.length} usuarios`}
+              </span>
+              <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-0" align="start">
+            <div className="max-h-60 overflow-y-auto p-1">
+              {vendedoresList?.map(v => (
+                <label
+                  key={v.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedVendedores.includes(v.id)}
+                    onChange={() => toggleVendedor(v.id)}
+                    className="rounded border-input"
+                  />
+                  <span className="truncate">{v.nombre}</span>
+                </label>
+              ))}
+              {(!vendedoresList || vendedoresList.length === 0) && (
+                <p className="text-[12px] text-muted-foreground p-3 text-center">Sin usuarios</p>
               )}
-            </PopoverContent>
-          </Popover>
-
-
-          {/* Tipo filter */}
-          <select
-            value={tipoFilter}
-            onChange={e => setTipoFilter(e.target.value as any)}
-            className={cn(
-              "input-odoo text-[13px] min-w-[130px]",
-              tipoFilter && "border-primary/60 bg-primary/5"
+            </div>
+            {selectedVendedores.length > 0 && (
+              <div className="border-t border-border p-1.5">
+                <button
+                  onClick={() => setSelectedVendedores([])}
+                  className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
+                >
+                  <X className="h-3 w-3" /> Limpiar filtro
+                </button>
+              </div>
             )}
-          >
-            <option value="">Todos los tipos</option>
-            <option value="pedido">Preventa</option>
-            <option value="venta_directa">Venta directa</option>
-          </select>
+          </PopoverContent>
+        </Popover>
 
-          {/* Status filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className={cn(
-                "input-odoo text-[13px] flex items-center gap-1.5 min-w-[120px] max-w-[200px] truncate",
-                selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
-              )}>
-                <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">
-                  {selectedStatuses.length === 0
-                    ? 'Todos los estados'
-                    : `${selectedStatuses.length} estado${selectedStatuses.length > 1 ? 's' : ''}`}
-                </span>
-                <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-0" align="end">
-              <div className="p-1">
-                {statusOptions.map(o => (
-                  <label
-                    key={o.value}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedStatuses.includes(o.value)}
-                      onChange={() => toggleStatus(o.value)}
-                      className="rounded border-input"
-                    />
-                    <span>{o.label}</span>
-                  </label>
-                ))}
+        {/* Tipo filter */}
+        <select
+          value={tipoFilter}
+          onChange={e => setTipoFilter(e.target.value as any)}
+          className={cn(
+            "input-odoo text-[12px] h-8 min-w-[120px]",
+            tipoFilter && "border-primary/60 bg-primary/5"
+          )}
+        >
+          <option value="">Todos los tipos</option>
+          <option value="pedido">Preventa</option>
+          <option value="venta_directa">Venta directa</option>
+        </select>
+
+        {/* Status filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
+              "input-odoo text-[12px] h-8 flex items-center gap-1.5 min-w-[120px] max-w-[180px] truncate",
+              selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
+            )}>
+              <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">
+                {selectedStatuses.length === 0
+                  ? 'Todos los estados'
+                  : `${selectedStatuses.length} estado${selectedStatuses.length > 1 ? 's' : ''}`}
+              </span>
+              <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-0" align="start">
+            <div className="p-1">
+              {statusOptions.map(o => (
+                <label
+                  key={o.value}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedStatuses.includes(o.value)}
+                    onChange={() => toggleStatus(o.value)}
+                    className="rounded border-input"
+                  />
+                  <span>{o.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedStatuses.length > 0 && (
+              <div className="border-t border-border p-1.5">
+                <button
+                  onClick={() => setSelectedStatuses([])}
+                  className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
+                >
+                  <X className="h-3 w-3" /> Limpiar
+                </button>
               </div>
-              {selectedStatuses.length > 0 && (
-                <div className="border-t border-border p-1.5">
-                  <button
-                    onClick={() => setSelectedStatuses([])}
-                    className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
-                  >
-                    <X className="h-3 w-3" /> Limpiar
-                  </button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
+            )}
+          </PopoverContent>
+        </Popover>
 
+        {/* Acciones alineadas a la derecha */}
+        <div className="flex items-center gap-2 ml-auto">
           <ExportButton
             onExcel={() => handleExport('excel')}
             onPDF={() => handleExport('pdf')}
           />
-          <button onClick={() => window.print()} className="btn-odoo-secondary flex items-center gap-1 print:hidden">
+          <button onClick={() => window.print()} className="btn-odoo-secondary h-8 flex items-center gap-1 print:hidden">
             <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>
         </div>
       </div>
 
-      {/* Active filter chips */}
+      {/* Chips de filtros activos — solo si hay alguno */}
       {(selectedVendedores.length > 0 || selectedStatuses.length > 0 || tipoFilter) && (
-        <div className="flex items-center gap-1.5 flex-wrap print:hidden">
-          <span className="text-[11px] text-muted-foreground">Filtrando por:</span>
+        <div className="flex items-center gap-1.5 flex-wrap print:hidden -mt-1">
           {tipoFilter && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
-              Tipo: {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
+              {tipoFilter === 'pedido' ? 'Preventa' : 'Venta directa'}
               <button onClick={() => setTipoFilter('')} className="hover:text-destructive">
                 <X className="h-3 w-3" />
               </button>
@@ -454,6 +455,7 @@ export default function ReportesPage() {
           ))}
         </div>
       )}
+
 
       {/* Tabs */}
       <div className="flex gap-0.5 border-b border-border overflow-x-auto print:hidden">
