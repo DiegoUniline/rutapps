@@ -1,7 +1,7 @@
 import { useCurrency } from '@/hooks/useCurrency';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
-import { useColumnFilters, FilterTh } from '@/hooks/useColumnFilters';
+import { useSmartColumnFilters, ColumnFilterButton, type ColumnFilterDef } from '@/hooks/useColumnFilters';
 
 const COLUMNS: ColumnDef[] = [
   { key: '#', label: '#' },
@@ -14,22 +14,41 @@ const COLUMNS: ColumnDef[] = [
   { key: 'pendiente', label: 'Pendiente' },
 ];
 
+const FILTER_DEFS: ColumnFilterDef[] = [
+  { key: 'nombre', type: 'text', label: 'Cliente' },
+  { key: 'ventas', type: 'number', label: 'Ventas' },
+  { key: 'total', type: 'number', label: 'Total' },
+  { key: 'costo', type: 'number', label: 'Costo' },
+  { key: 'utilidad', type: 'number', label: 'Utilidad' },
+  { key: 'margen', type: 'number', label: 'Margen %' },
+  { key: 'pendiente', type: 'number', label: 'Pendiente' },
+];
+
 export function ReporteVentasCliente({ data }: { data: any }) {
   const { fmt } = useCurrency();
   const { visible, setVisible, isVisible } = useColumnVisibility(COLUMNS);
   const rawItems: any[] = data.ventasPorCliente ?? [];
-  const { filtered, filters, setFilter, hasActive, clear } = useColumnFilters(rawItems, (r, k) => {
+  const getVal = (r: any, k: string) => {
     if (k === 'margen') return r.total > 0 ? ((r.utilidad ?? 0) / r.total) * 100 : 0;
     return r?.[k];
-  });
-  const { sorted, sort, toggle } = useSortableTable(filtered, (r, k) => {
-    if (k === 'margen') return r.total > 0 ? ((r.utilidad ?? 0) / r.total) * 100 : 0;
-    return r?.[k];
-  });
+  };
+  const { filtered, filters, setFilter, hasActive, clearAll, uniqueValues } = useSmartColumnFilters(rawItems, FILTER_DEFS, getVal);
+  const { sorted, sort, toggle } = useSortableTable(filtered, getVal);
   const items = sorted;
   const totalVendido = items.reduce((s, c) => s + c.total, 0);
   const totalPendiente = items.reduce((s, c) => s + c.pendiente, 0);
   const totalUtilidad = items.reduce((s, c) => s + (c.utilidad ?? 0), 0);
+
+  const filterFor = (key: string) => (
+    <ColumnFilterButton
+      columnKey={key}
+      label={FILTER_DEFS.find(d => d.key === key)?.label ?? key}
+      type={FILTER_DEFS.find(d => d.key === key)?.type ?? 'text'}
+      filter={filters[key]}
+      onChange={f => setFilter(key, f)}
+      uniqueValues={uniqueValues[key]}
+    />
+  );
 
   return (
     <div className="space-y-3">
@@ -54,7 +73,7 @@ export function ReporteVentasCliente({ data }: { data: any }) {
         </div>
         <div className="flex items-center gap-2">
           {hasActive && (
-            <button onClick={clear} className="text-[11px] text-primary hover:underline">Limpiar filtros</button>
+            <button onClick={clearAll} className="text-[11px] text-primary hover:underline">Limpiar filtros</button>
           )}
           <ColumnChooser columns={COLUMNS} visible={visible} onChange={setVisible} />
         </div>
@@ -65,23 +84,62 @@ export function ReporteVentasCliente({ data }: { data: any }) {
           <thead>
             <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
               {isVisible('#') && <th className="text-left py-2 px-3 w-8">#</th>}
-              {isVisible('nombre') && <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="text-left py-2 px-3">Cliente</SortableTh>}
-              {isVisible('ventas') && <SortableTh sortKey="ventas" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Ventas</SortableTh>}
-              {isVisible('total') && <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Total</SortableTh>}
-              {isVisible('costo') && <SortableTh sortKey="costo" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Costo</SortableTh>}
-              {isVisible('utilidad') && <SortableTh sortKey="utilidad" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Utilidad</SortableTh>}
-              {isVisible('margen') && <SortableTh sortKey="margen" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Margen</SortableTh>}
-              {isVisible('pendiente') && <SortableTh sortKey="pendiente" sort={sort} onToggle={toggle} align="right" className="text-right py-2 px-3">Pendiente</SortableTh>}
-            </tr>
-            <tr className="border-b border-border/60 bg-muted/20 print:hidden">
-              {isVisible('#') && <th />}
-              {isVisible('nombre') && <FilterTh columnKey="nombre" filters={filters} onFilter={setFilter} placeholder="Cliente" />}
-              {isVisible('ventas') && <FilterTh columnKey="ventas" filters={filters} onFilter={setFilter} placeholder="Ventas" align="right" />}
-              {isVisible('total') && <FilterTh columnKey="total" filters={filters} onFilter={setFilter} placeholder="Total" align="right" />}
-              {isVisible('costo') && <FilterTh columnKey="costo" filters={filters} onFilter={setFilter} placeholder="Costo" align="right" />}
-              {isVisible('utilidad') && <FilterTh columnKey="utilidad" filters={filters} onFilter={setFilter} placeholder="Utilidad" align="right" />}
-              {isVisible('margen') && <th />}
-              {isVisible('pendiente') && <FilterTh columnKey="pendiente" filters={filters} onFilter={setFilter} placeholder="Pendiente" align="right" />}
+              {isVisible('nombre') && (
+                <th className="text-left py-2 px-3">
+                  <span className="inline-flex items-center gap-1">
+                    <SortableTh sortKey="nombre" sort={sort} onToggle={toggle} className="p-0 border-0 bg-transparent">Cliente</SortableTh>
+                    {filterFor('nombre')}
+                  </span>
+                </th>
+              )}
+              {isVisible('ventas') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="ventas" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Ventas</SortableTh>
+                    {filterFor('ventas')}
+                  </span>
+                </th>
+              )}
+              {isVisible('total') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="total" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Total</SortableTh>
+                    {filterFor('total')}
+                  </span>
+                </th>
+              )}
+              {isVisible('costo') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="costo" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Costo</SortableTh>
+                    {filterFor('costo')}
+                  </span>
+                </th>
+              )}
+              {isVisible('utilidad') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="utilidad" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Utilidad</SortableTh>
+                    {filterFor('utilidad')}
+                  </span>
+                </th>
+              )}
+              {isVisible('margen') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="margen" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Margen</SortableTh>
+                    {filterFor('margen')}
+                  </span>
+                </th>
+              )}
+              {isVisible('pendiente') && (
+                <th className="text-right py-2 px-3">
+                  <span className="inline-flex items-center gap-1 justify-end w-full">
+                    <SortableTh sortKey="pendiente" sort={sort} onToggle={toggle} align="right" className="p-0 border-0 bg-transparent">Pendiente</SortableTh>
+                    {filterFor('pendiente')}
+                  </span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
