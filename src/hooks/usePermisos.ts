@@ -75,6 +75,7 @@ export const MODULOS: ModuloDef[] = [
   { id: 'ventas.promociones', label: 'Promociones', group: 'Ventas' },
   { id: 'ventas.cambiar_precio', label: 'Cambiar precio en venta', group: 'Ventas' },
   { id: 'ventas.aplicar_descuento', label: 'Aplicar descuento al total', group: 'Ventas' },
+  { id: 'ventas.editar_condicion_pago', label: 'Cambiar condición de pago (contado/crédito)', group: 'Ventas' },
   { id: 'pos', label: 'Punto de venta', group: 'Ventas' },
 
   // Clientes
