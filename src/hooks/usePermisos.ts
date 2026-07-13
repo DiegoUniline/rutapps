@@ -382,7 +382,10 @@ export function usePermisos(): UsePermisosReturn {
       return perm?.permitido ?? false;
     }
     if (hasRole === false) return true; // no role = full access
-    if (hasRole === null) return modulo === 'solo_movil' ? false : true; // still loading — allow access
+    // Aún cargando: denegar por defecto para evitar "flash de contenido no autorizado"
+    // (un vendedor veía dashboard/escritorio con datos sensibles hasta que terminaba
+    // la carga de permisos). Los owners ya pasaron por el early-return de arriba.
+    if (hasRole === null) return false;
     // Each module requires its own explicit permission — no parent fallback
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     return perm?.permitido ?? false;
