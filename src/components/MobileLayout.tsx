@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home, Eye, Inbox } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode, AlertTriangle, Play, BarChart3, Navigation, Receipt, Home, Eye, Inbox, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
@@ -48,6 +48,7 @@ const ALL_TABS_CLASSIC = [
 const ALL_MORE_ITEMS = [
   { label: 'POS', icon: ScanBarcode, path: '/ruta/pos', permiso: 'ruta.vender' },
   { label: 'Navegación', icon: Navigation, path: '/ruta/navegacion', permiso: 'ruta.mapa' },
+  { label: 'Promociones', icon: Gift, path: '/ruta/promociones', permiso: null as string | null },
   { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga', permiso: 'ruta.descarga' },
   { label: 'Pendientes', icon: Inbox, path: '/ruta/pendientes', permiso: null as string | null },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar', permiso: null as string | null },
