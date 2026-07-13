@@ -265,6 +265,7 @@ export const MODULOS_MOVIL: ModuloMovilDef[] = [
   // Acciones de venta
   { id: 'ruta.vender', label: 'Crear ventas (POS y nueva venta)', group: 'Ventas', description: 'Habilita pestaña POS y crear venta' },
   { id: 'ruta.venta_credito', label: 'Vender a crédito', group: 'Ventas' },
+  { id: 'ventas.editar_condicion_pago', label: 'Cambiar condición de pago (contado/crédito)', group: 'Ventas', description: 'Si se desactiva, la condición, plazo y forma de pago se toman automáticamente del cliente' },
   { id: 'ruta.cambiar_precio', label: 'Cambiar precio en línea', group: 'Ventas' },
   { id: 'ruta.aplicar_descuento', label: 'Aplicar descuento', group: 'Ventas' },
   { id: 'ruta.cancelar_venta', label: 'Cancelar venta', group: 'Ventas' },
