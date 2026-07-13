@@ -613,6 +613,7 @@ function AppRoutes() {
           <Route path="cobros" element={<RutaCobros />} />
           <Route path="stock" element={<RutaStock />} />
           <Route path="gastos" element={<RutaGastos />} />
+          <Route path="promociones" element={<RutaPromociones />} />
           <Route path="entregas" element={<RutaClientesEntregas />} />
           <Route path="perfil" element={<RutaPerfil />} />
         </Route>
@@ -680,9 +681,10 @@ function renderAuthenticatedRoutes() {
         <Route path="carga" element={<RutaMiCarga />} />
         <Route path="cobros" element={<RutaCobros />} />
         <Route path="stock" element={<RutaStock />} />
-        <Route path="gastos" element={<RutaGastos />} />
-        <Route path="entregas" element={<RutaClientesEntregas />} />
-        <Route path="perfil" element={<RutaPerfil />} />
+      <Route path="gastos" element={<RutaGastos />} />
+      <Route path="promociones" element={<RutaPromociones />} />
+      <Route path="entregas" element={<RutaClientesEntregas />} />
+      <Route path="perfil" element={<RutaPerfil />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />

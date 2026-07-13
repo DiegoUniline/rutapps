@@ -17,6 +17,7 @@ import {
   X,
   ChevronRight,
   ReceiptCent,
+  Gift,
 } from 'lucide-react';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,7 @@ const ALL_SECTIONS: Section[] = [
       { label: 'POS', sub: 'Venta rápida', icon: Calculator, path: '/ruta/pos', permiso: 'ruta.vender', tone: 'primary' },
       { label: 'Ventas', sub: 'Pedidos y preventa', icon: ShoppingCart, path: '/ruta/ventas', permiso: 'ruta.ventas', tone: 'primary' },
       { label: 'Cobros', sub: 'Pagos y saldos', icon: ReceiptText, path: '/ruta/cobros', permiso: 'ruta.cobros', tone: 'primary' },
+      { label: 'Promociones', sub: 'Activas hoy', icon: Gift, path: '/ruta/promociones', permiso: null, tone: 'green' },
     ],
   },
   {
