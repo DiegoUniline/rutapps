@@ -1262,6 +1262,12 @@ export default function PuntoVentaPage() {
             </div>
           )}
 
+          {/* Aviso: producto gratis pendiente en el carrito */}
+          <PromoPendingAlert
+            pending={promosPendientes}
+            productoNombre={(id) => productos?.find(p => p.id === id)?.nombre ?? 'producto'}
+          />
+
           {/* Category cards + view toggle */}
           <div className="px-3 sm:px-4 pb-2 flex items-center gap-2">
             {clasificaciones && clasificaciones.length > 0 && (
