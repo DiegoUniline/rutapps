@@ -181,6 +181,7 @@ import RutaVentasTab from "@/pages/ruta/RutaVentasTab";
 import RutaClientesEntregas from "@/pages/ruta/RutaClientesEntregas";
 import RutaStock from "@/pages/ruta/RutaStock";
 import RutaGastos from "@/pages/ruta/RutaGastos";
+import RutaPromociones from "@/pages/ruta/RutaPromociones";
 import RutaInicio from "@/pages/ruta/RutaInicio";
 import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta/index";
 import RutaCobros from "@/pages/ruta/RutaCobros";
