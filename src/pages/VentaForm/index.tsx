@@ -32,6 +32,7 @@ export default function VentaFormPage() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
+  const canEditCondicion = hasPermiso('ventas.editar_condicion_pago', 'ver');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
