@@ -155,6 +155,7 @@ export const ACCIONES_POR_MODULO: Record<string, string[]> = {
   'ventas.reporte_diario': ['ver'],
   'ventas.cambiar_precio': ['ver'],
   'ventas.aplicar_descuento': ['ver'],
+  'ventas.editar_condicion_pago': ['ver'],
   'logistica.dashboard': ['ver'],
   'logistica.monitor': ['ver'],
   'logistica.mapa_clientes': ['ver'],
