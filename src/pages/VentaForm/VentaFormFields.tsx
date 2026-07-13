@@ -17,6 +17,10 @@ interface Props {
   clienteNombre?: string;
   totalPagado: number;
   saldoPendiente: number;
+  canEditCondicion?: boolean;
+  set: (field: string, val: any) => void;
+  onClienteChange: (cId: string) => void;
+}
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
