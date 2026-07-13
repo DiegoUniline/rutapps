@@ -18,7 +18,8 @@ import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { usePromocionesActivas, evaluatePromociones, getPendingProductoGratis, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { PromoPendingAlert } from '@/components/PromoPendingAlert';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TurnoControls } from '@/components/pos/TurnoControls';
 import { AbrirTurnoModal as AbrirTurnoModalForPrompt, AbrirTurnoModal } from '@/components/pos/AbrirTurnoModal';
@@ -482,6 +483,22 @@ export default function PuntoVentaPage() {
   }, [promoResultsRaw, promoRawByProduct, linePricingMap]);
 
   const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
+
+  // Avisos de producto gratis pendiente (regalo faltante en el carrito)
+  const promosPendientes = useMemo(() => {
+    if (!promocionesActivas?.length || cart.length === 0) return [];
+    const cartForPromo: CartItemForPromo[] = cart.map(item => {
+      const prod = productos?.find(p => p.id === item.producto_id);
+      return {
+        producto_id: item.producto_id,
+        clasificacion_id: prod?.clasificacion_id ?? undefined,
+        precio_unitario: item.precio_unitario_sin_redondeo,
+        cantidad: item.cantidad,
+      };
+    });
+    return getPendingProductoGratis(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined, (empresa as any)?.zona_horaria);
+  }, [promocionesActivas, cart, productos, clienteId, empresa]);
+
 
   // Barcode scanner: listen for rapid key presses
   useEffect(() => {
@@ -1244,6 +1261,12 @@ export default function PuntoVentaPage() {
               </div>
             </div>
           )}
+
+          {/* Aviso: producto gratis pendiente en el carrito */}
+          <PromoPendingAlert
+            pending={promosPendientes}
+            productoNombre={(id) => productos?.find(p => p.id === id)?.nombre ?? 'producto'}
+          />
 
           {/* Category cards + view toggle */}
           <div className="px-3 sm:px-4 pb-2 flex items-center gap-2">

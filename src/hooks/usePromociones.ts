@@ -322,3 +322,85 @@ export function evaluatePromociones(
 
   return results;
 }
+
+/**
+ * Detecta promociones "producto_gratis" cuyo producto disparador YA está en el
+ * carrito con cantidad suficiente pero cuyo producto de regalo (distinto) NO está
+ * en el carrito (o está con cantidad insuficiente). Sirve para mostrar un aviso al
+ * vendedor de que debe agregar el producto gratis para que se aplique la promo.
+ */
+export interface PendingProductoGratis {
+  promocion_id: string;
+  promocion_nombre: string;
+  trigger_producto_id: string;
+  gratis_producto_id: string;
+  cantidad_gratis_faltante: number;
+}
+
+export function getPendingProductoGratis(
+  promociones: Promocion[],
+  cartItems: CartItemForPromo[],
+  clienteId?: string,
+  zonaId?: string,
+  zonaHoraria?: string,
+): PendingProductoGratis[] {
+  if (!promociones?.length || !cartItems?.length) return [];
+  const today = todayInTimezone(zonaHoraria);
+  const tz = zonaHoraria || 'America/Mexico_City';
+  const diaHoy = (() => {
+    try {
+      const wd = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long' }).format(new Date()).toLowerCase();
+      const map: Record<string, string> = {
+        sunday: 'domingo', monday: 'lunes', tuesday: 'martes', wednesday: 'miércoles',
+        thursday: 'jueves', friday: 'viernes', saturday: 'sábado',
+      };
+      return map[wd] || DIAS_MAP[new Date().getDay()];
+    } catch { return DIAS_MAP[new Date().getDay()]; }
+  })();
+
+  const active = promociones
+    .filter(p => p.activa && p.tipo === 'producto_gratis' && !!p.producto_gratis_id)
+    .filter(p => !p.vigencia_inicio || p.vigencia_inicio <= today)
+    .filter(p => !p.vigencia_fin || p.vigencia_fin >= today)
+    .filter(p => (p.dias_semana ?? []).length === 0 || p.dias_semana.includes(diaHoy));
+
+  const out: PendingProductoGratis[] = [];
+  for (const promo of active) {
+    const freeId = promo.producto_gratis_id!;
+    const triggers = cartItems.filter(item => {
+      if (item.es_cambio) return false;
+      // Regalo == disparador ⇒ el motor sí lo aplica solo, no hay pendiente
+      if (item.producto_id === freeId) return false;
+      switch (promo.aplica_a) {
+        case 'todos': return true;
+        case 'producto': return promo.producto_ids.includes(item.producto_id);
+        case 'clasificacion': return item.clasificacion_id ? promo.clasificacion_ids.includes(item.clasificacion_id) : false;
+        case 'cliente': return clienteId ? promo.cliente_ids.includes(clienteId) : false;
+        case 'zona': return zonaId ? promo.zona_ids.includes(zonaId) : false;
+        default: return false;
+      }
+    });
+
+    for (const item of triggers) {
+      const compraMin = Math.max(1, Number(promo.cantidad_minima) || 1);
+      const cantGratis = Math.max(1, Number(promo.cantidad_gratis) || 1);
+      const sets = Math.floor(item.cantidad / compraMin);
+      if (sets <= 0) continue;
+      const totalGratis = sets * cantGratis;
+      const enCarrito = cartItems.find(ci => ci.producto_id === freeId && !ci.es_cambio)?.cantidad ?? 0;
+      const faltante = totalGratis - enCarrito;
+      if (faltante <= 0) continue;
+      // Evitar duplicados por promo+trigger
+      if (out.some(o => o.promocion_id === promo.id && o.trigger_producto_id === item.producto_id)) continue;
+      out.push({
+        promocion_id: promo.id,
+        promocion_nombre: promo.nombre,
+        trigger_producto_id: item.producto_id,
+        gratis_producto_id: freeId,
+        cantidad_gratis_faltante: faltante,
+      });
+    }
+  }
+  return out;
+}
+
