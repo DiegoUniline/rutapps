@@ -17,11 +17,12 @@ interface Props {
   clienteNombre?: string;
   totalPagado: number;
   saldoPendiente: number;
+  canEditCondicion?: boolean;
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -38,7 +39,13 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     : (
       <div className="flex gap-1">
         {['pedido', 'venta_directa'].map(t => (
-          <button key={t} onClick={() => { set('tipo', t); set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado'); set('entrega_inmediata', t === 'venta_directa'); }}
+          <button key={t} onClick={() => {
+            set('tipo', t);
+            // Solo autopisamos condicion_pago si el usuario puede editarla;
+            // en caso contrario, la maneja el auto-fill por cliente.
+            if (canEditCondicion) set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado');
+            set('entrega_inmediata', t === 'venta_directa');
+          }}
             className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === t ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}>
             {t === 'pedido' ? 'Pedido' : 'Venta directa'}
           </button>
@@ -46,8 +53,15 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </div>
     );
 
-  const renderCondicion = () => readOnly
-    ? <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{form.condicion_pago}</div>
+  const renderCondicion = () => (readOnly || !canEditCondicion)
+    ? (
+      <div className="text-[13px] py-1.5 px-1 text-foreground capitalize flex items-center gap-1.5">
+        <span>{form.condicion_pago}</span>
+        {!readOnly && !canEditCondicion && (
+          <span className="text-[10px] text-muted-foreground italic">(según cliente)</span>
+        )}
+      </div>
+    )
     : (
       <div className="flex gap-1">
         {condicionBtns.map(o => (
@@ -58,6 +72,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
         ))}
       </div>
     );
+
 
   const listaNombre = listasPrecios?.find(l => l.id === form.lista_precio_id)?.nombre
     ?? tarifaOptions.find(t => t.value === form.tarifa_id)?.label;

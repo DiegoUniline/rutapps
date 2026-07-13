@@ -32,6 +32,7 @@ export default function VentaFormPage() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
+  const canEditCondicion = hasPermiso('ventas.editar_condicion_pago', 'ver');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
@@ -291,6 +292,12 @@ export default function VentaFormPage() {
       const dias = (c as any)?.dia_visita as string[] | null | undefined;
       set('fecha_entrega', nextVisitDate(dias));
     }
+    // Si el usuario NO puede editar la condición de pago, la fijamos según el cliente:
+    // cliente con crédito → 'credito' (usa sus dias_credito/limite_credito/forma_pago),
+    // cliente sin crédito o público general → 'contado'.
+    if (!canEditCondicion) {
+      set('condicion_pago', c?.credito ? 'credito' : 'contado');
+    }
   };
 
   const billingEnabled = isSuperAdminEmail(user?.email);
@@ -320,7 +327,7 @@ export default function VentaFormPage() {
       <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2"><span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />Esta venta está {form.status} y no se puede editar.</div>}
-          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} totalPagado={totalPagado} saldoPendiente={saldoPendiente} set={set} onClienteChange={onClienteChange} />
+          <VentaFormFields form={form} readOnly={readOnly} isNew={isNew} clienteOptions={clienteOptions} tarifaOptions={tarifaOptions} almacenOptions={almacenOptions} clienteNombre={clienteNombre} totalPagado={totalPagado} saldoPendiente={saldoPendiente} canEditCondicion={canEditCondicion} set={set} onClienteChange={onClienteChange} />
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
