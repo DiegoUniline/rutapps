@@ -105,12 +105,14 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       return state;
     }
 
-    // Determinar fecha de fin "real" — preferir el mayor entre fecha_vencimiento y current_period_end
+    // Determinar fecha de fin "real" — preferir el mayor entre fecha_vencimiento y current_period_end.
+    // Usar parseLocalDate para tratar las columnas `date` como fecha LOCAL, no UTC
+    // (si no, en CDMX el banner marca "vencida" un día antes de tiempo).
     const candidates = [sub.fecha_vencimiento, sub.current_period_end, sub.trial_ends_at]
-      .filter(Boolean)
-      .map((d) => new Date(d as string));
+      .map((d) => parseLocalDate(d as string | null))
+      .filter((d): d is Date => d !== null);
     const endDate = candidates.length ? new Date(Math.max(...candidates.map(d => d.getTime()))) : null;
-    const daysLeft = endDate ? differenceInDays(endDate, new Date()) : null;
+    const daysLeft = endDate ? differenceInCalendarDays(endDate, new Date()) : null;
 
     // Cobertura real: manual, o cualquier fecha de fin >= hoy
     const today = new Date();
