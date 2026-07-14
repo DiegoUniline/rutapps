@@ -1044,11 +1044,13 @@ export default function DashboardPage() {
               </h2>
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Rango seleccionado</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <IsTile label="Ventas" value={money(estadoResultados.ventasNetas)} hint="Después de descuento, antes de impuestos" tone="default" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+              <IsTile label="Subtotal bruto" value={money(estadoResultados.ventasBrutas)} hint="Antes de descuentos e impuestos" tone="info" />
               <IsTile label="Descuentos" value={`- ${money(estadoResultados.descuentos)}`} hint="Aplicados en líneas" tone="warning" />
+              <IsTile label="Subtotal neto" value={money(estadoResultados.ventasNetas)} hint="Después de descuento, sin IVA" tone="default" />
+              <IsTile label="Impuestos" value={`+ ${money(estadoResultados.impuestos)}`} hint="IVA + IEPS trasladados" tone="info" />
+              <IsTile label="Total facturado" value={money(estadoResultados.totalConImpuestos)} hint="Coincide con KPI Ventas" tone="default" emphasize />
               <IsTile label="Devoluciones" value={`- ${money(estadoResultados.devoluciones)}`} hint={`${devStats.count} registros`} tone="danger" />
-              <IsTile label="Ventas brutas" value={money(estadoResultados.ventasBrutas)} hint="Antes de descuentos y devoluciones" tone="info" />
               <IsTile label="Costo" value={`- ${money(estadoResultados.costo)}`} hint="Costo de mercancía vendida" tone="warning" />
               <IsTile
                 label="Utilidad bruta"
