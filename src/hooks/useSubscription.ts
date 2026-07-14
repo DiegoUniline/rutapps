@@ -1,7 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { differenceInDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns';
+
+/**
+ * Parsea una fecha de Supabase como fecha LOCAL, no UTC.
+ * Las columnas `date` vienen como 'YYYY-MM-DD' y `new Date(str)` las trata como
+ * medianoche UTC, lo que en CDMX (UTC-6) las mueve al día anterior por la tarde
+ * y provocaba que el banner marcara "suscripción vencida" un día antes.
+ */
+function parseLocalDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  // Si viene solo la fecha (YYYY-MM-DD), construir en zona local.
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.exec(value);
+  if (dateOnly) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
+}
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface SubscriptionState {
