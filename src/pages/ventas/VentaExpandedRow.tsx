@@ -38,6 +38,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const [cobradores, setCobradores] = useState<Record<string, string>>({});
   const [ventaListaNombre, setVentaListaNombre] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [entregadoPorProd, setEntregadoPorProd] = useState<Record<string, number>>({});
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [pdfName, setPdfName] = useState('');
@@ -107,6 +108,24 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         const principalNombre = (plRes as any)?.data?.[0]?.nombre ?? null;
         const tarifaNombre = (tRes as any)?.data?.nombre ?? null;
         setVentaListaNombre(clienteListaNombre ?? principalNombre ?? tarifaNombre ?? null);
+
+        // Cantidades ENTREGADAS por producto (solo pedidos con entregas separadas).
+        if (venta.tipo === 'pedido') {
+          const { data: ents } = await (supabase as any)
+            .from('entregas')
+            .select('status, entrega_lineas(producto_id, cantidad_entregada)')
+            .eq('pedido_id', venta.id);
+          const map: Record<string, number> = {};
+          for (const e of (ents ?? [])) {
+            if (e.status !== 'hecho') continue;
+            for (const el of (e.entrega_lineas ?? [])) {
+              map[el.producto_id] = (map[el.producto_id] ?? 0) + Number(el.cantidad_entregada ?? 0);
+            }
+          }
+          if (!cancelled) setEntregadoPorProd(map);
+        } else {
+          if (!cancelled) setEntregadoPorProd({});
+        }
         setLoading(false);
       }
     }
@@ -295,6 +314,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                         <th className="text-left py-1 font-medium">Lista</th>
                         <th className="text-right py-1 font-medium w-16">Precio</th>
                         <th className="text-right py-1 font-medium w-14">Cant</th>
+                        {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-16">Entreg.</th>}
                         <th className="text-center py-1 font-medium w-10">Ud</th>
                         <th className="text-right py-1 font-medium w-16">Monto</th>
                         <th className="text-right py-1 font-medium w-16">Desc</th>
@@ -312,6 +332,17 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                             <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
+                            {venta.tipo === 'pedido' && (() => {
+                              const ent = entregadoPorProd[l.producto_id] ?? 0;
+                              const ped = Number(l.cantidad ?? 0);
+                              const parcial = ent > 0 && ent < ped;
+                              const completo = ent >= ped && ped > 0;
+                              return (
+                                <td className={`text-right py-1.5 tabular-nums font-medium ${completo ? 'text-success' : parcial ? 'text-warning' : 'text-muted-foreground'}`}>
+                                  {ent}
+                                </td>
+                              );
+                            })()}
                             <td className="py-1.5 text-center text-muted-foreground">{
                               (l as any).unidades?.abreviatura
                               || (l as any).productos?.unidades_venta?.abreviatura
@@ -325,7 +356,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                         );
                       })}
                       {lineas.length === 0 && (
-                        <tr><td colSpan={8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                        <tr><td colSpan={venta.tipo === 'pedido' ? 9 : 8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
                       )}
                     </tbody>
                   </table>

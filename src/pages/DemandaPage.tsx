@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse, CheckCircle2, X, ChevronDown, ChevronRight, ExternalLink, Zap, AlertTriangle, UserPlus, XCircle, Lock } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import PedidosTabs from '@/components/PedidosTabs';
+import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 
 // ─── Data hooks ────────────────────────────────────────────
 
@@ -205,6 +206,7 @@ export default function DemandaPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCrearDialog, setShowCrearDialog] = useState(false);
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
+  const [showCerrarDialog, setShowCerrarDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
   const [surtirResult, setSurtirResult] = useState<null | { fully: any[]; partial: any[]; none: any[]; errors: any[] }>(null);
@@ -603,7 +605,8 @@ export default function DemandaPage() {
     const surtidosSinRuta = selectedPedidos.some(p => p.fullySurtido && !p.enRuta && !p.fullyDelivered);
     const enRutaSel = selectedPedidos.some(p => p.enRuta && !p.fullyDelivered);
     const conEntregaActiva = selectedPedidos.some(p => (p.totalGenerada + p.totalSurtido) > 0 && !p.fullyDelivered);
-    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva };
+    const conEntregaParcial = selectedPedidos.some(p => p.totalEntregado > 0 && p.totalEntregado < p.totalDemanda && !p.fullyDelivered);
+    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva, conEntregaParcial };
   }, [selectedPedidos]);
 
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
@@ -814,6 +817,17 @@ export default function DemandaPage() {
               >
                 <XCircle className="h-3.5 w-3.5" />
                 Cancelar entrega
+              </Button>
+            )}
+            {selectionState.conEntregaParcial && (
+              <Button
+                onClick={() => setShowCerrarDialog(true)}
+                size="sm"
+                variant="outline"
+                className="border-amber-500 text-amber-700 hover:bg-amber-50"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Cerrar a lo entregado
               </Button>
             )}
           </div>
@@ -1371,6 +1385,14 @@ export default function DemandaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkCerrarPedidosDialog
+        open={showCerrarDialog}
+        onOpenChange={setShowCerrarDialog}
+        ventaIds={selectedPedidos.map(p => p.id)}
+        fmt={(n) => fmt(n)}
+        onDone={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }

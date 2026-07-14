@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -28,7 +28,8 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
-import { totalEfectivoVenta, saldoRealVenta, sumCobrosActivos } from '@/lib/ventaCerrada';
+import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
+import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
@@ -73,12 +74,6 @@ export default function VentasListPage() {
   const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
   const [bulkCancelling, setBulkCancelling] = useState(false);
   const [bulkCloseOpen, setBulkCloseOpen] = useState(false);
-  const [bulkClosing, setBulkClosing] = useState(false);
-  const [bulkClosePreview, setBulkClosePreview] = useState<{
-    elegibles: Array<{ id: string; folio: string; totalPedido: number; totalEntregado: number; cobrado: number; faltantes: number }>;
-    noElegibles: number;
-  } | null>(null);
-  const [bulkCloseLoading, setBulkCloseLoading] = useState(false);
   const { requestPin, PinDialog } = usePinAuth();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
@@ -316,96 +311,7 @@ export default function VentasListPage() {
     );
   };
 
-  /**
-   * Prepara y muestra el diálogo de cierre masivo "a lo entregado".
-   * Filtra ventas elegibles: pedido + politica_cobro='entregado' + status confirmado/entregado
-   * + al menos una entrega 'hecho' con faltante. Calcula preview de totales por venta.
-   */
-  const openBulkClose = async () => {
-    if (selectedVentas.length === 0) return;
-    setBulkCloseLoading(true);
-    setBulkCloseOpen(true);
-    try {
-      const candidatas = selectedVentas.filter((v: any) =>
-        v.tipo === 'pedido' &&
-        v.politica_cobro === 'entregado' &&
-        (v.status === 'confirmado' || v.status === 'entregado')
-      );
-      const ids = candidatas.map(v => v.id);
-      const elegibles: Array<{ id: string; folio: string; totalPedido: number; totalEntregado: number; cobrado: number; faltantes: number }> = [];
 
-      if (ids.length > 0) {
-        const [{ data: entregas }, { data: lineas }] = await Promise.all([
-          (supabase as any).from('entregas').select('id, pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)').in('pedido_id', ids),
-          (supabase as any).from('venta_lineas').select('venta_id, producto_id, cantidad, total, subtotal, iva_monto, ieps_monto').in('venta_id', ids),
-        ]);
-        for (const v of candidatas) {
-          const ventaLineas = (lineas ?? []).filter((l: any) => l.venta_id === v.id);
-          const hechas = (entregas ?? []).filter((e: any) => e.pedido_id === v.id && e.status === 'hecho');
-          if (hechas.length === 0) continue;
-          const entregadoPorProd = new Map<string, number>();
-          for (const e of hechas) for (const l of (e.entrega_lineas ?? [])) {
-            entregadoPorProd.set(l.producto_id, (entregadoPorProd.get(l.producto_id) ?? 0) + Number(l.cantidad_entregada ?? 0));
-          }
-          let totalEntregado = 0, pzasPedidas = 0, pzasEntregadas = 0;
-          for (const vl of ventaLineas) {
-            const ped = Number(vl.cantidad ?? 0);
-            const ent = Math.min(entregadoPorProd.get(vl.producto_id) ?? 0, ped);
-            const lt = Number(vl.total ?? 0) > 0 ? Number(vl.total) : Number(vl.subtotal ?? 0) + Number(vl.iva_monto ?? 0) + Number(vl.ieps_monto ?? 0);
-            if (ped > 0) totalEntregado += lt * (ent / ped);
-            pzasPedidas += ped; pzasEntregadas += ent;
-          }
-          const faltantes = pzasPedidas - pzasEntregadas;
-          if (faltantes <= 0) continue;
-          elegibles.push({
-            id: v.id, folio: (v as any).folio || v.id.slice(0, 8),
-            totalPedido: Number((v as any).total ?? 0),
-            totalEntregado, cobrado: sumCobrosActivos(v as any), faltantes,
-          });
-        }
-      }
-      setBulkClosePreview({ elegibles, noElegibles: selectedVentas.length - elegibles.length });
-    } catch (e: any) {
-      toast.error(e.message || 'Error preparando cierre masivo');
-      setBulkCloseOpen(false);
-    } finally {
-      setBulkCloseLoading(false);
-    }
-  };
-
-  const handleBulkClose = async () => {
-    if (!bulkClosePreview || bulkClosePreview.elegibles.length === 0) return;
-    setBulkClosing(true);
-    let ok = 0, fail = 0;
-    try {
-      const { data: userRes } = await supabase.auth.getUser();
-      for (const el of bulkClosePreview.elegibles) {
-        try {
-          const { error } = await supabase.rpc('cerrar_pedido_parcial', {
-            p_venta_id: el.id,
-            p_user_id: userRes.user?.id ?? null,
-          } as any);
-          if (error) throw error;
-          ok++;
-        } catch (e) {
-          console.error('bulk close', el.id, e);
-          fail++;
-        }
-      }
-    } finally {
-      qc.invalidateQueries({ queryKey: ['ventas'] });
-      qc.invalidateQueries({ queryKey: ['entregas'] });
-      qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
-      qc.invalidateQueries({ queryKey: ['cxc'] });
-      qc.invalidateQueries({ queryKey: ['saldos'] });
-      setBulkClosing(false);
-      setBulkCloseOpen(false);
-      setBulkClosePreview(null);
-      setSelected(new Set());
-    }
-    if (ok > 0) toast.success(`${ok} pedido${ok !== 1 ? 's' : ''} cerrado${ok !== 1 ? 's' : ''} a lo entregado.`);
-    if (fail > 0) toast.error(`${fail} pedido(s) no se pudieron cerrar`);
-  };
 
 
 
@@ -632,7 +538,7 @@ export default function VentasListPage() {
         actions={[
           { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExport },
           { label: 'Imprimir PDF', icon: Printer, onClick: handleBulkPrint, loading: bulkPrinting },
-          { label: 'Cerrar a lo entregado', icon: Lock, onClick: openBulkClose, hidden: !hasPermiso('ventas', 'editar') },
+          { label: 'Cerrar a lo entregado', icon: Lock, onClick: () => setBulkCloseOpen(true), hidden: !hasPermiso('ventas', 'editar') },
           { label: 'Cancelar', icon: Ban, variant: 'destructive', onClick: () => requestPin(`Cancelar ${selected.size} venta(s)`, 'Ingresa tu PIN de administrador para cancelar las ventas seleccionadas.', () => setBulkCancelOpen(true)), hidden: !canDelete },
           { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => requestPin(`Eliminar ${selected.size} venta(s)`, 'Esta acción es permanente. Ingresa tu PIN de administrador para continuar.', () => setBulkDeleteOpen(true)), hidden: !canDelete },
         ]}
@@ -659,84 +565,14 @@ export default function VentasListPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={bulkCloseOpen} onOpenChange={(v) => { if (!bulkClosing) { setBulkCloseOpen(v); if (!v) setBulkClosePreview(null); } }}>
-        <AlertDialogContent className="max-w-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              Cerrar pedidos a lo entregado
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción cierra cada pedido usando lo realmente entregado como total final. Las piezas no entregadas se marcan como <b>canceladas por cierre</b> (no afectan inventario ni saldo). No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <BulkCerrarPedidosDialog
+        open={bulkCloseOpen}
+        onOpenChange={setBulkCloseOpen}
+        ventaIds={selectedVentas.map(v => v.id)}
+        fmt={(n) => fmtCurrency(n)}
+        onDone={() => setSelected(new Set())}
+      />
 
-          {bulkCloseLoading ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analizando ventas seleccionadas…
-            </div>
-          ) : bulkClosePreview && (
-            <div className="space-y-3 text-sm">
-              <div className="rounded-lg border border-border bg-accent/40 p-3 space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Seleccionadas</span><b>{selected.size}</b></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Elegibles para cerrar</span><b className="text-warning">{bulkClosePreview.elegibles.length}</b></div>
-                {bulkClosePreview.noElegibles > 0 && (
-                  <div className="flex justify-between"><span className="text-muted-foreground">No elegibles (se omiten)</span><b>{bulkClosePreview.noElegibles}</b></div>
-                )}
-              </div>
-
-              {bulkClosePreview.elegibles.length > 0 ? (
-                <div className="max-h-64 overflow-y-auto rounded border border-border">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/40 text-muted-foreground sticky top-0">
-                      <tr>
-                        <th className="text-left px-2 py-1.5">Folio</th>
-                        <th className="text-right px-2 py-1.5">Pedido</th>
-                        <th className="text-right px-2 py-1.5">Nuevo total</th>
-                        <th className="text-right px-2 py-1.5">Cobrado</th>
-                        <th className="text-right px-2 py-1.5">Saldo</th>
-                        <th className="text-right px-2 py-1.5">Pzas canc.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bulkClosePreview.elegibles.map(el => {
-                        const saldo = Math.max(0, el.totalEntregado - el.cobrado);
-                        return (
-                          <tr key={el.id} className="border-t border-border">
-                            <td className="px-2 py-1.5 font-medium">{el.folio}</td>
-                            <td className="px-2 py-1.5 text-right text-muted-foreground line-through tabular-nums">{fmt(el.totalPedido)}</td>
-                            <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmt(el.totalEntregado)}</td>
-                            <td className="px-2 py-1.5 text-right tabular-nums">{fmt(el.cobrado)}</td>
-                            <td className={cn("px-2 py-1.5 text-right tabular-nums", saldo > 0 ? 'text-warning font-semibold' : '')}>{fmt(saldo)}</td>
-                            <td className="px-2 py-1.5 text-right tabular-nums">{el.faltantes}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">
-                  Ninguna venta seleccionada es elegible. Requisitos: tipo pedido con cobro al entregar, estatus confirmado o entregado, y al menos una entrega hecha con piezas faltantes.
-                </p>
-              )}
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkClosing}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-warning text-warning-foreground hover:bg-warning/90"
-              disabled={bulkClosing || bulkCloseLoading || !bulkClosePreview || bulkClosePreview.elegibles.length === 0}
-              onClick={(e) => { e.preventDefault(); handleBulkClose(); }}
-            >
-              {bulkClosing
-                ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cerrando…</>
-                : <><Lock className="h-3.5 w-3.5 mr-1.5" /> Cerrar {bulkClosePreview?.elegibles.length ?? 0} pedido(s)</>}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <PinDialog />
     </div>
