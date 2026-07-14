@@ -1,7 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { differenceInDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns';
+
+/**
+ * Parsea una fecha de Supabase como fecha LOCAL, no UTC.
+ * Las columnas `date` vienen como 'YYYY-MM-DD' y `new Date(str)` las trata como
+ * medianoche UTC, lo que en CDMX (UTC-6) las mueve al día anterior por la tarde
+ * y provocaba que el banner marcara "suscripción vencida" un día antes.
+ */
+function parseLocalDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  // Si viene solo la fecha (YYYY-MM-DD), construir en zona local.
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.exec(value);
+  if (dateOnly) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
+}
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
 
 interface SubscriptionState {
@@ -88,12 +105,14 @@ async function fetchSubscription(userId: string, empresaId?: string, isOverride?
       return state;
     }
 
-    // Determinar fecha de fin "real" — preferir el mayor entre fecha_vencimiento y current_period_end
+    // Determinar fecha de fin "real" — preferir el mayor entre fecha_vencimiento y current_period_end.
+    // Usar parseLocalDate para tratar las columnas `date` como fecha LOCAL, no UTC
+    // (si no, en CDMX el banner marca "vencida" un día antes de tiempo).
     const candidates = [sub.fecha_vencimiento, sub.current_period_end, sub.trial_ends_at]
-      .filter(Boolean)
-      .map((d) => new Date(d as string));
+      .map((d) => parseLocalDate(d as string | null))
+      .filter((d): d is Date => d !== null);
     const endDate = candidates.length ? new Date(Math.max(...candidates.map(d => d.getTime()))) : null;
-    const daysLeft = endDate ? differenceInDays(endDate, new Date()) : null;
+    const daysLeft = endDate ? differenceInCalendarDays(endDate, new Date()) : null;
 
     // Cobertura real: manual, o cualquier fecha de fin >= hoy
     const today = new Date();
