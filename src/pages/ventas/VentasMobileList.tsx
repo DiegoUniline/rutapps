@@ -10,6 +10,7 @@ import { fmtDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
+import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 
 interface Props {
   items: any[];
