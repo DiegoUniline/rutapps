@@ -741,7 +741,8 @@ export default function RutaEntregaDetalle() {
             </button>
           )}
           {isClosedState ? (
-            <button onClick={goToCobrar}
+            <button onClick={goToPedido}
+
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
               <FileText className="h-5 w-5" /> Ver pedido
             </button>
