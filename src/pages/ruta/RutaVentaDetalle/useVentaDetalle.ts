@@ -188,6 +188,21 @@ export function useVentaDetalle() {
     setView('cobrar');
   };
 
+  // Auto-open cobrar view when ?cobrar=1 is in URL (from entrega Cobrar button)
+  const autoCobrarRef = useRef(false);
+  useEffect(() => {
+    if (autoCobrarRef.current) return;
+    if (!venta) return;
+    if (searchParams.get('cobrar') !== '1') return;
+    autoCobrarRef.current = true;
+    initCobrar();
+    const next = new URLSearchParams(searchParams);
+    next.delete('cobrar');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venta, searchParams]);
+
+
   const updateCuentaMonto = (cid: string, monto: number) => {
     const montoNormalizado = roundMoney(monto);
     setCuentasPendientes(prev => prev.map(c => c.id === cid ? {
