@@ -1385,6 +1385,14 @@ export default function DemandaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkCerrarPedidosDialog
+        open={showCerrarDialog}
+        onOpenChange={setShowCerrarDialog}
+        ventaIds={selectedPedidos.map(p => p.id)}
+        fmt={(n) => fmtMoney(n)}
+        onDone={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }
