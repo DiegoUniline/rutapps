@@ -819,6 +819,17 @@ export default function DemandaPage() {
                 Cancelar entrega
               </Button>
             )}
+            {selectionState.conEntregaParcial && (
+              <Button
+                onClick={() => setShowCerrarDialog(true)}
+                size="sm"
+                variant="outline"
+                className="border-amber-500 text-amber-700 hover:bg-amber-50"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Cerrar a lo entregado
+              </Button>
+            )}
           </div>
         )}
       </div>
