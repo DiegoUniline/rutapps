@@ -9,6 +9,7 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { fmtDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
+import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 
 interface Props {
   items: any[];
