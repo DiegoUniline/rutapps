@@ -659,6 +659,85 @@ export default function VentasListPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={bulkCloseOpen} onOpenChange={(v) => { if (!bulkClosing) { setBulkCloseOpen(v); if (!v) setBulkClosePreview(null); } }}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              Cerrar pedidos a lo entregado
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cierra cada pedido usando lo realmente entregado como total final. Las piezas no entregadas se marcan como <b>canceladas por cierre</b> (no afectan inventario ni saldo). No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {bulkCloseLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analizando ventas seleccionadas…
+            </div>
+          ) : bulkClosePreview && (
+            <div className="space-y-3 text-sm">
+              <div className="rounded-lg border border-border bg-accent/40 p-3 space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Seleccionadas</span><b>{selected.size}</b></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Elegibles para cerrar</span><b className="text-warning">{bulkClosePreview.elegibles.length}</b></div>
+                {bulkClosePreview.noElegibles > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">No elegibles (se omiten)</span><b>{bulkClosePreview.noElegibles}</b></div>
+                )}
+              </div>
+
+              {bulkClosePreview.elegibles.length > 0 ? (
+                <div className="max-h-64 overflow-y-auto rounded border border-border">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 text-muted-foreground sticky top-0">
+                      <tr>
+                        <th className="text-left px-2 py-1.5">Folio</th>
+                        <th className="text-right px-2 py-1.5">Pedido</th>
+                        <th className="text-right px-2 py-1.5">Nuevo total</th>
+                        <th className="text-right px-2 py-1.5">Cobrado</th>
+                        <th className="text-right px-2 py-1.5">Saldo</th>
+                        <th className="text-right px-2 py-1.5">Pzas canc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bulkClosePreview.elegibles.map(el => {
+                        const saldo = Math.max(0, el.totalEntregado - el.cobrado);
+                        return (
+                          <tr key={el.id} className="border-t border-border">
+                            <td className="px-2 py-1.5 font-medium">{el.folio}</td>
+                            <td className="px-2 py-1.5 text-right text-muted-foreground line-through tabular-nums">{fmt(el.totalPedido)}</td>
+                            <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{fmt(el.totalEntregado)}</td>
+                            <td className="px-2 py-1.5 text-right tabular-nums">{fmt(el.cobrado)}</td>
+                            <td className={cn("px-2 py-1.5 text-right tabular-nums", saldo > 0 ? 'text-warning font-semibold' : '')}>{fmt(saldo)}</td>
+                            <td className="px-2 py-1.5 text-right tabular-nums">{el.faltantes}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  Ninguna venta seleccionada es elegible. Requisitos: tipo pedido con cobro al entregar, estatus confirmado o entregado, y al menos una entrega hecha con piezas faltantes.
+                </p>
+              )}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkClosing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+              disabled={bulkClosing || bulkCloseLoading || !bulkClosePreview || bulkClosePreview.elegibles.length === 0}
+              onClick={(e) => { e.preventDefault(); handleBulkClose(); }}
+            >
+              {bulkClosing
+                ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cerrando…</>
+                : <><Lock className="h-3.5 w-3.5 mr-1.5" /> Cerrar {bulkClosePreview?.elegibles.length ?? 0} pedido(s)</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <PinDialog />
     </div>
   );
