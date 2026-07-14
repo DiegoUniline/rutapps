@@ -21,6 +21,8 @@ import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 export function useVentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const { user, empresa } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
