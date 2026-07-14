@@ -56,19 +56,7 @@ export function DetalleView(p: Props) {
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} lotes={lotesVenta} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
-        {/* Historial de cambios */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <button
-            onClick={() => document.getElementById('historial-section')?.classList.toggle('hidden')}
-            className="w-full flex items-center gap-2 px-4 py-3 text-left"
-          >
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[13px] font-semibold text-foreground">Historial de cambios</span>
-          </button>
-          <div id="historial-section">
-            <VentaHistorialTab ventaId={p.venta.id} />
-          </div>
-        </div>
+        {/* Historial: se muestra solo como pestaña dentro del detalle completo de la venta */}
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
       <CancelModal
