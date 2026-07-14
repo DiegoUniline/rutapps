@@ -186,7 +186,7 @@ export default function DemandaPage() {
   const today = todayLocal();
 
   // ── Filters ──
-  const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'todos'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos'>('pendientes');
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
