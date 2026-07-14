@@ -260,6 +260,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                     <Banknote className="h-3 w-3" /> Cobrar
                   </Button>
                 )}
+                <CerrarPedidoButton venta={{ ...venta, venta_lineas: lineas }} fmt={(n) => fmt(n) ?? ''} compact />
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/ventas/${venta.id}`)}>
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>
