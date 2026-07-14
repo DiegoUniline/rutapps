@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { queueOperation } from '@/lib/syncQueue';
 import { newLocalId } from '@/lib/localId';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenta } from '@/hooks/useVentas';
 import { supabase } from '@/lib/supabase';
