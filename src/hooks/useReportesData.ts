@@ -193,7 +193,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       for (const v of ventas) {
         const vid = v.vendedor_id ?? '';
         if (!vendMap[vid]) vendMap[vid] = { nombre: (v.vendedores as any)?.nombre ?? '—', total: 0, ventas: 0 };
-        vendMap[vid].total += v.total ?? 0;
+        vendMap[vid].total += totalEfectivoVenta(v as any);
         vendMap[vid].ventas += 1;
       }
       // Compute utilidad per vendedor
