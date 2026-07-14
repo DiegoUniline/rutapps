@@ -173,30 +173,33 @@ export default function RutaEntregaDetalle() {
   const lineasSurtidas = (lineas as any[]).filter(l => Number(l.cantidad_entregada ?? 0) > 0);
   const lineasNoSurtidas = (lineas as any[]).length - lineasSurtidas.length;
 
-  // Recompute totals for this delivery only, prorating taxes per venta_linea by delivered ratio.
+  // Recompute totals for this delivery only, prorating per venta_linea (subtotal,
+  // iva_monto, ieps_monto y total) por el ratio entregado/pedido. NO usar
+  // producto.precio_principal — la fuente de verdad son las venta_lineas.
+  const lineTotalFull = (vl: any) => {
+    if (!vl) return 0;
+    const t = Number(vl.total ?? 0);
+    if (t > 0) return t;
+    return Number(vl.subtotal ?? 0) + Number(vl.iva_monto ?? 0) + Number(vl.ieps_monto ?? 0);
+  };
   const computeEntregaTotals = () => {
     let subtotal = 0, iva = 0, ieps = 0, total = 0;
     for (const l of lineasSurtidas) {
       const cant = Number(l.cantidad_entregada) || 0;
       const vl = ventaLineas.find((v: any) => v.producto_id === l.producto_id);
-      const precio = vl?.precio_unitario ?? l.productos?.precio_principal ?? 0;
-      if (vl) {
-        const pedida = Number(vl.cantidad) || 0;
-        const ratio = pedida > 0 ? cant / pedida : 0;
-        subtotal += Number(vl.subtotal ?? precio * cant) * (pedida > 0 ? ratio : 1);
-        iva += Number(vl.iva_monto ?? 0) * ratio;
-        ieps += Number(vl.ieps_monto ?? 0) * ratio;
-        total += Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1);
-      } else {
-        const t = precio * cant;
-        subtotal += t;
-        total += t;
-      }
+      if (!vl) continue;
+      const pedida = Number(vl.cantidad) || 0;
+      const ratio = pedida > 0 ? cant / pedida : 0;
+      subtotal += Number(vl.subtotal ?? 0) * ratio;
+      iva += Number(vl.iva_monto ?? 0) * ratio;
+      ieps += Number(vl.ieps_monto ?? 0) * ratio;
+      total += lineTotalFull(vl) * ratio;
     }
     return { subtotal, iva, ieps, total };
   };
   const entregaTotals = computeEntregaTotals();
   const entregaTotal = entregaTotals.total;
+
 
   const handleMarcarClick = () => {
     // If there's any pending balance (this order or other accounts), prompt
