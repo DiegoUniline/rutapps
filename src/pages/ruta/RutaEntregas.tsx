@@ -170,9 +170,12 @@ export default function RutaEntregas() {
           ...l,
           _productoNombre: productoMap.get(l.producto_id)?.nombre ?? '—',
         }));
+      const totalEntregado = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_entregada) || 0), 0);
+      const totalPedido = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_pedida) || 0), 0);
       const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
-      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas };
+      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas, _totalEntregado: totalEntregado, _totalPedido: totalPedido };
     });
+
 
   const counts = useMemo(() => ({
     todos: entregas.length,
