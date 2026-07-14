@@ -10,6 +10,7 @@ const config: Record<string, { label: string; className: string }> = {
   confirmado: { label: 'Confirmado', className: 'status-pill status-activo' },
   confirmada: { label: 'Confirmada', className: 'status-pill status-activo' },
   entregado: { label: 'Entregado', className: 'status-pill status-activo' },
+  entregado_parcial: { label: 'Entregado parcial', className: 'status-pill bg-amber-100 text-amber-700 border border-amber-300' },
   recibida: { label: 'Recibida', className: 'status-pill status-activo' },
   facturado: { label: 'Facturado', className: 'status-pill status-activo' },
   pagada: { label: 'Pagada', className: 'status-pill status-activo' },
