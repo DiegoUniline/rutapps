@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Trash2, Gift, ChevronDown } from 'lucide-react';
+import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
+import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel } from '@/lib/ventaCerrada';
 
 interface Props {
   items: any[];
@@ -128,7 +129,19 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
                 {v('iva') && <td className="py-2 px-3 text-right hidden lg:table-cell text-muted-foreground tabular-nums">{fmt(row.iva_total)}</td>}
-                {v('total') && <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(row.total)}</td>}
+                {v('total') && (
+                  <td className="py-2 px-3 text-right font-medium tabular-nums">
+                    {isCerradaParcial(row) ? (
+                      <span title={`Cerrado. Total original: ${fmt(row.total)}`} className="inline-flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-warning" />
+                        <span>{fmt(totalEfectivoVenta(row))}</span>
+                        {Number(row.total ?? 0) > totalEfectivoVenta(row) && (
+                          <span className="text-[10px] text-muted-foreground line-through ml-1">{fmt(row.total)}</span>
+                        )}
+                      </span>
+                    ) : fmt(row.total)}
+                  </td>
+                )}
                 {v('saldo') && (
                   <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
                     {(row.saldo_pendiente ?? 0) > 0 ? (
@@ -140,7 +153,15 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 )}
                 {v('status') && (
                   <td className="py-2 px-3 text-center">
-                    <StatusChip status={row.status} />
+                    <div className="inline-flex items-center gap-1">
+                      <StatusChip status={row.status} />
+                      {isCerradaParcial(row) && (
+                        <span title="Pedido cerrado — no acepta más entregas" className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30 inline-flex items-center gap-0.5">
+                          <Lock className="h-2.5 w-2.5" />
+                          {ventaCerradaBadgeLabel(row) === 'Cerrado parcial' ? 'PARCIAL' : 'CERRADO'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 )}
                 <td className="py-2 px-2 text-center w-8">
@@ -169,7 +190,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         const totSubtotal = items.reduce((s: number, r: any) => s + (r.subtotal ?? 0), 0);
         const totDescuento = items.reduce((s: number, r: any) => s + (r.descuento_total ?? 0), 0);
         const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
-        const totTotal = items.reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+        const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
         const totSaldo = items.reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
         return (
           <tfoot>

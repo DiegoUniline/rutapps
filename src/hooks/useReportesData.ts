@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();

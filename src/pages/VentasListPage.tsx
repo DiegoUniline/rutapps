@@ -28,6 +28,7 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
@@ -121,7 +122,7 @@ export default function VentasListPage() {
 
   const handleBulkExport = () => {
     if (selectedVentas.length === 0) return;
-    const totalSel = selectedVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalSel = selectedVentas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
     const saldoSel = selectedVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
     exportToExcel({
       fileName: `Ventas-seleccion-${selectedVentas.length}`,
@@ -311,7 +312,7 @@ export default function VentasListPage() {
   const activeLoading = isProductView ? isLoadingLineas : isLoading;
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
-  const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
+  const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
   const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
@@ -475,7 +476,7 @@ export default function VentasListPage() {
         </>
       ) : (
         <>
-          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</span>)} />
+          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + totalEfectivoVenta(v), 0))}</span>)} />
           {!groupBy && total > 0 && (
             <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
           )}
