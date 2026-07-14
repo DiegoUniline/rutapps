@@ -51,6 +51,7 @@ export function DetalleView(p: Props) {
       <WADialog {...p} s={s} />
       <div className="p-4 space-y-4 pb-28">
         <ActionsBar {...p} />
+        <PedidoEntregaResumen venta={p.venta} fmt={p.fmt} />
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} lotes={lotesVenta} />
