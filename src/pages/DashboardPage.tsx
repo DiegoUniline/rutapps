@@ -932,6 +932,8 @@ export default function DashboardPage() {
     let ventasNetas = 0;     // subtotal después de descuento, antes de impuestos
     let ventasBrutas = 0;    // subtotal de la venta antes de descuentos
     let descuentos = 0;
+    let impuestos = 0;
+    let totalConImpuestos = 0;
     let costo = 0;
     for (const l of lineas) {
       const cant = Number(l.cantidad) || 0;
@@ -943,16 +945,21 @@ export default function DashboardPage() {
     }
     ventasMap.forEach((v: any) => {
       const bruto = Number(v.subtotal) || 0;
-      const descuento = Number(v.descuento_total) || Math.max(0, bruto - (Number(v.total) || 0) + (Number(v.iva_total) || 0) + (Number(v.ieps_total) || 0));
+      const iva = Number(v.iva_total) || 0;
+      const ieps = Number(v.ieps_total) || 0;
+      const total = Number(v.total) || 0;
+      const descuento = Number(v.descuento_total) || Math.max(0, bruto - total + iva + ieps);
       ventasBrutas += bruto;
       descuentos += descuento;
       ventasNetas += Math.max(0, bruto - descuento);
+      impuestos += iva + ieps;
+      totalConImpuestos += total;
     });
     const devoluciones = devStats.totalCredito || 0;
     const ventasNetasFinal = ventasNetas - devoluciones;
     const utilidadBruta = ventasNetasFinal - costo;
     const margenPct = ventasNetasFinal > 0 ? (utilidadBruta / ventasNetasFinal) * 100 : 0;
-    return { ventasNetas, ventasBrutas, descuentos, devoluciones, costo, utilidadBruta, margenPct, ventasNetasFinal };
+    return { ventasNetas, ventasBrutas, descuentos, devoluciones, impuestos, totalConImpuestos, costo, utilidadBruta, margenPct, ventasNetasFinal };
   }, [ventaLineasIS, devStats.totalCredito]);
 
 
