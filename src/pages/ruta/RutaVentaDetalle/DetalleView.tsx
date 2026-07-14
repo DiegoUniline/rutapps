@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Clock } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
-import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { useLotesPorReferencia, type LoteRef } from '@/hooks/useLotesPorReferencia';
+import { PedidoEntregaResumen } from '@/components/venta/PedidoEntregaResumen';
 
 interface Props {
   venta: any;
