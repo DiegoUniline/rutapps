@@ -1390,7 +1390,7 @@ export default function DemandaPage() {
         open={showCerrarDialog}
         onOpenChange={setShowCerrarDialog}
         ventaIds={selectedPedidos.map(p => p.id)}
-        fmt={(n) => fmtMoney(n)}
+        fmt={(n) => fmt(n)}
         onDone={() => setSelectedIds(new Set())}
       />
     </div>
