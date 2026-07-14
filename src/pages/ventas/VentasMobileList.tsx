@@ -103,9 +103,9 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
             onClick={() => navigate(`/ventas/${v.id}`)}
             fields={[
               { label: 'Fecha', value: fmtDateTime(v.created_at) },
-              { label: 'Total', value: fmtCurrency(v.total) },
+              { label: 'Total', value: fmtCurrency(totalEfectivoVenta(v)) },
               { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
-              ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(v.saldo_pendiente)}</span> }] : []),
+              ...(saldoRealVenta(v) > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(saldoRealVenta(v))}</span> }] : []),
             ]}
           />
         );
