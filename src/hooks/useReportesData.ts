@@ -132,14 +132,15 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       );
 
       // === RESUMEN ===
-      const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
+      // Pedidos "cerrados parciales" cobran únicamente lo entregado (total_efectivo).
+      const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
       const totalCobros = cobros.reduce((s, c) => s + (c.monto ?? 0), 0);
       const totalGastos = gastos.reduce((s, g) => s + (g.monto ?? 0), 0);
       const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
       // === CONTADO vs CRÉDITO ===
-      const totalContado = ventas.filter(v => v.condicion_pago === 'contado').reduce((s, v) => s + (v.total ?? 0), 0);
-      const totalCredito = ventas.filter(v => v.condicion_pago === 'credito').reduce((s, v) => s + (v.total ?? 0), 0);
+      const totalContado = ventas.filter(v => v.condicion_pago === 'contado').reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
+      const totalCredito = ventas.filter(v => v.condicion_pago === 'credito').reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
 
       // === DESGLOSE POR MÉTODO DE PAGO (from cobros) ===
       const metodoPagoMap: Record<string, number> = {};
