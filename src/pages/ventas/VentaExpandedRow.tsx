@@ -314,6 +314,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                         <th className="text-left py-1 font-medium">Lista</th>
                         <th className="text-right py-1 font-medium w-16">Precio</th>
                         <th className="text-right py-1 font-medium w-14">Cant</th>
+                        {venta.tipo === 'pedido' && <th className="text-right py-1 font-medium w-16">Entreg.</th>}
                         <th className="text-center py-1 font-medium w-10">Ud</th>
                         <th className="text-right py-1 font-medium w-16">Monto</th>
                         <th className="text-right py-1 font-medium w-16">Desc</th>
