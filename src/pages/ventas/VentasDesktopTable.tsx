@@ -7,6 +7,7 @@ import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel } from '@/lib/ventaCerrada';
+import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 
 interface Props {
   items: any[];
