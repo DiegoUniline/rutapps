@@ -64,7 +64,7 @@ export async function fetchVentaForEntregaWithFallback(ventaId: string) {
     try {
       const { data, error } = await supabase
         .from('ventas')
-        .select(`*, venta_lineas(*, productos(id, codigo, nombre), unidades:unidad_id(nombre, abreviatura)), clientes(id, nombre, telefono), vendedores:profiles!vendedor_id(nombre), venta_promociones(*)`)
+        .select(`*, venta_lineas(*, productos(id, codigo, nombre), unidades:unidad_id(nombre, abreviatura)), clientes(id, nombre, telefono), vendedores:profiles!vendedor_id(nombre)`)
         .eq('id', ventaId)
         .single();
       if (error) throw error;
