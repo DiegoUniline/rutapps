@@ -4,14 +4,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEntregasByPedido, useCrearEntrega, useEntregaExpress, calcRemainingQty } from '@/hooks/useEntregas';
-import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList, Zap } from 'lucide-react';
+import { ArrowLeft, Truck, Package, Check, ExternalLink, ClipboardList, Zap, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePermisos } from '@/hooks/usePermisos';
+import { usePinAuth } from '@/hooks/usePinAuth';
+import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, type CerradoSnapshot } from '@/lib/ventaCerrada';
 
 const EntregaFormPage = lazy(() => import('./EntregaFormPage'));
 
@@ -23,8 +28,12 @@ export default function PedidoPendienteDetailPage() {
   const crearEntrega = useCrearEntrega();
   const entregaExpress = useEntregaExpress();
   const { fmt: fmtC } = useCurrency();
-
-
+  const { hasPermiso } = usePermisos();
+  const canEditVentas = hasPermiso('ventas', 'editar');
+  const { requestPin, PinDialog } = usePinAuth();
+  const [cerrarOpen, setCerrarOpen] = useState(false);
+  const [cerrarAck, setCerrarAck] = useState(false);
+  const [cerrarBusy, setCerrarBusy] = useState(false);
 
   // Load pedido with lines
   const { data: pedido, isLoading } = useQuery({
@@ -83,6 +92,77 @@ export default function PedidoPendienteDetailPage() {
   }, [lineas, entregasActivas]);
 
   const fullyDelivered = remaining.length === 0 && entregasActivas.length > 0;
+
+  // === Cerrar pedido parcial (frontend-only, consume RPCs existentes) ===
+  const isCerrado = isCerradaParcial(pedido as any);
+  const politicaEntregado = (pedido as any)?.politica_cobro === 'entregado';
+  const tieneEntregaHecha = entregasActivas.some((e: any) => e.status === 'hecho');
+  const tieneFaltante = remaining.some(r => r.cantidad_pendiente > 0);
+  const puedeCerrar =
+    !!pedido &&
+    !isCerrado &&
+    politicaEntregado &&
+    (pedido as any).status === 'confirmado' &&
+    (pedido as any).tipo === 'pedido' &&
+    tieneEntregaHecha &&
+    tieneFaltante &&
+    canEditVentas;
+  const puedeReabrir = !!pedido && isCerrado && canEditVentas;
+  const cerradoSnapshot = ((pedido as any)?.cerrado_snapshot ?? null) as CerradoSnapshot | null;
+  const totalEfectivo = totalEfectivoVenta(pedido as any);
+  const totalOriginal = Number((pedido as any)?.total ?? cerradoSnapshot?.pedido_total ?? 0) || 0;
+  const cerradoLabel = ventaCerradaBadgeLabel(pedido as any);
+
+  const doCerrar = async () => {
+    if (!pedido) return;
+    setCerrarBusy(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const { error } = await supabase.rpc('cerrar_pedido_parcial', {
+        p_venta_id: (pedido as any).id,
+        p_user_id: userRes.user?.id ?? null,
+      } as any);
+      if (error) throw error;
+      toast.success('Pedido cerrado. Ya no se aceptarán más entregas.');
+      setCerrarOpen(false);
+      setCerrarAck(false);
+      qc.invalidateQueries({ queryKey: ['pedido-pendiente', id] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['cxc'] });
+      qc.invalidateQueries({ queryKey: ['saldos'] });
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo cerrar el pedido');
+    } finally {
+      setCerrarBusy(false);
+    }
+  };
+
+  const handleReabrir = () => {
+    if (!pedido) return;
+    requestPin(
+      'Reabrir pedido',
+      `Ingresa tu PIN para reabrir ${(pedido as any).folio || 'este pedido'} y permitir nuevas entregas.`,
+      async () => {
+        try {
+          const { error } = await supabase.rpc('reabrir_pedido_parcial', {
+            p_venta_id: (pedido as any).id,
+          } as any);
+          if (error) throw error;
+          toast.success('Pedido reabierto');
+          qc.invalidateQueries({ queryKey: ['pedido-pendiente', id] });
+          qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+          qc.invalidateQueries({ queryKey: ['demanda'] });
+          qc.invalidateQueries({ queryKey: ['ventas'] });
+          qc.invalidateQueries({ queryKey: ['cxc'] });
+          qc.invalidateQueries({ queryKey: ['saldos'] });
+        } catch (e: any) {
+          toast.error(e.message || 'No se pudo reabrir el pedido');
+        }
+      }
+    );
+  };
 
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
@@ -174,12 +254,17 @@ export default function PedidoPendienteDetailPage() {
             <h1 className="text-[15px] font-semibold text-foreground truncate flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               {pedido.folio}
+              {isCerrado && cerradoLabel && (
+                <Badge variant="outline" className="text-[10px] border-warning/40 text-warning bg-warning/10">
+                  <Lock className="h-3 w-3 mr-1" />{cerradoLabel}
+                </Badge>
+              )}
             </h1>
             <p className="text-xs text-muted-foreground truncate">{pedido.clientes?.nombre ?? '—'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!fullyDelivered && (
+          {!fullyDelivered && !isCerrado && (
             <>
               <Button onClick={handleCrearEntrega} size="sm" variant="outline" disabled={crearEntrega.isPending || entregaExpress.isPending}>
                 <Package className="h-3.5 w-3.5" /> Surtir parcial
@@ -189,8 +274,19 @@ export default function PedidoPendienteDetailPage() {
               </Button>
             </>
           )}
+          {puedeCerrar && (
+            <Button onClick={() => setCerrarOpen(true)} size="sm" variant="outline" className="border-warning/40 text-warning hover:bg-warning/10">
+              <Lock className="h-3.5 w-3.5" /> Cerrar pedido
+            </Button>
+          )}
+          {puedeReabrir && (
+            <Button onClick={handleReabrir} size="sm" variant="outline">
+              <Unlock className="h-3.5 w-3.5" /> Reabrir pedido
+            </Button>
+          )}
         </div>
       </div>
+
 
       <div className="p-5 space-y-5 max-w-[1200px]">
         {/* Info card */}
@@ -213,12 +309,23 @@ export default function PedidoPendienteDetailPage() {
               <Badge variant="outline" className="text-[10px] mt-0.5">{pedido.condicion_pago}</Badge>
             </div>
             <div>
-              <span className="text-muted-foreground text-[11px]">Total</span>
-              <p className="font-bold text-foreground">{fmtC((pedido.total ?? 0))}</p>
+              <span className="text-muted-foreground text-[11px]">Total {isCerrado ? 'cobrable' : ''}</span>
+              {isCerrado ? (
+                <p className="font-bold text-foreground">
+                  {fmtC(totalEfectivo)}
+                  {totalOriginal > totalEfectivo && (
+                    <span className="ml-2 text-[11px] font-normal text-muted-foreground line-through">{fmtC(totalOriginal)}</span>
+                  )}
+                </p>
+              ) : (
+                <p className="font-bold text-foreground">{fmtC((pedido.total ?? 0))}</p>
+              )}
             </div>
             <div>
               <span className="text-muted-foreground text-[11px]">Estado</span>
-              <p className="font-medium text-foreground">{fullyDelivered ? '✅ Completamente surtido' : '⏳ Pendiente'}</p>
+              <p className="font-medium text-foreground">
+                {isCerrado ? `🔒 ${cerradoLabel}` : fullyDelivered ? '✅ Completamente surtido' : '⏳ Pendiente'}
+              </p>
             </div>
           </div>
         </div>
@@ -267,7 +374,7 @@ export default function PedidoPendienteDetailPage() {
         </div>
 
         {/* Create entrega options */}
-        {!fullyDelivered && (
+        {!fullyDelivered && !isCerrado && (
           <div id="opciones-entrega" className="bg-card border border-border rounded-md p-4 space-y-3">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Almacén y repartidor para la entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -363,6 +470,43 @@ export default function PedidoPendienteDetailPage() {
           </div>
         ))}
       </div>
+
+      <AlertDialog open={cerrarOpen} onOpenChange={(v) => { setCerrarOpen(v); if (!v) setCerrarAck(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><Lock className="h-4 w-4 text-warning" /> Cerrar pedido {pedido.folio}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>Este pedido quedará <strong>cerrado</strong>. A partir de ahora se tomará como total real lo entregado y no se aceptarán nuevas entregas.</p>
+                <div className="rounded border border-border bg-muted/40 p-3 grid grid-cols-2 gap-y-1 text-[12px]">
+                  <span className="text-muted-foreground">Total original del pedido:</span>
+                  <span className="text-right font-medium">{fmtC(totalOriginal)}</span>
+                  <span className="text-muted-foreground">Total entregado (cobrable):</span>
+                  <span className="text-right font-bold text-primary">{fmtC(totalEfectivo)}</span>
+                  <span className="text-muted-foreground">Diferencia no entregada:</span>
+                  <span className="text-right font-medium text-warning">{fmtC(Math.max(0, totalOriginal - totalEfectivo))}</span>
+                </div>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <Checkbox checked={cerrarAck} onCheckedChange={(v) => setCerrarAck(!!v)} className="mt-0.5" />
+                  <span className="text-[13px]">Confirmo que ya no se harán más entregas de este pedido.</span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cerrarBusy}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!cerrarAck || cerrarBusy}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+              onClick={(e) => { e.preventDefault(); doCerrar(); }}
+            >
+              {cerrarBusy ? 'Cerrando…' : 'Cerrar pedido'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <PinDialog />
     </div>
   );
 }

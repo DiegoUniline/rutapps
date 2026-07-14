@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();
@@ -19,7 +20,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       // Run independent report queries in parallel so Reports does not stay stuck
       // waiting table-by-table on larger accounts.
       const ventasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).eq('es_saldo_inicial', false).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
+        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, total_efectivo, cerrado_snapshot, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).eq('es_saldo_inicial', false).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
         if (tipoFilter) q = q.eq('tipo', tipoFilter);
         return q;
@@ -131,14 +132,15 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       );
 
       // === RESUMEN ===
-      const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
+      // Pedidos "cerrados parciales" cobran únicamente lo entregado (total_efectivo).
+      const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
       const totalCobros = cobros.reduce((s, c) => s + (c.monto ?? 0), 0);
       const totalGastos = gastos.reduce((s, g) => s + (g.monto ?? 0), 0);
       const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
       // === CONTADO vs CRÉDITO ===
-      const totalContado = ventas.filter(v => v.condicion_pago === 'contado').reduce((s, v) => s + (v.total ?? 0), 0);
-      const totalCredito = ventas.filter(v => v.condicion_pago === 'credito').reduce((s, v) => s + (v.total ?? 0), 0);
+      const totalContado = ventas.filter(v => v.condicion_pago === 'contado').reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
+      const totalCredito = ventas.filter(v => v.condicion_pago === 'credito').reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
 
       // === DESGLOSE POR MÉTODO DE PAGO (from cobros) ===
       const metodoPagoMap: Record<string, number> = {};
@@ -151,7 +153,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         .sort((a, b) => b.total - a.total);
 
       const dailyMap: Record<string, number> = {};
-      for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + (v.total ?? 0); }
+      for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + totalEfectivoVenta(v as any); }
       const dailyVentas = Object.entries(dailyMap).sort().map(([fecha, total]) => ({ fecha, total }));
 
       // === VENTAS POR PRODUCTO ===
@@ -170,7 +172,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       for (const v of ventas) {
         const cid = v.cliente_id ?? '';
         if (!cliMap[cid]) cliMap[cid] = { nombre: (v.clientes as any)?.nombre ?? '—', total: 0, ventas: 0, pendiente: 0 };
-        cliMap[cid].total += v.total ?? 0;
+        cliMap[cid].total += totalEfectivoVenta(v as any);
         cliMap[cid].ventas += 1;
         cliMap[cid].pendiente += v.saldo_pendiente ?? 0;
       }
@@ -191,7 +193,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       for (const v of ventas) {
         const vid = v.vendedor_id ?? '';
         if (!vendMap[vid]) vendMap[vid] = { nombre: (v.vendedores as any)?.nombre ?? '—', total: 0, ventas: 0 };
-        vendMap[vid].total += v.total ?? 0;
+        vendMap[vid].total += totalEfectivoVenta(v as any);
         vendMap[vid].ventas += 1;
       }
       // Compute utilidad per vendedor
