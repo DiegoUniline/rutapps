@@ -133,16 +133,14 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('total') && (
                   <td className="py-2 px-3 text-right font-medium tabular-nums">
                     {isCerradaParcial(row) ? (
-                      <span title={`Cerrado. Total original: ${fmt(row.total)}`} className="inline-flex items-center gap-1">
+                      <span title="Pedido cerrado" className="inline-flex items-center gap-1">
                         <Lock className="h-3 w-3 text-warning" />
                         <span>{fmt(totalEfectivoVenta(row))}</span>
-                        {Number(row.total ?? 0) > totalEfectivoVenta(row) && (
-                          <span className="text-[10px] text-muted-foreground line-through ml-1">{fmt(row.total)}</span>
-                        )}
                       </span>
                     ) : fmt(row.total)}
                   </td>
                 )}
+
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
                   return (
