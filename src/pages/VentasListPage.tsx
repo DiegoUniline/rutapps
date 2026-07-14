@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban } from 'lucide-react';
+import { Plus, Banknote, List, Package, FileSpreadsheet, Printer, Trash2, Ban, Lock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -72,6 +72,13 @@ export default function VentasListPage() {
   const [bulkPdfName, setBulkPdfName] = useState('');
   const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
   const [bulkCancelling, setBulkCancelling] = useState(false);
+  const [bulkCloseOpen, setBulkCloseOpen] = useState(false);
+  const [bulkClosing, setBulkClosing] = useState(false);
+  const [bulkClosePreview, setBulkClosePreview] = useState<{
+    elegibles: Array<{ id: string; folio: string; totalPedido: number; totalEntregado: number; cobrado: number; faltantes: number }>;
+    noElegibles: number;
+  } | null>(null);
+  const [bulkCloseLoading, setBulkCloseLoading] = useState(false);
   const { requestPin, PinDialog } = usePinAuth();
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
