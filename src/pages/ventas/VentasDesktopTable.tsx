@@ -155,7 +155,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('status') && (
                   <td className="py-2 px-3 text-center">
                     <div className="inline-flex items-center gap-1">
-                      <StatusChip status={row.status} />
+                      <StatusChip status={row.status} label={isVentaEntregadaParcial(row) ? 'Entregado parcial' : undefined} />
                       {isCerradaParcial(row) && (
                         <span title="Pedido cerrado — no acepta más entregas" className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30 inline-flex items-center gap-0.5">
                           <Lock className="h-2.5 w-2.5" />
