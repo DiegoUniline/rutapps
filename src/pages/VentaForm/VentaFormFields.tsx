@@ -109,9 +109,21 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     </>
   );
 
+  const isCerrado = !!(form as any).cerrado_at;
+  const totalMostrar = isCerrado
+    ? Number((form as any).total_efectivo ?? form.total ?? 0)
+    : Number(form.total ?? 0);
   const renderSaldo = () => !isNew && form.status !== 'borrador' && (
     <div className="bg-card border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
-      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{fmt(form.total ?? 0)}</span></div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground inline-flex items-center gap-1">
+          Total
+          {isCerrado && Number(form.total ?? 0) !== totalMostrar && (
+            <span className="text-[10px] text-warning font-semibold">(cerrado)</span>
+          )}
+        </span>
+        <span className="font-medium">{fmt(totalMostrar)}</span>
+      </div>
       <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">{fmt(totalPagado)}</span></div>
       <div className="flex justify-between border-t border-border pt-0.5">
         <span className="font-medium">
@@ -128,6 +140,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       </div>
     </div>
   );
+
 
   const extraTipo = form.descuento_extra_tipo || 'porcentaje';
   const impliedDiscount = Math.max(0, Number(form.subtotal ?? 0) + Number(form.iva_total ?? 0) + Number(form.ieps_total ?? 0) - Number(form.total ?? 0));
