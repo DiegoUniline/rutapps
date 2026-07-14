@@ -532,6 +532,7 @@ export default function VentasListPage() {
       />
 
       <BulkActionsBar
+        position="top"
         count={selected.size}
         onClear={() => setSelected(new Set())}
         noun="venta"

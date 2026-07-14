@@ -16,19 +16,25 @@ interface Props {
   onClear: () => void;
   actions: BulkAction[];
   noun?: string; // "venta", "compra", etc. Used for label.
+  position?: 'top' | 'bottom';
 }
 
 /**
- * Floating bottom-center bar that appears when one or more rows are selected.
+ * Floating bar that appears when one or more rows are selected.
  * Provides a unified place for bulk actions (export, print, delete, status, etc.).
+ * `position="top"` fija la barra en la parte superior; por defecto va abajo-centro.
  */
-export function BulkActionsBar({ count, onClear, actions, noun = 'elemento' }: Props) {
+export function BulkActionsBar({ count, onClear, actions, noun = 'elemento', position = 'bottom' }: Props) {
   if (count === 0) return null;
   const label = count === 1 ? `1 ${noun} seleccionado` : `${count} ${noun}s seleccionados`;
   const visible = actions.filter(a => !a.hidden);
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-2rem)]">
+    <div className={cn(
+      'fixed left-1/2 -translate-x-1/2 z-50 max-w-[calc(100vw-2rem)]',
+      position === 'top' ? 'top-4' : 'bottom-4'
+    )}>
+
       <div className="bg-foreground text-background rounded-full shadow-2xl flex items-center gap-1 pl-4 pr-1.5 py-1.5 border border-foreground/20">
         <button
           onClick={onClear}
