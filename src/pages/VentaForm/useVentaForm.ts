@@ -318,16 +318,20 @@ export function useVentaForm() {
     const ieps_total = Number(form.ieps_total) || 0;
     const total = Number(form.total) || 0;
     const impliedDiscount = Math.max(0, subtotal + iva_total + ieps_total - total);
+    const cerrado = !!(form as any).cerrado_at;
+    const totalEf = Number((form as any).total_efectivo ?? total) || 0;
+    const ratio = cerrado && total > 0 ? Math.min(1, totalEf / total) : 1;
     return {
-      subtotal,
-      iva_total,
-      ieps_total,
-      total,
-      descuento_total: Math.max(Number(form.descuento_total) || 0, impliedDiscount),
-      descuento_extra_amt: Number((form as any).descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0,
-      descuento_promo: finalTotals.descuento_promo,
+      subtotal: subtotal * ratio,
+      iva_total: iva_total * ratio,
+      ieps_total: ieps_total * ratio,
+      total: cerrado ? totalEf : total,
+      descuento_total: Math.max(Number(form.descuento_total) || 0, impliedDiscount) * ratio,
+      descuento_extra_amt: (Number((form as any).descuento_extra) > 0 ? finalTotals.descuento_extra_amt : 0) * ratio,
+      descuento_promo: (finalTotals.descuento_promo ?? 0) * ratio,
     };
-  }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, isNew, readOnly]);
+  }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, (form as any).cerrado_at, (form as any).total_efectivo, isNew, readOnly]);
+
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
