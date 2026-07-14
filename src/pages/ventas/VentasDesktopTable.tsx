@@ -169,9 +169,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   </td>
                 )}
 
-                    </div>
-                  </td>
-                )}
+
                 <td className="py-2 px-2 text-center w-8">
                   <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
                 </td>
