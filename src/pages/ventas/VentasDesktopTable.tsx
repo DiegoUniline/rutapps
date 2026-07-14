@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
@@ -79,10 +79,10 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         {sorted.map((row: any) => {
           const isExpanded = expandedId === row.id;
           return (
-            <>
+            <React.Fragment key={row.id}>
               <tr
-                key={row.id}
                 className={cn(
+
                   "border-b border-table-border cursor-pointer transition-colors",
                   isExpanded ? "bg-primary/5" : selected.has(row.id) ? "bg-primary/5" : "hover:bg-table-hover"
                 )}
@@ -188,7 +188,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   clientesList={clientesList}
                 />
               )}
-            </>
+            </React.Fragment>
           );
         })}
       </tbody>

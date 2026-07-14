@@ -169,8 +169,13 @@ export function useVentaForm() {
     [pagosData],
   );
   // Always derive from total - totalPagado so it stays reactive when pagos change.
-  // totalPagado already excludes cancelled cobros.
-  const saldoPendiente = Number(form.total ?? 0) - totalPagado;
+  // totalPagado already excludes cancelled cobros. If the pedido is cerrado
+  // parcial, use the effective total (total_efectivo) instead of the original.
+  const totalReferencia = (form as any).cerrado_at
+    ? Number((form as any).total_efectivo ?? form.total ?? 0)
+    : Number(form.total ?? 0);
+  const saldoPendiente = Math.max(0, totalReferencia - totalPagado);
+
 
   // Load existing venta — only once per venta id
   useEffect(() => {
