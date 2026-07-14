@@ -6,7 +6,7 @@ import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 import { ClienteLink } from '@/components/links/EntityLinks';
 import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
-import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel } from '@/lib/ventaCerrada';
+import { isCerradaParcial, totalEfectivoVenta, ventaCerradaBadgeLabel, saldoRealVenta } from '@/lib/ventaCerrada';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
 
 interface Props {
@@ -38,7 +38,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
     if (k === 'descuento') return r.descuento_total ?? 0;
     if (k === 'iva') return r.iva_total ?? 0;
-    if (k === 'saldo') return r.saldo_pendiente ?? 0;
+    if (k === 'saldo') return saldoRealVenta(r);
     return r?.[k];
   });
 
@@ -143,15 +143,18 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                     ) : fmt(row.total)}
                   </td>
                 )}
-                {v('saldo') && (
-                  <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
-                    {(row.saldo_pendiente ?? 0) > 0 ? (
-                      <span className="text-warning font-medium">{fmt(row.saldo_pendiente)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">$0.00</span>
-                    )}
-                  </td>
-                )}
+                {v('saldo') && (() => {
+                  const saldo = saldoRealVenta(row);
+                  return (
+                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                      {saldo > 0 ? (
+                        <span className="text-warning font-medium">{fmt(saldo)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">$0.00</span>
+                      )}
+                    </td>
+                  );
+                })()}
                 {v('status') && (
                   <td className="py-2 px-3 text-center">
                     <div className="inline-flex items-center gap-1">
@@ -192,7 +195,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         const totDescuento = items.reduce((s: number, r: any) => s + (r.descuento_total ?? 0), 0);
         const totIva = items.reduce((s: number, r: any) => s + (r.iva_total ?? 0), 0);
         const totTotal = items.reduce((s: number, r: any) => s + totalEfectivoVenta(r), 0);
-        const totSaldo = items.reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+        const totSaldo = items.reduce((s: number, r: any) => s + saldoRealVenta(r), 0);
         return (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">

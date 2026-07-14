@@ -58,3 +58,30 @@ export function ventaCerradaBadgeLabel(v: VentaCerradaFields | null | undefined)
   const esParcial = efectivo + 0.0001 < original;
   return esParcial ? 'Cerrado parcial' : 'Cerrado';
 }
+
+/**
+ * Suma cobros activos aplicados a la venta (necesita el embed
+ * `cobro_aplicaciones(monto_aplicado, cobros!inner(status))`).
+ */
+export function sumCobrosActivos(v: any): number {
+  const aps = (v?.cobro_aplicaciones ?? []) as Array<{ monto_aplicado: number; cobros?: { status?: string } | null }>;
+  let s = 0;
+  for (const a of aps) {
+    const st = a?.cobros?.status;
+    if (st && st !== 'activo') continue;
+    s += Number(a.monto_aplicado ?? 0) || 0;
+  }
+  return s;
+}
+
+/**
+ * Saldo "real" para mostrar en listas: Total efectivo − cobros activos.
+ * Nunca negativo. Prefiere esto sobre `venta.saldo_pendiente` cuando la venta
+ * viene con el embed `cobro_aplicaciones`.
+ */
+export function saldoRealVenta(v: any): number {
+  const totalReal = totalEfectivoVenta(v);
+  const cobrado = sumCobrosActivos(v);
+  const saldo = totalReal - cobrado;
+  return saldo > 0 ? saldo : 0;
+}

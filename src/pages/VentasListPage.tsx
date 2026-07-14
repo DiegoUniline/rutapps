@@ -28,7 +28,7 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { mergePdfBlobs } from '@/lib/mergePdfs';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { usePinAuth } from '@/hooks/usePinAuth';
-import { totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { totalEfectivoVenta, saldoRealVenta } from '@/lib/ventaCerrada';
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
 import { useColumnPreferences } from '@/hooks/useColumnPreferences';
@@ -123,7 +123,7 @@ export default function VentasListPage() {
   const handleBulkExport = () => {
     if (selectedVentas.length === 0) return;
     const totalSel = selectedVentas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-    const saldoSel = selectedVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    const saldoSel = selectedVentas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
     exportToExcel({
       fileName: `Ventas-seleccion-${selectedVentas.length}`,
       title: `Ventas seleccionadas (${selectedVentas.length})`,
@@ -313,7 +313,7 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-  const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  const totalSaldo = ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
   const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 

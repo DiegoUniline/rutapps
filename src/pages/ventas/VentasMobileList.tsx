@@ -10,6 +10,7 @@ import { fmtDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { isVentaEntregadaParcial } from '@/lib/ventaEntregaParcial';
+import { saldoRealVenta, totalEfectivoVenta } from '@/lib/ventaCerrada';
 
 interface Props {
   items: any[];
@@ -70,7 +71,7 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/${v.id}`); }}>
                       <FileText className="h-3.5 w-3.5 mr-2" /> Ver detalle
                     </DropdownMenuItem>
-                    {v.status !== 'borrador' && v.saldo_pendiente > 0 && (
+                    {v.status !== 'borrador' && saldoRealVenta(v) > 0 && (
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/cobranza`, { state: { clienteId: v.cliente_id, ventaId: v.id } }); }}>
                         <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
                       </DropdownMenuItem>
@@ -102,9 +103,9 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
             onClick={() => navigate(`/ventas/${v.id}`)}
             fields={[
               { label: 'Fecha', value: fmtDateTime(v.created_at) },
-              { label: 'Total', value: fmtCurrency(v.total) },
+              { label: 'Total', value: fmtCurrency(totalEfectivoVenta(v)) },
               { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
-              ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(v.saldo_pendiente)}</span> }] : []),
+              ...(saldoRealVenta(v) > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(saldoRealVenta(v))}</span> }] : []),
             ]}
           />
         );

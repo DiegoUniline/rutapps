@@ -22,7 +22,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo, fetchAll],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada))';
+      const SELECT = 'id, folio, fecha, created_at, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, politica_cobro, cerrado_at, cerrado_por, total_efectivo, cerrado_snapshot, vendedor_id, cliente_id, almacen_id, es_saldo_inicial, origen, clientes(nombre, rfc, telefono, direccion, colonia), vendedores:profiles!vendedor_id(nombre, telefono), almacenes(nombre), entregas(status, entrega_lineas(cantidad_pedida, cantidad_entregada)), cobro_aplicaciones(monto_aplicado, cobros!inner(status))';
 
       // Resolve search-derived id filters once (shared by both branches)
       let searchOr: string | null = null;
