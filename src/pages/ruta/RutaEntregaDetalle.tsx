@@ -567,9 +567,10 @@ export default function RutaEntregaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{entrega.folio ?? 'Entrega'}</h1>
           <p className="text-[11px] text-muted-foreground">Entrega de pedido</p>
         </div>
-        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[entrega.status] ?? '')}>
-          {entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'no_entregado' ? 'No entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
+        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', esParcial ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' : statusColors[entrega.status] ?? '')}>
+          {esParcial ? 'Entregado parcial' : entrega.status === 'hecho' ? 'Entregado' : entrega.status === 'no_entregado' ? 'No entregado' : entrega.status === 'en_ruta' ? 'En ruta' : entrega.status}
         </span>
+
       </div>
 
       {showWADialog && (
