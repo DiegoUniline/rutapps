@@ -123,7 +123,7 @@ export default function VentasListPage() {
   const handleBulkExport = () => {
     if (selectedVentas.length === 0) return;
     const totalSel = selectedVentas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-    const saldoSel = selectedVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    const saldoSel = selectedVentas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
     exportToExcel({
       fileName: `Ventas-seleccion-${selectedVentas.length}`,
       title: `Ventas seleccionadas (${selectedVentas.length})`,
