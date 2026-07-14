@@ -78,7 +78,7 @@ export function VentaLineasTab(props: Props) {
               <tr className="border-b border-table-border text-left">
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">{cerradoSnapshot?.lineas?.length ? 'Entregado' : 'Cantidad'}</th>
+                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">{cerradoSnapshot?.lineas?.length ? 'Pedido / Entregado' : 'Cantidad'}</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
