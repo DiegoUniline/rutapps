@@ -937,6 +937,7 @@ export default function DemandaPage() {
             { key: 'surtidos', label: 'Surtidos', count: counts.surtidos },
             { key: 'en_ruta', label: 'En ruta', count: counts.en_ruta },
             { key: 'entregados', label: 'Entregados', count: counts.entregados },
+            { key: 'cerrados', label: 'Cerrados', count: counts.cerrados },
             { key: 'todos', label: 'Todos', count: counts.todos },
           ] as const).map(t => (
             <button
