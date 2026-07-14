@@ -734,12 +734,13 @@ export default function RutaEntregaDetalle() {
 
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex flex-col gap-2">
-          {totalSaldoPendiente > 0 && !isClosedState && (
+          {(ventaSaldo > 0 || totalSaldoPendiente > 0) && !isClosedState && (
             <button onClick={goToCobrar}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
-              <Banknote className="h-4 w-4" /> Cobrar {fmt(totalSaldoPendiente)}
+              <Banknote className="h-4 w-4" /> Cobrar {fmt(ventaSaldo > 0 ? ventaSaldo : totalSaldoPendiente)}
             </button>
           )}
+
           {isClosedState ? (
             <button onClick={goToPedido}
 
