@@ -313,7 +313,7 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-  const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  const totalSaldo = ventas.reduce((s, v) => s + saldoRealVenta(v as any), 0);
   const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
   const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
