@@ -384,13 +384,6 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                   )}
                 </div>
 
-                {/* Historial completo: quién creó/editó/canceló/pagó y cuándo */}
-                <div>
-                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Historial</h4>
-                  <div className="bg-accent/20 rounded-lg border border-border">
-                    <VentaHistorialTab ventaId={venta.id} />
-                  </div>
-                </div>
               </div>
             )}
           </div>
