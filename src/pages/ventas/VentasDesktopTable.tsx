@@ -133,16 +133,14 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('total') && (
                   <td className="py-2 px-3 text-right font-medium tabular-nums">
                     {isCerradaParcial(row) ? (
-                      <span title={`Cerrado. Total original: ${fmt(row.total)}`} className="inline-flex items-center gap-1">
+                      <span title="Pedido cerrado" className="inline-flex items-center gap-1">
                         <Lock className="h-3 w-3 text-warning" />
                         <span>{fmt(totalEfectivoVenta(row))}</span>
-                        {Number(row.total ?? 0) > totalEfectivoVenta(row) && (
-                          <span className="text-[10px] text-muted-foreground line-through ml-1">{fmt(row.total)}</span>
-                        )}
                       </span>
                     ) : fmt(row.total)}
                   </td>
                 )}
+
                 {v('saldo') && (() => {
                   const saldo = saldoRealVenta(row);
                   return (
@@ -158,16 +156,20 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 {v('status') && (
                   <td className="py-2 px-3 text-center">
                     <div className="inline-flex items-center gap-1">
-                      <StatusChip status={isVentaEntregadaParcial(row) ? 'entregado_parcial' : row.status} />
+                      {!isCerradaParcial(row) && (
+                        <StatusChip status={isVentaEntregadaParcial(row) ? 'entregado_parcial' : row.status} />
+                      )}
                       {isCerradaParcial(row) && (
                         <span title="Pedido cerrado — no acepta más entregas" className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30 inline-flex items-center gap-0.5">
                           <Lock className="h-2.5 w-2.5" />
-                          {ventaCerradaBadgeLabel(row) === 'Cerrado parcial' ? 'PARCIAL' : 'CERRADO'}
+                          {ventaCerradaBadgeLabel(row) === 'Cerrado parcial' ? 'CERRADO PARCIAL' : 'CERRADO'}
                         </span>
                       )}
                     </div>
                   </td>
                 )}
+
+
                 <td className="py-2 px-2 text-center w-8">
                   <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
                 </td>
