@@ -173,6 +173,18 @@ export default function RutaEntregaDetalle() {
   const lineasSurtidas = (lineas as any[]).filter(l => Number(l.cantidad_entregada ?? 0) > 0);
   const lineasNoSurtidas = (lineas as any[]).length - lineasSurtidas.length;
 
+  // Entrega parcial: se entregó menos de lo pedido (al menos una línea con
+  // cantidad_entregada < cantidad_pedida o líneas totalmente sin surtir).
+  const esParcial = isDelivered && (
+    lineasNoSurtidas > 0 ||
+    (lineas as any[]).some((l: any) => {
+      const ent = Number(l.cantidad_entregada ?? 0);
+      const ped = Number(l.cantidad_pedida ?? 0);
+      return ped > 0 && ent > 0 && ent < ped;
+    })
+  );
+
+
   // Recompute totals for this delivery only, prorating per venta_linea (subtotal,
   // iva_monto, ieps_monto y total) por el ratio entregado/pedido. NO usar
   // producto.precio_principal — la fuente de verdad son las venta_lineas.
