@@ -79,10 +79,10 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
         {sorted.map((row: any) => {
           const isExpanded = expandedId === row.id;
           return (
-            <>
+            <React.Fragment key={row.id}>
               <tr
-                key={row.id}
                 className={cn(
+
                   "border-b border-table-border cursor-pointer transition-colors",
                   isExpanded ? "bg-primary/5" : selected.has(row.id) ? "bg-primary/5" : "hover:bg-table-hover"
                 )}
