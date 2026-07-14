@@ -108,6 +108,24 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         const principalNombre = (plRes as any)?.data?.[0]?.nombre ?? null;
         const tarifaNombre = (tRes as any)?.data?.nombre ?? null;
         setVentaListaNombre(clienteListaNombre ?? principalNombre ?? tarifaNombre ?? null);
+
+        // Cantidades ENTREGADAS por producto (solo pedidos con entregas separadas).
+        if (venta.tipo === 'pedido') {
+          const { data: ents } = await (supabase as any)
+            .from('entregas')
+            .select('status, entrega_lineas(producto_id, cantidad_entregada)')
+            .eq('pedido_id', venta.id);
+          const map: Record<string, number> = {};
+          for (const e of (ents ?? [])) {
+            if (e.status !== 'hecho') continue;
+            for (const el of (e.entrega_lineas ?? [])) {
+              map[el.producto_id] = (map[el.producto_id] ?? 0) + Number(el.cantidad_entregada ?? 0);
+            }
+          }
+          if (!cancelled) setEntregadoPorProd(map);
+        } else {
+          if (!cancelled) setEntregadoPorProd({});
+        }
         setLoading(false);
       }
     }
