@@ -172,7 +172,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       for (const v of ventas) {
         const cid = v.cliente_id ?? '';
         if (!cliMap[cid]) cliMap[cid] = { nombre: (v.clientes as any)?.nombre ?? '—', total: 0, ventas: 0, pendiente: 0 };
-        cliMap[cid].total += v.total ?? 0;
+        cliMap[cid].total += totalEfectivoVenta(v as any);
         cliMap[cid].ventas += 1;
         cliMap[cid].pendiente += v.saldo_pendiente ?? 0;
       }
