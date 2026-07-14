@@ -188,7 +188,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   clientesList={clientesList}
                 />
               )}
-            </>
+            </React.Fragment>
           );
         })}
       </tbody>
