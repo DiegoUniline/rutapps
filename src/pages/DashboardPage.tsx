@@ -742,7 +742,7 @@ export default function DashboardPage() {
 
   const { symbol: cSym, code: cCode } = useCurrency();
   const money = (n: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: cCode, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: cCode, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
   const [activePreset, setActivePreset] = useState(3); // Este mes
   const [dateRange, setDateRange] = useState<DateRange>(PRESETS[3].range());
