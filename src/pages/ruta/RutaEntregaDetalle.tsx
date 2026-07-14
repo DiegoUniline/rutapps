@@ -535,8 +535,14 @@ export default function RutaEntregaDetalle() {
 
   const goToCobrar = () => {
     if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
+    // Abrir directamente el modal de cobro sobre el pedido asociado
+    navigate(`/ruta/ventas/${pedidoId}?cobrar=1`);
+  };
+  const goToPedido = () => {
+    if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
     navigate(`/ruta/ventas/${pedidoId}`);
   };
+
 
   const totalSaldoPendiente = (otrasPendientes ?? []).reduce((acc, v) => acc + (v.saldo_pendiente ?? 0), 0);
 
