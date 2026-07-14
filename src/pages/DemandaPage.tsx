@@ -237,24 +237,28 @@ export default function DemandaPage() {
   // Los pedidos "cerrados" (cerrado_at != null) se excluyen de todas las pestañas
   // porque ya no aceptan más entregas — se ven únicamente en la lista de ventas.
   const counts = useMemo(() => {
-    const list = (pedidos ?? []).filter((p: any) => !p.cerrado_at);
+    const all = (pedidos ?? []);
+    const list = all.filter((p: any) => !p.cerrado_at);
     return {
       pendientes: list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
       generadas: list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
       surtidos: list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta).length,
       en_ruta: list.filter(p => p.enRuta && !p.fullyDelivered).length,
       entregados: list.filter(p => p.fullyDelivered).length,
-      todos: list.length,
+      cerrados: all.filter((p: any) => !!p.cerrado_at).length,
+      todos: all.length,
     };
   }, [pedidos]);
 
   const filtered = useMemo(() => {
-    let list = (pedidos ?? []).filter((p: any) => !p.cerrado_at);
+    const all = (pedidos ?? []);
+    let list = tab === 'cerrados' || tab === 'todos' ? all : all.filter((p: any) => !p.cerrado_at);
     if (tab === 'pendientes') list = list.filter(p => !p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
     else if (tab === 'generadas') list = list.filter(p => p.fullyGenerada && !p.fullySurtido && !p.fullyDelivered && !p.enRuta);
     else if (tab === 'surtidos') list = list.filter(p => p.fullySurtido && !p.fullyDelivered && !p.enRuta);
     else if (tab === 'en_ruta') list = list.filter(p => p.enRuta && !p.fullyDelivered);
     else if (tab === 'entregados') list = list.filter(p => p.fullyDelivered);
+    else if (tab === 'cerrados') list = list.filter((p: any) => !!p.cerrado_at);
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(p =>
