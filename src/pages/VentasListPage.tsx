@@ -632,6 +632,7 @@ export default function VentasListPage() {
         actions={[
           { label: 'Exportar', icon: FileSpreadsheet, onClick: handleBulkExport },
           { label: 'Imprimir PDF', icon: Printer, onClick: handleBulkPrint, loading: bulkPrinting },
+          { label: 'Cerrar a lo entregado', icon: Lock, onClick: openBulkClose, hidden: !hasPermiso('ventas', 'editar') },
           { label: 'Cancelar', icon: Ban, variant: 'destructive', onClick: () => requestPin(`Cancelar ${selected.size} venta(s)`, 'Ingresa tu PIN de administrador para cancelar las ventas seleccionadas.', () => setBulkCancelOpen(true)), hidden: !canDelete },
           { label: 'Eliminar', icon: Trash2, variant: 'destructive', onClick: () => requestPin(`Eliminar ${selected.size} venta(s)`, 'Esta acción es permanente. Ingresa tu PIN de administrador para continuar.', () => setBulkDeleteOpen(true)), hidden: !canDelete },
         ]}
