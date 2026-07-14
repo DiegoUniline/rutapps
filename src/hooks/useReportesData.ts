@@ -153,7 +153,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         .sort((a, b) => b.total - a.total);
 
       const dailyMap: Record<string, number> = {};
-      for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + (v.total ?? 0); }
+      for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + totalEfectivoVenta(v as any); }
       const dailyVentas = Object.entries(dailyMap).sort().map(([fecha, total]) => ({ fecha, total }));
 
       // === VENTAS POR PRODUCTO ===
