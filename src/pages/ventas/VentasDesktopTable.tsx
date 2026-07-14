@@ -38,7 +38,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
     if (k === 'fecha') return r.created_at ? new Date(r.created_at).getTime() : 0;
     if (k === 'descuento') return r.descuento_total ?? 0;
     if (k === 'iva') return r.iva_total ?? 0;
-    if (k === 'saldo') return r.saldo_pendiente ?? 0;
+    if (k === 'saldo') return saldoRealVenta(r);
     return r?.[k];
   });
 
