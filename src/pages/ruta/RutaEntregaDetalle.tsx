@@ -173,30 +173,33 @@ export default function RutaEntregaDetalle() {
   const lineasSurtidas = (lineas as any[]).filter(l => Number(l.cantidad_entregada ?? 0) > 0);
   const lineasNoSurtidas = (lineas as any[]).length - lineasSurtidas.length;
 
-  // Recompute totals for this delivery only, prorating taxes per venta_linea by delivered ratio.
+  // Recompute totals for this delivery only, prorating per venta_linea (subtotal,
+  // iva_monto, ieps_monto y total) por el ratio entregado/pedido. NO usar
+  // producto.precio_principal — la fuente de verdad son las venta_lineas.
+  const lineTotalFull = (vl: any) => {
+    if (!vl) return 0;
+    const t = Number(vl.total ?? 0);
+    if (t > 0) return t;
+    return Number(vl.subtotal ?? 0) + Number(vl.iva_monto ?? 0) + Number(vl.ieps_monto ?? 0);
+  };
   const computeEntregaTotals = () => {
     let subtotal = 0, iva = 0, ieps = 0, total = 0;
     for (const l of lineasSurtidas) {
       const cant = Number(l.cantidad_entregada) || 0;
       const vl = ventaLineas.find((v: any) => v.producto_id === l.producto_id);
-      const precio = vl?.precio_unitario ?? l.productos?.precio_principal ?? 0;
-      if (vl) {
-        const pedida = Number(vl.cantidad) || 0;
-        const ratio = pedida > 0 ? cant / pedida : 0;
-        subtotal += Number(vl.subtotal ?? precio * cant) * (pedida > 0 ? ratio : 1);
-        iva += Number(vl.iva_monto ?? 0) * ratio;
-        ieps += Number(vl.ieps_monto ?? 0) * ratio;
-        total += Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1);
-      } else {
-        const t = precio * cant;
-        subtotal += t;
-        total += t;
-      }
+      if (!vl) continue;
+      const pedida = Number(vl.cantidad) || 0;
+      const ratio = pedida > 0 ? cant / pedida : 0;
+      subtotal += Number(vl.subtotal ?? 0) * ratio;
+      iva += Number(vl.iva_monto ?? 0) * ratio;
+      ieps += Number(vl.ieps_monto ?? 0) * ratio;
+      total += lineTotalFull(vl) * ratio;
     }
     return { subtotal, iva, ieps, total };
   };
   const entregaTotals = computeEntregaTotals();
   const entregaTotal = entregaTotals.total;
+
 
   const handleMarcarClick = () => {
     // If there's any pending balance (this order or other accounts), prompt
@@ -245,8 +248,9 @@ export default function RutaEntregaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       if (goToCobrarAfter && pedidoId) {
-        navigate(`/ruta/ventas/${pedidoId}`);
+        navigate(`/ruta/ventas/${pedidoId}?cobrar=1`);
       }
+
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
   };
@@ -532,8 +536,14 @@ export default function RutaEntregaDetalle() {
 
   const goToCobrar = () => {
     if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
+    // Abrir directamente el modal de cobro sobre el pedido asociado
+    navigate(`/ruta/ventas/${pedidoId}?cobrar=1`);
+  };
+  const goToPedido = () => {
+    if (!pedidoId) { toast.error('No hay pedido asociado'); return; }
     navigate(`/ruta/ventas/${pedidoId}`);
   };
+
 
   const totalSaldoPendiente = (otrasPendientes ?? []).reduce((acc, v) => acc + (v.saldo_pendiente ?? 0), 0);
 
@@ -622,11 +632,15 @@ export default function RutaEntregaDetalle() {
             {lineasSurtidas.map((l: any) => {
               const prod = l.productos;
               const vl = ventaLineas.find((vl: any) => vl.producto_id === l.producto_id);
-              const precio = vl?.precio_unitario ?? prod?.precio_principal ?? 0;
               const cant = Number(l.cantidad_entregada) || 0;
               const pedida = Number(vl?.cantidad) || 0;
               const ratio = pedida > 0 ? cant / pedida : 1;
-              const total = vl ? Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1) : precio * cant;
+              // Precio unitario y total del renglón deben venir de venta_lineas
+              // (total de la línea con impuestos ÷ cantidad pedida), NO de precio_principal.
+              const lineFull = lineTotalFull(vl);
+              const precio = pedida > 0 ? lineFull / pedida : (vl?.precio_unitario ?? 0);
+              const total = lineFull * (pedida > 0 ? ratio : 1);
+
               const pedidaLinea = Number(vl?.cantidad ?? l.cantidad) || 0;
               const reducida = pedidaLinea > 0 && cant < pedidaLinea;
               return (
@@ -720,14 +734,16 @@ export default function RutaEntregaDetalle() {
 
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex flex-col gap-2">
-          {totalSaldoPendiente > 0 && !isClosedState && (
+          {(ventaSaldo > 0 || totalSaldoPendiente > 0) && !isClosedState && (
             <button onClick={goToCobrar}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
-              <Banknote className="h-4 w-4" /> Cobrar {fmt(totalSaldoPendiente)}
+              <Banknote className="h-4 w-4" /> Cobrar {fmt(ventaSaldo > 0 ? ventaSaldo : totalSaldoPendiente)}
             </button>
           )}
+
           {isClosedState ? (
-            <button onClick={goToCobrar}
+            <button onClick={goToPedido}
+
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg flex items-center justify-center gap-1.5">
               <FileText className="h-5 w-5" /> Ver pedido
             </button>

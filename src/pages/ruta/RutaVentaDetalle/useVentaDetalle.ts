@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { queueOperation } from '@/lib/syncQueue';
 import { newLocalId } from '@/lib/localId';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenta } from '@/hooks/useVentas';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +21,8 @@ import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 export function useVentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const { user, empresa } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
@@ -184,6 +187,21 @@ export function useVentaDetalle() {
     setReferenciaPago('');
     setView('cobrar');
   };
+
+  // Auto-open cobrar view when ?cobrar=1 is in URL (from entrega Cobrar button)
+  const autoCobrarRef = useRef(false);
+  useEffect(() => {
+    if (autoCobrarRef.current) return;
+    if (!venta) return;
+    if (searchParams.get('cobrar') !== '1') return;
+    autoCobrarRef.current = true;
+    initCobrar();
+    const next = new URLSearchParams(searchParams);
+    next.delete('cobrar');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venta, searchParams]);
+
 
   const updateCuentaMonto = (cid: string, monto: number) => {
     const montoNormalizado = roundMoney(monto);
