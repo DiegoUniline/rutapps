@@ -625,11 +625,15 @@ export default function RutaEntregaDetalle() {
             {lineasSurtidas.map((l: any) => {
               const prod = l.productos;
               const vl = ventaLineas.find((vl: any) => vl.producto_id === l.producto_id);
-              const precio = vl?.precio_unitario ?? prod?.precio_principal ?? 0;
               const cant = Number(l.cantidad_entregada) || 0;
               const pedida = Number(vl?.cantidad) || 0;
               const ratio = pedida > 0 ? cant / pedida : 1;
-              const total = vl ? Number(vl.total ?? precio * cant) * (pedida > 0 ? ratio : 1) : precio * cant;
+              // Precio unitario y total del renglón deben venir de venta_lineas
+              // (total de la línea con impuestos ÷ cantidad pedida), NO de precio_principal.
+              const lineFull = lineTotalFull(vl);
+              const precio = pedida > 0 ? lineFull / pedida : (vl?.precio_unitario ?? 0);
+              const total = lineFull * (pedida > 0 ? ratio : 1);
+
               const pedidaLinea = Number(vl?.cantidad ?? l.cantidad) || 0;
               const reducida = pedidaLinea > 0 && cant < pedidaLinea;
               return (
