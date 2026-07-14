@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Trash2, Gift, ChevronDown, Lock } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { cn, fmtDateTime } from '@/lib/utils';
