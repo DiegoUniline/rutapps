@@ -22,6 +22,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import PedidosTabs from '@/components/PedidosTabs';
+import { BulkCerrarPedidosDialog } from '@/components/venta/BulkCerrarPedidosDialog';
 
 // ─── Data hooks ────────────────────────────────────────────
 
