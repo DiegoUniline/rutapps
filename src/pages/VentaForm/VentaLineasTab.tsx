@@ -66,7 +66,7 @@ export function VentaLineasTab(props: Props) {
       {isMobile ? (
         <div className="space-y-2">
           {lineas.map((l, idx) => (
-            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} currencySymbol={symbol} currencyCode={currencyCode} />
+            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
           ))}
         </div>
       ) : (
@@ -76,7 +76,7 @@ export function VentaLineasTab(props: Props) {
               <tr className="border-b border-table-border text-left">
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Cantidad</th>
+                <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">{cerradoSnapshot?.lineas?.length ? 'Entregado' : 'Cantidad'}</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center hidden md:table-cell">Unidad</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Precio</th>
                 <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-center hidden md:table-cell">Impuestos</th>
@@ -88,12 +88,13 @@ export function VentaLineasTab(props: Props) {
             </thead>
             <tbody>
               {lineas.map((l, idx) => (
-                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} currencySymbol={symbol} currencyCode={currencyCode} />
+                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} lineas={lineas} currencySymbol={symbol} currencyCode={currencyCode} />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
       {!readOnly && (
         <div className="flex items-center justify-between">
           <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
