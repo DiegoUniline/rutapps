@@ -7931,6 +7931,9 @@ export type Database = {
       ventas: {
         Row: {
           almacen_id: string | null
+          cerrado_at: string | null
+          cerrado_por: string | null
+          cerrado_snapshot: Json | null
           cliente_id: string | null
           comision_volumen_pago_id: string | null
           concepto: string | null
@@ -7961,11 +7964,15 @@ export type Database = {
           tarifa_id: string | null
           tipo: Database["public"]["Enums"]["tipo_venta"]
           total: number | null
+          total_efectivo: number | null
           turno_id: string | null
           vendedor_id: string | null
         }
         Insert: {
           almacen_id?: string | null
+          cerrado_at?: string | null
+          cerrado_por?: string | null
+          cerrado_snapshot?: Json | null
           cliente_id?: string | null
           comision_volumen_pago_id?: string | null
           concepto?: string | null
@@ -7996,11 +8003,15 @@ export type Database = {
           tarifa_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_venta"]
           total?: number | null
+          total_efectivo?: number | null
           turno_id?: string | null
           vendedor_id?: string | null
         }
         Update: {
           almacen_id?: string | null
+          cerrado_at?: string | null
+          cerrado_por?: string | null
+          cerrado_snapshot?: Json | null
           cliente_id?: string | null
           comision_volumen_pago_id?: string | null
           concepto?: string | null
@@ -8031,6 +8042,7 @@ export type Database = {
           tarifa_id?: string | null
           tipo?: Database["public"]["Enums"]["tipo_venta"]
           total?: number | null
+          total_efectivo?: number | null
           turno_id?: string | null
           vendedor_id?: string | null
         }
@@ -8701,6 +8713,10 @@ export type Database = {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
       }
+      cerrar_pedido_parcial: {
+        Args: { p_user_id?: string; p_venta_id: string }
+        Returns: undefined
+      }
       check_stock_lote_paridad: {
         Args: { p_empresa_id?: string }
         Returns: {
@@ -8913,6 +8929,10 @@ export type Database = {
       }
       purge_internal_notifications: { Args: never; Returns: undefined }
       purge_old_gps_history: { Args: never; Returns: undefined }
+      reabrir_pedido_parcial: {
+        Args: { p_venta_id: string }
+        Returns: undefined
+      }
       reactivar_usuario: { Args: { p_profile_id: string }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
