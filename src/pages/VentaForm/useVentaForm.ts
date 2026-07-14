@@ -144,7 +144,7 @@ export function useVentaForm() {
     return calcRemainingQty(validLineas, entregasActivas as any);
   }, [lineas, entregasActivas]);
   const fullyDelivered = remaining !== null && remaining.length === 0;
-  const canCreateEntrega = !isNew && form.tipo === 'pedido' && (form.status === 'confirmado' || form.status === 'entregado') && !fullyDelivered;
+  const canCreateEntrega = !isNew && form.tipo === 'pedido' && (form.status === 'confirmado' || form.status === 'entregado') && !fullyDelivered && !(form as any).cerrado_at;
 
   const lineDeliverySummary = useMemo(() => {
     const delivered: Record<string, number> = {};
