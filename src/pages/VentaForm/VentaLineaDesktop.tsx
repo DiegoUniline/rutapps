@@ -105,7 +105,18 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{l.cantidad}{(prod ?? prodDisplay)?.es_granel && <span className="text-muted-foreground ml-0.5 text-[10px]">{(prod ?? prodDisplay).unidad_granel}</span>}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span> : (
+        {readOnly ? (
+          (l as any).pedido_cantidad != null ? (
+            <span className="text-[12px] block text-right tabular-nums">
+              <span className="text-muted-foreground">{(l as any).pedido_cantidad}</span>
+              <span className="text-muted-foreground mx-1">/</span>
+              <span className="font-medium">{l.cantidad}</span>
+              {unidadLabel && <span className="text-muted-foreground ml-1 text-[10px]">{unidadLabel}</span>}
+            </span>
+          ) : (
+            <span className="text-[12px] block text-right">{l.cantidad}{(prod ?? prodDisplay)?.es_granel && <span className="text-muted-foreground ml-0.5 text-[10px]">{(prod ?? prodDisplay).unidad_granel}</span>}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span>
+          )
+        ) : (
           <div className="flex items-center gap-1 justify-end">
             <input ref={el => setCellRef(idx, 1, el)} type="number" inputMode={prod?.es_granel ? "decimal" : "numeric"} className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.cantidad ?? ''} onChange={e => onUpdateLine(idx, 'cantidad', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step={prod?.es_granel ? "0.001" : "1"} />
             {prod?.es_granel && <span className="text-[10px] text-muted-foreground shrink-0">{prod.unidad_granel}</span>}
@@ -113,6 +124,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
           </div>
         )}
       </td>
+
       <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">{isEmpty ? '' : (unidadLabel || '—')}</td>
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px] block text-right">{money(price)}</span>
