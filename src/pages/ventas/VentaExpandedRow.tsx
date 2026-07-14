@@ -356,7 +356,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                         );
                       })}
                       {lineas.length === 0 && (
-                        <tr><td colSpan={8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
+                        <tr><td colSpan={venta.tipo === 'pedido' ? 9 : 8} className="text-center py-3 text-muted-foreground text-xs">Sin productos</td></tr>
                       )}
                     </tbody>
                   </table>
