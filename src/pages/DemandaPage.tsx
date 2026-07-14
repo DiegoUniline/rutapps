@@ -605,7 +605,8 @@ export default function DemandaPage() {
     const surtidosSinRuta = selectedPedidos.some(p => p.fullySurtido && !p.enRuta && !p.fullyDelivered);
     const enRutaSel = selectedPedidos.some(p => p.enRuta && !p.fullyDelivered);
     const conEntregaActiva = selectedPedidos.some(p => (p.totalGenerada + p.totalSurtido) > 0 && !p.fullyDelivered);
-    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva };
+    const conEntregaParcial = selectedPedidos.some(p => p.totalEntregado > 0 && p.totalEntregado < p.totalDemanda && !p.fullyDelivered);
+    return { needsSurtir, surtidosSinRuta, enRutaSel, conEntregaActiva, conEntregaParcial };
   }, [selectedPedidos]);
 
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
