@@ -21,7 +21,15 @@ const statusMeta: Record<string, { label: string; className: string }> = {
 };
 
 function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string) => void; dimmed?: boolean }) {
-  const meta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
+  const esParcial = e.status === 'hecho' && (e._lineas ?? []).some((l: any) => {
+    const ent = Number(l.cantidad_entregada ?? 0);
+    const ped = Number(l.cantidad_pedida ?? 0);
+    return ped > 0 && ent < ped;
+  });
+  const baseMeta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
+  const meta = esParcial
+    ? { label: 'Entregado parcial', className: 'border-amber-500/60 text-amber-600 dark:text-amber-400' }
+    : baseMeta;
   const hasGps = !!e._cliente?.gps_lat && !!e._cliente?.gps_lng;
   const openMaps = (ev: React.MouseEvent) => {
     ev.stopPropagation();
@@ -55,6 +63,7 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
               <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
             </div>
           </div>
+
 
           {(e._cliente?.direccion || e._cliente?.colonia) && (
             <div className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
