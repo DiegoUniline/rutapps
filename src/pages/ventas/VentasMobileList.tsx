@@ -61,7 +61,7 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
             subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
             badge={
               <div className="flex items-center gap-1">
-                <StatusChip status={v.status} label={isVentaEntregadaParcial(v) ? 'Entregado parcial' : undefined} />
+                <StatusChip status={isVentaEntregadaParcial(v) ? 'entregado_parcial' : v.status} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
                     <button className="p-1 rounded hover:bg-accent"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
