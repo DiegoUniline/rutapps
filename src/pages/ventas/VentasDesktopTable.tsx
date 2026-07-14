@@ -143,15 +143,18 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                     ) : fmt(row.total)}
                   </td>
                 )}
-                {v('saldo') && (
-                  <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
-                    {(row.saldo_pendiente ?? 0) > 0 ? (
-                      <span className="text-warning font-medium">{fmt(row.saldo_pendiente)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">$0.00</span>
-                    )}
-                  </td>
-                )}
+                {v('saldo') && (() => {
+                  const saldo = saldoRealVenta(row);
+                  return (
+                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                      {saldo > 0 ? (
+                        <span className="text-warning font-medium">{fmt(saldo)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">$0.00</span>
+                      )}
+                    </td>
+                  );
+                })()}
                 {v('status') && (
                   <td className="py-2 px-3 text-center">
                     <div className="inline-flex items-center gap-1">
