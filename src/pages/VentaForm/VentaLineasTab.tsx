@@ -51,12 +51,14 @@ export function VentaLineasTab(props: Props) {
       return {
         ...l,
         cantidad: entregado,
+        pedido_cantidad: pedido,
         subtotal: (Number((l as any).subtotal) || 0) * ratio,
         total: (Number((l as any).total) || 0) * ratio,
         iva_total: (Number((l as any).iva_total) || 0) * ratio,
         ieps_total: (Number((l as any).ieps_total) || 0) * ratio,
         descuento_amount: (Number((l as any).descuento_amount) || 0) * ratio,
       } as Partial<VentaLinea>;
+
     });
   })();
 
