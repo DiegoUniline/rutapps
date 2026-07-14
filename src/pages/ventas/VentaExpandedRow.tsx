@@ -332,6 +332,17 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                             <td className="py-1.5 text-muted-foreground text-[11px]">{listaLabel}</td>
                             <td className="text-right py-1.5 tabular-nums">{fmt(l.precio_unitario)}</td>
                             <td className="text-right py-1.5 tabular-nums">{l.cantidad}</td>
+                            {venta.tipo === 'pedido' && (() => {
+                              const ent = entregadoPorProd[l.producto_id] ?? 0;
+                              const ped = Number(l.cantidad ?? 0);
+                              const parcial = ent > 0 && ent < ped;
+                              const completo = ent >= ped && ped > 0;
+                              return (
+                                <td className={`text-right py-1.5 tabular-nums font-medium ${completo ? 'text-success' : parcial ? 'text-warning' : 'text-muted-foreground'}`}>
+                                  {ent}
+                                </td>
+                              );
+                            })()}
                             <td className="py-1.5 text-center text-muted-foreground">{
                               (l as any).unidades?.abreviatura
                               || (l as any).productos?.unidades_venta?.abreviatura
