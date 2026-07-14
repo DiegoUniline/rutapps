@@ -21,7 +21,15 @@ const statusMeta: Record<string, { label: string; className: string }> = {
 };
 
 function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string) => void; dimmed?: boolean }) {
-  const meta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
+  const esParcial = e.status === 'hecho' && (e._lineas ?? []).some((l: any) => {
+    const ent = Number(l.cantidad_entregada ?? 0);
+    const ped = Number(l.cantidad_pedida ?? 0);
+    return ped > 0 && ent < ped;
+  });
+  const baseMeta = statusMeta[e.status] ?? { label: e.status, className: 'border-border text-muted-foreground' };
+  const meta = esParcial
+    ? { label: 'Entregado parcial', className: 'border-amber-500/60 text-amber-600 dark:text-amber-400' }
+    : baseMeta;
   const hasGps = !!e._cliente?.gps_lat && !!e._cliente?.gps_lng;
   const openMaps = (ev: React.MouseEvent) => {
     ev.stopPropagation();
@@ -56,6 +64,7 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
             </div>
           </div>
 
+
           {(e._cliente?.direccion || e._cliente?.colonia) && (
             <div className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -76,7 +85,12 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
                 ? `Entregado ${fmtDate(e.fecha_entrega)}`
                 : fmtDate(e.fecha)}
             </p>
-            <p className="text-[12px] font-medium text-foreground">{e._totalPiezas} pza{e._totalPiezas !== 1 ? 's' : ''} · {e._lineas.length} línea{e._lineas.length !== 1 ? 's' : ''}</p>
+            <p className="text-[12px] font-medium text-foreground">
+              {esParcial
+                ? `${e._totalEntregado}/${e._totalPedido} pza · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`
+                : `${e._totalPiezas} pza${e._totalPiezas !== 1 ? 's' : ''} · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`}
+            </p>
+
           </div>
         </div>
       </button>
@@ -156,9 +170,12 @@ export default function RutaEntregas() {
           ...l,
           _productoNombre: productoMap.get(l.producto_id)?.nombre ?? '—',
         }));
+      const totalEntregado = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_entregada) || 0), 0);
+      const totalPedido = lineas.reduce((acc: number, l: any) => acc + (Number(l.cantidad_pedida) || 0), 0);
       const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
-      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas };
+      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas, _totalEntregado: totalEntregado, _totalPedido: totalPedido };
     });
+
 
   const counts = useMemo(() => ({
     todos: entregas.length,
