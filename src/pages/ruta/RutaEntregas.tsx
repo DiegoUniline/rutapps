@@ -85,7 +85,12 @@ function EntregaCard({ e, navigate, dimmed }: { e: any; navigate: (path: string)
                 ? `Entregado ${fmtDate(e.fecha_entrega)}`
                 : fmtDate(e.fecha)}
             </p>
-            <p className="text-[12px] font-medium text-foreground">{e._totalPiezas} pza{e._totalPiezas !== 1 ? 's' : ''} · {e._lineas.length} línea{e._lineas.length !== 1 ? 's' : ''}</p>
+            <p className="text-[12px] font-medium text-foreground">
+              {esParcial
+                ? `${e._totalEntregado}/${e._totalPedido} pza · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`
+                : `${e._totalPiezas} pza${e._totalPiezas !== 1 ? 's' : ''} · ${e._lineas.length} línea${e._lineas.length !== 1 ? 's' : ''}`}
+            </p>
+
           </div>
         </div>
       </button>
