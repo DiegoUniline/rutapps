@@ -15,6 +15,8 @@ import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { VentaCobroQuickModal } from '@/components/venta/VentaCobroQuickModal';
+import { CerrarPedidoButton } from '@/components/venta/CerrarPedidoButton';
+import { saldoRealVenta } from '@/lib/ventaCerrada';
 
 interface Props {
   venta: any;
@@ -254,11 +256,12 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
                   {generatingWa ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircle className="h-3 w-3" />}
                   WhatsApp
                 </Button>
-                {venta.status !== 'borrador' && (venta.saldo_pendiente ?? 0) > 0 && (
+                {venta.status !== 'borrador' && saldoRealVenta(venta) > 0 && (
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => setCobroOpen(true)}>
                     <Banknote className="h-3 w-3" /> Cobrar
                   </Button>
                 )}
+                <CerrarPedidoButton venta={{ ...venta, venta_lineas: lineas }} fmt={(n) => fmt(n) ?? ''} compact />
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => navigate(`/ventas/${venta.id}`)}>
                   <Pencil className="h-3 w-3" /> Editar
                 </Button>
