@@ -38,6 +38,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
   const [cobradores, setCobradores] = useState<Record<string, string>>({});
   const [ventaListaNombre, setVentaListaNombre] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [entregadoPorProd, setEntregadoPorProd] = useState<Record<string, number>>({});
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [pdfName, setPdfName] = useState('');
