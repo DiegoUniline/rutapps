@@ -28,12 +28,38 @@ interface Props {
   readOnlyForm?: boolean;
   saldoPendiente?: number;
   currencyCode?: string | null;
+  cerradoSnapshot?: { lineas?: Array<{ producto_id: string; pedido: number; entregado: number }> } | null;
 }
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
   const { symbol } = useCurrency();
-  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode } = props;
+  const { readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults, currencyCode, cerradoSnapshot } = props;
+
+  // If pedido is cerrado, scale each line by its delivered/ordered ratio so
+  // Cantidad, Subtotal and Total reflect what was actually entregado.
+  const lineas = (() => {
+    const raw = props.lineas;
+    if (!cerradoSnapshot?.lineas?.length) return raw;
+    const byProd = new Map(cerradoSnapshot.lineas.map(s => [s.producto_id, s]));
+    return raw.map(l => {
+      const snap = l.producto_id ? byProd.get(l.producto_id) : null;
+      if (!snap) return l;
+      const pedido = Number(snap.pedido) || 0;
+      const entregado = Number(snap.entregado) || 0;
+      const ratio = pedido > 0 ? Math.min(1, entregado / pedido) : 0;
+      return {
+        ...l,
+        cantidad: entregado,
+        subtotal: (Number((l as any).subtotal) || 0) * ratio,
+        total: (Number((l as any).total) || 0) * ratio,
+        iva_total: (Number((l as any).iva_total) || 0) * ratio,
+        ieps_total: (Number((l as any).ieps_total) || 0) * ratio,
+        descuento_amount: (Number((l as any).descuento_amount) || 0) * ratio,
+      } as Partial<VentaLinea>;
+    });
+  })();
+
 
   return (
     <div className="p-3 sm:p-4 space-y-3">
