@@ -1878,6 +1878,8 @@ export default function DescargasPage() {
   const [filterVendedor, setFilterVendedor] = useState<string>('all');
   const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterDiferencia, setFilterDiferencia] = useState<string>('all');
+  const [fechaDesdeFiltro, setFechaDesdeFiltro] = useState<string>('');
+  const [fechaHastaFiltro, setFechaHastaFiltro] = useState<string>('');
   const [showNew, setShowNew] = useState(false);
   const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
@@ -1899,18 +1901,29 @@ export default function DescargasPage() {
       const matchesTipo = filterTipo === 'all' || tipo === filterTipo;
       const dif = cuadreVivo?.get(d.id)?.diferencia ?? (Number(d.diferencia_efectivo) || 0);
       const matchesDif = filterDiferencia === 'all' || (filterDiferencia === 'con' ? Math.abs(dif) >= 0.005 : Math.abs(dif) < 0.005);
-      return matchesStatus && matchesVendedor && matchesTipo && matchesDif;
+      // Filtro por fechas: si es periodo compara solape, si no compara la fecha
+      let matchesFecha = true;
+      if (fechaDesdeFiltro || fechaHastaFiltro) {
+        const dIni = (hasRange ? d.fecha_inicio : d.fecha) || d.fecha;
+        const dFin = (hasRange ? d.fecha_fin : d.fecha) || d.fecha;
+        if (fechaDesdeFiltro && dFin && dFin < fechaDesdeFiltro) matchesFecha = false;
+        if (fechaHastaFiltro && dIni && dIni > fechaHastaFiltro) matchesFecha = false;
+      }
+      return matchesStatus && matchesVendedor && matchesTipo && matchesDif && matchesFecha;
     });
-  }, [descargas, cuadreVivo, filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+  }, [descargas, cuadreVivo, filterStatus, filterVendedor, filterTipo, filterDiferencia, fechaDesdeFiltro, fechaHastaFiltro]);
 
-  const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all';
+  const hasFilters = filterStatus !== 'all' || filterVendedor !== 'all' || filterTipo !== 'all' || filterDiferencia !== 'all' || !!fechaDesdeFiltro || !!fechaHastaFiltro;
 
   const clearFilters = () => {
     setFilterStatus('all');
     setFilterVendedor('all');
     setFilterTipo('all');
     setFilterDiferencia('all');
+    setFechaDesdeFiltro('');
+    setFechaHastaFiltro('');
   };
+
 
   const totalEsperado = filtered.reduce((s, d: any) => s + cuadreDe(d).esperado, 0);
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
@@ -1918,7 +1931,7 @@ export default function DescargasPage() {
 
   const pag = useTablePagination(filtered);
   // Reset a página 1 al cambiar filtros
-  useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+  useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia, fechaDesdeFiltro, fechaHastaFiltro]);
 
 
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
