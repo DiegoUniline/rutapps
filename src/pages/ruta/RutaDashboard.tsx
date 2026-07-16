@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import { todayLocal } from '@/lib/utils';
+import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Users, Banknote, TrendingUp, Truck, Receipt, Search, Calendar as CalendarIcon, X, RotateCcw, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,8 +25,8 @@ export default function RutaDashboard() {
   // Filtros
   const [tab, setTab] = useState<TabKey>(canResumen ? 'resumen' : 'ventas');
   const [search, setSearch] = useState('');
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(weekStartLocal());
+  const [to, setTo] = useState(weekEndLocal());
 
   const { data: perfiles } = useOfflineQuery('profiles', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const vendedorUserId = vendedorId
@@ -191,7 +191,7 @@ export default function RutaDashboard() {
     ].filter(Boolean)).size,
   };
 
-  const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
+  const resetFilters = () => { setSearch(''); setFrom(weekStartLocal()); setTo(weekEndLocal()); };
 
   return (
     <div className="p-4 space-y-4 pb-24">

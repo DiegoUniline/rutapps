@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
-import { cn, fmtDate, todayLocal } from '@/lib/utils';
+import { cn, fmtDate, todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
@@ -184,11 +184,13 @@ export default function DemandaPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const today = todayLocal();
+  const weekStart = weekStartLocal();
+  const weekEnd = weekEndLocal();
 
   // ── Filters ──
   const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos'>('pendientes');
-  const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(today);
+  const [desde, setDesde] = useState(weekStart);
+  const [hasta, setHasta] = useState(weekEnd);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
   const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const [search, setSearch] = useState('');
@@ -918,10 +920,10 @@ export default function DemandaPage() {
             <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter.length > 0 || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+        {(vendedorFilter.length > 0 || search || desde !== weekStart || hasta !== weekEnd || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
             setVendedorFilter([]); setSearch(''); setTab('pendientes');
-            setDesde(today); setHasta(today); setFechaTipo('fecha');
+            setDesde(weekStart); setHasta(weekEnd); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
           </Button>

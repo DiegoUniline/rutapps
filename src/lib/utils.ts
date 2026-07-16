@@ -87,6 +87,26 @@ export function todayLocal(): string {
   return todayInTimezone(_empresaTimezone);
 }
 
+/** Monday of the current week (yyyy-mm-dd) in the empresa's timezone */
+export function weekStartLocal(): string {
+  const today = todayLocal();
+  const [y, m, d] = today.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const dow = dt.getUTCDay(); // 0 Sun..6 Sat
+  const diff = dow === 0 ? -6 : 1 - dow; // shift to Monday
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Sunday of the current week (yyyy-mm-dd) in the empresa's timezone */
+export function weekEndLocal(): string {
+  const start = weekStartLocal();
+  const [y, m, d] = start.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + 6);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** Format a date string to "d 'de' MMMM yyyy" in Mexico timezone (avoids UTC offset shifting the day) */
 export function fmtDateLongMx(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
