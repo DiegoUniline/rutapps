@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 
 const STORAGE_KEY = 'table-page-size';
 
-export type PageSizeOption = 50 | 100 | 200 | 'all';
+export type PageSizeOption = 50 | 100 | 200 | 500 | 'all';
 
 export function readStoredPageSize(): PageSizeOption {
   return readStoredSize();
@@ -13,10 +13,11 @@ function readStoredSize(): PageSizeOption {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === 'all') return 'all';
     const n = Number(raw);
-    if (n === 50 || n === 100 || n === 200) return n;
+    if (n === 50 || n === 100 || n === 200 || n === 500) return n as PageSizeOption;
   } catch {}
   return 50;
 }
+
 
 export function useTablePagination<T>(items: T[]) {
   const [pageSize, setPageSizeState] = useState<PageSizeOption>(readStoredSize);
