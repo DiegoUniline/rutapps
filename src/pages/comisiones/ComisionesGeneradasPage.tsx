@@ -1,5 +1,5 @@
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,8 +9,10 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { cn, todayLocal, fmtDate } from '@/lib/utils';
 import { Calendar } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useTablePagination } from '@/hooks/useTablePagination';
+import { TablePagination } from '@/components/TablePagination';
 
-const PAGE_SIZE = 20;
+
 const firstOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); };
 const firstOfLastMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10); };
 const lastOfLastMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10); };
