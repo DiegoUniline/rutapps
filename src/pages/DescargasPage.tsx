@@ -21,6 +21,9 @@ import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
 import { toPng } from 'html-to-image';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useTablePagination } from '@/hooks/useTablePagination';
+import { TablePagination } from '@/components/TablePagination';
+
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
