@@ -1916,6 +1916,11 @@ export default function DescargasPage() {
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
   const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
+  const pag = useTablePagination(filtered);
+  // Reset a página 1 al cambiar filtros
+  useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+
+
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
   if (showNew) {
