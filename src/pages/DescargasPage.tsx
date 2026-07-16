@@ -1958,6 +1958,15 @@ export default function DescargasPage() {
         </div>
 
         <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Fechas</label>
+            <DateRangePicker
+              from={fechaDesdeFiltro}
+              to={fechaHastaFiltro}
+              onChange={(f, t) => { setFechaDesdeFiltro(f); setFechaHastaFiltro(t); }}
+            />
+          </div>
+
           <div className="min-w-[200px] max-w-[260px]">
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Vendedor</label>
             <SearchableSelect
@@ -1967,6 +1976,7 @@ export default function DescargasPage() {
               placeholder="Todos..."
             />
           </div>
+
 
           <div>
             <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-1">Tipo</label>
