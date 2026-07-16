@@ -22,6 +22,8 @@ import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
+
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'secondary' },
@@ -38,6 +40,9 @@ export default function AuditoriasPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+
   const [showDialog, setShowDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
@@ -117,10 +122,16 @@ export default function AuditoriasPage() {
   }, [checklistItems, filterSearch]);
 
   const filtered = useMemo(() => {
-    if (!search) return auditorias ?? [];
-    const s = search.toLowerCase();
-    return (auditorias ?? []).filter((a: any) => a.nombre?.toLowerCase().includes(s));
-  }, [auditorias, search]);
+    let list = auditorias ?? [];
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter((a: any) => a.nombre?.toLowerCase().includes(s));
+    }
+    if (fechaDesde) list = list.filter((a: any) => (a.fecha ?? a.created_at ?? '').slice(0, 10) >= fechaDesde);
+    if (fechaHasta) list = list.filter((a: any) => (a.fecha ?? a.created_at ?? '').slice(0, 10) <= fechaHasta);
+    return list;
+  }, [auditorias, search, fechaDesde, fechaHasta]);
+
 
   // Preview count
   const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
@@ -268,10 +279,14 @@ export default function AuditoriasPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
       </div>
+
 
       <div className="border border-border rounded-lg overflow-hidden">
         <Table>
