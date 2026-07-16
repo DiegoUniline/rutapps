@@ -191,7 +191,7 @@ export default function RutaDashboard() {
     ].filter(Boolean)).size,
   };
 
-  const resetFilters = () => { setSearch(''); setFrom(today); setTo(today); };
+  const resetFilters = () => { setSearch(''); setFrom(weekStartLocal()); setTo(weekEndLocal()); };
 
   return (
     <div className="p-4 space-y-4 pb-24">
