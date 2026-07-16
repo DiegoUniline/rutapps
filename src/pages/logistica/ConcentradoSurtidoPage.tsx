@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProveedores } from '@/hooks/useData';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
-import { todayLocal } from '@/lib/utils';
+import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import PedidosTabs from '@/components/PedidosTabs';
 import { Button } from '@/components/ui/button';
