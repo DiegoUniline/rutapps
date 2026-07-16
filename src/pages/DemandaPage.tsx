@@ -921,12 +921,9 @@ export default function DemandaPage() {
           </div>
         </div>
         {(vendedorFilter.length > 0 || search || desde !== weekStart || hasta !== weekEnd || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
-          <Button variant="ghost" size="sm" onClick={() => {
-            setVendedorFilter([]); setSearch('');
-            setDesde(weekStart); setHasta(weekEnd); setFechaTipo('fecha');
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
             setVendedorFilter([]); setSearch(''); setTab('pendientes');
-            setDesde(today); setHasta(today); setFechaTipo('fecha');
+            setDesde(weekStart); setHasta(weekEnd); setFechaTipo('fecha');
           }}>
             <X className="h-3.5 w-3.5 mr-1" /> Limpiar
           </Button>
