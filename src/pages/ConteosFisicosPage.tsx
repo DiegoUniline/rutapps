@@ -16,6 +16,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import CrearConteoDialog from '@/components/conteos/CrearConteoDialog';
 import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
+
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   abierto: { label: 'Abierto', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
@@ -31,8 +33,11 @@ export default function ConteosFisicosPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
   useRealtimeInvalidate({
     table: 'conteos_fisicos',
     empresaId: empresa?.id,
@@ -56,6 +61,8 @@ export default function ConteosFisicosPage() {
   const filtered = useMemo(() => {
     let list = conteos ?? [];
     if (statusFilter !== 'todos') list = list.filter((c: any) => c.status === statusFilter);
+    if (fechaDesde) list = list.filter((c: any) => (c.fecha_apertura ?? c.created_at ?? '').slice(0, 10) >= fechaDesde);
+    if (fechaHasta) list = list.filter((c: any) => (c.fecha_apertura ?? c.created_at ?? '').slice(0, 10) <= fechaHasta);
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c: any) =>
@@ -64,7 +71,8 @@ export default function ConteosFisicosPage() {
       );
     }
     return list;
-  }, [conteos, statusFilter, search]);
+  }, [conteos, statusFilter, search, fechaDesde, fechaHasta]);
+
 
   const activos = (conteos ?? []).filter((c: any) => c.status === 'abierto' || c.status === 'en_progreso').length;
   const total = (conteos ?? []).length;
@@ -123,11 +131,13 @@ export default function ConteosFisicosPage() {
             {f.label}
           </button>
         ))}
+        <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
         <div className="relative ml-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar..." className="pl-9 h-8 w-48" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
+
 
       {/* Table */}
       <div className="bg-card border border-border rounded overflow-x-auto">
