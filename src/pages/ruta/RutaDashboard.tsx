@@ -25,8 +25,8 @@ export default function RutaDashboard() {
   // Filtros
   const [tab, setTab] = useState<TabKey>(canResumen ? 'resumen' : 'ventas');
   const [search, setSearch] = useState('');
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(weekStartLocal());
+  const [to, setTo] = useState(weekEndLocal());
 
   const { data: perfiles } = useOfflineQuery('profiles', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const vendedorUserId = vendedorId
