@@ -195,7 +195,11 @@ export function OdooField({
             className="inline-edit-input"
             value={value?.toString() ?? ''}
             onChange={e => onChange(e.target.value)}
-            placeholder={placeholder}
+            onFocus={e => {
+              // Prevent "phantom 0" bug: typing "1" over "0" should give "1", not "10".
+              if (type === 'number') e.currentTarget.select();
+            }}
+            placeholder={placeholder ?? (type === 'number' ? '0' : undefined)}
             step={type === 'number' ? '0.01' : undefined}
             inputMode={type === 'number' ? 'numeric' : undefined}
           />
