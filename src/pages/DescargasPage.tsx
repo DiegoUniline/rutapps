@@ -2051,7 +2051,7 @@ export default function DescargasPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((d: any) => {
+              {pag.paginatedItems.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
                 const cv = cuadreDe(d);
                 const dif = cv.diferencia;
@@ -2105,7 +2105,21 @@ export default function DescargasPage() {
               </tr>
             </tfoot>
           </table>
+          <TablePagination
+            from={pag.from}
+            to={pag.to}
+            total={pag.total}
+            page={pag.page}
+            totalPages={pag.totalPages}
+            pageSize={pag.pageSize}
+            onPageSizeChange={pag.setPageSize}
+            onFirst={pag.goFirst}
+            onPrev={pag.goPrev}
+            onNext={pag.goNext}
+            onLast={pag.goLast}
+          />
         </div>
+
       )}
 
       {selectedDescarga && (
