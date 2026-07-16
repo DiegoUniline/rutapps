@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { subDays, format } from 'date-fns';
+import { format } from 'date-fns';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export function useControlData(dateRange: { from: Date; to: Date }) {
   const { empresa } = useAuth();
@@ -14,16 +15,17 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-canceladas', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', empresaId!)
-        .eq('status', 'cancelado')
-        .gte('fecha', from)
-        .lte('fecha', to)
-        .order('fecha', { ascending: false })
-        .limit(50);
-      return data ?? [];
+      return await fetchAllPages<any>((f, t) =>
+        supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresaId!)
+          .eq('status', 'cancelado')
+          .gte('fecha', from)
+          .lte('fecha', to)
+          .order('fecha', { ascending: false })
+          .range(f, t)
+      );
     },
   });
 
@@ -32,17 +34,18 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-descuentos', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, descuento_porcentaje, descuento_monto, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', empresaId!)
-        .gte('fecha', from)
-        .lte('fecha', to)
-        .gt('descuento_porcentaje', 15)
-        .neq('status', 'cancelado')
-        .order('descuento_porcentaje', { ascending: false })
-        .limit(50);
-      return data ?? [];
+      return await fetchAllPages<any>((f, t) =>
+        supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, descuento_porcentaje, descuento_monto, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresaId!)
+          .gte('fecha', from)
+          .lte('fecha', to)
+          .gt('descuento_porcentaje', 15)
+          .neq('status', 'cancelado')
+          .order('descuento_porcentaje', { ascending: false })
+          .range(f, t)
+      );
     },
   });
 
@@ -51,28 +54,34 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-bajo-costo', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data: ventas } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total)')
-        .eq('empresa_id', empresaId!)
-        .gte('fecha', from)
-        .lte('fecha', to)
-        .neq('status', 'cancelado')
-        .order('fecha', { ascending: false })
-        .limit(500);
+      const ventas = await fetchAllPages<any>((f, t) =>
+        supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total)')
+          .eq('empresa_id', empresaId!)
+          .gte('fecha', from)
+          .lte('fecha', to)
+          .neq('status', 'cancelado')
+          .order('fecha', { ascending: false })
+          .range(f, t)
+      );
 
       if (!ventas || ventas.length === 0) return [];
 
-      // Get product costs
       const productoIds = [...new Set(ventas.flatMap(v => (v.venta_lineas ?? []).map((l: any) => l.producto_id)))];
       if (productoIds.length === 0) return [];
 
-      const { data: productos } = await supabase
-        .from('productos')
-        .select('id, costo, nombre')
-        .in('id', productoIds.slice(0, 200));
-
-      const costoMap = new Map((productos ?? []).map(p => [p.id, { costo: p.costo ?? 0, nombre: p.nombre }]));
+      // Chunk product lookup to avoid IN() explosion
+      const chunkSize = 200;
+      const costoMap = new Map<string, { costo: number; nombre: string }>();
+      for (let i = 0; i < productoIds.length; i += chunkSize) {
+        const chunk = productoIds.slice(i, i + chunkSize);
+        const { data: productos } = await supabase
+          .from('productos')
+          .select('id, costo, nombre')
+          .in('id', chunk);
+        for (const p of productos ?? []) costoMap.set(p.id, { costo: p.costo ?? 0, nombre: p.nombre });
+      }
 
       const alerts: any[] = [];
       for (const v of ventas) {
@@ -94,7 +103,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
           }
         }
       }
-      return alerts.sort((a, b) => b.perdida - a.perdida).slice(0, 50);
+      return alerts.sort((a, b) => b.perdida - a.perdida);
     },
   });
 
@@ -103,16 +112,18 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-descargas', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await (supabase.from as any)('descargas_ruta')
-        .select('id, fecha, status, vendedor_id, diferencia_efectivo, efectivo_esperado, efectivo_entregado, vendedores:profiles!vendedor_id(nombre), descarga_ruta_lineas(producto_id, cantidad_esperada, cantidad_real, diferencia, productos(nombre))')
-        .eq('empresa_id', empresaId!)
-        .gte('fecha', from)
-        .lte('fecha', to)
-        .order('fecha', { ascending: false })
-        .limit(50);
+      const data = await fetchAllPages<any>((f, t) =>
+        (supabase.from as any)('descargas_ruta')
+          .select('id, fecha, status, vendedor_id, diferencia_efectivo, efectivo_esperado, efectivo_entregado, vendedores:profiles!vendedor_id(nombre), descarga_ruta_lineas(producto_id, cantidad_esperada, cantidad_real, diferencia, productos(nombre))')
+          .eq('empresa_id', empresaId!)
+          .gte('fecha', from)
+          .lte('fecha', to)
+          .order('fecha', { ascending: false })
+          .range(f, t)
+      );
 
       const alerts: any[] = [];
-      for (const d of (data ?? []) as any[]) {
+      for (const d of data as any[]) {
         const difEfectivo = d.diferencia_efectivo ?? 0;
         const lineasConDif = ((d.descarga_ruta_lineas ?? []) as any[]).filter((l: any) => (l.diferencia ?? 0) !== 0);
 
@@ -139,23 +150,25 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     },
   });
 
-  // 5. Cobros pendientes vencidos (crédito vencido)
+  // 5. Cobros pendientes vencidos (crédito vencido) — TODO el historial de la empresa
   const creditoVencido = useQuery({
     queryKey: ['control-credito-vencido', empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, dias_credito, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
-        .eq('empresa_id', empresaId!)
-        .eq('condicion_pago', 'credito')
-        .gt('saldo_pendiente', 0)
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .order('fecha', { ascending: true })
-        .limit(100);
+      const data = await fetchAllPages<any>((f, t) =>
+        supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, saldo_pendiente, dias_credito, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
+          .eq('empresa_id', empresaId!)
+          .eq('condicion_pago', 'credito')
+          .gt('saldo_pendiente', 0)
+          .in('status', ['confirmado', 'entregado', 'facturado'])
+          .order('fecha', { ascending: true })
+          .range(f, t)
+      );
 
       const today = new Date();
-      return (data ?? [])
+      return data
         .map((v: any) => {
           const fechaVenta = new Date(v.fecha);
           const diasCredito = v.dias_credito ?? 30;
@@ -180,19 +193,20 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-historial', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('venta_historial')
-        .select('id, venta_id, accion, detalle, created_at, user_id, ventas(folio), profiles(nombre)')
-        .eq('empresa_id', empresaId!)
-        .gte('created_at', from)
-        .lte('created_at', to + 'T23:59:59')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      return data ?? [];
+      return await fetchAllPages<any>((f, t) =>
+        supabase
+          .from('venta_historial')
+          .select('id, venta_id, accion, detalle, created_at, user_id, ventas(folio), profiles(nombre)')
+          .eq('empresa_id', empresaId!)
+          .gte('created_at', from)
+          .lte('created_at', to + 'T23:59:59')
+          .order('created_at', { ascending: false })
+          .range(f, t)
+      );
     },
   });
 
-  const isLoading = canceladas.isLoading || descuentosAltos.isLoading || ventasBajoCosto.isLoading 
+  const isLoading = canceladas.isLoading || descuentosAltos.isLoading || ventasBajoCosto.isLoading
     || diferenciasDescarga.isLoading || creditoVencido.isLoading || historial.isLoading;
 
   return {
