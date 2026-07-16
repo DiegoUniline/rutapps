@@ -21,6 +21,9 @@ import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
 import { toPng } from 'html-to-image';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useTablePagination } from '@/hooks/useTablePagination';
+import { TablePagination } from '@/components/TablePagination';
+
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
@@ -1913,6 +1916,11 @@ export default function DescargasPage() {
   const totalEntregado = filtered.reduce((s, d: any) => s + (Number(d.efectivo_entregado) || 0), 0);
   const totalDiferencia = filtered.reduce((s, d: any) => s + cuadreDe(d).diferencia, 0);
 
+  const pag = useTablePagination(filtered);
+  // Reset a página 1 al cambiar filtros
+  useEffect(() => { pag.resetPage(); }, [filterStatus, filterVendedor, filterTipo, filterDiferencia]);
+
+
   const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
   if (showNew) {
@@ -2043,7 +2051,7 @@ export default function DescargasPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((d: any) => {
+              {pag.paginatedItems.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
                 const cv = cuadreDe(d);
                 const dif = cv.diferencia;
@@ -2097,7 +2105,21 @@ export default function DescargasPage() {
               </tr>
             </tfoot>
           </table>
+          <TablePagination
+            from={pag.from}
+            to={pag.to}
+            total={pag.total}
+            page={pag.page}
+            totalPages={pag.totalPages}
+            pageSize={pag.pageSize}
+            onPageSizeChange={pag.setPageSize}
+            onFirst={pag.goFirst}
+            onPrev={pag.goPrev}
+            onNext={pag.goNext}
+            onLast={pag.goLast}
+          />
         </div>
+
       )}
 
       {selectedDescarga && (

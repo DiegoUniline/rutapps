@@ -19,7 +19,8 @@ const SIZE_OPTIONS: { value: PageSizeOption; label: string }[] = [
   { value: 50, label: '50' },
   { value: 100, label: '100' },
   { value: 200, label: '200' },
-  { value: 'all', label: 'Todo' },
+  { value: 500, label: '500' },
+  { value: 'all', label: 'Todas' },
 ];
 
 export function TablePagination({
@@ -38,7 +39,7 @@ export function TablePagination({
           value={String(pageSize)}
           onChange={e => {
             const v = e.target.value;
-            onPageSizeChange(v === 'all' ? 'all' : (Number(v) as 50 | 100 | 200));
+            onPageSizeChange(v === 'all' ? 'all' : (Number(v) as 50 | 100 | 200 | 500));
           }}
         >
           {SIZE_OPTIONS.map(o => (
@@ -46,6 +47,7 @@ export function TablePagination({
           ))}
         </select>
         <span className="hidden sm:inline">registros</span>
+
         <span className="text-muted-foreground">—</span>
         <span>{from}-{to} de <strong className="text-foreground">{total}</strong></span>
       </div>
