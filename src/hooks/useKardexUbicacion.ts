@@ -47,32 +47,30 @@ export function useKardexUbicacion(
     queryKey: ['kardex-ubicacion', productoId, ubicacionId, ubicacionTipo, empresa?.id, fechaDesde, fechaHasta, loteId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('movimientos_inventario')
-        .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id, lote_id')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: true })
-        .limit(2000);
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('movimientos_inventario')
+          .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, producto_id, user_id, almacen_origen_id, almacen_destino_id, vendedor_destino_id, lote_id')
+          .eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: true });
 
-      if (productoId) q = q.eq('producto_id', productoId);
-      if (loteId) q = q.eq('lote_id', loteId);
-      if (fechaDesde) q = q.gte('fecha', fechaDesde);
-      if (fechaHasta) q = q.lte('fecha', fechaHasta);
+        if (productoId) q = q.eq('producto_id', productoId);
+        if (loteId) q = q.eq('lote_id', loteId);
+        if (fechaDesde) q = q.gte('fecha', fechaDesde);
+        if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
-      if (ubicacionId) {
-        // Camiones de ruta también son registros en `almacenes` (tipo='ruta')
-        // y sus movimientos usan almacen_origen_id/almacen_destino_id.
-        // Filtramos por almacén tanto para 'almacen' como para 'camion'.
-        q = q.or(
-          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
-        );
-      }
+        if (ubicacionId) {
+          q = q.or(
+            `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+          );
+        }
 
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+        return q.range(from, to);
+      });
     },
   });
+
 
   const almacenesQuery = useQuery({
     queryKey: ['kardex-almacenes-map', empresa?.id],

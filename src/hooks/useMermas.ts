@@ -70,20 +70,22 @@ export function useMermas(filters?: { desde?: string; hasta?: string }) {
     queryKey: ['mermas', empresa?.id, filters?.desde, filters?.hasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('mermas')
-        .select('id, folio, fecha, almacen_origen_id, motivo_id, observaciones, total_costo, total_venta, cancelada, creado_por, created_at, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre), profiles:creado_por(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (filters?.desde) q = q.gte('fecha', filters.desde);
-      if (filters?.hasta) q = q.lte('fecha', filters.hasta);
-      const { data, error } = await q.limit(1000);
-      if (error) throw error;
-      return data ?? [];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return await fetchAllPages<any>((from, to) => {
+        let q = supabase
+          .from('mermas')
+          .select('id, folio, fecha, almacen_origen_id, motivo_id, observaciones, total_costo, total_venta, cancelada, creado_por, created_at, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre), profiles:creado_por(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (filters?.desde) q = q.gte('fecha', filters.desde);
+        if (filters?.hasta) q = q.lte('fecha', filters.hasta);
+        return q.range(from, to);
+      });
     },
   });
 }
+
 
 export function useMerma(id?: string) {
   return useQuery({

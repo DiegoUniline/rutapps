@@ -31,21 +31,22 @@ export default function ComisionesGeneradasPage() {
     queryKey: ['venta_comisiones', empresa?.id, vendedorFilter, statusFilter, fechaDesde, fechaHasta],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase.from('venta_comisiones')
-        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha_venta', { ascending: false })
-        .limit(2000);
-      if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
-      if (statusFilter === 'pendientes') q = q.eq('pagada', false);
-      if (statusFilter === 'pagadas') q = q.eq('pagada', true);
-      if (fechaDesde) q = q.gte('fecha_venta', fechaDesde);
-      if (fechaHasta) q = q.lte('fecha_venta', fechaHasta);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as any[];
+      const { fetchAllPages } = await import('@/lib/supabasePaginate');
+      return await fetchAllPages<any>((from, to) => {
+        let q = supabase.from('venta_comisiones')
+          .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, pago_comision_id, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre), pago_comisiones(fecha_corte, estado)')
+          .eq('empresa_id', empresa!.id)
+          .order('fecha_venta', { ascending: false });
+        if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
+        if (statusFilter === 'pendientes') q = q.eq('pagada', false);
+        if (statusFilter === 'pagadas') q = q.eq('pagada', true);
+        if (fechaDesde) q = q.gte('fecha_venta', fechaDesde);
+        if (fechaHasta) q = q.lte('fecha_venta', fechaHasta);
+        return q.range(from, to);
+      });
     },
   });
+
 
   const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
   const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
