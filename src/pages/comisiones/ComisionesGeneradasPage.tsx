@@ -74,27 +74,26 @@ export default function ComisionesGeneradasPage() {
   }, [comisiones]);
 
   const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
-  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); setPage(0); };
-  const from = page * PAGE_SIZE + 1;
-  const to = Math.min((page + 1) * PAGE_SIZE, (comisiones ?? []).length);
-  const total = (comisiones ?? []).length;
+  const setRange = (d: string, h: string) => { setFechaDesde(d); setFechaHasta(h); };
+
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <div className="w-44">
-          <SearchableSelect options={vendedorOpts} value={vendedorFilter} onChange={v => { setVendedorFilter(v); setPage(0); }} placeholder="Vendedor" />
+          <SearchableSelect options={vendedorOpts} value={vendedorFilter} onChange={v => setVendedorFilter(v)} placeholder="Vendedor" />
         </div>
         <div className="flex border border-border rounded overflow-hidden">
           {([['pendientes', 'Pendientes'], ['pagadas', 'Pagadas'], ['todas', 'Todas']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => { setStatusFilter(key); setPage(0); }}
+            <button key={key} onClick={() => setStatusFilter(key)}
               className={cn('px-2.5 py-1.5 text-xs transition-colors', statusFilter === key ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted')}>
               {label}
             </button>
           ))}
         </div>
+
         <div className="h-6 w-px bg-border mx-1" />
-        <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); setPage(0); }} />
+        <DateRangePicker from={fechaDesde} to={fechaHasta} onChange={(f, t) => { setFechaDesde(f); setFechaHasta(t); }} />
         <div className="flex gap-1">
           <button onClick={() => setRange(todayLocal(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Hoy</button>
           <button onClick={() => setRange(mondayOfWeek(), todayLocal())} className="px-2 py-1 text-[11px] bg-muted hover:bg-muted/70 rounded">Semana</button>
@@ -124,7 +123,7 @@ export default function ComisionesGeneradasPage() {
             <tbody>
               {resumenVendedor.map(r => (
                 <tr key={r.vendedor_id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
-                  onClick={() => { setVendedorFilter(r.vendedor_id === 'sin' ? '' : r.vendedor_id); setPage(0); }}>
+                  onClick={() => setVendedorFilter(r.vendedor_id === 'sin' ? '' : r.vendedor_id)}>
                   <td className="py-1.5 px-3 text-xs font-medium">{r.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-xs">{r.ventas.size}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(r.vendido)}</td>
@@ -154,7 +153,7 @@ export default function ComisionesGeneradasPage() {
               </tr>
             </thead>
             <tbody>
-              {paged.map((c: any) => (
+              {pag.paginatedItems.map((c: any) => (
                 <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                   <td className="py-1.5 px-3 text-xs">{fmtDate(c.fecha_venta)}</td>
                   <td className="py-1.5 px-3 text-xs font-mono">
@@ -178,18 +177,26 @@ export default function ComisionesGeneradasPage() {
                   </td>
                 </tr>
               ))}
-              {paged.length === 0 && (
+              {pag.paginatedItems.length === 0 && (
                 <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">Sin comisiones en el rango seleccionado</td></tr>
               )}
             </tbody>
+
           </table>
-          {total > PAGE_SIZE && (
-            <div className="flex items-center justify-end gap-2 px-3 py-2 text-xs">
-              <span className="text-muted-foreground">{from}-{to} de {total}</span>
-              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-2 py-1 bg-muted rounded disabled:opacity-50">‹</button>
-              <button onClick={() => setPage(p => p + 1)} disabled={to >= total} className="px-2 py-1 bg-muted rounded disabled:opacity-50">›</button>
-            </div>
-          )}
+          <TablePagination
+            from={pag.from}
+            to={pag.to}
+            total={pag.total}
+            page={pag.page}
+            totalPages={pag.totalPages}
+            pageSize={pag.pageSize}
+            onPageSizeChange={pag.setPageSize}
+            onFirst={pag.goFirst}
+            onPrev={pag.goPrev}
+            onNext={pag.goNext}
+            onLast={pag.goLast}
+          />
+
         </div>
       )}
     </div>
