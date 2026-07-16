@@ -1,35 +1,66 @@
-# Unificar ticket impreso de "Nueva venta" con el de "Detalle de venta"
+# Plan: Campos numéricos universales (fix "0" fantasma → "10")
 
 ## Problema
+Muchos inputs numéricos se inicializan con `useState(0)` o `value={x || 0}`. El "0" es un valor real, así que si el usuario escribe "1" sin borrar, queda "10". Además `Number("")` devuelve `0`, contaminando payloads.
 
-El ticket impreso desde `/ruta/ventas/nueva` (al terminar una venta) no coincide con el impreso desde `/ruta/ventas/:id` (detalle). Ambas rutas ya usan `printTicket(td)` de `src/lib/printTicketUtil.ts`, así que el HTML/ESC-POS base es el mismo. Las diferencias vienen de **cómo se arma el `TicketData`** y del **ancho por defecto**.
+## Solución
 
-## Diferencias detectadas
+### 1. Componente universal `NumericInput`
+Nuevo archivo `src/components/NumericInput.tsx`:
 
-| Campo | Detalle (`useVentaDetalle.getTicketData`) | Nueva venta (`RutaNuevaVenta.handlePrintTicket`) |
-|---|---|---|
-| `ticketAncho` default | `empresa.ticket_ancho ?? '58'` | `empresa.ticket_ancho ?? '80'` |
-| `fecha` | `fmtDate(venta.fecha)` (DD/MM/YYYY) | `ticketInfo.fecha` crudo |
-| `descuento` | `venta.descuento_total ?? 0` | ausente |
-| `devoluciones` | array completo desde BD | ausente en `printTicket` (sí está en pantalla) |
-| `saldoNuevo` | `saldoAnterior + saldoPendiente` cuando > 0, si no `undefined` | fórmula distinta que suma condicional |
-| `pagos[].referencia` | incluido | ausente |
-| líneas | `descuento_pct` desde `descuento_porcentaje` | siempre `0` |
+- Props: `value: number | null`, `onChange: (v: number | null) => void`, `placeholder="0"`, `allowDecimals`, `allowNegative`, `min`, `max`, `step`, `decimals`, `zeroBehavior: "placeholder" | "select-on-focus" | "keep"`, más passthrough de `className`, `disabled`, `onBlur`, `autoFocus`, `id`, `name`, `inputMode`.
+- Estado interno: string `draft` sincronizado con `value`.
+- `value === null | undefined` → input vacío, muestra `placeholder="0"`.
+- `value === 0` + `zeroBehavior="placeholder"` → renderiza vacío también (el 0 vive como placeholder hasta que se escriba).
+- `zeroBehavior="select-on-focus"` (default para precios/costos existentes): mantiene "0" y hace `select()` en focus.
+- `onFocus`: si `zeroBehavior="placeholder"` y value===0 → limpia; en otros modos selecciona todo.
+- `onChange`: si raw==="" → `onChange(null)`; valida regex según `allowDecimals`/`allowNegative`; respeta `min`/`max` en blur; nunca emite `NaN`.
+- Manejo correcto de separador decimal (`.` y `,`), pegado, teclas ↑↓ nativas (`type="number"` con `inputMode`), móvil.
 
-## Cambios (solo `src/pages/ruta/RutaNuevaVenta/index.tsx`)
+### 2. Helper de payload
+`src/lib/numericInput.ts`:
+- `toPayloadNumber(value, { defaultZero = false })` → convierte `null | ""` → `null` (o `0` si negocio lo pide).
+- `numericValidator(schema)` para zod.
 
-Modificar únicamente `handlePrintTicket` (la vista `TicketVenta` en pantalla no se toca):
+### 3. Migración
+No podemos tocar cada uno de los ~600 inputs numéricos en una sola pasada sin riesgo. Estrategia por fases:
 
-1. Cambiar el default de `ticketAncho` de `'80'` a `'58'` para el ticket impreso (mantener `'80'` solo si `empresa.ticket_ancho` así lo indica).
-2. Formatear `fecha` con `fmtDate(...)` igual que detalle.
-3. Añadir `descuento: h.totals.descuentoDevolucion ?? 0` y `devoluciones` mapeando `h.devoluciones` con la misma forma que detalle.
-4. Recalcular `saldoNuevo` con la misma regla: `(saldoAnterior + saldoRestanteDeEstaVenta) > 0 ? esa suma : undefined`.
-5. Añadir `referencia` a cada `pago`.
-6. En las líneas, mantener el resto pero dejarlas listas para incluir `descuento_pct` si en el futuro se agrega (por ahora sigue en 0, aquí no hay descuentos por línea manuales).
+**Fase A (esta entrega):**
+- Crear componente + helper + tests.
+- Migrar los formularios de mayor tráfico y donde el bug es más visible:
+  - POS: cantidades, descuentos (`src/components/pos/*`, `MovimientoCajaModal`, `CerrarTurnoModal`).
+  - Ventas / cotizaciones: cantidad, descuento, precio (líneas editables).
+  - Compras y traspasos: cantidad, costo.
+  - Ajustes de inventario y conteos físicos: cantidad física.
+  - Productos: precio principal, costo, stock min/max, factor conversión (`ProductoGeneralFields`).
+  - Pagos y cobros: monto.
+- Ajustar `InlineEditCell` para usar la misma lógica cuando `type="number"`.
 
-Nada más se toca: ni la UI de `TicketVenta` en pantalla, ni la lógica de guardado, ni los cálculos de totales, ni los otros pasos del wizard.
+**Fase B (segunda entrega, tras validar Fase A):**
+- Barrido con `rg` de patrones `useState(0)`, `value={.*\|\| 0}`, `Number(e.target.value)`, `parseFloat(...) \|\| 0`, `type="number"` restantes.
+- Sustitución mecánica y revisión visual por módulo (reportes, WhatsApp, comisiones, promociones, gastos, mermas, etc.).
 
-## Cómo verificar
+### 4. Reglas de convivencia
+- No cambio schemas ni negocios: donde el backend exige `0` (ej. stock mínimo default), el helper de payload aplica `defaultZero`.
+- No toco cálculos de dinero ni RPCs.
+- Mantengo `es_granel` con `step="0.001"` y `fmtMoney` sin cambios.
 
-1. Terminar una venta desde `/ruta/ventas/nueva` → botón "Imprimir" → el ticket impreso/PDF debe tener el mismo layout, ancho y bloques (Saldo Anterior/Nuevo, devoluciones, pagos con referencia, descuento) que el que sale desde `/ruta/ventas/:id` → "Imprimir".
-2. La pantalla verde de éxito (`TicketVenta`) sigue viéndose igual — no se modifica.
+## Detalles técnicos
+- `NumericInput` usa `type="text"` con `inputMode="decimal"` o `"numeric"` para tener control total del string (evita autocast del navegador).
+- `zeroBehavior` default:
+  - Cantidades, descuentos, %: `"placeholder"`.
+  - Precios/costos/stock min/max ya persistidos: `"select-on-focus"`.
+- Tests unitarios: escribir "1" en un input inicializado sin valor produce `1`; escribir "1" con foco sobre value=0 y `zeroBehavior="placeholder"` produce `1`; blur vacío → `null`; blur con `defaultZero` en payload → `0`.
+
+## Fuera de alcance
+- Formateo con miles (`fmtMoney`) en tiempo real dentro del input (se mantiene formateo solo en modo lectura).
+- Migración de textareas o inputs de texto.
+
+## Entregable Fase A
+1. `src/components/NumericInput.tsx`
+2. `src/lib/numericInput.ts`
+3. `src/test/numericInput.test.ts`
+4. Migración de los formularios listados arriba.
+5. `InlineEditCell` actualizado.
+
+Confírmame para arrancar la Fase A tal cual, o dime si prefieres que priorice un módulo distinto primero.
