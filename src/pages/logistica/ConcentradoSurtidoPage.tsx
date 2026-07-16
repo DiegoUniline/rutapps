@@ -68,8 +68,8 @@ export default function ConcentradoSurtidoPage() {
   const { data: proveedores } = useProveedores();
 
   const today = todayLocal();
-  const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(today);
+  const [desde, setDesde] = useState(weekStartLocal());
+  const [hasta, setHasta] = useState(weekEndLocal());
   const [generando, setGenerando] = useState(false);
   const [fechaField, setFechaField] = useState<'fecha' | 'fecha_entrega'>('fecha');
 
