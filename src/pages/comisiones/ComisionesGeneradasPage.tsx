@@ -27,7 +27,7 @@ export default function ComisionesGeneradasPage() {
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
   const [fechaDesde, setFechaDesde] = useState(firstOfMonth());
   const [fechaHasta, setFechaHasta] = useState(todayLocal());
-  const [page, setPage] = useState(0);
+
 
   const { data: comisiones, isLoading } = useQuery({
     queryKey: ['venta_comisiones', empresa?.id, vendedorFilter, statusFilter, fechaDesde, fechaHasta],
@@ -50,10 +50,13 @@ export default function ComisionesGeneradasPage() {
   });
 
 
-  const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
-  const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
-  const totalPend = useMemo(() => (comisiones ?? []).filter(c => !c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
-  const totalPag = useMemo(() => (comisiones ?? []).filter(c => c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisiones]);
+  const comisionesList = comisiones ?? [];
+  const pag = useTablePagination(comisionesList);
+  useEffect(() => { pag.resetPage(); }, [vendedorFilter, statusFilter, fechaDesde, fechaHasta]);
+  const totalMonto = useMemo(() => comisionesList.reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisionesList]);
+  const totalPend = useMemo(() => comisionesList.filter(c => !c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisionesList]);
+  const totalPag = useMemo(() => comisionesList.filter(c => c.pagada).reduce((s, c) => s + (c.comision_monto ?? 0), 0), [comisionesList]);
+
 
   const resumenVendedor = useMemo(() => {
     const map = new Map<string, { vendedor_id: string; nombre: string; ventas: Set<string>; vendido: number; comision: number; pendiente: number; pagada: number }>();
