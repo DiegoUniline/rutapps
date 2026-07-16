@@ -184,11 +184,13 @@ export default function DemandaPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const today = todayLocal();
+  const weekStart = weekStartLocal();
+  const weekEnd = weekEndLocal();
 
   // ── Filters ──
   const [tab, setTab] = useState<'pendientes' | 'generadas' | 'surtidos' | 'en_ruta' | 'entregados' | 'cerrados' | 'todos'>('pendientes');
-  const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(today);
+  const [desde, setDesde] = useState(weekStart);
+  const [hasta, setHasta] = useState(weekEnd);
   const [fechaTipo, setFechaTipo] = useState<'fecha' | 'fecha_entrega'>('fecha');
   const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const [search, setSearch] = useState('');
