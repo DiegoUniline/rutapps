@@ -920,7 +920,10 @@ export default function DemandaPage() {
             <Input placeholder="Folio o cliente..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        {(vendedorFilter.length > 0 || search || desde !== today || hasta !== today || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+        {(vendedorFilter.length > 0 || search || desde !== weekStart || hasta !== weekEnd || fechaTipo !== 'fecha' || tab !== 'pendientes') && (
+          <Button variant="ghost" size="sm" onClick={() => {
+            setVendedorFilter([]); setSearch('');
+            setDesde(weekStart); setHasta(weekEnd); setFechaTipo('fecha');
           <Button variant="ghost" size="sm" className="h-9" onClick={() => {
             setVendedorFilter([]); setSearch(''); setTab('pendientes');
             setDesde(today); setHasta(today); setFechaTipo('fecha');
