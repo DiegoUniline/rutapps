@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { MessageCircle, Plus, Trash2, Sparkles, Send } from 'lucide-react';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { fetchAllPages } from '@/lib/supabasePaginate';
+
 
 const COMMANDS = ['reportes', 'stock', 'clientes', 'cobros'] as const;
 type Cmd = typeof COMMANDS[number];
@@ -26,6 +29,9 @@ export default function WhatsAppBotPage() {
   const qc = useQueryClient();
   const [newPhone, setNewPhone] = useState('');
   const [newName, setNewName] = useState('');
+  const [logsDesde, setLogsDesde] = useState('');
+  const [logsHasta, setLogsHasta] = useState('');
+
 
   const addonQ = useQuery({
     queryKey: ['empresa_addons', empresaId],
@@ -47,14 +53,19 @@ export default function WhatsAppBotPage() {
   });
 
   const logsQ = useQuery({
-    queryKey: ['wa_bot_logs', empresaId],
+    queryKey: ['wa_bot_logs', empresaId, logsDesde, logsHasta],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase.from('wa_bot_logs')
-        .select('*').eq('empresa_id', empresaId!).order('created_at', { ascending: false }).limit(50);
-      return data || [];
+      return await fetchAllPages<any>((from, to) => {
+        let q = supabase.from('wa_bot_logs')
+          .select('*').eq('empresa_id', empresaId!).order('created_at', { ascending: false });
+        if (logsDesde) q = q.gte('created_at', logsDesde);
+        if (logsHasta) q = q.lte('created_at', logsHasta + 'T23:59:59');
+        return q.range(from, to);
+      });
     },
   });
+
 
   const profilesQ = useQuery({
     queryKey: ['profiles_with_phone', empresaId],
@@ -353,8 +364,12 @@ export default function WhatsAppBotPage() {
 
       {/* Historial */}
       <Card className="p-4">
-        <h2 className="font-semibold mb-3 flex items-center gap-2"><Send className="h-4 w-4" /> Historial reciente</h2>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="font-semibold flex items-center gap-2"><Send className="h-4 w-4" /> Historial reciente</h2>
+          <DateRangePicker from={logsDesde} to={logsHasta} onChange={(f, t) => { setLogsDesde(f); setLogsHasta(t); }} />
+        </div>
         <div className="space-y-2 max-h-96 overflow-y-auto text-sm">
+
           {(logsQ.data || []).map((l: any) => (
             <div key={l.id} className="border-b border-border pb-2">
               <div className="flex justify-between items-center">
