@@ -109,14 +109,14 @@ export function useDescargasListDesktop() {
     queryKey: ['descargas-list', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('descarga_ruta')
-        .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, user_id, empresa_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, descargo_camion, almacen_destino_id, vendedores:profiles!vendedor_id(nombre), cargas(fecha)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data;
+      return fetchAllPages((from, to) =>
+        supabase
+          .from('descarga_ruta')
+          .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, user_id, empresa_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, descargo_camion, almacen_destino_id, vendedores:profiles!vendedor_id(nombre), cargas(fecha)')
+          .eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      );
     },
   });
 }
