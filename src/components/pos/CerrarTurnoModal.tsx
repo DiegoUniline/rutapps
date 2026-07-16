@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericInput } from '@/components/NumericInput';
+import { toRequiredNumber } from '@/lib/numericInput';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { toast } from 'sonner';
 import { Lock } from 'lucide-react';
@@ -14,37 +15,42 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-const ArqueoRow = ({ label, val, onChange }: { label: string; val: string; onChange: (v: string) => void }) => (
+const ArqueoRow = ({
+  label,
+  val,
+  onChange,
+}: {
+  label: string;
+  val: number | null;
+  onChange: (v: number | null) => void;
+}) => (
   <div className="grid grid-cols-2 gap-2 items-center">
     <Label className="text-sm">{label}</Label>
-    <Input type="number" inputMode="decimal" value={val} onChange={(e) => onChange(e.target.value)} placeholder="0.00" />
+    <NumericInput value={val} onChange={onChange} placeholder="0.00" allowDecimals min={0} />
   </div>
 );
 
 export function CerrarTurnoModal({ open, onOpenChange }: Props) {
   const { turno, cerrarTurno, computeArqueo } = useCajaTurno();
   const [esperado, setEsperado] = useState({ efectivo_esperado: 0, tarjeta_esperado: 0, transferencia_esperado: 0, otros_esperado: 0 });
-  const [efectivo, setEfectivo] = useState('');
-  const [tarjeta, setTarjeta] = useState('');
-  const [transfer, setTransfer] = useState('');
-  const [otros, setOtros] = useState('');
+  const [efectivo, setEfectivo] = useState<number | null>(null);
+  const [tarjeta, setTarjeta] = useState<number | null>(null);
+  const [transfer, setTransfer] = useState<number | null>(null);
+  const [otros, setOtros] = useState<number | null>(null);
   const [notas, setNotas] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    // Calcular esperados internamente para guardar al cerrar, pero NO mostrarlos al cajero
     computeArqueo().then(setEsperado);
-    setEfectivo(''); setTarjeta(''); setTransfer(''); setOtros(''); setNotas('');
+    setEfectivo(null); setTarjeta(null); setTransfer(null); setOtros(null); setNotas('');
   }, [open]);
 
-  const efectivoNum = parseFloat(efectivo) || 0;
-  const tarjetaNum = parseFloat(tarjeta) || 0;
-  const transferNum = parseFloat(transfer) || 0;
-  const otrosNum = parseFloat(otros) || 0;
+  const efectivoNum = toRequiredNumber(efectivo);
+  const tarjetaNum = toRequiredNumber(tarjeta);
+  const transferNum = toRequiredNumber(transfer);
+  const otrosNum = toRequiredNumber(otros);
   const totalContado = efectivoNum + tarjetaNum + transferNum + otrosNum;
-  const totalEsperado = esperado.efectivo_esperado + esperado.tarjeta_esperado + esperado.transferencia_esperado + esperado.otros_esperado;
-  const diferencia = totalContado - totalEsperado;
 
   const handleSubmit = async () => {
     setBusy(true);
@@ -58,7 +64,7 @@ export function CerrarTurnoModal({ open, onOpenChange }: Props) {
       });
       toast.success('Turno cerrado');
       onOpenChange(false);
-      setEfectivo(''); setNotas('');
+      setEfectivo(null); setNotas('');
     } catch (e: any) {
       toast.error(e.message || 'Error al cerrar');
     } finally {

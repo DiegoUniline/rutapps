@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { NumericInput } from '@/components/NumericInput';
+import { toRequiredNumber } from '@/lib/numericInput';
 import { useCajaTurno } from '@/hooks/useCajaTurno';
 import { toast } from 'sonner';
 import { ArrowDown, ArrowUp, Receipt } from 'lucide-react';
@@ -22,7 +23,7 @@ const META = {
 
 export function MovimientoCajaModal({ open, onOpenChange, tipo }: Props) {
   const { registrarMovimiento } = useCajaTurno();
-  const [monto, setMonto] = useState('');
+  const [monto, setMonto] = useState<number | null>(null);
   const [motivo, setMotivo] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -30,14 +31,14 @@ export function MovimientoCajaModal({ open, onOpenChange, tipo }: Props) {
   const Icon = meta.icon;
 
   const handleSubmit = async () => {
-    const v = parseFloat(monto) || 0;
+    const v = toRequiredNumber(monto);
     if (v <= 0) { toast.error('Monto inválido'); return; }
     setBusy(true);
     try {
       await registrarMovimiento.mutateAsync({ tipo, monto: v, motivo: motivo.trim() || undefined });
       toast.success(`${meta.label} registrado`);
       onOpenChange(false);
-      setMonto(''); setMotivo('');
+      setMonto(null); setMotivo('');
     } catch (e: any) {
       toast.error(e.message || 'Error');
     } finally {
@@ -56,12 +57,12 @@ export function MovimientoCajaModal({ open, onOpenChange, tipo }: Props) {
         <div className="space-y-4 py-2">
           <div>
             <Label>Monto</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
+            <NumericInput
               value={monto}
-              onChange={(e) => setMonto(e.target.value)}
+              onChange={setMonto}
               placeholder="0.00"
+              allowDecimals
+              min={0}
               autoFocus
             />
           </div>
