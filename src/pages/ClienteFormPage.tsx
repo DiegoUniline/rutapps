@@ -30,7 +30,7 @@ const defaultCliente: Partial<Cliente> = {
   credito: false, limite_credito: 0, dias_credito: 0, orden: 0, status: 'activo',
   requiere_factura: false, facturama_rfc: '', facturama_razon_social: '',
   facturama_regimen_fiscal: '', facturama_uso_cfdi: '', facturama_cp: '',
-  facturama_correo_facturacion: '',
+  facturama_correo_facturacion: '', notas_fiscales: '',
   fecha_alta: todayLocal(),
 };
 
@@ -685,6 +685,18 @@ export default function ClienteFormPage() {
                       options={(catUsoCfdi ?? []).map(u => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }))} />
                     <OdooField label="Código Postal" value={form.facturama_cp} onChange={v => set('facturama_cp', v)} placeholder="C.P. fiscal del receptor" />
                     <OdooField label="Correo Facturación" value={form.facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion', v)} placeholder="email@ejemplo.com" />
+                    <div>
+                      <label className="label-odoo">Notas fiscales</label>
+                      <textarea
+                        value={(form as any).notas_fiscales ?? ''}
+                        onChange={e => set('notas_fiscales', e.target.value)}
+                        placeholder="Indicaciones especiales de facturación (se mostrarán al vender)"
+                        rows={3}
+                        className="w-full input-odoo text-[13px] py-1.5 resize-y"
+                      />
+                    </div>
+
+
                   </>
                 )}
               </div>

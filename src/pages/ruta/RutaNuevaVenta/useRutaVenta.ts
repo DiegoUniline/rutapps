@@ -966,6 +966,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   return {
     navigate, empresa, user, profile, urlClienteId,
     step, setStep, clienteId, setClienteId, clienteNombre, setClienteNombre, clienteListaNombre,
+    clienteNotasFiscales: (selectedClienteData as any)?.notas_fiscales as string | undefined,
     clienteCredito, setClienteCredito, cart, setCart, devoluciones, setDevoluciones,
     searchCliente, setSearchCliente, searchProducto, setSearchProducto,
     searchDevProducto, setSearchDevProducto, saving, tipoVenta, setTipoVenta,

@@ -3,7 +3,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCurrency } from '@/hooks/useCurrency';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
-import { Percent, DollarSign } from 'lucide-react';
+import { Percent, DollarSign, FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,6 +15,7 @@ interface Props {
   tarifaOptions: { value: string; label: string }[];
   almacenOptions: { value: string; label: string }[];
   clienteNombre?: string;
+  clienteNotasFiscales?: string;
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
@@ -22,7 +23,7 @@ interface Props {
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -84,6 +85,14 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
       {listaNombre && (
         <div className="text-[11px] text-muted-foreground px-1">
           Lista: <span className="font-medium text-foreground">{listaNombre}</span>
+        </div>
+      )}
+      {form.cliente_id && clienteNotasFiscales && (
+        <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11.5px] text-amber-900">
+          <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div className="whitespace-pre-wrap leading-snug">
+            <span className="font-semibold">Notas fiscales:</span> {clienteNotasFiscales}
+          </div>
         </div>
       )}
     </div>
