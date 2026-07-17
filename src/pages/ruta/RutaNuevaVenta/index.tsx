@@ -46,6 +46,7 @@ export default function RutaNuevaVenta() {
       empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, moneda: (h.empresa as any)?.moneda, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos },
       folio: h.ticketInfo.folio, fecha: fmtDate(h.ticketInfo.fecha), clienteNombre: h.clienteNombre,
       vendedorNombre: h.profile?.nombre ?? '',
+      vendedorTelefono: (h.profile as any)?.telefono ?? null,
       lineas,
       subtotal: h.totals.subtotal,
       descuento: h.totals.descuentoDevolucion ?? 0,
