@@ -44,9 +44,10 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'status', header: 'Estado', width: 10 },
 ];
 
-const PAGE_SIZE_OPTIONS = [10, 50, 80, 200, 500, 0];
-const DEFAULT_PAGE_SIZE = 80;
+const DEFAULT_PAGE_SIZE: PageSizeOption = 50;
 const ALL_PAGE_SIZE = 100000;
+
+
 
 const STATIC_FILTER_OPTIONS = [
   {
