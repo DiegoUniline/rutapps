@@ -529,18 +529,24 @@ export default function ProductosListPage() {
               ]}
             />
           ))}
-          {total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
-          )}
         </div>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
+            <div className="flex justify-end pt-2 md:hidden">
+              <TablePagination
+                from={from} to={to} total={total} page={page} totalPages={totalPages}
+                pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+                onPrev={() => setPage(p => Math.max(1, p - 1))}
+                onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+                isLoading={isLoading}
+              />
+            </div>
           )}
         </>
       )}
+
 
       <BulkActionsBar
         count={selected.size}
