@@ -590,18 +590,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
       const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
-      // Cuando sinImpuestos y el precio está guardado como neto (base con_impuestos),
-      // usamos el precio display (gross = lo que el usuario ve) como precio unitario
-      // para evitar decimales al "quitar" el IVA.
-      const useDisplayAsUnit = sinImpuestos && item.base_precio === 'con_impuestos';
-      const effectiveUnit = useDisplayAsUnit
-        ? (item.precio_display_sin_redondeo ?? item.precio_unitario)
-        : item.precio_unitario;
       const pricingItem: PosPricingItem = {
-        precio_unitario: effectiveUnit,
-        precio_unitario_sin_redondeo: useDisplayAsUnit
-          ? (item.precio_display_sin_redondeo ?? effectiveUnit)
-          : (item.precio_unitario_sin_redondeo ?? item.precio_unitario),
+        precio_unitario: item.precio_unitario,
+        precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
         precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
         cantidad: item.cantidad,
         tiene_iva: sinImpuestos ? false : item.tiene_iva,
