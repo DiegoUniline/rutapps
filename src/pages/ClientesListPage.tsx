@@ -508,28 +508,13 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
               ]}
             />
           ))}
-          {total > 0 && (
-            <TablePagination
-              from={from} to={to} total={total} page={page} totalPages={totalPages}
-              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
-              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
-              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
-            />
-          )}
         </div>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
-          {!groupBy && total > 0 && (
-            <TablePagination
-              from={from} to={to} total={total} page={page} totalPages={totalPages}
-              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
-              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
-              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
-            />
-          )}
         </>
       )}
+
 
       <BulkActionsBar
         count={selected.size}
