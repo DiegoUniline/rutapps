@@ -1729,6 +1729,7 @@ export type Database = {
           empresa_id: string
           id: string
           nombre: string
+          telefono: string | null
         }
         Insert: {
           activo?: boolean
@@ -1736,6 +1737,7 @@ export type Database = {
           empresa_id: string
           id?: string
           nombre: string
+          telefono?: string | null
         }
         Update: {
           activo?: boolean
@@ -1743,6 +1745,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           nombre?: string
+          telefono?: string | null
         }
         Relationships: [
           {
@@ -7636,18 +7639,21 @@ export type Database = {
           empresa_id: string
           id: string
           nombre: string
+          telefono: string | null
         }
         Insert: {
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
+          telefono?: string | null
         }
         Update: {
           created_at?: string
           empresa_id?: string
           id?: string
           nombre?: string
+          telefono?: string | null
         }
         Relationships: [
           {
