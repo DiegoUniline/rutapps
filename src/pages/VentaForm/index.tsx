@@ -163,24 +163,19 @@ export default function VentaFormPage() {
             if (cuentaRemaining <= 0.01) continue;
             const apply = Math.min(remaining, cuentaRemaining);
 
-            // Create cobro + aplicación for the pending account
-            const { data: cobroData } = await supabase.from('cobros').insert({
-              empresa_id: empresa!.id,
-              cliente_id: form.cliente_id!,
-              user_id: user!.id,
-              monto: apply,
-              metodo_pago: pago.metodo,
-              referencia: pago.referencia || null,
-              fecha: todayInTimezone(empresa?.zona_horaria),
-            }).select('id').single();
-
-            if (cobroData) {
-              await supabase.from('cobro_aplicaciones').insert({
-                cobro_id: cobroData.id,
-                venta_id: cuenta.id,
-                monto_aplicado: apply,
-              });
-              import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroData.id, empresa!.id));
+            // Create cobro + aplicación atómico (aplicar_cobro) para la cuenta pendiente.
+            const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
+              p_empresa_id: empresa!.id,
+              p_cliente_id: form.cliente_id!,
+              p_monto: apply,
+              p_metodo: pago.metodo,
+              p_referencia: pago.referencia || null,
+              p_fecha: todayInTimezone(empresa?.zona_horaria),
+              p_aplicaciones: [{ venta_id: cuenta.id, monto_aplicado: apply }],
+              p_user_id: user!.id,
+            });
+            if (!cobroErr && cobroId) {
+              import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa!.id));
             }
 
             accountApplied.set(cuenta.id, alreadyApplied + apply);
