@@ -17,6 +17,7 @@ interface Props {
   goToPayment: () => void;
   navigate: (to: any) => void;
   cart: CartItem[];
+  ticketLineas: Array<{ cantidad: number; precio: number; total: number; esCambio?: boolean }>;
   fmt: (n: number) => string;
   // Descuento extra
   canApplyDiscount: boolean;
@@ -31,7 +32,7 @@ interface Props {
 export function StepResumen(props: Props) {
   const {
     clienteNombre, devoluciones, cambioItems, chargedItems, promoResults, totals,
-    saldoPendienteTotal, setStep, goToPayment, navigate, cart, fmt,
+    saldoPendienteTotal, setStep, goToPayment, navigate, cart, ticketLineas, fmt,
     canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo,
     descuentoExtraValor, setDescuentoExtraValor,
     descuentoExtraMotivo, setDescuentoExtraMotivo,
@@ -40,6 +41,7 @@ export function StepResumen(props: Props) {
   const descExtraAmt = totals.descuentoExtra ?? 0;
   const requiresMotivo = descExtraAmt > 0 && !descuentoExtraMotivo.trim();
   const canConfirm = cart.length > 0 && !requiresMotivo;
+  const chargedTicketLineas = ticketLineas.filter(line => !line.esCambio);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -72,7 +74,7 @@ export function StepResumen(props: Props) {
         )}
         <section className="bg-card rounded-lg p-3">
           <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Productos ({chargedItems.length})</p><button onClick={() => setStep('productos')} className="text-[10.5px] text-primary font-medium">Editar</button></div>
-          <div className="space-y-1">{chargedItems.map(item => { const lineTotal = item.precio_unitario * item.cantidad; return (<div key={item.producto_id} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0"><div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10.5px] text-muted-foreground">{item.cantidad} × ${fmt(item.precio_unitario)} / {item.unidad}</p></div><span className="text-[12.5px] font-semibold text-foreground shrink-0 tabular-nums">{fmt(lineTotal)}</span></div>); })}</div>
+          <div className="space-y-1">{chargedItems.map((item, index) => { const line = chargedTicketLineas[index]; const linePrice = line?.precio ?? item.precio_unitario; const lineTotal = line?.total ?? item.precio_unitario * item.cantidad; return (<div key={item.producto_id} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0"><div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10.5px] text-muted-foreground">{item.cantidad} × ${fmt(linePrice)} / {item.unidad}</p></div><span className="text-[12.5px] font-semibold text-foreground shrink-0 tabular-nums">{fmt(lineTotal)}</span></div>); })}</div>
         </section>
         {promoResults.length > 0 && (
           <section className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">

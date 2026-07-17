@@ -32,12 +32,6 @@ export default function RutaNuevaVenta() {
 
   const handlePrintTicket = useCallback(async () => {
     if (!h.ticketInfo) return;
-    const lineas = h.cart.map(item => {
-      const lineSub = item.precio_unitario * item.cantidad;
-      const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
-      const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
-      return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, total: lineSub + lineIva + lineIeps, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, esCambio: item.es_cambio, producto_id: item.producto_id };
-    });
     const totalPagadoAhora = h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0);
     const saldoRestanteEstaVenta = h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - totalPagadoAhora) : 0;
     const saldoAnteriorRestante = Math.max(0, h.saldoPendienteTotal - h.totalAplicarCuentas);
@@ -47,7 +41,7 @@ export default function RutaNuevaVenta() {
       folio: h.ticketInfo.folio, fecha: fmtDate(h.ticketInfo.fecha), clienteNombre: h.clienteNombre,
       vendedorNombre: h.profile?.nombre ?? '',
       vendedorTelefono: (h.profile as any)?.telefono ?? null,
-      lineas,
+      lineas: h.ticketLineas,
       subtotal: h.totals.subtotal,
       descuento: h.totals.descuentoDevolucion ?? 0,
       iva: h.totals.iva,
@@ -63,7 +57,7 @@ export default function RutaNuevaVenta() {
       devoluciones: h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: Number(d.cantidad) || 0, motivo: d.motivo, accion: d.accion, monto: (d.precio_unitario ?? 0) * (Number(d.cantidad) || 0) })),
     };
     await printTicket(td, { ticketAncho });
-  }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
+  }, [h.ticketInfo, h.ticketLineas, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
 
 
   if (h.ticketInfo) {
@@ -73,7 +67,7 @@ export default function RutaNuevaVenta() {
         folio={h.ticketInfo.folio} fecha={h.ticketInfo.fecha} clienteNombre={h.clienteNombre}
         vendedorNombre={h.profile?.nombre ?? ''}
         vendedorTelefono={(h.profile as any)?.telefono ?? null}
-        lineas={h.cart.map(item => { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, subtotal: lineSub, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, esCambio: item.es_cambio, producto_id: item.producto_id }; })}
+        lineas={h.ticketLineas}
         subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
         descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
         devoluciones={h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo, accion: d.accion, monto: d.precio_unitario * d.cantidad }))}
@@ -144,7 +138,7 @@ export default function RutaNuevaVenta() {
 
       {h.step === 'devoluciones' && <StepDevoluciones clienteNombre={h.clienteNombre} searchDevProducto={h.searchDevProducto} setSearchDevProducto={h.setSearchDevProducto} filteredDevProductos={h.filteredDevProductos} devoluciones={h.devoluciones} addDevolucion={h.addDevolucion} updateDevQty={h.updateDevQty} updateDevMotivo={h.updateDevMotivo} updateDevAccion={h.updateDevAccion} batchUpdateDevDefaults={h.batchUpdateDevDefaults} showReemplazoFor={h.showReemplazoFor} setShowReemplazoFor={h.setShowReemplazoFor} searchReemplazo={h.searchReemplazo} setSearchReemplazo={h.setSearchReemplazo} filteredReemplazoProductos={h.filteredReemplazoProductos} setReemplazo={h.setReemplazo} processDevolucionesAndGoToProductos={h.processDevolucionesAndGoToProductos} fmt={h.fmt} />}
       {h.step === 'productos' && <StepProductos clienteNombre={h.clienteNombre} clienteListaNombre={h.clienteListaNombre} devoluciones={h.devoluciones} searchProducto={h.searchProducto} setSearchProducto={h.setSearchProducto} filteredProductos={h.filteredProductos} cart={h.cart} cambioItems={h.cambioItems} tipoVenta={h.tipoVenta} totals={h.totals} addToCart={h.addToCart} addGranelLine={h.addGranelLine} updateQty={h.updateQty} removeFromCart={h.removeFromCart} getItemInCart={h.getItemInCart} getMaxQty={h.getMaxQty} setStep={h.setStep} setCart={h.setCart} stockAbordo={h.stockAbordo} usandoAlmacen={h.usandoAlmacen} fmt={h.fmt} insights={h.insights} bannerDismissed={h.bannerDismissed} setBannerDismissed={h.setBannerDismissed} applyManualList={h.applyManualList} applyHistorialAvg={h.applyHistorialAvg} repeatLastSale={h.repeatLastSale} findProductByCode={h.findProductByCode} setItemQty={h.setItemQty} getSuggestedPrice={h.getSuggestedPrice} setItemPriceManual={h.setItemPriceManual} setItemPriceFromLista={h.setItemPriceFromLista} resetItemToSuggested={h.resetItemToSuggested} canChangePrice={h.canChangePrice} apartadoActivoPedido={h.apartadoActivoPedido} pedidoAlmacenId={h.pedidoAlmacenId} setPedidoAlmacenId={h.setPedidoAlmacenId} />}
-      {h.step === 'resumen' && <StepResumen clienteNombre={h.clienteNombre} devoluciones={h.devoluciones} cambioItems={h.cambioItems} chargedItems={h.chargedItems} promoResults={h.promoResults} totals={h.totals} saldoPendienteTotal={h.saldoPendienteTotal} setStep={h.setStep} goToPayment={h.goToPayment} navigate={h.navigate} cart={h.cart} fmt={h.fmt} canApplyDiscount={h.canApplyDiscount} descuentoExtraTipo={h.descuentoExtraTipo} setDescuentoExtraTipo={h.setDescuentoExtraTipo} descuentoExtraValor={h.descuentoExtraValor} setDescuentoExtraValor={h.setDescuentoExtraValor} descuentoExtraMotivo={h.descuentoExtraMotivo} setDescuentoExtraMotivo={h.setDescuentoExtraMotivo} />}
+      {h.step === 'resumen' && <StepResumen clienteNombre={h.clienteNombre} devoluciones={h.devoluciones} cambioItems={h.cambioItems} chargedItems={h.chargedItems} promoResults={h.promoResults} totals={h.totals} saldoPendienteTotal={h.saldoPendienteTotal} setStep={h.setStep} goToPayment={h.goToPayment} navigate={h.navigate} cart={h.cart} ticketLineas={h.ticketLineas} fmt={h.fmt} canApplyDiscount={h.canApplyDiscount} descuentoExtraTipo={h.descuentoExtraTipo} setDescuentoExtraTipo={h.setDescuentoExtraTipo} descuentoExtraValor={h.descuentoExtraValor} setDescuentoExtraValor={h.setDescuentoExtraValor} descuentoExtraMotivo={h.descuentoExtraMotivo} setDescuentoExtraMotivo={h.setDescuentoExtraMotivo} />}
       {h.step === 'pago' && <StepPago tipoVenta={h.tipoVenta} entregaInmediata={h.entregaInmediata} fechaEntrega={h.fechaEntrega} setFechaEntrega={h.setFechaEntrega} condicionPago={h.condicionPago} setCondicionPago={h.setCondicionPago} clienteCredito={h.clienteCredito} excedeCredito={h.excedeCredito} creditoDisponible={h.creditoDisponible} saldoPendienteTotal={h.saldoPendienteTotal} cuentasPendientes={h.cuentasPendientes} liquidarTodas={h.liquidarTodas} updateCuentaMonto={h.updateCuentaMonto} totalAplicarCuentas={h.totalAplicarCuentas} pagos={h.pagos} setPagos={h.setPagos} notas={h.notas} setNotas={h.setNotas} totals={h.totals} totalACobrar={h.totalACobrar} cambio={h.cambio} saving={h.saving} cart={h.cart} devoluciones={h.devoluciones} sinImpuestos={h.sinImpuestos} setSinImpuestos={h.setSinImpuestos} handleSave={h.handleSave} navigate={h.navigate} fmt={h.fmt} canApplyDiscount={h.canApplyDiscount} descuentoExtraTipo={h.descuentoExtraTipo} setDescuentoExtraTipo={h.setDescuentoExtraTipo} descuentoExtraValor={h.descuentoExtraValor} setDescuentoExtraValor={h.setDescuentoExtraValor} descuentoExtraMotivo={h.descuentoExtraMotivo} setDescuentoExtraMotivo={h.setDescuentoExtraMotivo} />}
     </div>
   );

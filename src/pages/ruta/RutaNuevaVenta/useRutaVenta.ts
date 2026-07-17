@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
-import { buildSalePricingSnapshot } from '@/lib/salePricing';
+import { buildManualSalePricingFromGross, buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
@@ -20,6 +20,59 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 import { nextVisitDate } from '@/lib/nextVisitDate';
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+function splitFinalGross(item: PosPricingItem, finalGross: number) {
+  const gross = r2(finalGross);
+  const taxMultiplier = getTaxMultiplier(item);
+
+  if (taxMultiplier <= 0 || (!item.tiene_iva && !item.tiene_ieps)) {
+    return { subtotal: gross, ieps: 0, iva: 0 };
+  }
+
+  const subtotalBase = r2(gross / taxMultiplier);
+
+  if (item.tiene_ieps && item.tiene_iva) {
+    const ieps = r2(subtotalBase * ((item.ieps_pct ?? 0) / 100));
+    const iva = r2(gross - subtotalBase - ieps);
+    return { subtotal: r2(gross - ieps - iva), ieps, iva };
+  }
+
+  if (item.tiene_ieps) {
+    const ieps = r2(gross - subtotalBase);
+    return { subtotal: r2(gross - ieps), ieps, iva: 0 };
+  }
+
+  const iva = r2(gross - subtotalBase);
+  return { subtotal: r2(gross - iva), ieps: 0, iva };
+}
+
+function toPosPricingItem(item: CartItem, sinImpuestos: boolean): PosPricingItem {
+  return {
+    precio_unitario: item.precio_unitario,
+    precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+    precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
+    cantidad: item.cantidad,
+    tiene_iva: sinImpuestos ? false : item.tiene_iva,
+    iva_pct: item.iva_pct,
+    tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
+    ieps_pct: item.ieps_pct,
+    base_precio: (item.base_precio ?? 'sin_impuestos') as PosPricingItem['base_precio'],
+    redondeo: item.redondeo ?? 'ninguno',
+  };
+}
+
+function getOriginalLineBreakdown(item: CartItem, sinImpuestos: boolean) {
+  const pricingItem = toPosPricingItem(item, sinImpuestos);
+  if (!sinImpuestos && pricingItem.base_precio === 'con_impuestos') {
+    const gross = r2(getSaleDisplayUnitPrice(pricingItem) * item.cantidad);
+    return { ...splitFinalGross(pricingItem, gross), total: gross };
+  }
+
+  const original = buildPosLinePricing(pricingItem, 0);
+  return { subtotal: original.subtotal, ieps: original.ieps, iva: original.iva, total: original.finalGross };
+}
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
@@ -242,10 +295,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any) => {
       const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: claseMap.get(producto.id) ?? producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio };
-      if (!rules.length) {
-        const fallback = pf.precio_principal;
-        return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
-      }
       const r = resolveProductPricing(rules, pf, clienteListaPrecioId);
       // Igual que el escritorio: el precio_unitario guardado se deriva del
       // display YA REDONDEADO (buildSalePricingSnapshot). Antes el móvil usaba
@@ -585,29 +634,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   }, [devoluciones, productos, cart, sinImpuestos]);
 
   const totals = useMemo(() => {
-    const r2 = (n: number) => Math.round(n * 100) / 100;
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
       const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
-      const pricingItem: PosPricingItem = {
-        precio_unitario: item.precio_unitario,
-        precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
-        precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
-        cantidad: item.cantidad,
-        tiene_iva: sinImpuestos ? false : item.tiene_iva,
-        iva_pct: item.iva_pct,
-        tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
-        ieps_pct: item.ieps_pct,
-        base_precio: (item.base_precio ?? 'sin_impuestos') as any,
-        redondeo: item.redondeo ?? 'ninguno',
-      };
+      const pricingItem = toPosPricingItem(item, sinImpuestos);
       const lp = buildPosLinePricing(pricingItem, promoDisc);
-      const original = buildPosLinePricing(pricingItem, 0);
+      const original = getOriginalLineBreakdown(item, sinImpuestos);
       subtotal += original.subtotal;
       iva += original.iva;
       ieps += original.ieps;
-      descuentoPromo += lp.effectiveDiscount;
+      descuentoPromo += pricingItem.base_precio === 'con_impuestos' ? r2(Math.max(0, original.total - lp.finalGross)) : lp.effectiveDiscount;
       items += item.cantidad;
     });
     const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));
@@ -736,7 +773,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
-      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
+      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
 
       // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
@@ -891,6 +928,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const fmtM = fmt;
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
+  const ticketLineas = useMemo(() => cart.map(item => {
+    const breakdown = getOriginalLineBreakdown(item, sinImpuestos);
+    return {
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      precio: item.cantidad > 0 ? r2(breakdown.total / item.cantidad) : 0,
+      subtotal: breakdown.subtotal,
+      iva_monto: breakdown.iva,
+      ieps_monto: breakdown.ieps,
+      descuento_pct: 0,
+      total: breakdown.total,
+      esCambio: item.es_cambio,
+      producto_id: item.producto_id,
+    };
+  }), [cart, sinImpuestos]);
 
   /** Compute the suggested (tarifa-based) price for a product */
   const getSuggestedPrice = (productoId: string): number => {
@@ -903,25 +955,30 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const setItemPriceManual = (productoId: string, price: number) => {
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return;
+    const snap = buildManualSalePricingFromGross({ tiene_iva: prod.tiene_iva ?? false, iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0, tiene_ieps: prod.tiene_ieps ?? false, ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0 }, price);
     setCart(prev => {
       const existing = prev.find(c => c.producto_id === productoId && !c.es_cambio);
       if (existing) {
         return prev.map(c => c.producto_id === productoId && !c.es_cambio
-          ? { ...c, precio_unitario: price, precio_manual: true, lista_precio_id: null, lista_nombre: null }
+          ? { ...c, precio_unitario: snap.unitPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo, precio_manual: true, lista_precio_id: null, lista_nombre: null }
           : c);
       }
       return [...prev, {
         producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
-        precio_unitario: price, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        precio_unitario: snap.unitPrice, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
         unidad_id: prod.unidad_venta_id ?? undefined,
         tiene_iva: prod.tiene_iva ?? false,
         iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
         tiene_ieps: prod.tiene_ieps ?? false,
         ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_unitario_sin_redondeo: snap.rawUnitPrice,
+        precio_display_sin_redondeo: snap.rawDisplayPrice,
+        base_precio: snap.basePrecio,
+        redondeo: snap.redondeo,
         precio_manual: true, lista_precio_id: null, lista_nombre: null,
       }];
     });
-    toast.success(`Precio actualizado: $${price.toFixed(2)}`);
+    toast.success(`Precio actualizado: $${r2(price).toFixed(2)}`);
   };
 
   /** Apply a price-list price to a product (creates the cart line if missing) */
@@ -973,7 +1030,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     navigate, empresa, user, profile, urlClienteId,
     step, setStep, clienteId, setClienteId, clienteNombre, setClienteNombre, clienteListaNombre,
     clienteNotasFiscales: (selectedClienteData as any)?.notas_fiscales as string | undefined,
-    clienteCredito, setClienteCredito, cart, setCart, devoluciones, setDevoluciones,
+    clienteCredito, setClienteCredito, cart, setCart, ticketLineas, devoluciones, setDevoluciones,
     searchCliente, setSearchCliente, searchProducto, setSearchProducto,
     searchDevProducto, setSearchDevProducto, saving, tipoVenta, setTipoVenta,
     condicionPago, setCondicionPago, notas, setNotas, fechaEntrega, setFechaEntrega,
