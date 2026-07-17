@@ -685,6 +685,8 @@ export default function ClienteFormPage() {
                       options={(catUsoCfdi ?? []).map(u => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }))} />
                     <OdooField label="Código Postal" value={form.facturama_cp} onChange={v => set('facturama_cp', v)} placeholder="C.P. fiscal del receptor" />
                     <OdooField label="Correo Facturación" value={form.facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion', v)} placeholder="email@ejemplo.com" />
+                    <OdooField label="Notas fiscales" value={(form as any).notas_fiscales ?? ''} onChange={v => set('notas_fiscales', v)} type="textarea" placeholder="Indicaciones especiales de facturación (se mostrarán al vender)" />
+
                   </>
                 )}
               </div>
