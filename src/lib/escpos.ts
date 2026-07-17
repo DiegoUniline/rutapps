@@ -294,15 +294,20 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const det = detParts.join(' ');
       ln(clean(det).slice(0, W));
     }
-    // Per-product promotions
-    if (showPromociones) {
-      const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
-      for (const lp of linePromos) {
-        ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
-      }
-    }
   }
   ln(divider(W));
+
+  // ── PROMOCIONES APLICADAS (bloque unificado) ──
+  const promosAplicadas = (data.promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  if (showPromociones && promosAplicadas.length > 0) {
+    add(BOLD_ON);
+    ln('PROMOCIONES APLICADAS');
+    add(BOLD_OFF);
+    for (const p of promosAplicadas) {
+      ln(row(`  ${clean(p.descripcion)}`, `-${fmt(p.descuento)}`, W));
+    }
+    ln(divider(W));
+  }
 
   // ── TOTALES ──
   const summary = getTicketTotalsSummary(data);

@@ -248,16 +248,18 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
     if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
     add(detParts.join(' ').substring(0, COLS));
-    // Per-product promotions
-    if (showPromociones) {
-      const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
-      for (const lp of linePromos) {
-        const desc = fmt(lp.descuento);
-        add(pad(`  *${lp.descripcion}`, `-${desc}`));
-      }
-    }
   }
   add(div);
+
+  // ── PROMOCIONES APLICADAS (bloque unificado) ──
+  const promosAplicadas = (promociones ?? []).filter(p => (Number(p.descuento) || 0) > 0);
+  if (showPromociones && promosAplicadas.length > 0) {
+    add('PROMOCIONES APLICADAS');
+    for (const p of promosAplicadas) {
+      add(pad(`  ${p.descripcion}`, `-${fmt(p.descuento)}`));
+    }
+    add(div);
+  }
 
   const summary = getTicketTotalsSummary(data);
   add('');
