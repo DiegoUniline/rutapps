@@ -39,7 +39,7 @@ export function useEntrega(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
-        .select('*, clientes(nombre), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), almacenes(nombre), ventas!entregas_pedido_id_fkey(folio, total, condicion_pago)')
+        .select('*, clientes(nombre), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre, telefono), almacenes(nombre), ventas!entregas_pedido_id_fkey(folio, total, condicion_pago)')
         .eq('id', id!)
         .single();
       if (error) throw error;
