@@ -9,7 +9,7 @@ export const CLIENTE_COLUMNS = [
   'dia_visita','frecuencia','fecha_alta','status','orden','credito','limite_credito','dias_credito',
   'gps_lat','gps_lng','vendedor_id','cobrador_id','zona_id','tarifa_id','lista_id','lista_precio_id',
   'facturama_id','facturama_rfc','facturama_razon_social','facturama_regimen_fiscal',
-  'facturama_uso_cfdi','facturama_cp','facturama_correo_facturacion','created_at',
+  'facturama_uso_cfdi','facturama_cp','facturama_correo_facturacion','notas_fiscales','created_at',
 ] as const;
 
 export const PRODUCTO_COLUMNS = [
