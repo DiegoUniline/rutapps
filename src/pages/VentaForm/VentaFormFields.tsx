@@ -19,11 +19,12 @@ interface Props {
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
+  canApplyDiscount?: boolean;
   set: (field: string, val: any) => void;
   onClienteChange: (cId: string) => void;
 }
 
-export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, set, onClienteChange }: Props) {
+export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaOptions, almacenOptions, clienteNombre, clienteNotasFiscales, totalPagado, saldoPendiente, canEditCondicion = true, canApplyDiscount = true, set, onClienteChange }: Props) {
   const isMobile = useIsMobile();
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -158,39 +159,42 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
     : impliedDiscount > 0
       ? fmt(impliedDiscount)
       : '—';
-  const renderDescuentoExtra = () => (
-    <div>
-      <label className="label-odoo">Descuento extra</label>
-      {readOnly ? (
-        <div className="text-[13px] py-1.5 px-1 text-foreground">
-          {discountDisplay}
-        </div>
-      ) : (
-        <div className="flex items-center gap-1">
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.descuento_extra ?? 0}
-            onChange={e => set('descuento_extra', Number(e.target.value) || 0)}
-            className="flex-1 input-odoo text-[13px] py-1.5 w-20"
-            placeholder="0"
-          />
-          <button
-            type="button"
-            onClick={() => set('descuento_extra_tipo', extraTipo === 'porcentaje' ? 'monto' : 'porcentaje')}
-            className={cn(
-              "shrink-0 flex items-center justify-center w-8 h-8 rounded border transition-colors",
-              "bg-card text-foreground border-input hover:bg-secondary"
-            )}
-            title={extraTipo === 'porcentaje' ? 'Cambiar a monto fijo' : 'Cambiar a porcentaje'}
-          >
-            {extraTipo === 'porcentaje' ? <Percent className="h-3.5 w-3.5" /> : <DollarSign className="h-3.5 w-3.5" />}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  const renderDescuentoExtra = () => {
+    if (!canApplyDiscount && !readOnly) return null;
+    return (
+      <div>
+        <label className="label-odoo">Descuento extra</label>
+        {readOnly || !canApplyDiscount ? (
+          <div className="text-[13px] py-1.5 px-1 text-foreground">
+            {discountDisplay}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.descuento_extra ?? 0}
+              onChange={e => set('descuento_extra', Number(e.target.value) || 0)}
+              className="flex-1 input-odoo text-[13px] py-1.5 w-20"
+              placeholder="0"
+            />
+            <button
+              type="button"
+              onClick={() => set('descuento_extra_tipo', extraTipo === 'porcentaje' ? 'monto' : 'porcentaje')}
+              className={cn(
+                "shrink-0 flex items-center justify-center w-8 h-8 rounded border transition-colors",
+                "bg-card text-foreground border-input hover:bg-secondary"
+              )}
+              title={extraTipo === 'porcentaje' ? 'Cambiar a monto fijo' : 'Cambiar a porcentaje'}
+            >
+              {extraTipo === 'porcentaje' ? <Percent className="h-3.5 w-3.5" /> : <DollarSign className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (isMobile) {
     return (

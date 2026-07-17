@@ -29,6 +29,8 @@ interface Props {
   saldoPendiente?: number;
   currencyCode?: string | null;
   cerradoSnapshot?: { lineas?: Array<{ producto_id: string; pedido: number; entregado: number }> } | null;
+  canChangePrice?: boolean;
+  canApplyDiscount?: boolean;
 }
 
 export function VentaLineasTab(props: Props) {
