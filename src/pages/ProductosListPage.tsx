@@ -514,7 +514,7 @@ export default function ProductosListPage() {
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
           )}
         </>
       )}
