@@ -30,9 +30,11 @@ import { nextVisitDate } from '@/lib/nextVisitDate';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
-  const { hasPermiso } = usePermisos();
+  const { hasPermiso, isOwner } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const canEditCondicion = hasPermiso('ventas.editar_condicion_pago', 'ver');
+  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver');
+  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
