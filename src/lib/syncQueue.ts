@@ -89,47 +89,6 @@ export async function queueOperations(operations: QueuedOperation[]) {
   }
 }
 
-async function queueOperationLegacy(
-  table: string,
-  operation: 'insert' | 'update' | 'delete',
-  data: any,
-  keyField: string = 'id',
-) {
-  const keyValue = data[keyField];
-  const localTable = getOfflineTable(table);
-
-  // El put local + el encolado deben ser ATÓMICOS: si el put pasa pero el enqueue
-  // falla (cuota de IndexedDB, etc.), la venta se vería en pantalla pero nunca
-  // subiría (pérdida silenciosa). Se hacen dentro de una sola transacción.
-  const enqueue = async () => {
-    if (localTable) {
-      if (operation === 'delete') await localTable.delete(keyValue);
-      else await localTable.put(data);
-    }
-    // Deduplicate: if same table+key+operation pending, replace data
-    const existing = await offlineDb.syncQueue
-      .where('table').equals(table)
-      .filter(item => item.keyValue === keyValue && item.operation === operation)
-      .first();
-    if (existing && existing.id) {
-      await offlineDb.syncQueue.update(existing.id, { data, createdAt: Date.now(), retries: 0 });
-    } else {
-      await offlineDb.syncQueue.add({ table, operation, data, keyField, keyValue, createdAt: Date.now(), retries: 0 });
-    }
-  };
-  const txTables: any[] = localTable ? [localTable, offlineDb.syncQueue] : [offlineDb.syncQueue];
-  await offlineDb.transaction('rw', txTables, enqueue);
-
-  // 3. Try to sync immediately if online AND auto-sync is enabled AND data saver is off
-  const autoSync = localStorage.getItem('uniline_auto_sync');
-  const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
-  if (autoSyncEnabled && !isDataSaverEnabled()) {
-    hasRealConnection().then(online => {
-      if (online) processSyncQueue().catch(console.warn);
-    }).catch(console.warn);
-  }
-}
-
 // Process all pending items in the sync queue
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
   if (activeProcessPromise) return activeProcessPromise;
