@@ -267,7 +267,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add('');
   add(pad('Sub total', fmt(subtotal)));
   if (showDescuentos) add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
-  add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
+  if (showImpuestos) add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
   add(div);
   add(pad('Total pagado', fmt(summary.totalPagado)));
   add(pad('Saldo', fmt(summary.saldo)));
