@@ -525,7 +525,8 @@ export default function ProductosListPage() {
                   (p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-foreground"
                 )}>{fmtNum(p.cantidad ?? 0)}</span> },
                 ...(p.clasificaciones?.nombre ? [{ label: 'Cat', value: p.clasificaciones.nombre }] : []),
-                ...(p.costo ? [{ label: 'Costo', value: fmt(p.costo) }] : []),
+                ...(p.costo ? [{ label: 'Costo', value: fmt((p.costo ?? 0) * (p.factor_conversion || 1)) }] : []),
+                ...(p.costo && (p.factor_conversion || 1) > 1 ? [{ label: 'C/U', value: fmt(p.costo) }] : []),
               ]}
             />
           ))}
