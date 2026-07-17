@@ -275,8 +275,8 @@ export default function ProductosListPage() {
              <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
              <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
              <th className="th-odoo text-right">Precio</th>
-             <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-             <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
+            <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+            <th className="th-odoo text-right hidden xl:table-cell">C/U</th>
              <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
              <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
              <th className="th-odoo text-center">Status</th>
