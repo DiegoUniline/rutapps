@@ -18,6 +18,7 @@ interface TicketVentaProps {
   fecha: string;
   clienteNombre: string;
   vendedorNombre?: string;
+  vendedorTelefono?: string | null;
   lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean; producto_id?: string; precio_sugerido_publico?: number }[];
   subtotal: number;
   iva: number;
@@ -88,7 +89,7 @@ function calcTicketSummary(params: {
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
-    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas: lineasRaw,
+    empresa, folio, fecha, clienteNombre, vendedorNombre, vendedorTelefono, lineas: lineasRaw,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], productosList, onPrintTicket, onClose,
@@ -280,6 +281,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               {vendedorNombre && (
                 <div>
                   <span className="font-bold text-foreground">Vendedor </span><span className="text-muted-foreground">{vendedorNombre}</span>
+                </div>
+              )}
+              {vendedorTelefono && (empresa.ticket_campos as any)?.vendedor_telefono !== false && (
+                <div>
+                  <span className="font-bold text-foreground">Tel. vend. </span><span className="text-muted-foreground">{vendedorTelefono}</span>
                 </div>
               )}
               <div className="flex gap-4">
