@@ -9005,6 +9005,10 @@ export type Database = {
         Args: { p_empresa_id: string }
         Returns: number
       }
+      registrar_cobro: {
+        Args: { p_aplicaciones?: Json; p_cobro: Json }
+        Returns: Json
+      }
       registrar_merma: {
         Args: {
           _almacen_origen_id: string

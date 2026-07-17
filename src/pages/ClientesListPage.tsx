@@ -265,10 +265,12 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
       rows = rows.filter(c => creditoFilter.includes(c.credito ? 'si' : 'no'));
     }
     if (diaVisitaFilter && diaVisitaFilter.length > 0) {
+      const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const target = diaVisitaFilter.map(norm);
       rows = rows.filter(c => {
         const dv = (c as any).dia_visita as string[] | null | undefined;
         if (!dv || dv.length === 0) return false;
-        return dv.some(d => diaVisitaFilter.includes(d.toLowerCase()));
+        return dv.some(d => target.includes(norm(d)));
       });
     }
     return rows;
