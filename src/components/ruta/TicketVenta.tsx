@@ -89,7 +89,7 @@ function calcTicketSummary(params: {
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
-    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas: lineasRaw,
+    empresa, folio, fecha, clienteNombre, vendedorNombre, vendedorTelefono, lineas: lineasRaw,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], productosList, onPrintTicket, onClose,
