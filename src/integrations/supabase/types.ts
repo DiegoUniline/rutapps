@@ -14,21 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _difa_formulas_staging: {
-        Row: {
-          codigo: string
-          formula: string
-        }
-        Insert: {
-          codigo: string
-          formula: string
-        }
-        Update: {
-          codigo?: string
-          formula?: string
-        }
-        Relationships: []
-      }
       ajustes_inventario: {
         Row: {
           almacen_id: string | null
