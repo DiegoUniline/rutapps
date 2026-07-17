@@ -207,7 +207,7 @@ export default function ProductosListPage() {
   const proveedorFilter = filters.proveedor?.length ? filters.proveedor.join(',') : 'todos';
   const manejaLoteFilter = filters.maneja_lote?.[0] ?? '';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
