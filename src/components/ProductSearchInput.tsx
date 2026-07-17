@@ -5,6 +5,7 @@ interface ProductOption {
   id: string;
   codigo: string;
   nombre: string;
+  formula?: string | null;
   precio_principal?: number;
   _stock?: number;
 }
@@ -35,7 +36,11 @@ export default function ProductSearchInput({ products, value, displayText, onSel
     if (!search.trim()) return products.slice(0, 8);
     const q = search.toLowerCase();
     return products
-      .filter(p => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q))
+      .filter(p =>
+        p.nombre.toLowerCase().includes(q)
+        || p.codigo.toLowerCase().includes(q)
+        || (p.formula ?? '').toLowerCase().includes(q)
+      )
       .slice(0, 8);
   }, [search, products]);
 
