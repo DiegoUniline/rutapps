@@ -231,6 +231,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showFirmas = tc.firmas !== false;
   // Pie Rutapp: siempre visible, no configurable
 
   // ── LOGO (raster image) ──
@@ -313,7 +315,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const summary = getTicketTotalsSummary(data);
   ln(row('Sub total', fmt(data.subtotal), W));
   if (showDescuentos) ln(row('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0), W));
-  ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
+  if (showImpuestos) ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
   ln(divider(W));
   add(BOLD_ON);
   ln(row('Total pagado', fmt(summary.totalPagado), W));
@@ -366,6 +368,14 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const right = (d.monto ?? 0) > 0 ? `${accion} ${fmt(d.monto!)}` : accion;
       ln(row(`  ${motivo}`, right, W));
     }
+  }
+
+  if (showFirmas) {
+    add(LF);
+    add(ALIGN_LEFT);
+    const half = Math.floor(W / 2);
+    ln('_'.repeat(half - 1) + ' ' + '_'.repeat(W - half));
+    ln(center('Entrego', half) + center('Recibio', W - half));
   }
 
   add(LF);

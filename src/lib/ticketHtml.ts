@@ -198,6 +198,8 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showFirmas = tc.firmas !== false;
   // Pie Rutapp: siempre visible, no configurable
 
   const hLines: string[] = [];
@@ -265,7 +267,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add('');
   add(pad('Sub total', fmt(subtotal)));
   if (showDescuentos) add(pad('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0)));
-  add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
+  if (showImpuestos) add(pad('Impuestos', fmt(showTax ? summary.impuestosTotal : 0)));
   add(div);
   add(pad('Total pagado', fmt(summary.totalPagado)));
   add(pad('Saldo', fmt(summary.saldo)));
@@ -311,6 +313,11 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
 
 
+  if (showFirmas) {
+    add('');
+    add(pad('_______________', '_______________'));
+    add(pad('    Entrego    ', '    Recibio    '));
+  }
   add('');
   if (showMensajeGracias) add(centerText('Gracias por su compra'));
   if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
