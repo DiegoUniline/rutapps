@@ -275,7 +275,7 @@ export default function MermasPage() {
                     <CommandList>
                       <CommandEmpty>Sin resultados</CommandEmpty>
                       <CommandGroup>
-                        {(productos ?? []).slice(0, 200).map((p: any) => (
+                        {(productos ?? []).map((p: any) => (
                           <CommandItem key={p.id} value={`${p.codigo} ${p.nombre}`} onSelect={() => addProducto(p)}>
                             <span className="font-mono text-xs text-muted-foreground mr-2">{p.codigo}</span>
                             {p.nombre}
