@@ -219,7 +219,8 @@ export function CompraLineasTab({ lineas, productosList, isEditable, puedeRecibi
           if (quickIdx === null) return;
           updateLinea(quickIdx, 'producto_id', prod.id);
           if (prod.costo && !lineas[quickIdx]?.precio_unitario) {
-            updateLinea(quickIdx, 'precio_unitario', prod.costo);
+            const factor = prod.factor_conversion ?? 1;
+            updateLinea(quickIdx, 'precio_unitario', prod.costo * factor);
           }
           updateLinea(quickIdx, '_tiene_iva', !!prod.tiene_iva);
           if (prod.tiene_iva) updateLinea(quickIdx, '_iva_pct', prod.iva_pct ?? 16);

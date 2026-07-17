@@ -84,7 +84,7 @@ export function useCompraForm() {
       const line = { ...next[idx], [key]: val };
       if (key === 'producto_id' && productosList) {
         const p = productosList.find((x: any) => x.id === val) as any;
-        if (p) { line.precio_unitario = p.costo ?? 0; line.productos = { id: p.id, codigo: p.codigo, nombre: p.nombre, nombre_compra: p.nombre_compra ?? null, costo: p.costo ?? 0 } as any; line._tiene_iva = p.tiene_iva ?? false; line._iva_pct = p.iva_pct ?? 16; line._tiene_ieps = p.tiene_ieps ?? false; line._ieps_pct = p.ieps_pct ?? 0; line._ieps_tipo = p.ieps_tipo ?? 'porcentaje'; line._unidad_compra = p.unidades_compra?.abreviatura ?? p.unidades_venta?.abreviatura ?? 'pz'; line._factor_conversion = p.factor_conversion ?? 1; }
+        if (p) { const factor = p.factor_conversion ?? 1; const costoSugerido = (p.costo ?? 0) * factor; line.precio_unitario = costoSugerido; line.productos = { id: p.id, codigo: p.codigo, nombre: p.nombre, nombre_compra: p.nombre_compra ?? null, costo: p.costo ?? 0 } as any; line._tiene_iva = p.tiene_iva ?? false; line._iva_pct = p.iva_pct ?? 16; line._tiene_ieps = p.tiene_ieps ?? false; line._ieps_pct = p.ieps_pct ?? 0; line._ieps_tipo = p.ieps_tipo ?? 'porcentaje'; line._unidad_compra = p.unidades_compra?.abreviatura ?? p.unidades_venta?.abreviatura ?? 'pz'; line._factor_conversion = factor; }
       }
       calcLineTotals(line);
       next[idx] = line;
