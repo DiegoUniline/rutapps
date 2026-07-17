@@ -32,12 +32,6 @@ export default function RutaNuevaVenta() {
 
   const handlePrintTicket = useCallback(async () => {
     if (!h.ticketInfo) return;
-    const lineas = h.cart.map(item => {
-      const lineSub = item.precio_unitario * item.cantidad;
-      const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
-      const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
-      return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, total: lineSub + lineIva + lineIeps, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, esCambio: item.es_cambio, producto_id: item.producto_id };
-    });
     const totalPagadoAhora = h.pagos.reduce((a, p) => a + Number(p.monto || 0), 0);
     const saldoRestanteEstaVenta = h.condicionPago !== 'contado' ? Math.max(0, h.totals.total - totalPagadoAhora) : 0;
     const saldoAnteriorRestante = Math.max(0, h.saldoPendienteTotal - h.totalAplicarCuentas);
@@ -47,7 +41,7 @@ export default function RutaNuevaVenta() {
       folio: h.ticketInfo.folio, fecha: fmtDate(h.ticketInfo.fecha), clienteNombre: h.clienteNombre,
       vendedorNombre: h.profile?.nombre ?? '',
       vendedorTelefono: (h.profile as any)?.telefono ?? null,
-      lineas,
+      lineas: h.ticketLineas,
       subtotal: h.totals.subtotal,
       descuento: h.totals.descuentoDevolucion ?? 0,
       iva: h.totals.iva,
@@ -63,7 +57,7 @@ export default function RutaNuevaVenta() {
       devoluciones: h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: Number(d.cantidad) || 0, motivo: d.motivo, accion: d.accion, monto: (d.precio_unitario ?? 0) * (Number(d.cantidad) || 0) })),
     };
     await printTicket(td, { ticketAncho });
-  }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
+  }, [h.ticketInfo, h.ticketLineas, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, h.devoluciones, h.profile, ticketAncho]);
 
 
   if (h.ticketInfo) {
@@ -73,7 +67,7 @@ export default function RutaNuevaVenta() {
         folio={h.ticketInfo.folio} fecha={h.ticketInfo.fecha} clienteNombre={h.clienteNombre}
         vendedorNombre={h.profile?.nombre ?? ''}
         vendedorTelefono={(h.profile as any)?.telefono ?? null}
-        lineas={h.cart.map(item => { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, subtotal: lineSub, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, esCambio: item.es_cambio, producto_id: item.producto_id }; })}
+        lineas={h.ticketLineas}
         subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
         descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
         devoluciones={h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo, accion: d.accion, monto: d.precio_unitario * d.cantidad }))}
