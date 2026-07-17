@@ -313,6 +313,11 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
 
 
+  if (showFirmas) {
+    add('');
+    add(pad('_______________', '_______________'));
+    add(pad('    Entrego    ', '    Recibio    '));
+  }
   add('');
   if (showMensajeGracias) add(centerText('Gracias por su compra'));
   if (showNotas && empresa.notas_ticket) add(centerText(empresa.notas_ticket));
