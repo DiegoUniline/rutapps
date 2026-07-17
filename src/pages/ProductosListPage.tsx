@@ -109,8 +109,13 @@ export default function ProductosListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  const effectivePageSize = pageSize === 0 ? ALL_PAGE_SIZE : pageSize;
+  const [pageSize, setPageSizeState] = useState<PageSizeOption>(() => readStoredPageSizeFor('productos') ?? DEFAULT_PAGE_SIZE);
+  const effectivePageSize = pageSize === 'all' ? ALL_PAGE_SIZE : pageSize;
+  const handlePageSizeChange = (size: PageSizeOption) => {
+    setPageSizeState(size);
+    setPage(1);
+    writeStoredPageSizeFor(size, 'productos');
+  };
   const [importOpen, setImportOpen] = useState(false);
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
