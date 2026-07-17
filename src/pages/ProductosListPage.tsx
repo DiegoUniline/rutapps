@@ -275,8 +275,8 @@ export default function ProductosListPage() {
              <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
              <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
              <th className="th-odoo text-right">Precio</th>
-             <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-             <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
+            <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+            <th className="th-odoo text-right hidden xl:table-cell">C/U</th>
              <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
              <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
              <th className="th-odoo text-center">Status</th>
@@ -333,9 +333,9 @@ export default function ProductosListPage() {
                <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
                <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
                <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
-               <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+               <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt((p.costo ?? 0) * (p.factor_conversion || 1))}</td>
                <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
-                 {fmt((p.costo ?? 0) / (p.factor_conversion || 1))}
+                 {fmt(p.costo ?? 0)}
                </td>
               <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
                 <span className={cn(
@@ -525,7 +525,8 @@ export default function ProductosListPage() {
                   (p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-foreground"
                 )}>{fmtNum(p.cantidad ?? 0)}</span> },
                 ...(p.clasificaciones?.nombre ? [{ label: 'Cat', value: p.clasificaciones.nombre }] : []),
-                ...(p.costo ? [{ label: 'Costo', value: fmt(p.costo) }] : []),
+                ...(p.costo ? [{ label: 'Costo', value: fmt((p.costo ?? 0) * (p.factor_conversion || 1)) }] : []),
+                ...(p.costo && (p.factor_conversion || 1) > 1 ? [{ label: 'C/U', value: fmt(p.costo) }] : []),
               ]}
             />
           ))}
