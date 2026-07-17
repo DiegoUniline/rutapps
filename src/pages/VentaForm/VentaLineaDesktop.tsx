@@ -22,9 +22,11 @@ interface Props {
   setLineas: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
   currencySymbol?: string;
   currencyCode?: string | null;
+  canChangePrice?: boolean;
+  canApplyDiscount?: boolean;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -91,7 +93,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px]">{prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}`.replace(/^ · /, '') : (l.descripcion || '—')}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
           <ProductSearchInput
-            products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
+            products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
             value={l.producto_id ?? ''} displayText={prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}${prod?._stock != null ? ` (Stock: ${prod._stock})` : ''}`.replace(/^ · /, '') : (l.descripcion || undefined)}
             onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly}
             registerRef={el => setCellRef(idx, 0, el)}
@@ -129,6 +131,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px] block text-right">{money(price)}</span>
         : isEmpty ? <span></span>
+        : !canChangePrice ? <span className="text-[12px] block text-right">{money(price)}</span>
         : (
           <div className="flex items-center gap-1 justify-end">
             <ListaPrecioPicker
@@ -183,7 +186,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '0%'}</span>
+        {(readOnly || !canApplyDiscount) ? <span className="text-[12px] block text-right">{inferredDesc > 0 ? `${Number(inferredDesc.toFixed(2))}%` : '0%'}</span>
         : <input ref={el => setCellRef(idx, 3, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.descuento_pct ?? ''} onChange={e => onUpdateLine(idx, 'descuento_pct', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />}
       </td>
       <td className="py-1.5 px-2 text-right font-medium">

@@ -320,7 +320,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
     return productos.filter(p => p.vender_sin_stock || (stockAbordo.get(p.id) ?? 0) > 0);
   }, [productos, tipoVenta, stockAbordo, useFallbackStock, almacenId]);
-  const filteredProductos = productosDisponibles?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
+  const filteredProductos = productosDisponibles?.filter(p => {
+    if (!searchProducto) return true;
+    const q = searchProducto.toLowerCase();
+    return p.nombre.toLowerCase().includes(q)
+      || p.codigo.toLowerCase().includes(q)
+      || ((p as any).formula ?? '').toLowerCase().includes(q);
+  });
   const filteredDevProductos = productos?.filter(p => !searchDevProducto || p.nombre.toLowerCase().includes(searchDevProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchDevProducto.toLowerCase()));
   const filteredReemplazoProductos = productos?.filter(p => !searchReemplazo || p.nombre.toLowerCase().includes(searchReemplazo.toLowerCase()) || p.codigo.toLowerCase().includes(searchReemplazo.toLowerCase()));
 

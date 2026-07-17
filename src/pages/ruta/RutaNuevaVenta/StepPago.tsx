@@ -77,6 +77,7 @@ export function StepPago(props: Props) {
   const { symbol: s } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
   const canCredito = hasPermisoMovil('ruta.venta_credito');
+  const canEditCondicion = hasPermisoMovil('ventas.editar_condicion_pago');
   const descExtraAmt = totals.descuentoExtra ?? 0;
   const requiresMotivo = descExtraAmt > 0 && !descuentoExtraMotivo.trim();
 
@@ -138,11 +139,18 @@ export function StepPago(props: Props) {
 
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
-          <div className="flex gap-1.5">
-            {([['contado', 'Contado'], ...(clienteCredito?.credito && canCredito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
-              <button key={val} onClick={() => setCondicionPago(val as any)} className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${condicionPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>{label}</button>
-            ))}
-          </div>
+          {canEditCondicion ? (
+            <div className="flex gap-1.5">
+              {([['contado', 'Contado'], ...(clienteCredito?.credito && canCredito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setCondicionPago(val as any)} className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${condicionPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>{label}</button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-accent/40 rounded-md px-3 py-2">
+              <span className="text-[12.5px] font-semibold text-foreground capitalize">{condicionPago === 'por_definir' ? 'Por definir' : condicionPago}</span>
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><Lock className="h-3 w-3" /> según cliente</span>
+            </div>
+          )}
           {condicionPago === 'credito' && clienteCredito && (
             <div className={`mt-2.5 rounded-md px-2.5 py-2 text-[11px] space-y-1 ${excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'}`}>
               <div className="flex justify-between"><span className="text-muted-foreground">Límite</span><span className="font-medium text-foreground">{fmt(clienteCredito.limite)}</span></div>

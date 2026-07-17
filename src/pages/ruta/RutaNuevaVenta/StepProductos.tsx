@@ -268,14 +268,13 @@ export function StepProductos(props: Props) {
               <div className="flex items-center gap-2.5">
                 <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && handleAdd(p)}>
                   <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
-                  <div className="flex items-center gap-1.5 mt-px">
+                  <div className="flex items-center gap-1.5 mt-px flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
-                    {tipoVenta !== 'pedido' && (
-                      <>
-                        <span className="text-[10px] text-muted-foreground">·</span>
-                        <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
-                      </>
+                    {(p as any).formula && (
+                      <span className="text-[10px] text-muted-foreground italic truncate max-w-[140px]">· {(p as any).formula}</span>
                     )}
+                    <span className="text-[10px] text-muted-foreground">·</span>
+                    <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
                       const disp = disponibleMap?.get(p.id) ?? 0;
                       const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';

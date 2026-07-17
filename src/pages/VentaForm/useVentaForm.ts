@@ -83,10 +83,10 @@ export function useVentaForm() {
   const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
-  // Fetch stock per almacen for filtering products on venta_directa
+  // Fetch stock per almacen for filtering / enriching products (real-time in both pedido & venta_directa)
   const { data: stockAlmacenData } = useQuery({
     queryKey: ['stock-almacen-form', form.almacen_id],
-    enabled: !!form.almacen_id && form.tipo === 'venta_directa',
+    enabled: !!form.almacen_id,
     staleTime: 30_000,
     queryFn: async () => {
       const { data } = await supabase.from('stock_almacen')
@@ -96,19 +96,17 @@ export function useVentaForm() {
     },
   });
 
-  // For venta_directa, hide products with 0 stock (unless vender_sin_stock) and enrich with stock qty
+  // Always enrich each product with its live _stock. For venta_directa we ALSO hide
+  // products with 0 stock (unless vender_sin_stock). Pedidos show everything.
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
-    if (form.tipo !== 'venta_directa') return productosListRaw;
     const stockMap = new Map((stockAlmacenData ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0]));
-    return productosListRaw.filter((p: any) => {
-      if (p.vender_sin_stock) return true;
-      const qty = form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0);
-      return qty > 0;
-    }).map((p: any) => ({
+    const enriched = productosListRaw.map((p: any) => ({
       ...p,
       _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
     }));
+    if (form.tipo !== 'venta_directa') return enriched;
+    return enriched.filter((p: any) => p.vender_sin_stock || (p._stock ?? 0) > 0);
   }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
