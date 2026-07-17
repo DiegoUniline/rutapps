@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
-import { buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
+import { buildManualSalePricingFromGross, buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
@@ -295,10 +295,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any) => {
       const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: claseMap.get(producto.id) ?? producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio };
-      if (!rules.length) {
-        const fallback = pf.precio_principal;
-        return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
-      }
       const r = resolveProductPricing(rules, pf, clienteListaPrecioId);
       // Igual que el escritorio: el precio_unitario guardado se deriva del
       // display YA REDONDEADO (buildSalePricingSnapshot). Antes el móvil usaba
@@ -648,7 +644,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       subtotal += original.subtotal;
       iva += original.iva;
       ieps += original.ieps;
-      descuentoPromo += lp.effectiveDiscount;
+      descuentoPromo += pricingItem.base_precio === 'con_impuestos' ? r2(Math.max(0, original.total - lp.finalGross)) : lp.effectiveDiscount;
       items += item.cantidad;
     });
     const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));
@@ -932,6 +928,21 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const fmtM = fmt;
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
+  const ticketLineas = useMemo(() => cart.map(item => {
+    const breakdown = getOriginalLineBreakdown(item, sinImpuestos);
+    return {
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      precio: item.cantidad > 0 ? r2(breakdown.total / item.cantidad) : 0,
+      subtotal: breakdown.subtotal,
+      iva_monto: breakdown.iva,
+      ieps_monto: breakdown.ieps,
+      descuento_pct: 0,
+      total: breakdown.total,
+      esCambio: item.es_cambio,
+      producto_id: item.producto_id,
+    };
+  }), [cart, sinImpuestos]);
 
   /** Compute the suggested (tarifa-based) price for a product */
   const getSuggestedPrice = (productoId: string): number => {
@@ -944,25 +955,30 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const setItemPriceManual = (productoId: string, price: number) => {
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return;
+    const snap = buildManualSalePricingFromGross({ tiene_iva: prod.tiene_iva ?? false, iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0, tiene_ieps: prod.tiene_ieps ?? false, ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0 }, price);
     setCart(prev => {
       const existing = prev.find(c => c.producto_id === productoId && !c.es_cambio);
       if (existing) {
         return prev.map(c => c.producto_id === productoId && !c.es_cambio
-          ? { ...c, precio_unitario: price, precio_manual: true, lista_precio_id: null, lista_nombre: null }
+          ? { ...c, precio_unitario: snap.unitPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo, precio_manual: true, lista_precio_id: null, lista_nombre: null }
           : c);
       }
       return [...prev, {
         producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
-        precio_unitario: price, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        precio_unitario: snap.unitPrice, cantidad: 1, unidad: (prod.unidades as any)?.abreviatura || 'pz',
         unidad_id: prod.unidad_venta_id ?? undefined,
         tiene_iva: prod.tiene_iva ?? false,
         iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
         tiene_ieps: prod.tiene_ieps ?? false,
         ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_unitario_sin_redondeo: snap.rawUnitPrice,
+        precio_display_sin_redondeo: snap.rawDisplayPrice,
+        base_precio: snap.basePrecio,
+        redondeo: snap.redondeo,
         precio_manual: true, lista_precio_id: null, lista_nombre: null,
       }];
     });
-    toast.success(`Precio actualizado: $${price.toFixed(2)}`);
+    toast.success(`Precio actualizado: $${r2(price).toFixed(2)}`);
   };
 
   /** Apply a price-list price to a product (creates the cart line if missing) */
@@ -1014,7 +1030,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     navigate, empresa, user, profile, urlClienteId,
     step, setStep, clienteId, setClienteId, clienteNombre, setClienteNombre, clienteListaNombre,
     clienteNotasFiscales: (selectedClienteData as any)?.notas_fiscales as string | undefined,
-    clienteCredito, setClienteCredito, cart, setCart, devoluciones, setDevoluciones,
+    clienteCredito, setClienteCredito, cart, setCart, ticketLineas, devoluciones, setDevoluciones,
     searchCliente, setSearchCliente, searchProducto, setSearchProducto,
     searchDevProducto, setSearchDevProducto, saving, tipoVenta, setTipoVenta,
     condicionPago, setCondicionPago, notas, setNotas, fechaEntrega, setFechaEntrega,
