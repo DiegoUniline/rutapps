@@ -87,6 +87,14 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, tarifaO
           Lista: <span className="font-medium text-foreground">{listaNombre}</span>
         </div>
       )}
+      {form.cliente_id && clienteNotasFiscales && (
+        <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11.5px] text-amber-900">
+          <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div className="whitespace-pre-wrap leading-snug">
+            <span className="font-semibold">Notas fiscales:</span> {clienteNotasFiscales}
+          </div>
+        </div>
+      )}
     </div>
   );
 
