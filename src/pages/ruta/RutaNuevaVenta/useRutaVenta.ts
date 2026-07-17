@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
-import { buildSalePricingSnapshot } from '@/lib/salePricing';
+import { buildSalePricingSnapshot, getDisplayUnitPrice as getSaleDisplayUnitPrice, getTaxMultiplier } from '@/lib/salePricing';
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
@@ -20,6 +20,59 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
 import { nextVisitDate } from '@/lib/nextVisitDate';
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+function splitFinalGross(item: PosPricingItem, finalGross: number) {
+  const gross = r2(finalGross);
+  const taxMultiplier = getTaxMultiplier(item);
+
+  if (taxMultiplier <= 0 || (!item.tiene_iva && !item.tiene_ieps)) {
+    return { subtotal: gross, ieps: 0, iva: 0 };
+  }
+
+  const subtotalBase = r2(gross / taxMultiplier);
+
+  if (item.tiene_ieps && item.tiene_iva) {
+    const ieps = r2(subtotalBase * ((item.ieps_pct ?? 0) / 100));
+    const iva = r2(gross - subtotalBase - ieps);
+    return { subtotal: r2(gross - ieps - iva), ieps, iva };
+  }
+
+  if (item.tiene_ieps) {
+    const ieps = r2(gross - subtotalBase);
+    return { subtotal: r2(gross - ieps), ieps, iva: 0 };
+  }
+
+  const iva = r2(gross - subtotalBase);
+  return { subtotal: r2(gross - iva), ieps: 0, iva };
+}
+
+function toPosPricingItem(item: CartItem, sinImpuestos: boolean): PosPricingItem {
+  return {
+    precio_unitario: item.precio_unitario,
+    precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+    precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
+    cantidad: item.cantidad,
+    tiene_iva: sinImpuestos ? false : item.tiene_iva,
+    iva_pct: item.iva_pct,
+    tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
+    ieps_pct: item.ieps_pct,
+    base_precio: (item.base_precio ?? 'sin_impuestos') as PosPricingItem['base_precio'],
+    redondeo: item.redondeo ?? 'ninguno',
+  };
+}
+
+function getOriginalLineBreakdown(item: CartItem, sinImpuestos: boolean) {
+  const pricingItem = toPosPricingItem(item, sinImpuestos);
+  if (!sinImpuestos && pricingItem.base_precio === 'con_impuestos') {
+    const gross = r2(getSaleDisplayUnitPrice(pricingItem) * item.cantidad);
+    return { ...splitFinalGross(pricingItem, gross), total: gross };
+  }
+
+  const original = buildPosLinePricing(pricingItem, 0);
+  return { subtotal: original.subtotal, ieps: original.ieps, iva: original.iva, total: original.finalGross };
+}
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
