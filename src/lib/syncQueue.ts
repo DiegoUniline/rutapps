@@ -112,21 +112,8 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
   // Backup before processing as safety net
   await backupSyncQueueToStorage();
 
-  let items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
-  // Topological order: parents before children, createdAt as tiebreaker.
-  items.sort((a, b) => {
-    const pa = priorityOf(a.table);
-    const pb = priorityOf(b.table);
-    if (pa !== pb) return pa - pb;
-    return a.createdAt - b.createdAt;
-  });
-
   let success = 0;
   let failed = 0;
-  // Tables for which a parent insert just succeeded in THIS pass — children
-  // deferred earlier in the pass should be retried at the end.
-  const parentSyncedThisPass = new Set<string>();
-  const deferredIds: number[] = [];
 
   const runItem = async (item: SyncQueueItem) => {
     // Skip items that have exceeded max retries recently (backoff)
@@ -140,7 +127,6 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       await processItem(item);
       await offlineDb.syncQueue.delete(item.id!);
       if (item.keyValue) markAsSynced(item.table, item.keyValue);
-      parentSyncedThisPass.add(item.table);
       success++;
       return { handled: true };
     } catch (err: any) {
@@ -178,7 +164,6 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
-        if (item.id) deferredIds.push(item.id);
         return { handled: true }; // aún no cuenta como "failed"
       }
 
@@ -206,20 +191,28 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
     }
   };
 
-  for (const item of items) {
-    await runItem(item);
-  }
+  // Drain in fresh rounds. A mobile sale enqueues venta → líneas → cobro →
+  // aplicaciones sequentially, and each enqueue can wake auto-sync. If we keep a
+  // single initial snapshot, a cobro may upload before its application exists in
+  // that snapshot, leaving a temporary orphan until another sync event runs. Fresh
+  // rounds pick up items added during this pass and keep parent→child ordering.
+  for (let round = 0; round < 25; round++) {
+    const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
+    if (items.length === 0) break;
 
-  // Same-pass second sweep: any item deferred because its parent wasn't synced
-  // yet gets one more chance now that parents may have come through.
-  if (deferredIds.length > 0 && parentSyncedThisPass.size > 0) {
-    const fresh = await offlineDb.syncQueue
-      .where('id').anyOf(deferredIds).toArray();
-    fresh.sort((a, b) => priorityOf(a.table) - priorityOf(b.table) || a.createdAt - b.createdAt);
-    for (const item of fresh) {
-      // Bypass backoff for this immediate second attempt.
-      await runItem({ ...item, retries: 0 } as SyncQueueItem).catch(() => {});
+    items.sort((a, b) => {
+      const pa = priorityOf(a.table);
+      const pb = priorityOf(b.table);
+      if (pa !== pb) return pa - pb;
+      return a.createdAt - b.createdAt;
+    });
+
+    let handledThisRound = 0;
+    for (const item of items) {
+      const result = await runItem(item);
+      if (result?.handled) handledThisRound++;
     }
+    if (handledThisRound === 0) break;
   }
 
   // Limpiar el respaldo SOLO cuando la cola quedó completamente vacía (nada
