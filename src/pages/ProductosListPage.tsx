@@ -14,7 +14,9 @@ import { useThumb } from '@/hooks/useThumb';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
-import { OdooPagination } from '@/components/OdooPagination';
+import { TablePagination } from '@/components/TablePagination';
+import { StickyListToolbar } from '@/components/StickyListToolbar';
+import { readStoredPageSizeFor, writeStoredPageSizeFor, type PageSizeOption } from '@/hooks/useTablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
@@ -42,9 +44,10 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'status', header: 'Estado', width: 10 },
 ];
 
-const PAGE_SIZE_OPTIONS = [10, 50, 80, 200, 500, 0];
-const DEFAULT_PAGE_SIZE = 80;
+const DEFAULT_PAGE_SIZE: PageSizeOption = 50;
 const ALL_PAGE_SIZE = 100000;
+
+
 
 const STATIC_FILTER_OPTIONS = [
   {
@@ -106,8 +109,13 @@ export default function ProductosListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  const effectivePageSize = pageSize === 0 ? ALL_PAGE_SIZE : pageSize;
+  const [pageSize, setPageSizeState] = useState<PageSizeOption>(() => readStoredPageSizeFor('productos') ?? DEFAULT_PAGE_SIZE);
+  const effectivePageSize = pageSize === 'all' ? ALL_PAGE_SIZE : pageSize;
+  const handlePageSizeChange = (size: PageSizeOption) => {
+    setPageSizeState(size);
+    setPage(1);
+    writeStoredPageSizeFor(size, 'productos');
+  };
   const [importOpen, setImportOpen] = useState(false);
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
@@ -221,8 +229,9 @@ export default function ProductosListPage() {
     return map;
   }, [allPresentaciones]);
   const total = productosData?.total ?? 0;
-  const from = Math.min((page - 1) * effectivePageSize + 1, total);
+  const from = total === 0 ? 0 : Math.min((page - 1) * effectivePageSize + 1, total);
   const to = Math.min(page * effectivePageSize, total);
+  const totalPages = effectivePageSize > 0 ? Math.max(1, Math.ceil(total / effectivePageSize)) : 1;
   const pageData = productos;
   const allSelected = pageData.length > 0 && pageData.every(p => selected.has(p.id));
 
@@ -384,97 +393,111 @@ export default function ProductosListPage() {
         })}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <OdooFilterBar
-          search={search}
-          onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder="Buscar por nombre o código..."
-          filterOptions={FILTER_OPTIONS}
-          activeFilters={filters}
-          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
-          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-          onClearFilters={() => { clearFilters(); setPage(1); }}
-          groupByOptions={GROUP_BY_OPTIONS}
-          activeGroupBy={groupBy}
-          onGroupByChange={setGroupBy}
-          activeGroupByLevels={groupByLevels}
-          onGroupByLevelChange={setGroupByLevel}
-        />
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Bulk actions moved to floating BulkActionsBar */}
-          {!isMobile && (
-            <>
-              <ExportButton
-                onExcel={() => exportToExcel({
-                  fileName: 'Productos', title: 'Catálogo de Productos',
-                  columns: PRODUCTOS_COLUMNS, data: productos ?? [],
-                })}
-                onPDF={() => exportToPDF({
-                  fileName: 'Productos', title: 'Catálogo de Productos',
-                  columns: PRODUCTOS_COLUMNS, data: productos ?? [],
-                })}
+      <StickyListToolbar
+        left={
+          <OdooFilterBar
+            search={search}
+            onSearchChange={val => { setSearch(val); setPage(1); }}
+            placeholder="Buscar por nombre, código o fórmula..."
+            filterOptions={FILTER_OPTIONS}
+            activeFilters={filters}
+            onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+            onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+            onClearFilters={() => { clearFilters(); setPage(1); }}
+            groupByOptions={GROUP_BY_OPTIONS}
+            activeGroupBy={groupBy}
+            onGroupByChange={setGroupBy}
+            activeGroupByLevels={groupByLevels}
+            onGroupByLevelChange={setGroupByLevel}
+          />
+        }
+        right={
+          <>
+            {(total > 0 || isLoading) && !groupBy && (
+              <TablePagination
+                from={from} to={to} total={total} page={page} totalPages={totalPages}
+                pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+                onPrev={() => setPage(p => Math.max(1, p - 1))}
+                onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+                isLoading={isLoading}
               />
-              <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
-                <Upload className="h-3.5 w-3.5" /> Importar
-              </button>
-            </>
-          )}
-          <button
-            onClick={() => isMobile ? setMobileNewOpen(true) : navigate('/productos/nuevo')}
-            className="btn-odoo-primary shrink-0"
-          >
-            <Plus className="h-3.5 w-3.5" /> Nuevo
-          </button>
-        </div>
-        <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
-        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{statusFilter === 'inactivo' ? 'Eliminar productos' : 'Dar de baja productos'}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {statusFilter === 'inactivo'
-                  ? `Se eliminarán permanentemente ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
-                  : `Se marcarán como inactivos ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={bulkDeleting}
-                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {bulkDeleting ? 'Procesando…' : (statusFilter === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <AlertDialog open={confirmActivateOpen} onOpenChange={setConfirmActivateOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reactivar productos</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se marcarán como activos {selected.size} producto{selected.size !== 1 ? 's' : ''}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={bulkActivating}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={bulkActivating}
-                onClick={(e) => { e.preventDefault(); handleBulkActivate(); }}
-                className="bg-success text-success-foreground hover:bg-success/90"
-              >
-                {bulkActivating ? 'Procesando…' : 'Activar'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <MobileProductoQuickForm
-          open={mobileNewOpen}
-          onOpenChange={setMobileNewOpen}
-          onCreated={(id) => navigate(`/productos/${id}`)}
-        />
-      </div>
+            )}
+            {!isMobile && (
+              <>
+                <ExportButton
+                  onExcel={() => exportToExcel({
+                    fileName: 'Productos', title: 'Catálogo de Productos',
+                    columns: PRODUCTOS_COLUMNS, data: productos ?? [],
+                  })}
+                  onPDF={() => exportToPDF({
+                    fileName: 'Productos', title: 'Catálogo de Productos',
+                    columns: PRODUCTOS_COLUMNS, data: productos ?? [],
+                  })}
+                />
+                <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
+                  <Upload className="h-3.5 w-3.5" /> Importar
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => isMobile ? setMobileNewOpen(true) : navigate('/productos/nuevo')}
+              className="btn-odoo-primary shrink-0"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuevo
+            </button>
+          </>
+        }
+      />
+
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="productos" />
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{statusFilter === 'inactivo' ? 'Eliminar productos' : 'Dar de baja productos'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusFilter === 'inactivo'
+                ? `Se eliminarán permanentemente ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
+                : `Se marcarán como inactivos ${selected.size} producto${selected.size !== 1 ? 's' : ''}. Podrás reactivarlos cambiando el filtro de estado.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkDeleting}
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? 'Procesando…' : (statusFilter === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmActivateOpen} onOpenChange={setConfirmActivateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivar productos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se marcarán como activos {selected.size} producto{selected.size !== 1 ? 's' : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActivating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkActivating}
+              onClick={(e) => { e.preventDefault(); handleBulkActivate(); }}
+              className="bg-success text-success-foreground hover:bg-success/90"
+            >
+              {bulkActivating ? 'Procesando…' : 'Activar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <MobileProductoQuickForm
+        open={mobileNewOpen}
+        onOpenChange={setMobileNewOpen}
+        onCreated={(id) => navigate(`/productos/${id}`)}
+      />
+
 
       {isLoading ? (
         <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 12} /></div>
@@ -506,18 +529,24 @@ export default function ProductosListPage() {
               ]}
             />
           ))}
-          {total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
-          )}
         </div>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
+            <div className="flex justify-end pt-2 md:hidden">
+              <TablePagination
+                from={from} to={to} total={total} page={page} totalPages={totalPages}
+                pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+                onPrev={() => setPage(p => Math.max(1, p - 1))}
+                onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+                isLoading={isLoading}
+              />
+            </div>
           )}
         </>
       )}
+
 
       <BulkActionsBar
         count={selected.size}
