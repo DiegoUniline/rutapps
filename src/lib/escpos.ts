@@ -370,6 +370,14 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     }
   }
 
+  if (showFirmas) {
+    add(LF);
+    add(ALIGN_LEFT);
+    const half = Math.floor(W / 2);
+    ln('_'.repeat(half - 1) + ' ' + '_'.repeat(W - half));
+    ln(center('Entrego', half) + center('Recibio', W - half));
+  }
+
   add(LF);
   add(ALIGN_CENTER);
   if (showMensajeGracias) ln('Gracias por su compra');
