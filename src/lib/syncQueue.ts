@@ -10,6 +10,13 @@ const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
 let activeProcessPromise: Promise<{ success: number; failed: number }> | null = null;
 
+type QueuedOperation = {
+  table: string;
+  operation: 'insert' | 'update' | 'delete';
+  data: any;
+  keyField?: string;
+};
+
 // Exponential backoff delay
 function getRetryDelay(retries: number): number {
   return Math.min(BASE_DELAY_MS * Math.pow(2, retries), 30000); // max 30s
@@ -21,6 +28,68 @@ function sleep(ms: number) {
 
 // Add an operation to the sync queue and update local DB
 export async function queueOperation(
+  table: string,
+  operation: 'insert' | 'update' | 'delete',
+  data: any,
+  keyField: string = 'id',
+) {
+  await queueOperations([{ table, operation, data, keyField }]);
+}
+
+// Encola varias operaciones como una sola unidad local. Se usa para documentos
+// que no pueden separarse (ej. cobro + aplicaciones al folio): si falla una
+// escritura IndexedDB, no queda el padre sin sus hijos en la cola.
+export async function queueOperations(operations: QueuedOperation[]) {
+  if (operations.length === 0) return;
+
+  const txTables = new Set<any>([offlineDb.syncQueue]);
+  for (const op of operations) {
+    const localTable = getOfflineTable(op.table);
+    if (localTable) txTables.add(localTable);
+  }
+
+  await offlineDb.transaction('rw', Array.from(txTables), async () => {
+    for (const op of operations) {
+      const keyField = op.keyField ?? 'id';
+      const keyValue = op.data[keyField];
+      const localTable = getOfflineTable(op.table);
+
+      if (localTable) {
+        if (op.operation === 'delete') await localTable.delete(keyValue);
+        else await localTable.put(op.data);
+      }
+
+      const existing = await offlineDb.syncQueue
+        .where('table').equals(op.table)
+        .filter(item => item.keyValue === keyValue && item.operation === op.operation)
+        .first();
+      if (existing && existing.id) {
+        await offlineDb.syncQueue.update(existing.id, { data: op.data, createdAt: Date.now(), retries: 0 });
+      } else {
+        await offlineDb.syncQueue.add({
+          table: op.table,
+          operation: op.operation,
+          data: op.data,
+          keyField,
+          keyValue,
+          createdAt: Date.now(),
+          retries: 0,
+        });
+      }
+    }
+  });
+
+  // Try to sync immediately if online AND auto-sync is enabled AND data saver is off
+  const autoSync = localStorage.getItem('uniline_auto_sync');
+  const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
+  if (autoSyncEnabled && !isDataSaverEnabled()) {
+    hasRealConnection().then(online => {
+      if (online) processSyncQueue().catch(console.warn);
+    }).catch(console.warn);
+  }
+}
+
+async function queueOperationLegacy(
   table: string,
   operation: 'insert' | 'update' | 'delete',
   data: any,
