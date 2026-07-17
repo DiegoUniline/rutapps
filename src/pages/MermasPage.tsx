@@ -36,7 +36,7 @@ interface LineaForm {
 
 export default function MermasPage() {
   const { empresa } = useAuth();
-  const { isOwner, loading: permisosLoading } = usePermisos();
+  const { hasPermiso, loading: permisosLoading } = usePermisos();
   const { data: almacenes } = useAlmacenes();
   const { data: motivos } = useMermaMotivos();
   const { data: productos } = useProductosForSelect();
@@ -109,13 +109,17 @@ export default function MermasPage() {
     }
   };
 
-  if (!permisosLoading && !isOwner) {
+  const canViewMermas = hasPermiso('almacen.ajustes', 'ver');
+  const canCreateMermas = hasPermiso('almacen.ajustes', 'crear');
+  const canCancelMermas = hasPermiso('almacen.ajustes', 'eliminar');
+
+  if (!permisosLoading && !canViewMermas) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 p-6 text-center">
         <AlertTriangle className="h-10 w-10 text-warning" />
         <h2 className="text-xl font-semibold">Acceso restringido</h2>
         <p className="text-sm text-muted-foreground max-w-md">
-          El módulo de Mermas es exclusivo para el administrador de la empresa.
+          Tu rol no tiene permiso para ver ajustes y mermas.
         </p>
       </div>
     );
@@ -136,9 +140,11 @@ export default function MermasPage() {
           <Link to="/almacen/mermas/motivos">
             <Button variant="outline"><Settings className="h-4 w-4 mr-1" /> Motivos</Button>
           </Link>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Registrar merma
-          </Button>
+          {canCreateMermas && (
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Registrar merma
+            </Button>
+          )}
         </div>
       </div>
 
@@ -193,7 +199,7 @@ export default function MermasPage() {
                   {m.cancelada ? <Badge variant="outline">Cancelada</Badge> : <Badge>Activa</Badge>}
                 </TableCell>
                 <TableCell onClick={e => e.stopPropagation()}>
-                  {!m.cancelada && (
+                  {!m.cancelada && canCancelMermas && (
                     <Button variant="ghost" size="icon" title="Cancelar"
                       onClick={async () => {
                         if (await confirmDialog(`¿Cancelar merma ${m.folio}? Se devolverá el stock al almacén origen.`)) {
