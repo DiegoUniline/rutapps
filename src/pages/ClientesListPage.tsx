@@ -13,6 +13,7 @@ import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { TablePagination } from '@/components/TablePagination';
+import { StickyListToolbar } from '@/components/StickyListToolbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
