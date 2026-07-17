@@ -1,39 +1,57 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 
-const STORAGE_KEY = 'table-page-size';
+const DEFAULT_STORAGE_KEY = 'table-page-size';
 
-export type PageSizeOption = 50 | 100 | 200 | 500 | 'all';
+export type PageSizeOption = 25 | 50 | 100 | 200 | 500 | 'all';
 
-export function readStoredPageSize(): PageSizeOption {
-  return readStoredSize();
+function coerce(raw: string | null): PageSizeOption | null {
+  if (raw === 'all') return 'all';
+  const n = Number(raw);
+  if (n === 25 || n === 50 || n === 100 || n === 200 || n === 500) return n as PageSizeOption;
+  return null;
 }
 
-function readStoredSize(): PageSizeOption {
+/** Backwards-compatible: reads the shared/global page size preference. */
+export function readStoredPageSize(): PageSizeOption {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === 'all') return 'all';
-    const n = Number(raw);
-    if (n === 50 || n === 100 || n === 200 || n === 500) return n as PageSizeOption;
+    const v = coerce(localStorage.getItem(DEFAULT_STORAGE_KEY));
+    if (v) return v;
   } catch {}
   return 50;
 }
 
+/** Per-module page size. Falls back to the global preference, then to 50. */
+export function readStoredPageSizeFor(moduleKey?: string): PageSizeOption {
+  if (!moduleKey) return readStoredPageSize();
+  try {
+    const v = coerce(localStorage.getItem(`${DEFAULT_STORAGE_KEY}:${moduleKey}`));
+    if (v) return v;
+  } catch {}
+  return readStoredPageSize();
+}
 
-export function useTablePagination<T>(items: T[]) {
-  const [pageSize, setPageSizeState] = useState<PageSizeOption>(readStoredSize);
+export function writeStoredPageSizeFor(size: PageSizeOption, moduleKey?: string) {
+  try {
+    if (moduleKey) localStorage.setItem(`${DEFAULT_STORAGE_KEY}:${moduleKey}`, String(size));
+    // Keep the global preference in sync so new modules inherit the last choice.
+    localStorage.setItem(DEFAULT_STORAGE_KEY, String(size));
+  } catch {}
+}
+
+export function useTablePagination<T>(items: T[], moduleKey?: string) {
+  const [pageSize, setPageSizeState] = useState<PageSizeOption>(() => readStoredPageSizeFor(moduleKey));
   const [page, setPage] = useState(1);
 
   const setPageSize = useCallback((size: PageSizeOption) => {
     setPageSizeState(size);
     setPage(1);
-    try { localStorage.setItem(STORAGE_KEY, String(size)); } catch {}
-  }, []);
+    writeStoredPageSizeFor(size, moduleKey);
+  }, [moduleKey]);
 
   const total = items.length;
   const effectiveSize = pageSize === 'all' ? total : pageSize;
   const totalPages = effectiveSize > 0 ? Math.max(1, Math.ceil(total / effectiveSize)) : 1;
 
-  // Clamp page
   const safePage = Math.min(page, totalPages);
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -49,8 +67,8 @@ export function useTablePagination<T>(items: T[]) {
 
   const goFirst = useCallback(() => setPage(1), []);
   const goPrev = useCallback(() => setPage(p => Math.max(1, p - 1)), []);
-  const goNext = useCallback(() => setPage(p => Math.min(totalPages, p + 1)), []);
-  const goLast = useCallback(() => setPage(totalPages), []);
+  const goNext = useCallback(() => setPage(p => Math.min(totalPages, p + 1)), [totalPages]);
+  const goLast = useCallback(() => setPage(totalPages), [totalPages]);
   const resetPage = useCallback(() => setPage(1), []);
 
   return {
