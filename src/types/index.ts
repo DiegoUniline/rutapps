@@ -140,6 +140,7 @@ export interface Cliente {
   facturama_cp?: string;
   facturama_correo_facturacion?: string;
   facturama_id?: string;
+  notas_fiscales?: string;
   created_at: string;
   // joined
   zonas?: { nombre: string };
