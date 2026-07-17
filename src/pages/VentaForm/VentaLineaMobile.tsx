@@ -63,7 +63,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
             </>
           ) : (
             <ProductSearchInput
-              products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
+              products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, formula: p.formula, precio_principal: p.precio_principal, _stock: p._stock }))}
               value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : (snapshotProd ? `${snapshotProd.codigo ?? ''}${snapshotProd.codigo && snapshotProd.nombre ? ' · ' : ''}${snapshotProd.nombre ?? ''}` : undefined)}
               onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly}
             />
@@ -90,7 +90,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Precio</label>
-            {readOnly ? <span className="text-sm">{money(price)}</span> : (
+            {(readOnly || !canChangePrice) ? <span className="text-sm">{money(price)}</span> : (
               <div className="space-y-1">
                 <input
                   type="number" inputMode="decimal" className="inline-edit-input text-sm text-right !py-1 w-full"
