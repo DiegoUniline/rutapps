@@ -283,6 +283,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   <span className="font-bold text-foreground">Vendedor </span><span className="text-muted-foreground">{vendedorNombre}</span>
                 </div>
               )}
+              {vendedorTelefono && (empresa.ticket_campos as any)?.vendedor_telefono !== false && (
+                <div>
+                  <span className="font-bold text-foreground">Tel. vend. </span><span className="text-muted-foreground">{vendedorTelefono}</span>
+                </div>
+              )}
               <div className="flex gap-4">
                 <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
                 {metodoPago && (
