@@ -229,8 +229,9 @@ export default function ProductosListPage() {
     return map;
   }, [allPresentaciones]);
   const total = productosData?.total ?? 0;
-  const from = Math.min((page - 1) * effectivePageSize + 1, total);
+  const from = total === 0 ? 0 : Math.min((page - 1) * effectivePageSize + 1, total);
   const to = Math.min(page * effectivePageSize, total);
+  const totalPages = effectivePageSize > 0 ? Math.max(1, Math.ceil(total / effectivePageSize)) : 1;
   const pageData = productos;
   const allSelected = pageData.length > 0 && pageData.every(p => selected.has(p.id));
 
