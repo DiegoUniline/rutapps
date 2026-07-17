@@ -638,25 +638,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   }, [devoluciones, productos, cart, sinImpuestos]);
 
   const totals = useMemo(() => {
-    const r2 = (n: number) => Math.round(n * 100) / 100;
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
       const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
-      const pricingItem: PosPricingItem = {
-        precio_unitario: item.precio_unitario,
-        precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
-        precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
-        cantidad: item.cantidad,
-        tiene_iva: sinImpuestos ? false : item.tiene_iva,
-        iva_pct: item.iva_pct,
-        tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
-        ieps_pct: item.ieps_pct,
-        base_precio: (item.base_precio ?? 'sin_impuestos') as any,
-        redondeo: item.redondeo ?? 'ninguno',
-      };
+      const pricingItem = toPosPricingItem(item, sinImpuestos);
       const lp = buildPosLinePricing(pricingItem, promoDisc);
-      const original = buildPosLinePricing(pricingItem, 0);
+      const original = getOriginalLineBreakdown(item, sinImpuestos);
       subtotal += original.subtotal;
       iva += original.iva;
       ieps += original.ieps;
@@ -789,7 +777,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
-      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
+      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
 
       // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
