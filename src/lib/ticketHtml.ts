@@ -198,6 +198,8 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showFirmas = tc.firmas !== false;
   // Pie Rutapp: siempre visible, no configurable
 
   const hLines: string[] = [];
