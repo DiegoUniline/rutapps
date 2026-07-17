@@ -83,16 +83,31 @@ export function useVentaForm() {
   const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
+  // Feature apartado: si la empresa lo activa y el almacén está en la lista,
+  // para pedidos mostramos disponible = stock - apartado (respeta reservas).
+  const apartadoEnabled = !!empresa?.apartar_stock_pedidos
+    && !!form.almacen_id
+    && (empresa?.apartado_almacenes_ids ?? []).includes(form.almacen_id)
+    && form.tipo !== 'venta_directa';
+
   // Fetch stock per almacen for filtering / enriching products (real-time in both pedido & venta_directa)
   const { data: stockAlmacenData } = useQuery({
-    queryKey: ['stock-almacen-form', form.almacen_id],
+    queryKey: ['stock-almacen-form', form.almacen_id, apartadoEnabled],
     enabled: !!form.almacen_id,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data } = await supabase.from('stock_almacen')
-        .select('producto_id, cantidad')
-        .eq('almacen_id', form.almacen_id!);
-      return data ?? [];
+      const [stockRes, apartRes] = await Promise.all([
+        supabase.from('stock_almacen').select('producto_id, cantidad').eq('almacen_id', form.almacen_id!),
+        apartadoEnabled
+          ? supabase.from('stock_apartado').select('producto_id, cantidad').eq('almacen_id', form.almacen_id!)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const map = new Map<string, number>();
+      (stockRes.data ?? []).forEach((r: any) => map.set(r.producto_id, Number(r.cantidad) || 0));
+      (apartRes.data ?? []).forEach((r: any) => {
+        map.set(r.producto_id, (map.get(r.producto_id) ?? 0) - (Number(r.cantidad) || 0));
+      });
+      return map;
     },
   });
 
@@ -100,7 +115,7 @@ export function useVentaForm() {
   // products with 0 stock (unless vender_sin_stock). Pedidos show everything.
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
-    const stockMap = new Map((stockAlmacenData ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0]));
+    const stockMap = stockAlmacenData ?? new Map<string, number>();
     const enriched = productosListRaw.map((p: any) => ({
       ...p,
       _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
