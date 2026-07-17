@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { queueOperation } from '@/lib/syncQueue';
+import { queueOperation, queueOperations } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -862,11 +862,19 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           const montoCobro = roundMoney(aplicaciones.reduce((s, a) => s + a.monto, 0));
           if (montoCobro <= 0) continue;
 
-          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-
-          for (const ap of aplicaciones) {
-            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: new Date().toISOString() });
-          }
+          const nowIso = new Date().toISOString();
+          await queueOperations([
+            {
+              table: 'cobros',
+              operation: 'insert',
+              data: { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: nowIso },
+            },
+            ...aplicaciones.map(ap => ({
+              table: 'cobro_aplicaciones',
+              operation: 'insert' as const,
+              data: { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: nowIso },
+            })),
+          ]);
         }
 
         // El saldo_pendiente lo recalcula EXCLUSIVAMENTE el trigger de BD

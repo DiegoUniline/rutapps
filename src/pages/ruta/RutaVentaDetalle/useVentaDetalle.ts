@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { queueOperation } from '@/lib/syncQueue';
+import { queueOperation, queueOperations } from '@/lib/syncQueue';
 import { newLocalId } from '@/lib/localId';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -221,7 +221,7 @@ export function useVentaDetalle() {
       if (!empresa?.id) throw new Error('Sin empresa');
       const online = typeof navigator === 'undefined' || navigator.onLine;
 
-      // Generar id local del cobro para encolar offline; cuando esté online, supabase asigna real
+      // Generar id local del cobro para encolar offline; cuando esté online, la RPC asigna el real.
       const localCobroId = newLocalId();
       const cobroPayload = {
         empresa_id: empresa.id,
@@ -233,15 +233,7 @@ export function useVentaDetalle() {
         fecha: todayInTimezone(empresa.zona_horaria),
       };
 
-      let cobroId: string;
-      if (online) {
-        const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert(cobroPayload).select('id').single();
-        if (cobroErr) throw cobroErr;
-        cobroId = cobro.id;
-      } else {
-        cobroId = localCobroId;
-        await queueOperation('cobros', 'insert', { id: cobroId, ...cobroPayload });
-      }
+      let cobroId = localCobroId;
 
       const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
       const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
@@ -271,13 +263,28 @@ export function useVentaDetalle() {
 
       if (aplicaciones.length > 0) {
         if (online) {
-          const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
-          if (appErr) throw appErr;
+          const { data: createdCobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
+            p_empresa_id: empresa.id,
+            p_cliente_id: clienteId,
+            p_monto: roundMoney(totalACobrar),
+            p_metodo: metodoPago,
+            p_referencia: referenciaPago || null,
+            p_fecha: todayInTimezone(empresa.zona_horaria),
+            p_aplicaciones: aplicaciones.map(ap => ({ venta_id: ap.venta_id, monto_aplicado: ap.monto_aplicado })),
+            p_notas: null,
+            p_user_id: user.id,
+          });
+          if (cobroErr) throw cobroErr;
+          cobroId = createdCobroId;
         } else {
-          for (const ap of aplicaciones) {
-            const apId = newLocalId();
-            await queueOperation('cobro_aplicaciones', 'insert', { id: apId, ...ap });
-          }
+          await queueOperations([
+            { table: 'cobros', operation: 'insert', data: { id: cobroId, ...cobroPayload } },
+            ...aplicaciones.map(ap => ({
+              table: 'cobro_aplicaciones',
+              operation: 'insert' as const,
+              data: { id: newLocalId(), ...ap },
+            })),
+          ]);
         }
       }
 

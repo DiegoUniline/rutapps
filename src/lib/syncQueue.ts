@@ -10,6 +10,13 @@ const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
 let activeProcessPromise: Promise<{ success: number; failed: number }> | null = null;
 
+type QueuedOperation = {
+  table: string;
+  operation: 'insert' | 'update' | 'delete';
+  data: any;
+  keyField?: string;
+};
+
 // Exponential backoff delay
 function getRetryDelay(retries: number): number {
   return Math.min(BASE_DELAY_MS * Math.pow(2, retries), 30000); // max 30s
@@ -26,32 +33,53 @@ export async function queueOperation(
   data: any,
   keyField: string = 'id',
 ) {
-  const keyValue = data[keyField];
-  const localTable = getOfflineTable(table);
+  await queueOperations([{ table, operation, data, keyField }]);
+}
 
-  // El put local + el encolado deben ser ATÓMICOS: si el put pasa pero el enqueue
-  // falla (cuota de IndexedDB, etc.), la venta se vería en pantalla pero nunca
-  // subiría (pérdida silenciosa). Se hacen dentro de una sola transacción.
-  const enqueue = async () => {
-    if (localTable) {
-      if (operation === 'delete') await localTable.delete(keyValue);
-      else await localTable.put(data);
-    }
-    // Deduplicate: if same table+key+operation pending, replace data
-    const existing = await offlineDb.syncQueue
-      .where('table').equals(table)
-      .filter(item => item.keyValue === keyValue && item.operation === operation)
-      .first();
-    if (existing && existing.id) {
-      await offlineDb.syncQueue.update(existing.id, { data, createdAt: Date.now(), retries: 0 });
-    } else {
-      await offlineDb.syncQueue.add({ table, operation, data, keyField, keyValue, createdAt: Date.now(), retries: 0 });
-    }
-  };
-  const txTables: any[] = localTable ? [localTable, offlineDb.syncQueue] : [offlineDb.syncQueue];
-  await offlineDb.transaction('rw', txTables, enqueue);
+// Encola varias operaciones como una sola unidad local. Se usa para documentos
+// que no pueden separarse (ej. cobro + aplicaciones al folio): si falla una
+// escritura IndexedDB, no queda el padre sin sus hijos en la cola.
+export async function queueOperations(operations: QueuedOperation[]) {
+  if (operations.length === 0) return;
 
-  // 3. Try to sync immediately if online AND auto-sync is enabled AND data saver is off
+  const txTables = new Set<any>([offlineDb.syncQueue]);
+  for (const op of operations) {
+    const localTable = getOfflineTable(op.table);
+    if (localTable) txTables.add(localTable);
+  }
+
+  await offlineDb.transaction('rw', Array.from(txTables), async () => {
+    for (const op of operations) {
+      const keyField = op.keyField ?? 'id';
+      const keyValue = op.data[keyField];
+      const localTable = getOfflineTable(op.table);
+
+      if (localTable) {
+        if (op.operation === 'delete') await localTable.delete(keyValue);
+        else await localTable.put(op.data);
+      }
+
+      const existing = await offlineDb.syncQueue
+        .where('table').equals(op.table)
+        .filter(item => item.keyValue === keyValue && item.operation === op.operation)
+        .first();
+      if (existing && existing.id) {
+        await offlineDb.syncQueue.update(existing.id, { data: op.data, createdAt: Date.now(), retries: 0 });
+      } else {
+        await offlineDb.syncQueue.add({
+          table: op.table,
+          operation: op.operation,
+          data: op.data,
+          keyField,
+          keyValue,
+          createdAt: Date.now(),
+          retries: 0,
+        });
+      }
+    }
+  });
+
+  // Try to sync immediately if online AND auto-sync is enabled AND data saver is off
   const autoSync = localStorage.getItem('uniline_auto_sync');
   const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
   if (autoSyncEnabled && !isDataSaverEnabled()) {
@@ -112,21 +140,8 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
   // Backup before processing as safety net
   await backupSyncQueueToStorage();
 
-  let items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
-  // Topological order: parents before children, createdAt as tiebreaker.
-  items.sort((a, b) => {
-    const pa = priorityOf(a.table);
-    const pb = priorityOf(b.table);
-    if (pa !== pb) return pa - pb;
-    return a.createdAt - b.createdAt;
-  });
-
   let success = 0;
   let failed = 0;
-  // Tables for which a parent insert just succeeded in THIS pass — children
-  // deferred earlier in the pass should be retried at the end.
-  const parentSyncedThisPass = new Set<string>();
-  const deferredIds: number[] = [];
 
   const runItem = async (item: SyncQueueItem) => {
     // Skip items that have exceeded max retries recently (backoff)
@@ -140,7 +155,6 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
       await processItem(item);
       await offlineDb.syncQueue.delete(item.id!);
       if (item.keyValue) markAsSynced(item.table, item.keyValue);
-      parentSyncedThisPass.add(item.table);
       success++;
       return { handled: true };
     } catch (err: any) {
@@ -178,7 +192,6 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
           lastError: errorMsg,
           lastAttemptAt: Date.now(),
         });
-        if (item.id) deferredIds.push(item.id);
         return { handled: true }; // aún no cuenta como "failed"
       }
 
@@ -206,20 +219,28 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
     }
   };
 
-  for (const item of items) {
-    await runItem(item);
-  }
+  // Drain in fresh rounds. A mobile sale enqueues venta → líneas → cobro →
+  // aplicaciones sequentially, and each enqueue can wake auto-sync. If we keep a
+  // single initial snapshot, a cobro may upload before its application exists in
+  // that snapshot, leaving a temporary orphan until another sync event runs. Fresh
+  // rounds pick up items added during this pass and keep parent→child ordering.
+  for (let round = 0; round < 25; round++) {
+    const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
+    if (items.length === 0) break;
 
-  // Same-pass second sweep: any item deferred because its parent wasn't synced
-  // yet gets one more chance now that parents may have come through.
-  if (deferredIds.length > 0 && parentSyncedThisPass.size > 0) {
-    const fresh = await offlineDb.syncQueue
-      .where('id').anyOf(deferredIds).toArray();
-    fresh.sort((a, b) => priorityOf(a.table) - priorityOf(b.table) || a.createdAt - b.createdAt);
-    for (const item of fresh) {
-      // Bypass backoff for this immediate second attempt.
-      await runItem({ ...item, retries: 0 } as SyncQueueItem).catch(() => {});
+    items.sort((a, b) => {
+      const pa = priorityOf(a.table);
+      const pb = priorityOf(b.table);
+      if (pa !== pb) return pa - pb;
+      return a.createdAt - b.createdAt;
+    });
+
+    let handledThisRound = 0;
+    for (const item of items) {
+      const result = await runItem(item);
+      if (result?.handled) handledThisRound++;
     }
+    if (handledThisRound === 0) break;
   }
 
   // Limpiar el respaldo SOLO cuando la cola quedó completamente vacía (nada
