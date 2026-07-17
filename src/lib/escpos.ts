@@ -315,7 +315,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const summary = getTicketTotalsSummary(data);
   ln(row('Sub total', fmt(data.subtotal), W));
   if (showDescuentos) ln(row('Descuentos', summary.descuentoTotal > 0 ? `-${fmt(summary.descuentoTotal)}` : fmt(0), W));
-  ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
+  if (showImpuestos) ln(row('Impuestos', fmt(showTax ? summary.impuestosTotal : 0), W));
   ln(divider(W));
   add(BOLD_ON);
   ln(row('Total pagado', fmt(summary.totalPagado), W));
