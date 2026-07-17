@@ -231,6 +231,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   const showPagosRecibidos = tc.pagos_recibidos !== false;
   const showDevoluciones = tc.devoluciones !== false;
   const showMensajeGracias = tc.mensaje_gracias !== false;
+  const showImpuestos = tc.impuestos !== false;
+  const showFirmas = tc.firmas !== false;
   // Pie Rutapp: siempre visible, no configurable
 
   // ── LOGO (raster image) ──
