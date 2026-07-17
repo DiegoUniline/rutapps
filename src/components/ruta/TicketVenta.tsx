@@ -18,6 +18,7 @@ interface TicketVentaProps {
   fecha: string;
   clienteNombre: string;
   vendedorNombre?: string;
+  vendedorTelefono?: string | null;
   lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean; producto_id?: string; precio_sugerido_publico?: number }[];
   subtotal: number;
   iva: number;
