@@ -990,7 +990,6 @@ export default function PuntoVentaPage() {
 
         for (const split of splitsToUse) {
           if (split.monto <= 0) continue;
-          const cobroId = crypto.randomUUID();
           let remaining = split.monto;
           const splitApplications: { venta_id: string; monto_aplicado: number }[] = [];
 
@@ -1019,25 +1018,21 @@ export default function PuntoVentaPage() {
           const montoCobro = r2(splitApplications.reduce((s, a) => s + a.monto_aplicado, 0));
           if (montoCobro <= 0) continue;
 
-          const { error: cobErr } = await supabase.from('cobros').insert({
-            id: cobroId,
-            empresa_id: empresa.id,
-            cliente_id: clienteCobroId,
-            user_id: user.id,
-            monto: montoCobro,
-            metodo_pago: split.metodo,
-            referencia: split.referencia || null,
-            fecha: today,
+          // Cobro + aplicaciones atómico (aplicar_cobro): o entran los dos, o ninguno.
+          const { data: newCobroId, error: cobErr } = await (supabase as any).rpc('aplicar_cobro', {
+            p_empresa_id: empresa.id,
+            p_cliente_id: clienteCobroId,
+            p_monto: montoCobro,
+            p_metodo: split.metodo,
+            p_referencia: split.referencia || null,
+            p_fecha: today,
+            p_aplicaciones: splitApplications,
+            p_user_id: user.id,
           });
           if (cobErr) continue;
 
-          if (splitApplications.length > 0) {
-            await supabase.from('cobro_aplicaciones').insert(
-              splitApplications.map(a => ({ cobro_id: cobroId, ...a }))
-            );
-          }
           // Recibo automático
-          import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
+          import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(newCobroId, empresa.id));
         }
         totalAppliedToAccountsPOS = [...accountAppliedPOS.values()].reduce((s, v) => s + v, 0);
       }

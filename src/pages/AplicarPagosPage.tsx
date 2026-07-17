@@ -187,22 +187,19 @@ export default function AplicarPagosPage() {
 
     setSaving(true);
     try {
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
-        empresa_id: empresa.id,
-        cliente_id: selectedCliente.id,
-        user_id: user.id,
-        monto: roundMoney(totalDistribuido),
-        metodo_pago: metodoPago,
-        referencia: referencia || null,
-        notas: notas || null,
-        fecha: todayInTimezone(empresa.zona_horaria),
-      }).select('id').single();
+      // Cobro + aplicaciones como una unidad atómica (aplicar_cobro).
+      const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
+        p_empresa_id: empresa.id,
+        p_cliente_id: selectedCliente.id,
+        p_monto: roundMoney(totalDistribuido),
+        p_metodo: metodoPago,
+        p_referencia: referencia || null,
+        p_fecha: todayInTimezone(empresa.zona_horaria),
+        p_aplicaciones: aplicaciones.map(v => ({ venta_id: v.id, monto_aplicado: roundMoney(v.montoAplicar) })),
+        p_notas: notas || null,
+        p_user_id: user.id,
+      });
       if (cobroErr) throw cobroErr;
-
-      for (const v of aplicaciones) {
-        await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: v.id, monto_aplicado: roundMoney(v.montoAplicar) });
-        // saldo_pendiente recalculated automatically by DB trigger trg_recalc_venta_saldo
-      }
 
       toast.success(`Pago de ${fmt(totalDistribuido)} aplicado a ${aplicaciones.length} venta(s)`);
       queryClient.invalidateQueries({ queryKey: ['ventas-pendientes-aplicar'] });
@@ -211,7 +208,7 @@ export default function AplicarPagosPage() {
       queryClient.invalidateQueries({ queryKey: ['cobros'] });
 
       // Enviar recibo por email + WhatsApp (fire-and-forget)
-      enviarReciboCobro(cobro.id, empresa.id);
+      enviarReciboCobro(cobroId, empresa.id);
 
       // Print ticket
       if (empresa) {
@@ -233,7 +230,7 @@ export default function AplicarPagosPage() {
             ticket_campos: (empresa as any).ticket_campos,
           },
           cobro: {
-            id: cobro.id,
+            id: cobroId,
             fecha: todayInTimezone(empresa.zona_horaria),
             monto: totalDistribuido,
             metodo_pago: metodoPago,

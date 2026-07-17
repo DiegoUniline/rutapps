@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info, PiggyBank } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { queueOperation } from '@/lib/syncQueue';
+import { queueOperations } from '@/lib/syncQueue';
 import { deterministicUuid } from '@/lib/deterministicId';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
@@ -209,32 +209,42 @@ export default function RutaCobrar() {
         .sort()
         .join(',');
       const cobroId = await deterministicUuid('cobro', empresa.id, clienteId, fecha, metodoPago, totalAplicado, firma);
-      await queueOperation('cobros', 'insert', {
-        id: cobroId,
-        empresa_id: empresa.id,
-        cliente_id: clienteId!,
-        monto: totalAplicado,
-        metodo_pago: metodoPago,
-        referencia: referencia || null,
-        notas: notas || null,
-        user_id: user.id,
-        fecha,
-        created_at: new Date().toISOString(),
-      });
-
-      for (const app of aplicaciones) {
-        await queueOperation('cobro_aplicaciones', 'insert', {
-          // Id determinístico por (cobro, venta) → reenvíos no duplican la aplicación.
+      const nowIso = new Date().toISOString();
+      // Cobro + aplicaciones como UNA sola unidad en la cola (queueOperations):
+      // se encolan en una sola transacción local → nunca queda el cobro sin sus
+      // aplicaciones. Ids determinísticos → reenvío/resync no duplican.
+      const apOps = await Promise.all(aplicaciones.map(async app => ({
+        table: 'cobro_aplicaciones',
+        operation: 'insert' as const,
+        data: {
           id: await deterministicUuid('capp', cobroId, app.id),
           cobro_id: cobroId,
           venta_id: app.id,
           monto_aplicado: app.montoAplicar,
-          created_at: new Date().toISOString(),
-        });
-        // NOTE: saldo_pendiente is recalculated automatically by DB trigger
-        // trg_recalc_venta_saldo when cobro_aplicaciones syncs. Do NOT write it
-        // from the client (was causing stale-cache overwrites).
-      }
+          created_at: nowIso,
+        },
+      })));
+      await queueOperations([
+        {
+          table: 'cobros',
+          operation: 'insert',
+          data: {
+            id: cobroId,
+            empresa_id: empresa.id,
+            cliente_id: clienteId!,
+            monto: totalAplicado,
+            metodo_pago: metodoPago,
+            referencia: referencia || null,
+            notas: notas || null,
+            user_id: user.id,
+            fecha,
+            created_at: nowIso,
+          },
+        },
+        ...apOps,
+      ]);
+      // NOTE: saldo_pendiente lo recalcula el trigger trg_recalc_venta_saldo al
+      // sincronizar cobro_aplicaciones. No se escribe desde el cliente.
 
       toast.success(`¡Cobro de ${fmtC(totalAplicado)} registrado!`);
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });

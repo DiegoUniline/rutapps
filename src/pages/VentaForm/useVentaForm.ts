@@ -662,12 +662,20 @@ export function useVentaForm() {
   const handleAddPago = async (monto: number, metodo: string, referencia: string) => {
     if (!form.id || !form.cliente_id || !user?.id || !empresa?.id) return;
     if (monto > saldoPendiente + 0.01) { toast.error('El monto excede el saldo pendiente'); return; }
-    const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: form.cliente_id, monto, metodo_pago: metodo, referencia: referencia || null, user_id: user.id, fecha: todayLocal() }).select('id').single();
+    // Cobro + aplicación atómico (aplicar_cobro): o entran los dos, o ninguno.
+    const { data: cobroId, error: cobroErr } = await (supabase as any).rpc('aplicar_cobro', {
+      p_empresa_id: empresa.id,
+      p_cliente_id: form.cliente_id,
+      p_monto: monto,
+      p_metodo: metodo,
+      p_referencia: referencia || null,
+      p_fecha: todayLocal(),
+      p_aplicaciones: [{ venta_id: form.id, monto_aplicado: monto }],
+      p_user_id: user.id,
+    });
     if (cobroErr) throw cobroErr;
-    const { error: appErr } = await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: form.id, monto_aplicado: monto });
-    if (appErr) throw appErr;
     toast.success('Pago registrado');
-    import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobro.id, empresa.id));
+    import('@/lib/enviarReciboCobro').then(m => m.enviarReciboCobro(cobroId, empresa.id));
     queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
     queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
   };
