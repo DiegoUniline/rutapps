@@ -42,7 +42,9 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'status', header: 'Estado', width: 10 },
 ];
 
-const PAGE_SIZE = 80;
+const PAGE_SIZE_OPTIONS = [10, 50, 80, 200, 500, 0];
+const DEFAULT_PAGE_SIZE = 80;
+const ALL_PAGE_SIZE = 100000;
 
 const STATIC_FILTER_OPTIONS = [
   {
@@ -104,6 +106,8 @@ export default function ProductosListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const effectivePageSize = pageSize === 0 ? ALL_PAGE_SIZE : pageSize;
   const [importOpen, setImportOpen] = useState(false);
   const [mobileNewOpen, setMobileNewOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
@@ -203,7 +207,7 @@ export default function ProductosListPage() {
   const proveedorFilter = filters.proveedor?.length ? filters.proveedor.join(',') : 'todos';
   const manejaLoteFilter = filters.maneja_lote?.[0] ?? '';
   const debouncedSearch = useDebounce(search, 300);
-  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
+  const { data: productosData, isLoading } = useProductosPaginated(debouncedSearch, statusFilter, page, effectivePageSize, clasificacionFilter, marcaFilter, !!groupBy, proveedorFilter, manejaLoteFilter);
 
   const productos = productosData?.rows ?? [];
   const { data: allPresentaciones } = useAllPresentaciones();
@@ -217,8 +221,8 @@ export default function ProductosListPage() {
     return map;
   }, [allPresentaciones]);
   const total = productosData?.total ?? 0;
-  const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
-  const to = Math.min(page * PAGE_SIZE, total);
+  const from = Math.min((page - 1) * effectivePageSize + 1, total);
+  const to = Math.min(page * effectivePageSize, total);
   const pageData = productos;
   const allSelected = pageData.length > 0 && pageData.every(p => selected.has(p.id));
 
@@ -503,14 +507,14 @@ export default function ProductosListPage() {
             />
           ))}
           {total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
           )}
         </div>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={PAGE_SIZE_OPTIONS} />
           )}
         </>
       )}
