@@ -377,97 +377,111 @@ function ClientesTable({ forcedStatus, prefsKey }: { forcedStatus: string; prefs
           </span>
         </div>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <OdooFilterBar
-          search={search}
-          onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder="Buscar por nombre o código..."
-          filterOptions={FILTER_OPTIONS}
-          activeFilters={filters}
-          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
-          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-          onClearFilters={() => { clearFilters(); setPage(1); }}
-          groupByOptions={GROUP_BY_OPTIONS}
-          activeGroupBy={groupBy}
-          onGroupByChange={setGroupBy}
-          activeGroupByLevels={groupByLevels}
-          onGroupByLevelChange={setGroupByLevel}
-        />
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Bulk actions moved to floating BulkActionsBar */}
-          {!isMobile && (
-            <>
-              <ExportButton
-                onExcel={() => exportToExcel({
-                  fileName: 'Clientes', title: 'Catálogo de Clientes',
-                  columns: CLIENTES_COLUMNS,
-                  data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-                })}
-                onPDF={() => exportToPDF({
-                  fileName: 'Clientes', title: 'Catálogo de Clientes',
-                  columns: CLIENTES_COLUMNS,
-                  data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-                })}
+      <StickyListToolbar
+        left={
+          <OdooFilterBar
+            search={search}
+            onSearchChange={val => { setSearch(val); setPage(1); }}
+            placeholder="Buscar por nombre o código..."
+            filterOptions={FILTER_OPTIONS}
+            activeFilters={filters}
+            onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+            onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
+            onClearFilters={() => { clearFilters(); setPage(1); }}
+            groupByOptions={GROUP_BY_OPTIONS}
+            activeGroupBy={groupBy}
+            onGroupByChange={setGroupBy}
+            activeGroupByLevels={groupByLevels}
+            onGroupByLevelChange={setGroupByLevel}
+          />
+        }
+        right={
+          <>
+            {total > 0 && !groupBy && (
+              <TablePagination
+                from={from} to={to} total={total} page={page} totalPages={totalPages}
+                pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+                onPrev={() => setPage(p => Math.max(1, p - 1))}
+                onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+                isLoading={isLoading}
               />
-              {canCreate && (
-                <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
-                  <Upload className="h-3.5 w-3.5" /> Importar
-                </button>
-              )}
-            </>
-          )}
-          {canCreate && (
-            <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
-              <Plus className="h-3.5 w-3.5" /> Nuevo
-            </button>
-          )}
-        </div>
-        <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
-        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {forcedStatus === 'inactivo' ? 'Eliminar definitivamente' : 'Dar de baja clientes'}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {forcedStatus === 'inactivo'
-                  ? `Se eliminarán permanentemente ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
-                  : `Se marcarán como inactivos ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Puedes reactivarlos desde la pestaña Bajas.`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={bulkDeleting}
-                onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {bulkDeleting ? 'Procesando…' : (forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <AlertDialog open={confirmActivateOpen} onOpenChange={setConfirmActivateOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reactivar clientes</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se marcarán como activos {selected.size} cliente{selected.size !== 1 ? 's' : ''}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={bulkActivating}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={bulkActivating}
-                onClick={(e) => { e.preventDefault(); handleBulkActivate(); }}
-                className="bg-success text-success-foreground hover:bg-success/90"
-              >
-                {bulkActivating ? 'Procesando…' : 'Activar'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+            )}
+            {!isMobile && (
+              <>
+                <ExportButton
+                  onExcel={() => exportToExcel({
+                    fileName: 'Clientes', title: 'Catálogo de Clientes',
+                    columns: CLIENTES_COLUMNS,
+                    data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                  })}
+                  onPDF={() => exportToPDF({
+                    fileName: 'Clientes', title: 'Catálogo de Clientes',
+                    columns: CLIENTES_COLUMNS,
+                    data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                  })}
+                />
+                {canCreate && (
+                  <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
+                    <Upload className="h-3.5 w-3.5" /> Importar
+                  </button>
+                )}
+              </>
+            )}
+            {canCreate && (
+              <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
+                <Plus className="h-3.5 w-3.5" /> Nuevo
+              </button>
+            )}
+          </>
+        }
+      />
+
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {forcedStatus === 'inactivo' ? 'Eliminar definitivamente' : 'Dar de baja clientes'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {forcedStatus === 'inactivo'
+                ? `Se eliminarán permanentemente ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`
+                : `Se marcarán como inactivos ${selected.size} cliente${selected.size !== 1 ? 's' : ''}. Puedes reactivarlos desde la pestaña Bajas.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkDeleting}
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? 'Procesando…' : (forcedStatus === 'inactivo' ? 'Eliminar' : 'Dar de baja')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmActivateOpen} onOpenChange={setConfirmActivateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivar clientes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se marcarán como activos {selected.size} cliente{selected.size !== 1 ? 's' : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActivating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkActivating}
+              onClick={(e) => { e.preventDefault(); handleBulkActivate(); }}
+              className="bg-success text-success-foreground hover:bg-success/90"
+            >
+              {bulkActivating ? 'Procesando…' : 'Activar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {isLoading ? (
         <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 7} /></div>
