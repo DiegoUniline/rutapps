@@ -3,7 +3,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCurrency } from '@/hooks/useCurrency';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn, fmtDate } from '@/lib/utils';
-import { Percent, DollarSign } from 'lucide-react';
+import { Percent, DollarSign, FileText } from 'lucide-react';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 
