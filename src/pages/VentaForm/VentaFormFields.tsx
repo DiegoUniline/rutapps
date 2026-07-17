@@ -15,6 +15,7 @@ interface Props {
   tarifaOptions: { value: string; label: string }[];
   almacenOptions: { value: string; label: string }[];
   clienteNombre?: string;
+  clienteNotasFiscales?: string;
   totalPagado: number;
   saldoPendiente: number;
   canEditCondicion?: boolean;
