@@ -71,10 +71,10 @@ export function useMermas(filters?: { desde?: string; hasta?: string }) {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { fetchAllPages } = await import('@/lib/supabasePaginate');
-      return await fetchAllPages<any>((from, to) => {
+      const rows = await fetchAllPages<any>((from, to) => {
         let q = supabase
           .from('mermas')
-          .select('id, folio, fecha, almacen_origen_id, motivo_id, observaciones, total_costo, total_venta, cancelada, creado_por, created_at, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre), profiles:creado_por(nombre)')
+          .select('id, folio, fecha, almacen_origen_id, motivo_id, observaciones, total_costo, total_venta, cancelada, creado_por, created_at, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre)')
           .eq('empresa_id', empresa!.id)
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
@@ -82,6 +82,26 @@ export function useMermas(filters?: { desde?: string; hasta?: string }) {
         if (filters?.hasta) q = q.lte('fecha', filters.hasta);
         return q.range(from, to);
       });
+
+      const creadorIds = Array.from(new Set(rows.map((m: any) => m.creado_por).filter(Boolean)));
+      if (creadorIds.length === 0) return rows;
+
+      const { data: perfiles } = await supabase
+        .from('profiles')
+        .select('id, user_id, nombre')
+        .eq('empresa_id', empresa!.id)
+        .or(`id.in.(${creadorIds.join(',')}),user_id.in.(${creadorIds.join(',')})`);
+
+      const perfilPorId = new Map<string, { nombre: string | null }>();
+      (perfiles ?? []).forEach((p: any) => {
+        perfilPorId.set(p.id, { nombre: p.nombre });
+        if (p.user_id) perfilPorId.set(p.user_id, { nombre: p.nombre });
+      });
+
+      return rows.map((m: any) => ({
+        ...m,
+        profiles: m.creado_por ? perfilPorId.get(m.creado_por) ?? null : null,
+      }));
     },
   });
 }
@@ -94,11 +114,21 @@ export function useMerma(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('mermas')
-        .select('*, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre), profiles:creado_por(nombre), merma_lineas(*, productos:producto_id(nombre, codigo, unidad_granel, es_granel))')
+        .select('*, almacenes:almacen_origen_id(nombre), merma_motivos:motivo_id(nombre), merma_lineas(*, productos:producto_id(nombre, codigo, unidad_granel, es_granel))')
         .eq('id', id!)
         .single();
       if (error) throw error;
-      return data;
+
+      if (!data?.creado_por || !data?.empresa_id) return data;
+
+      const { data: perfil } = await supabase
+        .from('profiles')
+        .select('nombre')
+        .eq('empresa_id', data.empresa_id)
+        .or(`id.eq.${data.creado_por},user_id.eq.${data.creado_por}`)
+        .maybeSingle();
+
+      return { ...data, profiles: perfil ?? null };
     },
   });
 }
