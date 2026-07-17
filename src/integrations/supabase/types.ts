@@ -1555,6 +1555,7 @@ export type Database = {
           lista_precio_id: string | null
           nombre: string
           notas: string | null
+          notas_fiscales: string | null
           orden: number | null
           portal_token: string | null
           recibir_notificaciones: boolean
@@ -1603,6 +1604,7 @@ export type Database = {
           lista_precio_id?: string | null
           nombre: string
           notas?: string | null
+          notas_fiscales?: string | null
           orden?: number | null
           portal_token?: string | null
           recibir_notificaciones?: boolean
@@ -1651,6 +1653,7 @@ export type Database = {
           lista_precio_id?: string | null
           nombre?: string
           notas?: string | null
+          notas_fiscales?: string | null
           orden?: number | null
           portal_token?: string | null
           recibir_notificaciones?: boolean
