@@ -120,7 +120,18 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           onChange={v => set('precio_principal', +v)}
           format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
         />
-        <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+        <OdooField label="C/U" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+        <OdooField
+          label="Costo"
+          value={(form.costo ?? 0) * (form.factor_conversion || 1)}
+          type="number"
+          help
+          onChange={v => {
+            const f = form.factor_conversion || 1;
+            set('costo', (Number(v) || 0) / f);
+          }}
+          format={v => `${symbol} ${(Number(v) || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+        />
         <OdooField
           label="Precio sugerido público"
           value={(form as any).precio_sugerido_publico}
