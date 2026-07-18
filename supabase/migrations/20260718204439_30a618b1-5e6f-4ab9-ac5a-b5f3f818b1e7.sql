@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN IF NOT EXISTS apartado_solo_con_stock boolean NOT NULL DEFAULT false;
