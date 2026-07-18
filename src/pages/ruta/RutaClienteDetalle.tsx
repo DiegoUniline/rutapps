@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, Save, Trash2, Loader2, Phone, MapPin, Mail,
-  User, Calendar, DollarSign, FileText, Crosshair, Navigation, X,
+  User, Calendar, DollarSign, FileText, Crosshair, Navigation, X, Camera,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { locationService } from '@/lib/locationService';
 import { confirmDialog } from '@/lib/confirm';
+import { compressPhoto } from '@/lib/imageCompressor';
+import { supabase } from '@/lib/supabase';
 import type { Cliente, FrecuenciaVisita } from '@/types';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
