@@ -53,8 +53,13 @@ interface Props {
  */
 export function ProductoDetalleModal({
   open, onClose, producto, currentUnitPrice, suggestedPrice, isManual,
-  currentListaPrecioId, canEdit = true, onSelectLista, onSetManualPrice, onResetToSuggested,
+  currentListaPrecioId, canEditManual = true, canSelectLista = true,
+  onSelectLista, onSetManualPrice, onResetToSuggested,
 }: Props) {
+  // Compat legacy: cualquier lugar que aún pueda apoyarse en un único "canEdit"
+  // ahora tiene dos permisos separados. Reset al precio sugerido requiere poder
+  // hacer al menos una de las dos operaciones.
+  const canResetToSuggested = canEditManual || canSelectLista;
   const { empresa } = useAuth();
   const { fmt, symbol } = useCurrency();
   const [manualInput, setManualInput] = useState<string>('');
