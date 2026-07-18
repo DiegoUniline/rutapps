@@ -48,8 +48,10 @@ interface Props {
   setItemPriceManual: (pid: string, price: number) => void;
   setItemPriceFromLista: (pid: string, listaPrecioId: string | null, tarifaId: string | null, unitPrice: number, listaNombre: string) => void;
   resetItemToSuggested: (pid: string) => void;
-  /** True if user can change prices (else "ojito" stays read-only) */
+  /** True if user can change prices manually (else manual entry stays read-only) */
   canChangePrice: boolean;
+  /** True if user can switch price lists (else the list picker is read-only) */
+  canChangeLista: boolean;
   // Apartado de stock en pedidos
   apartadoActivoPedido: boolean;
   pedidoAlmacenId: string | null;
