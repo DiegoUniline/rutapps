@@ -246,7 +246,7 @@ export function ProductoDetalleModal({
           {/* Other price lists */}
           <div className="px-4 pt-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
-              {canEdit ? 'Otras listas de precios' : 'Listas de precios disponibles'}
+              {canSelectLista ? 'Otras listas de precios' : 'Listas de precios disponibles'}
             </p>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               {options.length === 0 && (
