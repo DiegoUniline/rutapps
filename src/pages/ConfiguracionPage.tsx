@@ -410,6 +410,7 @@ export default function ConfiguracionPage() {
   const [requiereJornadaDesde, setRequiereJornadaDesde] = useState<string>('');
   const [permiteSinVehiculo, setPermiteSinVehiculo] = useState(false);
   const [apartarStockPedidos, setApartarStockPedidos] = useState(false);
+  const [apartadoSoloConStock, setApartadoSoloConStock] = useState(false);
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
   const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
 
