@@ -470,6 +470,7 @@ export default function ConfiguracionPage() {
     setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
     setApartarStockPedidos(!!(config as any).apartar_stock_pedidos);
     setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
+    setApartadoSoloConStock(!!(config as any).apartado_solo_con_stock);
     setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
     setLogoFile(null);
     setInitialized(true);
