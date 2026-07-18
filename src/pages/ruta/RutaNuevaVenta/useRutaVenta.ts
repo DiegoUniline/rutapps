@@ -119,6 +119,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   // el admin denegara "Aplicar descuento" en móvil, el descuento siguiera apareciendo
   // porque el permiso desktop entraba con default true en ciertos escenarios.
   const canChangePrice = isOwner || hasPermisoMovil('ruta.cambiar_precio');
+  const canChangeLista = isOwner || hasPermisoMovil('ruta.cambiar_lista_precio');
   const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
@@ -1064,7 +1065,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     // Price overrides
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     // Permisos
-    canChangePrice, canApplyDiscount,
+    canChangePrice, canChangeLista, canApplyDiscount,
     // Descuento extra
     descuentoExtraTipo, setDescuentoExtraTipo,
     descuentoExtraValor, setDescuentoExtraValor,

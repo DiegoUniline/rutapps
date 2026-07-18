@@ -30,8 +30,10 @@ interface Props {
   isManual: boolean;
   /** Currently active lista_precio_id (if any) */
   currentListaPrecioId?: string | null;
-  /** When false the modal stays read-only (no list switching, no manual entry) */
-  canEdit?: boolean;
+  /** True when the user may type a manual price (permiso `ruta.cambiar_precio`) */
+  canEditManual?: boolean;
+  /** True when the user may pick a different price list (permiso `ruta.cambiar_lista_precio`) */
+  canSelectLista?: boolean;
   /** Apply a price from a list (or back to suggested) */
   onSelectLista: (
     listaPrecioId: string | null,
@@ -51,8 +53,13 @@ interface Props {
  */
 export function ProductoDetalleModal({
   open, onClose, producto, currentUnitPrice, suggestedPrice, isManual,
-  currentListaPrecioId, canEdit = true, onSelectLista, onSetManualPrice, onResetToSuggested,
+  currentListaPrecioId, canEditManual = true, canSelectLista = true,
+  onSelectLista, onSetManualPrice, onResetToSuggested,
 }: Props) {
+  // Compat legacy: cualquier lugar que aún pueda apoyarse en un único "canEdit"
+  // ahora tiene dos permisos separados. Reset al precio sugerido requiere poder
+  // hacer al menos una de las dos operaciones.
+  const canResetToSuggested = canEditManual || canSelectLista;
   const { empresa } = useAuth();
   const { fmt, symbol } = useCurrency();
   const [manualInput, setManualInput] = useState<string>('');
@@ -225,7 +232,7 @@ export function ProductoDetalleModal({
                   </p>
                 </div>
               </div>
-              {(isManual || currentListaPrecioId) && canEdit && (
+              {(isManual || currentListaPrecioId) && canResetToSuggested && (
                 <button
                   onClick={() => { onResetToSuggested(); onClose(); }}
                   className="mt-2.5 w-full text-[11px] font-medium text-primary py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 active:scale-[0.98] transition-all"
@@ -239,7 +246,7 @@ export function ProductoDetalleModal({
           {/* Other price lists */}
           <div className="px-4 pt-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
-              {canEdit ? 'Otras listas de precios' : 'Listas de precios disponibles'}
+              {canSelectLista ? 'Otras listas de precios' : 'Listas de precios disponibles'}
             </p>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               {options.length === 0 && (
@@ -267,7 +274,7 @@ export function ProductoDetalleModal({
                     </div>
                   </>
                 );
-                if (!canEdit) {
+                if (!canSelectLista) {
                   return (
                     <div
                       key={opt.lista_precio_id ?? 'base'}
@@ -300,8 +307,8 @@ export function ProductoDetalleModal({
             </div>
           </div>
 
-          {/* Manual price (only if user can edit) */}
-          {canEdit ? (
+          {/* Manual price (only if user can edit manually) */}
+          {canEditManual ? (
             <div className="px-4 pt-3 pb-4">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
                 Precio manual
@@ -336,8 +343,13 @@ export function ProductoDetalleModal({
           ) : (
             <div className="px-4 pt-3 pb-4">
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-300">
-                🔒 No tienes permiso para cambiar precios. Pide a tu administrador el permiso <span className="font-semibold">"Cambiar precio en venta"</span>.
+                🔒 No tienes permiso para <span className="font-semibold">escribir un precio manual</span>. Pide a tu administrador el permiso <span className="font-semibold">"Cambiar precio manual en línea"</span>.
               </div>
+              {!canSelectLista && (
+                <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+                  Tampoco puedes <span className="font-semibold">cambiar de lista de precios</span> sin el permiso <span className="font-semibold">"Cambiar lista de precios en línea"</span>.
+                </div>
+              )}
             </div>
           )}
         </div>
