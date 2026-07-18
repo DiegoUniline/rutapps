@@ -333,9 +333,9 @@ export function usePermisos(): UsePermisosReturn {
   const isOwner = !!(user && empresa?.owner_user_id && empresa.owner_user_id === user.id);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['user-permisos', user?.id],
+    queryKey: ['user-permisos', empresa?.id, user?.id],
     queryFn: () => fetchPermisos(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!empresa?.id,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: true,
