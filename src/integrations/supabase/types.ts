@@ -3141,6 +3141,7 @@ export type Database = {
       empresas: {
         Row: {
           apartado_almacenes_ids: string[]
+          apartado_solo_con_stock: boolean
           apartar_stock_pedidos: boolean
           ciudad: string | null
           clientes_visibilidad: string
@@ -3184,6 +3185,7 @@ export type Database = {
         }
         Insert: {
           apartado_almacenes_ids?: string[]
+          apartado_solo_con_stock?: boolean
           apartar_stock_pedidos?: boolean
           ciudad?: string | null
           clientes_visibilidad?: string
@@ -3227,6 +3229,7 @@ export type Database = {
         }
         Update: {
           apartado_almacenes_ids?: string[]
+          apartado_solo_con_stock?: boolean
           apartar_stock_pedidos?: boolean
           ciudad?: string | null
           clientes_visibilidad?: string

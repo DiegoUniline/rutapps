@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
 import { toast } from 'sonner';
@@ -76,7 +77,9 @@ export function StepProductos(props: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
-  const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>('con');
+  const { empresa } = useAuth();
+  const soloConStockDefault = !!(empresa as any)?.apartado_solo_con_stock;
+  const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>(soloConStockDefault ? 'con' : 'todos');
 
 
   // Wrap addToCart: abrir el selector si es granel O si el producto tiene

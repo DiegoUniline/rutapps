@@ -410,6 +410,7 @@ export default function ConfiguracionPage() {
   const [requiereJornadaDesde, setRequiereJornadaDesde] = useState<string>('');
   const [permiteSinVehiculo, setPermiteSinVehiculo] = useState(false);
   const [apartarStockPedidos, setApartarStockPedidos] = useState(false);
+  const [apartadoSoloConStock, setApartadoSoloConStock] = useState(false);
   const [apartadoAlmacenesIds, setApartadoAlmacenesIds] = useState<string[]>([]);
   const [politicaCobro, setPoliticaCobro] = useState<'pedido' | 'entregado'>('pedido');
 
@@ -469,6 +470,7 @@ export default function ConfiguracionPage() {
     setPermiteSinVehiculo(!!(config as any).jornada_permite_sin_vehiculo);
     setApartarStockPedidos(!!(config as any).apartar_stock_pedidos);
     setApartadoAlmacenesIds(Array.isArray((config as any).apartado_almacenes_ids) ? (config as any).apartado_almacenes_ids : []);
+    setApartadoSoloConStock(!!(config as any).apartado_solo_con_stock);
     setPoliticaCobro(((config as any).politica_cobro === 'entregado') ? 'entregado' : 'pedido');
     setLogoFile(null);
     setInitialized(true);
@@ -476,7 +478,7 @@ export default function ConfiguracionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || requiereJornadaRuta !== !!((config as any)?.requiere_jornada_ruta) || (requiereJornadaDesde || '') !== (((config as any)?.requiere_jornada_desde as string | null) ?? '') || permiteSinVehiculo !== !!((config as any)?.jornada_permite_sin_vehiculo) || apartarStockPedidos !== !!((config as any)?.apartar_stock_pedidos) || apartadoSoloConStock !== !!((config as any)?.apartado_solo_con_stock) || JSON.stringify([...apartadoAlmacenesIds].sort()) !== JSON.stringify([...(((config as any)?.apartado_almacenes_ids ?? []) as string[])].sort()) || politicaCobro !== (((config as any)?.politica_cobro === 'entregado') ? 'entregado' : 'pedido') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -522,6 +524,7 @@ export default function ConfiguracionPage() {
         jornada_permite_sin_vehiculo: permiteSinVehiculo,
         apartar_stock_pedidos: apartarStockPedidos,
         apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
+        apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
         politica_cobro: politicaCobro,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
@@ -984,6 +987,18 @@ export default function ConfiguracionPage() {
                     <span>Selecciona al menos un almacén para que los vendedores puedan apartar stock.</span>
                   </p>
                 )}
+
+                <div className="mt-4 pt-4 border-t border-border flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="text-[13px] font-medium text-foreground">
+                      Mostrar solo productos con stock disponible
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Cuando esté activo, al crear un pedido en la app móvil solo se listarán productos con disponible mayor a cero en el almacén seleccionado. Si está apagado, se muestran todos (comportamiento actual).
+                    </p>
+                  </div>
+                  <Switch checked={apartadoSoloConStock} onCheckedChange={setApartadoSoloConStock} />
+                </div>
               </div>
             )}
           </div>

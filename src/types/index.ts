@@ -184,6 +184,7 @@ export interface Empresa {
   owner_user_id?: string;
   apartar_stock_pedidos?: boolean;
   apartado_almacenes_ids?: string[];
+  apartado_solo_con_stock?: boolean;
   maneja_lotes?: boolean;
 }
 
