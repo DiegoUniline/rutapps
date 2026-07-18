@@ -307,8 +307,8 @@ export function ProductoDetalleModal({
             </div>
           </div>
 
-          {/* Manual price (only if user can edit) */}
-          {canEdit ? (
+          {/* Manual price (only if user can edit manually) */}
+          {canEditManual ? (
             <div className="px-4 pt-3 pb-4">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 px-1">
                 Precio manual
@@ -343,8 +343,13 @@ export function ProductoDetalleModal({
           ) : (
             <div className="px-4 pt-3 pb-4">
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-300">
-                🔒 No tienes permiso para cambiar precios. Pide a tu administrador el permiso <span className="font-semibold">"Cambiar precio en venta"</span>.
+                🔒 No tienes permiso para <span className="font-semibold">escribir un precio manual</span>. Pide a tu administrador el permiso <span className="font-semibold">"Cambiar precio manual en línea"</span>.
               </div>
+              {!canSelectLista && (
+                <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+                  Tampoco puedes <span className="font-semibold">cambiar de lista de precios</span> sin el permiso <span className="font-semibold">"Cambiar lista de precios en línea"</span>.
+                </div>
+              )}
             </div>
           )}
         </div>
