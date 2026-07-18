@@ -62,10 +62,37 @@ export default function RutaClienteDetalle() {
 
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<Partial<Cliente>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState<'foto' | 'fachada' | null>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const fachadaInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (cliente) setForm(cliente as any); }, [cliente]);
 
   const set = (k: keyof Cliente, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handlePhotoUpload = async (file: File, field: 'foto_url' | 'foto_fachada_url') => {
+    if (!canEditar) { toast.error('Sin permiso para editar'); return; }
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    const which = field === 'foto_url' ? 'foto' : 'fachada';
+    setUploadingPhoto(which);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `clientes/${cliente!.id}/${which}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      const newUrl = urlData.publicUrl;
+      setForm(prev => ({ ...prev, [field]: newUrl } as any));
+      // Auto-guarda cambio de foto (sin depender del modo edición)
+      await saveMut.mutateAsync({ id: cliente!.id, [field]: newUrl } as any);
+      toast.success(which === 'foto' ? 'Foto actualizada' : 'Fachada actualizada');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al subir imagen');
+    } finally {
+      setUploadingPhoto(null);
+    }
+  };
 
   const isMyClient = useMemo(() => {
     if (clientesVisibilidad !== 'propios') return true;
