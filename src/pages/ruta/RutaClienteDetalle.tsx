@@ -166,8 +166,56 @@ export default function RutaClienteDetalle() {
       </div>
 
       <div className="flex-1 overflow-auto px-3 py-3 pb-28 space-y-3">
+        {/* Hidden file inputs con captura de cámara */}
+        <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_url'); e.target.value = ''; }} />
+        <input ref={fachadaInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_fachada_url'); e.target.value = ''; }} />
+
+        {/* Fotos del cliente (visibles siempre; toque para tomar foto) */}
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-3">
+          <div className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Fotos</div>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: 'foto_url' as const, label: 'Foto cliente', ref: fotoInputRef, which: 'foto' as const },
+              { key: 'foto_fachada_url' as const, label: 'Fachada', ref: fachadaInputRef, which: 'fachada' as const },
+            ]).map(({ key, label, ref, which }) => {
+              const url = (form as any)[key] as string | undefined;
+              const busy = uploadingPhoto === which;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => canEditar && !busy && ref.current?.click()}
+                  disabled={!canEditar || busy}
+                  className={cn(
+                    "relative aspect-square rounded-xl overflow-hidden border border-border/60 bg-muted/50 flex items-center justify-center active:scale-[0.98] transition disabled:opacity-70",
+                  )}
+                >
+                  {url ? (
+                    <img src={url} alt={label} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground text-[11px]">
+                      <Camera className="h-6 w-6" />
+                      <span>Tocar para tomar</span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 inset-x-0 px-2 py-1 bg-black/55 text-white text-[10.5px] font-semibold flex items-center justify-between">
+                    <span>{label}</span>
+                    {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {!canEditar && (
+            <div className="mt-2 text-[10.5px] text-muted-foreground">Solo lectura</div>
+          )}
+        </div>
+
         {!editMode ? (
           <>
+
             <div className="bg-card rounded-2xl border border-border/60 shadow-sm px-4">
               <Field label="Contacto" icon={User} value={cliente.contacto} />
               <Field
