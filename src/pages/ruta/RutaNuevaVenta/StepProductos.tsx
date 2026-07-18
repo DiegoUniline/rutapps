@@ -310,13 +310,15 @@ export function StepProductos(props: Props) {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDetalleProducto(p); }}
-                  aria-label="Ver detalle y precios"
-                  className="w-8 h-8 rounded-lg bg-accent/60 hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all shrink-0"
-                >
-                  <Eye className="h-4 w-4" />
-                </button>
+                {(canChangePrice || canChangeLista) && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDetalleProducto(p); }}
+                    aria-label="Ver detalle y precios"
+                    className="w-8 h-8 rounded-lg bg-accent/60 hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all shrink-0"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                )}
                 {inCart ? (
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => inCart.cantidad === 1 ? removeFromCart(p.id) : updateQty(p.id, -1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
