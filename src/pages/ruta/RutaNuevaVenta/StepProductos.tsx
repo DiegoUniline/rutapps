@@ -66,7 +66,7 @@ export function StepProductos(props: Props) {
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
-    canChangePrice,
+    canChangePrice, canChangeLista,
     apartadoActivoPedido, pedidoAlmacenId, setPedidoAlmacenId,
   } = props;
   const { symbol: s } = useCurrency();
