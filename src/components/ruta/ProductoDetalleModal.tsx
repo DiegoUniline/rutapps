@@ -274,7 +274,7 @@ export function ProductoDetalleModal({
                     </div>
                   </>
                 );
-                if (!canEdit) {
+                if (!canSelectLista) {
                   return (
                     <div
                       key={opt.lista_precio_id ?? 'base'}
