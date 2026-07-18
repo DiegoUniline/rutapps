@@ -113,10 +113,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [descuentoExtraValor, setDescuentoExtraValor] = useState<number>(0);
   const [descuentoExtraMotivo, setDescuentoExtraMotivo] = useState<string>('');
 
-  const { hasPermiso, hasPermisoMovil, isOwner } = usePermisos();
-  // Combina permiso desktop (ventas.*) con permiso mobile (ruta.*). Default mobile = true.
-  const canChangePrice = isOwner || hasPermiso('ventas.cambiar_precio', 'ver') || hasPermisoMovil('ruta.cambiar_precio');
-  const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver') || hasPermisoMovil('ruta.aplicar_descuento');
+  const { hasPermisoMovil, isOwner } = usePermisos();
+  // En /ruta solo mandan los permisos móviles (sección "Permisos móviles" del rol).
+  // Antes hacíamos OR con el permiso desktop (`ventas.*`), lo que causaba que aunque
+  // el admin denegara "Aplicar descuento" en móvil, el descuento siguiera apareciendo
+  // porque el permiso desktop entraba con default true en ciertos escenarios.
+  const canChangePrice = isOwner || hasPermisoMovil('ruta.cambiar_precio');
+  const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
