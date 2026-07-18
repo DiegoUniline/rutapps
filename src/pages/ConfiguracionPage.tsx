@@ -987,6 +987,18 @@ export default function ConfiguracionPage() {
                     <span>Selecciona al menos un almacén para que los vendedores puedan apartar stock.</span>
                   </p>
                 )}
+
+                <div className="mt-4 pt-4 border-t border-border flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="text-[13px] font-medium text-foreground">
+                      Mostrar solo productos con stock disponible
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Cuando esté activo, al crear un pedido en la app móvil solo se listarán productos con disponible mayor a cero en el almacén seleccionado. Si está apagado, se muestran todos (comportamiento actual).
+                    </p>
+                  </div>
+                  <Switch checked={apartadoSoloConStock} onCheckedChange={setApartadoSoloConStock} />
+                </div>
               </div>
             )}
           </div>
