@@ -2,7 +2,7 @@ import { ArrowLeft, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TicketVenta from '@/components/ruta/TicketVenta';
-import { STEPS, STEP_LABELS } from './types';
+import { STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
 import { printTicket } from '@/lib/printTicketUtil';
 import type { TicketData } from '@/lib/ticketHtml';
@@ -116,7 +116,7 @@ export default function RutaNuevaVenta() {
           </AlertDialogContent>
         </AlertDialog>
         <div className="flex px-3 pb-2.5 gap-1">
-          {STEPS.map((s, i) => (
+          {h.routeSteps.map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
               <div className={`h-[3px] w-full rounded-full transition-colors ${i <= h.currentStepIdx ? 'bg-primary' : 'bg-border'}`} />
               <span className={`text-[9px] font-medium transition-colors ${i <= h.currentStepIdx ? 'text-primary' : 'text-muted-foreground/60'}`}>{STEP_LABELS[s]}</span>

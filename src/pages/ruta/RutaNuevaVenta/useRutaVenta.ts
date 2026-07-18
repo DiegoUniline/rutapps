@@ -123,6 +123,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
   const canDoDevoluciones = isOwner || hasPermisoMovil('ruta.devoluciones');
 
+  useEffect(() => {
+    if (!canDoDevoluciones && step === 'devoluciones') {
+      setDevoluciones([]);
+      setStep('productos');
+    }
+  }, [canDoDevoluciones, step]);
+
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
     try {
@@ -953,8 +960,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 
-  const currentStepIdx = STEPS.indexOf(step);
-  const goBack = () => { if (currentStepIdx === 0) navigate('/ruta'); else setStep(STEPS[currentStepIdx - 1]); };
+  const routeSteps = useMemo(
+    () => canDoDevoluciones ? STEPS : STEPS.filter(s => s !== 'devoluciones'),
+    [canDoDevoluciones],
+  );
+  const currentStepIdx = routeSteps.indexOf(step);
+  const goBack = () => { if (currentStepIdx <= 0) navigate('/ruta'); else setStep(routeSteps[currentStepIdx - 1]); };
   const goToPayment = () => { initCuentasPendientes(); setStep('pago'); };
   const { symbol: currSym, fmt } = useCurrency();
   const fmtM = fmt;
@@ -1091,7 +1102,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
-    currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
+    currentStepIdx, routeSteps, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
