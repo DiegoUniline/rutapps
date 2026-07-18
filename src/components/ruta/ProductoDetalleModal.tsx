@@ -232,7 +232,7 @@ export function ProductoDetalleModal({
                   </p>
                 </div>
               </div>
-              {(isManual || currentListaPrecioId) && canEdit && (
+              {(isManual || currentListaPrecioId) && canResetToSuggested && (
                 <button
                   onClick={() => { onResetToSuggested(); onClose(); }}
                   className="mt-2.5 w-full text-[11px] font-medium text-primary py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 active:scale-[0.98] transition-all"
