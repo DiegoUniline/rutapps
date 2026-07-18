@@ -124,11 +124,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const canDoDevoluciones = isOwner || hasPermisoMovil('ruta.devoluciones');
 
   useEffect(() => {
-    if (!canDoDevoluciones && step === 'devoluciones') {
+    if (!canDoDevoluciones && devoluciones.length > 0) {
       setDevoluciones([]);
+      setCart(prev => prev.filter(c => !c.es_cambio));
+    }
+    if (!canDoDevoluciones && step === 'devoluciones') {
       setStep('productos');
     }
-  }, [canDoDevoluciones, step]);
+  }, [canDoDevoluciones, devoluciones.length, step]);
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
