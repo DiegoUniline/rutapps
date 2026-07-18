@@ -404,12 +404,15 @@ export function usePermisos(): UsePermisosReturn {
 
   /**
    * Permisos móviles (solo para roles "solo vista móvil").
-   * Semántica inversa: default = true (permitido) si no hay row en role_permisos.
-   * Owners siempre true. Solo se bloquea si existe un row con permitido=false.
+   * Semántica: si el usuario NO tiene rol asignado (hasRole === false), acceso total.
+   * Si está cargando (hasRole === null) denegar para evitar "flash de acciones no
+   * autorizadas" mientras llega la respuesta. Si tiene rol, default = true salvo
+   * que exista un row explícito con permitido=false. Owners siempre true.
    */
   const hasPermisoMovil = useCallback((modulo: string): boolean => {
     if (isOwner) return true;
-    if (hasRole !== true) return true;
+    if (hasRole === false) return true;   // sin rol = acceso total
+    if (hasRole === null) return false;   // cargando = denegar por seguridad
     const perm = permisos.find(p => p.modulo === modulo && p.accion === 'ver');
     return perm?.permitido ?? true;
   }, [permisos, hasRole, isOwner]);
