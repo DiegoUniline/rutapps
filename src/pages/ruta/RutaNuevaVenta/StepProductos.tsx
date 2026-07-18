@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
 import { toast } from 'sonner';
