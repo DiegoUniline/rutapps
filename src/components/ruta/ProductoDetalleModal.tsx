@@ -30,8 +30,10 @@ interface Props {
   isManual: boolean;
   /** Currently active lista_precio_id (if any) */
   currentListaPrecioId?: string | null;
-  /** When false the modal stays read-only (no list switching, no manual entry) */
-  canEdit?: boolean;
+  /** True when the user may type a manual price (permiso `ruta.cambiar_precio`) */
+  canEditManual?: boolean;
+  /** True when the user may pick a different price list (permiso `ruta.cambiar_lista_precio`) */
+  canSelectLista?: boolean;
   /** Apply a price from a list (or back to suggested) */
   onSelectLista: (
     listaPrecioId: string | null,
