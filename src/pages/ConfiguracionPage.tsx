@@ -524,6 +524,7 @@ export default function ConfiguracionPage() {
         jornada_permite_sin_vehiculo: permiteSinVehiculo,
         apartar_stock_pedidos: apartarStockPedidos,
         apartado_almacenes_ids: apartarStockPedidos ? apartadoAlmacenesIds : [],
+        apartado_solo_con_stock: apartarStockPedidos ? apartadoSoloConStock : false,
         politica_cobro: politicaCobro,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
