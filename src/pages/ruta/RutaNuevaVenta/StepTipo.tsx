@@ -9,12 +9,13 @@ interface Props {
   setStep: (s: Step) => void;
   urlClienteId: string | null;
   clienteId: string | null;
+  canDoDevoluciones: boolean;
 }
 
-export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId }: Props) {
+export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId, canDoDevoluciones }: Props) {
   if (sinCompra) return null;
   const hasCliente = !!(urlClienteId || clienteId);
-  const nextStep = hasCliente ? 'devoluciones' : 'cliente';
+  const nextStep = hasCliente ? (canDoDevoluciones ? 'devoluciones' : 'productos') : 'cliente';
 
 
   return (

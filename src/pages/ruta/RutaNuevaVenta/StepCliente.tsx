@@ -12,17 +12,18 @@ interface Props {
   setCondicionPago: (v: 'contado' | 'credito' | 'por_definir') => void;
   setStep: (s: Step) => void;
   sinCompra?: boolean;
+  canDoDevoluciones: boolean;
 }
 
 export function StepCliente(props: Props) {
-  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra } = props;
+  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra, canDoDevoluciones } = props;
 
   const selectCliente = (id: string | null, nombre: string, credito: { credito: boolean; limite: number; dias: number } | null) => {
     setClienteId(id);
     setClienteNombre(nombre);
     setClienteCredito(credito);
     setCondicionPago('contado');
-    setStep(sinCompra ? 'tipo' : 'devoluciones');
+    setStep(sinCompra ? 'tipo' : (canDoDevoluciones ? 'devoluciones' : 'productos'));
   };
 
 

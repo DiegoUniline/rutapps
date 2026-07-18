@@ -121,6 +121,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const canChangePrice = isOwner || hasPermisoMovil('ruta.cambiar_precio');
   const canChangeLista = isOwner || hasPermisoMovil('ruta.cambiar_lista_precio');
   const canApplyDiscount = isOwner || hasPermisoMovil('ruta.aplicar_descuento');
+  const canDoDevoluciones = isOwner || hasPermisoMovil('ruta.devoluciones');
 
   const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
@@ -575,15 +576,28 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
 
-  const addDevolucion = (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: DevolucionItem['accion'] }) => { if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: defaults?.motivo ?? 'no_vendido', accion: defaults?.accion ?? 'reposicion', precio_unitario: p.precio_principal ?? 0 }]); };
-  const updateDevQty = (productoId: string, qty: number) => { if (qty <= 0) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
-  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (updated.accion === 'reposicion' && motivo !== 'cambio' && motivo !== 'danado' && motivo !== 'caducado' && motivo !== 'error_pedido') { /* keep accion */ } return updated; })); };
-  const updateDevAccion = (productoId: string, accion: DevolucionItem['accion']) => { setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
-  const batchUpdateDevDefaults = (motivo: DevolucionItem['motivo'], accion: DevolucionItem['accion']) => { setDevoluciones(prev => prev.map(d => { const updated = { ...d, motivo, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
-  const setReemplazo = (devProductoId: string, p: any) => { setDevoluciones(prev => prev.map(d => d.producto_id === devProductoId ? { ...d, reemplazo_producto_id: p.id, reemplazo_nombre: p.nombre } : d)); setShowReemplazoFor(null); setSearchReemplazo(''); };
+  const requireDevolucionesPermiso = () => {
+    if (canDoDevoluciones) return true;
+    toast.error('Tu rol no permite registrar devoluciones en Ruta');
+    setDevoluciones([]);
+    return false;
+  };
+
+  const addDevolucion = (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: DevolucionItem['accion'] }) => { if (!requireDevolucionesPermiso()) return; if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: defaults?.motivo ?? 'no_vendido', accion: defaults?.accion ?? 'reposicion', precio_unitario: p.precio_principal ?? 0 }]); };
+  const updateDevQty = (productoId: string, qty: number) => { if (!requireDevolucionesPermiso()) return; if (qty <= 0) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
+  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (updated.accion === 'reposicion' && motivo !== 'cambio' && motivo !== 'danado' && motivo !== 'caducado' && motivo !== 'error_pedido') { /* keep accion */ } return updated; })); };
+  const updateDevAccion = (productoId: string, accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
+  const batchUpdateDevDefaults = (motivo: DevolucionItem['motivo'], accion: DevolucionItem['accion']) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => { const updated = { ...d, motivo, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
+  const setReemplazo = (devProductoId: string, p: any) => { if (!requireDevolucionesPermiso()) return; setDevoluciones(prev => prev.map(d => d.producto_id === devProductoId ? { ...d, reemplazo_producto_id: p.id, reemplazo_nombre: p.nombre } : d)); setShowReemplazoFor(null); setSearchReemplazo(''); };
   const removeDevolucion = (productoId: string) => { setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); };
 
   const processDevolucionesAndGoToProductos = () => {
+    if (!canDoDevoluciones) {
+      setDevoluciones([]);
+      setCart(prev => prev.filter(c => !c.es_cambio));
+      setStep('productos');
+      return;
+    }
     let newCart = cart.filter(c => !c.es_cambio);
     // Add replacement products (reposición) at $0
     devoluciones.filter(d => d.accion === 'reposicion' && d.reemplazo_producto_id).forEach(d => {
@@ -713,6 +727,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   const handleSave = async () => {
     if (!empresa || !user) return;
+    if (!canDoDevoluciones && devoluciones.length > 0) {
+      toast.error('Tu rol no permite registrar devoluciones en Ruta');
+      setDevoluciones([]);
+      setStep('productos');
+      return;
+    }
      if (!profile?.almacen_id) {
       opts?.onAlmacenMissing?.();
       return;
@@ -965,6 +985,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   /** Set unit price manually for a product (creates the cart line if missing) */
   const setItemPriceManual = (productoId: string, price: number) => {
+    if (!canChangePrice) {
+      toast.error('Tu rol no permite cambiar precios manuales en Ruta');
+      return;
+    }
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return;
     const snap = buildManualSalePricingFromGross({ tiene_iva: prod.tiene_iva ?? false, iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0, tiene_ieps: prod.tiene_ieps ?? false, ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0 }, price);
@@ -1001,6 +1025,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     unitPrice: number,
     listaNombre: string,
   ) => {
+    if (!canChangeLista) {
+      toast.error('Tu rol no permite cambiar la lista de precios en Ruta');
+      return;
+    }
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return;
     setCart(prev => {
@@ -1028,6 +1056,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const resetItemToSuggested = (productoId: string) => {
     const prod = productos?.find((p: any) => p.id === productoId);
     if (!prod) return;
+    const item = cart.find(c => c.producto_id === productoId && !c.es_cambio);
+    if (item?.precio_manual && !canChangePrice) {
+      toast.error('Tu rol no permite cambiar precios manuales en Ruta');
+      return;
+    }
+    if (item?.lista_precio_id && !canChangeLista) {
+      toast.error('Tu rol no permite cambiar la lista de precios en Ruta');
+      return;
+    }
     const pf = resolvePricingFull(prod);
     setCart(prev => prev.map(c => c.producto_id === productoId && !c.es_cambio
       ? { ...c, precio_unitario: pf.unitPrice, precio_unitario_sin_redondeo: pf.rawUnitPrice,
@@ -1065,7 +1102,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     // Price overrides
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
     // Permisos
-    canChangePrice, canChangeLista, canApplyDiscount,
+    canChangePrice, canChangeLista, canApplyDiscount, canDoDevoluciones,
     // Descuento extra
     descuentoExtraTipo, setDescuentoExtraTipo,
     descuentoExtraValor, setDescuentoExtraValor,
