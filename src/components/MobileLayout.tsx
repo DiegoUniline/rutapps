@@ -295,6 +295,7 @@ export default function MobileLayout() {
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16 relative">
         <Outlet />
+        <StockAdjustmentDialog />
         <UnilineFooter />
 
         {/* Bloqueo total: requiere iniciar jornada */}
