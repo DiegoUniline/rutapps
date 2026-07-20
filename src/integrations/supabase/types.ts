@@ -1550,6 +1550,7 @@ export type Database = {
           gps_lat: number | null
           gps_lng: number | null
           id: string
+          lada: string | null
           limite_credito: number | null
           lista_id: string | null
           lista_precio_id: string | null
@@ -1599,6 +1600,7 @@ export type Database = {
           gps_lat?: number | null
           gps_lng?: number | null
           id?: string
+          lada?: string | null
           limite_credito?: number | null
           lista_id?: string | null
           lista_precio_id?: string | null
@@ -1648,6 +1650,7 @@ export type Database = {
           gps_lat?: number | null
           gps_lng?: number | null
           id?: string
+          lada?: string | null
           limite_credito?: number | null
           lista_id?: string | null
           lista_precio_id?: string | null
@@ -3160,6 +3163,7 @@ export type Database = {
           id: string
           is_partner_sandbox: boolean
           jornada_permite_sin_vehiculo: boolean
+          lada: string
           logo_url: string | null
           maneja_lotes: boolean
           metodo_pago_sat: string | null
@@ -3204,6 +3208,7 @@ export type Database = {
           id?: string
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
+          lada?: string
           logo_url?: string | null
           maneja_lotes?: boolean
           metodo_pago_sat?: string | null
@@ -3248,6 +3253,7 @@ export type Database = {
           id?: string
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
+          lada?: string
           logo_url?: string | null
           maneja_lotes?: boolean
           metodo_pago_sat?: string | null
