@@ -25,7 +25,7 @@ import { todayLocal } from '@/lib/utils';
 import { confirmDialog } from '@/lib/confirm';
 
 const defaultCliente: Partial<Cliente> = {
-  codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
+  codigo: '', nombre: '', contacto: '', telefono: '', lada: '', email: '', direccion: '',
   rfc: '', notas: '', colonia: '', frecuencia: 'semanal', dia_visita: [],
   credito: false, limite_credito: 0, dias_credito: 0, orden: 0, status: 'activo',
   requiere_factura: false, facturama_rfc: '', facturama_razon_social: '',
