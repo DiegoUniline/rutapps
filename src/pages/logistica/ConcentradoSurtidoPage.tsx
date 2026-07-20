@@ -6,7 +6,7 @@ import { Package, AlertTriangle, ShoppingCart, Calendar as CalendarIcon, CheckCi
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProveedores } from '@/hooks/useData';
+import { useProveedores, useAlmacenes } from '@/hooks/useData';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
 import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
