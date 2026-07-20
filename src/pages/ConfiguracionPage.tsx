@@ -453,6 +453,7 @@ export default function ConfiguracionPage() {
       estado: (config as any).estado ?? '',
       cp: (config as any).cp ?? '',
       telefono: (config as any).telefono ?? '',
+      lada: (config as any).lada ?? '52',
       email: (config as any).email ?? '',
       notas_ticket: (config as any).notas_ticket ?? '',
     });
