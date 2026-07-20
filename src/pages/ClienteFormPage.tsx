@@ -541,15 +541,29 @@ export default function ClienteFormPage() {
                 <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
                 <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} required />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
-                <OdooField label="Teléfono" value={form.telefono} onChange={v => {
-                  const digits = v.replace(/\D/g, '');
-                  // Auto-prefix 52 when user types exactly 10 digits
-                  if (digits.length === 10 && !digits.startsWith('52')) {
-                    set('telefono', '52' + digits);
-                  } else {
-                    set('telefono', v);
-                  }
-                }} placeholder="5210dígitos" />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Teléfono</span>
+                  <div className="flex gap-1.5 items-center flex-1">
+                    <div className="relative w-[70px]">
+                      <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-muted-foreground text-[13px] pointer-events-none">+</span>
+                      <input
+                        className="input-odoo w-full pl-4 pr-1 text-[13px]"
+                        value={form.lada ?? ''}
+                        onChange={e => set('lada' as any, e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder={(empresa as any)?.lada || '52'}
+                        readOnly={readOnly}
+                        title="Código de país (lada)"
+                      />
+                    </div>
+                    <input
+                      className="input-odoo flex-1 text-[13px]"
+                      value={form.telefono ?? ''}
+                      onChange={e => set('telefono', e.target.value.replace(/\D/g, ''))}
+                      placeholder="10 dígitos"
+                      readOnly={readOnly}
+                    />
+                  </div>
+                </div>
                 <OdooField label="Email" value={form.email} onChange={v => set('email', v)} />
                 
               </div>
