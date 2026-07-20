@@ -118,7 +118,7 @@ export default function ConcentradoSurtidoPage() {
 
   const vendedoresKey = vendedorFilter.slice().sort().join(',');
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
