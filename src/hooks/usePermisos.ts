@@ -305,26 +305,40 @@ interface PermisosData {
 }
 
 async function fetchPermisos(userId: string): Promise<PermisosData> {
-  const { data: userRole } = await supabase
+  // Un usuario puede tener MÁS de un rol asignado. Debemos considerarlos todos:
+  //  - solo_movil = ANY (el más restrictivo gana → si algún rol es "Solo móvil",
+  //    el usuario NO debe ver escritorio, aunque también tenga Administrador).
+  //  - permisos: unión OR por (modulo, accion).
+  const { data: userRoles } = await supabase
     .from('user_roles')
     .select('role_id, roles(solo_movil)')
-    .eq('user_id', userId)
-    .maybeSingle();
+    .eq('user_id', userId);
 
-  if (!userRole?.role_id) {
+  const roleIds = (userRoles ?? []).map((r: any) => r.role_id).filter(Boolean);
+
+  if (roleIds.length === 0) {
     return { hasRole: false, permisos: [], roleSoloMovil: false, roleId: null };
   }
 
-  const roleSoloMovil = !!(userRole as any).roles?.solo_movil;
+  const roleSoloMovil = (userRoles ?? []).some((r: any) => !!r.roles?.solo_movil);
 
   const rolePermisos = await fetchAllPages<Permiso>((from, to) =>
     supabase.from('role_permisos')
       .select('modulo, accion, permitido')
-      .eq('role_id', userRole.role_id)
+      .in('role_id', roleIds)
       .range(from, to)
   );
 
-  return { hasRole: true, permisos: rolePermisos, roleSoloMovil, roleId: userRole.role_id };
+  // Merge OR por (modulo, accion): permitido si CUALQUIER rol lo permite.
+  const merged = new Map<string, Permiso>();
+  for (const p of rolePermisos) {
+    const key = `${p.modulo}::${p.accion}`;
+    const prev = merged.get(key);
+    if (!prev) merged.set(key, p);
+    else if (!prev.permitido && p.permitido) merged.set(key, p);
+  }
+
+  return { hasRole: true, permisos: Array.from(merged.values()), roleSoloMovil, roleId: roleIds[0] };
 }
 
 export function usePermisos(): UsePermisosReturn {
