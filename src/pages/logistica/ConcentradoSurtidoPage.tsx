@@ -514,6 +514,21 @@ export default function ConcentradoSurtidoPage() {
               onChange={setVendedorFilter}
             />
           </div>
+          <div className="pt-1">
+            <EntityMultiSelect
+              label="Almacén (surtir desde)"
+              placeholder="Todos los almacenes"
+              options={almacenesList.map(a => ({ id: a.id, label: a.nombre || '—' }))}
+              value={almacenFilter}
+              onChange={setAlmacenFilter}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {almacenFilter.length === 0
+                ? 'Sin almacén: stock total de todos los almacenes.'
+                : `Stock sumado de ${almacenFilter.length} almacén(es).`}
+            </p>
+          </div>
+
           <div className="space-y-1 pt-2">
             <Label className="text-xs">Agrupar por</Label>
             <Select value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setOpenGroups(new Set()); }}>
