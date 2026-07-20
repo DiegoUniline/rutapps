@@ -24,7 +24,7 @@ import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
 import { phoneWithLada } from '@/lib/phoneWithLada';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney } from '@/lib/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
