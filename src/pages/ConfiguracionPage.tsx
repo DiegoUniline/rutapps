@@ -612,6 +612,7 @@ export default function ConfiguracionPage() {
             <div className="grid grid-cols-2 gap-3">
               {field('nombre', 'Nombre comercial', 'Mi Empresa')}
               {field('telefono', 'Teléfono', '33 1234 5678')}
+              {field('lada', 'Lada país (WhatsApp)', '52')}
               {field('email', 'Email', 'contacto@empresa.com')}
             </div>
           </div>
