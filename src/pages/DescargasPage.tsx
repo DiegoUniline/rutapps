@@ -260,7 +260,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       const finTs = zonedDateTimeToUtcIso(fFin, '23:59:59.999', empresa?.zona_horaria);
       const { data, error } = await supabase
         .from('entregas')
-        .select('id, folio, status, fecha_entrega, validado_at, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
+        .select('id, folio, status, fecha_entrega, validado_at, fecha, pedido_id, clientes(nombre), entrega_lineas(producto_id, cantidad:cantidad_pedida, cantidad_entregada, hecho, motivo_no_entrega, productos(nombre, codigo)), ventas:pedido_id(folio, total)')
         .eq('empresa_id', descarga.empresa_id)
         .or(`vendedor_ruta_id.eq.${descarga.vendedor_id},vendedor_id.eq.${descarga.vendedor_id}`)
         .eq('status', 'hecho')
