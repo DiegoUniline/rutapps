@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       case "send-text": {
         const { phone, message, tipo, referencia_id } = body as any;
         if (!phone || !message) return json(400, { error: "phone y message requeridos" });
-        const normalized = String(phone).replace(/[\s\-\(\)+]/g, "");
+        const normalized = await normalizePhone(admin, empresa_id, phone);
         const r = await evo(`/message/sendText/${instanceName}`, {
           method: "POST",
           body: JSON.stringify({ number: normalized, text: message }),
