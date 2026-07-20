@@ -347,7 +347,7 @@ export default function VentaFormPage() {
         const cli = clientesList?.find(c => c.id === form.cliente_id);
         const phoneWA = phoneWithLada(cli?.telefono, (cli as any)?.lada, (empresa as any)?.lada || '52');
         const nombreCli = cli?.nombre || 'estimado cliente';
-        const esCotizacion = form.tipo === 'cotizacion';
+        const esCotizacion = (form.tipo as string) === 'cotizacion';
         const esPedido = !esCotizacion;
         const totalTxt = fmtMoney(Number(totals?.total ?? 0));
         const saldoTxt = fmtMoney(Number(saldoPendiente ?? 0));
