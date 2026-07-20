@@ -6,6 +6,7 @@ import { offlineDb } from '@/lib/offlineDb';
 import { downloadAllData, MOBILE_QUICK_SYNC_TABLES, retryFailedTables, getFailedTables } from '@/lib/offlineSync';
 import { processSyncQueue, resurrectDeadLetters } from '@/lib/syncQueue';
 import { hasRealConnection } from '@/lib/connectivity';
+import { revalidatePendingVentas } from '@/lib/revalidateStock';
 
 /**
  * On reconnect (browser online event or pageshow), push pending mutations,
@@ -38,6 +39,21 @@ export function useOnlineReconnect() {
         // 1) Push pending mutations first — resurrect dead-lettered devoluciones
         //    (older builds left them stuck with invalid enum `tipo`; now sanitized).
         await resurrectDeadLetters(['devoluciones', 'devolucion_lineas']).catch(() => {});
+
+        // 1.b) Revalidar disponibilidad real de stock para pedidos hechos offline.
+        // Si otro vendedor apartó parte mientras estábamos sin señal, abrimos un
+        // modal para que el vendedor confirme/reduzca ANTES de subir a servidor.
+        try {
+          const conflicts = await revalidatePendingVentas();
+          if (conflicts.length > 0) {
+            window.dispatchEvent(new CustomEvent('uniline:stock-adjustment-needed', { detail: conflicts }));
+            // No procesamos la cola aquí: se reanuda desde el diálogo tras confirmar.
+            return;
+          }
+        } catch (e) {
+          console.warn('[reconnect] revalidación de stock falló, continuo con sync', e);
+        }
+
         await processSyncQueue().catch((e) => console.warn('[reconnect] push failed', e));
 
         // 2) Pull critical fresh data

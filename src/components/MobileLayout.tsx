@@ -21,6 +21,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
+import StockAdjustmentDialog from '@/components/StockAdjustmentDialog';
 
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
@@ -163,6 +164,7 @@ export default function MobileLayout() {
           </div>
         )}
         <Outlet />
+        <StockAdjustmentDialog />
       </div>
     );
   }
@@ -293,6 +295,7 @@ export default function MobileLayout() {
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16 relative">
         <Outlet />
+        <StockAdjustmentDialog />
         <UnilineFooter />
 
         {/* Bloqueo total: requiere iniciar jornada */}
