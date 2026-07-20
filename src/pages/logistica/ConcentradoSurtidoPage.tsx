@@ -169,6 +169,22 @@ export default function ConcentradoSurtidoPage() {
       );
       const prodMap = new Map(productos.map(p => [p.id, p]));
 
+      // 4b) Stock por almacén(es) seleccionado(s). Si no hay ninguno, cae al total del producto.
+      const stockPorProducto = new Map<string, number>();
+      if (almacenFilter.length > 0 && productoIds.length > 0) {
+        const stockRows = await fetchAllPages<{ producto_id: string; cantidad: number | null }>((from, to) =>
+          supabase.from('stock_almacen')
+            .select('producto_id, cantidad')
+            .eq('empresa_id', empresa!.id)
+            .in('almacen_id', almacenFilter)
+            .in('producto_id', productoIds)
+            .range(from, to)
+        );
+        for (const r of stockRows) {
+          stockPorProducto.set(r.producto_id, (stockPorProducto.get(r.producto_id) ?? 0) + Number(r.cantidad || 0));
+        }
+      }
+
       // Agregaciones
       const requerido = new Map<string, number>();
       for (const l of lineas) requerido.set(l.producto_id, (requerido.get(l.producto_id) ?? 0) + Number(l.cantidad || 0));
@@ -181,7 +197,9 @@ export default function ConcentradoSurtidoPage() {
         const req = requerido.get(pid) ?? 0;
         const ent = entregado.get(pid) ?? 0;
         const pend = Math.max(0, req - ent);
-        const stock = Number(p?.cantidad ?? 0);
+        const stock = almacenFilter.length > 0
+          ? Number(stockPorProducto.get(pid) ?? 0)
+          : Number(p?.cantidad ?? 0);
         const faltante = Math.max(0, pend - stock);
         return {
           producto_id: pid,
