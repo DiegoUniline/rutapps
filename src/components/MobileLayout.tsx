@@ -164,6 +164,7 @@ export default function MobileLayout() {
           </div>
         )}
         <Outlet />
+        <StockAdjustmentDialog />
       </div>
     );
   }
