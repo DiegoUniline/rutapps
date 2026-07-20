@@ -11,7 +11,7 @@ import { ProductoDetalleModal } from '@/components/ruta/ProductoDetalleModal';
 import { PresentacionSelectorModal } from '@/components/ruta/PresentacionSelectorModal';
 import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import type { CartItem, DevolucionItem } from './types';
-import { useApartadoAlmacenes, useDisponiblePorAlmacen } from '@/hooks/useApartadoStock';
+import { useApartadoAlmacenes } from '@/hooks/useApartadoStock';
 
 interface Props {
   clienteNombre: string;
@@ -73,7 +73,6 @@ export function StepProductos(props: Props) {
   const { symbol: s } = useCurrency();
   const { data: allPresentaciones } = useAllPresentaciones();
   const { data: apartadoAlmacenes } = useApartadoAlmacenes();
-  const { data: disponibleMap } = useDisponiblePorAlmacen(apartadoActivoPedido ? pedidoAlmacenId : null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
   const [granelFor, setGranelFor] = useState<any | null>(null);
@@ -251,20 +250,22 @@ export function StepProductos(props: Props) {
         {filteredProductos?.filter(p => {
           if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
           if (stockFilter === 'todos') return true;
-          const disp = disponibleMap?.get(p.id) ?? 0;
+          const disp = getMaxQty(p.id);
           return stockFilter === 'con' ? disp > 0 : disp <= 0;
         }).map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
           // Show real stock, not Infinity (which appears when vender_sin_stock is enabled)
-          const realStock = tipoVenta === 'venta_directa'
+          const realStock = apartadoActivoPedido && tipoVenta === 'pedido'
+            ? maxQty
+            : tipoVenta === 'venta_directa'
             ? (stockAbordo.get(p.id) ?? 0)
             : (p.cantidad ?? 0);
           const stockLabel = tipoVenta === 'venta_directa'
             ? `${realStock} ${usandoAlmacen ? 'en almacén' : 'a bordo'}`
             : `${realStock} en almacén`;
-          const stockOk = tipoVenta === 'pedido' || realStock > 0 || !!p.vender_sin_stock;
-          const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty && maxQty !== Infinity;
+          const stockOk = (apartadoActivoPedido && tipoVenta === 'pedido') ? realStock > 0 : (tipoVenta === 'pedido' || realStock > 0 || !!p.vender_sin_stock);
+          const atMax = inCart && maxQty !== Infinity && inCart.cantidad >= maxQty;
           const isManual = !!inCart?.precio_manual;
           const hasLista = !!inCart?.lista_precio_id;
           const displayPrice = inCart?.precio_unitario ?? (p.precio_principal ?? 0);
@@ -285,7 +286,7 @@ export function StepProductos(props: Props) {
                       </>
                     )}
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
-                      const disp = disponibleMap?.get(p.id) ?? 0;
+                      const disp = maxQty;
                       const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';
                       return (
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${bg}`}>
@@ -341,10 +342,10 @@ export function StepProductos(props: Props) {
                     <button onClick={() => handleAdd(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
                   </div>
                 ) : (
-                  <button onClick={() => handleAdd(p)} className="w-8 h-8 rounded-lg bg-accent hover:bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-all shrink-0"><Plus className="h-4 w-4" /></button>
+                  <button onClick={() => handleAdd(p)} disabled={!stockOk} className={`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all shrink-0 ${stockOk ? 'bg-accent hover:bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}><Plus className="h-4 w-4" /></button>
                 )}
               </div>
-              {atMax && <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1">Máximo a bordo alcanzado</p>}
+              {atMax && <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1">Máximo disponible alcanzado</p>}
             </div>
           );
         })}
@@ -366,7 +367,7 @@ export function StepProductos(props: Props) {
         subtitle={keypadFor?.nombre}
         initialValue={keypadFor?.cantidad ?? 0}
         allowDecimal={!!keypadFor?.granel}
-        maxValue={tipoVenta === 'venta_directa' && keypadFor && !keypadFor.granel ? keypadFor.max : undefined}
+        maxValue={keypadFor && keypadFor.max !== Number.MAX_SAFE_INTEGER ? keypadFor.max : undefined}
         onClose={() => setKeypadFor(null)}
         onConfirm={(v) => { if (keypadFor) setItemQty(keypadFor.producto_id, v); }}
       />
