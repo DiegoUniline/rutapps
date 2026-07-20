@@ -1,32 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Send, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { MessageCircle, CheckCircle, AlertCircle, Loader2, QrCode, LogOut, Smartphone, RefreshCw } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { useDebounce } from '@/hooks/useDebounce';
 
 interface WhatsAppConfig {
   id?: string;
   empresa_id: string;
-  api_url: string;
-  api_token: string;
-  instance_name: string;
+  provider: 'whatsapi' | 'evolution';
   activo: boolean;
   enviar_recibo_pago: boolean;
   aviso_dia_antes: boolean;
   aviso_vencido: boolean;
+  evolution_instance_name?: string | null;
+  evolution_status?: 'conectado' | 'esperando_qr' | 'desconectado' | null;
+  evolution_phone_number?: string | null;
+  evolution_connected_at?: string | null;
 }
 
 export default function WhatsAppConfigPage() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
 
-  const { data: config, isLoading } = useQuery({
+  const { data: config, isLoading, refetch } = useQuery({
     queryKey: ['whatsapp-config', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
@@ -39,113 +40,132 @@ export default function WhatsAppConfigPage() {
     },
   });
 
-  const [form, setForm] = useState<WhatsAppConfig>({
-    empresa_id: empresa?.id ?? '',
-    api_url: '',
-    api_token: '',
-    instance_name: '',
-    activo: false,
-    enviar_recibo_pago: true,
-    aviso_dia_antes: false,
-    aviso_vencido: false,
-  });
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const pollingRef = useRef<number | null>(null);
 
-  const [testPhone, setTestPhone] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showToken, setShowToken] = useState(false);
+  const invalidate = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ['whatsapp-config'] });
+  }, [qc]);
 
-  useEffect(() => {
-    if (config) {
-      setForm({ ...config });
-    } else if (empresa?.id) {
-      setForm(prev => ({ ...prev, empresa_id: empresa.id }));
-    }
-  }, [config, empresa]);
-
-  // Debounced auto-save
-  const debouncedForm = useDebounce(form, 800);
-
-  const saveConfig = useCallback(async (data: WhatsAppConfig, opts?: { silent?: boolean }) => {
-    if (!empresa?.id) return;
-    setSaving(true);
-    try {
-      const payload = { ...data, empresa_id: empresa.id };
-      if (data.id) {
-        const { error } = await supabase.from('whatsapp_config').update(payload).eq('id', data.id);
-        if (error) throw error;
-      } else {
-        const { data: created, error } = await supabase.from('whatsapp_config').insert(payload).select().single();
-        if (error) throw error;
-        if (created) setForm(prev => ({ ...prev, id: created.id }));
-      }
-      qc.invalidateQueries({ queryKey: ['whatsapp-config'] });
-      if (!opts?.silent) toast.success('Configuración guardada');
-    } catch (e: any) {
-      toast.error(e.message || 'Error al guardar');
-    } finally {
-      setSaving(false);
-    }
-  }, [empresa, qc]);
-
-  const isDirty =
-    form.api_url !== (config?.api_url ?? '') ||
-    form.api_token !== (config?.api_token ?? '') ||
-    form.instance_name !== (config?.instance_name ?? '') ||
-    form.activo !== (config?.activo ?? false) ||
-    form.enviar_recibo_pago !== (config?.enviar_recibo_pago ?? true) ||
-    form.aviso_dia_antes !== (config?.aviso_dia_antes ?? false) ||
-    form.aviso_vencido !== (config?.aviso_vencido ?? false);
-
-  useEffect(() => {
-    if (debouncedForm.api_url !== (config?.api_url ?? '') ||
-        debouncedForm.api_token !== (config?.api_token ?? '') ||
-        debouncedForm.instance_name !== (config?.instance_name ?? '') ||
-        debouncedForm.activo !== (config?.activo ?? false) ||
-        debouncedForm.enviar_recibo_pago !== (config?.enviar_recibo_pago ?? true) ||
-        debouncedForm.aviso_dia_antes !== (config?.aviso_dia_antes ?? false) ||
-        debouncedForm.aviso_vencido !== (config?.aviso_vencido ?? false)) {
-      saveConfig(debouncedForm, { silent: true });
-    }
-  }, [debouncedForm, config, saveConfig]);
-
-  const update = (field: keyof WhatsAppConfig, val: any) => {
-    setForm(prev => {
-      const next = { ...prev, [field]: val };
-      // Auto-activate when token is pasted
-      if (field === 'api_token' && val && !prev.activo) {
-        next.activo = true;
-      }
-      return next;
+  const callEvo = useCallback(async (action: string) => {
+    if (!empresa?.id) return null;
+    const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+      body: { action, empresa_id: empresa.id },
     });
+    if (error) throw new Error(error.message);
+    return data;
+  }, [empresa]);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
   };
 
-  const handleTest = async () => {
-    if (!testPhone.trim()) {
-      toast.error('Ingresa un número de teléfono');
-      return;
-    }
-    setTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-sender', {
-        body: {
-          action: 'send-text',
-          empresa_id: empresa!.id,
-          phone: testPhone,
-          message: `🔔 Prueba de WhatsApp desde ${empresa?.nombre ?? 'tu empresa'}.\n\n✅ Conexión exitosa.`,
-          tipo: 'test',
-        },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.success) {
-        toast.success('Mensaje de prueba enviado correctamente');
-      } else {
-        toast.error(data?.error || 'Error al enviar');
+  const startPolling = useCallback(() => {
+    stopPolling();
+    pollingRef.current = window.setInterval(async () => {
+      try {
+        const st = await callEvo('status');
+        if (st?.state === 'open') {
+          setQrOpen(false);
+          setQrImage(null);
+          stopPolling();
+          toast.success('WhatsApp conectado');
+          invalidate();
+          return;
+        }
+        // Refresh QR every 25s
+        const qr = await callEvo('qr');
+        if (qr?.connected) {
+          setQrOpen(false);
+          setQrImage(null);
+          stopPolling();
+          toast.success('WhatsApp conectado');
+          invalidate();
+        } else if (qr?.qr) {
+          setQrImage(qr.qr);
+        }
+      } catch (e: any) {
+        console.error('polling error:', e.message);
       }
+    }, 3000);
+  }, [callEvo, invalidate]);
+
+  useEffect(() => () => stopPolling(), []);
+
+  const handleConnect = async () => {
+    if (!empresa?.id) return;
+    setQrLoading(true);
+    setQrOpen(true);
+    try {
+      await callEvo('create-instance');
+      // small delay so QR is ready
+      await new Promise(r => setTimeout(r, 1500));
+      const qr = await callEvo('qr');
+      if (qr?.connected) {
+        setQrOpen(false);
+        toast.success('WhatsApp ya estaba conectado');
+        invalidate();
+        return;
+      }
+      setQrImage(qr?.qr ?? null);
+      startPolling();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al iniciar conexión');
+      setQrOpen(false);
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!empresa?.id) return;
+    if (!confirm('¿Desconectar WhatsApp? Tendrás que volver a escanear el QR.')) return;
+    setDisconnecting(true);
+    try {
+      await callEvo('disconnect');
+      toast.success('WhatsApp desconectado');
+      invalidate();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al desconectar');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    try {
+      await callEvo('status');
+      await refetch();
+      toast.success('Estado actualizado');
     } catch (e: any) {
       toast.error(e.message);
-    } finally {
-      setTesting(false);
+    }
+  };
+
+  const updateToggle = async (field: keyof WhatsAppConfig, val: boolean) => {
+    if (!empresa?.id) return;
+    try {
+      if (config?.id) {
+        const { error } = await supabase
+          .from('whatsapp_config')
+          .update({ [field]: val })
+          .eq('id', config.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('whatsapp_config')
+          .insert({ empresa_id: empresa.id, provider: 'evolution', [field]: val });
+        if (error) throw error;
+      }
+      invalidate();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al guardar');
     }
   };
 
@@ -157,6 +177,9 @@ export default function WhatsAppConfigPage() {
     );
   }
 
+  const isConnected = config?.provider === 'evolution' && config?.evolution_status === 'conectado';
+  const usesLegacy = config?.provider === 'whatsapi';
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
@@ -165,57 +188,72 @@ export default function WhatsAppConfigPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">WhatsApp</h1>
-          <p className="text-sm text-muted-foreground">Configura el envío automático de tickets y documentos</p>
+          <p className="text-sm text-muted-foreground">Conecta tu WhatsApp escaneando un QR — sin tokens</p>
         </div>
-        {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-auto" />}
-        {!saving && form.activo && (
-          <span className="ml-auto flex items-center gap-1 text-xs text-[#25D366] font-medium">
-            <CheckCircle className="h-3.5 w-3.5" /> Activo
-          </span>
+      </div>
+
+      {/* Connection card */}
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Estado de la conexión</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Vincula el WhatsApp de tu empresa una sola vez.
+            </p>
+          </div>
+          {isConnected ? (
+            <span className="flex items-center gap-1.5 text-xs text-[#25D366] font-medium whitespace-nowrap">
+              <CheckCircle className="h-4 w-4" /> Conectado
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+              <AlertCircle className="h-4 w-4" /> Sin conectar
+            </span>
+          )}
+        </div>
+
+        {isConnected && (
+          <div className="flex items-center gap-3 p-3 bg-[#25D366]/5 border border-[#25D366]/20 rounded-lg">
+            <Smartphone className="h-5 w-5 text-[#25D366]" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                +{config?.evolution_phone_number ?? '—'}
+              </p>
+              {config?.evolution_connected_at && (
+                <p className="text-xs text-muted-foreground">
+                  Desde {new Date(config.evolution_connected_at).toLocaleString('es-MX')}
+                </p>
+              )}
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleRefreshStatus}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          {!isConnected && (
+            <Button onClick={handleConnect} className="flex-1 bg-[#25D366] hover:bg-[#20b558] text-white">
+              <QrCode className="h-4 w-4 mr-1.5" />
+              Conectar WhatsApp
+            </Button>
+          )}
+          {isConnected && (
+            <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting} className="flex-1">
+              {disconnecting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <LogOut className="h-4 w-4 mr-1.5" />}
+              Desconectar
+            </Button>
+          )}
+        </div>
+
+        {usesLegacy && (
+          <div className="text-xs text-muted-foreground p-3 bg-muted rounded-lg">
+            Estás usando el proveedor anterior. Al conectar por QR migrarás automáticamente al nuevo sistema.
+          </div>
         )}
       </div>
 
-      {/* API Connection */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Conexión API (WhatsAPI)</h2>
-
-        <div className="space-y-2">
-          <Label className="text-xs">Token / API Key</Label>
-          <div className="relative">
-            <Input
-              type={showToken ? 'text' : 'password'}
-              placeholder="Pega aquí tu token de WhatsAPI"
-              value={form.api_token}
-              onChange={e => update('api_token', e.target.value)}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowToken(s => !s)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-              aria-label={showToken ? 'Ocultar token' : 'Mostrar token'}
-            >
-              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between py-2">
-          <Label className="text-sm">Servicio activo</Label>
-          <Switch checked={form.activo} onCheckedChange={v => update('activo', v)} />
-        </div>
-
-        <Button
-          onClick={() => saveConfig(form)}
-          disabled={saving || !isDirty}
-          className="w-full"
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <CheckCircle className="h-4 w-4 mr-1.5" />}
-          {saving ? 'Guardando...' : isDirty ? 'Guardar cambios' : 'Guardado'}
-        </Button>
-      </div>
-
-      {/* Toggles */}
+      {/* Automatic sends */}
       <div className="bg-card border border-border rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Envíos automáticos</h2>
 
@@ -224,7 +262,10 @@ export default function WhatsAppConfigPage() {
             <p className="text-sm text-foreground">Recibo de pago</p>
             <p className="text-xs text-muted-foreground">Enviar ticket cuando se registre un pago</p>
           </div>
-          <Switch checked={form.enviar_recibo_pago} onCheckedChange={v => update('enviar_recibo_pago', v)} />
+          <Switch
+            checked={config?.enviar_recibo_pago ?? true}
+            onCheckedChange={v => updateToggle('enviar_recibo_pago', v)}
+          />
         </div>
 
         <div className="flex items-center justify-between py-1">
@@ -232,7 +273,10 @@ export default function WhatsAppConfigPage() {
             <p className="text-sm text-foreground">Aviso día antes</p>
             <p className="text-xs text-muted-foreground">Notificar al cliente un día antes de la visita</p>
           </div>
-          <Switch checked={form.aviso_dia_antes} onCheckedChange={v => update('aviso_dia_antes', v)} />
+          <Switch
+            checked={config?.aviso_dia_antes ?? false}
+            onCheckedChange={v => updateToggle('aviso_dia_antes', v)}
+          />
         </div>
 
         <div className="flex items-center justify-between py-1">
@@ -240,31 +284,43 @@ export default function WhatsAppConfigPage() {
             <p className="text-sm text-foreground">Aviso vencido</p>
             <p className="text-xs text-muted-foreground">Notificar cuando una factura esté vencida</p>
           </div>
-          <Switch checked={form.aviso_vencido} onCheckedChange={v => update('aviso_vencido', v)} />
+          <Switch
+            checked={config?.aviso_vencido ?? false}
+            onCheckedChange={v => updateToggle('aviso_vencido', v)}
+          />
         </div>
       </div>
 
-      {/* Test */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Prueba de conexión</h2>
-        <div className="flex gap-2">
-          <Input
-            placeholder="521234567890"
-            value={testPhone}
-            onChange={e => setTestPhone(e.target.value)}
-            className="flex-1"
-          />
-          <Button onClick={handleTest} disabled={testing || !form.activo} size="sm">
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span className="ml-1.5">Probar</span>
-          </Button>
-        </div>
-        {!form.activo && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <AlertCircle className="h-3.5 w-3.5" /> Activa el servicio para enviar una prueba
-          </p>
-        )}
-      </div>
+      {/* QR modal */}
+      <Dialog open={qrOpen} onOpenChange={(o) => { if (!o) { stopPolling(); setQrImage(null); } setQrOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Escanea el código QR</DialogTitle>
+            <DialogDescription>
+              Abre WhatsApp en tu celular → Menú → <strong>Dispositivos vinculados</strong> → <strong>Vincular un dispositivo</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center py-4 space-y-3">
+            {qrLoading && !qrImage && (
+              <div className="h-64 w-64 flex flex-col items-center justify-center bg-muted rounded-lg gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Generando QR...</p>
+              </div>
+            )}
+            {qrImage && (
+              <img
+                src={qrImage.startsWith('data:') ? qrImage : `data:image/png;base64,${qrImage}`}
+                alt="Código QR"
+                className="h-64 w-64 rounded-lg border border-border"
+              />
+            )}
+            <p className="text-xs text-muted-foreground text-center">
+              Esperando conexión... El QR se refresca automáticamente.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
