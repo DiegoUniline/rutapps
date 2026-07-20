@@ -64,7 +64,7 @@ export function StepProductos(props: Props) {
   const {
     clienteNombre, clienteListaNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos,
     cart, cambioItems, tipoVenta, totals, addToCart, addGranelLine, updateQty, removeFromCart,
-    getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
+    getItemInCart, getMaxQty, getDispSigned, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
