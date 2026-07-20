@@ -30,6 +30,7 @@ interface Props {
   removeFromCart: (pid: string, esCambio?: boolean) => void;
   getItemInCart: (pid: string) => CartItem | undefined;
   getMaxQty: (pid: string) => number;
+  getDispSigned?: (pid: string) => number;
   setStep: (s: any) => void;
   setCart: (v: any) => void;
   stockAbordo: Map<string, number>;
