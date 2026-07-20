@@ -77,6 +77,53 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Provider dispatch — Evolution API delegates to whatsapp-evolution
+    if (config.provider === "evolution") {
+      const forwardBody: Record<string, unknown> = {
+        empresa_id,
+        phone,
+        tipo,
+        referencia_id,
+      };
+      if (action === "send-text") {
+        forwardBody.action = "send-text";
+        forwardBody.message = message || "";
+      } else if (action === "send-image") {
+        forwardBody.action = "send-media";
+        forwardBody.url = url;
+        forwardBody.caption = caption || "";
+        forwardBody.mediaType = "image";
+      } else if (action === "send-file") {
+        forwardBody.action = "send-media";
+        forwardBody.url = url;
+        forwardBody.fileName = fileName || "documento.pdf";
+        forwardBody.caption = caption || "";
+        forwardBody.mediaType = "document";
+      } else {
+        return new Response(
+          JSON.stringify({ error: `Acción no soportada: ${action}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const evoRes = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-evolution`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify(forwardBody),
+        },
+      );
+      const evoJson = await evoRes.json().catch(() => ({}));
+      return new Response(JSON.stringify(evoJson), {
+        status: evoRes.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- Legacy WhatsAPI provider ---
     const { api_token } = config;
     if (!api_token) {
       return new Response(
@@ -130,6 +177,7 @@ Deno.serve(async (req) => {
       status = "error";
       errorDetalle = fetchErr instanceof Error ? fetchErr.message : "Error de conexión";
     }
+
 
     // 3. Log the message
     await supabaseAdmin.from("whatsapp_log").insert({
