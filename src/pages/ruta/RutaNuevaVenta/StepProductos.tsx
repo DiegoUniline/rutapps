@@ -30,6 +30,7 @@ interface Props {
   removeFromCart: (pid: string, esCambio?: boolean) => void;
   getItemInCart: (pid: string) => CartItem | undefined;
   getMaxQty: (pid: string) => number;
+  getDispSigned?: (pid: string) => number;
   setStep: (s: any) => void;
   setCart: (v: any) => void;
   stockAbordo: Map<string, number>;
@@ -63,7 +64,7 @@ export function StepProductos(props: Props) {
   const {
     clienteNombre, clienteListaNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos,
     cart, cambioItems, tipoVenta, totals, addToCart, addGranelLine, updateQty, removeFromCart,
-    getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
+    getItemInCart, getMaxQty, getDispSigned, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
     insights, bannerDismissed, setBannerDismissed,
     applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode, setItemQty,
     getSuggestedPrice, setItemPriceManual, setItemPriceFromLista, resetItemToSuggested,
@@ -250,7 +251,7 @@ export function StepProductos(props: Props) {
         {filteredProductos?.filter(p => {
           if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
           if (stockFilter === 'todos') return true;
-          const disp = getMaxQty(p.id);
+          const disp = getDispSigned ? getDispSigned(p.id) : getMaxQty(p.id);
           return stockFilter === 'con' ? disp > 0 : disp <= 0;
         }).map(p => {
           const inCart = getItemInCart(p.id);
@@ -286,7 +287,7 @@ export function StepProductos(props: Props) {
                       </>
                     )}
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
-                      const disp = maxQty;
+                      const disp = getDispSigned ? getDispSigned(p.id) : maxQty;
                       const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';
                       return (
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${bg}`}>

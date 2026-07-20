@@ -437,6 +437,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return stockAbordo.get(productoId) ?? 0;
   };
 
+  /** Disponible (con signo, permite negativos) para mostrar en UI cuando hay apartado */
+  const getDispSigned = (productoId: string): number => {
+    if (apartadoActivoPedido) return apartadoDisponible.get(productoId) ?? 0;
+    return getMaxQty(productoId);
+  };
+
   /** Apply a list of suggested items into the cart, capping qty at available stock */
   const applySuggestionList = (items: { producto_id: string; cantidad: number }[], label: string) => {
     if (!productos || !items.length) return;
@@ -1145,7 +1151,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, routeSteps, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
-    addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
+    addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,
