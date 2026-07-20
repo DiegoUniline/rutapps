@@ -251,7 +251,7 @@ export function StepProductos(props: Props) {
         {filteredProductos?.filter(p => {
           if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
           if (stockFilter === 'todos') return true;
-          const disp = getMaxQty(p.id);
+          const disp = getDispSigned ? getDispSigned(p.id) : getMaxQty(p.id);
           return stockFilter === 'con' ? disp > 0 : disp <= 0;
         }).map(p => {
           const inCart = getItemInCart(p.id);
