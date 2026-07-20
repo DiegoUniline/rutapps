@@ -237,7 +237,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
       const cliente = clientesList?.find(c => c.id === venta.cliente_id);
       setWaPdfBlob(blob);
       setWaPdfName(fileName);
-      setWaPhone(cliente?.telefono ?? '');
+      setWaPhone(phoneWithLada(cliente?.telefono, (cliente as any)?.lada, (empresa as any)?.lada || '52'));
       setWaMessage(caption);
       setWaOpen(true);
     } catch (err: any) {
