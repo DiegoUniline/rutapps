@@ -8432,8 +8432,14 @@ export type Database = {
           created_at: string | null
           empresa_id: string
           enviar_recibo_pago: boolean
+          evolution_connected_at: string | null
+          evolution_instance_name: string | null
+          evolution_last_qr_at: string | null
+          evolution_phone_number: string | null
+          evolution_status: string | null
           id: string
           instance_name: string
+          provider: string
         }
         Insert: {
           activo?: boolean
@@ -8444,8 +8450,14 @@ export type Database = {
           created_at?: string | null
           empresa_id: string
           enviar_recibo_pago?: boolean
+          evolution_connected_at?: string | null
+          evolution_instance_name?: string | null
+          evolution_last_qr_at?: string | null
+          evolution_phone_number?: string | null
+          evolution_status?: string | null
           id?: string
           instance_name?: string
+          provider?: string
         }
         Update: {
           activo?: boolean
@@ -8456,8 +8468,14 @@ export type Database = {
           created_at?: string | null
           empresa_id?: string
           enviar_recibo_pago?: boolean
+          evolution_connected_at?: string | null
+          evolution_instance_name?: string | null
+          evolution_last_qr_at?: string | null
+          evolution_phone_number?: string | null
+          evolution_status?: string | null
           id?: string
           instance_name?: string
+          provider?: string
         }
         Relationships: [
           {
