@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,7 +6,7 @@ import { Package, AlertTriangle, ShoppingCart, Calendar as CalendarIcon, CheckCi
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProveedores } from '@/hooks/useData';
+import { useProveedores, useAlmacenes } from '@/hooks/useData';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { fmtMoney } from '@/lib/currency';
 import { todayLocal, weekStartLocal, weekEndLocal } from '@/lib/utils';
@@ -96,6 +96,18 @@ export default function ConcentradoSurtidoPage() {
   const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const { data: vendedoresList = [], isLoading: loadingVendedores } = useVendedoresForFilter();
 
+  // Almacenes desde los que se surtirá (multi). Default: "Almacén General" si existe.
+  const { data: almacenesList = [] } = useAlmacenes();
+  const [almacenFilter, setAlmacenFilter] = useState<string[]>([]);
+  const [almacenInit, setAlmacenInit] = useState(false);
+  useEffect(() => {
+    if (almacenInit || almacenesList.length === 0) return;
+    const general = almacenesList.find(a => /general/i.test(a.nombre || ''));
+    setAlmacenFilter(general ? [general.id] : [almacenesList[0].id]);
+    setAlmacenInit(true);
+  }, [almacenesList, almacenInit]);
+  const almacenesKey = almacenFilter.slice().sort().join(',');
+
   // Agrupador
   type GroupKey = 'none' | 'vendedor' | 'cliente' | 'estado' | 'estado_surtido';
   const [groupBy, setGroupBy] = useState<GroupKey>('none');
@@ -106,7 +118,7 @@ export default function ConcentradoSurtidoPage() {
 
   const vendedoresKey = vendedorFilter.slice().sort().join(',');
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey],
+    queryKey: ['concentrado-surtido', empresa?.id, desde, hasta, statusFilter.join(','), fechaField, tipoFilter, vendedoresKey, almacenesKey],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const statuses = statusFilter.length > 0
@@ -157,6 +169,22 @@ export default function ConcentradoSurtidoPage() {
       );
       const prodMap = new Map(productos.map(p => [p.id, p]));
 
+      // 4b) Stock por almacén(es) seleccionado(s). Si no hay ninguno, cae al total del producto.
+      const stockPorProducto = new Map<string, number>();
+      if (almacenFilter.length > 0 && productoIds.length > 0) {
+        const stockRows = await fetchAllPages<{ producto_id: string; cantidad: number | null }>((from, to) =>
+          supabase.from('stock_almacen')
+            .select('producto_id, cantidad')
+            .eq('empresa_id', empresa!.id)
+            .in('almacen_id', almacenFilter)
+            .in('producto_id', productoIds)
+            .range(from, to)
+        );
+        for (const r of stockRows) {
+          stockPorProducto.set(r.producto_id, (stockPorProducto.get(r.producto_id) ?? 0) + Number(r.cantidad || 0));
+        }
+      }
+
       // Agregaciones
       const requerido = new Map<string, number>();
       for (const l of lineas) requerido.set(l.producto_id, (requerido.get(l.producto_id) ?? 0) + Number(l.cantidad || 0));
@@ -169,7 +197,9 @@ export default function ConcentradoSurtidoPage() {
         const req = requerido.get(pid) ?? 0;
         const ent = entregado.get(pid) ?? 0;
         const pend = Math.max(0, req - ent);
-        const stock = Number(p?.cantidad ?? 0);
+        const stock = almacenFilter.length > 0
+          ? Number(stockPorProducto.get(pid) ?? 0)
+          : Number(p?.cantidad ?? 0);
         const faltante = Math.max(0, pend - stock);
         return {
           producto_id: pid,
@@ -484,6 +514,21 @@ export default function ConcentradoSurtidoPage() {
               onChange={setVendedorFilter}
             />
           </div>
+          <div className="pt-1">
+            <EntityMultiSelect
+              label="Almacén (surtir desde)"
+              placeholder="Todos los almacenes"
+              options={almacenesList.map(a => ({ id: a.id, label: a.nombre || '—' }))}
+              value={almacenFilter}
+              onChange={setAlmacenFilter}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {almacenFilter.length === 0
+                ? 'Sin almacén: stock total de todos los almacenes.'
+                : `Stock sumado de ${almacenFilter.length} almacén(es).`}
+            </p>
+          </div>
+
           <div className="space-y-1 pt-2">
             <Label className="text-xs">Agrupar por</Label>
             <Select value={groupBy} onValueChange={(v) => { setGroupBy(v as GroupKey); setOpenGroups(new Set()); }}>
