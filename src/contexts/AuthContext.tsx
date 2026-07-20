@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const { data, error } = await supabase.from('empresas')
-        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, maneja_lotes')
+        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, maneja_lotes, lada')
         .eq('id', id)
         .maybeSingle();
       if (!error && data) {
