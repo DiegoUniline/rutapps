@@ -14,6 +14,7 @@ import { usePermisos } from "@/hooks/usePermisos";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import WhatsAppSuspendedBanner from "@/components/WhatsAppSuspendedBanner";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import FacturaPendienteModal from "@/components/FacturaPendienteModal";
 import { ErrorModalProvider } from "@/components/ErrorModal";
@@ -483,7 +484,7 @@ function AppRoutes() {
   if (isBlockedTotal && (!subscription.isSuperAdmin || isSuperAdminOverride)) {
     return (
       <div className="min-h-[100dvh] flex flex-col bg-background">
-        <SubscriptionBanner />
+        <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -533,7 +534,7 @@ function AppRoutes() {
   if (subscription.isSuperAdmin) {
     return (
       <>
-        <SubscriptionBanner />
+        <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -559,7 +560,7 @@ function AppRoutes() {
   if (isBlockedTotal) {
     return (
       <div className="min-h-[100dvh] flex flex-col bg-background">
-        <SubscriptionBanner />
+        <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -601,7 +602,7 @@ function AppRoutes() {
   if (isSoloMovil) {
     return (
       <>
-      <SubscriptionBanner />
+      <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
       <Routes>
         <Route path="/ruta" element={<MobileLayout />}>
@@ -644,7 +645,7 @@ function AppRoutes() {
   if (isSoloPos) {
     return (
       <>
-        <SubscriptionBanner />
+        <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -658,7 +659,7 @@ function AppRoutes() {
 
   return (
     <>
-      <SubscriptionBanner />
+      <WhatsAppSuspendedBanner /><SubscriptionBanner />
       <OnboardingGate />
       <Suspense fallback={<PageLoader />}>
         <Routes>
