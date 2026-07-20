@@ -10,6 +10,7 @@ import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { printTicket } from '@/lib/printTicketUtil';
 import { toPng } from 'html-to-image';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { fetchEntregaWithFallback, fetchVentaForEntregaWithFallback, fetchOtrasPendientesWithFallback } from '@/lib/offlineEntrega';

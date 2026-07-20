@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
