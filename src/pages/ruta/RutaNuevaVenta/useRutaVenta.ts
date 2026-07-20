@@ -183,6 +183,23 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     enabled: useFallbackStock && !!empresa?.id && !!almacenId,
   });
 
+  const apartadoActivoPedido = tipoVenta === 'pedido' && !!(empresa as any)?.apartar_stock_pedidos;
+  const apartadoAlmacenesIds = ((empresa as any)?.apartado_almacenes_ids ?? []) as string[];
+
+  const { data: pedidoStockAlmacenRaw } = useOfflineQuery('stock_almacen', {
+    empresa_id: empresa?.id,
+    almacen_id: pedidoAlmacenId,
+  }, {
+    enabled: apartadoActivoPedido && !!empresa?.id && !!pedidoAlmacenId,
+  });
+
+  const { data: pedidoStockApartadoRaw } = useOfflineQuery('stock_apartado', {
+    empresa_id: empresa?.id,
+    almacen_id: pedidoAlmacenId,
+  }, {
+    enabled: apartadoActivoPedido && !!empresa?.id && !!pedidoAlmacenId,
+  });
+
   const stockAbordo = useMemo(() => {
     const map = new Map<string, number>();
     if (!useFallbackStock && cargaLineasRaw && cargaLineasRaw.length > 0) {
@@ -198,6 +215,18 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }
     return map;
   }, [cargaLineasRaw, useFallbackStock, almacenId, stockAlmacenRaw]);
+
+  const apartadoDisponible = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!apartadoActivoPedido || !pedidoAlmacenId) return map;
+    (pedidoStockAlmacenRaw as any[] | undefined)?.forEach(s => {
+      map.set(s.producto_id, Number(s.cantidad) || 0);
+    });
+    (pedidoStockApartadoRaw as any[] | undefined)?.forEach(s => {
+      map.set(s.producto_id, (map.get(s.producto_id) ?? 0) - (Number(s.cantidad) || 0));
+    });
+    return map;
+  }, [apartadoActivoPedido, pedidoAlmacenId, pedidoStockAlmacenRaw, pedidoStockApartadoRaw]);
 
   const { data: promocionesActivas } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
@@ -395,6 +424,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const filteredReemplazoProductos = productos?.filter(p => !searchReemplazo || p.nombre.toLowerCase().includes(searchReemplazo.toLowerCase()) || p.codigo.toLowerCase().includes(searchReemplazo.toLowerCase()));
 
   const getMaxQty = (productoId: string) => {
+    if (apartadoActivoPedido) return Math.max(0, apartadoDisponible.get(productoId) ?? 0);
     if (tipoVenta === 'pedido') return Infinity;
     const prod = productos?.find(p => p.id === productoId);
     if (prod?.vender_sin_stock) return Infinity;
@@ -418,8 +448,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       if (!prod) return;
       const max = getMaxQty(prod.id);
       // Skip products with zero stock when in venta_directa mode
-      if (max <= 0 && !prod.vender_sin_stock) { skippedCount++; return; }
+      if (max <= 0) { skippedCount++; return; }
       const finalQty = Math.min(s.cantidad, max);
+      if (finalQty <= 0) { skippedCount++; return; }
       if (finalQty < s.cantidad) cappedCount++;
       const pf = resolvePricingFull(prod);
       newItems.push({
@@ -454,13 +485,20 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const repeatLastSale = () => {
     if (!productos || !insights.lastSaleLineas.length) return;
     const newItems: CartItem[] = [];
+    let cappedCount = 0;
+    let skippedCount = 0;
     insights.lastSaleLineas.forEach(l => {
       const prod = (productos as any[]).find(p => p.id === l.producto_id);
       if (!prod) return;
+      const max = getMaxQty(prod.id);
+      if (max <= 0) { skippedCount++; return; }
+      const requestedQty = Number(l.cantidad) || 1;
+      const finalQty = Math.min(requestedQty, max);
+      if (finalQty < requestedQty) cappedCount++;
       const pf = resolvePricingFull(prod);
       newItems.push({
         producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
-        precio_unitario: pf.unitPrice, cantidad: Number(l.cantidad) || 1,
+        precio_unitario: pf.unitPrice, cantidad: finalQty,
         unidad: (prod.unidades as any)?.abreviatura || 'pz',
         unidad_id: prod.unidad_venta_id ?? undefined,
         tiene_iva: prod.tiene_iva ?? false,
@@ -473,7 +511,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       });
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
-    toast.success(`${newItems.length} productos de la última venta`);
+    let msg = `${newItems.length} productos de la última venta`;
+    if (cappedCount > 0) msg += ` · ${cappedCount} ajustados al stock`;
+    if (skippedCount > 0) msg += ` · ${skippedCount} sin stock`;
+    toast.success(msg);
   };
 
   /** Find product by scanned code (barcode → SKU → name fuzzy) */
@@ -504,9 +545,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     setCart(prev => prev.map(c => c.producto_id === productoId && !!c.es_cambio === match ? { ...c, cantidad: capped } : c));
   };
 
-  const apartadoActivoPedido = tipoVenta === 'pedido' && !!(empresa as any)?.apartar_stock_pedidos;
-  const apartadoAlmacenesIds = ((empresa as any)?.apartado_almacenes_ids ?? []) as string[];
-
   // Default pedidoAlmacenId al primer almacén habilitado cuando aplica
   useEffect(() => {
     if (!apartadoActivoPedido) { if (pedidoAlmacenId !== null) setPedidoAlmacenId(null); return; }
@@ -520,13 +558,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   const addToCart = (p: any, esCambio = false) => {
     const maxQty = esCambio ? Infinity : getMaxQty(p.id);
+    const stockMessage = apartadoActivoPedido ? 'Sin stock disponible' : 'Stock a bordo insuficiente';
     const existing = cart.find(c => c.producto_id === p.id && c.es_cambio === esCambio);
     if (existing) {
       const newQty = Math.min(existing.cantidad + 1, maxQty);
-      if (newQty <= existing.cantidad) { toast.error('Stock a bordo insuficiente'); return; }
+      if (newQty <= existing.cantidad) { toast.error(stockMessage); return; }
       setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
-      if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
+      if (maxQty < 1) { toast.error(apartadoActivoPedido ? 'Sin stock disponible' : 'Sin stock a bordo'); return; }
       const pf = resolvePricingFull(p);
       const almacenLinea = apartadoActivoPedido && !esCambio ? pedidoAlmacenId : null;
       setCart([...cart, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, precio_unitario: esCambio ? 0 : pf.unitPrice, cantidad: 1, unidad: 'pz', unidad_id: p.unidad_venta_id ?? undefined, tiene_iva: esCambio ? false : (p.tiene_iva ?? false), iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0), tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false), ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0), es_cambio: esCambio, precio_unitario_sin_redondeo: esCambio ? 0 : pf.rawUnitPrice, precio_display_sin_redondeo: esCambio ? 0 : pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo, almacen_id: almacenLinea }]);
@@ -537,7 +576,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const addGranelLine = (p: any, opts: { cantidadBase: number; precioUnitario: number; paquetes: number | null; presentacion: { id: string; nombre: string; factor_base: number } | null }) => {
     const { cantidadBase, precioUnitario, paquetes, presentacion } = opts;
     if (cantidadBase <= 0) return;
-    const noLimit = !!p.vender_sin_stock;
+    const noLimit = !apartadoActivoPedido && !!p.vender_sin_stock;
     const maxQty = noLimit ? Infinity : getMaxQty(p.id);
     if (!noLimit && maxQty <= 0) {
       toast.error('Sin stock disponible');
@@ -807,7 +846,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
-      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); }
+      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); const ventaLineaId = crypto.randomUUID(); await queueOperation('venta_lineas', 'insert', { id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) { try { const apartTable = getOfflineTable('stock_apartado'); await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }); } catch { /* cache local; el trigger del backend crea el apartado real */ } } }
 
       // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).

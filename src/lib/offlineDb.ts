@@ -55,6 +55,7 @@ class OfflineDatabase extends Dexie {
   tarifa_lineas!: Table;
   tarifas!: Table;
   stock_almacen!: Table;
+  stock_apartado!: Table;
   producto_presentaciones!: Table;
   lista_precios!: Table;
   listas!: Table;
@@ -111,6 +112,11 @@ class OfflineDatabase extends Dexie {
     this.version(10).stores({
       zonas: 'id, empresa_id, activo',
       almacenes: 'id, empresa_id, activo, es_merma',
+    });
+    // v11: cache stock reservations so mobile orders can calculate
+    // disponible = stock_almacen - stock_apartado even without signal.
+    this.version(11).stores({
+      stock_apartado: 'id, empresa_id, almacen_id, producto_id, venta_id, venta_linea_id',
     });
   }
 }
