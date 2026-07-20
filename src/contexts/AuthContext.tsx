@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (nextProfile?.empresa_id) {
       try {
         const { data, error } = await supabase.from('empresas')
-          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes, lada')
           .eq('id', nextProfile.empresa_id)
           .maybeSingle();
 
