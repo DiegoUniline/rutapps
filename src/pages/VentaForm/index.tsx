@@ -23,6 +23,9 @@ import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVent
 import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
+import { phoneWithLada } from '@/lib/phoneWithLada';
+import { fmtMoney } from '@/lib/currency';
+
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
@@ -340,7 +343,40 @@ export default function VentaFormPage() {
           ]} />
         </div>
       </div>
-      <DocumentPreviewModal open={showPdfModal} onClose={() => { setShowPdfModal(false); setPdfBlob(null); }} pdfBlob={pdfBlob} fileName={`${form.folio ?? 'pedido'}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''} caption={`Documento ${form.folio}`} tipo="pedido" referencia_id={form.id} />
+      {(() => {
+        const cli = clientesList?.find(c => c.id === form.cliente_id);
+        const phoneWA = phoneWithLada(cli?.telefono, (cli as any)?.lada, (empresa as any)?.lada || '52');
+        const nombreCli = cli?.nombre || 'estimado cliente';
+        const esCotizacion = (form.tipo as string) === 'cotizacion';
+        const esPedido = !esCotizacion;
+        const totalTxt = fmtMoney(Number(totals?.total ?? 0));
+        const saldoTxt = fmtMoney(Number(saldoPendiente ?? 0));
+        const empresaNombre = (empresa as any)?.nombre ?? '';
+        const docLabel = esCotizacion ? 'cotización' : 'pedido';
+        const caption = [
+          `Hola ${nombreCli}, 👋`,
+          '',
+          `Adjuntamos su ${docLabel} *${form.folio ?? ''}*.`,
+          `• Total: *${totalTxt}*`,
+          ...(esPedido && Number(saldoPendiente ?? 0) > 0 ? [`• Saldo pendiente: *${saldoTxt}*`] : []),
+          '',
+          'Cualquier duda o aclaración estamos a sus órdenes. ¡Gracias por su preferencia! 🙌',
+          empresaNombre ? `\n_${empresaNombre}_` : '',
+        ].filter(Boolean).join('\n');
+        return (
+          <DocumentPreviewModal
+            open={showPdfModal}
+            onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+            pdfBlob={pdfBlob}
+            fileName={`${form.folio ?? 'pedido'}.pdf`}
+            empresaId={empresa?.id ?? ''}
+            defaultPhone={phoneWA}
+            caption={caption}
+            tipo="pedido"
+            referencia_id={form.id}
+          />
+        );
+      })()}
       {billingEnabled && showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
 

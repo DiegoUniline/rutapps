@@ -109,6 +109,7 @@ export interface Cliente {
   nombre: string;
   contacto?: string;
   telefono?: string;
+  lada?: string;
   email?: string;
   direccion?: string;
   rfc?: string;
@@ -186,6 +187,7 @@ export interface Empresa {
   apartado_almacenes_ids?: string[];
   apartado_solo_con_stock?: boolean;
   maneja_lotes?: boolean;
+  lada?: string;
 }
 
 export interface Gasto {

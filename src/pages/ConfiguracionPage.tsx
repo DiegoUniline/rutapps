@@ -453,6 +453,7 @@ export default function ConfiguracionPage() {
       estado: (config as any).estado ?? '',
       cp: (config as any).cp ?? '',
       telefono: (config as any).telefono ?? '',
+      lada: (config as any).lada ?? '52',
       email: (config as any).email ?? '',
       notas_ticket: (config as any).notas_ticket ?? '',
     });
@@ -485,6 +486,7 @@ export default function ConfiguracionPage() {
       direccion: (config as any).direccion ?? '', colonia: (config as any).colonia ?? '',
       ciudad: (config as any).ciudad ?? '', estado: (config as any).estado ?? '',
       cp: (config as any).cp ?? '', telefono: (config as any).telefono ?? '',
+      lada: (config as any).lada ?? '52',
       email: (config as any).email ?? '', notas_ticket: (config as any).notas_ticket ?? '',
     };
     const origCampos = { ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean> ?? {}) };
@@ -516,6 +518,7 @@ export default function ConfiguracionPage() {
         nombre: form.nombre, razon_social: form.razon_social, rfc: form.rfc,
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
+        lada: (form.lada || '52').replace(/\D/g, '') || '52',
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
         ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
         ticket_ancho: ticketAncho,
@@ -609,6 +612,7 @@ export default function ConfiguracionPage() {
             <div className="grid grid-cols-2 gap-3">
               {field('nombre', 'Nombre comercial', 'Mi Empresa')}
               {field('telefono', 'Teléfono', '33 1234 5678')}
+              {field('lada', 'Lada país (WhatsApp)', '52')}
               {field('email', 'Email', 'contacto@empresa.com')}
             </div>
           </div>
