@@ -69,7 +69,7 @@ export function DetalleView(p: Props) {
         handleCancelar={p.handleCancelar}
         fmt={p.fmt}
       />
-      <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={p.clienteData?.telefono ?? ''} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
+      <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={phoneWithLada(p.clienteData?.telefono, p.clienteData?.lada, (p.empresa as any)?.lada || '52')} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
 }

@@ -1044,7 +1044,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         pdfBlob={pdfBlob}
         fileName={`${form.folio ?? 'entrega'}.pdf`}
         empresaId={empresa?.id ?? ''}
-        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        defaultPhone={(() => { const c = clientesList?.find(x => x.id === form.cliente_id); return phoneWithLada(c?.telefono, (c as any)?.lada, (empresa as any)?.lada || '52'); })()}
         caption={`Entrega ${form.folio}`}
         tipo="entrega"
         referencia_id={form.id}
