@@ -23,6 +23,9 @@ import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVent
 import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
+import { phoneWithLada } from '@/lib/phoneWithLada';
+import { fmtMoney } from '@/lib/format';
+import { useAuth } from '@/contexts/AuthContext';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, todayInTimezone } from '@/lib/utils';
 import { isSuperAdminEmail } from '@/lib/superAdminEmail';
