@@ -109,6 +109,7 @@ export interface Cliente {
   nombre: string;
   contacto?: string;
   telefono?: string;
+  lada?: string;
   email?: string;
   direccion?: string;
   rfc?: string;
