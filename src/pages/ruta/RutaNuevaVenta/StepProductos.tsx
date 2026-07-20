@@ -278,8 +278,12 @@ export function StepProductos(props: Props) {
                     {(p as any).formula && (
                       <span className="text-[10px] text-muted-foreground italic truncate max-w-[140px]">· {(p as any).formula}</span>
                     )}
-                    <span className="text-[10px] text-muted-foreground">·</span>
-                    <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
+                    {!(apartadoActivoPedido && tipoVenta === 'pedido' && pedidoAlmacenId) && (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                        <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
+                      </>
+                    )}
                     {apartadoActivoPedido && tipoVenta === 'pedido' && (() => {
                       const disp = disponibleMap?.get(p.id) ?? 0;
                       const bg = disp > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : disp === 0 ? 'bg-muted text-muted-foreground' : 'bg-destructive/15 text-destructive';
