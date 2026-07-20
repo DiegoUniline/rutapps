@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       case "send-media": {
         const { phone, url, fileName, caption, mediaType, tipo, referencia_id } = body as any;
         if (!phone || !url) return json(400, { error: "phone y url requeridos" });
-        const normalized = String(phone).replace(/[\s\-\(\)+]/g, "");
+        const normalized = await normalizePhone(admin, empresa_id, phone);
         const mediaKind = mediaType || (String(fileName || url).match(/\.(jpg|jpeg|png|webp)$/i) ? "image" : "document");
         const r = await evo(`/message/sendMedia/${instanceName}`, {
           method: "POST",
