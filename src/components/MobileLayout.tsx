@@ -21,6 +21,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
+import StockAdjustmentDialog from '@/components/StockAdjustmentDialog';
 
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
