@@ -30,6 +30,23 @@ async function evo(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, body: json ?? text };
 }
 
+/**
+ * Normaliza el número para WhatsApp:
+ * - Sólo dígitos.
+ * - Si tiene 10 dígitos, antepone la lada de la empresa (default '52').
+ * - Deja intacto si ya trae lada.
+ */
+async function normalizePhone(admin: any, empresa_id: string, phone: string): Promise<string> {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return digits;
+  if (digits.length === 10) {
+    const { data } = await admin.from("empresas").select("lada").eq("id", empresa_id).maybeSingle();
+    const lada = String(data?.lada ?? "52").replace(/\D/g, "") || "52";
+    return lada + digits;
+  }
+  return digits;
+}
+
 function json(status: number, data: unknown) {
   return new Response(JSON.stringify(data), {
     status,
