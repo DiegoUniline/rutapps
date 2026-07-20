@@ -100,7 +100,7 @@ export default function ConcentradoSurtidoPage() {
   const { data: almacenesList = [] } = useAlmacenes();
   const [almacenFilter, setAlmacenFilter] = useState<string[]>([]);
   const [almacenInit, setAlmacenInit] = useState(false);
-  useMemo(() => {
+  useEffect(() => {
     if (almacenInit || almacenesList.length === 0) return;
     const general = almacenesList.find(a => /general/i.test(a.nombre || ''));
     setAlmacenFilter(general ? [general.id] : [almacenesList[0].id]);
