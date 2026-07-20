@@ -11,6 +11,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
