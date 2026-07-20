@@ -518,6 +518,7 @@ export default function ConfiguracionPage() {
         nombre: form.nombre, razon_social: form.razon_social, rfc: form.rfc,
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
+        lada: (form.lada || '52').replace(/\D/g, '') || '52',
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
         ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
         ticket_ancho: ticketAncho,
