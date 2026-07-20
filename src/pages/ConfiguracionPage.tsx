@@ -486,6 +486,7 @@ export default function ConfiguracionPage() {
       direccion: (config as any).direccion ?? '', colonia: (config as any).colonia ?? '',
       ciudad: (config as any).ciudad ?? '', estado: (config as any).estado ?? '',
       cp: (config as any).cp ?? '', telefono: (config as any).telefono ?? '',
+      lada: (config as any).lada ?? '52',
       email: (config as any).email ?? '', notas_ticket: (config as any).notas_ticket ?? '',
     };
     const origCampos = { ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean> ?? {}) };
