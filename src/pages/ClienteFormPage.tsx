@@ -299,6 +299,13 @@ export default function ClienteFormPage() {
     }
   }, [isNew, vendedorIdParam]);
 
+  // Default lada from empresa on new cliente
+  useEffect(() => {
+    if (isNew && empresa && !form.lada) {
+      set('lada' as any, (empresa as any).lada || '52');
+    }
+  }, [isNew, empresa]);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
