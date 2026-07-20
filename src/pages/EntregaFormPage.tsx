@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarEntregaPdf } from '@/lib/entregaPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -1044,7 +1045,7 @@ export default function EntregaFormPage({ entregaIdProp, embedded = false }: { e
         pdfBlob={pdfBlob}
         fileName={`${form.folio ?? 'entrega'}.pdf`}
         empresaId={empresa?.id ?? ''}
-        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        defaultPhone={(() => { const c = clientesList?.find(x => x.id === form.cliente_id); return phoneWithLada(c?.telefono, (c as any)?.lada, (empresa as any)?.lada || '52'); })()}
         caption={`Entrega ${form.folio}`}
         tipo="entrega"
         referencia_id={form.id}

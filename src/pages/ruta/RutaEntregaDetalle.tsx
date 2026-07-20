@@ -10,6 +10,7 @@ import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { printTicket } from '@/lib/printTicketUtil';
 import { toPng } from 'html-to-image';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
 import { fetchEntregaWithFallback, fetchVentaForEntregaWithFallback, fetchOtrasPendientesWithFallback } from '@/lib/offlineEntrega';
@@ -960,7 +961,7 @@ export default function RutaEntregaDetalle() {
         );
       })()}
 
-      <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={cliente?.telefono ?? ''} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
+      <DocumentPreviewModal open={showEcPreview} onClose={() => setShowEcPreview(false)} pdfBlob={ecPdfBlob} fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={phoneWithLada(cliente?.telefono, (cliente as any)?.lada, (empresa as any)?.lada || '52')} caption={`Estado de cuenta - ${clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
 }

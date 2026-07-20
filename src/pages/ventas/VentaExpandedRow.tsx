@@ -11,6 +11,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo } from '@/hooks/usePromociones';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 
 import { toast } from 'sonner';
 import { ProductoLink } from '@/components/links/EntityLinks';
@@ -236,7 +237,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
       const cliente = clientesList?.find(c => c.id === venta.cliente_id);
       setWaPdfBlob(blob);
       setWaPdfName(fileName);
-      setWaPhone(cliente?.telefono ?? '');
+      setWaPhone(phoneWithLada(cliente?.telefono, (cliente as any)?.lada, (empresa as any)?.lada || '52'));
       setWaMessage(caption);
       setWaOpen(true);
     } catch (err: any) {
@@ -433,7 +434,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
               pdfBlob={pdfBlob}
               fileName={pdfName}
               empresaId={eId}
-              defaultPhone={clientesList?.find(c => c.id === venta.cliente_id)?.telefono}
+              defaultPhone={(() => { const c = clientesList?.find(x => x.id === venta.cliente_id); return phoneWithLada(c?.telefono, (c as any)?.lada, (empresa as any)?.lada || '52'); })()}
               caption={pdfCaption}
               tipo="venta"
               referencia_id={venta.id}

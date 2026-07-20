@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Lock } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { phoneWithLada } from '@/lib/phoneWithLada';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePermisos } from '@/hooks/usePermisos';
 import { statusColors } from './types';
@@ -69,7 +70,7 @@ export function DetalleView(p: Props) {
         handleCancelar={p.handleCancelar}
         fmt={p.fmt}
       />
-      <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={p.clienteData?.telefono ?? ''} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
+      <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={phoneWithLada(p.clienteData?.telefono, p.clienteData?.lada, (p.empresa as any)?.lada || '52')} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
 }
