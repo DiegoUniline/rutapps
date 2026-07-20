@@ -96,6 +96,18 @@ export default function ConcentradoSurtidoPage() {
   const [vendedorFilter, setVendedorFilter] = useState<string[]>([]);
   const { data: vendedoresList = [], isLoading: loadingVendedores } = useVendedoresForFilter();
 
+  // Almacenes desde los que se surtirá (multi). Default: "Almacén General" si existe.
+  const { data: almacenesList = [] } = useAlmacenes();
+  const [almacenFilter, setAlmacenFilter] = useState<string[]>([]);
+  const [almacenInit, setAlmacenInit] = useState(false);
+  useMemo(() => {
+    if (almacenInit || almacenesList.length === 0) return;
+    const general = almacenesList.find(a => /general/i.test(a.nombre || ''));
+    setAlmacenFilter(general ? [general.id] : [almacenesList[0].id]);
+    setAlmacenInit(true);
+  }, [almacenesList, almacenInit]);
+  const almacenesKey = almacenFilter.slice().sort().join(',');
+
   // Agrupador
   type GroupKey = 'none' | 'vendedor' | 'cliente' | 'estado' | 'estado_surtido';
   const [groupBy, setGroupBy] = useState<GroupKey>('none');
