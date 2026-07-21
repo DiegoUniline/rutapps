@@ -105,6 +105,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [searchReemplazo, setSearchReemplazo] = useState('');
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
   const [sinCompra, setSinCompra] = useState(false);
+  const [soloDevolucion, setSoloDevolucion] = useState(false);
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
