@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import KardexUbicacionModal from '@/components/KardexUbicacionModal';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
@@ -19,6 +19,9 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { EntityMultiSelect, type MSOption } from '@/components/reportes/EntityMultiSelect';
+import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda';
 
@@ -34,7 +37,7 @@ function useInventarioData() {
       const productos = await fetchAllPages<any>((from, to) =>
         supabase
           .from('productos')
-          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, unidades:unidad_venta_id(abreviatura)')
+          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, clasificacion_id, marca_id, proveedor_id, unidades:unidad_venta_id(abreviatura)')
           .eq('empresa_id', eid)
           .eq('status', 'activo')
           .order('nombre')
@@ -206,18 +209,58 @@ export default function InventarioPage() {
   const [showPresModal, setShowPresModal] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
+  const [categoriaIds, setCategoriaIds] = useState<string[]>([]);
+  const [marcaIds, setMarcaIds] = useState<string[]>([]);
+  const [proveedorIds, setProveedorIds] = useState<string[]>([]);
+
+  // Lookups for filter labels
+  const { data: lookups } = useQuery({
+    queryKey: ['inventario-lookups', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const eid = empresa!.id;
+      const [cats, marcas, provs] = await Promise.all([
+        supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+        supabase.from('marcas').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+        supabase.from('proveedores').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+      ]);
+      const toOpts = (rows: any[] | null): MSOption[] => (rows ?? []).map(r => ({ id: r.id, label: r.nombre }));
+      return { categorias: toOpts(cats.data), marcas: toOpts(marcas.data), proveedores: toOpts(provs.data) };
+    },
+  });
+
+  // Column visibility (resumen + almacen shared toggles for the non-dynamic columns)
+  const COLS: ColumnDef[] = useMemo(() => [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nombre', label: 'Producto', required: true },
+    { key: 'unidad', label: 'Unidad' },
+    { key: 'stockTotal', label: 'Stock Total' },
+    { key: 'costoUnit', label: 'Costo unit.' },
+    { key: 'valorCosto', label: 'Valor costo' },
+    { key: 'valorVenta', label: 'Proyección venta' },
+  ], []);
+  const { visible: colVisible, toggleColumn, setAll, reset } = useColumnPreferences('inventario', {
+    codigo: true, nombre: true, unidad: true, stockTotal: true, costoUnit: true, valorCosto: true, valorVenta: true,
+  });
+  const isCol = (k: string) => colVisible[k] !== false;
 
   const presByProd: Record<string, typeof presentaciones> = {};
   for (const p of presentaciones) {
     (presByProd[p.producto_id] ||= []).push(p);
   }
-  // (in-cell breakdown removed; presented in modal instead)
+
+  const catSet = useMemo(() => new Set(categoriaIds), [categoriaIds]);
+  const marcaSet = useMemo(() => new Set(marcaIds), [marcaIds]);
+  const provSet = useMemo(() => new Set(proveedorIds), [proveedorIds]);
 
   const filteredProducts = data?.productos.filter(p => {
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.codigo.toLowerCase().includes(search.toLowerCase())) return false;
     const total = p.stockTotal ?? 0;
     if (stockFilter === 'con' && total <= 0) return false;
     if (stockFilter === 'sin' && total > 0) return false;
+    if (catSet.size > 0 && !catSet.has((p as any).clasificacion_id)) return false;
+    if (marcaSet.size > 0 && !marcaSet.has((p as any).marca_id)) return false;
+    if (provSet.size > 0 && !provSet.has((p as any).proveedor_id)) return false;
     return true;
   });
 
@@ -225,7 +268,7 @@ export default function InventarioPage() {
     if (!data || !filteredProducts) return;
 
     if (view === 'resumen') {
-      const columns: ExportColumn[] = [
+      const allColumns: ExportColumn[] = [
         { key: 'codigo', header: 'Código', width: 14 },
         { key: 'nombre', header: 'Producto', width: 30 },
         { key: 'unidad', header: 'Ud.', width: 6 },
@@ -233,6 +276,14 @@ export default function InventarioPage() {
         { key: 'valorCostoTotal', header: 'Valor costo', format: 'currency', width: 16 },
         { key: 'valorVentaTotal', header: 'Proyección', format: 'currency', width: 16 },
       ];
+      const keyMap: Record<string, string> = {
+        codigo: 'codigo', nombre: 'nombre', unidad: 'unidad',
+        stockTotal: 'stockTotal', valorCosto: 'valorCostoTotal', valorVenta: 'valorVentaTotal',
+      };
+      const columns = allColumns.filter(c => {
+        const uiKey = Object.entries(keyMap).find(([, v]) => v === c.key)?.[0];
+        return uiKey ? isCol(uiKey) : true;
+      });
       const rows = filteredProducts.map(p => ({
         codigo: p.codigo,
         nombre: p.nombre,
@@ -248,9 +299,9 @@ export default function InventarioPage() {
         columns,
         data: rows,
         totals: {
-          stockTotal: data.totales.stockTotal,
-          valorCostoTotal: data.totales.valorCostoTotal,
-          valorVentaTotal: data.totales.valorVentaTotal,
+          stockTotal: filteredProducts.reduce((s, p) => s + (p.stockTotal ?? 0), 0),
+          valorCostoTotal: filteredProducts.reduce((s, p) => s + (p.valorCostoTotal ?? 0), 0),
+          valorVentaTotal: filteredProducts.reduce((s, p) => s + (p.valorVentaTotal ?? 0), 0),
         },
       });
     } else if (view === 'almacen') {
@@ -259,18 +310,24 @@ export default function InventarioPage() {
         nombre: a.nombre,
         tipo: ((a as any).tipo ?? 'almacen') as string,
       }));
-      const columns: ExportColumn[] = [
-        { key: 'codigo', header: 'Código', width: 14 },
+      const baseCols: ExportColumn[] = [
+        ...(isCol('codigo') ? [{ key: 'codigo', header: 'Código', width: 14 }] : []),
         { key: 'nombre', header: 'Producto', width: 30 },
+      ];
+      const tailCols: ExportColumn[] = [
+        ...(isCol('stockTotal') ? [{ key: 'total', header: 'Total', format: 'number' as const, width: 12 }] : []),
+        ...(isCol('costoUnit') ? [{ key: 'costo', header: 'Costo unit.', format: 'currency' as const, width: 14 }] : []),
+        ...(isCol('valorCosto') ? [{ key: 'valorTotal', header: 'Valor total', format: 'currency' as const, width: 16 }] : []),
+      ];
+      const columns: ExportColumn[] = [
+        ...baseCols,
         ...ubicaciones.map(u => ({
           key: `ubic_${u.id}`,
           header: `${u.nombre} (${u.tipo === 'ruta' ? 'Ruta' : 'Almacén'})`,
           format: 'number' as const,
           width: 14,
         })),
-        { key: 'total', header: 'Total', format: 'number' as const, width: 12 },
-        { key: 'costo', header: 'Costo unit.', format: 'currency' as const, width: 14 },
-        { key: 'valorTotal', header: 'Valor total', format: 'currency' as const, width: 16 },
+        ...tailCols,
       ];
       const rows = filteredProducts.map(p => {
         const row: Record<string, any> = { codigo: p.codigo, nombre: p.nombre };
@@ -303,7 +360,7 @@ export default function InventarioPage() {
         totals,
       });
     }
-  }, [data, filteredProducts, view, empresa]);
+  }, [data, filteredProducts, view, empresa, colVisible]);
 
   const tabs: { key: ViewMode; label: string; icon: React.ElementType }[] = [
     { key: 'resumen', label: 'Stock Total', icon: Package },
@@ -377,28 +434,73 @@ export default function InventarioPage() {
 
       {/* Search + stock filter */}
       {view !== 'rutas' && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative max-w-sm flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
+              {([
+                { v: 'todos', label: 'Todos' },
+                { v: 'con', label: 'Con stock' },
+                { v: 'sin', label: 'Sin stock' },
+              ] as const).map(o => (
+                <button
+                  key={o.v}
+                  onClick={() => setStockFilter(o.v)}
+                  className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <div className="ml-auto">
+              <ColumnVisibilityMenu
+                columns={COLS}
+                visible={colVisible}
+                onToggle={toggleColumn}
+                onShowAll={() => setAll(true)}
+                onReset={reset}
+              />
+            </div>
           </div>
-          <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
-            {([
-              { v: 'todos', label: 'Todos' },
-              { v: 'con', label: 'Con stock' },
-              { v: 'sin', label: 'Sin stock' },
-            ] as const).map(o => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <EntityMultiSelect
+              label="Categoría"
+              options={lookups?.categorias ?? []}
+              value={categoriaIds}
+              onChange={setCategoriaIds}
+            />
+            <EntityMultiSelect
+              label="Marca"
+              options={lookups?.marcas ?? []}
+              value={marcaIds}
+              onChange={setMarcaIds}
+            />
+            <EntityMultiSelect
+              label="Proveedor"
+              options={lookups?.proveedores ?? []}
+              value={proveedorIds}
+              onChange={setProveedorIds}
+            />
+          </div>
+          {(categoriaIds.length + marcaIds.length + proveedorIds.length) > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>
+                {filteredProducts?.length ?? 0} producto(s) tras filtros
+              </span>
               <button
-                key={o.v}
-                onClick={() => setStockFilter(o.v)}
-                className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+                onClick={() => { setCategoriaIds([]); setMarcaIds([]); setProveedorIds([]); }}
+                className="text-primary hover:underline"
               >
-                {o.label}
+                Limpiar filtros
               </button>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
+
 
 
 
@@ -412,33 +514,39 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Código</TableHead>
+                {isCol('codigo') && <TableHead className="text-[11px]">Código</TableHead>}
                 <TableHead className="text-[11px]">Producto</TableHead>
-                <TableHead className="text-[11px] text-center">Ud.</TableHead>
-                <TableHead className="text-[11px] text-center font-bold">Stock Total</TableHead>
-                <TableHead className="text-[11px] text-right">Valor costo</TableHead>
-                <TableHead className="text-[11px] text-right">Proyección</TableHead>
+                {isCol('unidad') && <TableHead className="text-[11px] text-center">Ud.</TableHead>}
+                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Stock Total</TableHead>}
+                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor costo</TableHead>}
+                {isCol('valorVenta') && <TableHead className="text-[11px] text-right">Proyección</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
+                  {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>}
                   <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
-                  <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>
-                  <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
-                  <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
+                  {isCol('unidad') && <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>}
+                  {isCol('stockTotal') && <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>}
+                  {isCol('valorCosto') && <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>}
+                  {isCol('valorVenta') && <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>}
                 </TableRow>
               ))}
-              {filteredProducts && filteredProducts.length > 0 && (
-                <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={3}>Totales</TableCell>
-                  <TableCell className="text-center">{fmtNum(data.totales.stockTotal)}</TableCell>
-                  <TableCell className="text-right">{fmt(data.totales.valorCostoTotal)}</TableCell>
-                  <TableCell className="text-right text-success">{fmt(data.totales.valorVentaTotal)}</TableCell>
-                </TableRow>
-              )}
+              {filteredProducts && filteredProducts.length > 0 && (() => {
+                const tStock = filteredProducts.reduce((s, p) => s + (p.stockTotal ?? 0), 0);
+                const tCosto = filteredProducts.reduce((s, p) => s + (p.valorCostoTotal ?? 0), 0);
+                const tVenta = filteredProducts.reduce((s, p) => s + (p.valorVentaTotal ?? 0), 0);
+                const leftCols = 1 + (isCol('codigo') ? 1 : 0) + (isCol('unidad') ? 1 : 0);
+                return (
+                  <TableRow className="bg-card font-bold">
+                    <TableCell colSpan={leftCols}>Totales</TableCell>
+                    {isCol('stockTotal') && <TableCell className="text-center">{fmtNum(tStock)}</TableCell>}
+                    {isCol('valorCosto') && <TableCell className="text-right">{fmt(tCosto)}</TableCell>}
+                    {isCol('valorVenta') && <TableCell className="text-right text-success">{fmt(tVenta)}</TableCell>}
+                  </TableRow>
+                );
+              })()}
             </TableBody>
           </Table>
         </div>
@@ -464,7 +572,7 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
+                {isCol('codigo') && <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>}
                 <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
                 {ubicaciones.map(u => (
                   <TableHead key={u.id} className="text-[11px] text-center whitespace-nowrap">
@@ -480,9 +588,9 @@ export default function InventarioPage() {
                     )}
                   </TableHead>
                 ))}
-                <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
-                <TableHead className="text-[11px] text-right">Costo unit.</TableHead>
-                <TableHead className="text-[11px] text-right">Valor total</TableHead>
+                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Total</TableHead>}
+                {isCol('costoUnit') && <TableHead className="text-[11px] text-right">Costo unit.</TableHead>}
+                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor total</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -490,7 +598,7 @@ export default function InventarioPage() {
                 const totalUbic = ubicaciones.reduce((s, u) => s + u.getStock(p.id), 0);
                 return (
                   <TableRow key={p.id}>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
+                    {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>}
                     <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
@@ -528,27 +636,29 @@ export default function InventarioPage() {
                         </TableCell>
                       );
                     })}
-                    <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
-                      {fmtNum(totalUbic)}
-                    </TableCell>
-                    <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>
-                    <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>
+                    {isCol('stockTotal') && (
+                      <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
+                        {fmtNum(totalUbic)}
+                      </TableCell>
+                    )}
+                    {isCol('costoUnit') && <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>}
+                    {isCol('valorCosto') && <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>}
                   </TableRow>
                 );
               })}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={2} className="sticky left-0 bg-card">Totales</TableCell>
+                  <TableCell colSpan={isCol('codigo') ? 2 : 1} className="sticky left-0 bg-card">Totales</TableCell>
                   {ubicaciones.map(u => {
                     const total = filteredProducts.reduce((s, p) => s + u.getStock(p.id), 0);
                     return <TableCell key={u.id} className={cn("text-center", u.tipo === 'ruta' ? "text-warning" : "")}>{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0), 0))}</TableCell>
-                  <TableCell className="text-right">—</TableCell>
-                  <TableCell className="text-right">{fmt(filteredProducts.reduce((s, p) => {
+                  {isCol('stockTotal') && <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0), 0))}</TableCell>}
+                  {isCol('costoUnit') && <TableCell className="text-right">—</TableCell>}
+                  {isCol('valorCosto') && <TableCell className="text-right">{fmt(filteredProducts.reduce((s, p) => {
                     const totalUbic = ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0);
                     return s + totalUbic * (p.costo ?? 0);
-                  }, 0))}</TableCell>
+                  }, 0))}</TableCell>}
                 </TableRow>
               )}
             </TableBody>
