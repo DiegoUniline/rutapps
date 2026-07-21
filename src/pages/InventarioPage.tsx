@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import KardexUbicacionModal from '@/components/KardexUbicacionModal';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
@@ -19,6 +19,9 @@ import { useAllPresentaciones } from '@/hooks/usePresentaciones';
 import InventarioPresentacionesModal from '@/components/InventarioPresentacionesModal';
 import { ProductoLink } from '@/components/links/EntityLinks';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { EntityMultiSelect, type MSOption } from '@/components/reportes/EntityMultiSelect';
+import { ColumnVisibilityMenu, type ColumnDef } from '@/components/ColumnVisibilityMenu';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas' | 'demanda';
 
