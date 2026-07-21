@@ -80,6 +80,14 @@ export function StepProductos(props: Props) {
   const { empresa } = useAuth();
   const soloConStockDefault = !!(empresa as any)?.apartado_solo_con_stock;
   const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>(soloConStockDefault ? 'con' : 'todos');
+  // Sincroniza el filtro por defecto cuando empresa carga async (evita quedar en 'todos'
+  // porque en el primer render empresa aún era undefined). Solo aplica hasta que el
+  // usuario toca los tabs (userTouched).
+  const userTouched = useRef(false);
+  useEffect(() => {
+    if (userTouched.current) return;
+    setStockFilter(soloConStockDefault ? 'con' : 'todos');
+  }, [soloConStockDefault]);
 
 
   // Wrap addToCart: abrir el selector si es granel O si el producto tiene
