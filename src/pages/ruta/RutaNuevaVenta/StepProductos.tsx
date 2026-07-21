@@ -210,7 +210,7 @@ export function StepProductos(props: Props) {
             ] as const).map(opt => (
               <button
                 key={opt.k}
-                onClick={() => setStockFilter(opt.k)}
+                onClick={() => { userTouched.current = true; setStockFilter(opt.k); }}
                 className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all active:scale-95 ${stockFilter === opt.k ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-muted-foreground'}`}
               >
                 {opt.label}
