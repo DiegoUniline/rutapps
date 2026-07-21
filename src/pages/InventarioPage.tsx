@@ -588,9 +588,9 @@ export default function InventarioPage() {
                     )}
                   </TableHead>
                 ))}
-                <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
-                <TableHead className="text-[11px] text-right">Costo unit.</TableHead>
-                <TableHead className="text-[11px] text-right">Valor total</TableHead>
+                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Total</TableHead>}
+                {isCol('costoUnit') && <TableHead className="text-[11px] text-right">Costo unit.</TableHead>}
+                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor total</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
