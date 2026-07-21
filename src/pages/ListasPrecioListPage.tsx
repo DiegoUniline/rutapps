@@ -42,6 +42,21 @@ export default function ListasPrecioListPage() {
     navigate(`/tarifas/${l.tarifa_id}?lista=${encodeURIComponent(l.nombre)}`);
   };
 
+  const setPrincipal = async (l: any) => {
+    if (l.es_principal || !empresa?.id) return;
+    try {
+      await supabase.from('lista_precios').update({ es_principal: false } as any).eq('empresa_id', empresa.id);
+      const { error } = await supabase.from('lista_precios').update({ es_principal: true } as any).eq('id', l.id);
+      if (error) throw error;
+      toast.success(`"${l.nombre}" es ahora la lista principal`);
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'No se pudo cambiar la principal');
+    }
+  };
+
   const total = filtered.length;
 
 
