@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, EyeOff } from 'lucide-react';
+import { ShoppingCart, Package, EyeOff, RotateCcw } from 'lucide-react';
 import type { Step } from './types';
 
 interface Props {
@@ -10,12 +10,14 @@ interface Props {
   urlClienteId: string | null;
   clienteId: string | null;
   canDoDevoluciones: boolean;
+  setSoloDevolucion: (v: boolean) => void;
 }
 
-export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId, canDoDevoluciones }: Props) {
+export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPago, setStep, urlClienteId, clienteId, canDoDevoluciones, setSoloDevolucion }: Props) {
   if (sinCompra) return null;
   const hasCliente = !!(urlClienteId || clienteId);
   const nextStep = hasCliente ? (canDoDevoluciones ? 'devoluciones' : 'productos') : 'cliente';
+  const nextStepSoloDev = hasCliente ? 'devoluciones' : 'cliente';
 
 
   return (
@@ -39,6 +41,15 @@ export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPa
             <div><p className="text-[14px] font-bold text-foreground">Pedido</p><p className="text-[11px] text-muted-foreground mt-0.5">Se entrega después · Todos los productos disponibles</p></div>
           </div>
         </button>
+        {canDoDevoluciones && (
+          <button onClick={() => { setSoloDevolucion(true); setStep(nextStepSoloDev as Step); }}
+            className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-primary/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0"><RotateCcw className="h-5 w-5 text-foreground" /></div>
+              <div><p className="text-[14px] font-bold text-foreground">Solo devolución</p><p className="text-[11px] text-muted-foreground mt-0.5">Registrar devolución sin venta · Nota de crédito, reposición o reembolso</p></div>
+            </div>
+          </button>
+        )}
         <button onClick={() => { setSinCompra(true); if (!hasCliente) setStep('cliente'); }}
           className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-muted-foreground/40">
           <div className="flex items-center gap-3">
@@ -50,3 +61,4 @@ export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPa
     </div>
   );
 }
+
