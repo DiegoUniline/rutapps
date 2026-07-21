@@ -648,17 +648,17 @@ export default function InventarioPage() {
               })}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={2} className="sticky left-0 bg-card">Totales</TableCell>
+                  <TableCell colSpan={isCol('codigo') ? 2 : 1} className="sticky left-0 bg-card">Totales</TableCell>
                   {ubicaciones.map(u => {
                     const total = filteredProducts.reduce((s, p) => s + u.getStock(p.id), 0);
                     return <TableCell key={u.id} className={cn("text-center", u.tipo === 'ruta' ? "text-warning" : "")}>{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0), 0))}</TableCell>
-                  <TableCell className="text-right">—</TableCell>
-                  <TableCell className="text-right">{fmt(filteredProducts.reduce((s, p) => {
+                  {isCol('stockTotal') && <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0), 0))}</TableCell>}
+                  {isCol('costoUnit') && <TableCell className="text-right">—</TableCell>}
+                  {isCol('valorCosto') && <TableCell className="text-right">{fmt(filteredProducts.reduce((s, p) => {
                     const totalUbic = ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0);
                     return s + totalUbic * (p.costo ?? 0);
-                  }, 0))}</TableCell>
+                  }, 0))}</TableCell>}
                 </TableRow>
               )}
             </TableBody>
