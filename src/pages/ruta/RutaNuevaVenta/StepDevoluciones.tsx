@@ -128,6 +128,7 @@ export function StepDevoluciones(props: Props) {
     devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     filteredReemplazoProductos, setReemplazo, processDevolucionesAndGoToProductos, fmt,
+    soloDevolucion, saveSoloDevolucion, saving,
   } = props;
 
   // Global defaults
