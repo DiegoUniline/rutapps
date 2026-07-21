@@ -105,6 +105,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [searchReemplazo, setSearchReemplazo] = useState('');
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
   const [sinCompra, setSinCompra] = useState(false);
+  const [soloDevolucion, setSoloDevolucion] = useState(false);
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
@@ -1008,9 +1009,69 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 
+  const saveSoloDevolucion = async () => {
+    if (!empresa || !user) return;
+    if (!canDoDevoluciones) { toast.error('Tu rol no permite registrar devoluciones en Ruta'); return; }
+    if (!clienteId) { toast.error('Selecciona un cliente'); return; }
+    if (devoluciones.length === 0) { toast.error('Agrega al menos una devolución'); return; }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const devId = crypto.randomUUID();
+      const cargaIdForDev = activeCarga?.id || null;
+      await queueOperation('devoluciones', 'insert', {
+        id: devId, empresa_id: empresa.id, user_id: user.id,
+        vendedor_id: profile?.id || null, cliente_id: clienteId,
+        carga_id: cargaIdForDev, venta_id: null, tipo: 'tienda',
+        fecha: todayInTimezone(empresa.zona_horaria),
+        created_at: new Date().toISOString(),
+      });
+      for (const d of devoluciones) {
+        const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero')
+          ? d.precio_unitario * d.cantidad : 0;
+        await queueOperation('devolucion_lineas', 'insert', {
+          id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
+          motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
+          monto_credito: montoCredito, created_at: new Date().toISOString(),
+        });
+        if (activeCarga) {
+          try {
+            const cargaLineasTable = getOfflineTable('carga_lineas');
+            if (cargaLineasTable) {
+              const allCL = await cargaLineasTable.toArray();
+              const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
+              if (cl) {
+                await queueOperation('carga_lineas', 'update', {
+                  id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
+                  cantidad_cargada: cl.cantidad_cargada,
+                  cantidad_vendida: cl.cantidad_vendida ?? 0,
+                  cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
+                });
+              }
+            }
+          } catch (e) { console.error('Error updating carga devuelta:', e); }
+        }
+      }
+      await saveVisita('devolucion');
+      markVisited(clienteId);
+      toast.success('¡Devolución registrada! Se sincronizará automáticamente');
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
+      navigate('/ruta');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSaving(false); savingRef.current = false; }
+  };
+
+
+
   const routeSteps = useMemo(
-    () => canDoDevoluciones ? STEPS : STEPS.filter(s => s !== 'devoluciones'),
-    [canDoDevoluciones],
+    () => {
+      if (soloDevolucion) return ['tipo', 'cliente', 'devoluciones'] as Step[];
+      return canDoDevoluciones ? STEPS : STEPS.filter(s => s !== 'devoluciones');
+    },
+    [canDoDevoluciones, soloDevolucion],
   );
   const currentStepIdx = routeSteps.indexOf(step);
   const goBack = () => { if (currentStepIdx <= 0) navigate('/ruta'); else setStep(routeSteps[currentStepIdx - 1]); };
@@ -1145,7 +1206,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     pagos, setPagos,
     cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
-    ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra, sinImpuestos, setSinImpuestos,
+    ticketInfo, sinCompra, setSinCompra, soloDevolucion: soloDevolucion, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra, sinImpuestos, setSinImpuestos,
     entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
@@ -1154,7 +1215,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
-    handleSave,
+    handleSave, saveSoloDevolucion, setSoloDevolucion,
     // Insights & smart actions
     insights, bannerDismissed, setBannerDismissed,
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,

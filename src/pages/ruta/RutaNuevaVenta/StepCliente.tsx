@@ -13,18 +13,21 @@ interface Props {
   setStep: (s: Step) => void;
   sinCompra?: boolean;
   canDoDevoluciones: boolean;
+  soloDevolucion?: boolean;
 }
 
 export function StepCliente(props: Props) {
-  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra, canDoDevoluciones } = props;
+  const { searchCliente, setSearchCliente, filteredClientes, clienteId, setClienteId, setClienteNombre, setClienteCredito, setCondicionPago, setStep, sinCompra, canDoDevoluciones, soloDevolucion } = props;
 
   const selectCliente = (id: string | null, nombre: string, credito: { credito: boolean; limite: number; dias: number } | null) => {
     setClienteId(id);
     setClienteNombre(nombre);
     setClienteCredito(credito);
     setCondicionPago('contado');
+    if (soloDevolucion) { setStep('devoluciones'); return; }
     setStep(sinCompra ? 'tipo' : (canDoDevoluciones ? 'devoluciones' : 'productos'));
   };
+
 
 
   return (
