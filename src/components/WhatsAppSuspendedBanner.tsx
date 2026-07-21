@@ -1,7 +1,8 @@
 import { useLocation } from 'react-router-dom';
-import { AlertTriangle, Phone } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
-const PHONE = '3171297626';
+const PHONE = '3171045954';
+const PHONE_DISPLAY = '317 104 5954';
 const WA_URL = `https://wa.me/52${PHONE}`;
 
 export default function WhatsAppSuspendedBanner() {
@@ -9,21 +10,19 @@ export default function WhatsAppSuspendedBanner() {
   if (location.pathname.startsWith('/ruta')) return null;
 
   return (
-    <div className="w-full px-4 py-2.5 text-center text-sm font-semibold flex items-center justify-center gap-3 bg-blue-600 text-white relative z-[100]">
-      <AlertTriangle className="h-4 w-4 shrink-0" />
+    <div className="w-full px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-3 bg-primary text-primary-foreground relative z-[100]">
+      <MessageCircle className="h-4 w-4 shrink-0" />
       <span>
-        Nuestro WhatsApp fue suspendido temporalmente. Por el momento todas las llamadas y mensajes al{' '}
-        <strong>{PHONE}</strong>.
+        ¿Dudas o necesitas ayuda? Escríbenos a RutApp al{' '}
+        <a
+          href={WA_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold underline underline-offset-2 hover:opacity-90"
+        >
+          {PHONE_DISPLAY}
+        </a>
       </span>
-      <a
-        href={WA_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-bold bg-white text-blue-700 hover:bg-white/90 transition shadow-sm"
-      >
-        <Phone className="h-3.5 w-3.5" />
-        Contactar por WhatsApp
-      </a>
     </div>
   );
 }
