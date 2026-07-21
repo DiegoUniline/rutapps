@@ -448,13 +448,23 @@ export function StepDevoluciones(props: Props) {
 
       {/* Bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
-        <button
-          onClick={processDevolucionesAndGoToProductos}
-          className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
-        >
-          {devoluciones.length > 0 ? `Continuar con ${devoluciones.length} devolución(es)` : 'Sin devoluciones — Continuar'}
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        {soloDevolucion ? (
+          <button
+            onClick={() => saveSoloDevolucion?.()}
+            disabled={saving || devoluciones.length === 0}
+            className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Guardando…' : (devoluciones.length > 0 ? `Guardar ${devoluciones.length} devolución(es)` : 'Agrega al menos una devolución')}
+          </button>
+        ) : (
+          <button
+            onClick={processDevolucionesAndGoToProductos}
+            className="w-full bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
+          >
+            {devoluciones.length > 0 ? `Continuar con ${devoluciones.length} devolución(es)` : 'Sin devoluciones — Continuar'}
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
