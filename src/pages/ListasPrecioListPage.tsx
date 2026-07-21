@@ -91,12 +91,22 @@ export default function ListasPrecioListPage() {
                   {l.es_principal && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
                   <span className="text-[14px] font-semibold text-foreground truncate">{l.nombre}</span>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {l.activa
                     ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Activa</span>
                     : <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">Inactiva</span>
                   }
-                  {l.es_principal && <span className="text-[10px] text-amber-600 font-medium">Principal</span>}
+                  {l.es_principal ? (
+                    <span className="text-[10px] text-amber-600 font-medium">Principal</span>
+                  ) : (
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPrincipal(l); }}
+                      className="text-[10px] text-muted-foreground hover:text-amber-600 underline underline-offset-2"
+                    >
+                      Hacer principal
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
