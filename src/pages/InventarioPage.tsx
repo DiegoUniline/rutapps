@@ -268,7 +268,7 @@ export default function InventarioPage() {
     if (!data || !filteredProducts) return;
 
     if (view === 'resumen') {
-      const columns: ExportColumn[] = [
+      const allColumns: ExportColumn[] = [
         { key: 'codigo', header: 'Código', width: 14 },
         { key: 'nombre', header: 'Producto', width: 30 },
         { key: 'unidad', header: 'Ud.', width: 6 },
@@ -276,6 +276,14 @@ export default function InventarioPage() {
         { key: 'valorCostoTotal', header: 'Valor costo', format: 'currency', width: 16 },
         { key: 'valorVentaTotal', header: 'Proyección', format: 'currency', width: 16 },
       ];
+      const keyMap: Record<string, string> = {
+        codigo: 'codigo', nombre: 'nombre', unidad: 'unidad',
+        stockTotal: 'stockTotal', valorCosto: 'valorCostoTotal', valorVenta: 'valorVentaTotal',
+      };
+      const columns = allColumns.filter(c => {
+        const uiKey = Object.entries(keyMap).find(([, v]) => v === c.key)?.[0];
+        return uiKey ? isCol(uiKey) : true;
+      });
       const rows = filteredProducts.map(p => ({
         codigo: p.codigo,
         nombre: p.nombre,
@@ -291,9 +299,9 @@ export default function InventarioPage() {
         columns,
         data: rows,
         totals: {
-          stockTotal: data.totales.stockTotal,
-          valorCostoTotal: data.totales.valorCostoTotal,
-          valorVentaTotal: data.totales.valorVentaTotal,
+          stockTotal: filteredProducts.reduce((s, p) => s + (p.stockTotal ?? 0), 0),
+          valorCostoTotal: filteredProducts.reduce((s, p) => s + (p.valorCostoTotal ?? 0), 0),
+          valorVentaTotal: filteredProducts.reduce((s, p) => s + (p.valorVentaTotal ?? 0), 0),
         },
       });
     } else if (view === 'almacen') {
@@ -302,18 +310,24 @@ export default function InventarioPage() {
         nombre: a.nombre,
         tipo: ((a as any).tipo ?? 'almacen') as string,
       }));
-      const columns: ExportColumn[] = [
-        { key: 'codigo', header: 'Código', width: 14 },
+      const baseCols: ExportColumn[] = [
+        ...(isCol('codigo') ? [{ key: 'codigo', header: 'Código', width: 14 }] : []),
         { key: 'nombre', header: 'Producto', width: 30 },
+      ];
+      const tailCols: ExportColumn[] = [
+        ...(isCol('stockTotal') ? [{ key: 'total', header: 'Total', format: 'number' as const, width: 12 }] : []),
+        ...(isCol('costoUnit') ? [{ key: 'costo', header: 'Costo unit.', format: 'currency' as const, width: 14 }] : []),
+        ...(isCol('valorCosto') ? [{ key: 'valorTotal', header: 'Valor total', format: 'currency' as const, width: 16 }] : []),
+      ];
+      const columns: ExportColumn[] = [
+        ...baseCols,
         ...ubicaciones.map(u => ({
           key: `ubic_${u.id}`,
           header: `${u.nombre} (${u.tipo === 'ruta' ? 'Ruta' : 'Almacén'})`,
           format: 'number' as const,
           width: 14,
         })),
-        { key: 'total', header: 'Total', format: 'number' as const, width: 12 },
-        { key: 'costo', header: 'Costo unit.', format: 'currency' as const, width: 14 },
-        { key: 'valorTotal', header: 'Valor total', format: 'currency' as const, width: 16 },
+        ...tailCols,
       ];
       const rows = filteredProducts.map(p => {
         const row: Record<string, any> = { codigo: p.codigo, nombre: p.nombre };
@@ -346,7 +360,7 @@ export default function InventarioPage() {
         totals,
       });
     }
-  }, [data, filteredProducts, view, empresa]);
+  }, [data, filteredProducts, view, empresa, colVisible]);
 
   const tabs: { key: ViewMode; label: string; icon: React.ElementType }[] = [
     { key: 'resumen', label: 'Stock Total', icon: Package },
