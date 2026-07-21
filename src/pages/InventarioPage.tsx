@@ -434,28 +434,73 @@ export default function InventarioPage() {
 
       {/* Search + stock filter */}
       {view !== 'rutas' && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative max-w-sm flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar producto..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
+              {([
+                { v: 'todos', label: 'Todos' },
+                { v: 'con', label: 'Con stock' },
+                { v: 'sin', label: 'Sin stock' },
+              ] as const).map(o => (
+                <button
+                  key={o.v}
+                  onClick={() => setStockFilter(o.v)}
+                  className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <div className="ml-auto">
+              <ColumnVisibilityMenu
+                columns={COLS}
+                visible={colVisible}
+                onToggle={toggleColumn}
+                onShowAll={() => setAll(true)}
+                onReset={reset}
+              />
+            </div>
           </div>
-          <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
-            {([
-              { v: 'todos', label: 'Todos' },
-              { v: 'con', label: 'Con stock' },
-              { v: 'sin', label: 'Sin stock' },
-            ] as const).map(o => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <EntityMultiSelect
+              label="Categoría"
+              options={lookups?.categorias ?? []}
+              value={categoriaIds}
+              onChange={setCategoriaIds}
+            />
+            <EntityMultiSelect
+              label="Marca"
+              options={lookups?.marcas ?? []}
+              value={marcaIds}
+              onChange={setMarcaIds}
+            />
+            <EntityMultiSelect
+              label="Proveedor"
+              options={lookups?.proveedores ?? []}
+              value={proveedorIds}
+              onChange={setProveedorIds}
+            />
+          </div>
+          {(categoriaIds.length + marcaIds.length + proveedorIds.length) > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>
+                {filteredProducts?.length ?? 0} producto(s) tras filtros
+              </span>
               <button
-                key={o.v}
-                onClick={() => setStockFilter(o.v)}
-                className={`px-3 py-2 transition-colors ${stockFilter === o.v ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent text-foreground'}`}
+                onClick={() => { setCategoriaIds([]); setMarcaIds([]); setProveedorIds([]); }}
+                className="text-primary hover:underline"
               >
-                {o.label}
+                Limpiar filtros
               </button>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
+
 
 
 
