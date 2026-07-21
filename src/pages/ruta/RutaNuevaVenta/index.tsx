@@ -132,7 +132,7 @@ export default function RutaNuevaVenta() {
         </div>
       )}
 
-      {h.step === 'tipo' && !h.sinCompra && <StepTipo sinCompra={h.sinCompra} setSinCompra={h.setSinCompra} setTipoVenta={h.setTipoVenta} setCondicionPago={h.setCondicionPago} setStep={h.setStep} urlClienteId={h.urlClienteId} clienteId={h.clienteId} canDoDevoluciones={h.canDoDevoluciones} />}
+      {h.step === 'tipo' && !h.sinCompra && <StepTipo sinCompra={h.sinCompra} setSinCompra={h.setSinCompra} setTipoVenta={h.setTipoVenta} setCondicionPago={h.setCondicionPago} setStep={h.setStep} urlClienteId={h.urlClienteId} clienteId={h.clienteId} canDoDevoluciones={h.canDoDevoluciones} setSoloDevolucion={h.setSoloDevolucion} />}
       {h.step === 'tipo' && h.sinCompra && <StepSinCompra clienteNombre={h.clienteNombre} motivoSinCompra={h.motivoSinCompra} setMotivoSinCompra={h.setMotivoSinCompra} notas={h.notas} setNotas={h.setNotas} savingSinCompra={h.savingSinCompra} setSavingSinCompra={h.setSavingSinCompra} setSinCompra={h.setSinCompra} saveVisita={h.saveVisita} markVisited={h.markVisited} clienteId={h.clienteId} urlClienteId={h.urlClienteId} navigate={h.navigate} />}
       {h.step === 'cliente' && <StepCliente searchCliente={h.searchCliente} setSearchCliente={h.setSearchCliente} filteredClientes={h.filteredClientes} clienteId={h.clienteId} setClienteId={h.setClienteId} setClienteNombre={h.setClienteNombre} setClienteCredito={h.setClienteCredito} setCondicionPago={h.setCondicionPago} setStep={h.setStep} sinCompra={h.sinCompra} canDoDevoluciones={h.canDoDevoluciones} />}
 
