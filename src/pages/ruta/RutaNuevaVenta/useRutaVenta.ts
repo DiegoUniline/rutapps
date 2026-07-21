@@ -1010,8 +1010,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   };
 
   const routeSteps = useMemo(
-    () => canDoDevoluciones ? STEPS : STEPS.filter(s => s !== 'devoluciones'),
-    [canDoDevoluciones],
+    () => {
+      if (soloDevolucion) return ['tipo', 'cliente', 'devoluciones'] as Step[];
+      return canDoDevoluciones ? STEPS : STEPS.filter(s => s !== 'devoluciones');
+    },
+    [canDoDevoluciones, soloDevolucion],
   );
   const currentStepIdx = routeSteps.indexOf(step);
   const goBack = () => { if (currentStepIdx <= 0) navigate('/ruta'); else setStep(routeSteps[currentStepIdx - 1]); };
