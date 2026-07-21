@@ -37,7 +37,7 @@ function useInventarioData() {
       const productos = await fetchAllPages<any>((from, to) =>
         supabase
           .from('productos')
-          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, clasificacion_id, marca_id, proveedor_id, unidades:unidad_venta_id(abreviatura)')
+          .select('id, codigo, nombre, cantidad, costo, precio_principal, status, es_granel, unidad_granel, dias_cobertura, clasificacion_id, marca_id, proveedor_preferido_id, unidades:unidad_venta_id(abreviatura)')
           .eq('empresa_id', eid)
           .eq('status', 'activo')
           .order('nombre')
@@ -260,7 +260,7 @@ export default function InventarioPage() {
     if (stockFilter === 'sin' && total > 0) return false;
     if (catSet.size > 0 && !catSet.has((p as any).clasificacion_id)) return false;
     if (marcaSet.size > 0 && !marcaSet.has((p as any).marca_id)) return false;
-    if (provSet.size > 0 && !provSet.has((p as any).proveedor_id)) return false;
+    if (provSet.size > 0 && !provSet.has((p as any).proveedor_preferido_id)) return false;
     return true;
   });
 
