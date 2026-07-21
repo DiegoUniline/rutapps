@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine, Eye, Pencil, Tag, PackageSearch } from 'lucide-react';
@@ -80,6 +80,14 @@ export function StepProductos(props: Props) {
   const { empresa } = useAuth();
   const soloConStockDefault = !!(empresa as any)?.apartado_solo_con_stock;
   const [stockFilter, setStockFilter] = useState<'con' | 'sin' | 'todos'>(soloConStockDefault ? 'con' : 'todos');
+  // Sincroniza el filtro por defecto cuando empresa carga async (evita quedar en 'todos'
+  // porque en el primer render empresa aún era undefined). Solo aplica hasta que el
+  // usuario toca los tabs (userTouched).
+  const userTouched = useRef(false);
+  useEffect(() => {
+    if (userTouched.current) return;
+    setStockFilter(soloConStockDefault ? 'con' : 'todos');
+  }, [soloConStockDefault]);
 
 
   // Wrap addToCart: abrir el selector si es granel O si el producto tiene
@@ -202,7 +210,7 @@ export function StepProductos(props: Props) {
             ] as const).map(opt => (
               <button
                 key={opt.k}
-                onClick={() => setStockFilter(opt.k)}
+                onClick={() => { userTouched.current = true; setStockFilter(opt.k); }}
                 className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all active:scale-95 ${stockFilter === opt.k ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-muted-foreground'}`}
               >
                 {opt.label}
@@ -251,6 +259,9 @@ export function StepProductos(props: Props) {
         {filteredProductos?.filter(p => {
           if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
           if (stockFilter === 'todos') return true;
+          // Sin almacén seleccionado, no podemos calcular disponible: mostramos todo
+          // para no dejar la lista vacía y confundir al vendedor.
+          if (!pedidoAlmacenId) return true;
           const disp = getDispSigned ? getDispSigned(p.id) : getMaxQty(p.id);
           return stockFilter === 'con' ? disp > 0 : disp <= 0;
         }).map(p => {
