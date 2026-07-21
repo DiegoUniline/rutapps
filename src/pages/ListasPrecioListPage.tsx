@@ -135,8 +135,18 @@ export default function ListasPrecioListPage() {
                       {l.nombre}
                     </span>
                   </td>
-                  <td className="py-1.5 px-3 text-center">
-                    {l.es_principal ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 mx-auto" /> : <span className="text-muted-foreground">—</span>}
+                  <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                    {l.es_principal ? (
+                      <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 mx-auto" />
+                    ) : (
+                      <button
+                        onClick={() => setPrincipal(l)}
+                        title="Marcar como principal"
+                        className="text-muted-foreground hover:text-amber-500 transition-colors text-[11px] underline underline-offset-2"
+                      >
+                        Hacer principal
+                      </button>
+                    )}
                   </td>
                   <td className="py-1.5 px-3 text-center">
                     {l.activa ? <span className="status-pill status-activo">Activa</span> : <span className="status-pill status-borrador">Inactiva</span>}
