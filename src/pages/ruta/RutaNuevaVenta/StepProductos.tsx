@@ -259,6 +259,9 @@ export function StepProductos(props: Props) {
         {filteredProductos?.filter(p => {
           if (!(apartadoActivoPedido && tipoVenta === 'pedido')) return true;
           if (stockFilter === 'todos') return true;
+          // Sin almacén seleccionado, no podemos calcular disponible: mostramos todo
+          // para no dejar la lista vacía y confundir al vendedor.
+          if (!pedidoAlmacenId) return true;
           const disp = getDispSigned ? getDispSigned(p.id) : getMaxQty(p.id);
           return stockFilter === 'con' ? disp > 0 : disp <= 0;
         }).map(p => {
