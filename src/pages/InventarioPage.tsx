@@ -598,7 +598,7 @@ export default function InventarioPage() {
                 const totalUbic = ubicaciones.reduce((s, u) => s + u.getStock(p.id), 0);
                 return (
                   <TableRow key={p.id}>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
+                    {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>}
                     <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
