@@ -514,33 +514,39 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Código</TableHead>
+                {isCol('codigo') && <TableHead className="text-[11px]">Código</TableHead>}
                 <TableHead className="text-[11px]">Producto</TableHead>
-                <TableHead className="text-[11px] text-center">Ud.</TableHead>
-                <TableHead className="text-[11px] text-center font-bold">Stock Total</TableHead>
-                <TableHead className="text-[11px] text-right">Valor costo</TableHead>
-                <TableHead className="text-[11px] text-right">Proyección</TableHead>
+                {isCol('unidad') && <TableHead className="text-[11px] text-center">Ud.</TableHead>}
+                {isCol('stockTotal') && <TableHead className="text-[11px] text-center font-bold">Stock Total</TableHead>}
+                {isCol('valorCosto') && <TableHead className="text-[11px] text-right">Valor costo</TableHead>}
+                {isCol('valorVenta') && <TableHead className="text-[11px] text-right">Proyección</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
+                  {isCol('codigo') && <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>}
                   <TableCell className="text-[12px] font-medium"><ProductoLink id={p.id}>{p.nombre}</ProductoLink></TableCell>
-                  <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>
-                  <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>
-                  <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>
+                  {isCol('unidad') && <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>}
+                  {isCol('stockTotal') && <TableCell className={`text-center font-bold ${(p.stockTotal ?? 0) <= 0 ? 'text-destructive' : ''}`}>{fmtNum(p.stockTotal)}</TableCell>}
+                  {isCol('valorCosto') && <TableCell className="text-right text-[12px]">{fmt(p.valorCostoTotal)}</TableCell>}
+                  {isCol('valorVenta') && <TableCell className="text-right text-[12px] text-success">{fmt(p.valorVentaTotal)}</TableCell>}
                 </TableRow>
               ))}
-              {filteredProducts && filteredProducts.length > 0 && (
-                <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={3}>Totales</TableCell>
-                  <TableCell className="text-center">{fmtNum(data.totales.stockTotal)}</TableCell>
-                  <TableCell className="text-right">{fmt(data.totales.valorCostoTotal)}</TableCell>
-                  <TableCell className="text-right text-success">{fmt(data.totales.valorVentaTotal)}</TableCell>
-                </TableRow>
-              )}
+              {filteredProducts && filteredProducts.length > 0 && (() => {
+                const tStock = filteredProducts.reduce((s, p) => s + (p.stockTotal ?? 0), 0);
+                const tCosto = filteredProducts.reduce((s, p) => s + (p.valorCostoTotal ?? 0), 0);
+                const tVenta = filteredProducts.reduce((s, p) => s + (p.valorVentaTotal ?? 0), 0);
+                const leftCols = 1 + (isCol('codigo') ? 1 : 0) + (isCol('unidad') ? 1 : 0);
+                return (
+                  <TableRow className="bg-card font-bold">
+                    <TableCell colSpan={leftCols}>Totales</TableCell>
+                    {isCol('stockTotal') && <TableCell className="text-center">{fmtNum(tStock)}</TableCell>}
+                    {isCol('valorCosto') && <TableCell className="text-right">{fmt(tCosto)}</TableCell>}
+                    {isCol('valorVenta') && <TableCell className="text-right text-success">{fmt(tVenta)}</TableCell>}
+                  </TableRow>
+                );
+              })()}
             </TableBody>
           </Table>
         </div>
