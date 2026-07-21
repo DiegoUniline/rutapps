@@ -260,7 +260,7 @@ export default function InventarioPage() {
     if (stockFilter === 'sin' && total > 0) return false;
     if (catSet.size > 0 && !catSet.has((p as any).clasificacion_id)) return false;
     if (marcaSet.size > 0 && !marcaSet.has((p as any).marca_id)) return false;
-    if (provSet.size > 0 && !provSet.has((p as any).proveedor_id)) return false;
+    if (provSet.size > 0 && !provSet.has((p as any).proveedor_preferido_id)) return false;
     return true;
   });
 
