@@ -22,6 +22,9 @@ interface Props {
   setReemplazo: (devPid: string, p: any) => void;
   processDevolucionesAndGoToProductos: () => void;
   fmt: (n: number) => string;
+  soloDevolucion?: boolean;
+  saveSoloDevolucion?: () => void | Promise<void>;
+  saving?: boolean;
 }
 
 /* ── Bottom sheet for picking motivo / acción ─── */
