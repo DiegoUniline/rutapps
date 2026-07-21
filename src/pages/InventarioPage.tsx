@@ -209,18 +209,58 @@ export default function InventarioPage() {
   const [showPresModal, setShowPresModal] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
+  const [categoriaIds, setCategoriaIds] = useState<string[]>([]);
+  const [marcaIds, setMarcaIds] = useState<string[]>([]);
+  const [proveedorIds, setProveedorIds] = useState<string[]>([]);
+
+  // Lookups for filter labels
+  const { data: lookups } = useQuery({
+    queryKey: ['inventario-lookups', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const eid = empresa!.id;
+      const [cats, marcas, provs] = await Promise.all([
+        supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+        supabase.from('marcas').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+        supabase.from('proveedores').select('id, nombre').eq('empresa_id', eid).order('nombre'),
+      ]);
+      const toOpts = (rows: any[] | null): MSOption[] => (rows ?? []).map(r => ({ id: r.id, label: r.nombre }));
+      return { categorias: toOpts(cats.data), marcas: toOpts(marcas.data), proveedores: toOpts(provs.data) };
+    },
+  });
+
+  // Column visibility (resumen + almacen shared toggles for the non-dynamic columns)
+  const COLS: ColumnDef[] = useMemo(() => [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nombre', label: 'Producto', required: true },
+    { key: 'unidad', label: 'Unidad' },
+    { key: 'stockTotal', label: 'Stock Total' },
+    { key: 'costoUnit', label: 'Costo unit.' },
+    { key: 'valorCosto', label: 'Valor costo' },
+    { key: 'valorVenta', label: 'Proyección venta' },
+  ], []);
+  const { visible: colVisible, toggleColumn, setAll, reset } = useColumnPreferences('inventario', {
+    codigo: true, nombre: true, unidad: true, stockTotal: true, costoUnit: true, valorCosto: true, valorVenta: true,
+  });
+  const isCol = (k: string) => colVisible[k] !== false;
 
   const presByProd: Record<string, typeof presentaciones> = {};
   for (const p of presentaciones) {
     (presByProd[p.producto_id] ||= []).push(p);
   }
-  // (in-cell breakdown removed; presented in modal instead)
+
+  const catSet = useMemo(() => new Set(categoriaIds), [categoriaIds]);
+  const marcaSet = useMemo(() => new Set(marcaIds), [marcaIds]);
+  const provSet = useMemo(() => new Set(proveedorIds), [proveedorIds]);
 
   const filteredProducts = data?.productos.filter(p => {
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.codigo.toLowerCase().includes(search.toLowerCase())) return false;
     const total = p.stockTotal ?? 0;
     if (stockFilter === 'con' && total <= 0) return false;
     if (stockFilter === 'sin' && total > 0) return false;
+    if (catSet.size > 0 && !catSet.has((p as any).clasificacion_id)) return false;
+    if (marcaSet.size > 0 && !marcaSet.has((p as any).marca_id)) return false;
+    if (provSet.size > 0 && !provSet.has((p as any).proveedor_id)) return false;
     return true;
   });
 
