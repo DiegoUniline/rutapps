@@ -636,11 +636,13 @@ export default function InventarioPage() {
                         </TableCell>
                       );
                     })}
-                    <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
-                      {fmtNum(totalUbic)}
-                    </TableCell>
-                    <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>
-                    <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>
+                    {isCol('stockTotal') && (
+                      <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
+                        {fmtNum(totalUbic)}
+                      </TableCell>
+                    )}
+                    {isCol('costoUnit') && <TableCell className="text-right text-[12px]">{fmt(p.costo ?? 0)}</TableCell>}
+                    {isCol('valorCosto') && <TableCell className="text-right text-[12px]">{fmt(totalUbic * (p.costo ?? 0))}</TableCell>}
                   </TableRow>
                 );
               })}
