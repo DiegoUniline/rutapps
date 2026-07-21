@@ -1215,7 +1215,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     addToCart, addGranelLine, updateQty, removeFromCart, getItemInCart, getMaxQty, getDispSigned, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
-    handleSave, saveSoloDevolucion, soloDevolucion, setSoloDevolucion,
+    handleSave, saveSoloDevolucion, setSoloDevolucion,
     // Insights & smart actions
     insights, bannerDismissed, setBannerDismissed,
     applySmartSuggestion, applyManualList, applyHistorialAvg, repeatLastSale, findProductByCode,
