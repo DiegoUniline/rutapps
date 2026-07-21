@@ -572,7 +572,7 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
+                {isCol('codigo') && <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>}
                 <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
                 {ubicaciones.map(u => (
                   <TableHead key={u.id} className="text-[11px] text-center whitespace-nowrap">
