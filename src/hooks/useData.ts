@@ -55,12 +55,26 @@ export function useProductosRealtime() {
       })
       .subscribe();
 
+    const invalidateVentas = () => {
+      qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['ventas-list'] });
+      qc.invalidateQueries({ queryKey: ['venta-lineas'] });
+    };
+
     const ventasCh = supabase
       .channel(`data-ventas-${empresaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, () => {
-        qc.invalidateQueries({ queryKey: ['ventas'] });
-        qc.invalidateQueries({ queryKey: ['ventas-list'] });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter }, invalidateVentas)
+      .subscribe();
+
+    // venta_lineas / entrega_lineas / cobro_aplicaciones no tienen empresa_id;
+    // filtrar por empresa se hace del lado del cliente al refetch — igual el volumen
+    // de eventos es acotado y evita la latencia de "hasta 1 hora" cuando el móvil
+    // sincroniza el ticket después del header.
+    const ventaLineasCh = supabase
+      .channel(`data-venta-lineas-${empresaId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'venta_lineas' }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'entrega_lineas' }, invalidateVentas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cobro_aplicaciones' }, invalidateVentas)
       .subscribe();
 
     const almacenesCh = supabase
