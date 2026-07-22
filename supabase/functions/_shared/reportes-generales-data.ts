@@ -133,7 +133,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     if (!vendMap[vid]) continue;
     const prod = prodById.get(l.producto_id);
     const costo = Number(prod?.costo || 0) * Number(l.cantidad || 0);
-    vendMap[vid].utilidad += Number(l.total || 0) - costo;
+    vendMap[vid].utilidad += lineTotalEfectivo(l) - costo;
   }
   const topVendedores = Object.values(vendMap).sort((a: any, b: any) => b.total - a.total);
 
