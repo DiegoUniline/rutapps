@@ -89,6 +89,7 @@ export function useProductosRealtime() {
       supabase.removeChannel(productosCh);
       supabase.removeChannel(stockCh);
       supabase.removeChannel(ventasCh);
+      supabase.removeChannel(ventaLineasCh);
       supabase.removeChannel(almacenesCh);
     };
   }, [qc, empresaId]);
