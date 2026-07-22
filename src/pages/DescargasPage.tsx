@@ -164,7 +164,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       if (!descarga.vendedor_id) return [];
       let q = supabase
         .from('ventas')
-        .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
+        .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(id, producto_id, cantidad, precio_unitario, total, productos(nombre, codigo)), promocion_aplicada(venta_linea_id, descuento_aplicado)')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
