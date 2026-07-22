@@ -110,10 +110,17 @@ export default function ListasPrecioListPage() {
                   <span className="text-[14px] font-semibold text-foreground truncate">{l.nombre}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {l.activa
-                    ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Activa</span>
-                    : <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">Inactiva</span>
-                  }
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleActiva(l); }}
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium cursor-pointer",
+                      l.activa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    )}
+                    title={l.activa ? 'Clic para desactivar' : 'Clic para activar'}
+                  >
+                    {l.activa ? 'Activa' : 'Inactiva'}
+                  </span>
                   {l.es_principal ? (
                     <span className="text-[10px] text-amber-600 font-medium">Principal</span>
                   ) : (
