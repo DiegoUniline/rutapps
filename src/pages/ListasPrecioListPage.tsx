@@ -57,6 +57,24 @@ export default function ListasPrecioListPage() {
     }
   };
 
+  const toggleActiva = async (l: any) => {
+    const next = !l.activa;
+    try {
+      const { error } = await supabase.from('lista_precios').update({ activa: next } as any).eq('id', l.id);
+      if (error) throw error;
+      // Also sync the parent tarifa so it's consistent everywhere
+      if (l.tarifa_id) {
+        await supabase.from('tarifas').update({ activa: next } as any).eq('id', l.tarifa_id);
+      }
+      toast.success(next ? 'Lista activada' : 'Lista desactivada');
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'No se pudo cambiar el estado');
+    }
+  };
+
   const total = filtered.length;
 
 
