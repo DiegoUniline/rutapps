@@ -183,8 +183,16 @@ export default function ListasPrecioListPage() {
                       </button>
                     )}
                   </td>
-                  <td className="py-1.5 px-3 text-center">
-                    {l.activa ? <span className="status-pill status-activo">Activa</span> : <span className="status-pill status-borrador">Inactiva</span>}
+                  <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => toggleActiva(l)}
+                      title={l.activa ? 'Clic para desactivar' : 'Clic para activar'}
+                      className="focus:outline-none"
+                    >
+                      {l.activa
+                        ? <span className="status-pill status-activo cursor-pointer">Activa</span>
+                        : <span className="status-pill status-borrador cursor-pointer">Inactiva</span>}
+                    </button>
                   </td>
                   <td className="py-1.5 px-3 text-center">
                     <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
