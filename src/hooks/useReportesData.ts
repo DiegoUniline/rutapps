@@ -225,7 +225,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find((p: any) => p.id === l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         vendCostoMap[vid] = (vendCostoMap[vid] ?? 0) + costo;
-        vendUtilMap[vid] = (vendUtilMap[vid] ?? 0) + ((l.total ?? 0) - costo);
+        vendUtilMap[vid] = (vendUtilMap[vid] ?? 0) + (lineTotalEfectivo(l) - costo);
       }
       const topVendedores = Object.entries(vendMap).map(([id, v]) => ({ id, ...v, costo: vendCostoMap[id] ?? 0, utilidad: vendUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
