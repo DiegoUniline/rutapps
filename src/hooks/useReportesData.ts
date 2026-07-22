@@ -184,7 +184,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find(p => p.id === pid);
         if (!prodMap[pid]) prodMap[pid] = { nombre: (l.productos as any)?.nombre ?? '', codigo: (l.productos as any)?.codigo ?? '', cantidad: 0, total: 0, costo: (prod?.costo ?? 0) };
         prodMap[pid].cantidad += l.cantidad ?? 0;
-        prodMap[pid].total += l.total ?? 0;
+        prodMap[pid].total += lineTotalEfectivo(l);
       }
       const ventasPorProducto = Object.entries(prodMap).map(([id, v]) => ({ id, ...v, utilidad: v.total - (v.costo * v.cantidad) })).sort((a, b) => b.total - a.total);
 
