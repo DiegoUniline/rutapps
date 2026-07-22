@@ -205,7 +205,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find((p: any) => p.id === l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         clientCostoMap[cid] = (clientCostoMap[cid] ?? 0) + costo;
-        clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + ((l.total ?? 0) - costo);
+        clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + (lineTotalEfectivo(l) - costo);
       }
       const ventasPorCliente = Object.entries(cliMap).map(([id, v]) => ({ id, ...v, costo: clientCostoMap[id] ?? 0, utilidad: clientUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
