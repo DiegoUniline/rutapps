@@ -285,6 +285,10 @@ export function useSaveTarifa() {
       if (tarifa.id) {
         const { data, error } = await supabase.from('tarifas').update(clean as any).eq('id', tarifa.id).select('id').single();
         if (error) throw error;
+        // Propagate activa flag to all lista_precios of this tarifa so the "Listas de Precios" list stays in sync
+        if (typeof (clean as any).activa === 'boolean') {
+          await supabase.from('lista_precios').update({ activa: (clean as any).activa } as any).eq('tarifa_id', tarifa.id);
+        }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
