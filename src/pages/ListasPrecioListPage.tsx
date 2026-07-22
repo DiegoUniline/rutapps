@@ -57,6 +57,24 @@ export default function ListasPrecioListPage() {
     }
   };
 
+  const toggleActiva = async (l: any) => {
+    const next = !l.activa;
+    try {
+      const { error } = await supabase.from('lista_precios').update({ activa: next } as any).eq('id', l.id);
+      if (error) throw error;
+      // Also sync the parent tarifa so it's consistent everywhere
+      if (l.tarifa_id) {
+        await supabase.from('tarifas').update({ activa: next } as any).eq('id', l.tarifa_id);
+      }
+      toast.success(next ? 'Lista activada' : 'Lista desactivada');
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'No se pudo cambiar el estado');
+    }
+  };
+
   const total = filtered.length;
 
 
@@ -92,10 +110,17 @@ export default function ListasPrecioListPage() {
                   <span className="text-[14px] font-semibold text-foreground truncate">{l.nombre}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {l.activa
-                    ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Activa</span>
-                    : <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">Inactiva</span>
-                  }
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleActiva(l); }}
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium cursor-pointer",
+                      l.activa ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    )}
+                    title={l.activa ? 'Clic para desactivar' : 'Clic para activar'}
+                  >
+                    {l.activa ? 'Activa' : 'Inactiva'}
+                  </span>
                   {l.es_principal ? (
                     <span className="text-[10px] text-amber-600 font-medium">Principal</span>
                   ) : (
@@ -158,8 +183,16 @@ export default function ListasPrecioListPage() {
                       </button>
                     )}
                   </td>
-                  <td className="py-1.5 px-3 text-center">
-                    {l.activa ? <span className="status-pill status-activo">Activa</span> : <span className="status-pill status-borrador">Inactiva</span>}
+                  <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => toggleActiva(l)}
+                      title={l.activa ? 'Clic para desactivar' : 'Clic para activar'}
+                      className="focus:outline-none"
+                    >
+                      {l.activa
+                        ? <span className="status-pill status-activo cursor-pointer">Activa</span>
+                        : <span className="status-pill status-borrador cursor-pointer">Inactiva</span>}
+                    </button>
                   </td>
                   <td className="py-1.5 px-3 text-center">
                     <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
