@@ -27,7 +27,15 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       });
 
       const ventaLineasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre, costo), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+        let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre, costo), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+        if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
+        if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
+        return q;
+      });
+
+      // Promociones aplicadas por línea (para descontar productos gratis en reportes)
+      const promoAplicadasPromise = fetchAllPages<any>((from, to) => {
+        let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
         if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
         return q;
