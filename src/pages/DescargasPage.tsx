@@ -375,9 +375,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     }))
     .sort((a, b) => a.cliente.localeCompare(b.cliente));
 
-  // Aggregate products sold
+  // Aggregate products sold — restando descuentos de promoción (p.ej. producto gratis)
   const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
   ventasActivas.forEach((v: any) => {
+    const promoByLinea: Record<string, number> = {};
+    for (const p of (v.promocion_aplicada || [])) {
+      if (!p.venta_linea_id) continue;
+      promoByLinea[p.venta_linea_id] = (promoByLinea[p.venta_linea_id] ?? 0) + Number(p.descuento_aplicado || 0);
+    }
     (v.venta_lineas || []).forEach((l: any) => {
       const pid = l.producto_id;
       if (!pid) return;
@@ -389,8 +394,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           total: 0,
         };
       }
+      const disc = promoByLinea[l.id] ?? 0;
       productosSold[pid].cantidad += Number(l.cantidad) || 0;
-      productosSold[pid].total += Number(l.total) || 0;
+      productosSold[pid].total += Math.max(0, (Number(l.total) || 0) - disc);
     });
   });
   const productosArr = Object.values(productosSold).sort((a, b) => b.total - a.total);
