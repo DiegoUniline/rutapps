@@ -97,7 +97,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     const prod = prodById.get(pid);
     if (!prodMap[pid]) prodMap[pid] = { codigo: l.productos?.codigo ?? "", nombre: l.productos?.nombre ?? "—", cantidad: 0, total: 0, costo: Number(prod?.costo || 0) };
     prodMap[pid].cantidad += Number(l.cantidad || 0);
-    prodMap[pid].total += Number(l.total || 0);
+    prodMap[pid].total += lineTotalEfectivo(l);
   }
   const ventasPorProducto = Object.values(prodMap).map((v: any) => ({ ...v, utilidad: v.total - v.costo * v.cantidad })).sort((a: any, b: any) => b.total - a.total);
 
