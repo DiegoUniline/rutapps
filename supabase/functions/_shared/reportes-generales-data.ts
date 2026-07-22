@@ -116,7 +116,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     const prod = prodById.get(l.producto_id);
     const costo = Number(prod?.costo || 0) * Number(l.cantidad || 0);
     cliMap[cid].costo += costo;
-    cliMap[cid].utilidad += Number(l.total || 0) - costo;
+    cliMap[cid].utilidad += lineTotalEfectivo(l) - costo;
   }
   const ventasPorCliente = Object.values(cliMap).sort((a: any, b: any) => b.total - a.total);
 
