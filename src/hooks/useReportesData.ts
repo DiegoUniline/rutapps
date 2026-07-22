@@ -27,7 +27,15 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       });
 
       const ventaLineasPromise = fetchAllPages<any>((from, to) => {
-        let q = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre, costo), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+        let q = supabase.from('venta_lineas').select('id, producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre, costo), venta_id, ventas!inner(empresa_id, fecha, status, tipo, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
+        if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
+        if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
+        return q;
+      });
+
+      // Promociones aplicadas por línea (para descontar productos gratis en reportes)
+      const promoAplicadasPromise = fetchAllPages<any>((from, to) => {
+        let q = supabase.from('promocion_aplicada').select('venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status, tipo, vendedor_id)').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('ventas.vendedor_id', vendedorIds);
         if (tipoFilter) q = q.eq('ventas.tipo', tipoFilter);
         return q;
@@ -72,9 +80,10 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         return q;
       });
 
-      const [ventas, ventaLineas, cobrosAll, gastosBase, cajaGastosRaw, cargas, devoluciones, entregas] = await Promise.all([
+      const [ventas, ventaLineas, promoAplicadas, cobrosAll, gastosBase, cajaGastosRaw, cargas, devoluciones, entregas] = await Promise.all([
         ventasPromise,
         ventaLineasPromise,
+        promoAplicadasPromise,
         cobrosAllPromise,
         gastosBasePromise,
         cajaGastosRawPromise,
@@ -82,6 +91,18 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         devolucionesPromise,
         entregasPromise,
       ]);
+
+      // Descuento por línea proveniente de promociones (p.ej. producto gratis).
+      const promoDescByLinea: Record<string, number> = {};
+      for (const p of promoAplicadas as any[]) {
+        const lid = p.venta_linea_id;
+        if (!lid) continue;
+        promoDescByLinea[lid] = (promoDescByLinea[lid] ?? 0) + Number(p.descuento_aplicado ?? 0);
+      }
+      const lineTotalEfectivo = (l: any) => {
+        const disc = promoDescByLinea[l.id] ?? 0;
+        return Math.max(0, Number(l.total ?? 0) - disc);
+      };
 
       // If a vendor filter is active, attribute each cobro to the vendor(s) of the sales it was applied to.
       // Cobros without applications (anticipos) are attributed to the cliente's default vendedor via the clientes lookup below.
@@ -163,7 +184,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find(p => p.id === pid);
         if (!prodMap[pid]) prodMap[pid] = { nombre: (l.productos as any)?.nombre ?? '', codigo: (l.productos as any)?.codigo ?? '', cantidad: 0, total: 0, costo: (prod?.costo ?? 0) };
         prodMap[pid].cantidad += l.cantidad ?? 0;
-        prodMap[pid].total += l.total ?? 0;
+        prodMap[pid].total += lineTotalEfectivo(l);
       }
       const ventasPorProducto = Object.entries(prodMap).map(([id, v]) => ({ id, ...v, utilidad: v.total - (v.costo * v.cantidad) })).sort((a, b) => b.total - a.total);
 
@@ -184,7 +205,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find((p: any) => p.id === l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         clientCostoMap[cid] = (clientCostoMap[cid] ?? 0) + costo;
-        clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + ((l.total ?? 0) - costo);
+        clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + (lineTotalEfectivo(l) - costo);
       }
       const ventasPorCliente = Object.entries(cliMap).map(([id, v]) => ({ id, ...v, costo: clientCostoMap[id] ?? 0, utilidad: clientUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
@@ -204,7 +225,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         const prod = productos.find((p: any) => p.id === l.producto_id);
         const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
         vendCostoMap[vid] = (vendCostoMap[vid] ?? 0) + costo;
-        vendUtilMap[vid] = (vendUtilMap[vid] ?? 0) + ((l.total ?? 0) - costo);
+        vendUtilMap[vid] = (vendUtilMap[vid] ?? 0) + (lineTotalEfectivo(l) - costo);
       }
       const topVendedores = Object.entries(vendMap).map(([id, v]) => ({ id, ...v, costo: vendCostoMap[id] ?? 0, utilidad: vendUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 

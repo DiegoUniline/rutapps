@@ -42,7 +42,7 @@ export interface ReportesGeneralesData {
 export async function fetchReportesGenerales(empresaId: string, desde: string, hasta: string): Promise<ReportesGeneralesData> {
   const activeStatuses = ["borrador", "confirmado", "entregado", "facturado"];
 
-  const [empresaRes, ventas, ventaLineas, cobros, gastos, productos] = await Promise.all([
+  const [empresaRes, ventas, ventaLineas, promoAplicadas, cobros, gastos, productos] = await Promise.all([
     admin.from("empresas")
       .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, moneda")
       .eq("id", empresaId).maybeSingle(),
@@ -51,7 +51,11 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
       .eq("empresa_id", empresaId).eq("es_saldo_inicial", false)
       .gte("fecha", desde).lte("fecha", hasta).in("status", activeStatuses).range(f, t)),
     fetchAll((f, t) => admin.from("venta_lineas")
-      .select("producto_id, cantidad, total, productos(codigo, nombre, costo), ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))")
+      .select("id, producto_id, cantidad, total, productos(codigo, nombre, costo), ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))")
+      .eq("ventas.empresa_id", empresaId)
+      .gte("ventas.fecha", desde).lte("ventas.fecha", hasta).in("ventas.status", activeStatuses).range(f, t)),
+    fetchAll((f, t) => admin.from("promocion_aplicada")
+      .select("venta_linea_id, descuento_aplicado, ventas!inner(empresa_id, fecha, status)")
       .eq("ventas.empresa_id", empresaId)
       .gte("ventas.fecha", desde).lte("ventas.fecha", hasta).in("ventas.status", activeStatuses).range(f, t)),
     fetchAll((f, t) => admin.from("cobros")
@@ -65,6 +69,13 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
       .select("id, codigo, nombre, costo")
       .eq("empresa_id", empresaId).eq("status", "activo").range(f, t)),
   ]);
+
+  const promoDescByLinea: Record<string, number> = {};
+  for (const p of promoAplicadas as any[]) {
+    if (!p.venta_linea_id) continue;
+    promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] ?? 0) + Number(p.descuento_aplicado || 0);
+  }
+  const lineTotalEfectivo = (l: any) => Math.max(0, Number(l.total || 0) - (promoDescByLinea[l.id] ?? 0));
 
   const totalVentas = ventas.reduce((s: number, v: any) => s + Number(v.total || 0), 0);
   const totalCobros = cobros.reduce((s: number, c: any) => s + Number(c.monto || 0), 0);
@@ -86,7 +97,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     const prod = prodById.get(pid);
     if (!prodMap[pid]) prodMap[pid] = { codigo: l.productos?.codigo ?? "", nombre: l.productos?.nombre ?? "—", cantidad: 0, total: 0, costo: Number(prod?.costo || 0) };
     prodMap[pid].cantidad += Number(l.cantidad || 0);
-    prodMap[pid].total += Number(l.total || 0);
+    prodMap[pid].total += lineTotalEfectivo(l);
   }
   const ventasPorProducto = Object.values(prodMap).map((v: any) => ({ ...v, utilidad: v.total - v.costo * v.cantidad })).sort((a: any, b: any) => b.total - a.total);
 
@@ -105,7 +116,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     const prod = prodById.get(l.producto_id);
     const costo = Number(prod?.costo || 0) * Number(l.cantidad || 0);
     cliMap[cid].costo += costo;
-    cliMap[cid].utilidad += Number(l.total || 0) - costo;
+    cliMap[cid].utilidad += lineTotalEfectivo(l) - costo;
   }
   const ventasPorCliente = Object.values(cliMap).sort((a: any, b: any) => b.total - a.total);
 
@@ -122,7 +133,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
     if (!vendMap[vid]) continue;
     const prod = prodById.get(l.producto_id);
     const costo = Number(prod?.costo || 0) * Number(l.cantidad || 0);
-    vendMap[vid].utilidad += Number(l.total || 0) - costo;
+    vendMap[vid].utilidad += lineTotalEfectivo(l) - costo;
   }
   const topVendedores = Object.values(vendMap).sort((a: any, b: any) => b.total - a.total);
 
