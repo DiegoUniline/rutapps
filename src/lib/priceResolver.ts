@@ -30,6 +30,7 @@ export interface ProductForPricing {
   ieps_pct?: number;
   ieps_tipo?: string;
   usa_listas_precio?: boolean;
+  costo_incluye_impuestos?: boolean;
 }
 
 export interface ResolvedProductPricing {
