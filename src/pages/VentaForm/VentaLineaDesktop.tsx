@@ -26,9 +26,10 @@ interface Props {
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
   sinImpuestos?: boolean;
+  onChangeLineListaPrecio?: (idx: number, listaPrecioId: string | null) => void;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -141,6 +142,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               isManual={!!(l as any).precio_manual}
               compact
               onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice, _nombre) => {
+                if (onChangeLineListaPrecio) {
+                  onChangeLineListaPrecio(idx, listaPrecioId);
+                  return;
+                }
                 setLineas(prev => {
                   const next = [...prev];
                   (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
