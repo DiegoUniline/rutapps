@@ -342,6 +342,14 @@ export function useVentaForm() {
     };
   }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, (form as any).cerrado_at, (form as any).total_efectivo, isNew, readOnly]);
 
+  const applyEffectiveLinePricing = useCallback((line: Partial<VentaLinea>, currentSinImpuestos: boolean) => {
+    const effective = calculateSaleLineEffectivePrices(line as any, currentSinImpuestos);
+    if (!effective.appliedRounding) return line;
+    const currentUnit = Number(line.precio_unitario) || 0;
+    const currentDisplay = Number((line as any).display_unit_price) || currentUnit;
+    if (Math.abs(currentUnit - effective.unitPrice) < 0.000001 && Math.abs(currentDisplay - effective.displayPrice) < 0.000001) return line;
+    return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
+  }, []);
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
