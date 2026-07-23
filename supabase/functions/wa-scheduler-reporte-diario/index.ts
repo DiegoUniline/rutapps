@@ -58,9 +58,9 @@ function addDays(iso: string, n: number) {
 
 async function buildReporte(empresaId: string, startLocal: string, endLocal: string, tz: string, label: string) {
   const { start, end } = rangeUtcForDates(startLocal, endLocal, tz);
-  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, entregasRes, empresaRes] = await Promise.all([
+  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, entregasRes, empresaRes, promosRes] = await Promise.all([
     admin.from("ventas")
-      .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))")
+      .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(id, producto_id, cantidad, total, productos(codigo, nombre))")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
     admin.from("cobros")
       .select("id, monto, metodo_pago, referencia, fecha, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(id, folio, fecha, condicion_pago))")
@@ -80,6 +80,9 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     admin.from("empresas")
       .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
       .eq("id", empresaId).maybeSingle(),
+    admin.from("promocion_aplicada")
+      .select("venta_linea_id, descuento_aplicado, ventas!inner(id, empresa_id, fecha)")
+      .eq("ventas.empresa_id", empresaId).gte("ventas.fecha", start).lte("ventas.fecha", end),
   ]);
   const entregas = (entregasRes.data || []) as any[];
   const entregasHechas = entregas.filter((e) => e.status === "hecho").length;
@@ -90,9 +93,22 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
   const canceladas = allVentas.filter((v) => v.status === "cancelada" || v.status === "cancelado");
   const ventasContado = ventas.filter((v) => (v.condicion_pago || "").toLowerCase() === "contado");
   const ventasCredito = ventas.filter((v) => /cr[eé]dito/i.test(v.condicion_pago || ""));
-  const totalVentas = ventas.reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalContado = ventasContado.reduce((s, v) => s + Number(v.total || 0), 0);
-  const totalCredito = ventasCredito.reduce((s, v) => s + Number(v.total || 0), 0);
+
+  // Descuentos por promoción (producto gratis, etc.)
+  const promoDescByLinea: Record<string, number> = {};
+  const promoDescByVenta: Record<string, number> = {};
+  for (const p of ((promosRes as any).data || []) as any[]) {
+    const disc = Number(p.descuento_aplicado || 0);
+    if (p.venta_linea_id) promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] || 0) + disc;
+    const vid = p.ventas?.id;
+    if (vid) promoDescByVenta[vid] = (promoDescByVenta[vid] || 0) + disc;
+  }
+  const ventaTotalEfectivo = (v: any) => Math.max(0, Number(v.total || 0) - (promoDescByVenta[v.id] || 0));
+  const lineTotalEfectivo = (l: any) => Math.max(0, Number(l.total || 0) - (promoDescByLinea[l.id] || 0));
+
+  const totalVentas = ventas.reduce((s, v) => s + ventaTotalEfectivo(v), 0);
+  const totalContado = ventasContado.reduce((s, v) => s + ventaTotalEfectivo(v), 0);
+  const totalCredito = ventasCredito.reduce((s, v) => s + ventaTotalEfectivo(v), 0);
   const totalCancelado = canceladas.reduce((s, v) => s + Number(v.total || 0), 0);
   const cobros = (cobrosRes.data || []) as any[];
   const totalCobros = cobros.reduce((s, c) => s + Number(c.monto || 0), 0);
@@ -107,14 +123,14 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto || 0);
   }
 
-  // Productos vendidos (agregado)
+  // Productos vendidos (agregado, neto de promociones)
   const prodMap = new Map<string, { codigo: string; nombre: string; cantidad: number; total: number }>();
   for (const v of ventas) {
     for (const l of (v.venta_lineas || []) as any[]) {
       const pid = l.producto_id || `${l.productos?.codigo || ""}::${l.productos?.nombre || ""}`;
       const prev = prodMap.get(pid) || { codigo: l.productos?.codigo || "", nombre: l.productos?.nombre || "—", cantidad: 0, total: 0 };
       prev.cantidad += Number(l.cantidad || 0);
-      prev.total += Number(l.total || 0);
+      prev.total += lineTotalEfectivo(l);
       prodMap.set(pid, prev);
     }
   }
