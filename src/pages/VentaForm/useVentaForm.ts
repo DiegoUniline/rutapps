@@ -834,7 +834,7 @@ export function useVentaForm() {
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
-    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
+    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio,
     loteParaLinea, setLoteParaLinea, setLineaLote,
   };
 }
