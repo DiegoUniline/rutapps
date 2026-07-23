@@ -432,6 +432,63 @@ export function useVentaForm() {
     }
   };
 
+  // Cambio de lista de precios a nivel de línea: reemplaza COMPLETAMENTE el
+  // snapshot de precio (raw, display, base_precio, redondeo). No conserva
+  // valores de la lista anterior — esos solo aplican como fallback cuando NO
+  // se cambia de lista. El motor fiscal, descuentos e impuestos siguen igual.
+  const changeLineListaPrecio = useCallback((idx: number, listaPrecioId: string | null) => {
+    if (readOnly) return;
+    setLineas(prev => {
+      const next = [...prev];
+      const line: any = next[idx];
+      if (!line?.producto_id) return prev;
+      const producto: any = productosList?.find((p: any) => p.id === line.producto_id);
+      if (!producto) return prev;
+      const prodForPricing: ProductForPricing = {
+        id: line.producto_id,
+        precio_principal: Number(producto.precio_principal) || 0,
+        costo: Number(producto.costo) || 0,
+        clasificacion_id: producto.clasificacion_id,
+        tiene_iva: producto.tiene_iva,
+        iva_pct: Number(producto.iva_pct ?? 16),
+        tiene_ieps: !!producto.tiene_ieps || Number(producto.ieps_pct ?? 0) > 0,
+        ieps_pct: Number(producto.ieps_pct ?? 0),
+        ieps_tipo: producto.ieps_tipo,
+        usa_listas_precio: producto.usa_listas_precio,
+      };
+      const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId) : null;
+      const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
+      const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
+      const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
+      next[idx] = {
+        ...line,
+        lista_precio_id: listaPrecioId,
+        precio_unitario: finalUnitPrice,
+        display_unit_price: finalDisplayPrice,
+        precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice,
+        precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice,
+        base_precio: snap?.basePrecio ?? 'con_impuestos',
+        redondeo: snap?.redondeo ?? 'ninguno',
+        precio_manual: false,
+      };
+      if (typeof console !== 'undefined') {
+        console.debug('[price-list-change]', {
+          previousListId: line.lista_precio_id ?? null,
+          selectedListId: listaPrecioId,
+          resolvedRawUnitPrice: pricing?.rawUnitPrice,
+          resolvedDisplayPrice: pricing?.displayPrice,
+          snapshotUnitPrice: snap?.unitPrice,
+          snapshotDisplayPrice: snap?.displayPrice,
+          assignedRawUnitPrice: next[idx].precio_unitario_sin_redondeo,
+          assignedUnitPrice: next[idx].precio_unitario,
+          assignedDisplayPrice: next[idx].display_unit_price,
+        });
+      }
+      return next;
+    });
+    setDirty(true);
+  }, [readOnly, productosList, tarifaRules]);
+
   const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
     if (dir === 'next') { if (colIdx < COL_COUNT - 1) focusCell(rowIdx, colIdx + 1); else if (rowIdx >= lineas.length - 1) { setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(rowIdx + 1, 0), 50); } else focusCell(rowIdx + 1, 0); }
     else { if (colIdx > 0) focusCell(rowIdx, colIdx - 1); else if (rowIdx > 0) focusCell(rowIdx - 1, COL_COUNT - 1); }
