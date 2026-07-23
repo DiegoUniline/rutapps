@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
 
 interface VentaLinea {
+  id: string;
   producto_id: string;
   cantidad: number;
   precio_unitario: number;
@@ -54,6 +55,7 @@ export function ReporteProductoCliente({ data }: { data: any }) {
   const { visible, setVisible, isVisible } = useColumnVisibility(INNER_COLUMNS);
 
   const ventaLineas: VentaLinea[] = data.ventaLineas ?? [];
+  const promoDescByLinea: Record<string, number> = data.promoDescByLinea ?? {};
 
   const clienteMap: Record<string, ClienteGroup> = {};
   for (const l of ventaLineas) {
@@ -69,9 +71,10 @@ export function ReporteProductoCliente({ data }: { data: any }) {
       prod = { productoId: pid, codigo: (l.productos as any)?.codigo ?? '', nombre: (l.productos as any)?.nombre ?? '', cantidad: 0, total: 0 };
       clienteMap[cid].productos.push(prod);
     }
+    const totalEfectivo = Math.max(0, Number(l.total ?? 0) - Number(promoDescByLinea[l.id] ?? 0));
     prod.cantidad += l.cantidad ?? 0;
-    prod.total += l.total ?? 0;
-    clienteMap[cid].totalGeneral += l.total ?? 0;
+    prod.total += totalEfectivo;
+    clienteMap[cid].totalGeneral += totalEfectivo;
     clienteMap[cid].cantidadTotal += l.cantidad ?? 0;
   }
 

@@ -312,6 +312,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         numVentas: ventas.length, numCobros: cobros.length,
         utilidad: totalVentas - totalGastos, dailyVentas,
         ventaLineas,
+        promoDescByLinea,
         ventasPorProducto,
         ventasPorCliente,
         topVendedores,
