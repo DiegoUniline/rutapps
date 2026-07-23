@@ -150,7 +150,7 @@ export function useVentaDetalle() {
 
       if (navigator.onLine) {
         // Insert first, then delete old — if insert fails, old lines remain intact
-        const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
+        const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas as any);
         if (linErr) throw linErr;
         // Delete old lines (those not just inserted)
         await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
