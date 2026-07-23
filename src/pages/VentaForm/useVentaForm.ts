@@ -350,14 +350,35 @@ export function useVentaForm() {
     return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
   }, []);
 
-  // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
+  // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines).
+  // Una línea con lista_precio_id propio NO se reprecifica desde la lista/tarifa global:
+  // solo se re-aplica el redondeo efectivo con el nuevo estado de impuestos.
   useEffect(() => {
-    if (!tarifaRules?.length || !productosList || readOnly) return;
-    const listaPrecioId = (form as any).lista_precio_id || null;
+    if (!productosList || readOnly) return;
+    const formListaPrecioId = (form as any).lista_precio_id || null;
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
       if ((l as any).precio_manual) return l;
-      const lineLista = (l as any).lista_precio_id ?? listaPrecioId;
+      const lineOwnLista = (l as any).lista_precio_id ?? null;
+
+      // Caso 1: la línea tiene su propia lista. NUNCA sobrescribir con la lista/tarifa
+      // global. Solo re-aplicar impuestos/redondeo sobre el snapshot existente.
+      if (lineOwnLista) {
+        const rawNet = Number((l as any).precio_unitario_sin_redondeo);
+        if (!Number.isFinite(rawNet) || rawNet <= 0) {
+          if (typeof console !== 'undefined') {
+            console.warn('[line-price-list-unresolved]', {
+              listaPrecioId: lineOwnLista,
+              tarifaId: (l as any).tarifa_id ?? null,
+            });
+          }
+          return l;
+        }
+        return applyEffectiveLinePricing(l, sinImpuestos) as any;
+      }
+
+      // Caso 2: la línea no tiene lista propia → reprecificar con lista/tarifa global.
+      if (!tarifaRules?.length) return l;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
       const prodForPricing: ProductForPricing = {
@@ -366,10 +387,8 @@ export function useVentaForm() {
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
         usa_listas_precio: prod.usa_listas_precio,
       };
-      const pricing = resolveProductPricing(tarifaRules, prodForPricing, lineLista);
+      const pricing = resolveProductPricing(tarifaRules, prodForPricing, formListaPrecioId);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
-      // Merge snapshot but preserve the line's current tax state, then re-apply
-      // effective rounding so re-pricing never resurrects taxes the user removed.
       const merged: any = {
         ...l,
         precio_unitario: snap.unitPrice,
@@ -386,7 +405,7 @@ export function useVentaForm() {
       ) return l;
       return effective;
     }));
-  }, [tarifaRules, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing]);
+  }, [tarifaRules, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing, productosList, readOnly]);
 
 
 
