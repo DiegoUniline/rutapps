@@ -326,9 +326,11 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
   if (!tarifaId) return <p className="text-[12px] text-muted-foreground py-4">Guarda la tarifa primero.</p>;
 
-  const filtered = (productos ?? []).filter(p =>
-    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (productos ?? [])
+    .filter(p =>
+      !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
 
   
 
