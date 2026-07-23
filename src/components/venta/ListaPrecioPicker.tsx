@@ -9,19 +9,25 @@ import { buildSalePricingSnapshot } from '@/lib/salePricing';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
+export interface ListaPrecioSelection {
+  listaPrecioId: string | null;
+  listaPrecioNombre: string;
+  tarifaId: string | null;
+  unitPrice: number;
+  displayPrice: number;
+  rawUnitPrice: number;
+  rawDisplayPrice: number;
+  basePrecio: string;
+  redondeo: string;
+}
+
 interface Props {
   producto: any | null;
   currentListaPrecioId?: string | null;
   currentTarifaId?: string | null;
   isManual?: boolean;
   disabled?: boolean;
-  onSelectLista: (
-    listaPrecioId: string | null,
-    tarifaId: string | null,
-    unitPrice: number,
-    displayPrice: number,
-    listaNombre: string,
-  ) => void;
+  onSelectLista: (selection: ListaPrecioSelection) => void;
   /** Render trigger as compact badge */
   compact?: boolean;
 }
@@ -34,6 +40,10 @@ interface ListaOption {
   es_principal: boolean;
   unitPrice: number;
   displayPrice: number;
+  rawUnitPrice: number;
+  rawDisplayPrice: number;
+  basePrecio: string;
+  redondeo: string;
   hasRule: boolean;
 }
 
