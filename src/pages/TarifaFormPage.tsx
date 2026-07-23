@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
@@ -617,11 +617,39 @@ export default function TarifaFormPage() {
 
   const set = (key: keyof Tarifa, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
+  // Extra fetch: products referenced in rules that aren't in the active-only select list
+  const referencedProdIds = useMemo(() => {
+    const set = new Set<string>();
+    ((existing as any)?.tarifa_lineas ?? []).forEach((l: any) => {
+      if (l.aplica_a === 'producto') (l.producto_ids ?? []).forEach((pid: string) => set.add(pid));
+    });
+    return Array.from(set);
+  }, [existing]);
+
+  const activeIdSet = useMemo(
+    () => new Set((productosDisp ?? []).map(p => p.id)),
+    [productosDisp]
+  );
+  const missingIds = referencedProdIds.filter(pid => !activeIdSet.has(pid));
+
+  const { data: extraProds } = useQuery({
+    queryKey: ['tarifa-extra-prods', missingIds.sort().join(',')],
+    enabled: missingIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('productos').select('id, codigo, nombre').in('id', missingIds);
+      return data ?? [];
+    },
+  });
+
   // Lookup maps
-  const prodMap = new Map((productosDisp ?? []).map(p => [p.id, `${p.codigo} — ${p.nombre}`]));
+  const prodMap = new Map<string, string>();
+  (productosDisp ?? []).forEach(p => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
+  (extraProds ?? []).forEach((p: any) => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
   const clasMap = new Map((clasificaciones ?? []).map(c => [c.id, c.nombre]));
   const prodItems = (productosDisp ?? []).map(p => ({ id: p.id, label: `${p.codigo} — ${p.nombre}` }));
   const clasItems = (clasificaciones ?? []).map(c => ({ id: c.id, label: c.nombre }));
+
 
   const handleSave = async () => {
     if (!form.nombre) { toast.error('El nombre es obligatorio'); return; }
