@@ -49,6 +49,13 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
           ))}
         </div>
         <div className="odoo-field-row">
+          <span className="odoo-field-label">Tiene IEPS</span>
+          <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
+            <input type="checkbox" checked={!!form.tiene_ieps} onChange={e => { const on = e.target.checked; set('tiene_ieps', on); if (!on) set('ieps_pct', 0); }} className="rounded border-input h-3.5 w-3.5" />
+            <span className="text-[11px] text-muted-foreground">Activar impuesto especial</span>
+          </label>
+        </div>
+        <div className="odoo-field-row">
           <span className="odoo-field-label">Tipo IEPS</span>
           <div className="flex gap-2 pt-[2px]">
             {(['porcentaje', 'cuota'] as const).map(t => (
