@@ -25,15 +25,16 @@ interface Props {
   currencyCode?: string | null;
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
+  sinImpuestos?: boolean;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const amounts = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike);
+  const amounts = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike, sinImpuestos);
   const grossSubtotal = amounts.subtotal;
   const discount = amounts.discount;
   const base = r2(grossSubtotal - discount);

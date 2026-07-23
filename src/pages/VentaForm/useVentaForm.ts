@@ -9,7 +9,7 @@ import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/
 import { supabase } from '@/lib/supabase';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
-import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
+import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices } from '@/lib/salePricing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
@@ -77,7 +77,7 @@ export function useVentaForm() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
-  const [sinImpuestos, setSinImpuestos] = useState(false);
+  const [sinImpuestos, setSinImpuestosState] = useState(false);
   const { hasPermiso } = usePermisos();
   const canEditVenta = hasPermiso('ventas', 'editar');
   const canCreateVenta = hasPermiso('ventas', 'crear');
@@ -367,6 +367,21 @@ export function useVentaForm() {
     }));
   }, [tarifaRules, (form as any).lista_precio_id]);
 
+  const applyEffectiveLinePricing = useCallback((line: Partial<VentaLinea>, currentSinImpuestos: boolean) => {
+    const effective = calculateSaleLineEffectivePrices(line as any, currentSinImpuestos);
+    if (!effective.appliedRounding) return line;
+    const currentUnit = Number(line.precio_unitario) || 0;
+    const currentDisplay = Number((line as any).display_unit_price) || currentUnit;
+    if (Math.abs(currentUnit - effective.unitPrice) < 0.000001 && Math.abs(currentDisplay - effective.displayPrice) < 0.000001) return line;
+    return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
+  }, []);
+
+  const setSinImpuestos = useCallback((value: boolean) => {
+    setSinImpuestosState(value);
+    setLineas(prev => prev.map(l => applyEffectiveLinePricing(l, value)));
+    setDirty(true);
+  }, [applyEffectiveLinePricing]);
+
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
   const handleProductSelect = (idx: number, productoId: string) => {
@@ -432,7 +447,7 @@ export function useVentaForm() {
     // that would re-interpret a "con_impuestos" rule and undo the discount the user
     // expects when unchecking a tax.
     if (field === 'iva_pct' || field === 'ieps_pct') {
-      setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val } as any; return next; });
+      setLineas(prev => { const next = [...prev]; const updated = { ...next[idx], [field]: val } as any; next[idx] = applyEffectiveLinePricing(updated, sinImpuestos) as any; return next; });
       setDirty(true);
       return;
     }
@@ -535,10 +550,11 @@ export function useVentaForm() {
       const linePromises: Promise<any>[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
-        const lineAmounts = calculateSaleLineAmounts(l as any, sinImpuestos);
+        const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
+        const lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        const linePayload = { ...l, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
+        const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;
