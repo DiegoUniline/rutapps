@@ -30,6 +30,7 @@ export interface ProductForPricing {
   ieps_pct?: number;
   ieps_tipo?: string;
   usa_listas_precio?: boolean;
+  costo_incluye_impuestos?: boolean;
 }
 
 export interface ResolvedProductPricing {
@@ -98,7 +99,14 @@ export function calculateRawPrice(rule: TarifaLineaRule, producto: ProductForPri
     precio = rule.precio ?? 0;
     if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
   } else if (rule.tipo_calculo === 'margen_costo') {
-    precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
+    // If the captured cost already includes taxes, strip them BEFORE applying the margin.
+    // This is the single source of truth for the pricing base when costo_incluye_impuestos = true.
+    let baseCosto = producto.costo ?? 0;
+    if (producto.costo_incluye_impuestos) {
+      const divisor = getTaxMultiplier(producto);
+      if (divisor > 0) baseCosto = baseCosto / divisor;
+    }
+    precio = baseCosto * (1 + (rule.margen_pct ?? 0) / 100);
   } else if (rule.tipo_calculo === 'descuento_precio') {
     precio = producto.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
   }
@@ -200,9 +208,13 @@ export function resolveProductPricing(
   }
   const rawDisplayPrice = rawUnitPrice * getTaxMultiplier(producto);
 
+  // Compute display price from the high-precision net to avoid double-rounding drift.
+  const grossHi = rawUnitPrice * getTaxMultiplier(producto);
+  const displayPrice = round2(applyRedondeo(round2(grossHi), rule.redondeo ?? 'ninguno'));
+
   return {
     unitPrice,
-    displayPrice: toDisplayPrice(unitPrice, producto, rule.redondeo),
+    displayPrice,
     rawUnitPrice,
     rawDisplayPrice,
     basePrecio: rule.base_precio ?? 'sin_impuestos',
