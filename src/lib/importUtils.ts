@@ -8,7 +8,7 @@
 // xlsx (≈424 KB) se carga de forma DIFERIDA (import dinámico dentro de cada
 // función que lo usa), para no pesar en la carga inicial.
 import { supabase } from '@/integrations/supabase/client';
-import { todayLocal } from '@/lib/utils';
+// todayLocal ya no se usa aquí: el stock inicial no se importa desde productos.
 
 // ─── Types ──────────────────────────────────────────────────────
 export interface ImportResult {
