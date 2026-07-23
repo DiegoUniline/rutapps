@@ -31,6 +31,13 @@ export interface SaleLineAmounts {
   total: number;
 }
 
+export interface SaleLineEffectivePrices {
+  unitPrice: number;
+  displayPrice: number;
+  finalUnitGross: number;
+  appliedRounding: boolean;
+}
+
 export interface SalePricingSnapshot {
   unitPrice: number;
   displayPrice: number;
@@ -111,9 +118,55 @@ export function buildManualSalePricingFromGross(input: TaxPricingInput, grossPri
   };
 }
 
+export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinImpuestos = false): SaleLineEffectivePrices {
+  const currentUnitPrice = Number(line.precio_unitario) || 0;
+  const currentDisplayPrice = Number(line.display_unit_price) || currentUnitPrice;
+  const descPct = Number(line.descuento_pct) || 0;
+  const descFactor = Math.max(0, 1 - descPct / 100);
+  const ivaPct = sinImpuestos ? 0 : Number(line.iva_pct) || 0;
+  const iepsPct = sinImpuestos ? 0 : Number(line.ieps_pct) || 0;
+  const redondeo = line.redondeo;
+  const hasConfiguredRounding = !!redondeo && redondeo !== 'ninguno';
+  const canApplyRounding = hasConfiguredRounding && !line.precio_manual;
+
+  if (!canApplyRounding) {
+    return {
+      unitPrice: currentUnitPrice,
+      displayPrice: currentDisplayPrice,
+      finalUnitGross: round2(currentUnitPrice * descFactor * (1 + iepsPct / 100) * (1 + ivaPct / 100)),
+      appliedRounding: false,
+    };
+  }
+
+  const rawNet = Number(line.precio_unitario_sin_redondeo) || currentUnitPrice;
+  const taxMultiplier = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+  const unitGrossBeforeRound = round2(rawNet * descFactor * taxMultiplier);
+  const finalUnitGross = round2(applyDisplayRedondeo(unitGrossBeforeRound, redondeo));
+
+  if (descFactor <= 0) {
+    return {
+      unitPrice: rawNet,
+      displayPrice: round2(rawNet * taxMultiplier),
+      finalUnitGross: 0,
+      appliedRounding: true,
+    };
+  }
+
+  const displayPrice = finalUnitGross / descFactor;
+  const unitPrice = taxMultiplier > 0 ? displayPrice / taxMultiplier : displayPrice;
+
+  return {
+    unitPrice,
+    displayPrice,
+    finalUnitGross,
+    appliedRounding: true,
+  };
+}
+
 export function calculateSaleLineAmounts(line: SaleLinePricingLike, sinImpuestos = false): SaleLineAmounts {
   const qty = Number(line.cantidad) || 0;
-  const price = Number(line.precio_unitario) || 0;
+  const effectivePrices = calculateSaleLineEffectivePrices(line, sinImpuestos);
+  const price = effectivePrices.unitPrice;
   const descPct = Number(line.descuento_pct) || 0;
   const ivaPct = sinImpuestos ? 0 : Number(line.iva_pct) || 0;
   const iepsPct = sinImpuestos ? 0 : Number(line.ieps_pct) || 0;
@@ -139,11 +192,7 @@ export function calculateSaleLineAmounts(line: SaleLinePricingLike, sinImpuestos
   if (canApplyRounding) {
     // Usar el NET crudo pre-redondeo cuando esté disponible para que un
     // precio ya limpio ($60.00) no se infle al alternar impuestos (Caso 5).
-    const rawNet = Number(line.precio_unitario_sin_redondeo) || price;
-    const unitAfterDisc = rawNet * (1 - descPct / 100);
-    const taxMul = (1 + iepsPct / 100) * (1 + ivaPct / 100);
-    const unitGrossBeforeRound = round2(unitAfterDisc * taxMul);
-    const finalUnitGross = round2(applyDisplayRedondeo(unitGrossBeforeRound, redondeo));
+    const finalUnitGross = effectivePrices.finalUnitGross;
     const targetTotal = round2(finalUnitGross * qty);
     const diff = round2(targetTotal - total);
 
