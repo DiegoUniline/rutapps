@@ -372,7 +372,7 @@ export default function CotizacionFormPage() {
         precio_manual: !!l.precio_manual,
       }));
       if (ventaLineas.length) {
-        const { error: errL } = await supabase.from('venta_lineas').insert(ventaLineas);
+        const { error: errL } = await supabase.from('venta_lineas').insert(ventaLineas as any);
         if (errL) throw errL;
       }
       await supabase.from('cotizaciones').update({ estado: 'convertida', venta_id: venta.id }).eq('id', form.id);

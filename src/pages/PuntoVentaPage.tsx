@@ -968,7 +968,7 @@ export default function PuntoVentaPage() {
           paquetes: (item as any).paquetes ?? null,
         };
       });
-      const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
+      const { error: linErr } = await supabase.from('venta_lineas').insert(lineas as any);
       if (linErr) throw linErr;
 
       // 3. Stock deduction + movement logging handled by DB trigger (apply_immediate_sale_inventory)
