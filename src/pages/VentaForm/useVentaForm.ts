@@ -423,33 +423,15 @@ export function useVentaForm() {
         }
       }
     }
-    // When tax fields change, recalculate pricing with new tax settings so rounding still applies
-    if ((field === 'iva_pct' || field === 'ieps_pct') && tarifaRules?.length) {
-      const line = lineas[idx];
-      if (line?.producto_id) {
-        const prod = productosList?.find((p: any) => p.id === line.producto_id);
-        if (prod) {
-          const newIvaPct = field === 'iva_pct' ? Number(val) : Number(line.iva_pct);
-          const newIepsPct = field === 'ieps_pct' ? Number(val) : Number(line.ieps_pct);
-          const prodForPricing: ProductForPricing = {
-            id: line.producto_id!, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
-            clasificacion_id: prod.clasificacion_id,
-            tiene_iva: newIvaPct > 0, iva_pct: newIvaPct > 0 ? newIvaPct : Number(prod.iva_pct ?? 16),
-            tiene_ieps: newIepsPct > 0, ieps_pct: newIepsPct > 0 ? newIepsPct : Number(prod.ieps_pct ?? 0),
-            ieps_tipo: prod.ieps_tipo,
-            usa_listas_precio: prod.usa_listas_precio,
-          };
-          const pricing = resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id);
-          const snap = buildSalePricingSnapshot(prodForPricing, pricing);
-          setLineas(prev => {
-            const next = [...prev];
-            next[idx] = { ...next[idx], [field]: val, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo } as any;
-            return next;
-          });
-          setDirty(true);
-          return;
-        }
-      }
+    // Tax toggles (iva_pct/ieps_pct): keep the stored NET precio_unitario intact so
+    // removing a tax lowers the total by exactly the tax amount (and adding it back
+    // raises it accordingly). Do NOT re-resolve pricing from the price list here —
+    // that would re-interpret a "con_impuestos" rule and undo the discount the user
+    // expects when unchecking a tax.
+    if (field === 'iva_pct' || field === 'ieps_pct') {
+      setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val } as any; return next; });
+      setDirty(true);
+      return;
     }
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; });
     setDirty(true);
