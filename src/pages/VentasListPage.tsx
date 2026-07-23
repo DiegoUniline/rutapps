@@ -48,7 +48,7 @@ export default function VentasListPage() {
   const { empresa } = useAuth();
   // Realtime: refresca lista al haber cambios en ventas/entregas/cobros (otro dispositivo)
   useRealtimeInvalidate({ table: 'ventas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
-  useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']] });
+  useRealtimeInvalidate({ table: 'venta_lineas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas']], tenantColumn: null });
   useRealtimeInvalidate({ table: 'entregas', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['entregas']] });
   useRealtimeInvalidate({ table: 'cobros', empresaId: empresa?.id, queryKeys: [['ventas'], ['venta-lineas'], ['cxc'], ['saldos']] });
   const navigate = useNavigate();
