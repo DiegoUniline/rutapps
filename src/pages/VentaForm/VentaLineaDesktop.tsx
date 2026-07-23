@@ -175,12 +175,19 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}>
               IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
             </button>
-            {(Number(l.ieps_pct) > 0 || (impuestosLabel).includes('IEPS')) && (
-              <button type="button" disabled={readOnly} onClick={handleIepsToggle}
-                className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}>
-                IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
-              </button>
-            )}
+            {(() => {
+              const p = productosList?.find((x: any) => x.id === l.producto_id);
+              const prodHasIeps = !!p && (p.tiene_ieps || Number(p.ieps_pct ?? 0) > 0);
+              const showIeps = Number(l.ieps_pct) > 0 || prodHasIeps || impuestosLabel.includes('IEPS');
+              if (!showIeps) return null;
+              return (
+                <button type="button" disabled={readOnly} onClick={handleIepsToggle}
+                  className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
+                  title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}>
+                  IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
+                </button>
+              );
+            })()}
             {Number(l.iva_pct) === 0 && Number(l.ieps_pct) === 0 && !impuestosLabel.includes('IEPS') && <span className="text-muted-foreground text-[11px]">—</span>}
           </div>
         )}
