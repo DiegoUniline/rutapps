@@ -167,15 +167,7 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
 
-  // Get default almacén for adjustments
-  const { data: defaultAlmacen } = await supabase
-    .from('almacenes')
-    .select('id')
-    .eq('empresa_id', empresaId)
-    .eq('activo', true)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle();
+  // (Stock inicial ya no se toca aquí; no necesitamos almacén por defecto.)
 
   for (let i = 0; i < rows.length; i++) {
     const raw = mapHeaders(rows[i], PRODUCT_IMPORT_COLUMNS);
