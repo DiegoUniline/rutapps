@@ -342,6 +342,14 @@ export function useVentaForm() {
     };
   }, [finalTotals, (form as any).descuento_extra, form.descuento_total, form.ieps_total, form.iva_total, form.subtotal, form.total, (form as any).cerrado_at, (form as any).total_efectivo, isNew, readOnly]);
 
+  const applyEffectiveLinePricing = useCallback((line: Partial<VentaLinea>, currentSinImpuestos: boolean) => {
+    const effective = calculateSaleLineEffectivePrices(line as any, currentSinImpuestos);
+    if (!effective.appliedRounding) return line;
+    const currentUnit = Number(line.precio_unitario) || 0;
+    const currentDisplay = Number((line as any).display_unit_price) || currentUnit;
+    if (Math.abs(currentUnit - effective.unitPrice) < 0.000001 && Math.abs(currentDisplay - effective.displayPrice) < 0.000001) return line;
+    return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
+  }, []);
 
   // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
@@ -350,7 +358,6 @@ export function useVentaForm() {
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
       if ((l as any).precio_manual) return l;
-      // If line has its own lista_precio_id, keep it (per-line override)
       const lineLista = (l as any).lista_precio_id ?? listaPrecioId;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
@@ -362,19 +369,28 @@ export function useVentaForm() {
       };
       const pricing = resolveProductPricing(tarifaRules, prodForPricing, lineLista);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
-      if (snap.unitPrice === Number(l.precio_unitario)) return l;
-      return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo } as any;
+      // Merge snapshot but preserve the line's current tax state, then re-apply
+      // effective rounding so re-pricing never resurrects taxes the user removed.
+      const merged: any = {
+        ...l,
+        precio_unitario: snap.unitPrice,
+        display_unit_price: snap.displayPrice,
+        precio_unitario_sin_redondeo: snap.rawUnitPrice,
+        precio_display_sin_redondeo: snap.rawDisplayPrice,
+        base_precio: snap.basePrecio,
+        redondeo: snap.redondeo,
+      };
+      const effective = applyEffectiveLinePricing(merged, sinImpuestos) as any;
+      if (
+        effective.precio_unitario === Number(l.precio_unitario) &&
+        effective.display_unit_price === Number((l as any).display_unit_price)
+      ) return l;
+      return effective;
     }));
-  }, [tarifaRules, (form as any).lista_precio_id]);
+  }, [tarifaRules, (form as any).lista_precio_id, sinImpuestos, applyEffectiveLinePricing]);
 
-  const applyEffectiveLinePricing = useCallback((line: Partial<VentaLinea>, currentSinImpuestos: boolean) => {
-    const effective = calculateSaleLineEffectivePrices(line as any, currentSinImpuestos);
-    if (!effective.appliedRounding) return line;
-    const currentUnit = Number(line.precio_unitario) || 0;
-    const currentDisplay = Number((line as any).display_unit_price) || currentUnit;
-    if (Math.abs(currentUnit - effective.unitPrice) < 0.000001 && Math.abs(currentDisplay - effective.displayPrice) < 0.000001) return line;
-    return { ...line, precio_unitario: effective.unitPrice, display_unit_price: effective.displayPrice } as Partial<VentaLinea>;
-  }, []);
+
+
 
   const setSinImpuestos = useCallback((value: boolean) => {
     setSinImpuestosState(value);
