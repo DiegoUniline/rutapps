@@ -81,14 +81,14 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
 
     // Empresa — MAYÚSCULAS bold 12pt
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...BLACK);
     doc.text(((empresa as any)?.nombre || '').toUpperCase(), leftX, y);
     y += 4.5;
 
     // RFC · (no email en esta consulta)
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setTextColor(...MUTED);
     const ids: string[] = [];
     if ((empresa as any)?.rfc) ids.push(`RFC: ${(empresa as any).rfc}`);
@@ -98,12 +98,12 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
 
     // Derecha
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...BLACK);
     doc.text('RECIBO DE PAGO', W - MR, 14, { align: 'right' });
 
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setTextColor(...MUTED);
     let ry = 18.5;
     doc.text(`Folio: ${cobro.id.slice(0, 8).toUpperCase()}`, W - MR, ry, { align: 'right' });
@@ -127,17 +127,17 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
 
     // ── Cliente ──
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...MUTED);
     doc.text('CLIENTE', ML, y);
     y += 4.5;
     doc.setFontSize(10.5);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...BLACK);
     doc.text(cliente?.nombre || '—', ML, y);
     y += 4.5;
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setTextColor(...MUTED);
     if ((cliente as any)?.rfc) { doc.text(`RFC: ${(cliente as any).rfc}`, ML, y); y += 4; }
     if ((cliente as any)?.direccion) { doc.text((cliente as any).direccion, ML, y); y += 4; }
@@ -147,7 +147,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
     // ── Tabla aplicaciones (B/N, sin zebra) ──
     // Encabezados
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...BLACK);
     doc.text('Folio', ML + 2, y);
     doc.text('Monto aplicado', W - MR - 2, y, { align: 'right' });
@@ -157,7 +157,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
     doc.line(ML, y + 2, W - MR, y + 2);
     y += 6;
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...BLACK);
     let totalApp = 0;
@@ -187,7 +187,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
     doc.line(ML, y, W - MR, y);
     y += 6;
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.setTextColor(...BLACK);
     doc.text('TOTAL RECIBIDO', ML + 2, y);
     doc.text(fmt(Number(cobro.monto)), W - MR - 2, y, { align: 'right' });
@@ -195,7 +195,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
 
     // Método y referencia (texto plano)
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setTextColor(...MUTED);
     if (cobro.metodo_pago) { doc.text(`Método de pago: ${cobro.metodo_pago}`, ML, y); y += 4.5; }
     if (cobro.referencia) { doc.text(`Referencia: ${cobro.referencia}`, ML, y); y += 4.5; }
@@ -205,7 +205,7 @@ export async function generarYSubirReciboCobro(cobroId: string, empresaId: strin
     doc.setLineWidth(0.2);
     doc.line(ML, H - 13, W - MR, H - 13);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('courier', 'normal');
     doc.setTextColor(...MUTED);
     const empresaFooter = (empresa as any)?.nombre || '';
     doc.text(empresaFooter ? `Rutapp · ${empresaFooter}` : 'Rutapp', ML, H - 8);
