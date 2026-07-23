@@ -774,17 +774,21 @@ export default function TarifaFormPage() {
 
   const lineas = (existing?.tarifa_lineas ?? []) as TarifaLinea[];
   const [reglaSearch, setReglaSearch] = useState('');
+  const [reglaSort, setReglaSort] = useState<'nombre' | 'clave'>('nombre');
   const sortedLineas = [...lineas]
     .sort((a, b) => {
       const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
       const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
-        if (l.aplica_a === 'producto') return (l.producto_ids.map(pid => prodNombreMap.get(pid) ?? '').join(', '));
+        if (l.aplica_a === 'producto') {
+          const m = reglaSort === 'clave' ? prodCodigoMap : prodNombreMap;
+          return (l.producto_ids.map(pid => m.get(pid) ?? '').join(', '));
+        }
         if (l.aplica_a === 'categoria') return (l.clasificacion_ids.map(cid => clasMap.get(cid) ?? '').join(', '));
         return '';
       };
-      return labelOf(a).localeCompare(labelOf(b), 'es', { sensitivity: 'base' });
+      return labelOf(a).localeCompare(labelOf(b), 'es', { sensitivity: 'base', numeric: true });
     })
     .filter(l => {
       if (!reglaSearch.trim()) return true;
