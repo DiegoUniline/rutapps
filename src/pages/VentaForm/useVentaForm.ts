@@ -479,9 +479,9 @@ export function useVentaForm() {
           resolvedDisplayPrice: pricing?.displayPrice,
           snapshotUnitPrice: snap?.unitPrice,
           snapshotDisplayPrice: snap?.displayPrice,
-          assignedRawUnitPrice: next[idx].precio_unitario_sin_redondeo,
-          assignedUnitPrice: next[idx].precio_unitario,
-          assignedDisplayPrice: next[idx].display_unit_price,
+          assignedRawUnitPrice: (next[idx] as any).precio_unitario_sin_redondeo,
+          assignedUnitPrice: (next[idx] as any).precio_unitario,
+          assignedDisplayPrice: (next[idx] as any).display_unit_price,
         });
       }
       return next;
