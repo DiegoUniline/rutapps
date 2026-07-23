@@ -1,126 +1,48 @@
+## Diagnóstico confirmado
 
-# Integración WhatsApp vía Evolution API (QR) + CRM/Inbox
+Al seleccionar **Lista General $68.00** la línea se queda en $5,000 / $5,800. Dos causas verificadas leyendo el código:
 
-## Objetivo
+1. `changeLineListaPrecio` en `src/pages/VentaForm/useVentaForm.ts` re-resuelve el precio con `tarifaRules` (reglas de la tarifa global del formulario). Si la lista elegida pertenece a otra tarifa o esas reglas no están en ese query, `resolveProductPricing` cae al fallback y usa `producto.precio_principal = $5,000` → $5,800 con IVA. El snapshot correcto que ya calculó `ListaPrecioPicker` se descarta.
+2. El `useEffect` de reprecificación (líneas 354–389) itera todas las líneas y vuelve a resolver con `form.lista_precio_id` + `tarifaRules` globales, pisando la lista específica que el usuario acaba de fijar en la línea.
 
-Reemplazar el flujo actual de "pega tu token de WhatsAPI" por un flujo tipo Kommo/Sirena:
-1. La empresa entra a **Configuración → WhatsApp**.
-2. Pica **"Conectar WhatsApp"** → aparece un **QR**.
-3. Lo escanea con su celular (WhatsApp → Dispositivos vinculados).
-4. Queda conectado; el sistema envía y recibe mensajes a través del servidor Evolution que tú administras.
+## Cambios (alcance mínimo)
 
-Después, montar un **Inbox/CRM** dentro de Rutapp para atender clientes, levantar pedidos, mandar estados de cuenta, etc.
+### 1. `src/components/venta/ListaPrecioPicker.tsx`
+- Ampliar la firma de `onSelectLista` para enviar el snapshot completo ya calculado (`unitPrice`, `displayPrice`, `rawUnitPrice`, `rawDisplayPrice`, `basePrecio`, `redondeo`, `tarifaId`, `listaPrecioNombre`). Los valores ya se computan hoy dentro de `options` vía `resolveProductPricing` + `buildSalePricingSnapshot`; solo hay que exponerlos.
+- Guardar en cada `ListaOption` también `rawUnitPrice`, `rawDisplayPrice`, `basePrecio`, `redondeo` provenientes del snapshot y de la regla resuelta.
 
----
+### 2. `src/pages/VentaForm/useVentaForm.ts` — `changeLineListaPrecio`
+- Cambiar firma a `changeLineListaPrecio(idx, selectedPricing)` recibiendo el snapshot completo del picker.
+- Reemplazo atómico, sin fallback al valor anterior de la línea:
+  - `lista_precio_id = selectedPricing.listaPrecioId`
+  - `precio_unitario = selectedPricing.unitPrice`
+  - `display_unit_price = selectedPricing.displayPrice`
+  - `precio_unitario_sin_redondeo = selectedPricing.rawUnitPrice`
+  - `precio_display_sin_redondeo = selectedPricing.rawDisplayPrice`
+  - `base_precio = selectedPricing.basePrecio`
+  - `redondeo = selectedPricing.redondeo`
+  - `precio_manual = false`
+  - Si el objeto línea ya tiene `tarifa_id`, asignarlo también (no crear campo nuevo).
+- Eliminar la re-resolución con `tarifaRules` globales.
 
-## FASE 1 — Conexión por QR (base)
+### 3. `src/pages/VentaForm/useVentaForm.ts` — efecto de reprecificación (l. 354–389)
+- Antes de reprecificar cada línea:
+  - Si `l.lista_precio_id` está definido, **no** aplicar `form.lista_precio_id` ni sobrescribir su snapshot con `tarifaRules` globales.
+  - Si no se puede resolver esa lista (reglas no cargadas para su tarifa), conservar la línea tal cual y emitir `console.warn('[line-price-list-unresolved]', { listaPrecioId, tarifaId })`. Nunca degradar a `precio_principal`.
+- Solo las líneas sin `lista_precio_id` propia se reprecifican con la lista/tarifa global.
 
-**Frontend (`/configuracion/whatsapp`):**
-- Ocultar los inputs de "Token / API URL".
-- Nuevo botón: **Conectar WhatsApp**.
-- Modal con QR (polling cada 2s al backend), estados: `esperando_qr`, `conectado`, `desconectado`.
-- Muestra número conectado, batería, foto de perfil (los devuelve Evolution).
-- Botón **Desconectar** (cierra sesión en Evolution).
+### 4. Callbacks Desktop/Mobile
+- `src/pages/VentaForm/VentaLineaDesktop.tsx` y `VentaLineaMobile.tsx`: pasar el snapshot completo recibido del picker a `onChangeLineListaPrecio`. Sin cambios adicionales de UI.
 
-**Backend (nueva edge function `whatsapp-evolution`):**
-- Guarda credenciales del server Evolution como **secrets globales**: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY` (nunca expuestos al cliente).
-- Endpoints internos (todos validan `empresa_id` del JWT):
-  - `POST /create-instance` → nombre = `empresa_<uuid>`, integration `WHATSAPP-BAILEYS`.
-  - `GET /qr` → devuelve base64 del QR.
-  - `GET /status` → conectado / desconectado / esperando.
-  - `POST /disconnect` → logout + delete instance.
-  - `POST /send-text` → reemplaza al `whatsapp-sender` actual.
-  - `POST /send-media` → para PDFs (tickets, notas, estados de cuenta).
+## Fuera de alcance (no se toca)
 
-**DB:**
-- Ampliar `whatsapp_config`:
-  - `provider` ∈ `whatsapi | evolution` (default `evolution` para nuevas).
-  - `evolution_instance_name`, `evolution_status`, `evolution_phone_number`, `evolution_connected_at`.
-- Migrar sin romper: si `api_token` existe → seguir usando `whatsapi`. Las empresas nuevas o quienes toquen "Conectar QR" pasan a `evolution`.
+`priceResolver.ts`, `salePricing.ts`, motor fiscal (IVA/IEPS), descuentos, redondeos, esquema DB, migraciones, ventas históricas, diseño.
 
-**Router de envío:**
-- `whatsapp-sender` se convierte en dispatcher: lee `provider` y llama a la función correcta. Todos los toggles actuales (recibo de pago, aviso día antes, vencido) siguen funcionando igual.
+## Verificación
 
----
-
-## FASE 2 — Enviar comprobantes por 1 clic (sin token que pegar)
-
-En las pantallas de venta / cotización / cobro / estado de cuenta:
-- Botón **Enviar por WhatsApp** deja de abrir wa.me → llama directo a Evolution y adjunta el PDF.
-- Si la empresa no tiene WhatsApp conectado, fallback al link wa.me actual.
-
----
-
-## FASE 3 — Inbox / CRM básico
-
-**DB:**
-```sql
-wa_conversaciones (id, empresa_id, cliente_id, telefono, ultimo_mensaje_at,
-                   unread_count, status open|snoozed|closed, assigned_to)
-wa_mensajes       (id, conversacion_id, empresa_id, direction in|out,
-                   tipo text|image|audio|document, body, media_url,
-                   evolution_message_id, from_me, ack, created_at)
-```
-
-**Webhook `whatsapp-evolution-webhook`** (Evolution manda eventos aquí):
-- `messages.upsert` → crea/actualiza `wa_mensajes`, matchea `cliente_id` por teléfono, incrementa `unread_count`.
-- `messages.update` → actualiza `ack` (enviado / entregado / leído).
-- `connection.update` → actualiza `evolution_status`.
-- Publica a Supabase Realtime → el Inbox se actualiza en vivo.
-
-**Ruta `/whatsapp/inbox`:**
-- Columna izquierda: lista de conversaciones (con avatar del cliente, último mensaje, badge de no leídos).
-- Centro: hilo tipo WhatsApp Web (burbujas, hora, ✓✓).
-- Derecha: **panel del cliente** con saldo, últimas ventas, botones:
-  - **Levantar pedido** → abre POS pre-cargado con el cliente.
-  - **Mandar estado de cuenta** → adjunta PDF.
-  - **Registrar cobro**.
-  - **Agendar visita**.
-- Notificaciones push/badge cuando llegan mensajes.
-
-**Permisos nuevos:** `whatsapp.inbox.ver`, `whatsapp.inbox.responder`, `whatsapp.inbox.asignar`.
-
----
-
-## FASE 4 — Automatizaciones e IA (opcional, después)
-
-- Respuestas automáticas: "Hola, escribe *saldo*, *pedido*, *catálogo*".
-- Reutilizar el bot con IA existente (`wa_bot_authorized_numbers`) montado sobre Evolution en vez del gateway actual.
-- Plantillas rápidas por empresa (`wa_templates`).
-
----
-
-## Consumo / Costos
-
-- **Tu server Evolution**: soporta 3–5 empresas conectadas cómodamente en el droplet actual ($6/mes). Cuando crezca, subir a $12/mes = ~10-15 empresas, o escalar horizontalmente.
-- **Lovable Cloud**: el impacto real es el **webhook entrante**. Cada mensaje = 1 INSERT + 1 Realtime broadcast. Con 50 empresas × 500 msgs/día = 25k msgs/día ≈ despreciable en cómputo; el peso está en **storage** (media de audios/imágenes).
-- **Mitigación**: guardar solo texto + URL del media (Evolution lo hostea), no descargar binarios al bucket salvo que el usuario los abra. Purgar mensajes > 90 días con un cron.
-- **Cobro sugerido**: WhatsApp + Inbox como **add-on** ($99–149/mes por empresa), igual que ya cobras el bot IA. Cubre tu infra + margen.
-
----
-
-## Detalles técnicos
-
-- **Nombre de instancia**: `empresa_<uuid>` — aísla cada tenant en Evolution.
-- **Multi-tenant en webhook**: Evolution manda `instance` en el payload → mapear a `empresa_id`. Validar firma con un `EVOLUTION_WEBHOOK_SECRET` en headers.
-- **Media**: descargar bajo demanda vía endpoint autenticado, no exponer URLs de Evolution al browser (llevan API key).
-- **Reconexión**: si `connection.update = close`, marcar `evolution_status = 'desconectado'` y mostrar banner "Vuelve a escanear el QR".
-- **Rate limit interno**: cola en `pgmq` para envíos masivos (recordatorios de vencidos), 1 msg / 3s por instancia para no ser marcados spam.
-- **Fallback**: mientras `provider = whatsapi` siga configurado, todo sigue igual — cero disrupción.
-
----
-
-## Entregable por fase
-
-- **F1** (2–3 días): conexión QR + envío de texto/PDF funcionando. Sustituye al flujo actual sin romperlo.
-- **F2** (1 día): botones "Enviar por WhatsApp" en ventas/cotizaciones/cobros usan Evolution.
-- **F3** (4–5 días): Inbox básico con Realtime, panel cliente, acciones rápidas.
-- **F4**: cuando quieras, IA + automatizaciones.
-
----
-
-## Preguntas antes de arrancar
-
-1. ¿Empezamos por **F1 (conexión QR)** solo, y las demás fases las decidimos después de probarla? Es lo que recomiendo — así ves el impacto real de infra antes de meter el Inbox.
-2. ¿Quieres que `EVOLUTION_API_URL` y `EVOLUTION_API_KEY` sean **globales tuyas** (todas las empresas usan tu server) o permitir que empresas grandes pongan su propio server Evolution?
-3. Para el Inbox (F3): ¿mensajes multimedia (audios, fotos) los quieres guardar en tu Storage o solo mostrar el link de Evolution?
+- `tsgo --noEmit` en 0.
+- En `/ventas/nuevo` con el producto de la captura:
+  - Dueños → $5,800 · Lista General → **$68.00** · Lista Mayoreo → $45.94 · Lista General → **$68.00**.
+  - Desde Lista General: IVA → $68.00; Sin impuestos → $59.00; IVA → $68.00.
+- Subtotal $58.62, IVA $9.38, Total $68.00 en el escenario final.
+- Ningún estado intermedio muestra $5,000/$5,800 tras elegir una lista.

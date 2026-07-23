@@ -9,19 +9,25 @@ import { buildSalePricingSnapshot } from '@/lib/salePricing';
 import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
+export interface ListaPrecioSelection {
+  listaPrecioId: string | null;
+  listaPrecioNombre: string;
+  tarifaId: string | null;
+  unitPrice: number;
+  displayPrice: number;
+  rawUnitPrice: number;
+  rawDisplayPrice: number;
+  basePrecio: string;
+  redondeo: string;
+}
+
 interface Props {
   producto: any | null;
   currentListaPrecioId?: string | null;
   currentTarifaId?: string | null;
   isManual?: boolean;
   disabled?: boolean;
-  onSelectLista: (
-    listaPrecioId: string | null,
-    tarifaId: string | null,
-    unitPrice: number,
-    displayPrice: number,
-    listaNombre: string,
-  ) => void;
+  onSelectLista: (selection: ListaPrecioSelection) => void;
   /** Render trigger as compact badge */
   compact?: boolean;
 }
@@ -34,6 +40,10 @@ interface ListaOption {
   es_principal: boolean;
   unitPrice: number;
   displayPrice: number;
+  rawUnitPrice: number;
+  rawDisplayPrice: number;
+  basePrecio: string;
+  redondeo: string;
   hasRule: boolean;
 }
 
@@ -107,6 +117,10 @@ export function ListaPrecioPicker({
         es_principal: !!lista.es_principal,
         unitPrice: snap.unitPrice,
         displayPrice: r.displayPrice,
+        rawUnitPrice: snap.rawUnitPrice,
+        rawDisplayPrice: snap.rawDisplayPrice,
+        basePrecio: snap.basePrecio,
+        redondeo: snap.redondeo,
         hasRule: !!r.appliedRule,
       });
     }
@@ -164,7 +178,17 @@ export function ListaPrecioPicker({
                 key={opt.lista_precio_id ?? 'base'}
                 type="button"
                 onClick={() => {
-                  onSelectLista(opt.lista_precio_id, opt.tarifa_id, opt.unitPrice, opt.displayPrice, opt.lista_nombre);
+                  onSelectLista({
+                    listaPrecioId: opt.lista_precio_id,
+                    listaPrecioNombre: opt.lista_nombre,
+                    tarifaId: opt.tarifa_id,
+                    unitPrice: opt.unitPrice,
+                    displayPrice: opt.displayPrice,
+                    rawUnitPrice: opt.rawUnitPrice,
+                    rawDisplayPrice: opt.rawDisplayPrice,
+                    basePrecio: opt.basePrecio,
+                    redondeo: opt.redondeo,
+                  });
                   setOpen(false);
                 }}
                 className={cn(
