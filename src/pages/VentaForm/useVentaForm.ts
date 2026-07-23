@@ -72,6 +72,7 @@ export function useVentaForm() {
   const [dirty, setDirty] = useState(false);
   const loadedVentaIdRef = useRef<string | null>(null);
   const savingRef = useRef(false);
+  const statusChangingRef = useRef(false);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -577,6 +578,15 @@ export function useVentaForm() {
 
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
+    if (statusChangingRef.current) return;
+    statusChangingRef.current = true;
+    try {
+      return await _handleStatusChangeInner(newStatus);
+    } finally {
+      statusChangingRef.current = false;
+    }
+  };
+  const _handleStatusChangeInner = async (newStatus: StatusVenta) => {
     if (newStatus === 'cancelado') {
       requestPin('Cancelar venta', 'Ingresa tu PIN de autorización para cancelar esta venta.', async () => {
         const prevStatus = form.status;
