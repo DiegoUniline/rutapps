@@ -59,11 +59,11 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
             ))}
           </div>
         </div>
-        <OdooField label={(form.ieps_tipo || 'porcentaje') === 'cuota' ? 'IEPS cuota $' : 'IEPS %'} value={form.ieps_pct ?? 0} type="number" teal onChange={v => set('ieps_pct', +v)} format={v => (form.ieps_tipo || 'porcentaje') === 'cuota' ? `$ ${v ?? 0}` : `${v ?? 0}%`} />
+        <OdooField label={(form.ieps_tipo || 'porcentaje') === 'cuota' ? 'IEPS cuota $' : 'IEPS %'} value={form.ieps_pct ?? 0} type="number" teal onChange={v => { const n = +v; set('ieps_pct', n); set('tiene_ieps', n > 0); }} format={v => (form.ieps_tipo || 'porcentaje') === 'cuota' ? `$ ${v ?? 0}` : `${v ?? 0}%`} />
         {(form.ieps_tipo || 'porcentaje') === 'porcentaje' && (
           <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
             {[0, 8, 25, 53].map(rate => (
-              <button key={rate} type="button" onClick={() => set('ieps_pct', rate)}
+              <button key={rate} type="button" onClick={() => { set('ieps_pct', rate); set('tiene_ieps', rate > 0); }}
                 className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${form.ieps_pct === rate ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>{rate}%</button>
             ))}
           </div>
