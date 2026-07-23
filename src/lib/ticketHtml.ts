@@ -245,11 +245,19 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
     const imp = fmt(lineAmt);
     const nombre = `${l.cantidad}x ${l.nombre}`;
-    add(pad(nombre.substring(0, COLS - imp.length - 1), imp));
+    const maxFirst = COLS - imp.length - 1;
+    if (nombre.length <= maxFirst) {
+      add(pad(nombre, imp));
+    } else {
+      // Wrap name across multiple lines; put importe on the first line only.
+      const wrapped = wrapText(nombre, maxFirst);
+      add(pad(wrapped[0], imp));
+      for (let i = 1; i < wrapped.length; i++) add(wrapped[i]);
+    }
     const detParts = [`  ${fmt(l.precio)}c/u`];
     if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
     if ((l.precio_sugerido_publico ?? 0) > 0) detParts.push(`Sug ${fmt(l.precio_sugerido_publico!)}`);
-    add(detParts.join(' ').substring(0, COLS));
+    for (const line of wrapText(detParts.join(' '), COLS)) add(line);
   }
   add(div);
 
