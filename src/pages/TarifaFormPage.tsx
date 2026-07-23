@@ -646,8 +646,18 @@ export default function TarifaFormPage() {
 
   // Lookup maps
   const prodMap = new Map<string, string>();
-  (productosDisp ?? []).forEach(p => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
-  (extraProds ?? []).forEach((p: any) => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
+  const prodCodigoMap = new Map<string, string>();
+  const prodNombreMap = new Map<string, string>();
+  (productosDisp ?? []).forEach(p => {
+    prodMap.set(p.id, `${p.codigo} — ${p.nombre}`);
+    prodCodigoMap.set(p.id, p.codigo);
+    prodNombreMap.set(p.id, p.nombre);
+  });
+  (extraProds ?? []).forEach((p: any) => {
+    prodMap.set(p.id, `${p.codigo} — ${p.nombre}`);
+    prodCodigoMap.set(p.id, p.codigo);
+    prodNombreMap.set(p.id, p.nombre);
+  });
   const clasMap = new Map((clasificaciones ?? []).map(c => [c.id, c.nombre]));
   const prodItems = (productosDisp ?? []).map(p => ({ id: p.id, label: `${p.codigo} — ${p.nombre}` }));
   const clasItems = (clasificaciones ?? []).map(c => ({ id: c.id, label: c.nombre }));
