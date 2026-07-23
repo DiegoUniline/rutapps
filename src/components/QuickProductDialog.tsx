@@ -172,7 +172,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           se_puede_vender: true,
           codigo_sat: claveSat || null,
           calculo_costo: 'promedio',
-          activo: true,
+          status_producto: 'activo',
         } as any)
         .select('id, codigo, nombre, costo, iva_pct, tiene_iva, tiene_ieps, ieps_pct')
         .single();
