@@ -72,6 +72,7 @@ export function useVentaForm() {
   const [dirty, setDirty] = useState(false);
   const loadedVentaIdRef = useRef<string | null>(null);
   const savingRef = useRef(false);
+  const statusChangingRef = useRef(false);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
