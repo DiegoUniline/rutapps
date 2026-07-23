@@ -217,20 +217,18 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       };
 
       let productId: string | null = null;
-      let previousStock = 0;
 
       // Check if exists by codigo
       if (productData.codigo) {
         const { data: existing } = await supabase
           .from('productos')
-          .select('id, cantidad')
+          .select('id')
           .eq('empresa_id', empresaId)
           .eq('codigo', productData.codigo)
           .maybeSingle();
 
         if (existing) {
           productId = existing.id;
-          previousStock = existing.cantidad ?? 0;
           const { empresa_id: _, ...updateData } = productData;
           const { error } = await supabase.from('productos').update(updateData).eq('id', existing.id);
           if (error) throw error;
@@ -247,36 +245,10 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
         productId = inserted.id;
         result.created++;
       }
-
-      // Create inventory adjustment & movement when stock differs
-      const stockDiff = importedStock - previousStock;
-      if (productId && userId && stockDiff !== 0) {
-        // Ajuste de inventario
-        await supabase.from('ajustes_inventario').insert({
-          empresa_id: empresaId,
-          producto_id: productId,
-          user_id: userId,
-          cantidad_anterior: previousStock,
-          cantidad_nueva: importedStock,
-          diferencia: stockDiff,
-          motivo: 'Importación masiva de productos',
-          almacen_id: defaultAlmacen?.id ?? null,
-        });
-
-        // Movimiento de inventario
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: empresaId,
-          producto_id: productId,
-          tipo: stockDiff > 0 ? 'entrada' : 'salida',
-          cantidad: Math.abs(stockDiff),
-          fecha: todayLocal(),
-          referencia_tipo: 'ajuste',
-          notas: 'Importación masiva de productos',
-          user_id: userId,
-          almacen_destino_id: stockDiff > 0 ? (defaultAlmacen?.id ?? null) : null,
-          almacen_origen_id: stockDiff < 0 ? (defaultAlmacen?.id ?? null) : null,
-        });
-      }
+      void productId;
+      // Stock inicial: NO se toca desde la importación de productos.
+      // Debe capturarse en Inventario → Ajustes eligiendo el almacén destino,
+      // para que se registre correctamente en stock_almacen.
     } catch (err: any) {
       result.errors.push({ row: rowNum, message: err.message || 'Error desconocido' });
     }
