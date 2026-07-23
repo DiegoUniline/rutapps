@@ -128,13 +128,18 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
   const taxMultiplier = (1 + iepsPct / 100) * (1 + ivaPct / 100);
   const redondeo = line.redondeo;
   const hasConfiguredRounding = !!redondeo && redondeo !== 'ninguno';
-  const canApplyRounding = hasConfiguredRounding && !line.precio_manual;
 
-  if (!canApplyRounding) {
-    // Sin regla de redondeo: mantener el display bruto como fuente de verdad y
-    // re-derivar el neto según el multiplicador de impuestos actual. Esto
-    // asegura que al alternar IVA/IEPS el subtotal siga cuadrando con el
-    // precio mostrado (p. ej. display=$68 con IVA 16% ⇒ neto=$58.62 y total=$68).
+  // Fuente de verdad = neto crudo (precio_unitario_sin_redondeo). Nunca partir
+  // del display_unit_price porque ese valor ya trae los impuestos redondeados
+  // del escenario anterior (p. ej. $68 = ceil(58.50 * 1.16)). Al apagar IVA
+  // hay que volver a partir de $58.50, no de $68.
+  const rawNetSource = Number(line.precio_unitario_sin_redondeo);
+  const hasRawNet = Number.isFinite(rawNetSource) && rawNetSource > 0;
+
+  // Fallback SOLO cuando no hay raw disponible (línea manual sin raw derivable,
+  // o datos legacy): preservamos el display actual como el bruto que el usuario
+  // ya vio y re-derivamos el neto para el multiplicador actual.
+  if (!hasRawNet) {
     const displayPrice = currentDisplayPrice;
     const unitPrice = taxMultiplier > 0 ? displayPrice / taxMultiplier : displayPrice;
     return {
@@ -145,16 +150,18 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
     };
   }
 
-  const rawNet = Number(line.precio_unitario_sin_redondeo) || currentUnitPrice;
-  const unitGrossBeforeRound = round2(rawNet * descFactor * taxMultiplier);
-  const finalUnitGross = round2(applyDisplayRedondeo(unitGrossBeforeRound, redondeo));
+  const rawNet = rawNetSource;
+  const grossBeforeRound = round2(rawNet * descFactor * taxMultiplier);
+  const finalUnitGross = hasConfiguredRounding
+    ? round2(applyDisplayRedondeo(grossBeforeRound, redondeo))
+    : grossBeforeRound;
 
   if (descFactor <= 0) {
     return {
       unitPrice: rawNet,
       displayPrice: round2(rawNet * taxMultiplier),
       finalUnitGross: 0,
-      appliedRounding: true,
+      appliedRounding: hasConfiguredRounding,
     };
   }
 
@@ -165,7 +172,7 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
     unitPrice,
     displayPrice,
     finalUnitGross,
-    appliedRounding: true,
+    appliedRounding: hasConfiguredRounding,
   };
 }
 
