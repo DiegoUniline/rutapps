@@ -125,31 +125,65 @@ export function calculateSaleLineAmounts(line: SaleLinePricingLike, sinImpuestos
   let iva = ivaPct > 0 ? round2((base + ieps) * (ivaPct / 100)) : 0;
   let total = round2(base + ieps + iva);
 
-  const displayUnitPrice = Number(line.display_unit_price) || 0;
-  const canUseDisplayTotal = !sinImpuestos
+  // ─── Redondeo como ÚLTIMO paso ───────────────────────────────────────────────
+  // El redondeo de la regla se aplica siempre al precio unitario final
+  // (después de descuentos e impuestos), independientemente de si hay
+  // impuestos activos o no. Luego se multiplica por la cantidad para obtener
+  // el total de la línea. No se re-redondea el total (evita doble redondeo).
+  const redondeo = line.redondeo;
+  const hasConfiguredRounding = !!redondeo && redondeo !== 'ninguno';
+  const canApplyRounding = hasConfiguredRounding
     && !line.precio_manual
-    && descPct === 0
-    && displayUnitPrice > 0
-    && (ivaPct > 0 || iepsPct > 0);
+    && qty > 0;
 
-  if (canUseDisplayTotal) {
-    const targetTotal = round2(displayUnitPrice * qty);
-    const diff = Math.abs(targetTotal - total);
+  if (canApplyRounding) {
+    // Usar el NET crudo pre-redondeo cuando esté disponible para que un
+    // precio ya limpio ($60.00) no se infle al alternar impuestos (Caso 5).
+    const rawNet = Number(line.precio_unitario_sin_redondeo) || price;
+    const unitAfterDisc = rawNet * (1 - descPct / 100);
+    const taxMul = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+    const unitGrossBeforeRound = round2(unitAfterDisc * taxMul);
+    const finalUnitGross = round2(applyDisplayRedondeo(unitGrossBeforeRound, redondeo));
+    const targetTotal = round2(finalUnitGross * qty);
+    const diff = round2(targetTotal - total);
 
-    // Only correct normal per-line tax rounding drift. Larger gaps usually mean
-    // the user typed a manual net price or stale display metadata survived.
-    if (diff > 0 && diff <= Math.max(0.1, 0.03 * Math.max(1, qty))) {
-      if (iepsPct > 0 && ivaPct > 0) {
-        const adjustedIva = round2(targetTotal - base - ieps);
-        if (adjustedIva >= 0) iva = adjustedIva;
+    if (diff !== 0) {
+      if (ivaPct > 0) {
+        const adj = round2(iva + diff);
+        if (adj >= 0) { iva = adj; total = round2(base + ieps + iva); }
       } else if (iepsPct > 0) {
-        const adjustedIeps = round2(targetTotal - base);
-        if (adjustedIeps >= 0) ieps = adjustedIeps;
-      } else if (ivaPct > 0) {
-        const adjustedIva = round2(targetTotal - base);
-        if (adjustedIva >= 0) iva = adjustedIva;
+        const adj = round2(ieps + diff);
+        if (adj >= 0) { ieps = adj; total = round2(base + ieps + iva); }
+      } else {
+        // Sin impuestos: el ajuste de redondeo vive en el total directamente.
+        total = targetTotal;
       }
-      total = round2(base + ieps + iva);
+    }
+  } else {
+    // Corrección legacy de drift de impuestos cuando la regla no configura redondeo.
+    const displayUnitPrice = Number(line.display_unit_price) || 0;
+    const canUseDisplayTotal = !sinImpuestos
+      && !line.precio_manual
+      && descPct === 0
+      && displayUnitPrice > 0
+      && (ivaPct > 0 || iepsPct > 0);
+
+    if (canUseDisplayTotal) {
+      const targetTotal = round2(displayUnitPrice * qty);
+      const diff = Math.abs(targetTotal - total);
+      if (diff > 0 && diff <= Math.max(0.1, 0.03 * Math.max(1, qty))) {
+        if (iepsPct > 0 && ivaPct > 0) {
+          const adjustedIva = round2(targetTotal - base - ieps);
+          if (adjustedIva >= 0) iva = adjustedIva;
+        } else if (iepsPct > 0) {
+          const adjustedIeps = round2(targetTotal - base);
+          if (adjustedIeps >= 0) ieps = adjustedIeps;
+        } else if (ivaPct > 0) {
+          const adjustedIva = round2(targetTotal - base);
+          if (adjustedIva >= 0) iva = adjustedIva;
+        }
+        total = round2(base + ieps + iva);
+      }
     }
   }
 
