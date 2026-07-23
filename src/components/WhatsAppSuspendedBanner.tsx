@@ -15,13 +15,13 @@ export default function WhatsAppSuspendedBanner() {
 
   return (
     <div className="w-full px-4 py-2 text-sm font-medium bg-primary text-primary-foreground relative z-[100] flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-2 shrink-0">
-        <ShieldCheck className="h-4 w-4" />
-        <span className="font-semibold tracking-wide">
-          Licenciada:{' '}
-          <span className="font-mono font-bold text-base">
-            {licencia ?? '--------'}
-          </span>
+      <div className="flex items-center gap-2 shrink-0 rounded-full bg-primary-foreground/15 px-2.5 py-1 backdrop-blur-sm">
+        <ShieldCheck className="h-3.5 w-3.5" />
+        <span className="text-xs font-semibold tracking-wide opacity-90">
+          Licencia
+        </span>
+        <span className="font-mono font-bold text-sm">
+          {licencia ?? '--------'}
         </span>
       </div>
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0">
