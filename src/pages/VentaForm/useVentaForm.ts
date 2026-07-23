@@ -374,17 +374,19 @@ export function useVentaForm() {
     const producto = productosList?.find((p: any) => p.id === productoId);
     if (!producto) return;
     const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
-    const iepsPct = producto.tiene_ieps ? Number(producto.ieps_pct ?? 0) : 0;
+    // Trata IEPS como activo si tiene_ieps=true o si ieps_pct > 0 (por si el flag no se marcó explícito)
+    const hasIeps = !!producto.tiene_ieps || Number(producto.ieps_pct ?? 0) > 0;
+    const iepsPct = hasIeps ? Number(producto.ieps_pct ?? 0) : 0;
     const unidadId = producto.unidad_venta_id || producto.unidad_compra_id || null;
     const unidadData = (producto as any).unidades_venta;
     const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
     const taxes: string[] = [];
     if (producto.tiene_iva) taxes.push(`IVA ${ivaPct}%`);
-    if (producto.tiene_ieps) { taxes.push(producto.ieps_tipo === 'cuota' ? 'IEPS cuota' : `IEPS ${iepsPct}%`); }
+    if (hasIeps) { taxes.push(producto.ieps_tipo === 'cuota' ? 'IEPS cuota' : `IEPS ${iepsPct}%`); }
     const prodForPricing: ProductForPricing = {
       id: productoId, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
-      tiene_ieps: producto.tiene_ieps, ieps_pct: Number(producto.ieps_pct ?? 0), ieps_tipo: producto.ieps_tipo,
+      tiene_ieps: hasIeps, ieps_pct: iepsPct, ieps_tipo: producto.ieps_tipo,
       usa_listas_precio: producto.usa_listas_precio,
     };
     const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id) : null;
