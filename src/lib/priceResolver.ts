@@ -99,7 +99,14 @@ export function calculateRawPrice(rule: TarifaLineaRule, producto: ProductForPri
     precio = rule.precio ?? 0;
     if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
   } else if (rule.tipo_calculo === 'margen_costo') {
-    precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
+    // If the captured cost already includes taxes, strip them BEFORE applying the margin.
+    // This is the single source of truth for the pricing base when costo_incluye_impuestos = true.
+    let baseCosto = producto.costo ?? 0;
+    if (producto.costo_incluye_impuestos) {
+      const divisor = getTaxMultiplier(producto);
+      if (divisor > 0) baseCosto = baseCosto / divisor;
+    }
+    precio = baseCosto * (1 + (rule.margen_pct ?? 0) / 100);
   } else if (rule.tipo_calculo === 'descuento_precio') {
     precio = producto.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
   }
