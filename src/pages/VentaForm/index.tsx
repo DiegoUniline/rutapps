@@ -53,7 +53,7 @@ export default function VentaFormPage() {
     saveVenta, crearEntrega, PinDialog,
     set, handleProductSelect, handleSave: baseSave, handleDelete, handleStatusChange, handleAddPago,
     handleCancelPago, handleReactivarPago, handleDeletePago, handleUpdatePago,
-    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
+    addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell, changeLineListaPrecio,
   } = h;
 
   // Wrap handleSave: for venta_directa, open checkout modal after save+confirm
