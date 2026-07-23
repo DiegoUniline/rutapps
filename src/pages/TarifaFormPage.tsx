@@ -780,7 +780,7 @@ export default function TarifaFormPage() {
       const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
-        if (l.aplica_a === 'producto') return (l.producto_ids.map(pid => prodMap.get(pid) ?? '').join(', '));
+        if (l.aplica_a === 'producto') return (l.producto_ids.map(pid => prodNombreMap.get(pid) ?? '').join(', '));
         if (l.aplica_a === 'categoria') return (l.clasificacion_ids.map(cid => clasMap.get(cid) ?? '').join(', '));
         return '';
       };
