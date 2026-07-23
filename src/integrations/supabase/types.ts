@@ -7820,6 +7820,7 @@ export type Database = {
           created_at: string
           descripcion: string | null
           descuento_pct: number | null
+          empresa_id: string
           factura_cfdi_id: string | null
           facturado: boolean | null
           facturado_global: boolean
@@ -7849,6 +7850,7 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_pct?: number | null
+          empresa_id: string
           factura_cfdi_id?: string | null
           facturado?: boolean | null
           facturado_global?: boolean
@@ -7878,6 +7880,7 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_pct?: number | null
+          empresa_id?: string
           factura_cfdi_id?: string | null
           facturado?: boolean | null
           facturado_global?: boolean
@@ -7907,6 +7910,13 @@ export type Database = {
             columns: ["almacen_id"]
             isOneToOne: false
             referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
           {
