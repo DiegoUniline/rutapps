@@ -1006,6 +1006,21 @@ export default function TarifaFormPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={reglaSearch}
+                      onChange={e => setReglaSearch(e.target.value)}
+                      placeholder="Buscar por producto o categoría..."
+                      className="input-odoo text-xs w-full max-w-xs"
+                    />
+                    {reglaSearch && (
+                      <button type="button" onClick={() => setReglaSearch('')} className="text-[11px] text-muted-foreground hover:text-foreground">
+                        Limpiar
+                      </button>
+                    )}
+                    <span className="text-[11px] text-muted-foreground ml-auto">{sortedLineas.length} reglas</span>
+                  </div>
                   <div className="overflow-x-auto border border-border rounded">
                     <table className="w-full text-sm">
                       <thead>
