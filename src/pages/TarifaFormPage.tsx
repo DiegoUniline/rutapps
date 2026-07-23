@@ -1077,9 +1077,9 @@ export default function TarifaFormPage() {
                                 </select>
                               ) : getAplicaBadge(l.aplica_a)}
                             </td>
-                            {/* Productos / Categorías */}
-                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('items')}>
-                              {ec('items') ? (
+                            {/* Clave + Producto/Categoría (2 columnas) */}
+                            {ec('items') ? (
+                              <td colSpan={2} className="py-1.5 px-3 cursor-pointer" onClick={cellClick('items')}>
                                 <div onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) blurSave(); }}>
                                   {editLinea.aplica_a === 'producto' && (
                                     <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
@@ -1091,18 +1091,37 @@ export default function TarifaFormPage() {
                                   )}
                                   {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
                                 </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1">
-                                  {l.aplica_a === 'producto' && l.producto_ids.map(pid => (
-                                    <span key={pid} className="odoo-badge text-[11px]">{prodMap.get(pid) ?? pid}</span>
-                                  ))}
-                                  {l.aplica_a === 'categoria' && l.clasificacion_ids.map(cid => (
-                                    <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
-                                  ))}
+                              </td>
+                            ) : (
+                              <>
+                                <td className="py-1.5 px-3 cursor-pointer align-top" onClick={cellClick('items')}>
+                                  {l.aplica_a === 'producto' ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.producto_ids.map(pid => (
+                                        <span key={pid} className="odoo-badge text-[11px] font-mono">{prodCodigoMap.get(pid) ?? '—'}</span>
+                                      ))}
+                                    </div>
+                                  ) : <span className="text-xs text-muted-foreground">—</span>}
+                                </td>
+                                <td className="py-1.5 px-3 cursor-pointer align-top" onClick={cellClick('items')}>
+                                  {l.aplica_a === 'producto' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.producto_ids.map(pid => (
+                                        <span key={pid} className="odoo-badge text-[11px]">{prodNombreMap.get(pid) ?? pid}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {l.aplica_a === 'categoria' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.clasificacion_ids.map(cid => (
+                                        <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
+                                      ))}
+                                    </div>
+                                  )}
                                   {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
-                                </div>
-                              )}
-                            </td>
+                                </td>
+                              </>
+                            )}
                             {/* Cálculo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
                               {ec('tipo_calculo') ? (
