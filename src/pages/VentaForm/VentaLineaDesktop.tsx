@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
+import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 interface Props {
@@ -30,15 +31,15 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const grossSubtotal = r2(qty * price);
-  const discount = r2(grossSubtotal * (desc / 100));
+  const amounts = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike);
+  const grossSubtotal = amounts.subtotal;
+  const discount = amounts.discount;
   const base = r2(grossSubtotal - discount);
-  const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
-  const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-  const lineTotal = r2(base + ieps + iva);
+  const ieps = amounts.ieps;
+  const iva = amounts.iva;
+  const lineTotal = amounts.total;
   const storedBase = Number(l.subtotal) || 0;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
@@ -51,7 +52,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const prodDisplay = prod || embeddedProd;
   const isEmpty = !l.producto_id;
   const lineData = l as any;
-  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
     || (embeddedProd as any)?.unidades_venta?.abreviatura

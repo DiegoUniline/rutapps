@@ -3,6 +3,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
+import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 interface Props {
@@ -25,21 +26,13 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
-  const desc = Number(l.descuento_pct) || 0;
-  const grossSubtotal = r2(qty * price);
-  const discount = r2(grossSubtotal * (desc / 100));
-  const base = r2(grossSubtotal - discount);
-  const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
-  const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-  const lineTotal = r2(base + ieps + iva);
+  const lineTotal = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike).total;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
-  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
   // Fallback to embedded snapshot from venta_lineas.productos when product is not in productosList
   // (e.g. inactive/deleted products, or products outside the loaded catalog page)
