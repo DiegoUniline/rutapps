@@ -236,7 +236,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
       const prods = await fetchAllPages<any>((from, to) =>
         supabase.from('productos')
-          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+          .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos')
           .eq('empresa_id', empresaId!)
           .eq('status', 'activo')
           .order('nombre')
