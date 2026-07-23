@@ -80,6 +80,9 @@ async function buildReporte(empresaId: string, startLocal: string, endLocal: str
     admin.from("empresas")
       .select("nombre, razon_social, rfc, direccion, colonia, ciudad, estado, cp, telefono, email, logo_url, moneda")
       .eq("id", empresaId).maybeSingle(),
+    admin.from("promocion_aplicada")
+      .select("venta_linea_id, descuento_aplicado, ventas!inner(id, empresa_id, fecha)")
+      .eq("ventas.empresa_id", empresaId).gte("ventas.fecha", start).lte("ventas.fecha", end),
   ]);
   const entregas = (entregasRes.data || []) as any[];
   const entregasHechas = entregas.filter((e) => e.status === "hecho").length;
