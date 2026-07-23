@@ -1207,7 +1207,7 @@ export default function TarifaFormPage() {
                                   <option value="producto">Producto</option>
                                 </select>
                               </td>
-                              <td className="py-2 px-3">
+                              <td colSpan={2} className="py-2 px-3">
                                 {newLinea.aplica_a === 'producto' && (
                                   <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
