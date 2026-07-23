@@ -8,7 +8,7 @@
 // xlsx (≈424 KB) se carga de forma DIFERIDA (import dinámico dentro de cada
 // función que lo usa), para no pesar en la carga inicial.
 import { supabase } from '@/integrations/supabase/client';
-import { todayLocal } from '@/lib/utils';
+// todayLocal ya no se usa aquí: el stock inicial no se importa desde productos.
 
 // ─── Types ──────────────────────────────────────────────────────
 export interface ImportResult {
@@ -31,7 +31,7 @@ export const PRODUCT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'nombre', header: 'Nombre', required: true, example: 'Refresco Cola 600ml' },
   { key: 'precio_principal', header: 'Precio', example: '18.50' },
   { key: 'costo', header: 'Costo', example: '12.00' },
-  { key: 'cantidad', header: 'Stock', example: '100' },
+  // Stock inicial removido: debe cargarse desde Inventario → Ajustes eligiendo almacén.
   { key: 'marca', header: 'Marca', example: 'Coca-Cola' },
   { key: 'clasificacion', header: 'Clasificación', example: 'Bebidas' },
   { key: 'proveedor', header: 'Proveedor', example: 'Distribuidora ABC' },
@@ -167,15 +167,7 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
 
-  // Get default almacén for adjustments
-  const { data: defaultAlmacen } = await supabase
-    .from('almacenes')
-    .select('id')
-    .eq('empresa_id', empresaId)
-    .eq('activo', true)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle();
+  // (Stock inicial ya no se toca aquí; no necesitamos almacén por defecto.)
 
   for (let i = 0; i < rows.length; i++) {
     const raw = mapHeaders(rows[i], PRODUCT_IMPORT_COLUMNS);
@@ -199,15 +191,12 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       const unidad_venta_id = await resolveOrCreate('unidades', raw.unidad_venta, empresaId, cache);
       const unidad_compra_id = await resolveOrCreate('unidades', raw.unidad_compra, empresaId, cache);
 
-      const importedStock = raw.cantidad ? Number(raw.cantidad) : 0;
-
       const productData: any = {
         empresa_id: empresaId,
         codigo: raw.codigo?.toString().trim() || '',
         nombre: raw.nombre?.toString().trim(),
         precio_principal: raw.precio_principal ? Number(raw.precio_principal) : 0,
         costo: raw.costo ? Number(raw.costo) : 0,
-        cantidad: importedStock,
         clave_alterna: raw.clave_alterna?.toString().trim() || null,
         tiene_iva: raw.tiene_iva ? toBool(raw.tiene_iva) : false,
         status: ['activo', 'inactivo', 'borrador'].includes(raw.status?.toLowerCase?.()) ? raw.status.toLowerCase() : 'activo',
@@ -220,20 +209,18 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       };
 
       let productId: string | null = null;
-      let previousStock = 0;
 
       // Check if exists by codigo
       if (productData.codigo) {
         const { data: existing } = await supabase
           .from('productos')
-          .select('id, cantidad')
+          .select('id')
           .eq('empresa_id', empresaId)
           .eq('codigo', productData.codigo)
           .maybeSingle();
 
         if (existing) {
           productId = existing.id;
-          previousStock = existing.cantidad ?? 0;
           const { empresa_id: _, ...updateData } = productData;
           const { error } = await supabase.from('productos').update(updateData).eq('id', existing.id);
           if (error) throw error;
@@ -250,36 +237,10 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
         productId = inserted.id;
         result.created++;
       }
-
-      // Create inventory adjustment & movement when stock differs
-      const stockDiff = importedStock - previousStock;
-      if (productId && userId && stockDiff !== 0) {
-        // Ajuste de inventario
-        await supabase.from('ajustes_inventario').insert({
-          empresa_id: empresaId,
-          producto_id: productId,
-          user_id: userId,
-          cantidad_anterior: previousStock,
-          cantidad_nueva: importedStock,
-          diferencia: stockDiff,
-          motivo: 'Importación masiva de productos',
-          almacen_id: defaultAlmacen?.id ?? null,
-        });
-
-        // Movimiento de inventario
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: empresaId,
-          producto_id: productId,
-          tipo: stockDiff > 0 ? 'entrada' : 'salida',
-          cantidad: Math.abs(stockDiff),
-          fecha: todayLocal(),
-          referencia_tipo: 'ajuste',
-          notas: 'Importación masiva de productos',
-          user_id: userId,
-          almacen_destino_id: stockDiff > 0 ? (defaultAlmacen?.id ?? null) : null,
-          almacen_origen_id: stockDiff < 0 ? (defaultAlmacen?.id ?? null) : null,
-        });
-      }
+      void productId;
+      // Stock inicial: NO se toca desde la importación de productos.
+      // Debe capturarse en Inventario → Ajustes eligiendo el almacén destino,
+      // para que se registre correctamente en stock_almacen.
     } catch (err: any) {
       result.errors.push({ row: rowNum, message: err.message || 'Error desconocido' });
     }
