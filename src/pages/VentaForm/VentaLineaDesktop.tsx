@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
-import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
+import { ListaPrecioPicker, type ListaPrecioSelection } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
