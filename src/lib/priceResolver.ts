@@ -208,9 +208,13 @@ export function resolveProductPricing(
   }
   const rawDisplayPrice = rawUnitPrice * getTaxMultiplier(producto);
 
+  // Compute display price from the high-precision net to avoid double-rounding drift.
+  const grossHi = rawUnitPrice * getTaxMultiplier(producto);
+  const displayPrice = round2(applyRedondeo(round2(grossHi), rule.redondeo ?? 'ninguno'));
+
   return {
     unitPrice,
-    displayPrice: toDisplayPrice(unitPrice, producto, rule.redondeo),
+    displayPrice,
     rawUnitPrice,
     rawDisplayPrice,
     basePrecio: rule.base_precio ?? 'sin_impuestos',
