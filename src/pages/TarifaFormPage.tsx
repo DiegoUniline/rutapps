@@ -646,8 +646,18 @@ export default function TarifaFormPage() {
 
   // Lookup maps
   const prodMap = new Map<string, string>();
-  (productosDisp ?? []).forEach(p => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
-  (extraProds ?? []).forEach((p: any) => prodMap.set(p.id, `${p.codigo} — ${p.nombre}`));
+  const prodCodigoMap = new Map<string, string>();
+  const prodNombreMap = new Map<string, string>();
+  (productosDisp ?? []).forEach(p => {
+    prodMap.set(p.id, `${p.codigo} — ${p.nombre}`);
+    prodCodigoMap.set(p.id, p.codigo);
+    prodNombreMap.set(p.id, p.nombre);
+  });
+  (extraProds ?? []).forEach((p: any) => {
+    prodMap.set(p.id, `${p.codigo} — ${p.nombre}`);
+    prodCodigoMap.set(p.id, p.codigo);
+    prodNombreMap.set(p.id, p.nombre);
+  });
   const clasMap = new Map((clasificaciones ?? []).map(c => [c.id, c.nombre]));
   const prodItems = (productosDisp ?? []).map(p => ({ id: p.id, label: `${p.codigo} — ${p.nombre}` }));
   const clasItems = (clasificaciones ?? []).map(c => ({ id: c.id, label: c.nombre }));
@@ -764,17 +774,21 @@ export default function TarifaFormPage() {
 
   const lineas = (existing?.tarifa_lineas ?? []) as TarifaLinea[];
   const [reglaSearch, setReglaSearch] = useState('');
+  const [reglaSort, setReglaSort] = useState<'nombre' | 'clave'>('nombre');
   const sortedLineas = [...lineas]
     .sort((a, b) => {
       const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
       const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
       if (diff !== 0) return diff;
       const labelOf = (l: TarifaLinea) => {
-        if (l.aplica_a === 'producto') return (l.producto_ids.map(pid => prodMap.get(pid) ?? '').join(', '));
+        if (l.aplica_a === 'producto') {
+          const m = reglaSort === 'clave' ? prodCodigoMap : prodNombreMap;
+          return (l.producto_ids.map(pid => m.get(pid) ?? '').join(', '));
+        }
         if (l.aplica_a === 'categoria') return (l.clasificacion_ids.map(cid => clasMap.get(cid) ?? '').join(', '));
         return '';
       };
-      return labelOf(a).localeCompare(labelOf(b), 'es', { sensitivity: 'base' });
+      return labelOf(a).localeCompare(labelOf(b), 'es', { sensitivity: 'base', numeric: true });
     })
     .filter(l => {
       if (!reglaSearch.trim()) return true;
@@ -1026,7 +1040,13 @@ export default function TarifaFormPage() {
                       <thead>
                          <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
-                          <th className="th-odoo text-left">Productos / Categorías</th>
+                          <th className="th-odoo text-left cursor-pointer select-none" onClick={() => setReglaSort('clave')}>
+                            Clave {reglaSort === 'clave' && '▲'}
+                          </th>
+                          <th className="th-odoo text-left cursor-pointer select-none" onClick={() => setReglaSort('nombre')}>
+                            Producto / Categoría {reglaSort === 'nombre' && '▲'}
+                          </th>
+                          
                           
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-left">Base</th>
@@ -1057,9 +1077,9 @@ export default function TarifaFormPage() {
                                 </select>
                               ) : getAplicaBadge(l.aplica_a)}
                             </td>
-                            {/* Productos / Categorías */}
-                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('items')}>
-                              {ec('items') ? (
+                            {/* Clave + Producto/Categoría (2 columnas) */}
+                            {ec('items') ? (
+                              <td colSpan={2} className="py-1.5 px-3 cursor-pointer" onClick={cellClick('items')}>
                                 <div onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) blurSave(); }}>
                                   {editLinea.aplica_a === 'producto' && (
                                     <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
@@ -1071,18 +1091,37 @@ export default function TarifaFormPage() {
                                   )}
                                   {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
                                 </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1">
-                                  {l.aplica_a === 'producto' && l.producto_ids.map(pid => (
-                                    <span key={pid} className="odoo-badge text-[11px]">{prodMap.get(pid) ?? pid}</span>
-                                  ))}
-                                  {l.aplica_a === 'categoria' && l.clasificacion_ids.map(cid => (
-                                    <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
-                                  ))}
+                              </td>
+                            ) : (
+                              <>
+                                <td className="py-1.5 px-3 cursor-pointer align-top" onClick={cellClick('items')}>
+                                  {l.aplica_a === 'producto' ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.producto_ids.map(pid => (
+                                        <span key={pid} className="odoo-badge text-[11px] font-mono">{prodCodigoMap.get(pid) ?? '—'}</span>
+                                      ))}
+                                    </div>
+                                  ) : <span className="text-xs text-muted-foreground">—</span>}
+                                </td>
+                                <td className="py-1.5 px-3 cursor-pointer align-top" onClick={cellClick('items')}>
+                                  {l.aplica_a === 'producto' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.producto_ids.map(pid => (
+                                        <span key={pid} className="odoo-badge text-[11px]">{prodNombreMap.get(pid) ?? pid}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {l.aplica_a === 'categoria' && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {l.clasificacion_ids.map(cid => (
+                                        <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
+                                      ))}
+                                    </div>
+                                  )}
                                   {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
-                                </div>
-                              )}
-                            </td>
+                                </td>
+                              </>
+                            )}
                             {/* Cálculo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
                               {ec('tipo_calculo') ? (
@@ -1151,7 +1190,7 @@ export default function TarifaFormPage() {
                           );
                         })}
                         {sortedLineas.length === 0 && !showAddRow && (
-                          <tr><td colSpan={10} className="py-6 text-center text-[12px] text-muted-foreground">
+                          <tr><td colSpan={11} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
                           </td></tr>
                         )}
@@ -1168,7 +1207,7 @@ export default function TarifaFormPage() {
                                   <option value="producto">Producto</option>
                                 </select>
                               </td>
-                              <td className="py-2 px-3">
+                              <td colSpan={2} className="py-2 px-3">
                                 {newLinea.aplica_a === 'producto' && (
                                   <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
@@ -1215,7 +1254,7 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3"></td>
                             </tr>
                             <tr className="bg-primary/5">
-                              <td colSpan={10} className="py-2 px-3">
+                              <td colSpan={11} className="py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar
