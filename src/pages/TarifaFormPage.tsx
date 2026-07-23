@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
@@ -618,7 +618,7 @@ export default function TarifaFormPage() {
   const set = (key: keyof Tarifa, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
   // Extra fetch: products referenced in rules that aren't in the active-only select list
-  const referencedProdIds = React.useMemo(() => {
+  const referencedProdIds = useMemo(() => {
     const set = new Set<string>();
     ((existing as any)?.tarifa_lineas ?? []).forEach((l: any) => {
       if (l.aplica_a === 'producto') (l.producto_ids ?? []).forEach((pid: string) => set.add(pid));
@@ -626,7 +626,7 @@ export default function TarifaFormPage() {
     return Array.from(set);
   }, [existing]);
 
-  const activeIdSet = React.useMemo(
+  const activeIdSet = useMemo(
     () => new Set((productosDisp ?? []).map(p => p.id)),
     [productosDisp]
   );
