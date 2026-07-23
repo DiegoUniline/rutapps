@@ -12,8 +12,23 @@ export interface DisplayPricingLike extends TaxPricingInput {
   precio_unitario: number;
   precio_unitario_sin_redondeo?: number;
   precio_display_sin_redondeo?: number;
+  display_unit_price?: number;
   base_precio?: BasePrecioMode | string;
   redondeo?: string;
+}
+
+export interface SaleLinePricingLike extends DisplayPricingLike {
+  cantidad?: number | string | null;
+  descuento_pct?: number | string | null;
+  precio_manual?: boolean | null;
+}
+
+export interface SaleLineAmounts {
+  subtotal: number;
+  discount: number;
+  iva: number;
+  ieps: number;
+  total: number;
 }
 
 export interface SalePricingSnapshot {
@@ -94,4 +109,49 @@ export function buildManualSalePricingFromGross(input: TaxPricingInput, grossPri
     basePrecio: 'con_impuestos',
     redondeo: 'ninguno',
   };
+}
+
+export function calculateSaleLineAmounts(line: SaleLinePricingLike, sinImpuestos = false): SaleLineAmounts {
+  const qty = Number(line.cantidad) || 0;
+  const price = Number(line.precio_unitario) || 0;
+  const descPct = Number(line.descuento_pct) || 0;
+  const ivaPct = sinImpuestos ? 0 : Number(line.iva_pct) || 0;
+  const iepsPct = sinImpuestos ? 0 : Number(line.ieps_pct) || 0;
+
+  const subtotal = round2(qty * price);
+  const discount = round2(subtotal * (descPct / 100));
+  const base = round2(subtotal - discount);
+  let ieps = iepsPct > 0 ? round2(base * (iepsPct / 100)) : 0;
+  let iva = ivaPct > 0 ? round2((base + ieps) * (ivaPct / 100)) : 0;
+  let total = round2(base + ieps + iva);
+
+  const displayUnitPrice = Number(line.display_unit_price) || 0;
+  const canUseDisplayTotal = !sinImpuestos
+    && !line.precio_manual
+    && descPct === 0
+    && displayUnitPrice > 0
+    && (ivaPct > 0 || iepsPct > 0);
+
+  if (canUseDisplayTotal) {
+    const targetTotal = round2(displayUnitPrice * qty);
+    const diff = Math.abs(targetTotal - total);
+
+    // Only correct normal per-line tax rounding drift. Larger gaps usually mean
+    // the user typed a manual net price or stale display metadata survived.
+    if (diff > 0 && diff <= Math.max(0.1, 0.03 * Math.max(1, qty))) {
+      if (iepsPct > 0 && ivaPct > 0) {
+        const adjustedIva = round2(targetTotal - base - ieps);
+        if (adjustedIva >= 0) iva = adjustedIva;
+      } else if (iepsPct > 0) {
+        const adjustedIeps = round2(targetTotal - base);
+        if (adjustedIeps >= 0) ieps = adjustedIeps;
+      } else if (ivaPct > 0) {
+        const adjustedIva = round2(targetTotal - base);
+        if (adjustedIva >= 0) iva = adjustedIva;
+      }
+      total = round2(base + ieps + iva);
+    }
+  }
+
+  return { subtotal, discount, iva, ieps, total };
 }

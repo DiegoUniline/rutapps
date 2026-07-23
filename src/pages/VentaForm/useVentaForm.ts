@@ -9,7 +9,7 @@ import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/
 import { supabase } from '@/lib/supabase';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
-import { buildManualSalePricingFromGross, buildSalePricingSnapshot } from '@/lib/salePricing';
+import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
@@ -248,13 +248,9 @@ export function useVentaForm() {
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
     const r2 = (n: number) => Math.round(n * 100) / 100;
     lineas.forEach(l => {
-      const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
-      const lineSubtotal = r2(qty * price), discountAmt = r2(lineSubtotal * (desc / 100)), base = r2(lineSubtotal - discountAmt);
-      if (!sinImpuestos) {
-        const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100)), iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-        iva_total += iva; ieps_total += ieps;
-      }
-      subtotal += lineSubtotal; descuento_total += discountAmt;
+      const lineAmounts = calculateSaleLineAmounts(l as any, sinImpuestos);
+      iva_total += lineAmounts.iva; ieps_total += lineAmounts.ieps;
+      subtotal += lineAmounts.subtotal; descuento_total += lineAmounts.discount;
     });
     // Extra discount
     const extraTipo = (form as any).descuento_extra_tipo || 'porcentaje';
@@ -366,7 +362,7 @@ export function useVentaForm() {
       const pricing = resolveProductPricing(tarifaRules, prodForPricing, lineLista);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
       if (snap.unitPrice === Number(l.precio_unitario)) return l;
-      return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
+      return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo } as any;
     }));
   }, [tarifaRules, (form as any).lista_precio_id]);
 
@@ -395,7 +391,7 @@ export function useVentaForm() {
     const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
     const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
     const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice, precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice, base_precio: snap?.basePrecio ?? 'con_impuestos', redondeo: snap?.redondeo ?? 'ninguno', unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false, lote_id: null, lote_codigo: null } as any; return next; });
     setDirty(true);
     // Producto por lote en venta directa → pedir el lote (FEFO).
     if ((producto as any).maneja_lote && form.tipo === 'venta_directa') {
@@ -447,7 +443,7 @@ export function useVentaForm() {
           const snap = buildSalePricingSnapshot(prodForPricing, pricing);
           setLineas(prev => {
             const next = [...prev];
-            next[idx] = { ...next[idx], [field]: val, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
+            next[idx] = { ...next[idx], [field]: val, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice, base_precio: snap.basePrecio, redondeo: snap.redondeo } as any;
             return next;
           });
           setDirty(true);
@@ -531,13 +527,10 @@ export function useVentaForm() {
       const linePromises: Promise<any>[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
-        const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
-        const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
-        const ieps = sinImpuestos ? 0 : base * ((Number(l.ieps_pct) || 0) / 100);
-        const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        const lineAmounts = calculateSaleLineAmounts(l as any, sinImpuestos);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        const linePayload = { ...l, venta_id: ventaId, subtotal: lineSubtotal, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
+        const linePayload = { ...l, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
         const clean = { ...linePayload } as any;
         delete clean.unidad_label;
         delete clean.impuestos_label;

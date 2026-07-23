@@ -3,6 +3,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
+import { calculateSaleLineAmounts } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 interface Props {
@@ -28,12 +29,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const grossSubtotal = r2(qty * price);
-  const discount = r2(grossSubtotal * (desc / 100));
-  const base = r2(grossSubtotal - discount);
-  const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
-  const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-  const lineTotal = r2(base + ieps + iva);
+  const lineTotal = calculateSaleLineAmounts(l as any).total;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);

@@ -24,7 +24,7 @@ import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { buildCotizacionPdf, buildCotizacionWhatsappMessage, cotizacionPublicUrl } from '@/lib/cotizacionPdf';
 import { VentaLineasTab } from './VentaForm/VentaLineasTab';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
-import { buildSalePricingSnapshot } from '@/lib/salePricing';
+import { buildSalePricingSnapshot, calculateSaleLineAmounts } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 type Linea = Partial<VentaLinea> & { unidad_label?: string; impuestos_label?: string; lista_precio_id?: string | null; precio_manual?: boolean; display_unit_price?: number };
@@ -126,16 +126,9 @@ export default function CotizacionFormPage() {
     const r2 = (n: number) => Math.round(n * 100) / 100;
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
     lineas.forEach(l => {
-      const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
-      const ls = r2(qty * price);
-      const da = r2(ls * (desc / 100));
-      const base = r2(ls - da);
-      if (!sinImpuestos) {
-        const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
-        const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-        iva_total += iva; ieps_total += ieps;
-      }
-      subtotal += ls; descuento_total += da;
+      const lineAmounts = calculateSaleLineAmounts(l as any, sinImpuestos);
+      iva_total += lineAmounts.iva; ieps_total += lineAmounts.ieps;
+      subtotal += lineAmounts.subtotal; descuento_total += lineAmounts.discount;
     });
     const extraTipo = form.descuento_extra_tipo || 'porcentaje';
     const extraVal = Number(form.descuento_extra) || 0;
@@ -209,6 +202,10 @@ export default function CotizacionFormPage() {
         cantidad: Number(next[idx].cantidad) || 1,
         precio_unitario: snap.unitPrice,
         display_unit_price: snap.displayPrice,
+        precio_unitario_sin_redondeo: snap.rawUnitPrice,
+        precio_display_sin_redondeo: snap.rawDisplayPrice,
+        base_precio: snap.basePrecio,
+        redondeo: snap.redondeo,
         iva_pct: ivaPct, ieps_pct: iepsPct,
         unidad_id: producto.unidad_venta_id || producto.unidad_compra_id || null,
         unidad_label: unidadLabel,
@@ -224,12 +221,8 @@ export default function CotizacionFormPage() {
   useEffect(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
     setLineas(prev => prev.map(l => {
-      const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
-      const ls = r2(qty * price);
-      const base = r2(ls - r2(ls * (desc / 100)));
-      const ieps = sinImpuestos ? 0 : r2(base * ((Number(l.ieps_pct) || 0) / 100));
-      const iva = sinImpuestos ? 0 : r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
-      return { ...l, subtotal: base, iva_monto: iva, ieps_monto: ieps, total: r2(base + iva + ieps) };
+      const lineAmounts = calculateSaleLineAmounts(l as any, sinImpuestos);
+      return { ...l, subtotal: lineAmounts.subtotal, iva_monto: lineAmounts.iva, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
     }));
   }, [lineas.map(l => `${l.producto_id}|${l.cantidad}|${l.precio_unitario}|${l.descuento_pct}|${l.iva_pct}|${l.ieps_pct}`).join('~'), sinImpuestos]);
 
