@@ -249,7 +249,10 @@ export default function ReporteDiarioRuta() {
   // después mediante una entrega.
   const pedidosLevantados = ventasActivas.filter((v: any) => v.tipo === 'pedido');
   const ventasDirectas = ventasActivas.filter((v: any) => v.tipo !== 'pedido');
-  const totalPedidos = pedidosLevantados.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const totalPedidos = pedidosLevantados.reduce((s: number, v: any) => {
+    const disc = (promoAplicadas || []).filter((p: any) => p.ventas?.id === v.id).reduce((a: number, p: any) => a + Number(p.descuento_aplicado || 0), 0);
+    return s + Math.max(0, (Number(v.total) || 0) - disc);
+  }, 0);
   const TIPO_LABEL: Record<string, string> = { pedido: 'Pedido', venta_directa: 'Directa' };
 
   // --- Entregas programadas + estado ---
