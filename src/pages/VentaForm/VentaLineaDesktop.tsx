@@ -142,6 +142,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               isManual={!!(l as any).precio_manual}
               compact
               onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice, _nombre) => {
+                if (onChangeLineListaPrecio) {
+                  onChangeLineListaPrecio(idx, listaPrecioId);
+                  return;
+                }
                 setLineas(prev => {
                   const next = [...prev];
                   (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
