@@ -265,9 +265,21 @@ export default function ReporteDiarioRuta() {
   const totalEntregasProg = entregasList.reduce((s: number, e: any) => s + (Number(e.ventas?.total) || 0), 0);
   const totalEntregado = entregasHechas.reduce((s: number, e: any) => s + (Number(e.ventas?.total) || 0), 0);
 
-  const totalContado = ventasContado.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
-  const totalCredito = ventasCredito.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
-  const totalVentas = ventasActivas.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  // Descuentos por promoción (producto gratis, etc.) — mapa por línea y por venta
+  const promoDescByLinea: Record<string, number> = {};
+  const promoDescByVenta: Record<string, number> = {};
+  (promoAplicadas || []).forEach((p: any) => {
+    const disc = Number(p.descuento_aplicado || 0);
+    if (p.venta_linea_id) promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] || 0) + disc;
+    const vid = p.ventas?.id;
+    if (vid) promoDescByVenta[vid] = (promoDescByVenta[vid] || 0) + disc;
+  });
+  const ventaTotalEfectivo = (v: any) => Math.max(0, (Number(v.total) || 0) - (promoDescByVenta[v.id] || 0));
+  const lineTotalEfectivo = (l: any) => Math.max(0, (Number(l.total) || 0) - (promoDescByLinea[l.id] || 0));
+
+  const totalContado = ventasContado.reduce((s: number, v: any) => s + ventaTotalEfectivo(v), 0);
+  const totalCredito = ventasCredito.reduce((s: number, v: any) => s + ventaTotalEfectivo(v), 0);
+  const totalVentas = ventasActivas.reduce((s: number, v: any) => s + ventaTotalEfectivo(v), 0);
   const totalCancelado = ventasCanceladas.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
@@ -278,7 +290,7 @@ export default function ReporteDiarioRuta() {
   ]);
   const visitasSinCompra = (visitas || []).filter((v: any) => v.tipo === 'sin_compra');
 
-  // Products sold aggregate
+  // Products sold aggregate (neto de promociones)
   const prodMap: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
   ventasActivas.forEach((v: any) => {
     (v.venta_lineas || []).forEach((l: any) => {
@@ -286,7 +298,7 @@ export default function ReporteDiarioRuta() {
       if (!pid) return;
       if (!prodMap[pid]) prodMap[pid] = { nombre: l.productos?.nombre || '—', codigo: l.productos?.codigo || '', cantidad: 0, total: 0 };
       prodMap[pid].cantidad += Number(l.cantidad) || 0;
-      prodMap[pid].total += Number(l.total) || 0;
+      prodMap[pid].total += lineTotalEfectivo(l);
     });
   });
   const productosArr = Object.values(prodMap).sort((a, b) => b.total - a.total);
