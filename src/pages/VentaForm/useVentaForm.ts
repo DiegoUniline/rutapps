@@ -432,54 +432,49 @@ export function useVentaForm() {
     }
   };
 
-  // Cambio de lista de precios a nivel de línea: reemplaza COMPLETAMENTE el
-  // snapshot de precio (raw, display, base_precio, redondeo). No conserva
-  // valores de la lista anterior — esos solo aplican como fallback cuando NO
-  // se cambia de lista. El motor fiscal, descuentos e impuestos siguen igual.
-  const changeLineListaPrecio = useCallback((idx: number, listaPrecioId: string | null) => {
+  // Cambio de lista de precios a nivel de línea: usamos el snapshot ya calculado
+  // por ListaPrecioPicker (que resuelve con las reglas de la tarifa de esa lista,
+  // no con las reglas de la tarifa global del formulario). Reemplazamos por
+  // completo el snapshot de la línea sin conservar valores de la lista anterior.
+  const changeLineListaPrecio = useCallback((
+    idx: number,
+    selection: {
+      listaPrecioId: string | null;
+      listaPrecioNombre?: string;
+      tarifaId: string | null;
+      unitPrice: number;
+      displayPrice: number;
+      rawUnitPrice: number;
+      rawDisplayPrice: number;
+      basePrecio: string;
+      redondeo: string;
+    },
+  ) => {
     if (readOnly) return;
     setLineas(prev => {
       const next = [...prev];
       const line: any = next[idx];
       if (!line?.producto_id) return prev;
-      const producto: any = productosList?.find((p: any) => p.id === line.producto_id);
-      if (!producto) return prev;
-      const prodForPricing: ProductForPricing = {
-        id: line.producto_id,
-        precio_principal: Number(producto.precio_principal) || 0,
-        costo: Number(producto.costo) || 0,
-        clasificacion_id: producto.clasificacion_id,
-        tiene_iva: producto.tiene_iva,
-        iva_pct: Number(producto.iva_pct ?? 16),
-        tiene_ieps: !!producto.tiene_ieps || Number(producto.ieps_pct ?? 0) > 0,
-        ieps_pct: Number(producto.ieps_pct ?? 0),
-        ieps_tipo: producto.ieps_tipo,
-        usa_listas_precio: producto.usa_listas_precio,
-      };
-      const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId) : null;
-      const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
-      const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
-      const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
-      next[idx] = {
+      const updated: any = {
         ...line,
-        lista_precio_id: listaPrecioId,
-        precio_unitario: finalUnitPrice,
-        display_unit_price: finalDisplayPrice,
-        precio_unitario_sin_redondeo: snap?.rawUnitPrice ?? finalUnitPrice,
-        precio_display_sin_redondeo: snap?.rawDisplayPrice ?? finalDisplayPrice,
-        base_precio: snap?.basePrecio ?? 'con_impuestos',
-        redondeo: snap?.redondeo ?? 'ninguno',
+        lista_precio_id: selection.listaPrecioId,
+        precio_unitario: selection.unitPrice,
+        display_unit_price: selection.displayPrice,
+        precio_unitario_sin_redondeo: selection.rawUnitPrice,
+        precio_display_sin_redondeo: selection.rawDisplayPrice,
+        base_precio: selection.basePrecio,
+        redondeo: selection.redondeo,
         precio_manual: false,
       };
+      if ('tarifa_id' in line) updated.tarifa_id = selection.tarifaId;
+      next[idx] = applyEffectiveLinePricing(updated, sinImpuestos) as any;
       if (typeof console !== 'undefined') {
         console.debug('[price-list-change]', {
           previousListId: line.lista_precio_id ?? null,
-          selectedListId: listaPrecioId,
-          resolvedRawUnitPrice: pricing?.rawUnitPrice,
-          resolvedDisplayPrice: pricing?.displayPrice,
-          snapshotUnitPrice: snap?.unitPrice,
-          snapshotDisplayPrice: snap?.displayPrice,
-          assignedRawUnitPrice: (next[idx] as any).precio_unitario_sin_redondeo,
+          selectedListId: selection.listaPrecioId,
+          selectionUnitPrice: selection.unitPrice,
+          selectionDisplayPrice: selection.displayPrice,
+          selectionRawUnitPrice: selection.rawUnitPrice,
           assignedUnitPrice: (next[idx] as any).precio_unitario,
           assignedDisplayPrice: (next[idx] as any).display_unit_price,
         });
@@ -487,7 +482,7 @@ export function useVentaForm() {
       return next;
     });
     setDirty(true);
-  }, [readOnly, productosList, tarifaRules]);
+  }, [readOnly, sinImpuestos, applyEffectiveLinePricing]);
 
   const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
     if (dir === 'next') { if (colIdx < COL_COUNT - 1) focusCell(rowIdx, colIdx + 1); else if (rowIdx >= lineas.length - 1) { setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(rowIdx + 1, 0), 50); } else focusCell(rowIdx + 1, 0); }
