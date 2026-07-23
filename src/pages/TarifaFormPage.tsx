@@ -1040,7 +1040,13 @@ export default function TarifaFormPage() {
                       <thead>
                          <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
-                          <th className="th-odoo text-left">Productos / Categorías</th>
+                          <th className="th-odoo text-left cursor-pointer select-none" onClick={() => setReglaSort('clave')}>
+                            Clave {reglaSort === 'clave' && '▲'}
+                          </th>
+                          <th className="th-odoo text-left cursor-pointer select-none" onClick={() => setReglaSort('nombre')}>
+                            Producto / Categoría {reglaSort === 'nombre' && '▲'}
+                          </th>
+                          
                           
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-left">Base</th>
