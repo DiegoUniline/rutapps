@@ -3164,6 +3164,7 @@ export type Database = {
           is_partner_sandbox: boolean
           jornada_permite_sin_vehiculo: boolean
           lada: string
+          licencia: string | null
           logo_url: string | null
           maneja_lotes: boolean
           metodo_pago_sat: string | null
@@ -3209,6 +3210,7 @@ export type Database = {
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           lada?: string
+          licencia?: string | null
           logo_url?: string | null
           maneja_lotes?: boolean
           metodo_pago_sat?: string | null
@@ -3254,6 +3256,7 @@ export type Database = {
           is_partner_sandbox?: boolean
           jornada_permite_sin_vehiculo?: boolean
           lada?: string
+          licencia?: string | null
           logo_url?: string | null
           maneja_lotes?: boolean
           metodo_pago_sat?: string | null
@@ -8836,6 +8839,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_empresa_licencia: { Args: never; Returns: string }
       generate_folio: {
         Args: { p_empresa_id: string; p_tipo: string }
         Returns: string
