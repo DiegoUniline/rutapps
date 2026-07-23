@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (nextProfile?.empresa_id) {
       try {
         const { data, error } = await supabase.from('empresas')
-          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes, lada')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, licencia, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes, lada')
           .eq('id', nextProfile.empresa_id)
           .maybeSingle();
 
@@ -142,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOverrideEmpresaIdRaw(overrideId);
       try {
         const { data } = await supabase.from('empresas')
-          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes, lada')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, licencia, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, apartar_stock_pedidos, apartado_almacenes_ids, apartado_solo_con_stock, maneja_lotes, lada')
           .eq('id', overrideId)
           .maybeSingle();
         if (data) {
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const { data, error } = await supabase.from('empresas')
-        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, maneja_lotes, lada')
+        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, licencia, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria, owner_user_id, maneja_lotes, lada')
         .eq('id', id)
         .maybeSingle();
       if (!error && data) {

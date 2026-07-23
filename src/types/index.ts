@@ -167,6 +167,7 @@ export interface Profile { id: string; user_id: string; empresa_id: string; nomb
 export interface Empresa {
   id: string;
   nombre: string;
+  licencia?: string;
   razon_social?: string;
   rfc?: string;
   regimen_fiscal?: string;
