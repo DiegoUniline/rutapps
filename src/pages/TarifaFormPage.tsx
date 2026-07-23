@@ -326,9 +326,11 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
 
   if (!tarifaId) return <p className="text-[12px] text-muted-foreground py-4">Guarda la tarifa primero.</p>;
 
-  const filtered = (productos ?? []).filter(p =>
-    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (productos ?? [])
+    .filter(p =>
+      !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
 
   
 
@@ -761,10 +763,26 @@ export default function TarifaFormPage() {
   };
 
   const lineas = (existing?.tarifa_lineas ?? []) as TarifaLinea[];
-  const sortedLineas = [...lineas].sort((a, b) => {
-    const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
-    return (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
-  });
+  const [reglaSearch, setReglaSearch] = useState('');
+  const sortedLineas = [...lineas]
+    .sort((a, b) => {
+      const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
+      const diff = (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
+      if (diff !== 0) return diff;
+      const labelOf = (l: TarifaLinea) => {
+        if (l.aplica_a === 'producto') return (l.producto_ids.map(pid => prodMap.get(pid) ?? '').join(', '));
+        if (l.aplica_a === 'categoria') return (l.clasificacion_ids.map(cid => clasMap.get(cid) ?? '').join(', '));
+        return '';
+      };
+      return labelOf(a).localeCompare(labelOf(b), 'es', { sensitivity: 'base' });
+    })
+    .filter(l => {
+      if (!reglaSearch.trim()) return true;
+      const q = reglaSearch.toLowerCase();
+      if (l.aplica_a === 'producto') return l.producto_ids.some(pid => (prodMap.get(pid) ?? '').toLowerCase().includes(q));
+      if (l.aplica_a === 'categoria') return l.clasificacion_ids.some(cid => (clasMap.get(cid) ?? '').toLowerCase().includes(q));
+      return 'todos'.includes(q);
+    });
 
   // ── Used IDs tracking (for duplicate prevention) ──
   const usedCatIds = new Set<string>();
@@ -988,6 +1006,21 @@ export default function TarifaFormPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={reglaSearch}
+                      onChange={e => setReglaSearch(e.target.value)}
+                      placeholder="Buscar por producto o categoría..."
+                      className="input-odoo text-xs w-full max-w-xs"
+                    />
+                    {reglaSearch && (
+                      <button type="button" onClick={() => setReglaSearch('')} className="text-[11px] text-muted-foreground hover:text-foreground">
+                        Limpiar
+                      </button>
+                    )}
+                    <span className="text-[11px] text-muted-foreground ml-auto">{sortedLineas.length} reglas</span>
+                  </div>
                   <div className="overflow-x-auto border border-border rounded">
                     <table className="w-full text-sm">
                       <thead>
