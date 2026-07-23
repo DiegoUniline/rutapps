@@ -142,8 +142,9 @@ export default function ConfiguracionInicialPage() {
     );
   }
 
-  const pending = STEPS.filter(s => !s.check(data));
-  const completed = STEPS.filter(s => s.check(data));
+  const safeData = data ?? {};
+  const pending = STEPS.filter(s => !s.check(safeData));
+  const completed = STEPS.filter(s => s.check(safeData));
   const progress = completed.length / STEPS.length;
 
   if (pending.length === 0) {
