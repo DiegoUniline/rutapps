@@ -125,21 +125,27 @@ export function calculateSaleLineEffectivePrices(line: SaleLinePricingLike, sinI
   const descFactor = Math.max(0, 1 - descPct / 100);
   const ivaPct = sinImpuestos ? 0 : Number(line.iva_pct) || 0;
   const iepsPct = sinImpuestos ? 0 : Number(line.ieps_pct) || 0;
+  const taxMultiplier = (1 + iepsPct / 100) * (1 + ivaPct / 100);
   const redondeo = line.redondeo;
   const hasConfiguredRounding = !!redondeo && redondeo !== 'ninguno';
   const canApplyRounding = hasConfiguredRounding && !line.precio_manual;
 
   if (!canApplyRounding) {
+    // Sin regla de redondeo: mantener el display bruto como fuente de verdad y
+    // re-derivar el neto según el multiplicador de impuestos actual. Esto
+    // asegura que al alternar IVA/IEPS el subtotal siga cuadrando con el
+    // precio mostrado (p. ej. display=$68 con IVA 16% ⇒ neto=$58.62 y total=$68).
+    const displayPrice = currentDisplayPrice;
+    const unitPrice = taxMultiplier > 0 ? displayPrice / taxMultiplier : displayPrice;
     return {
-      unitPrice: currentUnitPrice,
-      displayPrice: currentDisplayPrice,
-      finalUnitGross: round2(currentUnitPrice * descFactor * (1 + iepsPct / 100) * (1 + ivaPct / 100)),
+      unitPrice,
+      displayPrice,
+      finalUnitGross: round2(unitPrice * descFactor * taxMultiplier),
       appliedRounding: false,
     };
   }
 
   const rawNet = Number(line.precio_unitario_sin_redondeo) || currentUnitPrice;
-  const taxMultiplier = (1 + iepsPct / 100) * (1 + ivaPct / 100);
   const unitGrossBeforeRound = round2(rawNet * descFactor * taxMultiplier);
   const finalUnitGross = round2(applyDisplayRedondeo(unitGrossBeforeRound, redondeo));
 
