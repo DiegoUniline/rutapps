@@ -178,7 +178,17 @@ export function ListaPrecioPicker({
                 key={opt.lista_precio_id ?? 'base'}
                 type="button"
                 onClick={() => {
-                  onSelectLista(opt.lista_precio_id, opt.tarifa_id, opt.unitPrice, opt.displayPrice, opt.lista_nombre);
+                  onSelectLista({
+                    listaPrecioId: opt.lista_precio_id,
+                    listaPrecioNombre: opt.lista_nombre,
+                    tarifaId: opt.tarifa_id,
+                    unitPrice: opt.unitPrice,
+                    displayPrice: opt.displayPrice,
+                    rawUnitPrice: opt.rawUnitPrice,
+                    rawDisplayPrice: opt.rawDisplayPrice,
+                    basePrecio: opt.basePrecio,
+                    redondeo: opt.redondeo,
+                  });
                   setOpen(false);
                 }}
                 className={cn(
