@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
 
 interface VentaLinea {
+  id: string;
   producto_id: string;
   cantidad: number;
   precio_unitario: number;
