@@ -31,7 +31,7 @@ interface Props {
   cerradoSnapshot?: { lineas?: Array<{ producto_id: string; pedido: number; entregado: number }> } | null;
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
-  onChangeLineListaPrecio?: (idx: number, listaPrecioId: string | null) => void;
+  onChangeLineListaPrecio?: (idx: number, selection: import('@/components/venta/ListaPrecioPicker').ListaPrecioSelection) => void;
 }
 
 export function VentaLineasTab(props: Props) {

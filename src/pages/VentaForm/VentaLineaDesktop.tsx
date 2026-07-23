@@ -26,7 +26,7 @@ interface Props {
   canChangePrice?: boolean;
   canApplyDiscount?: boolean;
   sinImpuestos?: boolean;
-  onChangeLineListaPrecio?: (idx: number, listaPrecioId: string | null) => void;
+  onChangeLineListaPrecio?: (idx: number, selection: ListaPrecioSelection) => void;
 }
 
 export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio }: Props) {
@@ -141,14 +141,24 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
               currentListaPrecioId={(l as any).lista_precio_id ?? null}
               isManual={!!(l as any).precio_manual}
               compact
-              onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice, _nombre) => {
+              onSelectLista={(selection) => {
                 if (onChangeLineListaPrecio) {
-                  onChangeLineListaPrecio(idx, listaPrecioId);
+                  onChangeLineListaPrecio(idx, selection);
                   return;
                 }
                 setLineas(prev => {
                   const next = [...prev];
-                  (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
+                  (next[idx] as any) = {
+                    ...next[idx],
+                    lista_precio_id: selection.listaPrecioId,
+                    precio_unitario: selection.unitPrice,
+                    display_unit_price: selection.displayPrice,
+                    precio_unitario_sin_redondeo: selection.rawUnitPrice,
+                    precio_display_sin_redondeo: selection.rawDisplayPrice,
+                    base_precio: selection.basePrecio,
+                    redondeo: selection.redondeo,
+                    precio_manual: false,
+                  };
                   return next;
                 });
               }}
