@@ -3,7 +3,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
-import { calculateSaleLineAmounts } from '@/lib/salePricing';
+import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 interface Props {
@@ -27,7 +27,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const price = Number(l.precio_unitario) || 0;
-  const lineTotal = calculateSaleLineAmounts(l as any).total;
+  const lineTotal = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike).total;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);

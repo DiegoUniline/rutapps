@@ -4,7 +4,7 @@ import { formatCurrency } from '@/lib/currency';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
-import { calculateSaleLineAmounts } from '@/lib/salePricing';
+import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
 
 interface Props {
@@ -33,7 +33,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const amounts = calculateSaleLineAmounts(l as any);
+  const amounts = calculateSaleLineAmounts({ ...l, precio_unitario: price } as SaleLinePricingLike);
   const grossSubtotal = amounts.subtotal;
   const discount = amounts.discount;
   const base = r2(grossSubtotal - discount);
