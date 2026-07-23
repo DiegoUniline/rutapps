@@ -31,7 +31,7 @@ export const PRODUCT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'nombre', header: 'Nombre', required: true, example: 'Refresco Cola 600ml' },
   { key: 'precio_principal', header: 'Precio', example: '18.50' },
   { key: 'costo', header: 'Costo', example: '12.00' },
-  { key: 'cantidad', header: 'Stock', example: '100' },
+  // Stock inicial removido: debe cargarse desde Inventario → Ajustes eligiendo almacén.
   { key: 'marca', header: 'Marca', example: 'Coca-Cola' },
   { key: 'clasificacion', header: 'Clasificación', example: 'Bebidas' },
   { key: 'proveedor', header: 'Proveedor', example: 'Distribuidora ABC' },
