@@ -117,6 +117,10 @@ export function ListaPrecioPicker({
         es_principal: !!lista.es_principal,
         unitPrice: snap.unitPrice,
         displayPrice: r.displayPrice,
+        rawUnitPrice: snap.rawUnitPrice,
+        rawDisplayPrice: snap.rawDisplayPrice,
+        basePrecio: snap.basePrecio,
+        redondeo: snap.redondeo,
         hasRule: !!r.appliedRule,
       });
     }
