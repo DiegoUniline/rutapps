@@ -199,15 +199,12 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       const unidad_venta_id = await resolveOrCreate('unidades', raw.unidad_venta, empresaId, cache);
       const unidad_compra_id = await resolveOrCreate('unidades', raw.unidad_compra, empresaId, cache);
 
-      const importedStock = raw.cantidad ? Number(raw.cantidad) : 0;
-
       const productData: any = {
         empresa_id: empresaId,
         codigo: raw.codigo?.toString().trim() || '',
         nombre: raw.nombre?.toString().trim(),
         precio_principal: raw.precio_principal ? Number(raw.precio_principal) : 0,
         costo: raw.costo ? Number(raw.costo) : 0,
-        cantidad: importedStock,
         clave_alterna: raw.clave_alterna?.toString().trim() || null,
         tiene_iva: raw.tiene_iva ? toBool(raw.tiene_iva) : false,
         status: ['activo', 'inactivo', 'borrador'].includes(raw.status?.toLowerCase?.()) ? raw.status.toLowerCase() : 'activo',
