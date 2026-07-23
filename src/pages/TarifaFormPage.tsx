@@ -276,6 +276,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre, tarifaEmpresaId, listasPrec
           tiene_ieps: p.tiene_ieps,
           ieps_pct: p.ieps_pct,
           ieps_tipo: p.ieps_tipo,
+          costo_incluye_impuestos: p.costo_incluye_impuestos,
         };
 
         const pricing = resolveProductPricing(rules, producto, listaSeleccionadaId);
