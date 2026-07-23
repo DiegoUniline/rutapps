@@ -58,9 +58,9 @@ function addDays(iso: string, n: number) {
 
 async function buildReporte(empresaId: string, startLocal: string, endLocal: string, tz: string, label: string) {
   const { start, end } = rangeUtcForDates(startLocal, endLocal, tz);
-  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, entregasRes, empresaRes] = await Promise.all([
+  const [ventasRes, cobrosRes, gastosRes, devsRes, visitasRes, entregasRes, empresaRes, promosRes] = await Promise.all([
     admin.from("ventas")
-      .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))")
+      .select("id, folio, total, status, condicion_pago, cliente_id, clientes(nombre), venta_lineas(id, producto_id, cantidad, total, productos(codigo, nombre))")
       .eq("empresa_id", empresaId).gte("fecha", start).lte("fecha", end),
     admin.from("cobros")
       .select("id, monto, metodo_pago, referencia, fecha, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(id, folio, fecha, condicion_pago))")
