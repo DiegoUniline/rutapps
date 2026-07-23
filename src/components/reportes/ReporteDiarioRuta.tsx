@@ -65,6 +65,21 @@ export default function ReporteDiarioRuta() {
     },
   });
 
+  // --- Promociones aplicadas (para descontar productos gratis y descuentos por promoción) ---
+  const { data: promoAplicadas } = useQuery<any[]>({
+    queryKey: ['rpt-diario-promos', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
+    enabled,
+    queryFn: async () => {
+      let q = (supabase as any).from('promocion_aplicada')
+        .select('venta_linea_id, descuento_aplicado, ventas!inner(id, empresa_id, fecha, status, vendedor_id)')
+        .eq('ventas.empresa_id', empresa!.id)
+        .gte('ventas.fecha', fechaInicio).lte('ventas.fecha', fechaFin);
+      if (!isAll) q = q.eq('ventas.vendedor_id', selectedVendedorId);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
   // --- Entregas programadas (pedidos a entregar en el rango) ---
   const { data: entregas } = useQuery<any[]>({
     queryKey: ['rpt-diario-entregas', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
