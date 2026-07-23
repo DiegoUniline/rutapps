@@ -147,23 +147,32 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
                 });
               }}
             />
-            <input
-              ref={el => setCellRef(idx, 2, el)}
-              type="number" inputMode="decimal"
-              className="inline-edit-input text-[12px] text-right !py-1 w-20"
-              value={l.precio_unitario ?? ''}
-              onChange={e => {
-                onUpdateLine(idx, 'precio_unitario', e.target.value);
-                setLineas(prev => {
-                  const next = [...prev];
-                  (next[idx] as any).precio_manual = true;
-                  return next;
-                });
-              }}
-              onKeyDown={e => onCellKeyDown(e, idx, 2)}
-              onFocus={e => e.target.select()}
-              min="0" step="0.01"
-            />
+            {(() => {
+              const basePrecio = ((l as any).base_precio ?? 'sin_impuestos');
+              const showGross = basePrecio === 'con_impuestos';
+              const shownValue = showGross
+                ? ((l as any).display_unit_price ?? l.precio_unitario ?? '')
+                : (l.precio_unitario ?? '');
+              return (
+                <input
+                  ref={el => setCellRef(idx, 2, el)}
+                  type="number" inputMode="decimal"
+                  className="inline-edit-input text-[12px] text-right !py-1 w-20"
+                  value={shownValue}
+                  onChange={e => {
+                    onUpdateLine(idx, 'precio_unitario', e.target.value);
+                    setLineas(prev => {
+                      const next = [...prev];
+                      (next[idx] as any).precio_manual = true;
+                      return next;
+                    });
+                  }}
+                  onKeyDown={e => onCellKeyDown(e, idx, 2)}
+                  onFocus={e => e.target.select()}
+                  min="0" step="0.01"
+                />
+              );
+            })()}
           </div>
         )}
       </td>

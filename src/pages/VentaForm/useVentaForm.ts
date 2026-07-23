@@ -435,6 +435,29 @@ export function useVentaForm() {
       setDirty(true);
       return;
     }
+    // Manual price edit: if the line is priced "con impuestos" (Base chip),
+    // the value in the input is a GROSS price that includes IVA/IEPS. Decompose
+    // it into net so the totals honor the taxes the user configured.
+    if (field === 'precio_unitario') {
+      setLineas(prev => {
+        const next = [...prev];
+        const line = next[idx] as any;
+        const gross = Number(val) || 0;
+        const basePrecio = (line.base_precio ?? 'sin_impuestos');
+        if (basePrecio === 'con_impuestos') {
+          const snap = buildManualSalePricingFromGross(
+            { tiene_iva: Number(line.iva_pct) > 0, iva_pct: Number(line.iva_pct) || 0, tiene_ieps: Number(line.ieps_pct) > 0, ieps_pct: Number(line.ieps_pct) || 0 },
+            gross,
+          );
+          next[idx] = { ...line, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice, precio_unitario_sin_redondeo: snap.rawUnitPrice, precio_display_sin_redondeo: snap.rawDisplayPrice };
+        } else {
+          next[idx] = { ...line, precio_unitario: gross, display_unit_price: gross };
+        }
+        return next;
+      });
+      setDirty(true);
+      return;
+    }
     setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; });
     setDirty(true);
   };
