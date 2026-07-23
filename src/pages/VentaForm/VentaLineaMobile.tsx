@@ -26,16 +26,13 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
-  const desc = Number(l.descuento_pct) || 0;
   const lineTotal = calculateSaleLineAmounts(l as any).total;
   const storedTotal = Number(l.total) || 0;
   const displayLineTotal = readOnly && storedTotal > 0 ? r2(storedTotal) : lineTotal;
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
-  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
   // Fallback to embedded snapshot from venta_lineas.productos when product is not in productosList
   // (e.g. inactive/deleted products, or products outside the loaded catalog page)

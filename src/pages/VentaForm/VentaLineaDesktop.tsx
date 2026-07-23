@@ -31,7 +31,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
   const amounts = calculateSaleLineAmounts(l as any);
@@ -53,7 +52,6 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const prodDisplay = prod || embeddedProd;
   const isEmpty = !l.producto_id;
   const lineData = l as any;
-  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
     || (embeddedProd as any)?.unidades_venta?.abreviatura
