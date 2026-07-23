@@ -109,6 +109,10 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
                     isManual={!!(l as any).precio_manual}
                     compact
                     onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice) => {
+                      if (onChangeLineListaPrecio) {
+                        onChangeLineListaPrecio(idx, listaPrecioId);
+                        return;
+                      }
                       setLineas(prev => {
                         const next = [...prev];
                         (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
