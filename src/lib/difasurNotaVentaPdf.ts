@@ -24,6 +24,8 @@ import type jsPDF from 'jspdf';
 import { supabase } from '@/lib/supabase';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import { getCurrencyConfig } from '@/lib/currency';
+import difasurLogoAsset from '@/assets/difasur-logo.png.asset.json';
+
 
 const ML = 10;
 const MR = 10;
@@ -376,7 +378,9 @@ export async function generateDifasurVentaPdf(
     }
   }
 
-  const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
+  // DIFASUR: siempre usar el logo oficial fijo, ignorando el logo de la empresa.
+  const logo = await loadLogoBase64(difasurLogoAsset.url).catch(() => null);
+
   const clienteRow: any = (venta as any).clientes ?? {};
   const zonaNombre = clienteRow?.zonas?.nombre ?? '';
 
