@@ -19,13 +19,6 @@ interface CxCRow {
   vencido: boolean;
 }
 
-/** Suma N días a una fecha YYYY-MM-DD y devuelve YYYY-MM-DD. */
-function addDays(fecha: string, dias: number): string {
-  const d = new Date(fecha + 'T00:00:00');
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * Cuentas por cobrar: UNA fila por folio (venta con saldo), no por producto.
  * Columnas: Fecha · Cliente · Folio · Tipo · Vence · Total · Abonado · Saldo.
@@ -47,7 +40,7 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
       // saldo_pendiente > 0 y status != cancelado, incluyendo saldos iniciales.
       const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, dias_credito, status, es_saldo_inicial, clientes(nombre)')
+        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, fecha_vencimiento, status, es_saldo_inicial, clientes(nombre)')
         .eq('empresa_id', eid)
         .gt('saldo_pendiente', 0)
         .neq('status', 'cancelado')
@@ -58,8 +51,7 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
         const total = Number(v.total) || 0;
         const saldo = Number(v.saldo_pendiente) || 0;
         const esCredito = v.condicion_pago === 'credito';
-        const dias = Number(v.dias_credito) || 0;
-        const vencimiento = esCredito && dias > 0 && v.fecha ? addDays(v.fecha, dias) : null;
+        const vencimiento = esCredito && v.fecha_vencimiento ? String(v.fecha_vencimiento).slice(0, 10) : null;
         return {
           id: v.id,
           folio: v.folio,
