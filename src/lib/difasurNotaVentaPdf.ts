@@ -110,19 +110,21 @@ function drawCell(
 
   if (content.label) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(content.fontSize ?? 8.5);
+    doc.setFontSize(content.fontSize ?? 7.5);
     doc.setTextColor(...BLACK);
     const lw = doc.getTextWidth(content.label);
     doc.text(content.label, tx, ty);
-    tx += lw + 1.5;
+    tx += lw + 1.2;
   }
   if (content.value !== undefined) {
     doc.setFont('helvetica', content.bold ? 'bold' : 'normal');
-    doc.setFontSize(content.fontSize ?? 8.5);
+    doc.setFontSize(content.fontSize ?? 7.5);
     doc.setTextColor(...BLACK);
     const align = content.align ?? 'left';
     const anchorX = align === 'right' ? x + w - pad : align === 'center' ? x + w / 2 : tx;
-    doc.text(content.value, anchorX, ty, { align });
+    const maxW = align === 'right' ? w - pad * 2 : x + w - pad - anchorX;
+    const val = doc.splitTextToSize(String(content.value), Math.max(10, maxW))[0] ?? String(content.value);
+    doc.text(val, anchorX, ty, { align });
   }
 }
 
@@ -244,39 +246,41 @@ export async function generarDifasurNotaVentaPdf(params: DifasurParams): Promise
       { content: 'Código', styles: { halign: 'center' } },
       { content: 'Descripción', styles: { halign: 'center' } },
       { content: 'Lote', styles: { halign: 'center' } },
-      { content: 'Caducidad', styles: { halign: 'center' } },
-      { content: 'P. Público', styles: { halign: 'center' } },
-      { content: 'P. Unitario', styles: { halign: 'center' } },
+      { content: 'Cad.', styles: { halign: 'center' } },
+      { content: 'P. Púb.', styles: { halign: 'center' } },
+      { content: 'P. Unit.', styles: { halign: 'center' } },
       { content: 'IVA', styles: { halign: 'center' } },
       { content: 'Importe', styles: { halign: 'center' } },
     ]],
     body,
     theme: 'grid',
     styles: {
-      fontSize: 8.5,
-      cellPadding: 2,
+      fontSize: 7,
+      cellPadding: 1.2,
       textColor: BLACK,
       lineColor: BORDER,
       lineWidth: 0.15,
       valign: 'middle',
+      overflow: 'linebreak',
     },
     headStyles: {
       fillColor: [245, 245, 245],
       textColor: BLACK,
       fontStyle: 'bold',
+      fontSize: 7.5,
       lineColor: BORDER,
       lineWidth: 0.15,
     },
     columnStyles: {
-      0: { cellWidth: 10 },
-      1: { cellWidth: 24 },
+      0: { cellWidth: 9 },
+      1: { cellWidth: 22 },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 16 },
-      4: { cellWidth: 18 },
-      5: { cellWidth: 18 },
-      6: { cellWidth: 18 },
-      7: { cellWidth: 14 },
-      8: { cellWidth: 20 },
+      3: { cellWidth: 14 },
+      4: { cellWidth: 14 },
+      5: { cellWidth: 15 },
+      6: { cellWidth: 15 },
+      7: { cellWidth: 12 },
+      8: { cellWidth: 18 },
     },
   });
 
