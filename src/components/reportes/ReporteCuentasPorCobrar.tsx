@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, Fragment } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -17,14 +17,14 @@ interface CxCRow {
   abonado: number;
   saldo: number;
   vencido: boolean;
+  esSaldoInicial: boolean;
 }
 
 /**
- * Cuentas por cobrar: UNA fila por folio (venta con saldo), no por producto.
- * Columnas: Fecha · Cliente · Folio · Tipo · Vence · Total · Abonado · Saldo.
+ * Cuentas por cobrar — estado de cuenta clásico agrupado por cliente.
+ * Columnas: Concepto · Documento · Num · Fecha aplic · Fecha venc · Cargos · Abonos · Saldos.
+ * Muestra TODOS los folios con saldo > 0 (no depende del rango de fechas).
  */
-// Cuentas por cobrar = saldo vivo de crédito. Muestra TODOS los folios con
-// saldo pendiente, sin importar la fecha (no es un reporte por período).
 export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }) {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
@@ -36,8 +36,6 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteCuentasPorCobrar');
-      // Misma base que la vista de Finanzas / Por Cobrar (que sí lista todo):
-      // saldo_pendiente > 0 y status != cancelado, incluyendo saldos iniciales.
       const { data, error } = await supabase
         .from('ventas')
         .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, fecha_vencimiento, status, es_saldo_inicial, clientes(nombre)')
@@ -60,75 +58,117 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
           tipo: v.es_saldo_inicial ? 'Saldo inicial' : esCredito ? 'Crédito' : 'Contado',
           vencimiento,
           total,
-          abonado: Math.max(0, total - saldo),  // pagado = total − saldo (convención del sistema)
+          abonado: Math.max(0, total - saldo),
           saldo,
           vencido: !!vencimiento && vencimiento < hoy,
+          esSaldoInicial: !!v.es_saldo_inicial,
         } as CxCRow;
       });
     },
   });
 
-  // Orden: por cliente, luego por fecha (para monitorear crédito por cliente).
-  const items = useMemo(
-    () => [...rows].sort((a, b) => a.cliente.localeCompare(b.cliente) || a.fecha.localeCompare(b.fecha)),
-    [rows],
-  );
+  // Agrupar por cliente
+  const grupos = useMemo(() => {
+    const map = new Map<string, CxCRow[]>();
+    for (const r of rows) {
+      if (!map.has(r.cliente)) map.set(r.cliente, []);
+      map.get(r.cliente)!.push(r);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([cliente, items], idx) => {
+        items.sort((a, b) => a.fecha.localeCompare(b.fecha));
+        const cargos = items.reduce((s, r) => s + r.total, 0);
+        const abonos = items.reduce((s, r) => s + r.abonado, 0);
+        const saldos = items.reduce((s, r) => s + r.saldo, 0);
+        return { cliente, num: idx + 1, items, cargos, abonos, saldos };
+      });
+  }, [rows]);
 
-  const totalSaldo = items.reduce((s, r) => s + r.saldo, 0);
-  const totalVencido = items.filter(r => r.vencido).reduce((s, r) => s + r.saldo, 0);
-  const clientesUnicos = new Set(items.map(r => r.cliente)).size;
+  const totalCargos = grupos.reduce((s, g) => s + g.cargos, 0);
+  const totalAbonos = grupos.reduce((s, g) => s + g.abonos, 0);
+  const totalSaldos = grupos.reduce((s, g) => s + g.saldos, 0);
+  const totalVencido = rows.filter(r => r.vencido).reduce((s, r) => s + r.saldo, 0);
+
+  const padDoc = (folio: string | null) => (folio ? folio.replace(/\D/g, '').padStart(10, '0') || folio : '—');
 
   return (
     <div className="space-y-3">
       {/* Resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Card label="Por cobrar" value={fmt(totalSaldo)} tone="primary" />
+        <Card label="Por cobrar" value={fmt(totalSaldos)} tone="primary" />
         <Card label="Vencido" value={fmt(totalVencido)} tone={totalVencido > 0 ? 'danger' : 'muted'} />
-        <Card label="Folios" value={String(items.length)} />
-        <Card label="Clientes" value={String(clientesUnicos)} />
+        <Card label="Folios" value={String(rows.length)} />
+        <Card label="Clientes" value={String(grupos.length)} />
       </div>
 
-      <div className="border border-border rounded-lg overflow-x-auto">
+      <div className="border border-border rounded-lg overflow-x-auto bg-card">
         <table className="w-full text-[12px]">
-          <thead className="bg-accent/40 text-muted-foreground uppercase text-[10px] font-semibold">
+          <thead className="text-muted-foreground text-[10px] font-semibold uppercase border-b border-border">
             <tr>
-              <th className="text-left px-3 py-2">Fecha</th>
-              <th className="text-left px-3 py-2">Cliente</th>
-              <th className="text-left px-3 py-2">Folio</th>
-              <th className="text-left px-3 py-2">Tipo</th>
-              <th className="text-left px-3 py-2">Vence</th>
-              <th className="text-right px-3 py-2">Total</th>
-              <th className="text-right px-3 py-2">Abonado</th>
-              <th className="text-right px-3 py-2">Saldo</th>
+              <th className="text-left px-3 py-2 w-10">Cliente</th>
+              <th className="text-left px-3 py-2">Concepto</th>
+              <th className="text-left px-3 py-2">Documento</th>
+              <th className="text-center px-2 py-2">Num.</th>
+              <th className="text-left px-3 py-2">Fecha aplic.</th>
+              <th className="text-left px-3 py-2">Fecha venc.</th>
+              <th className="text-right px-3 py-2">Cargos</th>
+              <th className="text-right px-3 py-2">Abonos</th>
+              <th className="text-right px-3 py-2">Saldos</th>
             </tr>
           </thead>
           <tbody>
-            {items.map(r => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="px-3 py-1.5 whitespace-nowrap">{fmtDate(r.fecha)}</td>
-                <td className="px-3 py-1.5">{r.cliente}</td>
-                <td className="px-3 py-1.5 font-mono">{r.folio ?? '—'}</td>
-                <td className="px-3 py-1.5">{r.tipo}</td>
-                <td className={`px-3 py-1.5 whitespace-nowrap ${r.vencido ? 'text-destructive font-semibold' : ''}`}>
-                  {r.vencimiento ? fmtDate(r.vencimiento) : '—'}
-                </td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.total)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{fmt(r.abonado)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{fmt(r.saldo)}</td>
-              </tr>
+            {grupos.map(g => (
+              <Fragment key={g.cliente}>
+                {/* Encabezado del cliente */}
+                <tr className="bg-accent/30 border-t border-border">
+                  <td className="px-3 py-1.5 font-semibold tabular-nums">{g.num}</td>
+                  <td className="px-3 py-1.5 font-semibold uppercase tracking-wide" colSpan={8}>
+                    {g.cliente}
+                  </td>
+                </tr>
+                {/* Filas de folios */}
+                {g.items.map(r => (
+                  <tr key={r.id} className="border-t border-border/60">
+                    <td className="px-3 py-1.5" />
+                    <td className="px-3 py-1.5">{r.esSaldoInicial ? 'Saldo inicial' : 'Nota de venta'}</td>
+                    <td className="px-3 py-1.5 font-mono">{padDoc(r.folio)}</td>
+                    <td className="px-2 py-1.5 text-center tabular-nums">1</td>
+                    <td className="px-3 py-1.5 whitespace-nowrap">{fmtDate(r.fecha)}</td>
+                    <td className={`px-3 py-1.5 whitespace-nowrap ${r.vencido ? 'text-destructive font-semibold' : ''}`}>
+                      {r.vencimiento ? fmtDate(r.vencimiento) : fmtDate(r.fecha)}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.total)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
+                      {r.abonado > 0 ? fmt(r.abonado) : fmt(0)}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{fmt(r.saldo)}</td>
+                  </tr>
+                ))}
+                {/* Subtotal del cliente */}
+                <tr className="border-t border-dashed border-border/80 text-[12px]">
+                  <td />
+                  <td colSpan={5} />
+                  <td className="px-3 py-1.5 text-right tabular-nums font-semibold border-t border-border">{fmt(g.cargos)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums font-semibold border-t border-border">{fmt(g.abonos)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums font-semibold border-t border-border">{fmt(g.saldos)}</td>
+                </tr>
+              </Fragment>
             ))}
-            {!isLoading && items.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin saldos pendientes</td></tr>
+            {!isLoading && grupos.length === 0 && (
+              <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin saldos pendientes</td></tr>
             )}
             {isLoading && (
-              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
+              <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
             )}
           </tbody>
-          {items.length > 0 && (
+          {grupos.length > 0 && (
             <tfoot>
-              <tr className="border-t-2 border-border font-semibold">
-                <td className="px-3 py-2" colSpan={7}>Total por cobrar</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totalSaldo)}</td>
+              <tr className="border-t-2 border-border font-bold bg-accent/20">
+                <td className="px-3 py-2" colSpan={6}>TOTAL GENERAL</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totalCargos)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totalAbonos)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totalSaldos)}</td>
               </tr>
             </tfoot>
           )}
