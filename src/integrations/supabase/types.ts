@@ -9100,6 +9100,26 @@ export type Database = {
         Returns: undefined
       }
       run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
+      saldo_clientes_a_la_fecha: {
+        Args: { p_empresa_id: string; p_fecha: string }
+        Returns: {
+          abonos: number
+          cargos: number
+          cliente: string
+          cliente_id: string
+          saldo: number
+        }[]
+      }
+      stock_a_la_fecha: {
+        Args: { p_empresa_id: string; p_fecha: string }
+        Returns: {
+          almacen: string
+          almacen_id: string
+          cantidad: number
+          producto: string
+          producto_id: string
+        }[]
+      }
       stock_almacen_at_eod: {
         Args: { p_almacen_id: string; p_fecha: string }
         Returns: {
