@@ -110,19 +110,21 @@ function drawCell(
 
   if (content.label) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(content.fontSize ?? 8.5);
+    doc.setFontSize(content.fontSize ?? 7.5);
     doc.setTextColor(...BLACK);
     const lw = doc.getTextWidth(content.label);
     doc.text(content.label, tx, ty);
-    tx += lw + 1.5;
+    tx += lw + 1.2;
   }
   if (content.value !== undefined) {
     doc.setFont('helvetica', content.bold ? 'bold' : 'normal');
-    doc.setFontSize(content.fontSize ?? 8.5);
+    doc.setFontSize(content.fontSize ?? 7.5);
     doc.setTextColor(...BLACK);
     const align = content.align ?? 'left';
     const anchorX = align === 'right' ? x + w - pad : align === 'center' ? x + w / 2 : tx;
-    doc.text(content.value, anchorX, ty, { align });
+    const maxW = align === 'right' ? w - pad * 2 : x + w - pad - anchorX;
+    const val = doc.splitTextToSize(String(content.value), Math.max(10, maxW))[0] ?? String(content.value);
+    doc.text(val, anchorX, ty, { align });
   }
 }
 
