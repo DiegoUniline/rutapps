@@ -211,6 +211,15 @@ export default function VentaFormPage() {
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
 
   const handleGenerarPdf = async () => {
+    // Empresas con plantilla personalizada por ID (ej. DIFASUR con lotes)
+    const licencia = String((empresa as any)?.licencia ?? '');
+    if (licencia === '53021303' && (form as any).id) {
+      const { generateVentaPdfById } = await import('@/lib/ventaPdfFromId');
+      const { blob } = await generateVentaPdfById((form as any).id, (empresa as any)?.id);
+      setPdfBlob(blob);
+      setShowPdfModal(true);
+      return;
+    }
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
     const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
     const promos = (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento }));
