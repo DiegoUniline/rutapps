@@ -232,6 +232,9 @@ export default function ReportesPage() {
   const { data: vendedoresList } = useVendedores();
   const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined, tipoFilter || undefined);
   if (error) console.error('[ReportesPage] query error:', error);
+  // Pestañas que NO dependen del rango de fechas ni de la consulta principal
+  // (traen sus propios datos): se renderizan aunque el rango esté vacío / falle.
+  const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha';
   const [tab, setTab] = useState<ReportTab>('resumen');
 
   const statusOptions = [
@@ -479,10 +482,10 @@ export default function ReportesPage() {
         ))}
       </div>
 
-      {isLoading && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
-      {error && <div className="py-12 text-center text-destructive text-sm">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>}
+      {isLoading && !dataIndependent && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
+      {error && !dataIndependent && <div className="py-12 text-center text-destructive text-sm">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>}
 
-      {data && (() => {
+      {(data || dataIndependent) && (() => {
         const tabTitles: Record<ReportTab, string> = {
           resumen: 'Resumen General',
           ventas_producto: 'Ventas por Producto',
@@ -504,7 +507,7 @@ export default function ReportesPage() {
         if (vendedorNames.length > 0) activeFilters.push({ label: 'Vendedor', value: vendedorNames.join(', ') });
         if (selectedStatuses.length > 0) activeFilters.push({ label: 'Estado', value: selectedStatuses.map(st => statusOptions.find(o => o.value === st)?.label ?? st).join(', ') });
 
-        const resumenFooter = (
+        const resumenFooter = data ? (
           <ResumenGeneralVentas
             totalVentas={data.totalVentas}
             totalContado={data.totalContado ?? 0}
@@ -516,7 +519,7 @@ export default function ReportesPage() {
             }))}
             metodosPago={data.metodosPago ?? []}
           />
-        );
+        ) : null;
 
         return (
           <ReportLayout
