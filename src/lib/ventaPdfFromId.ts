@@ -26,6 +26,12 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
   if (!eid) throw new Error('Sin empresa');
   const { data: empresa } = await supabase.from('empresas').select('*').eq('id', eid).single();
 
+  // Plantilla personalizada por empresa (ej. DIFASUR con lotes)
+  if (empresa && CUSTOM_TEMPLATE_LICENCIAS.has(String((empresa as any).licencia ?? ''))) {
+    return generateDifasurVentaPdf(ventaId, eid);
+  }
+
+
   // Fetch pagos
   const { data: pagosRaw } = await supabase
     .from('cobro_aplicaciones')
