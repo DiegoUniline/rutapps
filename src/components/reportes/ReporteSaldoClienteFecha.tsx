@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, todayLocal } from '@/lib/utils';
 
 interface SaldoRow {
   cliente_id: string;
@@ -23,13 +23,15 @@ export function ReporteSaldoClienteFecha({ hasta }: { desde: string; hasta: stri
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
+  // "A la fecha" usa UNA sola fecha de corte (no un rango). Default: hoy.
+  const [fecha, setFecha] = useState(hasta || todayLocal());
 
   const { data: rows = [], isLoading } = useQuery<SaldoRow[]>({
-    queryKey: ['reporte-saldo-cliente-fecha', empresaId, hasta],
+    queryKey: ['reporte-saldo-cliente-fecha', empresaId, fecha],
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteSaldoClienteFecha');
-      const { data, error } = await supabase.rpc('saldo_clientes_a_la_fecha', { p_empresa_id: eid, p_fecha: hasta } as any);
+      const { data, error } = await supabase.rpc('saldo_clientes_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha } as any);
       if (error) throw error;
       return (data ?? []) as SaldoRow[];
     },
@@ -42,7 +44,12 @@ export function ReporteSaldoClienteFecha({ hasta }: { desde: string; hasta: stri
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-muted-foreground">Estado al corte del <strong>{fmtDate(hasta)}</strong> — cargos (ventas) menos abonos (cobros) acumulados.</p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Saldo a la fecha</label>
+        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+          className="border border-border rounded-md px-2 py-1 text-[12px] bg-background" />
+        <span className="text-[11px] text-muted-foreground">cargos (ventas) − abonos (cobros) acumulados al {fmtDate(fecha)}</span>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card label="Saldo total" value={fmt(totalSaldo)} tone="primary" />
         <Card label="Cargos" value={fmt(totalCargos)} tone="muted" />
