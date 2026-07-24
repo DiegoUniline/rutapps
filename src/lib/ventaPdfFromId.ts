@@ -6,6 +6,10 @@ import { supabase } from '@/lib/supabase';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import { getCurrencyConfig } from '@/lib/currency';
+import { generateDifasurVentaPdf } from '@/lib/difasurNotaVentaPdf';
+
+// Empresas con plantilla de nota de venta personalizada
+const CUSTOM_TEMPLATE_LICENCIAS = new Set(['53021303']); // DIFASUR
 
 export async function generateVentaPdfById(ventaId: string, empresaId?: string): Promise<{ blob: Blob; fileName: string; caption: string }> {
   // Fetch venta with relations
@@ -21,6 +25,12 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
   const eid = empresaId || (venta as any).empresa_id;
   if (!eid) throw new Error('Sin empresa');
   const { data: empresa } = await supabase.from('empresas').select('*').eq('id', eid).single();
+
+  // Plantilla personalizada por empresa (ej. DIFASUR con lotes)
+  if (empresa && CUSTOM_TEMPLATE_LICENCIAS.has(String((empresa as any).licencia ?? ''))) {
+    return generateDifasurVentaPdf(ventaId, eid);
+  }
+
 
   // Fetch pagos
   const { data: pagosRaw } = await supabase
