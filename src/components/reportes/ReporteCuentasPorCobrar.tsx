@@ -337,12 +337,13 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
         </table>
       </div>
 
-      {pdfBlob && (
+      {pdfBlob && empresaId && (
         <DocumentPreviewModal
           open={showPdf}
           onClose={() => setShowPdf(false)}
-          blob={pdfBlob}
+          pdfBlob={pdfBlob}
           fileName={pdfName}
+          empresaId={empresaId}
           caption="Cuentas por Cobrar"
         />
       )}
