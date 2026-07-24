@@ -232,10 +232,10 @@ export default function ReportesPage() {
   const { data: vendedoresList } = useVendedores();
   const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined, tipoFilter || undefined);
   if (error) console.error('[ReportesPage] query error:', error);
+  const [tab, setTab] = useState<ReportTab>('resumen');
   // Pestañas que NO dependen del rango de fechas ni de la consulta principal
   // (traen sus propios datos): se renderizan aunque el rango esté vacío / falle.
   const dataIndependent = tab === 'cuentas_cobrar' || tab === 'saldo_fecha' || tab === 'stock_fecha';
-  const [tab, setTab] = useState<ReportTab>('resumen');
 
   const statusOptions = [
     { value: 'borrador', label: 'Borrador' },
