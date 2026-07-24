@@ -43,33 +43,33 @@ export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteCuentasPorCobrar');
-      const { data } = await supabase
+      // Misma base que la vista de Finanzas / Por Cobrar (que sí lista todo):
+      // saldo_pendiente > 0 y status != cancelado, incluyendo saldos iniciales.
+      const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, dias_credito, clientes(nombre), cobro_aplicaciones(monto_aplicado, cobros!inner(status))')
+        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, dias_credito, status, es_saldo_inicial, clientes(nombre)')
         .eq('empresa_id', eid)
-        .eq('es_saldo_inicial', false)
-        .gt('saldo_pendiente', 0.009)
+        .gt('saldo_pendiente', 0)
         .neq('status', 'cancelado')
-        .neq('status', 'borrador')
         .order('fecha', { ascending: true });
+      if (error) throw error;
 
       return (data ?? []).map((v: any) => {
-        const abonado = (v.cobro_aplicaciones ?? [])
-          .filter((ca: any) => (ca.cobros?.status ?? 'activo') !== 'cancelado')
-          .reduce((s: number, ca: any) => s + Number(ca.monto_aplicado || 0), 0);
+        const total = Number(v.total) || 0;
+        const saldo = Number(v.saldo_pendiente) || 0;
         const esCredito = v.condicion_pago === 'credito';
         const dias = Number(v.dias_credito) || 0;
-        const vencimiento = esCredito && dias > 0 ? addDays(v.fecha, dias) : null;
+        const vencimiento = esCredito && dias > 0 && v.fecha ? addDays(v.fecha, dias) : null;
         return {
           id: v.id,
           folio: v.folio,
           fecha: v.fecha,
           cliente: v.clientes?.nombre ?? 'Sin cliente',
-          tipo: esCredito ? 'Crédito' : 'Contado',
+          tipo: v.es_saldo_inicial ? 'Saldo inicial' : esCredito ? 'Crédito' : 'Contado',
           vencimiento,
-          total: Number(v.total) || 0,
-          abonado,
-          saldo: Number(v.saldo_pendiente) || 0,
+          total,
+          abonado: Math.max(0, total - saldo),  // pagado = total − saldo (convención del sistema)
+          saldo,
           vencido: !!vencimiento && vencimiento < hoy,
         } as CxCRow;
       });
