@@ -30,14 +30,16 @@ function addDays(fecha: string, dias: number): string {
  * Cuentas por cobrar: UNA fila por folio (venta con saldo), no por producto.
  * Columnas: Fecha · Cliente · Folio · Tipo · Vence · Total · Abonado · Saldo.
  */
-export function ReporteCuentasPorCobrar({ desde, hasta }: { desde: string; hasta: string }) {
+// Cuentas por cobrar = saldo vivo de crédito. Muestra TODOS los folios con
+// saldo pendiente, sin importar la fecha (no es un reporte por período).
+export function ReporteCuentasPorCobrar(_props: { desde: string; hasta: string }) {
   const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
   const hoy = new Date().toISOString().slice(0, 10);
 
   const { data: rows = [], isLoading } = useQuery<CxCRow[]>({
-    queryKey: ['reporte-cxc', empresaId, desde, hasta],
+    queryKey: ['reporte-cxc', empresaId],
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteCuentasPorCobrar');
@@ -47,9 +49,8 @@ export function ReporteCuentasPorCobrar({ desde, hasta }: { desde: string; hasta
         .eq('empresa_id', eid)
         .eq('es_saldo_inicial', false)
         .gt('saldo_pendiente', 0.009)
-        .not('status', 'in', '("cancelado","borrador")')
-        .gte('fecha', desde)
-        .lte('fecha', hasta)
+        .neq('status', 'cancelado')
+        .neq('status', 'borrador')
         .order('fecha', { ascending: true });
 
       return (data ?? []).map((v: any) => {
@@ -125,7 +126,7 @@ export function ReporteCuentasPorCobrar({ desde, hasta }: { desde: string; hasta
               </tr>
             ))}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin saldos pendientes en este período</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Sin saldos pendientes</td></tr>
             )}
             {isLoading && (
               <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Cargando…</td></tr>
