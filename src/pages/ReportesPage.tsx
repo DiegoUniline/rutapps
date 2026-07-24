@@ -527,7 +527,7 @@ export default function ReportesPage() {
             desde={desde}
             hasta={hasta}
             filters={activeFilters.length > 0 ? activeFilters : undefined}
-            footer={resumenFooter}
+            footer={dataIndependent ? undefined : resumenFooter}
           >
             {tab === 'resumen' && <ReporteResumen data={data} />}
             {tab === 'ventas_producto' && <ReporteVentasProducto data={data} />}
