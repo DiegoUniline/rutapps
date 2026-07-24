@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasEmpresa, requireEmpresa } from '@/lib/empresaGuard';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, todayLocal } from '@/lib/utils';
 
 interface StockRow {
   producto_id: string;
@@ -23,13 +23,15 @@ const nf = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
 export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
   const { empresa } = useAuth();
   const empresaId = empresa?.id;
+  // "A la fecha" usa UNA sola fecha de corte (no un rango). Default: hoy.
+  const [fecha, setFecha] = useState(hasta || todayLocal());
 
   const { data: rows = [], isLoading } = useQuery<StockRow[]>({
-    queryKey: ['reporte-stock-fecha', empresaId, hasta],
+    queryKey: ['reporte-stock-fecha', empresaId, fecha],
     enabled: hasEmpresa(empresaId),
     queryFn: async () => {
       const eid = requireEmpresa(empresaId, 'ReporteStockFecha');
-      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: hasta } as any);
+      const { data, error } = await supabase.rpc('stock_a_la_fecha', { p_empresa_id: eid, p_fecha: fecha } as any);
       if (error) throw error;
       return (data ?? []) as StockRow[];
     },
@@ -41,7 +43,12 @@ export function ReporteStockFecha({ hasta }: { desde: string; hasta: string }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-muted-foreground">Existencia al corte del <strong>{fmtDate(hasta)}</strong> — reconstruida desde el kardex completo.</p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Stock a la fecha</label>
+        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+          className="border border-border rounded-md px-2 py-1 text-[12px] bg-background" />
+        <span className="text-[11px] text-muted-foreground">existencia reconstruida desde el kardex al {fmtDate(fecha)}</span>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         <Card label="Unidades" value={nf.format(totalUnidades)} />
         <Card label="Productos" value={String(productosUnicos)} />
