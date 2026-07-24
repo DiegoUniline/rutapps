@@ -9,6 +9,7 @@ import type { ExportColumn } from '@/lib/exportUtils';
 
 export type ReporteFuente =
   | 'ventas'
+  | 'ventas_folio'
   | 'cobranza'
   | 'inventario'
   | 'compras'
@@ -210,8 +211,26 @@ export interface FuenteMeta {
   entityFilters?: EntityFilterKey[];
 }
 
+const CAMPOS_VENTAS_FOLIO: CampoDef[] = [
+  { key: 'fecha',             label: 'Fecha',                format: 'date',     width: 12 },
+  { key: 'folio',             label: 'Folio',                format: 'text',     width: 14 },
+  { key: 'cliente_codigo',    label: 'Código Cliente',       format: 'text',     width: 12 },
+  { key: 'cliente',           label: 'Cliente',              format: 'text',     width: 28 },
+  { key: 'vendedor',          label: 'Vendedor',             format: 'text',     width: 20 },
+  { key: 'tipo',              label: 'Tipo',                 format: 'text',     width: 10 },
+  { key: 'status',            label: 'Estado',               format: 'text',     width: 12 },
+  { key: 'condicion_pago',    label: 'Condición de pago',    format: 'text',     width: 12 },
+  { key: 'forma_pago',        label: 'Forma de Pago',        format: 'text',     width: 14 },
+  { key: 'metodo_pago',       label: 'Método de pago',       format: 'text',     width: 18 },
+  { key: 'fecha_vencimiento', label: 'Fecha de vencimiento', format: 'date',     width: 14 },
+  { key: 'total_venta',       label: 'Total venta',          format: 'currency', width: 14 },
+  { key: 'abonado',           label: 'Abonado',              format: 'currency', width: 14 },
+  { key: 'saldo_pendiente',   label: 'Saldo pendiente',      format: 'currency', width: 14 },
+];
+
 export const FUENTES: FuenteMeta[] = [
   { key: 'ventas',     label: 'Ventas (líneas)',       description: 'Una fila por línea de venta.',  campos: CAMPOS_VENTAS,    statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'], entityFilters: ['cliente','vendedor','categoria','marca','condicion_pago','monto','search'] },
+  { key: 'ventas_folio', label: 'Ventas (por folio)',  description: 'Una fila por venta/folio — cuentas por cobrar (con abonado y vencimiento).', campos: CAMPOS_VENTAS_FOLIO, statusOptions: ['borrador','confirmado','entregado','facturado','cancelado'], tipoOptions: ['pedido','venta_directa','saldo_inicial'], entityFilters: ['cliente','vendedor','condicion_pago','monto','search'] },
   { key: 'cobranza',   label: 'Cobranza (aplicaciones)', description: 'Una fila por aplicación de cobro a venta.', campos: CAMPOS_COBRANZA, statusOptions: ['activo','cancelado'], entityFilters: ['cliente','cobrador','metodo_pago','monto','search'] },
   { key: 'inventario', label: 'Inventario (movimientos)', description: 'Kardex: una fila por movimiento.', campos: CAMPOS_INVENTARIO, tipoOptions: ['entrada','salida','ajuste','traspaso','venta','compra','devolucion','merma'], entityFilters: ['almacen','categoria','marca','search'] },
   { key: 'compras',    label: 'Compras (líneas)',      description: 'Una fila por línea de compra.', campos: CAMPOS_COMPRAS, statusOptions: ['borrador','pendiente','recibida','pagada','cancelada'], entityFilters: ['proveedor','almacen','condicion_pago','monto','search'] },
@@ -269,6 +288,7 @@ export async function runReporte(
 ): Promise<Record<string, any>[]> {
   switch (config.fuente) {
     case 'ventas':     return runVentas(config, filtros, empresaId);
+    case 'ventas_folio': return runVentasFolio(filtros, empresaId);
     case 'cobranza':   return runCobranza(filtros, empresaId);
     case 'inventario': return runInventario(filtros, empresaId);
     case 'compras':    return runCompras(filtros, empresaId);
@@ -386,6 +406,79 @@ async function runVentas(config: ReporteConfig, filtros: ReporteFiltros, empresa
     });
   }
   return rows;
+}
+
+// ─── Ventas por folio (cuentas por cobrar) ─────────────────────
+// Una fila por venta (no por línea): fecha, cliente, folio, tipo, vencimiento,
+// total, abonado (Σ cobros aplicados) y saldo. Para monitoreo de crédito.
+async function runVentasFolio(filtros: ReporteFiltros, empresaId: string) {
+  const ventas = await fetchAllPages<any>((from, to) => {
+    let q = supabase
+      .from('ventas')
+      .select('id, folio, fecha, tipo, status, condicion_pago, dias_credito, cliente_id, vendedor_id, total, saldo_pendiente')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: true })
+      .range(from, to);
+    if (filtros.fechaDesde) q = q.gte('fecha', filtros.fechaDesde);
+    if (filtros.fechaHasta) q = q.lte('fecha', filtros.fechaHasta);
+    if (filtros.status?.length) q = q.in('status', filtros.status as any);
+    if (filtros.tipo?.length) q = q.in('tipo', filtros.tipo as any);
+    if (filtros.clienteIds?.length) q = q.in('cliente_id', filtros.clienteIds);
+    if (filtros.vendedorIds?.length) q = q.in('vendedor_id', filtros.vendedorIds);
+    if (filtros.condicionPago?.length) q = q.in('condicion_pago', filtros.condicionPago as any);
+    if (typeof filtros.montoMin === 'number') q = q.gte('total', filtros.montoMin);
+    if (typeof filtros.montoMax === 'number') q = q.lte('total', filtros.montoMax);
+    if (filtros.search?.trim()) q = q.ilike('folio', `%${filtros.search.trim()}%`);
+    return q;
+  });
+  if (!ventas.length) return [];
+
+  const ventaIds = ventas.map(v => v.id);
+  const clienteIds = Array.from(new Set(ventas.map(v => v.cliente_id).filter(Boolean)));
+  const vendedorIds = Array.from(new Set(ventas.map(v => v.vendedor_id).filter(Boolean)));
+  const [clientesMap, vendedoresMap] = await Promise.all([
+    loadMap('clientes', clienteIds, 'id, codigo, nombre'),
+    loadMap('profiles', vendedorIds, 'id, nombre'),
+  ]);
+
+  // Abonado (Σ cobros aplicados no cancelados) + método de pago por venta.
+  const apps = await fetchAllPages<any>((from, to) =>
+    supabase.from('cobro_aplicaciones')
+      .select('venta_id, monto_aplicado, cobros!inner(metodo_pago, status)')
+      .in('venta_id', ventaIds)
+      .neq('cobros.status', 'cancelado')
+      .range(from, to)
+  );
+  const abonadoMap = new Map<string, number>();
+  const metodoMap = new Map<string, Set<string>>();
+  for (const a of apps) {
+    abonadoMap.set(a.venta_id, (abonadoMap.get(a.venta_id) ?? 0) + Number(a.monto_aplicado || 0));
+    const m = a.cobros?.metodo_pago;
+    if (m) { const s = metodoMap.get(a.venta_id) ?? new Set<string>(); s.add(METODO_LABELS[m] ?? m); metodoMap.set(a.venta_id, s); }
+  }
+
+  return ventas.map(v => {
+    const c = clientesMap.get(v.cliente_id);
+    const vd = vendedoresMap.get(v.vendedor_id);
+    const dias = Number(v.dias_credito) || 0;
+    let venc: string | null = null;
+    if (v.condicion_pago === 'credito' && dias > 0 && v.fecha) {
+      const d = new Date(v.fecha + 'T00:00:00');
+      d.setDate(d.getDate() + dias);
+      venc = d.toISOString().slice(0, 10);
+    }
+    return {
+      fecha: v.fecha, folio: v.folio, tipo: v.tipo, status: v.status,
+      cliente_codigo: c?.codigo ?? '', cliente: c?.nombre ?? '', vendedor: vd?.nombre ?? '',
+      condicion_pago: v.condicion_pago,
+      forma_pago: v.condicion_pago === 'contado' ? 'Contado' : v.condicion_pago === 'credito' ? 'Crédito' : 'Por definir',
+      metodo_pago: metodoMap.has(v.id) ? Array.from(metodoMap.get(v.id)!).join(', ') : '',
+      fecha_vencimiento: venc,
+      total_venta: Number(v.total || 0),
+      abonado: abonadoMap.get(v.id) ?? 0,
+      saldo_pendiente: Number(v.saldo_pendiente || 0),
+    };
+  });
 }
 
 // ─── Cobranza ──────────────────────────────────────────────────

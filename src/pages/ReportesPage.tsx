@@ -16,6 +16,9 @@ import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
+import { ReporteCuentasPorCobrar } from '@/components/reportes/ReporteCuentasPorCobrar';
+import { ReporteSaldoClienteFecha } from '@/components/reportes/ReporteSaldoClienteFecha';
+import { ReporteStockFecha } from '@/components/reportes/ReporteStockFecha';
 import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
 import { ReportLayout } from '@/components/reportes/ReportLayout';
 import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
@@ -26,7 +29,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'no_visitados';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'cuentas_cobrar' | 'saldo_fecha' | 'stock_fecha' | 'no_visitados';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -250,6 +253,9 @@ export default function ReportesPage() {
     { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
     { key: 'promociones', label: 'Promociones', icon: TrendingUp },
+    { key: 'cuentas_cobrar', label: 'Cuentas por cobrar', icon: DollarSign },
+    { key: 'saldo_fecha', label: 'Saldo a la fecha', icon: DollarSign },
+    { key: 'stock_fecha', label: 'Stock a la fecha', icon: BoxIcon },
     { key: 'no_visitados', label: 'No visitados', icon: UserX },
   ];
 
@@ -488,6 +494,9 @@ export default function ReportesPage() {
           devoluciones: 'Reporte de Devoluciones',
           utilidad: 'Reporte de Utilidad',
           promociones: 'Reporte de Promociones',
+          cuentas_cobrar: 'Cuentas por Cobrar',
+          saldo_fecha: 'Saldo de Clientes a la Fecha',
+          stock_fecha: 'Stock a la Fecha',
           no_visitados: 'Clientes No Visitados',
         };
 
@@ -527,6 +536,9 @@ export default function ReportesPage() {
             {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
             {tab === 'utilidad' && <ReporteUtilidad data={data} />}
             {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
+            {tab === 'cuentas_cobrar' && <ReporteCuentasPorCobrar desde={desde} hasta={hasta} />}
+            {tab === 'saldo_fecha' && <ReporteSaldoClienteFecha desde={desde} hasta={hasta} />}
+            {tab === 'stock_fecha' && <ReporteStockFecha desde={desde} hasta={hasta} />}
             {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );
