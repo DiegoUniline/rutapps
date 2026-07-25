@@ -21,6 +21,7 @@ interface Props {
   open: boolean;
   total: number;
   clienteNombre: string;
+  clienteId?: string | null;
   clienteCredito?: boolean;
   clienteDiasCredito?: number;
   clienteLimiteCredito?: number;
@@ -35,11 +36,12 @@ interface Props {
 }
 
 export function VentaCheckoutModal({
-  open, total, clienteNombre, clienteCredito, clienteDiasCredito = 0, clienteLimiteCredito = 0,
+  open, total, clienteNombre, clienteId, clienteCredito, clienteDiasCredito = 0, clienteLimiteCredito = 0,
   saving, cuentasPendientes = [], onConfirm, onClose,
 }: Props) {
 
   const { fmt } = useCurrency();
+  const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [payMode, setPayMode] = useState<PayMode>('efectivo');
   const [payEfectivo, setPayEfectivo] = useState(total.toFixed(2));
