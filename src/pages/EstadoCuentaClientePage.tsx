@@ -339,7 +339,7 @@ export default function EstadoCuentaClientePage() {
                     <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px] text-success">{fmt((v.total ?? 0) - (v.saldo_pendiente ?? 0))}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                    <TableCell className="text-right font-bold text-success">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   </TableRow>
                 ))}
                 {ventasPendientes.length === 0 && (
