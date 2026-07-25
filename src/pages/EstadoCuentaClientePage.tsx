@@ -176,7 +176,8 @@ export default function EstadoCuentaClientePage() {
         { value: 'no', label: 'Sin crédito' },
       ]},
       { key: 'saldo', label: 'Saldo', options: [
-        { value: 'con', label: 'Con saldo' },
+        { value: 'con', label: 'Con saldo pendiente' },
+        { value: 'favor', label: 'A favor' },
         { value: 'sin', label: 'Sin saldo' },
       ]},
     ];
@@ -196,7 +197,11 @@ export default function EstadoCuentaClientePage() {
     const credF = filters['credito'] ?? [];
     if (credF.length) list = list.filter(c => credF.includes(c.credito ? 'si' : 'no'));
     const saldoF = filters['saldo'] ?? [];
-    if (saldoF.length) list = list.filter(c => saldoF.includes(c.saldoPendiente > 0.01 ? 'con' : 'sin'));
+    if (saldoF.length) list = list.filter(c => {
+      if (c.saldoNeto > 0.01) return saldoF.includes('con');
+      if (c.saldoNeto < -0.01) return saldoF.includes('favor');
+      return saldoF.includes('sin');
+    });
     return list;
   }, [clientes, search, filters]);
 
@@ -205,7 +210,9 @@ export default function EstadoCuentaClientePage() {
   const selected = clientes?.find(c => c.id === selectedId);
 
   const totalPendienteGlobal = clientes?.reduce((s, c) => s + c.saldoPendiente, 0) ?? 0;
-  const clientesConSaldo = clientes?.filter(c => c.saldoPendiente > 0.01).length ?? 0;
+  const totalFavorGlobal = clientes?.reduce((s, c) => s + c.saldoFavor, 0) ?? 0;
+  const clientesConSaldo = clientes?.filter(c => c.saldoNeto > 0.01).length ?? 0;
+  const clientesConFavor = clientes?.filter(c => c.saldoFavor > 0.01).length ?? 0;
 
   const ventasPendientes = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) > 0.01) ?? [];
   const ventasPagadas = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) <= 0.01) ?? [];
