@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Plus } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { Button } from '@/components/ui/button';
+import { DevolucionVentaModal } from './DevolucionVentaModal';
 
 const MOTIVO_LABELS: Record<string, string> = {
   no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro',
@@ -10,10 +13,11 @@ const ACCION_LABELS: Record<string, string> = {
   reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero',
 };
 
-interface Props { ventaId: string; }
+interface Props { ventaId: string; clienteId?: string | null; folio?: string | null; readOnly?: boolean; }
 
-export function VentaDevolucionesTab({ ventaId }: Props) {
+export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Props) {
   const { fmt } = useCurrency();
+  const [showModal, setShowModal] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ['venta-devoluciones', ventaId],
     enabled: !!ventaId,
@@ -43,23 +47,46 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
 
   if (isLoading) return <div className="p-4 text-sm text-muted-foreground">Cargando...</div>;
 
+  const modal = showModal && (
+    <DevolucionVentaModal
+      venta={{ id: ventaId, folio, cliente_id: clienteId }}
+      onClose={() => setShowModal(false)}
+      onDone={() => setShowModal(false)}
+    />
+  );
+
+  const header = (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 text-xs">
+        {lineas.length > 0 && <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>}
+        {totalCredito > 0 && (
+          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
+        )}
+      </div>
+      {!readOnly && (
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowModal(true)}>
+          <Plus className="h-4 w-4" /> Registrar devolución
+        </Button>
+      )}
+    </div>
+  );
+
   if (!lineas.length) {
     return (
-      <div className="p-6 text-center text-sm text-muted-foreground">
-        <RotateCcw className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-        No hay devoluciones registradas para esta venta.
+      <div className="p-4 space-y-3">
+        {header}
+        <div className="p-6 text-center text-sm text-muted-foreground">
+          <RotateCcw className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+          No hay devoluciones registradas para esta venta.
+        </div>
+        {modal}
       </div>
     );
   }
 
   return (
     <div className="p-4 space-y-3">
-      <div className="flex items-center gap-3 text-xs">
-        <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>
-        {totalCredito > 0 && (
-          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
-        )}
-      </div>
+      {header}
       <table className="w-full text-[12px]">
         <thead>
           <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
@@ -105,6 +132,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
           </tfoot>
         )}
       </table>
+      {modal}
     </div>
   );
 }
