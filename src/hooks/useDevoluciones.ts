@@ -28,7 +28,7 @@ export function useSaveDevolucion() {
   const { empresa, profile } = useAuth();
   return useMutation({
     mutationFn: async ({ devolucion, lineas }: {
-      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; tipo: string; notas?: string; user_id: string };
+      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; reembolso_metodo?: string; tipo: string; notas?: string; user_id: string };
       lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string; accion?: string; monto_credito?: number }[];
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
