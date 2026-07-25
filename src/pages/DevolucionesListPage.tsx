@@ -329,7 +329,7 @@ export default function DevolucionesListPage() {
           {!!filtered.length && (
             <tfoot>
               <tr className="border-t-2 border-border bg-muted/30 font-bold">
-                <td colSpan={5} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
+                <td colSpan={6} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
                 <td className="py-2 px-3 text-right tabular-nums">{totalUds}</td>
                 <td colSpan={3}></td>
                 <td className="py-2 px-3 text-right text-destructive tabular-nums">{fmt(totalCredito)}</td>
