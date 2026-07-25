@@ -53,7 +53,7 @@ export function VentaGastosTab({ ventaId }: { ventaId: string }) {
         </thead>
         <tbody>
           {(gastos as any[]).map(g => (
-            <tr key={g.id} className="border-b border-border/50">
+            <tr key={g.id} className="border-b border-border">
               <td className="py-2 whitespace-nowrap">{fmtDate(g.fecha)}</td>
               <td className="py-2">{g.concepto}</td>
               <td className="py-2 text-muted-foreground">{METODO_LABELS[g.metodo_pago] ?? g.metodo_pago ?? '—'}</td>
