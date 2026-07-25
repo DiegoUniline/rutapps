@@ -264,10 +264,10 @@ export default function DevolucionesListPage() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
             )}
             {!isLoading && paged.length === 0 && (
-              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">
+              <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">
                 {hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}
               </td></tr>
             )}
