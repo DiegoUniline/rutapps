@@ -99,7 +99,7 @@ export function VentaFormHeader({
             <Printer className="h-3.5 w-3.5" /> Imprimir ticket
           </button>
         )}
-        {!isNew && onDevolucion && !readOnly && (
+        {!isNew && onDevolucion && (
           <button onClick={onDevolucion} className="btn-odoo-secondary text-xs">
             <Undo2 className="h-3.5 w-3.5" /> Devolución
           </button>
