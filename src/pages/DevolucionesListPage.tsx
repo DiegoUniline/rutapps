@@ -49,7 +49,7 @@ export default function DevolucionesListPage() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), usuarios:profiles!user_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       return data ?? [];
