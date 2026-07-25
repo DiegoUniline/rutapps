@@ -28,8 +28,8 @@ export function useSaveDevolucion() {
   const { empresa, profile } = useAuth();
   return useMutation({
     mutationFn: async ({ devolucion, lineas }: {
-      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; tipo: string; notas?: string; user_id: string };
-      lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string }[];
+      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; tipo: string; notas?: string; user_id: string };
+      lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string; accion?: string; monto_credito?: number }[];
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
       const { data: dev, error: devErr } = await supabase.from('devoluciones').insert({
@@ -41,7 +41,7 @@ export function useSaveDevolucion() {
 
       if (lineas.length > 0) {
         const { error: linErr } = await supabase.from('devolucion_lineas').insert(
-          lineas.map(l => ({ devolucion_id: dev.id, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo as any, notas: l.notas || null }))
+          lineas.map(l => ({ devolucion_id: dev.id, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo as any, notas: l.notas || null, accion: (l.accion as any) ?? null, monto_credito: l.monto_credito ?? 0 }))
         );
         if (linErr) throw linErr;
       }
@@ -74,6 +74,9 @@ export function useSaveDevolucion() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['devoluciones'] });
+      qc.invalidateQueries({ queryKey: ['venta-devoluciones'] });
+      qc.invalidateQueries({ queryKey: ['venta-pagos'] });
+      qc.invalidateQueries({ queryKey: ['venta'] });
       qc.invalidateQueries({ queryKey: ['carga-activa'] });
       qc.invalidateQueries({ queryKey: ['carga'] });
       qc.invalidateQueries({ queryKey: ['cargas'] });
