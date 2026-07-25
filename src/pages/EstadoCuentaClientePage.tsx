@@ -297,7 +297,7 @@ export default function EstadoCuentaClientePage() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Saldo pendiente</p>
-              <p className="text-lg font-bold text-destructive">{fmt(totalSaldo)}</p>
+              <p className="text-lg font-bold text-success">{fmt(totalSaldo)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Crédito</p>
