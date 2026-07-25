@@ -436,6 +436,13 @@ export default function VentaFormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showDevolucion && !isNew && (
+        <DevolucionVentaModal
+          venta={{ id: form.id!, folio: form.folio, cliente_id: form.cliente_id }}
+          onClose={() => setShowDevolucion(false)}
+          onDone={() => { setShowDevolucion(false); queryClient.invalidateQueries({ queryKey: ['venta-devoluciones', form.id] }); }}
+        />
+      )}
     </div>
   );
 }
