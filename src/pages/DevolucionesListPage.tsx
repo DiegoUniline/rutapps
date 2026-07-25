@@ -47,12 +47,20 @@ export default function DevolucionesListPage() {
     queryKey: ['devoluciones-list-all', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), usuarios:profiles!user_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!devoluciones_vendedor_id_profiles_fkey(id,nombre), ventas(folio, vendedor_id, vendedor:profiles!ventas_vendedor_id_fkey(id,nombre)), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
-      return data ?? [];
+      if (error) console.error('[devoluciones] query error', error);
+      const list = data ?? [];
+      const userIds = Array.from(new Set(list.map((r: any) => r.user_id).filter(Boolean)));
+      let userMap: Record<string, string> = {};
+      if (userIds.length) {
+        const { data: us } = await (supabase as any).from('profiles').select('id,nombre').in('id', userIds as any);
+        userMap = Object.fromEntries((us ?? []).map((u: any) => [u.id, u.nombre]));
+      }
+      return list.map((r: any) => ({ ...r, registradoPor: r.user_id ? userMap[r.user_id] ?? null : null }));
     },
   });
 
