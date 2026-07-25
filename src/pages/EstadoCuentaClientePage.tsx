@@ -550,9 +550,9 @@ export default function EstadoCuentaClientePage() {
                   <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                   <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
-                  <TableCell className="text-right font-bold text-success tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
                   <TableCell className={cn("text-right font-bold tabular-nums",
-                    neto > 0.01 ? 'text-destructive' : neto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                    neto > 0.01 ? 'text-success' : neto < -0.01 ? 'text-destructive' : 'text-muted-foreground')}>
                     {neto < -0.01 ? `-${fmt(Math.abs(neto))}` : fmt(neto)}
                   </TableCell>
                   <TableCell />
