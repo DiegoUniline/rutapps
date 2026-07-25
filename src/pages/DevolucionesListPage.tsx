@@ -113,6 +113,7 @@ export default function DevolucionesListPage() {
     for (const r of rows as any[]) {
       if (r.cliente_id && r.clientes?.nombre) cm.set(r.cliente_id, r.clientes.nombre);
       if (r.vendedor_id && r.vendedores?.nombre) vm.set(r.vendedor_id, r.vendedores.nombre);
+      else if (r.user_id && r.usuarios?.nombre) vm.set(r.user_id, r.usuarios.nombre);
     }
     return {
       clientes: [...cm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
