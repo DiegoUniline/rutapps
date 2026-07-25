@@ -118,7 +118,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
                 </span>
               </td>
               <td className="py-2 text-right font-semibold">
-                {l.monto_credito > 0 ? <span className="text-destructive">${fmt(l.monto_credito)}</span> : '—'}
+                {l.monto_credito > 0 ? <span className="text-destructive">{fmt(l.monto_credito)}</span> : '—'}
               </td>
             </tr>
           ))}
