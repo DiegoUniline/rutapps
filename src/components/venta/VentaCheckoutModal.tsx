@@ -413,6 +413,11 @@ export function VentaCheckoutModal({
                       <span className="text-destructive font-medium">Faltante:</span>
                       <span className="font-bold text-destructive tabular-nums">{fmt(faltante)}</span>
                     </div>
+                  {favorAplicado > 0 && (
+                    <div className="flex items-center gap-3 text-[12px]">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-medium">Saldo a favor:</span>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">−{fmt(favorAplicado)}</span>
+                    </div>
                   )}
                   {totalAplicarCuentas > 0 && (
                     <div className="flex items-center gap-3 text-[12px]">
