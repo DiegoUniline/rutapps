@@ -60,7 +60,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
       <div className="flex items-center gap-3 text-xs">
         {lineas.length > 0 && <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>}
         {totalCredito > 0 && (
-          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
+          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: {fmt(totalCredito)}</span>
         )}
       </div>
       {!readOnly && (
@@ -118,7 +118,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
                 </span>
               </td>
               <td className="py-2 text-right font-semibold">
-                {l.monto_credito > 0 ? <span className="text-destructive">${fmt(l.monto_credito)}</span> : '—'}
+                {l.monto_credito > 0 ? <span className="text-destructive">{fmt(l.monto_credito)}</span> : '—'}
               </td>
             </tr>
           ))}
@@ -127,7 +127,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
           <tfoot>
             <tr className="border-t border-border font-bold text-[11px]">
               <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
-              <td className="py-2 text-right text-destructive">${fmt(totalCredito)}</td>
+              <td className="py-2 text-right text-destructive">{fmt(totalCredito)}</td>
             </tr>
           </tfoot>
         )}
