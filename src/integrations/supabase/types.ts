@@ -2904,6 +2904,7 @@ export type Database = {
       }
       devoluciones: {
         Row: {
+          almacen_destino_id: string | null
           carga_id: string | null
           cliente_id: string | null
           created_at: string
@@ -2911,12 +2912,14 @@ export type Database = {
           fecha: string
           id: string
           notas: string | null
+          reembolso_efectivo: boolean
           tipo: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id: string | null
           venta_id: string | null
         }
         Insert: {
+          almacen_destino_id?: string | null
           carga_id?: string | null
           cliente_id?: string | null
           created_at?: string
@@ -2924,12 +2927,14 @@ export type Database = {
           fecha?: string
           id?: string
           notas?: string | null
+          reembolso_efectivo?: boolean
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id?: string | null
           venta_id?: string | null
         }
         Update: {
+          almacen_destino_id?: string | null
           carga_id?: string | null
           cliente_id?: string | null
           created_at?: string
@@ -2937,12 +2942,20 @@ export type Database = {
           fecha?: string
           id?: string
           notas?: string | null
+          reembolso_efectivo?: boolean
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id?: string
           vendedor_id?: string | null
           venta_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "devoluciones_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "devoluciones_carga_id_fkey"
             columns: ["carga_id"]
