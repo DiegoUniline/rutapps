@@ -2913,6 +2913,7 @@ export type Database = {
           id: string
           notas: string | null
           reembolso_efectivo: boolean
+          reembolso_metodo: string | null
           tipo: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id: string | null
@@ -2928,6 +2929,7 @@ export type Database = {
           id?: string
           notas?: string | null
           reembolso_efectivo?: boolean
+          reembolso_metodo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id?: string | null
@@ -2943,6 +2945,7 @@ export type Database = {
           id?: string
           notas?: string | null
           reembolso_efectivo?: boolean
+          reembolso_metodo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id?: string
           vendedor_id?: string | null
@@ -3596,40 +3599,56 @@ export type Database = {
         Row: {
           concepto: string
           created_at: string
+          devolucion_id: string | null
           empresa_id: string
           fecha: string
           foto_url: string | null
           id: string
+          metodo_pago: string | null
           monto: number
           notas: string | null
           user_id: string
           vendedor_id: string | null
+          venta_id: string | null
         }
         Insert: {
           concepto: string
           created_at?: string
+          devolucion_id?: string | null
           empresa_id: string
           fecha?: string
           foto_url?: string | null
           id?: string
+          metodo_pago?: string | null
           monto?: number
           notas?: string | null
           user_id: string
           vendedor_id?: string | null
+          venta_id?: string | null
         }
         Update: {
           concepto?: string
           created_at?: string
+          devolucion_id?: string | null
           empresa_id?: string
           fecha?: string
           foto_url?: string | null
           id?: string
+          metodo_pago?: string | null
           monto?: number
           notas?: string | null
           user_id?: string
           vendedor_id?: string | null
+          venta_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "gastos_devolucion_id_fkey"
+            columns: ["devolucion_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gastos_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -3642,6 +3661,13 @@ export type Database = {
             columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
         ]
