@@ -25,9 +25,19 @@ export function ReporteResumen({ data }: { data: any }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPI label="Gastos" value={fmt(data.totalGastos)} />
         <KPI label="Utilidad neta" value={fmt(data.utilidadNeta)} sub={data.totalVentas > 0 ? `${Math.round((data.utilidadNeta / data.totalVentas) * 100)}% margen` : ''} />
-        <KPI label="Cobros" value={fmt(data.totalCobros)} sub={`${data.numCobros} cobros`} />
+        <KPI label="Cobros" value={fmt(data.totalCobros)} sub="dinero recibido" />
         <KPI label="Por cobrar" value={fmt(data.totalPendiente)} />
       </div>
+
+      {data.totalSaldoFavorAplicado > 0.01 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <KPI
+            label="Saldo a favor aplicado"
+            value={fmt(data.totalSaldoFavorAplicado)}
+            sub="no es dinero recibido"
+          />
+        </div>
+      )}
     </div>
   );
 }

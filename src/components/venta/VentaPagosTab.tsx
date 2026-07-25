@@ -12,6 +12,17 @@ interface Pago {
   cobros?: { fecha?: string; metodo_pago?: string; referencia?: string; status?: string } | null;
 }
 
+const METODO_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  tarjeta: 'Tarjeta',
+  cheque: 'Cheque',
+  saldo_favor: 'Saldo a favor',
+  otro: 'Otro',
+};
+const metodoLabel = (m?: string | null) =>
+  m ? (METODO_LABELS[m] ?? m.replace(/_/g, ' ')) : '—';
+
 interface VentaPagosTabProps {
   pagos: Pago[];
   totalPagado: number;
@@ -147,8 +158,8 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
               <div key={p.id} className={cn('border border-border rounded-lg p-3 bg-card', cancelado && 'opacity-50')}>
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium capitalize flex items-center gap-2">
-                      {p.cobros?.metodo_pago ?? '—'}
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {metodoLabel(p.cobros?.metodo_pago)}
                       {cancelado && <span className="text-[10px] uppercase text-destructive">Cancelado</span>}
                     </div>
                     <div className="text-xs text-muted-foreground">{fmtDate(p.cobros?.fecha ?? '')} {p.cobros?.referencia ? `· ${p.cobros.referencia}` : ''}</div>
@@ -182,8 +193,8 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
               return (
                 <tr key={p.id} className={cn('border-b border-table-border', cancelado && 'opacity-50')}>
                   <td className="py-2 px-2">{fmtDate(p.cobros?.fecha ?? '')}</td>
-                  <td className="py-2 px-2 capitalize">
-                    {p.cobros?.metodo_pago ?? '—'}
+                  <td className="py-2 px-2">
+                    {metodoLabel(p.cobros?.metodo_pago)}
                     {cancelado && <span className="ml-2 text-[10px] uppercase text-destructive">Cancelado</span>}
                   </td>
                   <td className="py-2 px-2 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
