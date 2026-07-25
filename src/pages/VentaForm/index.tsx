@@ -425,6 +425,7 @@ export default function VentaFormPage() {
             open={showCheckout}
             total={totals.total}
             clienteNombre={cliente?.nombre ?? 'Sin cliente'}
+            clienteId={form.cliente_id}
             clienteCredito={!!cliente?.credito}
             clienteDiasCredito={(cliente as any)?.dias_credito ?? 0}
             clienteLimiteCredito={(cliente as any)?.limite_credito ?? 0}
