@@ -1,4 +1,4 @@
-import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, RotateCcw, User } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, RotateCcw, User, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusVenta } from '@/types';
 
