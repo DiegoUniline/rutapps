@@ -126,7 +126,7 @@ export default function DevolucionesListPage() {
     return (rows as any[]).filter(d => {
       const lineas = d.devolucion_lineas ?? [];
       if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
-      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter) return false;
+      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter && d.user_id !== vendedorFilter) return false;
       if (desde && d.fecha < desde) return false;
       if (hasta && d.fecha > hasta) return false;
       if (motivoFilter !== 'all' && !lineas.some((l: any) => l.motivo === motivoFilter)) return false;
