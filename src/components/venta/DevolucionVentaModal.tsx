@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
 import { useCurrency } from '@/hooks/useCurrency';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ const METODOS = [
   { value: 'deposito', label: 'Depósito' },
 ];
 
+type Destino = 'saldo_favor' | 'aplicar_venta' | 'devolver_dinero';
+
 interface Props {
   venta: { id: string; folio?: string | null; cliente_id?: string | null };
   onClose: () => void;
@@ -44,16 +47,14 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
   const [qty, setQty] = useState<Record<string, number>>({});
   const [motivo, setMotivo] = useState('no_vendido');
   const [almacenId, setAlmacenId] = useState('');
-  const [bajaSaldo, setBajaSaldo] = useState(true);
-  const [montoSaldo, setMontoSaldo] = useState('');
+  const [destino, setDestino] = useState<Destino>('saldo_favor');
+  const [monto, setMonto] = useState('');
   const [montoTocado, setMontoTocado] = useState(false);
-  const [reembolso, setReembolso] = useState(false);
   const [reembolsoMetodo, setReembolsoMetodo] = useState('efectivo');
   const [registrarGasto, setRegistrarGasto] = useState(false);
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Líneas de la venta
   const { data: lineas = [] } = useQuery({
     queryKey: ['venta-lineas-devolucion', venta.id],
     queryFn: async () => {
@@ -65,7 +66,6 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     },
   });
 
-  // Totales de la venta (para el resumen)
   const { data: ventaInfo } = useQuery({
     queryKey: ['venta-info-devolucion', venta.id],
     queryFn: async () => {
@@ -76,8 +76,8 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
   const ventaTotal = Number(ventaInfo?.total) || 0;
   const ventaSaldo = Number(ventaInfo?.saldo_pendiente) || 0;
   const ventaPagado = r2(ventaTotal - ventaSaldo);
+  const tieneSaldo = ventaSaldo > 0.01;
 
-  // Almacenes destino
   const { data: almacenes = [] } = useQuery({
     queryKey: ['almacenes-devolucion', empresa?.id],
     enabled: !!empresa?.id,
@@ -90,20 +90,20 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     },
   });
 
-  // Valor devuelto de una línea = total de la línea (con impuestos) prorrateado.
-  const valorLinea = (l: any) => {
-    const vend = Number(l.cantidad) || 0;
-    const dev = Number(qty[l.producto_id]) || 0;
-    if (vend <= 0) return 0;
-    return r2((Number(l.total) || 0) * (dev / vend));
+  // Precio unitario CON impuestos (como en ventas) = total de línea / cantidad.
+  const precioConIva = (l: any) => {
+    const c = Number(l.cantidad) || 0;
+    return c > 0 ? r2((Number(l.total) || 0) / c) : r2(Number(l.precio_unitario) || 0);
   };
+  const valorLinea = (l: any) => r2(precioConIva(l) * (Number(qty[l.producto_id]) || 0));
 
   const valorSugerido = useMemo(
     () => r2((lineas as any[]).reduce((s, l) => s + valorLinea(l), 0)),
     [qty, lineas],
   );
-  const montoSaldoNum = montoTocado ? r2(Number(montoSaldo) || 0) : valorSugerido;
-  const nuevoSaldo = bajaSaldo ? Math.max(0, r2(ventaSaldo - montoSaldoNum)) : ventaSaldo;
+  const esDinero = destino === 'devolver_dinero';
+  const montoNum = esDinero ? valorSugerido : (montoTocado ? r2(Number(monto) || 0) : valorSugerido);
+  const nuevoSaldo = destino === 'aplicar_venta' ? Math.max(0, r2(ventaSaldo - montoNum)) : ventaSaldo;
 
   const setLineQty = (pid: string, vendida: number, val: number) => {
     setQty(prev => ({ ...prev, [pid]: Math.max(0, Math.min(vendida, val || 0)) }));
@@ -118,14 +118,15 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     if (items.length === 0) { toast.error('Indica al menos una cantidad a devolver'); return; }
     setSaving(true);
     try {
-      const accion = bajaSaldo ? 'nota_credito' : reembolso ? 'devolucion_dinero' : 'reposicion';
+      const emiteCredito = destino !== 'devolver_dinero';
+      const accion = esDinero ? 'devolucion_dinero' : 'nota_credito';
       const dev: any = await save.mutateAsync({
         devolucion: {
           venta_id: venta.id,
           cliente_id: venta.cliente_id ?? undefined,
           almacen_destino_id: almacenId,
-          reembolso_efectivo: reembolso,
-          reembolso_metodo: reembolso ? reembolsoMetodo : undefined,
+          reembolso_efectivo: esDinero,
+          reembolso_metodo: esDinero ? reembolsoMetodo : undefined,
           tipo: 'almacen',
           notas: notas || undefined,
           user_id: user.id,
@@ -135,28 +136,31 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
           cantidad: Number(qty[l.producto_id]) || 0,
           motivo,
           accion,
-          monto_credito: bajaSaldo ? valorLinea(l) : 0,
+          // El crédito emitido (saldo a favor) sale de monto_credito con accion nota_credito.
+          monto_credito: emiteCredito ? valorLinea(l) : 0,
         })),
       });
 
-      // Baja de saldo → nota de crédito (cobro nota_credito aplicado a la venta).
-      if (bajaSaldo && montoSaldoNum > 0 && venta.cliente_id) {
+      // Aplicar a ESTA venta = usar el crédito recién emitido como pago 'saldo_favor'
+      // sobre la venta → baja su saldo (emitido − usado se neutraliza en la cuenta).
+      if (destino === 'aplicar_venta' && montoNum > 0 && venta.cliente_id) {
+        const aplicar = Math.min(montoNum, ventaSaldo);
         const { error: cErr } = await (supabase as any).rpc('aplicar_cobro', {
           p_empresa_id: empresa.id,
           p_cliente_id: venta.cliente_id,
-          p_monto: montoSaldoNum,
-          p_metodo: 'nota_credito',
+          p_monto: aplicar,
+          p_metodo: SALDO_FAVOR_METODO,
           p_referencia: `Devolución ${venta.folio ?? ''}`.trim(),
           p_fecha: new Date().toISOString().slice(0, 10),
-          p_aplicaciones: [{ venta_id: venta.id, monto_aplicado: montoSaldoNum }],
-          p_notas: 'Nota de crédito por devolución',
+          p_aplicaciones: [{ venta_id: venta.id, monto_aplicado: aplicar }],
+          p_notas: 'Nota de crédito por devolución aplicada a la venta',
           p_user_id: user.id,
         });
         if (cErr) throw cErr;
       }
 
-      // Reembolso registrado como egreso en Gastos, ligado a la venta.
-      if (reembolso && registrarGasto && valorSugerido > 0) {
+      // Devolver dinero → egreso en Gastos ligado a la venta (opcional).
+      if (esDinero && registrarGasto && valorSugerido > 0) {
         const { error: gErr } = await supabase.from('gastos').insert({
           empresa_id: empresa.id,
           venta_id: venta.id,
@@ -202,7 +206,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
                   <div key={l.producto_id} className="px-3 py-1.5 text-xs border-t border-border grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-6 truncate">{l.productos?.nombre || l.descripcion || '—'}</div>
                     <div className="col-span-2 text-right tabular-nums text-muted-foreground">{vendida}</div>
-                    <div className="col-span-2 text-right tabular-nums text-muted-foreground">{fmt(r2(Number(l.precio_unitario) || 0))}</div>
+                    <div className="col-span-2 text-right tabular-nums text-muted-foreground">{fmt(precioConIva(l))}</div>
                     <div className="col-span-2">
                       <Input type="number" min={0} max={vendida} inputMode="decimal"
                         className="h-7 text-right text-xs"
@@ -233,31 +237,36 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
             </div>
           </div>
 
-          {/* Baja saldo */}
+          {/* ¿Qué hacer con el valor devuelto? */}
           <div className="border border-border rounded-lg p-3 space-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={bajaSaldo} onChange={e => setBajaSaldo(e.target.checked)} />
-              <span>Bajar el saldo de esta venta (nota de crédito)</span>
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase">¿Qué hacer con el valor de la devolución?</p>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="radio" name="destino" className="mt-1" checked={destino === 'saldo_favor'} onChange={() => setDestino('saldo_favor')} />
+              <span><strong>Saldo a favor</strong> — crédito para próximas compras del cliente.</span>
             </label>
-            {bajaSaldo && (
-              <div className="flex items-center gap-2 pl-6 flex-wrap">
-                <span className="text-xs text-muted-foreground">Monto a descontar:</span>
+            <label className={`flex items-start gap-2 text-sm ${!tieneSaldo ? 'opacity-40' : ''}`}>
+              <input type="radio" name="destino" className="mt-1" disabled={!tieneSaldo} checked={destino === 'aplicar_venta'} onChange={() => setDestino('aplicar_venta')} />
+              <span><strong>Aplicar a esta venta</strong> — baja el saldo de esta venta{!tieneSaldo ? ' (ya está pagada)' : ` (${fmt(ventaSaldo)} pendiente)`}.</span>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="radio" name="destino" className="mt-1" checked={destino === 'devolver_dinero'} onChange={() => setDestino('devolver_dinero')} />
+              <span><strong>Devolver el dinero</strong> — reembolso al cliente.</span>
+            </label>
+
+            {/* Monto (crédito) editable para saldo_favor / aplicar_venta */}
+            {!esDinero && (
+              <div className="flex items-center gap-2 pl-6 pt-1 flex-wrap">
+                <span className="text-xs text-muted-foreground">Monto:</span>
                 <Input type="number" min={0} step="0.01" inputMode="decimal" className="h-7 w-32 text-right text-xs"
-                  value={montoTocado ? montoSaldo : String(valorSugerido)}
-                  onChange={e => { setMontoTocado(true); setMontoSaldo(e.target.value); }} />
-                {montoTocado && <button type="button" className="text-[11px] text-primary underline" onClick={() => { setMontoTocado(false); setMontoSaldo(''); }}>usar sugerido</button>}
+                  value={montoTocado ? monto : String(valorSugerido)}
+                  onChange={e => { setMontoTocado(true); setMonto(e.target.value); }} />
+                {montoTocado && <button type="button" className="text-[11px] text-primary underline" onClick={() => { setMontoTocado(false); setMonto(''); }}>usar sugerido</button>}
               </div>
             )}
-          </div>
 
-          {/* Reembolso */}
-          <div className="border border-border rounded-lg p-3 space-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={reembolso} onChange={e => setReembolso(e.target.checked)} />
-              <span>Se devolvió el dinero al cliente</span>
-            </label>
-            {reembolso && (
-              <div className="pl-6 space-y-2">
+            {/* Devolver dinero: método + gasto */}
+            {esDinero && (
+              <div className="pl-6 pt-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-muted-foreground">Método:</span>
                   <select value={reembolsoMetodo} onChange={e => setReembolsoMetodo(e.target.value)} className="border border-border rounded-md px-2 py-1 text-xs bg-background">
@@ -278,18 +287,19 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
             <Input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Opcional…" />
           </div>
 
-          {/* Resumen de la cuenta */}
+          {/* Resumen */}
           <div className="bg-accent/30 border border-border rounded-lg p-3 text-xs">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div><div className="text-[10px] text-muted-foreground uppercase">Total venta</div><div className="font-bold tabular-nums">{fmt(ventaTotal)}</div></div>
               <div><div className="text-[10px] text-muted-foreground uppercase">Pagado</div><div className="font-bold tabular-nums">{fmt(ventaPagado)}</div></div>
               <div><div className="text-[10px] text-muted-foreground uppercase">Saldo actual</div><div className="font-bold tabular-nums">{fmt(ventaSaldo)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground uppercase">Saldo tras devol.</div><div className={`font-bold tabular-nums ${bajaSaldo ? 'text-primary' : ''}`}>{fmt(nuevoSaldo)}</div></div>
+              <div><div className="text-[10px] text-muted-foreground uppercase">Saldo tras devol.</div><div className={`font-bold tabular-nums ${destino === 'aplicar_venta' ? 'text-primary' : ''}`}>{fmt(nuevoSaldo)}</div></div>
             </div>
             <div className="mt-2 pt-2 border-t border-border space-y-0.5">
               <p>• Regresa <strong>{items.reduce((s, l) => s + (Number(qty[l.producto_id]) || 0), 0)}</strong> unidad(es) a <strong>{(almacenes as any[]).find(a => a.id === almacenId)?.nombre ?? '—'}</strong>.</p>
-              {bajaSaldo && <p>• Baja el saldo en <strong>{fmt(montoSaldoNum)}</strong> (nota de crédito).</p>}
-              {reembolso && <p>• Reembolso de <strong>{fmt(valorSugerido)}</strong> en <strong>{METODOS.find(m => m.value === reembolsoMetodo)?.label}</strong>{registrarGasto ? ' — se registra en Gastos.' : ' (solo anotado).'}</p>}
+              {destino === 'saldo_favor' && <p>• Genera <strong>{fmt(montoNum)}</strong> de <strong>saldo a favor</strong> del cliente (para próximas compras).</p>}
+              {destino === 'aplicar_venta' && <p>• Baja el saldo de esta venta en <strong>{fmt(Math.min(montoNum, ventaSaldo))}</strong>.</p>}
+              {esDinero && <p>• Reembolso de <strong>{fmt(valorSugerido)}</strong> en <strong>{METODOS.find(m => m.value === reembolsoMetodo)?.label}</strong>{registrarGasto ? ' — se registra en Gastos.' : ' (solo anotado).'}</p>}
             </div>
           </div>
         </div>
