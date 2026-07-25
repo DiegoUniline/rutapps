@@ -57,8 +57,17 @@ export default function DevolucionesListPage() {
       const userIds = Array.from(new Set(list.map((r: any) => r.user_id).filter(Boolean)));
       let userMap: Record<string, string> = {};
       if (userIds.length) {
-        const { data: us } = await (supabase as any).from('profiles').select('id,nombre').in('id', userIds as any);
-        userMap = Object.fromEntries((us ?? []).map((u: any) => [u.id, u.nombre]));
+        const { data: us } = await (supabase as any)
+          .from('profiles')
+          .select('id,user_id,nombre')
+          .eq('empresa_id', empresa!.id)
+          .or(`user_id.in.(${userIds.join(',')}),id.in.(${userIds.join(',')})`);
+        userMap = Object.fromEntries(
+          (us ?? []).flatMap((u: any) => [
+            u.user_id ? [u.user_id, u.nombre] : null,
+            u.id ? [u.id, u.nombre] : null,
+          ].filter(Boolean))
+        );
       }
       return list.map((r: any) => ({ ...r, registradoPor: r.user_id ? userMap[r.user_id] ?? null : null }));
     },
