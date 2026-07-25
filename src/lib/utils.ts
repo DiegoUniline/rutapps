@@ -71,6 +71,17 @@ export function todayInTimezone(tz?: string | null): string {
   }
 }
 
+/**
+ * Suma días a una fecha 'yyyy-mm-dd' sin drift por zona horaria.
+ * (Evita el bug de mezclar setDate local con toISOString UTC.)
+ */
+export function addDaysToDate(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** Module-level timezone set by AuthContext when empresa loads */
 let _empresaTimezone: string = 'America/Mexico_City';
 

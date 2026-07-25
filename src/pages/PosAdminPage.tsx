@@ -474,7 +474,7 @@ function VentasPosPanel({ empresaId }: { empresaId: string }) {
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs">{r.folio}</td>
-                      <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.created_at || r.fecha)}</td>
+                      <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDate(r.fecha || r.created_at)}</td>
                       <td className="px-3 py-2">{r.cliente?.nombre ?? '—'}</td>
                       <td className="px-3 py-2 text-xs">{r.vendedor_nombre}</td>
                       <td className="px-3 py-2 text-xs">{r.caja_turnos?.caja_nombre ?? '—'}</td>
@@ -760,7 +760,7 @@ function TurnoDetalleModal({ turnoId, onClose }: { turnoId: string | null; onClo
                     {(q.data?.ventas ?? []).map((v: any) => (
                       <tr key={v.id} className="border-t border-border/50">
                         <td className="px-2 py-1.5 font-mono">{v.folio}</td>
-                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(v.created_at || v.fecha)}</td>
+                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{fmtDate(v.fecha || v.created_at)}</td>
                         <td className="px-2 py-1.5">{v.cliente?.nombre ?? '—'}</td>
                         <td className="px-2 py-1.5">{v.vendedor_nombre ?? '—'}</td>
                         <td className="px-2 py-1.5 capitalize">{v.condicion_pago}</td>

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
 import { useCurrency } from '@/hooks/useCurrency';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
+import { todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,8 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
     if (items.length === 0) { toast.error('Indica al menos una cantidad a devolver'); return; }
     setSaving(true);
     try {
+      // Fecha de HOY en la zona horaria de la empresa (no UTC del dispositivo).
+      const hoy = todayInTimezone(empresa?.zona_horaria);
       const emiteCredito = destino !== 'devolver_dinero';
       const accion = esDinero ? 'devolucion_dinero' : 'nota_credito';
       const dev: any = await save.mutateAsync({
@@ -128,6 +131,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
           reembolso_efectivo: esDinero,
           reembolso_metodo: esDinero ? reembolsoMetodo : undefined,
           tipo: 'almacen',
+          fecha: hoy,
           notas: notas || undefined,
           user_id: user.id,
         },
@@ -151,7 +155,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
           p_monto: aplicar,
           p_metodo: SALDO_FAVOR_METODO,
           p_referencia: `Devolución ${venta.folio ?? ''}`.trim(),
-          p_fecha: new Date().toISOString().slice(0, 10),
+          p_fecha: hoy,
           p_aplicaciones: [{ venta_id: venta.id, monto_aplicado: aplicar }],
           p_notas: 'Nota de crédito por devolución aplicada a la venta',
           p_user_id: user.id,
@@ -168,6 +172,7 @@ export function DevolucionVentaModal({ venta, onClose, onDone }: Props) {
           user_id: user.id,
           monto: valorSugerido,
           metodo_pago: reembolsoMetodo,
+          fecha: hoy,
           concepto: `Reembolso devolución ${venta.folio ?? ''}`.trim(),
           notas: notas || null,
         } as any);

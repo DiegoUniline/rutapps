@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import { todayLocal } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
 import { SingleDatePicker } from '@/components/shared/SingleDatePicker';
 import { buildCotizacionPdf, buildCotizacionWhatsappMessage, cotizacionPublicUrl } from '@/lib/cotizacionPdf';
@@ -37,10 +38,9 @@ function emptyLine(): Linea {
   };
 }
 
+// Fecha de hoy en la zona horaria de la empresa (no la del dispositivo).
 function todayISO() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return todayLocal();
 }
 
 export default function CotizacionFormPage() {

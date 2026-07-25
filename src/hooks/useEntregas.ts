@@ -417,6 +417,7 @@ export function useCrearEntrega() {
           cliente_id: clienteId ?? null,
           almacen_id: almacenId ?? null,
           status: 'borrador',
+          fecha: todayLocal(),
           orden_entrega: ordenEntrega,
         } as any)
         .select('id, folio')
@@ -495,6 +496,7 @@ export function useEntregaExpress() {
           cliente_id: clienteId ?? null,
           almacen_id: almacenId,
           status: 'borrador',
+          fecha: todayLocal(),
           orden_entrega: ordenEntrega,
         } as any)
         .select('id, folio')

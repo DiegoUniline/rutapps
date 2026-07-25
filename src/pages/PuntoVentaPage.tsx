@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { todayInTimezone, cn } from '@/lib/utils';
+import { todayInTimezone, addDaysToDate, cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
@@ -1669,9 +1669,7 @@ export default function PuntoVentaPage() {
                 setCondicion('contado');
                 // Auto-set credit expiry
                 if (clienteDiasCredito > 0) {
-                  const d = new Date();
-                  d.setDate(d.getDate() + clienteDiasCredito);
-                  setFechaVencimiento(d.toISOString().slice(0, 10));
+                  setFechaVencimiento(addDaysToDate(todayInTimezone(empresa?.zona_horaria), clienteDiasCredito));
                 }
                 setShowPago(true);
               }}
@@ -1794,8 +1792,7 @@ export default function PuntoVentaPage() {
                       setPayMode('efectivo');
                       setPayEfectivo(''); setPayTransferencia(''); setPayTarjeta('');
                       if (clienteDiasCredito > 0) {
-                        const d = new Date(); d.setDate(d.getDate() + clienteDiasCredito);
-                        setFechaVencimiento(d.toISOString().slice(0, 10));
+                        setFechaVencimiento(addDaysToDate(todayInTimezone(empresa?.zona_horaria), clienteDiasCredito));
                       }
                     }}
                       className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-all ${condicion === 'credito' ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}`}>

@@ -13,6 +13,7 @@ import { uploadOdometroFoto } from '@/lib/rutaFotos';
 import { locationService } from '@/lib/locationService';
 import { queueOperation } from '@/lib/syncQueue';
 import { deterministicUuid } from '@/lib/deterministicId';
+import { todayInTimezone } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import {
   fetchMyProfileWithFallback,
@@ -94,14 +95,10 @@ export default function RutaDescarga() {
   // activa es solo respaldo — se consulta a nivel empresa y podría ser de otro.
   const vendedorId = myProfile?.id || cargaActiva?.vendedor_id;
 
-  // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
-  const today = useMemo(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
+  // Fecha de HOY en la zona horaria de la empresa (no la del dispositivo).
+  // Importante para liquidaciones offline y cerca de medianoche: el reloj/uso
+  // horario del celular podía diferir del de la empresa y cerrar con otra fecha.
+  const today = useMemo(() => todayInTimezone(empresa?.zona_horaria), [empresa?.zona_horaria]);
 
   const { data: financials } = useQuery({
     queryKey: ['descarga-mobile-financials', empresa?.id, vendedorId, user?.id, today],

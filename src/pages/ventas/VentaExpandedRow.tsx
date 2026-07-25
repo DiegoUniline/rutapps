@@ -183,7 +183,9 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onCanc
         empresa: empresa ?? {},
         venta: {
           folio: venta.folio,
-          fecha: fmtDate(venta.created_at),
+          // Usa la fecha de negocio (zona horaria de la empresa), no created_at
+          // (UTC), que cerca de medianoche muestra otro día.
+          fecha: fmtDate(venta.fecha ?? venta.created_at),
           subtotal: venta.subtotal,
           descuento_total: venta.descuento_total,
           iva_total: venta.iva_total,

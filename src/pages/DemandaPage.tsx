@@ -348,6 +348,7 @@ export default function DemandaPage() {
           almacen_id: almacenId || null,
           vendedor_ruta_id: vendedorRutaId || null,
           status: 'borrador',
+          fecha: today,
           orden_entrega: ordenEntrega,
         } as any).select('id, folio').single();
         if (error) throw error;
@@ -489,6 +490,7 @@ export default function DemandaPage() {
               almacen_id: almacenId,
               vendedor_ruta_id: vendedorRutaId || null,
               status: 'borrador',
+              fecha: today,
               orden_entrega: ordenEntrega,
             } as any).select('id, folio').single();
             if (eErr) throw eErr;

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { todayInTimezone } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function useDevoluciones(search?: string) {
@@ -28,7 +29,7 @@ export function useSaveDevolucion() {
   const { empresa, profile } = useAuth();
   return useMutation({
     mutationFn: async ({ devolucion, lineas }: {
-      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; reembolso_metodo?: string; tipo: string; notas?: string; user_id: string };
+      devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; venta_id?: string; almacen_destino_id?: string; reembolso_efectivo?: boolean; reembolso_metodo?: string; tipo: string; fecha?: string; notas?: string; user_id: string };
       lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string; accion?: string; monto_credito?: number }[];
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
@@ -36,6 +37,9 @@ export function useSaveDevolucion() {
         ...devolucion,
         empresa_id: empresa.id,
         tipo: devolucion.tipo as any,
+        // Fecha en zona horaria de la empresa; evita que el server ponga
+        // CURRENT_DATE (UTC) si el caller no la mandó.
+        fecha: devolucion.fecha ?? todayInTimezone(empresa.zona_horaria),
       }).select('id').single();
       if (devErr) throw devErr;
 
