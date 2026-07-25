@@ -316,7 +316,7 @@ export default function EstadoCuentaClientePage() {
 
         {/* Ventas pendientes */}
         <div>
-          <h3 className="text-sm font-semibold mb-2 text-destructive flex items-center gap-2">
+          <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Ventas con saldo pendiente ({ventasPendientes.length})
           </h3>
           <div className="bg-card border border-border rounded overflow-x-auto">
