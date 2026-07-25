@@ -28,16 +28,45 @@ function useClientesSaldo(desde: string, hasta: string) {
         .neq('status', 'cancelado');
       if (desde) q = q.gte('fecha', desde);
       if (hasta) q = q.lte('fecha', hasta);
-      const { data, error } = await q;
-      if (error) throw error;
+      const [ventasRes, devsRes, favUsadoRes] = await Promise.all([
+        q,
+        supabase
+          .from('devoluciones')
+          .select('cliente_id, devolucion_lineas(monto_credito, accion)')
+          .eq('empresa_id', empresa!.id),
+        supabase
+          .from('cobros')
+          .select('cliente_id, monto')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo')
+          .eq('metodo_pago', 'saldo_favor'),
+      ]);
+      if (ventasRes.error) throw ventasRes.error;
+
+      // Saldo a favor por cliente = emitido (notas de crédito) − usado (cobros con saldo_favor)
+      const favorEmitido = new Map<string, number>();
+      (devsRes.data ?? []).forEach((d: any) => {
+        if (!d.cliente_id) return;
+        const emit = (d.devolucion_lineas ?? [])
+          .filter((l: any) => l.accion === 'nota_credito')
+          .reduce((s: number, l: any) => s + (Number(l.monto_credito) || 0), 0);
+        favorEmitido.set(d.cliente_id, (favorEmitido.get(d.cliente_id) ?? 0) + emit);
+      });
+      const favorUsado = new Map<string, number>();
+      (favUsadoRes.data ?? []).forEach((c: any) => {
+        if (!c.cliente_id) return;
+        favorUsado.set(c.cliente_id, (favorUsado.get(c.cliente_id) ?? 0) + (Number(c.monto) || 0));
+      });
+      const favorDisponible = (cid: string) =>
+        Math.max(0, Math.round(((favorEmitido.get(cid) ?? 0) - (favorUsado.get(cid) ?? 0)) * 100) / 100);
 
       const map = new Map<string, {
         id: string; nombre: string; codigo: string | null; telefono: string | null;
         credito: boolean; dias_credito: number; limite_credito: number;
         rfc: string | null; direccion: string | null;
-        totalVendido: number; saldoPendiente: number; docs: number;
+        totalVendido: number; saldoPendiente: number; saldoFavor: number; saldoNeto: number; docs: number;
       }>();
-      (data ?? []).forEach((v: any) => {
+      (ventasRes.data ?? []).forEach((v: any) => {
         const cid = v.cliente_id;
         if (!cid) return;
         const c = v.clientes;
@@ -52,11 +81,43 @@ function useClientesSaldo(desde: string, hasta: string) {
             telefono: c?.telefono ?? null, credito: c?.credito ?? false,
             dias_credito: c?.dias_credito ?? 0, limite_credito: c?.limite_credito ?? 0,
             rfc: c?.rfc ?? null, direccion: c?.direccion ?? null,
-            totalVendido: v.total ?? 0, saldoPendiente: v.saldo_pendiente ?? 0, docs: 1,
+            totalVendido: v.total ?? 0, saldoPendiente: v.saldo_pendiente ?? 0,
+            saldoFavor: 0, saldoNeto: 0, docs: 1,
           });
         }
       });
-      return Array.from(map.values()).sort((a, b) => b.saldoPendiente - a.saldoPendiente);
+      // Incluir clientes que solo tienen saldo a favor (sin ventas en el rango)
+      favorEmitido.forEach((_v, cid) => {
+        if (!map.has(cid) && favorDisponible(cid) > 0.009) {
+          map.set(cid, {
+            id: cid, nombre: 'Cliente', codigo: null, telefono: null,
+            credito: false, dias_credito: 0, limite_credito: 0, rfc: null, direccion: null,
+            totalVendido: 0, saldoPendiente: 0, saldoFavor: 0, saldoNeto: 0, docs: 0,
+          });
+        }
+      });
+      // Completar nombres faltantes
+      const sinNombre = Array.from(map.values()).filter(c => c.nombre === 'Cliente').map(c => c.id);
+      if (sinNombre.length) {
+        const { data: cli } = await supabase
+          .from('clientes')
+          .select('id, nombre, codigo, telefono, credito, dias_credito, limite_credito, rfc, direccion')
+          .in('id', sinNombre);
+        (cli ?? []).forEach((c: any) => {
+          const row = map.get(c.id);
+          if (row) Object.assign(row, {
+            nombre: c.nombre ?? 'Cliente', codigo: c.codigo, telefono: c.telefono,
+            credito: c.credito, dias_credito: c.dias_credito ?? 0,
+            limite_credito: c.limite_credito ?? 0, rfc: c.rfc, direccion: c.direccion,
+          });
+        });
+      }
+      // Aplicar saldo a favor y calcular neto
+      map.forEach((row, cid) => {
+        row.saldoFavor = favorDisponible(cid);
+        row.saldoNeto = Math.round((row.saldoPendiente - row.saldoFavor) * 100) / 100;
+      });
+      return Array.from(map.values()).sort((a, b) => b.saldoNeto - a.saldoNeto);
     },
   });
 }
@@ -115,7 +176,8 @@ export default function EstadoCuentaClientePage() {
         { value: 'no', label: 'Sin crédito' },
       ]},
       { key: 'saldo', label: 'Saldo', options: [
-        { value: 'con', label: 'Con saldo' },
+        { value: 'con', label: 'Con saldo pendiente' },
+        { value: 'favor', label: 'A favor' },
         { value: 'sin', label: 'Sin saldo' },
       ]},
     ];
@@ -135,7 +197,11 @@ export default function EstadoCuentaClientePage() {
     const credF = filters['credito'] ?? [];
     if (credF.length) list = list.filter(c => credF.includes(c.credito ? 'si' : 'no'));
     const saldoF = filters['saldo'] ?? [];
-    if (saldoF.length) list = list.filter(c => saldoF.includes(c.saldoPendiente > 0.01 ? 'con' : 'sin'));
+    if (saldoF.length) list = list.filter(c => {
+      if (c.saldoNeto > 0.01) return saldoF.includes('con');
+      if (c.saldoNeto < -0.01) return saldoF.includes('favor');
+      return saldoF.includes('sin');
+    });
     return list;
   }, [clientes, search, filters]);
 
@@ -144,7 +210,9 @@ export default function EstadoCuentaClientePage() {
   const selected = clientes?.find(c => c.id === selectedId);
 
   const totalPendienteGlobal = clientes?.reduce((s, c) => s + c.saldoPendiente, 0) ?? 0;
-  const clientesConSaldo = clientes?.filter(c => c.saldoPendiente > 0.01).length ?? 0;
+  const totalFavorGlobal = clientes?.reduce((s, c) => s + c.saldoFavor, 0) ?? 0;
+  const clientesConSaldo = clientes?.filter(c => c.saldoNeto > 0.01).length ?? 0;
+  const clientesConFavor = clientes?.filter(c => c.saldoFavor > 0.01).length ?? 0;
 
   const ventasPendientes = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) > 0.01) ?? [];
   const ventasPagadas = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) <= 0.01) ?? [];
@@ -394,10 +462,15 @@ export default function EstadoCuentaClientePage() {
         <Users className="h-5 w-5" /> Saldos por cliente
       </h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo total pendiente</p>
           <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase">Saldo a favor</p>
+          <p className="text-2xl font-bold text-success">{fmt(totalFavorGlobal)}</p>
+          <p className="text-[10px] text-muted-foreground">{clientesConFavor} cliente{clientesConFavor === 1 ? '' : 's'}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Clientes con saldo</p>
@@ -408,6 +481,7 @@ export default function EstadoCuentaClientePage() {
           <p className="text-2xl font-bold text-muted-foreground">{clientes?.length ?? 0}</p>
         </div>
       </div>
+
 
       <OdooFilterBar
         search={search}
@@ -433,7 +507,8 @@ export default function EstadoCuentaClientePage() {
               <TableHead className="text-[11px]">Teléfono</TableHead>
               <TableHead className="text-[11px] text-center">Docs</TableHead>
               <TableHead className="text-[11px] text-right">Total vendido</TableHead>
-              <TableHead className="text-[11px] text-right">Saldo pendiente</TableHead>
+              <TableHead className="text-[11px] text-right">A favor</TableHead>
+              <TableHead className="text-[11px] text-right">Saldo</TableHead>
               <TableHead className="text-[11px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -449,33 +524,43 @@ export default function EstadoCuentaClientePage() {
                 <TableCell className="text-[12px] text-muted-foreground">{c.telefono ?? '—'}</TableCell>
                 <TableCell className="text-center text-[12px]">{c.docs}</TableCell>
                 <TableCell className="text-right text-[12px]">{fmt(c.totalVendido)}</TableCell>
-                <TableCell className={cn("text-right font-bold text-[12px]", c.saldoPendiente > 0.01 ? 'text-destructive' : 'text-success')}>
-                  {fmt(c.saldoPendiente)}
+                <TableCell className="text-right text-[12px] text-success tabular-nums">
+                  {c.saldoFavor > 0.01 ? fmt(c.saldoFavor) : '—'}
+                </TableCell>
+                <TableCell className={cn("text-right font-bold text-[12px] tabular-nums",
+                  c.saldoNeto > 0.01 ? 'text-destructive' : c.saldoNeto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                  {c.saldoNeto < -0.01 ? `-${fmt(Math.abs(c.saldoNeto))}` : fmt(c.saldoNeto)}
                 </TableCell>
                 <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
               </TableRow>
             ))}
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
             {!isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
             )}
           </TableBody>
           {filtered.length > 0 && (() => {
             const docs = filtered.reduce((s, c) => s + c.docs, 0);
             const tot = filtered.reduce((s, c) => s + c.totalVendido, 0);
-            const pend = filtered.reduce((s, c) => s + c.saldoPendiente, 0);
+            const fav = filtered.reduce((s, c) => s + c.saldoFavor, 0);
+            const neto = filtered.reduce((s, c) => s + c.saldoNeto, 0);
             return (
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                   <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
-                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(pend)}</TableCell>
+                  <TableCell className="text-right font-bold text-success tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
+                  <TableCell className={cn("text-right font-bold tabular-nums",
+                    neto > 0.01 ? 'text-destructive' : neto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                    {neto < -0.01 ? `-${fmt(Math.abs(neto))}` : fmt(neto)}
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               </TableFooter>
             );
           })()}
+
         </Table>
       </div>
     </div>
