@@ -335,6 +335,7 @@ export default function VentaFormPage() {
         onGenerarPdf={handleGenerarPdf}
         onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
+        onDevolucion={!isNew ? () => setShowDevolucion(true) : undefined}
       />
       {!isNew && <div className="px-5 pt-3"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>}
       <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
