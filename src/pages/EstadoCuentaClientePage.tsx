@@ -356,7 +356,7 @@ export default function EstadoCuentaClientePage() {
                       <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({ventasPendientes.length})</TableCell>
                       <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
                       <TableCell className="text-right font-bold text-success tabular-nums">{fmt(p)}</TableCell>
-                      <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(sp)}</TableCell>
+                      <TableCell className="text-right font-bold text-success tabular-nums">{fmt(sp)}</TableCell>
                     </TableRow>
                   </TableFooter>
                 );
