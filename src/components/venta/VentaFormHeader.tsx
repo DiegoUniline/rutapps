@@ -99,6 +99,11 @@ export function VentaFormHeader({
             <Printer className="h-3.5 w-3.5" /> Imprimir ticket
           </button>
         )}
+        {!isNew && onDevolucion && !readOnly && (
+          <button onClick={onDevolucion} className="btn-odoo-secondary text-xs">
+            <Undo2 className="h-3.5 w-3.5" /> Devolución
+          </button>
+        )}
         {!isNew && requiereFactura && lineasPendientesFactura > 0 && (
           <button onClick={onFacturar} className="btn-odoo-primary text-xs">
             <Receipt className="h-3.5 w-3.5" /> Facturar • {lineasPendientesFactura} pendientes
