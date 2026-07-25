@@ -47,13 +47,20 @@ export function VentaCheckoutModal({
   const [payEfectivo, setPayEfectivo] = useState(total.toFixed(2));
   const [payTransferencia, setPayTransferencia] = useState('');
   const [payTarjeta, setPayTarjeta] = useState('');
+  const [payFavor, setPayFavor] = useState('');
   const [refTransferencia, setRefTransferencia] = useState('');
   const [refTarjeta, setRefTarjeta] = useState('');
 
+  // Cap saldo a favor a lo disponible y al total a cubrir
+  const favorAplicado = useMemo(() => {
+    const v = parseFloat(payFavor) || 0;
+    return Math.max(0, Math.min(v, saldoFavorDisp, total));
+  }, [payFavor, saldoFavorDisp, total]);
+
   const totalPagado = useMemo(() => {
     if (condicion === 'credito') return 0;
-    return (parseFloat(payEfectivo) || 0) + (parseFloat(payTransferencia) || 0) + (parseFloat(payTarjeta) || 0);
-  }, [payEfectivo, payTransferencia, payTarjeta, condicion]);
+    return (parseFloat(payEfectivo) || 0) + (parseFloat(payTransferencia) || 0) + (parseFloat(payTarjeta) || 0) + favorAplicado;
+  }, [payEfectivo, payTransferencia, payTarjeta, favorAplicado, condicion]);
 
   // Auto-distribute surplus to pending accounts
   const distributed = useMemo(() => {
