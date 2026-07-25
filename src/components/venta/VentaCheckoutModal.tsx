@@ -227,6 +227,54 @@ export function VentaCheckoutModal({
           {/* Payment method selector — only for contado */}
           {condicion === 'contado' && (
             <>
+              {/* Saldo a favor disponible */}
+              {saldoFavorDisp > 0 && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <PiggyBank className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-[12px] font-semibold text-foreground flex-1">Saldo a favor disponible</span>
+                    <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{fmt(saldoFavorDisp)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mb-2">Se descuenta del total. No cuenta como ingreso nuevo — es crédito emitido antes.</p>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">$</span>
+                      <input type="number" inputMode="decimal"
+                        className="w-full bg-accent/30 border border-border rounded-lg pl-7 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={payFavor} placeholder="0.00"
+                        onChange={e => setPayFavor(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        const aplica = Math.min(saldoFavorDisp, total);
+                        setPayFavor(aplica.toFixed(2));
+                        // Reajusta efectivo al restante para no cobrar de más
+                        const resto = Math.max(0, total - aplica);
+                        if (payMode === 'efectivo') setPayEfectivo(resto.toFixed(2));
+                      }}
+                      className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold hover:bg-emerald-700 active:scale-95 transition-all"
+                    >
+                      Aplicar {fmt(Math.min(saldoFavorDisp, total))}
+                    </button>
+                    {favorAplicado > 0 && (
+                      <button
+                        onClick={() => { setPayFavor(''); if (payMode === 'efectivo') setPayEfectivo(total.toFixed(2)); }}
+                        className="text-[10px] text-destructive font-semibold hover:underline"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                  {favorAplicado > 0 && (
+                    <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-emerald-500/20">
+                      <span className="text-muted-foreground">Restante por cobrar</span>
+                      <span className="font-bold text-foreground tabular-nums">{fmt(Math.max(0, total - favorAplicado))}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Método de pago</label>
                 <div className="grid grid-cols-4 gap-1.5 mt-1.5">
