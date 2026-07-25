@@ -469,7 +469,7 @@ export default function EstadoCuentaClientePage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo a favor</p>
-          <p className="text-2xl font-bold text-success">{fmt(totalFavorGlobal)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalFavorGlobal)}</p>
           <p className="text-[10px] text-muted-foreground">{clientesConFavor} cliente{clientesConFavor === 1 ? '' : 's'}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
