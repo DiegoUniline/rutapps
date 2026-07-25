@@ -23,6 +23,14 @@ export interface CacheTimestamp {
   lastSuccessAt?: number;
   lastError?: string;
   lastErrorAt?: number;
+  // Delta incremental por updated_at (reloj del servidor, sin problemas de
+  // desfase de reloj del cliente): mayor updated_at ya descargado.
+  cursor?: string;
+  // Última vez que se hizo una descarga COMPLETA de la tabla (para reconciliar
+  // borrados físicos periódicamente en tablas con delta por updated_at).
+  lastFullAt?: number;
+  // Filas locales tras el último sync (para el gate de frescura de tablas full).
+  rowCount?: number;
 }
 
 class OfflineDatabase extends Dexie {

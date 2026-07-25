@@ -73,8 +73,8 @@ const CHILD_IN_CHUNK_SIZE = 80;
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
-  clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,notas_fiscales,requiere_factura,foto_url,foto_fachada_url,created_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
-  productos: 'id,empresa_id,codigo,clave_alterna,nombre,formula,nombre_compra,nombre_venta,nombre_ticket,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,usa_listas_precio,es_granel,unidad_granel,almacenes,proveedor_preferido_id,created_at',
+  clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,notas_fiscales,requiere_factura,foto_url,foto_fachada_url,created_at,updated_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
+  productos: 'id,empresa_id,codigo,clave_alterna,nombre,formula,nombre_compra,nombre_venta,nombre_ticket,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,usa_listas_precio,es_granel,unidad_granel,almacenes,proveedor_preferido_id,created_at,updated_at',
   venta_lineas: 'id,venta_id,producto_id,descripcion,cantidad,unidad_id,precio_unitario,descuento_pct,subtotal,iva_pct,ieps_pct,iva_monto,ieps_monto,total,notas,facturado,almacen_id,presentacion_id,presentacion_nombre,presentacion_factor,paquetes,lista_precio_id,precio_manual,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
   cobro_aplicaciones: 'id,cobro_id,venta_id,monto_aplicado,created_at',
@@ -161,8 +161,6 @@ const RECENT_TABLES = new Set([
 // se refrescan completos en cada sync (incluida la sync rápida) y los cambios de
 // precio/cliente/empresa siempre llegan.
 const NO_DELTA_TABLES = new Set([
-  'productos',
-  'clientes',
   'empresas',
   'cargas',
   'carga_lineas',
@@ -170,14 +168,36 @@ const NO_DELTA_TABLES = new Set([
   'entrega_lineas',
   'descarga_ruta',
   'descarga_ruta_lineas',
-  'stock_almacen',
-  'stock_apartado',
   'producto_presentaciones',
   'tarifas',
   'tarifa_lineas',
   'lista_precios',
   'promociones',
 ]);
+
+// Tablas grandes con delta REAL por `updated_at` (mantenido por trigger en BD,
+// ver migración 20260727000000). En vez de re-bajarlas completas en cada sync,
+// solo se descargan las filas cuyo updated_at es mayor al último cursor visto.
+// Esto corta la mayor parte del consumo de datos móviles.
+//
+// Deben tener empresa_id y ser de primer nivel (no hijas), para poder validar
+// borrados con un conteo barato. productos/clientes/stock_almacen/stock_apartado
+// cumplen y reciben la columna updated_at + trigger en la migración.
+const UPDATED_AT_DELTA_TABLES = new Set([
+  'productos',
+  'clientes',
+  'stock_almacen',
+  'stock_apartado',
+]);
+
+// Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
+// 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).
+const FULL_TABLE_REFRESH_MS = 5 * 60 * 1000; // 5 min
+
+// Respaldo de reconciliación de borrados en tablas con delta por updated_at:
+// aunque el chequeo por conteo ya los detecta, cada tanto forzamos una descarga
+// completa por si un insert+delete simultáneo dejó el conteo igual.
+const FULL_RECONCILE_MS = 12 * 60 * 60 * 1000; // 12 h
 
 const CHILD_SCOPES: Partial<Record<CacheTable, { parentTable: CacheTable; foreignKey: string }>> = {
   carga_lineas: { parentTable: 'cargas', foreignKey: 'carga_id' },
@@ -306,24 +326,45 @@ async function downloadAllDataInternal(
 
       try {
         const cacheEntry = await offlineDb.cacheTimestamps.get(table);
-        const skipDelta = NO_DELTA_TABLES.has(table);
-        const lastTableSync = (!forceFullSync && !skipDelta && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
+        const nowMs = Date.now();
+        const isUpdatedAtDelta = UPDATED_AT_DELTA_TABLES.has(table);
+        const isNoDelta = NO_DELTA_TABLES.has(table);
+
+        // AHORRO DE DATOS: las tablas "full" (sin updated_at) no se re-bajan en
+        // cada sync de 30s; si se refrescaron hace poco, se saltan. Un
+        // "Descargar todo" (forceFullSync) siempre las baja.
+        if (!forceFullSync && isNoDelta && cacheEntry?.lastSuccessAt
+            && (nowMs - cacheEntry.lastSuccessAt) < FULL_TABLE_REFRESH_MS) {
+          progress[idx].status = 'done';
+          progress[idx].rowCount = cacheEntry?.rowCount ?? 0;
+          notify();
+          return;
+        }
 
         const selectStr = COLUMN_SELECTS[table] || '*';
 
-        // Builder factory: rebuild the query each page so supabase-js doesn't
-        // reuse a consumed PostgrestFilterBuilder (which causes only the first
-        // 1000 rows to be returned).
         const parentIds = await getScopedParentIds(table, empresaId);
         const parentChunks = parentIds ? chunk(parentIds, CHILD_IN_CHUNK_SIZE) : [null];
 
+        // Modo de descarga:
+        //  - cursor (updated_at): solo filas cambiadas desde el último cursor.
+        //  - lastTableSync (created_at): delta clásico para tablas transaccionales.
+        //  - null en ambos: descarga COMPLETA (primer sync o forzado).
+        const cursor = (!forceFullSync && isUpdatedAtDelta) ? (cacheEntry?.cursor ?? null) : null;
+        const lastTableSync = (!forceFullSync && !isNoDelta && !isUpdatedAtDelta && cacheEntry?.lastSync)
+          ? cacheEntry.lastSync : null;
+        const isDeltaPull = !!cursor || !!lastTableSync;
+
         if (parentIds && parentIds.length === 0) {
           const localTable = getOfflineTable(table);
-          if (localTable && !lastTableSync) await localTable.clear();
+          if (localTable && !isDeltaPull) await localTable.clear();
           await offlineDb.cacheTimestamps.put({
             table,
-            lastSync: Date.now(),
-            lastSuccessAt: Date.now(),
+            lastSync: nowMs,
+            lastSuccessAt: nowMs,
+            cursor: cacheEntry?.cursor,
+            lastFullAt: isDeltaPull ? cacheEntry?.lastFullAt : nowMs,
+            rowCount: 0,
             lastError: undefined,
             lastErrorAt: undefined,
           });
@@ -333,80 +374,122 @@ async function downloadAllDataInternal(
           return;
         }
 
-        const buildQuery = (parentChunk: string[] | null) => {
-          let q = (supabase.from as any)(table).select(selectStr);
+        // Paginador reutilizable. mode='full' ignora los filtros de delta.
+        const paginate = async (mode: 'delta' | 'full'): Promise<any[]> => {
+          const build = (parentChunk: string[] | null) => {
+            let q = (supabase.from as any)(table).select(selectStr);
+            if (TABLES_WITH_EMPRESA.has(table)) {
+              q = table === 'empresas' ? q.eq('id', empresaId) : q.eq('empresa_id', empresaId);
+            }
+            const childScope = CHILD_SCOPES[table];
+            if (childScope && parentChunk && parentChunk.length > 0) {
+              q = q.in(childScope.foreignKey, parentChunk);
+            }
+            // Ventana de 30 días para tablas transaccionales (acota cuánta
+            // historia se cachea). Aplica en delta y en full; si además hay
+            // lastTableSync (más reciente) gana ese, no baja de más.
+            if (RECENT_TABLES.has(table)) {
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              q = q.gte('created_at', thirtyDaysAgo.toISOString());
+            }
+            if (mode === 'delta') {
+              if (lastTableSync) q = q.gte('created_at', new Date(lastTableSync - 5000).toISOString());
+              if (cursor) q = q.gte('updated_at', cursor);
+            }
+            return q;
+          };
 
-          if (TABLES_WITH_EMPRESA.has(table)) {
-            if (table === 'empresas') {
-              q = q.eq('id', empresaId);
-            } else {
-              q = q.eq('empresa_id', empresaId);
+          let acc: any[] = [];
+          const pageSize = 1000;
+          for (const parentChunk of parentChunks) {
+            let from = 0;
+            let hasMore = true;
+            while (hasMore) {
+              const { data, error } = await withTimeout<any>(
+                build(parentChunk).range(from, from + pageSize - 1),
+                `${table} ${from + 1}-${from + pageSize}`,
+              );
+              if (error) {
+                console.error(`Error downloading ${table}:`, error);
+                throw new Error(error.message || `Error al descargar ${table}`);
+              }
+              if (data && data.length > 0) {
+                acc = acc.concat(data);
+                from += pageSize;
+                hasMore = data.length === pageSize;
+                progress[idx].rowCount = acc.length;
+                notify();
+              } else {
+                hasMore = false;
+              }
             }
           }
-
-          const childScope = CHILD_SCOPES[table];
-          if (childScope && parentChunk && parentChunk.length > 0) {
-            q = q.in(childScope.foreignKey, parentChunk);
-          }
-
-          if (RECENT_TABLES.has(table) && !lastTableSync) {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            q = q.gte('created_at', thirtyDaysAgo.toISOString());
-          }
-
-          // Delta sync
-          if (lastTableSync) {
-            const sinceDate = new Date(lastTableSync - 5000).toISOString();
-            q = q.gte('created_at', sinceDate);
-          }
-
-          return q;
+          return acc;
         };
 
-        // Paginate
-        let allData: any[] = [];
-        const pageSize = 1000;
-
-        for (const parentChunk of parentChunks) {
-          let from = 0;
-          let hasMore = true;
-
-          while (hasMore) {
-            const { data, error } = await withTimeout<any>(
-              buildQuery(parentChunk).range(from, from + pageSize - 1),
-              `${table} ${from + 1}-${from + pageSize}`,
-            );
-            if (error) {
-              console.error(`Error downloading ${table}:`, error);
-              throw new Error(error.message || `Error al descargar ${table}`);
-            }
-            if (data && data.length > 0) {
-              allData = allData.concat(data);
-              from += pageSize;
-              hasMore = data.length === pageSize;
-              progress[idx].rowCount = allData.length;
-              notify();
-            } else {
-              hasMore = false;
-            }
-          }
-        }
-
-        // Write to IndexedDB
         const localTable = getOfflineTable(table);
-        if (localTable && allData.length > 0) {
-          if (!lastTableSync) {
-            await localTable.clear();
+        const maxUpdatedAt = (rows: any[], seed?: string) => {
+          let m = seed;
+          for (const r of rows) {
+            const u = r?.updated_at;
+            if (u && (!m || u > m)) m = u;
           }
-          await localTable.bulkPut(allData);
-          totalRows += allData.length;
+          return m;
+        };
+
+        // 1) Descarga (delta = merge sin borrar; full = borrar y reemplazar).
+        //    SEGURIDAD: solo se borra la caché local si llegaron datos de
+        //    reemplazo. Una respuesta vacía transitoria NUNCA vacía la caché.
+        let allData = await paginate(isDeltaPull ? 'delta' : 'full');
+        if (localTable) {
+          if (!isDeltaPull && allData.length > 0) await localTable.clear();
+          if (allData.length > 0) await localTable.bulkPut(allData);
         }
+
+        let newCursor = isUpdatedAtDelta ? maxUpdatedAt(allData, cacheEntry?.cursor) : cacheEntry?.cursor;
+        let lastFullAt = isDeltaPull ? cacheEntry?.lastFullAt : nowMs;
+
+        // 2) Robustez ante BORRADOS físicos (que un delta no ve): en tablas con
+        //    delta por updated_at, comparamos conteo local vs servidor (barato,
+        //    HEAD sin filas). Si difiere —o toca reconciliar cada 12h— se re-baja
+        //    completa esa tabla. Los borrados suaves (status) sí llegan por delta.
+        if (isUpdatedAtDelta && isDeltaPull && localTable) {
+          let mismatch = false;
+          try {
+            const { count } = await withTimeout<any>(
+              (supabase.from as any)(table).select('id', { count: 'exact', head: true }).eq('empresa_id', empresaId),
+              `${table} conteo`,
+            );
+            const localCount = await localTable.where('empresa_id').equals(empresaId).count();
+            mismatch = typeof count === 'number' && count !== localCount;
+          } catch { /* si el conteo falla, la reconciliación periódica cubre */ }
+
+          const needsPeriodic = !lastFullAt || (nowMs - lastFullAt) > FULL_RECONCILE_MS;
+          if (mismatch || needsPeriodic) {
+            const full = await paginate('full');
+            // Solo reemplazar si llegaron datos; si vino vacío por un error
+            // transitorio, se conserva la caché local (nunca se vacía a ciegas).
+            if (full.length > 0) {
+              await localTable.clear();
+              await localTable.bulkPut(full);
+              allData = full;
+              newCursor = maxUpdatedAt(full);
+            }
+            lastFullAt = nowMs;
+          }
+        }
+
+        totalRows += allData.length;
+        const rowCount = localTable ? await localTable.count().catch(() => allData.length) : allData.length;
 
         await offlineDb.cacheTimestamps.put({
           table,
-          lastSync: Date.now(),
-          lastSuccessAt: Date.now(),
+          lastSync: nowMs,
+          lastSuccessAt: nowMs,
+          cursor: newCursor,
+          lastFullAt,
+          rowCount,
           lastError: undefined,
           lastErrorAt: undefined,
         });
@@ -416,15 +499,18 @@ async function downloadAllDataInternal(
         notify();
       } catch (err: any) {
         console.error(`Failed to cache ${table}:`, err);
-        // Persist failure metadata WITHOUT touching lastSync — so the next
-        // sync still runs a full pull for this table and the UI can show
-        // "pending" tables even after a reload.
+        // Persist failure metadata WITHOUT touching lastSync/cursor — so the
+        // next sync retries from the same position and the UI can flag pending
+        // tables even after a reload.
         try {
           const prev = await offlineDb.cacheTimestamps.get(table);
           await offlineDb.cacheTimestamps.put({
             table,
             lastSync: prev?.lastSync ?? 0,
             lastSuccessAt: prev?.lastSuccessAt,
+            cursor: prev?.cursor,
+            lastFullAt: prev?.lastFullAt,
+            rowCount: prev?.rowCount,
             lastError: err?.message || 'Error desconocido',
             lastErrorAt: Date.now(),
           });
