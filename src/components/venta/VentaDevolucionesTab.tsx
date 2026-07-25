@@ -60,7 +60,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
       <div className="flex items-center gap-3 text-xs">
         {lineas.length > 0 && <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>}
         {totalCredito > 0 && (
-          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
+          <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: {fmt(totalCredito)}</span>
         )}
       </div>
       {!readOnly && (
