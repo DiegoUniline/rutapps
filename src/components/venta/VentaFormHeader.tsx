@@ -34,6 +34,7 @@ interface VentaFormHeaderProps {
   onGenerarPdf: () => void;
   onPrintTicket?: () => void;
   onFacturar: () => void;
+  onDevolucion?: () => void;
 }
 
 export function VentaFormHeader({
