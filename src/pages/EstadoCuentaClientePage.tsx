@@ -507,7 +507,8 @@ export default function EstadoCuentaClientePage() {
               <TableHead className="text-[11px]">Teléfono</TableHead>
               <TableHead className="text-[11px] text-center">Docs</TableHead>
               <TableHead className="text-[11px] text-right">Total vendido</TableHead>
-              <TableHead className="text-[11px] text-right">Saldo pendiente</TableHead>
+              <TableHead className="text-[11px] text-right">A favor</TableHead>
+              <TableHead className="text-[11px] text-right">Saldo</TableHead>
               <TableHead className="text-[11px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -523,33 +524,43 @@ export default function EstadoCuentaClientePage() {
                 <TableCell className="text-[12px] text-muted-foreground">{c.telefono ?? '—'}</TableCell>
                 <TableCell className="text-center text-[12px]">{c.docs}</TableCell>
                 <TableCell className="text-right text-[12px]">{fmt(c.totalVendido)}</TableCell>
-                <TableCell className={cn("text-right font-bold text-[12px]", c.saldoPendiente > 0.01 ? 'text-destructive' : 'text-success')}>
-                  {fmt(c.saldoPendiente)}
+                <TableCell className="text-right text-[12px] text-success tabular-nums">
+                  {c.saldoFavor > 0.01 ? fmt(c.saldoFavor) : '—'}
+                </TableCell>
+                <TableCell className={cn("text-right font-bold text-[12px] tabular-nums",
+                  c.saldoNeto > 0.01 ? 'text-destructive' : c.saldoNeto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                  {c.saldoNeto < -0.01 ? `-${fmt(Math.abs(c.saldoNeto))}` : fmt(c.saldoNeto)}
                 </TableCell>
                 <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
               </TableRow>
             ))}
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
             {!isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin clientes con ventas</TableCell></TableRow>
             )}
           </TableBody>
           {filtered.length > 0 && (() => {
             const docs = filtered.reduce((s, c) => s + c.docs, 0);
             const tot = filtered.reduce((s, c) => s + c.totalVendido, 0);
-            const pend = filtered.reduce((s, c) => s + c.saldoPendiente, 0);
+            const fav = filtered.reduce((s, c) => s + c.saldoFavor, 0);
+            const neto = filtered.reduce((s, c) => s + c.saldoNeto, 0);
             return (
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                   <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
-                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(pend)}</TableCell>
+                  <TableCell className="text-right font-bold text-success tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
+                  <TableCell className={cn("text-right font-bold tabular-nums",
+                    neto > 0.01 ? 'text-destructive' : neto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                    {neto < -0.01 ? `-${fmt(Math.abs(neto))}` : fmt(neto)}
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               </TableFooter>
             );
           })()}
+
         </Table>
       </div>
     </div>
