@@ -49,7 +49,7 @@ export default function DevolucionesListPage() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), usuarios:profiles!user_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       return data ?? [];
@@ -113,6 +113,7 @@ export default function DevolucionesListPage() {
     for (const r of rows as any[]) {
       if (r.cliente_id && r.clientes?.nombre) cm.set(r.cliente_id, r.clientes.nombre);
       if (r.vendedor_id && r.vendedores?.nombre) vm.set(r.vendedor_id, r.vendedores.nombre);
+      else if (r.user_id && r.usuarios?.nombre) vm.set(r.user_id, r.usuarios.nombre);
     }
     return {
       clientes: [...cm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
@@ -125,7 +126,7 @@ export default function DevolucionesListPage() {
     return (rows as any[]).filter(d => {
       const lineas = d.devolucion_lineas ?? [];
       if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
-      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter) return false;
+      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter && d.user_id !== vendedorFilter) return false;
       if (desde && d.fecha < desde) return false;
       if (hasta && d.fecha > hasta) return false;
       if (motivoFilter !== 'all' && !lineas.some((l: any) => l.motivo === motivoFilter)) return false;
@@ -273,7 +274,7 @@ export default function DevolucionesListPage() {
                 <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
                   <td className="py-2 px-3 font-mono text-muted-foreground">{fmtDate(d.fecha)}</td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
-                  <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? d.usuarios?.nombre ?? '—'}</td>
                   <td className="py-2 px-3">
                     {d.ventas?.folio ? (
                       <span className="text-primary font-mono text-[11px] font-semibold">{d.ventas.folio}</span>
