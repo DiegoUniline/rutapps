@@ -10,6 +10,7 @@ import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
 import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
 import { VentaDevolucionesTab } from '@/components/venta/VentaDevolucionesTab';
+import { DevolucionVentaModal } from '@/components/venta/DevolucionVentaModal';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
 import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
@@ -41,6 +42,7 @@ export default function VentaFormPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
+  const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
@@ -333,6 +335,7 @@ export default function VentaFormPage() {
         onGenerarPdf={handleGenerarPdf}
         onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
+        onDevolucion={!isNew ? () => setShowDevolucion(true) : undefined}
       />
       {!isNew && <div className="px-5 pt-3"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>}
       <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
@@ -433,6 +436,13 @@ export default function VentaFormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showDevolucion && !isNew && (
+        <DevolucionVentaModal
+          venta={{ id: form.id!, folio: form.folio, cliente_id: form.cliente_id }}
+          onClose={() => setShowDevolucion(false)}
+          onDone={() => { setShowDevolucion(false); queryClient.invalidateQueries({ queryKey: ['venta-devoluciones', form.id] }); }}
+        />
+      )}
     </div>
   );
 }
