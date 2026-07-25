@@ -100,7 +100,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
         </thead>
         <tbody>
           {lineas.map((l, i) => (
-            <tr key={i} className="border-b border-border/50">
+            <tr key={i} className="border-b border-border">
               <td className="py-2 text-muted-foreground">{i + 1}</td>
               <td className="py-2">
                 <span className="font-mono text-muted-foreground text-[10px]">{l.codigo}</span>
