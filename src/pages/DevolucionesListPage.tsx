@@ -120,8 +120,9 @@ export default function DevolucionesListPage() {
     const vm = new Map<string, string>();
     for (const r of rows as any[]) {
       if (r.cliente_id && r.clientes?.nombre) cm.set(r.cliente_id, r.clientes.nombre);
-      if (r.vendedor_id && r.vendedores?.nombre) vm.set(r.vendedor_id, r.vendedores.nombre);
-      else if (r.user_id && r.usuarios?.nombre) vm.set(r.user_id, r.usuarios.nombre);
+      const vId = r.ventas?.vendedor_id ?? r.vendedor_id;
+      const vNom = r.ventas?.vendedor?.nombre ?? r.vendedores?.nombre;
+      if (vId && vNom) vm.set(vId, vNom);
     }
     return {
       clientes: [...cm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
@@ -133,8 +134,9 @@ export default function DevolucionesListPage() {
     const s = search.trim().toLowerCase();
     return (rows as any[]).filter(d => {
       const lineas = d.devolucion_lineas ?? [];
+      const vId = d.ventas?.vendedor_id ?? d.vendedor_id;
       if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
-      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter && d.user_id !== vendedorFilter) return false;
+      if (vendedorFilter !== 'all' && vId !== vendedorFilter) return false;
       if (desde && d.fecha < desde) return false;
       if (hasta && d.fecha > hasta) return false;
       if (motivoFilter !== 'all' && !lineas.some((l: any) => l.motivo === motivoFilter)) return false;
@@ -142,7 +144,9 @@ export default function DevolucionesListPage() {
       if (s) {
         const haystack = [
           d.clientes?.nombre,
+          d.ventas?.vendedor?.nombre,
           d.vendedores?.nombre,
+          d.registradoPor,
           d.ventas?.folio,
           d.notas,
           ...lineas.map((l: any) => l.productos?.nombre),
