@@ -462,10 +462,15 @@ export default function EstadoCuentaClientePage() {
         <Users className="h-5 w-5" /> Saldos por cliente
       </h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo total pendiente</p>
           <p className="text-2xl font-bold text-destructive">{fmt(totalPendienteGlobal)}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-[11px] text-muted-foreground uppercase">Saldo a favor</p>
+          <p className="text-2xl font-bold text-success">{fmt(totalFavorGlobal)}</p>
+          <p className="text-[10px] text-muted-foreground">{clientesConFavor} cliente{clientesConFavor === 1 ? '' : 's'}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Clientes con saldo</p>
@@ -476,6 +481,7 @@ export default function EstadoCuentaClientePage() {
           <p className="text-2xl font-bold text-muted-foreground">{clientes?.length ?? 0}</p>
         </div>
       </div>
+
 
       <OdooFilterBar
         search={search}
