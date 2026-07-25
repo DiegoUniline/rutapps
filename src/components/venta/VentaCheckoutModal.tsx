@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Wallet, Banknote, CreditCard, Package, Check, X, FileText, AlertTriangle } from 'lucide-react';
+import { Wallet, Banknote, CreditCard, Package, Check, X, FileText, AlertTriangle, PiggyBank } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useSaldoFavor } from '@/hooks/useSaldoFavor';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { autoDistributeSurplus, type PendingAccountInput } from '@/lib/paymentDistribution';
 
 type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
