@@ -115,6 +115,10 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{fmt(venta.total ?? 0)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Saldo pendiente</span><span className="font-bold text-warning">{fmt(saldo)}</span></div>
+            <div className="flex justify-between border-t border-primary/10 mt-1 pt-1">
+              <span className="text-muted-foreground">Saldo a favor del cliente</span>
+              <span className={saldoFavorDisp > 0.01 ? 'font-semibold text-primary' : 'text-muted-foreground'}>{fmt(saldoFavorDisp)}</span>
+            </div>
           </div>
 
           <div>
