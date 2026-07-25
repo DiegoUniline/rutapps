@@ -107,6 +107,15 @@ export default function VentaFormPage() {
     },
   });
 
+  const { data: gastosCount } = useQuery({
+    queryKey: ['venta-gastos-count', form.id],
+    enabled: !!form.id && !isNew,
+    queryFn: async () => {
+      const { count } = await supabase.from('gastos').select('id', { count: 'exact', head: true }).eq('venta_id', form.id!);
+      return count ?? 0;
+    },
+  });
+
 
   const { data: cfdisCount } = useQuery({
     queryKey: ['cfdis-count-venta', form.id],
