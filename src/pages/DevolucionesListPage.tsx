@@ -47,12 +47,20 @@ export default function DevolucionesListPage() {
     queryKey: ['devoluciones-list-all', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!vendedor_id(id,nombre), usuarios:profiles!user_id(id,nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, user_id, cliente_id, clientes(id,nombre), vendedores:profiles!devoluciones_vendedor_id_profiles_fkey(id,nombre), ventas(folio, vendedor_id, vendedor:profiles!ventas_vendedor_id_profiles_fkey(id,nombre)), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
-      return data ?? [];
+      if (error) console.error('[devoluciones] query error', error);
+      const list = data ?? [];
+      const userIds = Array.from(new Set(list.map((r: any) => r.user_id).filter(Boolean)));
+      let userMap: Record<string, string> = {};
+      if (userIds.length) {
+        const { data: us } = await (supabase as any).from('profiles').select('id,nombre').in('id', userIds as any);
+        userMap = Object.fromEntries((us ?? []).map((u: any) => [u.id, u.nombre]));
+      }
+      return list.map((r: any) => ({ ...r, registradoPor: r.user_id ? userMap[r.user_id] ?? null : null }));
     },
   });
 
@@ -112,8 +120,9 @@ export default function DevolucionesListPage() {
     const vm = new Map<string, string>();
     for (const r of rows as any[]) {
       if (r.cliente_id && r.clientes?.nombre) cm.set(r.cliente_id, r.clientes.nombre);
-      if (r.vendedor_id && r.vendedores?.nombre) vm.set(r.vendedor_id, r.vendedores.nombre);
-      else if (r.user_id && r.usuarios?.nombre) vm.set(r.user_id, r.usuarios.nombre);
+      const vId = r.ventas?.vendedor_id ?? r.vendedor_id;
+      const vNom = r.ventas?.vendedor?.nombre ?? r.vendedores?.nombre;
+      if (vId && vNom) vm.set(vId, vNom);
     }
     return {
       clientes: [...cm.entries()].sort((a, b) => a[1].localeCompare(b[1])),
@@ -125,8 +134,9 @@ export default function DevolucionesListPage() {
     const s = search.trim().toLowerCase();
     return (rows as any[]).filter(d => {
       const lineas = d.devolucion_lineas ?? [];
+      const vId = d.ventas?.vendedor_id ?? d.vendedor_id;
       if (clienteFilter !== 'all' && d.cliente_id !== clienteFilter) return false;
-      if (vendedorFilter !== 'all' && d.vendedor_id !== vendedorFilter && d.user_id !== vendedorFilter) return false;
+      if (vendedorFilter !== 'all' && vId !== vendedorFilter) return false;
       if (desde && d.fecha < desde) return false;
       if (hasta && d.fecha > hasta) return false;
       if (motivoFilter !== 'all' && !lineas.some((l: any) => l.motivo === motivoFilter)) return false;
@@ -134,7 +144,9 @@ export default function DevolucionesListPage() {
       if (s) {
         const haystack = [
           d.clientes?.nombre,
+          d.ventas?.vendedor?.nombre,
           d.vendedores?.nombre,
+          d.registradoPor,
           d.ventas?.folio,
           d.notas,
           ...lineas.map((l: any) => l.productos?.nombre),
@@ -240,6 +252,7 @@ export default function DevolucionesListPage() {
               <th className="text-left py-2.5 px-3 font-medium">Fecha</th>
               <th className="text-left py-2.5 px-3 font-medium">Cliente</th>
               <th className="text-left py-2.5 px-3 font-medium">Vendedor</th>
+              <th className="text-left py-2.5 px-3 font-medium">Registró</th>
               <th className="text-left py-2.5 px-3 font-medium">Venta</th>
               <th className="text-left py-2.5 px-3 font-medium">Productos</th>
               <th className="text-right py-2.5 px-3 font-medium">Uds.</th>
@@ -251,10 +264,10 @@ export default function DevolucionesListPage() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">Cargando...</td></tr>
             )}
             {!isLoading && paged.length === 0 && (
-              <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">
+              <tr><td colSpan={11} className="py-8 text-center text-muted-foreground">
                 {hasFilters ? 'No hay devoluciones que coincidan con los filtros' : 'No hay devoluciones registradas'}
               </td></tr>
             )}
@@ -274,7 +287,8 @@ export default function DevolucionesListPage() {
                 <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
                   <td className="py-2 px-3 font-mono text-muted-foreground">{fmtDate(d.fecha)}</td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
-                  <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? d.usuarios?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{d.ventas?.vendedor?.nombre ?? d.vendedores?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{d.registradoPor ?? '—'}</td>
                   <td className="py-2 px-3">
                     {d.ventas?.folio ? (
                       <span className="text-primary font-mono text-[11px] font-semibold">{d.ventas.folio}</span>
@@ -315,7 +329,7 @@ export default function DevolucionesListPage() {
           {!!filtered.length && (
             <tfoot>
               <tr className="border-t-2 border-border bg-muted/30 font-bold">
-                <td colSpan={5} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
+                <td colSpan={6} className="py-2 px-3 text-[11px] text-muted-foreground uppercase">Totales ({filtered.length})</td>
                 <td className="py-2 px-3 text-right tabular-nums">{totalUds}</td>
                 <td colSpan={3}></td>
                 <td className="py-2 px-3 text-right text-destructive tabular-nums">{fmt(totalCredito)}</td>
