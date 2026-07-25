@@ -252,6 +252,7 @@ export default function DevolucionesListPage() {
               <th className="text-left py-2.5 px-3 font-medium">Fecha</th>
               <th className="text-left py-2.5 px-3 font-medium">Cliente</th>
               <th className="text-left py-2.5 px-3 font-medium">Vendedor</th>
+              <th className="text-left py-2.5 px-3 font-medium">Registró</th>
               <th className="text-left py-2.5 px-3 font-medium">Venta</th>
               <th className="text-left py-2.5 px-3 font-medium">Productos</th>
               <th className="text-right py-2.5 px-3 font-medium">Uds.</th>
