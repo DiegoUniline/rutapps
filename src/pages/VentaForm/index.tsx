@@ -42,6 +42,7 @@ export default function VentaFormPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
+  const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
