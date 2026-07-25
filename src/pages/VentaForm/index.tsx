@@ -42,6 +42,7 @@ export default function VentaFormPage() {
   const canApplyDiscount = isOwner || hasPermiso('ventas.aplicar_descuento', 'ver');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showPago, setShowPago] = useState(false);
   const [checkoutSaving, setCheckoutSaving] = useState(false);
   const [showDevolucion, setShowDevolucion] = useState(false);
   const h = useVentaForm();
@@ -347,7 +348,7 @@ export default function VentaFormPage() {
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
             { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} productosList={productosList ?? []} readOnly={readOnly} totals={totals} cerradoSnapshot={(form as any).cerrado_at ? ((form as any).cerrado_snapshot ?? null) : null} promoResults={promoResults} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} saldoPendiente={saldoPendiente} canChangePrice={canChangePrice} canApplyDiscount={canApplyDiscount} onChangeLineListaPrecio={changeLineListaPrecio} /> },
-            ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} /> }] : []),
+            ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} onCancelPago={handleCancelPago} onReactivarPago={handleReactivarPago} onDeletePago={handleDeletePago} onUpdatePago={handleUpdatePago} onRealizarPago={() => setShowPago(true)} /> }] : []),
             ...(!isNew ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab tipo={form.tipo} lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(billingEnabled && !isNew ? [{ key: 'facturacion', label: `Facturas (${cfdisCount ?? 0})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}</div> }] : []),
             ...(!isNew ? [{ key: 'devoluciones', label: 'Devoluciones', content: <VentaDevolucionesTab ventaId={form.id!} clienteId={form.cliente_id} folio={form.folio} readOnly={readOnly} /> }] : []),
@@ -422,6 +423,37 @@ export default function VentaFormPage() {
             saving={checkoutSaving}
             onConfirm={handleCheckoutConfirm}
             onClose={() => setShowCheckout(false)}
+          />
+        );
+      })()}
+
+      {/* Realizar pago sobre una venta existente — reutiliza el modal de checkout
+          (calcula cambio si dan de más y toma solo el monto justo o menor). */}
+      {(() => {
+        const cliente = clientesList?.find(c => c.id === form.cliente_id);
+        return (
+          <VentaCheckoutModal
+            open={showPago}
+            total={Math.max(0, saldoPendiente)}
+            clienteNombre={cliente?.nombre ?? 'Sin cliente'}
+            clienteCredito={!!cliente?.credito}
+            clienteDiasCredito={(cliente as any)?.dias_credito ?? 0}
+            clienteLimiteCredito={(cliente as any)?.limite_credito ?? 0}
+            cuentasPendientes={[]}
+            saving={checkoutSaving}
+            onConfirm={async (pagos) => {
+              setCheckoutSaving(true);
+              try {
+                let restante = saldoPendiente;
+                for (const p of pagos) {
+                  if (restante <= 0.01) break;
+                  const aplicar = Math.min(p.monto, restante);
+                  if (aplicar > 0) { await handleAddPago(aplicar, p.metodo, p.referencia); restante -= aplicar; }
+                }
+                setShowPago(false);
+              } finally { setCheckoutSaving(false); }
+            }}
+            onClose={() => setShowPago(false)}
           />
         );
       })()}

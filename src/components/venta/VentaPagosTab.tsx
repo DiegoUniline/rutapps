@@ -22,9 +22,10 @@ interface VentaPagosTabProps {
   onReactivarPago?: (cobroId: string) => Promise<void>;
   onDeletePago?: (aplicacionId: string, cobroId: string) => Promise<void>;
   onUpdatePago?: (aplicacionId: string, cobroId: string, nuevoMonto: number) => Promise<void>;
+  onRealizarPago?: () => void;
 }
 
-export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, onAddPago, onCancelPago, onReactivarPago, onDeletePago, onUpdatePago }: VentaPagosTabProps) {
+export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, onAddPago, onCancelPago, onReactivarPago, onDeletePago, onUpdatePago, onRealizarPago }: VentaPagosTabProps) {
   const { fmt } = useCurrency();
   const [showForm, setShowForm] = useState(false);
   const [monto, setMonto] = useState('');
@@ -128,6 +129,15 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
           </span>
         </div>
       </div>
+
+      {onRealizarPago && saldoPendiente > 0.01 && (
+        <button
+          onClick={onRealizarPago}
+          className="bg-primary text-primary-foreground rounded-md h-9 px-4 flex items-center gap-1.5 text-[13px] font-medium hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4" /> Realizar pago
+        </button>
+      )}
 
       {isMobile ? (
         <div className="space-y-2">
