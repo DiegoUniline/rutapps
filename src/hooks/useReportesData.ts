@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { totalEfectivoVenta } from '@/lib/ventaCerrada';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();
@@ -155,7 +156,15 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       // === RESUMEN ===
       // Pedidos "cerrados parciales" cobran únicamente lo entregado (total_efectivo).
       const totalVentas = ventas.reduce((s, v) => s + totalEfectivoVenta(v as any), 0);
-      const totalCobros = cobros.reduce((s, c) => s + (c.monto ?? 0), 0);
+      // El saldo a favor NO es dinero que entra a caja: es crédito del cliente
+      // (nota de crédito por devolución) que se consume. Se contabiliza aparte
+      // y se excluye de los ingresos por cobros.
+      const totalSaldoFavorAplicado = cobros
+        .filter((c) => c.metodo_pago === SALDO_FAVOR_METODO)
+        .reduce((s, c) => s + (c.monto ?? 0), 0);
+      const totalCobros = cobros
+        .filter((c) => c.metodo_pago !== SALDO_FAVOR_METODO)
+        .reduce((s, c) => s + (c.monto ?? 0), 0);
       const totalGastos = gastos.reduce((s, g) => s + (g.monto ?? 0), 0);
       const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
@@ -166,6 +175,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       // === DESGLOSE POR MÉTODO DE PAGO (from cobros) ===
       const metodoPagoMap: Record<string, number> = {};
       for (const c of cobros) {
+        if (c.metodo_pago === SALDO_FAVOR_METODO) continue; // no es dinero real
         const m = c.metodo_pago ?? 'otro';
         metodoPagoMap[m] = (metodoPagoMap[m] ?? 0) + (c.monto ?? 0);
       }
@@ -307,7 +317,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       }
 
       return {
-        totalVentas, totalCobros, totalGastos, totalPendiente,
+        totalVentas, totalCobros, totalGastos, totalPendiente, totalSaldoFavorAplicado,
         totalContado, totalCredito, metodosPago,
         numVentas: ventas.length, numCobros: cobros.length,
         utilidad: totalVentas - totalGastos, dailyVentas,

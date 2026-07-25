@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { roundMoney, todayInTimezone } from '@/lib/utils';
+import { useSaldoFavor } from '@/hooks/useSaldoFavor';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { Banknote, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -39,17 +41,27 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
   // deshabilite por re-render) registre el cobro dos veces.
   const savingRef = useRef(false);
 
+  // Saldo a favor del cliente (crédito por notas de crédito de devoluciones).
+  const { disponible: saldoFavorDisp } = useSaldoFavor(venta.cliente_id);
+  const esSaldoFavor = metodo === SALDO_FAVOR_METODO;
+  // Con saldo a favor sólo se puede aplicar hasta lo disponible.
+  const topeMonto = esSaldoFavor ? Math.min(saldo, roundMoney(saldoFavorDisp)) : saldo;
+
   const montoNum = roundMoney(Math.max(0, Number(monto) || 0));
-  const exceedsSaldo = montoNum > saldo;
+  const exceedsSaldo = esSaldoFavor ? montoNum > topeMonto : montoNum > saldo;
 
   const submit = async () => {
     if (!user || !empresa?.id) return;
     if (montoNum <= 0) { toast.error('Monto inválido'); return; }
+    if (esSaldoFavor && montoNum > topeMonto + 0.01) {
+      toast.error(`El saldo a favor disponible es ${fmt(saldoFavorDisp)}`);
+      return;
+    }
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     try {
-      const aplicado = Math.min(montoNum, saldo);
+      const aplicado = Math.min(montoNum, topeMonto);
       const { data: cobro, error: cErr } = await supabase
         .from('cobros')
         .insert({
@@ -117,26 +129,50 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
               autoFocus
             />
             <div className="flex gap-1 mt-1">
-              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMonto(String(saldo))}>
-                Saldar ({fmt(saldo)})
+              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMonto(String(topeMonto))}>
+                {esSaldoFavor ? `Aplicar (${fmt(topeMonto)})` : `Saldar (${fmt(saldo)})`}
               </Button>
-              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMonto(String(roundMoney(saldo / 2)))}>
+              <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setMonto(String(roundMoney(topeMonto / 2)))}>
                 50%
               </Button>
             </div>
             {exceedsSaldo && (
-              <p className="text-[11px] text-warning mt-1">El monto supera el saldo; sólo se aplicará {fmt(saldo)}.</p>
+              <p className="text-[11px] text-warning mt-1">
+                {esSaldoFavor
+                  ? `El monto supera el saldo a favor; sólo se aplicará ${fmt(topeMonto)}.`
+                  : `El monto supera el saldo; sólo se aplicará ${fmt(saldo)}.`}
+              </p>
             )}
           </div>
 
           <div>
             <Label>Método de pago</Label>
-            <Select value={metodo} onValueChange={setMetodo}>
+            <Select
+              value={metodo}
+              onValueChange={(v) => {
+                setMetodo(v);
+                // Al elegir saldo a favor, topamos el monto a lo disponible.
+                if (v === SALDO_FAVOR_METODO) {
+                  const tope = Math.min(saldo, roundMoney(saldoFavorDisp));
+                  if (montoNum > tope) setMonto(String(tope));
+                }
+              }}
+            >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {METODOS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                {saldoFavorDisp > 0.01 && (
+                  <SelectItem value={SALDO_FAVOR_METODO}>
+                    Saldo a favor ({fmt(saldoFavorDisp)})
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
+            {esSaldoFavor && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Se aplica el crédito del cliente. No entra dinero nuevo a caja.
+              </p>
+            )}
           </div>
 
           <div>
