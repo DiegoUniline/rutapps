@@ -124,8 +124,12 @@ export function VentaCheckoutModal({
     const ef = parseFloat(payEfectivo) || 0;
     const tr = parseFloat(payTransferencia) || 0;
     const ta = parseFloat(payTarjeta) || 0;
+    // Saldo a favor no es ingreso nuevo — se registra como cobro con metodo 'saldo_favor'
+    // que consume el crédito emitido previamente por notas de devolución.
+    if (favorAplicado > 0) pagos.push({ metodo: SALDO_FAVOR_METODO, monto: favorAplicado, referencia: '' });
     // For efectivo, cap at totalACobrar (don't register change as payment)
-    if (ef > 0) pagos.push({ metodo: 'efectivo', monto: Math.min(ef, totalACobrar), referencia: '' });
+    const restanteTrasFavor = Math.max(0, totalACobrar - favorAplicado);
+    if (ef > 0) pagos.push({ metodo: 'efectivo', monto: Math.min(ef, restanteTrasFavor), referencia: '' });
     if (tr > 0) pagos.push({ metodo: 'transferencia', monto: tr, referencia: refTransferencia });
     if (ta > 0) pagos.push({ metodo: 'tarjeta', monto: ta, referencia: refTarjeta });
 
