@@ -127,7 +127,7 @@ export function VentaDevolucionesTab({ ventaId, clienteId, folio, readOnly }: Pr
           <tfoot>
             <tr className="border-t border-border font-bold text-[11px]">
               <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
-              <td className="py-2 text-right text-destructive">${fmt(totalCredito)}</td>
+              <td className="py-2 text-right text-destructive">{fmt(totalCredito)}</td>
             </tr>
           </tfoot>
         )}
