@@ -62,32 +62,31 @@ export function VentaCobroQuickModal({ open, onClose, venta, fmt, onSuccess }: P
     setSaving(true);
     try {
       const aplicado = Math.min(montoNum, topeMonto);
-      const { data: cobro, error: cErr } = await supabase
-        .from('cobros')
-        .insert({
-          empresa_id: empresa.id,
-          cliente_id: venta.cliente_id,
-          user_id: user.id,
-          monto: montoNum,
-          metodo_pago: metodo,
-          referencia: referencia || null,
-          fecha,
-        })
-        .select('id')
-        .single();
-      if (cErr) throw cErr;
+      // Cobro atómico en una sola ida al servidor (RPC): inserta el cobro,
+      // su aplicación y recalcula el saldo con triggers. Antes eran 2-3 vueltas
+      // secuenciales (cobro → aplicación → update status), lo que lo hacía lento.
+      const { error: rErr } = await (supabase as any).rpc('aplicar_cobro', {
+        p_empresa_id: empresa.id,
+        p_cliente_id: venta.cliente_id,
+        p_monto: aplicado,
+        p_metodo: metodo,
+        p_referencia: referencia || null,
+        p_fecha: fecha,
+        p_aplicaciones: [{ venta_id: venta.id, monto_aplicado: aplicado }],
+        p_notas: null,
+        p_user_id: user.id,
+      });
+      if (rErr) throw rErr;
 
-      const { error: aErr } = await supabase
-        .from('cobro_aplicaciones')
-        .insert([{ cobro_id: cobro!.id, venta_id: venta.id, monto_aplicado: aplicado }]);
-      if (aErr) throw aErr;
-
-      const newSaldo = roundMoney(saldo - aplicado);
-      if (newSaldo <= 0.01 && venta.status === 'borrador') {
+      // Un borrador que queda totalmente pagado pasa a confirmado (caso raro).
+      if (roundMoney(saldo - aplicado) <= 0.01 && venta.status === 'borrador') {
         await supabase.from('ventas').update({ status: 'confirmado' as any }).eq('id', venta.id);
       }
 
       toast.success(`Cobro registrado a ${venta.folio ?? 'venta'} por ${fmt(aplicado)}`);
+      // Refresca las cachés offline (saldo a favor, saldos) sin recargar la
+      // vista: useOfflineQuery escucha este evento y vuelve a leer.
+      window.dispatchEvent(new Event('uniline:sync-complete'));
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['cobros-desktop'] });
       qc.invalidateQueries({ queryKey: ['venta-expanded', venta.id] });
