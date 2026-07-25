@@ -524,11 +524,11 @@ export default function EstadoCuentaClientePage() {
                 <TableCell className="text-[12px] text-muted-foreground">{c.telefono ?? '—'}</TableCell>
                 <TableCell className="text-center text-[12px]">{c.docs}</TableCell>
                 <TableCell className="text-right text-[12px]">{fmt(c.totalVendido)}</TableCell>
-                <TableCell className="text-right text-[12px] text-success tabular-nums">
+                <TableCell className="text-right text-[12px] text-destructive tabular-nums">
                   {c.saldoFavor > 0.01 ? fmt(c.saldoFavor) : '—'}
                 </TableCell>
                 <TableCell className={cn("text-right font-bold text-[12px] tabular-nums",
-                  c.saldoNeto > 0.01 ? 'text-destructive' : c.saldoNeto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                  c.saldoNeto > 0.01 ? 'text-success' : c.saldoNeto < -0.01 ? 'text-destructive' : 'text-muted-foreground')}>
                   {c.saldoNeto < -0.01 ? `-${fmt(Math.abs(c.saldoNeto))}` : fmt(c.saldoNeto)}
                 </TableCell>
                 <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
