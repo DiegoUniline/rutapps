@@ -25,6 +25,13 @@ function generateUUID(): string {
  * Hook that reads from IndexedDB first (instant), then from Supabase if online
  * AND cache is stale or data saver is off.
  */
+// AHORRO DE DATOS: throttle de descargas del servidor por (tabla+filtros+select).
+// Evita que cada montaje y cada evento 'sync-complete' vuelva a jalar la tabla
+// COMPLETA. Cuando ya hay datos locales frescos (el sync maestro los mantiene al
+// día), se reutiliza IndexedDB en vez de re-pegarle al servidor.
+const SERVER_FETCH_TTL_MS = 30_000;
+const lastServerFetchAt = new Map<string, number>();
+
 export function useOfflineQuery<T = any>(
   table: string,
   filters?: Record<string, any>,
@@ -39,11 +46,13 @@ export function useOfflineQuery<T = any>(
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (opts?: { localOnly?: boolean; force?: boolean }) => {
     if (!enabled) {
       setIsLoading(false);
       return;
     }
+
+    const cacheKey = `${table}|${JSON.stringify(filters ?? {})}|${options?.select ?? ''}|${options?.orderBy ?? ''}|${options?.ascending ?? ''}`;
 
     setIsLoading(true);
     let hasLocalData = false;
@@ -94,6 +103,23 @@ export function useOfflineQuery<T = any>(
       return;
     }
 
+    // 2b. AHORRO DE DATOS (solo cuando YA hay datos locales frescos):
+    //  - localOnly (evento sync-complete): el sync maestro ya actualizó
+    //    IndexedDB, así que basta con la lectura local de arriba; no se
+    //    re-descarga la tabla del servidor.
+    //  - throttle: si esta misma consulta jaló del servidor hace <30s, se
+    //    reutiliza lo local en vez de volver a bajar la tabla completa.
+    //  Si NO hay datos locales (p. ej. escritorio sin caché), se ignora este
+    //  atajo y se hace el fetch normal para no quedar sin datos.
+    if (hasLocalData && !opts?.force) {
+      const now = Date.now();
+      const last = lastServerFetchAt.get(cacheKey) ?? 0;
+      if (opts?.localOnly || (now - last < SERVER_FETCH_TTL_MS)) {
+        setIsLoading(false);
+        return;
+      }
+    }
+
     // 3. If connected, fetch fresh data from server and update cache
     if (await hasRealConnection()) {
       try {
@@ -118,6 +144,9 @@ export function useOfflineQuery<T = any>(
           return query.range(from, to);
         });
 
+        // Marca cuándo se jaló del servidor esta consulta (para el throttle).
+        lastServerFetchAt.set(cacheKey, Date.now());
+
         // Evita el "parpadeo a vacío" cuando ya hay datos locales (p. ej. un
         // registro recién insertado que aún no terminó de sincronizar al servidor).
         if (serverData.length > 0 || !hasLocalData) {
@@ -140,14 +169,17 @@ export function useOfflineQuery<T = any>(
     loadData();
   }, [loadData]);
 
-  // Re-fetch when sync completes (server may have generated folios, etc.)
+  // Al terminar un sync, el sync maestro ya dejó IndexedDB fresco: se re-lee
+  // local (localOnly) en vez de re-descargar la tabla del servidor.
   useEffect(() => {
-    const handler = () => loadData();
+    const handler = () => loadData({ localOnly: true });
     window.addEventListener('uniline:sync-complete', handler);
     return () => window.removeEventListener('uniline:sync-complete', handler);
   }, [loadData]);
 
-  return { data, isLoading, refetch: loadData };
+  // refetch() explícito siempre fuerza descarga del servidor (ignora el throttle).
+  const refetch = useCallback(() => loadData({ force: true }), [loadData]);
+  return { data, isLoading, refetch };
 }
 
 /**

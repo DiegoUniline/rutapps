@@ -17,18 +17,22 @@ export function useSaldoFavor(clienteId?: string | null) {
   const eid = empresa?.id;
   const enabled = !!eid && !!clienteId;
 
-  const { data: devoluciones } = useOfflineQuery('devoluciones', { empresa_id: eid }, { enabled });
-  const { data: devLineas } = useOfflineQuery('devolucion_lineas', undefined, { enabled });
+  // Devoluciones del cliente (no de toda la empresa).
+  const { data: devoluciones } = useOfflineQuery('devoluciones', { empresa_id: eid, cliente_id: clienteId }, { enabled });
+  // Líneas SOLO de esas devoluciones (antes se bajaba la tabla completa). Se
+  // consulta por los ids del cliente; si aún no hay devoluciones, no se consulta.
+  const devIdsList = useMemo(() => (devoluciones ?? []).map((d: any) => d.id), [devoluciones]);
+  const { data: devLineas } = useOfflineQuery(
+    'devolucion_lineas',
+    devIdsList.length ? { devolucion_id: devIdsList } : undefined,
+    { enabled: enabled && devIdsList.length > 0 },
+  );
   const { data: cobros } = useOfflineQuery('cobros', { empresa_id: eid, cliente_id: clienteId }, { enabled });
 
   return useMemo(() => {
     if (!clienteId) return { disponible: 0, emitido: 0, usado: 0 };
 
-    const devIds = new Set(
-      (devoluciones ?? [])
-        .filter((d: any) => d.cliente_id === clienteId)
-        .map((d: any) => d.id),
-    );
+    const devIds = new Set(devIdsList);
 
     const emitido = (devLineas ?? [])
       .filter((l: any) => devIds.has(l.devolucion_id) && l.accion === 'nota_credito')
@@ -39,5 +43,5 @@ export function useSaldoFavor(clienteId?: string | null) {
       .reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
 
     return { disponible: saldoFavorDisponible(emitido, usado), emitido, usado };
-  }, [clienteId, devoluciones, devLineas, cobros]);
+  }, [clienteId, devIdsList, devLineas, cobros]);
 }
