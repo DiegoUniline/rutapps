@@ -1,4 +1,4 @@
-import { Check, Wallet, Banknote, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Wallet, Banknote, CreditCard, PiggyBank, ChevronDown, ChevronUp } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useState } from 'react';
@@ -12,8 +12,9 @@ interface Props {
   totalAplicarOtras: number;
   montoAplicarActual: number;
   totalACobrar: number;
-  metodoPago: 'efectivo' | 'transferencia' | 'tarjeta';
-  setMetodoPago: (v: 'efectivo' | 'transferencia' | 'tarjeta') => void;
+  metodoPago: 'efectivo' | 'transferencia' | 'tarjeta' | 'saldo_favor';
+  setMetodoPago: (v: 'efectivo' | 'transferencia' | 'tarjeta' | 'saldo_favor') => void;
+  saldoFavorDisp: number;
   montoRecibido: string;
   setMontoRecibido: (v: string) => void;
   referenciaPago: string;
@@ -32,6 +33,8 @@ export function CobrarView(p: Props) {
   const { symbol: s } = useCurrency();
   const [showOtras, setShowOtras] = useState(p.cuentasPendientes.length > 0);
 
+  const esSaldoFavor = p.metodoPago === 'saldo_favor';
+  const excedeSaldoFavor = esSaldoFavor && p.totalACobrar > p.saldoFavorDisp + 0.01;
   const sinDistribuir = (parseFloat(p.montoRecibido) || 0) - p.totalACobrar;
 
   return (
@@ -47,27 +50,40 @@ export function CobrarView(p: Props) {
 
       <div className="flex-1 overflow-auto px-3 py-3 space-y-3 pb-28">
         {/* 1. Método de pago */}
-        <MetodoPagoSection {...p} s={s} />
+        <MetodoPagoSection metodoPago={p.metodoPago} setMetodoPago={p.setMetodoPago} saldoFavorDisp={p.saldoFavorDisp} fmt={p.fmt} s={s} />
 
-        {/* 2. Monto recibido */}
-        <section className="bg-card rounded-xl border border-border p-3.5">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">💵 Monto recibido del cliente</p>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-muted-foreground font-medium">{s}</span>
-            <input
-              type="number" inputMode="decimal" min="0"
-              className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-3 text-[20px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={p.montoRecibido} placeholder="0.00"
-              onChange={e => { const val = parseFloat(e.target.value); if (e.target.value === '' || val >= 0) p.setMontoRecibido(e.target.value); }}
-            />
-          </div>
-          {p.metodoPago !== 'efectivo' && (
-            <div className="mt-2">
-              <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
-              <input type="text" className="w-full mt-1 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={p.referenciaPago} placeholder="No. de referencia" onChange={e => p.setReferenciaPago(e.target.value)} />
+        {/* 2. Monto recibido — con saldo a favor no hay efectivo del cliente */}
+        {esSaldoFavor ? (
+          <section className="bg-card rounded-xl border border-border p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-primary flex items-center gap-1.5"><PiggyBank className="h-4 w-4" /> Saldo a favor disponible</span>
+              <span className="text-[16px] font-bold text-primary tabular-nums">{p.fmt(p.saldoFavorDisp)}</span>
             </div>
-          )}
-        </section>
+            <p className="text-[10px] text-muted-foreground mt-1.5">Se aplica el crédito del cliente. No entra dinero a caja.</p>
+            {excedeSaldoFavor && (
+              <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total supera el saldo a favor disponible.</p>
+            )}
+          </section>
+        ) : (
+          <section className="bg-card rounded-xl border border-border p-3.5">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">💵 Monto recibido del cliente</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-muted-foreground font-medium">{s}</span>
+              <input
+                type="number" inputMode="decimal" min="0"
+                className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-3 text-[20px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                value={p.montoRecibido} placeholder="0.00"
+                onChange={e => { const val = parseFloat(e.target.value); if (e.target.value === '' || val >= 0) p.setMontoRecibido(e.target.value); }}
+              />
+            </div>
+            {p.metodoPago !== 'efectivo' && (
+              <div className="mt-2">
+                <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
+                <input type="text" className="w-full mt-1 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={p.referenciaPago} placeholder="No. de referencia" onChange={e => p.setReferenciaPago(e.target.value)} />
+              </div>
+            )}
+          </section>
+        )}
 
         {/* 3. Distribución del pago */}
         <section className="bg-card rounded-xl border border-border p-3.5">
@@ -154,7 +170,7 @@ export function CobrarView(p: Props) {
 
       {/* CTA */}
       <div className="sticky bottom-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-        <button onClick={p.handleCobrar} disabled={p.saving || p.totalACobrar <= 0 || (parseFloat(p.montoRecibido) || 0) < p.totalACobrar - 0.01}
+        <button onClick={p.handleCobrar} disabled={p.saving || p.totalACobrar <= 0 || (esSaldoFavor ? excedeSaldoFavor : (parseFloat(p.montoRecibido) || 0) < p.totalACobrar - 0.01)}
           className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
           <Check className="h-4 w-4" />{p.saving ? 'Procesando...' : `Cobrar ${p.fmt(p.totalACobrar)}`}
         </button>
@@ -163,14 +179,18 @@ export function CobrarView(p: Props) {
   );
 }
 
-function MetodoPagoSection({ metodoPago, setMetodoPago, s }: Pick<Props, 'metodoPago' | 'setMetodoPago'> & { s: string }) {
+function MetodoPagoSection({ metodoPago, setMetodoPago, saldoFavorDisp, fmt, s }: Pick<Props, 'metodoPago' | 'setMetodoPago' | 'saldoFavorDisp' | 'fmt'> & { s: string }) {
+  const base = [['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const;
   return (
     <section className="bg-card rounded-xl border border-border p-3.5">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Método de pago</p>
       <div className="flex gap-1.5">
-        {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
+        {base.map(([val, label, Icon]) => (
           <button key={val} onClick={() => setMetodoPago(val)} className={`flex-1 py-2.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${metodoPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}><Icon className="h-4 w-4" />{label}</button>
         ))}
+        {saldoFavorDisp > 0.01 && (
+          <button onClick={() => setMetodoPago('saldo_favor')} className={`flex-1 py-2.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${metodoPago === 'saldo_favor' ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}><PiggyBank className="h-4 w-4" />Saldo<span className="text-[8px] leading-none opacity-80">{fmt(saldoFavorDisp)}</span></button>
+        )}
       </div>
     </section>
   );

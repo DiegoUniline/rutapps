@@ -16,6 +16,8 @@ import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, Descue
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useClienteInsights } from '@/hooks/useClienteInsights';
+import { useSaldoFavor } from '@/hooks/useSaldoFavor';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { STEPS } from './types';
@@ -375,6 +377,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     if (!pedidoSugeridoRaw || !productos) return [];
     return (pedidoSugeridoRaw as any[]).map(ps => { const prod = productos.find((p: any) => p.id === ps.producto_id); return prod ? { ...ps, productos: prod } : null; }).filter(Boolean);
   }, [pedidoSugeridoRaw, productos]);
+
+  // Saldo a favor del cliente (crédito por notas de crédito). Funciona offline.
+  const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
 
   // ── Client insights (smart suggestion + alerts) ──
   const insights = useClienteInsights(clienteId, selectedClienteData);
@@ -798,6 +803,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       toast.error('La fecha de entrega es obligatoria');
       return;
     }
+    // El pago con saldo a favor no puede exceder el crédito disponible del cliente.
+    const totalSaldoFavor = pagos
+      .filter(p => p.metodo_pago === SALDO_FAVOR_METODO)
+      .reduce((s, p) => s + p.monto, 0);
+    if (totalSaldoFavor > saldoFavorDisp + 0.01) {
+      toast.error(`Saldo a favor insuficiente. Disponible: ${fmt(saldoFavorDisp)}`);
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
     try {
@@ -1203,7 +1216,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     searchCliente, setSearchCliente, searchProducto, setSearchProducto,
     searchDevProducto, setSearchDevProducto, saving, tipoVenta, setTipoVenta,
     condicionPago, setCondicionPago, notas, setNotas, fechaEntrega, setFechaEntrega,
-    pagos, setPagos,
+    pagos, setPagos, saldoFavorDisp,
     cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     ticketInfo, sinCompra, setSinCompra, soloDevolucion: soloDevolucion, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra, sinImpuestos, setSinImpuestos,

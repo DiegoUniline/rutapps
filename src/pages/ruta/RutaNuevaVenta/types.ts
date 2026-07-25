@@ -62,7 +62,7 @@ export interface CuentaPendiente {
 
 export interface PagoLinea {
   id: string;
-  metodo_pago: 'efectivo' | 'transferencia' | 'tarjeta';
+  metodo_pago: 'efectivo' | 'transferencia' | 'tarjeta' | 'saldo_favor';
   monto: number;
   referencia: string;
 }

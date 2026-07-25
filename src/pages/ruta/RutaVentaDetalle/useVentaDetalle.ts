@@ -17,6 +17,8 @@ import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { marcarEntregaHechaYSincronizarPedido } from '@/lib/entregaStatus';
+import { useSaldoFavor } from '@/hooks/useSaldoFavor';
+import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -28,7 +30,7 @@ export function useVentaDetalle() {
   const { data: venta, isLoading } = useVenta(id);
 
   const [view, setView] = useState<View>('detalle');
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta' | 'saldo_favor'>('efectivo');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [referenciaPago, setReferenciaPago] = useState('');
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
@@ -49,6 +51,9 @@ export function useVentaDetalle() {
   const clienteId = (venta as any)?.cliente_id;
   const { symbol: currSym, fmt } = useCurrency();
   const fmtM = fmt;
+
+  // Saldo a favor del cliente (crédito por notas de crédito). Funciona offline.
+  const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
 
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId,
@@ -113,7 +118,10 @@ export function useVentaDetalle() {
   const totalAplicarOtras = roundMoney(cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0));
   const totalACobrar = roundMoney(montoAplicarActual + totalAplicarOtras);
   const montoRecibidoNum = roundMoney(parseFloat(montoRecibido) || 0);
-  const cambio = montoRecibidoNum > totalACobrar ? roundMoney(montoRecibidoNum - totalACobrar) : 0;
+  // Con saldo a favor no hay efectivo recibido, por lo tanto no hay cambio.
+  const cambio = metodoPago === SALDO_FAVOR_METODO
+    ? 0
+    : (montoRecibidoNum > totalACobrar ? roundMoney(montoRecibidoNum - totalACobrar) : 0);
 
   const updateMontoAplicarActual = (monto: number) => {
     const montoNormalizado = roundMoney(monto);
@@ -216,6 +224,12 @@ export function useVentaDetalle() {
 
   const handleCobrar = async () => {
     if (!user || !venta || totalACobrar <= 0) return;
+    // Con saldo a favor sólo se puede aplicar hasta el crédito disponible; no
+    // hay dinero recibido ni cambio (es crédito del cliente, no ingreso nuevo).
+    if (metodoPago === SALDO_FAVOR_METODO && totalACobrar > saldoFavorDisp + 0.01) {
+      toast.error(`Saldo a favor insuficiente. Disponible: ${fmt(saldoFavorDisp)}`);
+      return;
+    }
     setSaving(true);
     try {
       if (!empresa?.id) throw new Error('Sin empresa');
@@ -615,6 +629,7 @@ export function useVentaDetalle() {
     showProductSearch, setShowProductSearch, searchProducto, setSearchProducto,
     editTotals, saldoPendienteOtras, creditoDisponible, excedeCredito,
     saldoActual, totalAplicarOtras, totalACobrar, montoRecibidoNum, cambio,
+    saldoFavorDisp,
     montoAplicarActual, updateMontoAplicarActual,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,

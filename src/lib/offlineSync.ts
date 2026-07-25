@@ -78,7 +78,7 @@ const COLUMN_SELECTS: Record<string, string> = {
   venta_lineas: 'id,venta_id,producto_id,descripcion,cantidad,unidad_id,precio_unitario,descuento_pct,subtotal,iva_pct,ieps_pct,iva_monto,ieps_monto,total,notas,facturado,almacen_id,presentacion_id,presentacion_nombre,presentacion_factor,paquetes,lista_precio_id,precio_manual,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
   cobro_aplicaciones: 'id,cobro_id,venta_id,monto_aplicado,created_at',
-  devolucion_lineas: 'id,devolucion_id,producto_id,cantidad,motivo,notas,created_at',
+  devolucion_lineas: 'id,devolucion_id,producto_id,cantidad,motivo,accion,monto_credito,reemplazo_producto_id,notas,created_at',
   descarga_ruta_lineas: 'id,descarga_id,producto_id,cantidad_esperada,cantidad_real,diferencia,motivo,notas,created_at',
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
   tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',

@@ -182,7 +182,8 @@ export default function RutaDashboard() {
     ventasCount: ventasDirectasRango.length,
     pedidos: totalPedidosRango,
     pedidosCount: pedidosRango.length,
-    cobros: cobrosFiltrados.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
+    // El saldo a favor no es dinero recibido: se excluye del total de cobros.
+    cobros: cobrosFiltrados.filter((c: any) => c.metodo_pago !== 'saldo_favor').reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
     gastos: totalGastosRango,
     entregas: entregasFinalizadasRango.length,
     clientesVisitados: new Set([

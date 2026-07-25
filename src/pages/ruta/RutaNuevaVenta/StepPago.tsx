@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, PiggyBank, Save, ReceiptText, Plus, Trash2, Tag, Percent, DollarSign, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePermisos } from '@/hooks/usePermisos';
 import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea, DescuentoExtraTipo } from './types';
 import { ACCIONES } from './types';
@@ -23,6 +23,7 @@ interface Props {
   totalAplicarCuentas: number;
   pagos: PagoLinea[];
   setPagos: (fn: PagoLinea[] | ((prev: PagoLinea[]) => PagoLinea[])) => void;
+  saldoFavorDisp: number;
   notas: string;
   setNotas: (v: string) => void;
   totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number; descuentoExtra?: number };
@@ -51,6 +52,14 @@ const METODOS = [
   { value: 'transferencia' as const, label: 'Transfer.', Icon: Banknote },
   { value: 'tarjeta' as const, label: 'Tarjeta', Icon: CreditCard },
 ];
+// Metadatos de TODOS los métodos (para renderizar líneas ya agregadas),
+// incluye saldo a favor aunque no sea un método "normal" siempre disponible.
+const METODO_META: Record<string, { label: string; Icon: any }> = {
+  efectivo: { label: 'Efectivo', Icon: Wallet },
+  transferencia: { label: 'Transfer.', Icon: Banknote },
+  tarjeta: { label: 'Tarjeta', Icon: CreditCard },
+  saldo_favor: { label: 'Saldo a favor', Icon: PiggyBank },
+};
 
 /**
  * Quick-bill amounts using ONLY real bill denominations (MXN-style).
@@ -73,7 +82,7 @@ function getDynamicBills(total: number): { label: string; amount: number }[] {
 }
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, saldoFavorDisp, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt, canApplyDiscount, descuentoExtraTipo, setDescuentoExtraTipo, descuentoExtraValor, setDescuentoExtraValor, descuentoExtraMotivo, setDescuentoExtraMotivo } = props;
   const { symbol: s } = useCurrency();
   const { hasPermisoMovil } = usePermisos();
   const canCredito = hasPermisoMovil('ruta.venta_credito');
@@ -101,12 +110,26 @@ export function StepPago(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalACobrar]);
 
+  // Saldo a favor ya reservado en las líneas de pago actuales.
+  const saldoFavorEnUso = pagos.filter(p => p.metodo_pago === 'saldo_favor').reduce((s, p) => s + p.monto, 0);
+
   const addPagoLinea = (metodo: PagoLinea['metodo_pago']) => {
-    setPagos(prev => [...prev, { id: crypto.randomUUID(), metodo_pago: metodo, monto: restante, referencia: '' }]);
+    // El saldo a favor sólo puede cubrir hasta lo disponible del cliente.
+    const monto = metodo === 'saldo_favor'
+      ? Math.min(restante, Math.round(saldoFavorDisp * 100) / 100)
+      : restante;
+    setPagos(prev => [...prev, { id: crypto.randomUUID(), metodo_pago: metodo, monto, referencia: '' }]);
   };
 
   const updatePago = (id: string, field: keyof PagoLinea, value: any) => {
-    setPagos(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    setPagos(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      // Topar el monto de una línea de saldo a favor a lo disponible.
+      if (field === 'monto' && p.metodo_pago === 'saldo_favor') {
+        return { ...p, monto: Math.min(Number(value) || 0, Math.round(saldoFavorDisp * 100) / 100) };
+      }
+      return { ...p, [field]: value };
+    }));
   };
 
   const removePago = (id: string) => {
@@ -115,7 +138,11 @@ export function StepPago(props: Props) {
 
   // Métodos disponibles para agregar (que no estén ya en uso)
   const metodosUsados = new Set(pagos.map(p => p.metodo_pago));
-  const metodosDisponibles = METODOS.filter(m => !metodosUsados.has(m.value));
+  const metodosDisponibles = [
+    ...METODOS,
+    // Saldo a favor: sólo si el cliente tiene crédito disponible sin reservar.
+    ...(saldoFavorDisp - saldoFavorEnUso > 0.01 ? [{ value: 'saldo_favor' as const, label: 'Saldo a favor', Icon: PiggyBank }] : []),
+  ].filter(m => !metodosUsados.has(m.value));
 
   const [cuentasOpen, setCuentasOpen] = React.useState(false);
 
@@ -285,8 +312,9 @@ export function StepPago(props: Props) {
           {/* Existing payment lines */}
           <div className="space-y-2 mb-2.5">
             {pagos.map((pago) => {
-              const meta = METODOS.find(m => m.value === pago.metodo_pago)!;
+              const meta = METODO_META[pago.metodo_pago] ?? METODO_META.efectivo;
               const Icon = meta.Icon;
+              const esSaldoFavor = pago.metodo_pago === 'saldo_favor';
               return (
                 <div key={pago.id} className="rounded-md border border-border/60 p-2.5 space-y-2">
                   <div className="flex items-center justify-between">
@@ -327,10 +355,13 @@ export function StepPago(props: Props) {
                         ))}
                       </div>
                     )}
+                    {esSaldoFavor && (
+                      <p className="text-[10px] text-muted-foreground mt-1">Disponible {fmt(saldoFavorDisp)} · no entra dinero a caja.</p>
+                    )}
                   </div>
 
-                  {/* Reference for non-cash */}
-                  {pago.metodo_pago !== 'efectivo' && (
+                  {/* Reference for card/transfer only */}
+                  {(pago.metodo_pago === 'transferencia' || pago.metodo_pago === 'tarjeta') && (
                     <div>
                       <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
                       <input type="text" className="w-full mt-0.5 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={pago.referencia} placeholder="No. de referencia" onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />

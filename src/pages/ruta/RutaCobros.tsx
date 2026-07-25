@@ -34,7 +34,10 @@ export default function RutaCobros() {
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
   const filteredCobros = filterByDate((cobros ?? []) as any[], 'fecha');
-  const totalFiltrado = filteredCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+  // El saldo a favor no es dinero cobrado: se excluye del total (pero se lista).
+  const totalFiltrado = filteredCobros
+    .filter((c: any) => c.metodo_pago !== 'saldo_favor')
+    .reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
 
   const formatDate = (d: string) => {
     const date = new Date(d + 'T12:00:00');
