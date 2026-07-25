@@ -297,7 +297,7 @@ export default function EstadoCuentaClientePage() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Saldo pendiente</p>
-              <p className="text-lg font-bold text-destructive">{fmt(totalSaldo)}</p>
+              <p className="text-lg font-bold text-success">{fmt(totalSaldo)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Crédito</p>
@@ -316,7 +316,7 @@ export default function EstadoCuentaClientePage() {
 
         {/* Ventas pendientes */}
         <div>
-          <h3 className="text-sm font-semibold mb-2 text-destructive flex items-center gap-2">
+          <h3 className="text-sm font-semibold mb-2 text-success flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Ventas con saldo pendiente ({ventasPendientes.length})
           </h3>
           <div className="bg-card border border-border rounded overflow-x-auto">
@@ -339,7 +339,7 @@ export default function EstadoCuentaClientePage() {
                     <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
                     <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px] text-success">{fmt((v.total ?? 0) - (v.saldo_pendiente ?? 0))}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                    <TableCell className="text-right font-bold text-success">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                   </TableRow>
                 ))}
                 {ventasPendientes.length === 0 && (
@@ -356,7 +356,7 @@ export default function EstadoCuentaClientePage() {
                       <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({ventasPendientes.length})</TableCell>
                       <TableCell className="text-right font-bold tabular-nums">{fmt(t)}</TableCell>
                       <TableCell className="text-right font-bold text-success tabular-nums">{fmt(p)}</TableCell>
-                      <TableCell className="text-right font-bold text-destructive tabular-nums">{fmt(sp)}</TableCell>
+                      <TableCell className="text-right font-bold text-success tabular-nums">{fmt(sp)}</TableCell>
                     </TableRow>
                   </TableFooter>
                 );
@@ -469,7 +469,7 @@ export default function EstadoCuentaClientePage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo a favor</p>
-          <p className="text-2xl font-bold text-success">{fmt(totalFavorGlobal)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalFavorGlobal)}</p>
           <p className="text-[10px] text-muted-foreground">{clientesConFavor} cliente{clientesConFavor === 1 ? '' : 's'}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
@@ -524,11 +524,11 @@ export default function EstadoCuentaClientePage() {
                 <TableCell className="text-[12px] text-muted-foreground">{c.telefono ?? '—'}</TableCell>
                 <TableCell className="text-center text-[12px]">{c.docs}</TableCell>
                 <TableCell className="text-right text-[12px]">{fmt(c.totalVendido)}</TableCell>
-                <TableCell className="text-right text-[12px] text-success tabular-nums">
+                <TableCell className="text-right text-[12px] text-destructive tabular-nums">
                   {c.saldoFavor > 0.01 ? fmt(c.saldoFavor) : '—'}
                 </TableCell>
                 <TableCell className={cn("text-right font-bold text-[12px] tabular-nums",
-                  c.saldoNeto > 0.01 ? 'text-destructive' : c.saldoNeto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                  c.saldoNeto > 0.01 ? 'text-success' : c.saldoNeto < -0.01 ? 'text-destructive' : 'text-muted-foreground')}>
                   {c.saldoNeto < -0.01 ? `-${fmt(Math.abs(c.saldoNeto))}` : fmt(c.saldoNeto)}
                 </TableCell>
                 <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
@@ -550,9 +550,9 @@ export default function EstadoCuentaClientePage() {
                   <TableCell colSpan={3} className="text-[11px] text-muted-foreground font-semibold">Totales ({filtered.length})</TableCell>
                   <TableCell className="text-center font-bold tabular-nums">{docs}</TableCell>
                   <TableCell className="text-right font-bold tabular-nums">{fmt(tot)}</TableCell>
-                  <TableCell className="text-right font-bold text-success tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive tabular-nums">{fav > 0.01 ? fmt(fav) : '—'}</TableCell>
                   <TableCell className={cn("text-right font-bold tabular-nums",
-                    neto > 0.01 ? 'text-destructive' : neto < -0.01 ? 'text-success' : 'text-muted-foreground')}>
+                    neto > 0.01 ? 'text-success' : neto < -0.01 ? 'text-destructive' : 'text-muted-foreground')}>
                     {neto < -0.01 ? `-${fmt(Math.abs(neto))}` : fmt(neto)}
                   </TableCell>
                   <TableCell />
