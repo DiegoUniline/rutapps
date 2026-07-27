@@ -1569,6 +1569,7 @@ export type Database = {
           status: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id: string | null
           telefono: string | null
+          updated_at: string | null
           uso_cfdi: string | null
           vendedor_id: string | null
           zona_id: string | null
@@ -1619,6 +1620,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          updated_at?: string | null
           uso_cfdi?: string | null
           vendedor_id?: string | null
           zona_id?: string | null
@@ -1669,6 +1671,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          updated_at?: string | null
           uso_cfdi?: string | null
           vendedor_id?: string | null
           zona_id?: string | null
@@ -5466,6 +5469,7 @@ export type Database = {
           unidad_compra_id: string | null
           unidad_granel: string
           unidad_venta_id: string | null
+          updated_at: string | null
           usa_listas_precio: boolean
           usa_presentaciones: boolean
           vender_sin_stock: boolean | null
@@ -5524,6 +5528,7 @@ export type Database = {
           unidad_compra_id?: string | null
           unidad_granel?: string
           unidad_venta_id?: string | null
+          updated_at?: string | null
           usa_listas_precio?: boolean
           usa_presentaciones?: boolean
           vender_sin_stock?: boolean | null
@@ -5582,6 +5587,7 @@ export type Database = {
           unidad_compra_id?: string | null
           unidad_granel?: string
           unidad_venta_id?: string | null
+          updated_at?: string | null
           usa_listas_precio?: boolean
           usa_presentaciones?: boolean
           vender_sin_stock?: boolean | null
