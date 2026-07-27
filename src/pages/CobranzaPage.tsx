@@ -66,9 +66,12 @@ function useCobros() {
         if (error) throw error;
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
-          await offlineDb.cobros.where('empresa_id').equals(empresa!.id).delete();
+          // Limpieza total: registros viejos sin empresa_id o de otra sesión
+          // quedaban "fantasma" en la lista aunque el servidor ya no los tenga.
+          await offlineDb.cobros.clear();
           if (data && data.length > 0) await offlineDb.cobros.bulkPut(data as any[]);
         } catch { /* cache best-effort */ }
+
         return data ?? [];
       } catch (err) {
         const cached = await readCache();
