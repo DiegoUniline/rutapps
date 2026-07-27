@@ -64,6 +64,11 @@ function useCobros() {
           .eq('empresa_id', empresa!.id)
           .order('fecha', { ascending: false });
         if (error) throw error;
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          await offlineDb.cobros.where('empresa_id').equals(empresa!.id).delete();
+          if (data && data.length > 0) await offlineDb.cobros.bulkPut(data as any[]);
+        } catch { /* cache best-effort */ }
         return data ?? [];
       } catch (err) {
         const cached = await readCache();
