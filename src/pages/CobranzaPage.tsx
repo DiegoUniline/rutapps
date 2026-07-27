@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -74,6 +74,13 @@ function useCobros() {
 
         return data ?? [];
       } catch (err) {
+        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+          try {
+            const { offlineDb } = await import('@/lib/offlineDb');
+            await offlineDb.cobros.clear();
+          } catch { /* cache best-effort */ }
+          return [];
+        }
         const cached = await readCache();
         if (cached.length > 0) return cached;
         throw err;
@@ -136,6 +143,13 @@ export default function CobranzaPage() {
   const qc = useQueryClient();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (!empresa?.id || isLoading || (cobros?.length ?? 0) > 0) return;
+    import('@/lib/offlineDb')
+      .then(({ offlineDb }) => offlineDb.cobros.clear())
+      .catch(() => undefined);
+  }, [empresa?.id, isLoading, cobros?.length]);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
