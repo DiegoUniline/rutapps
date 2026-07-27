@@ -33,29 +33,74 @@ import { useSortableTable, SortableTh } from '@/hooks/useSortableTable';
 import { CobranzaTabs } from '@/components/CobranzaTabs';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate';
+import { hasRealConnection } from '@/lib/connectivity';
 
 
 
 function useCobros() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['cobros-desktop', empresa?.id],
+    queryKey: ['cobros-desktop', empresa?.id, 'server-v2'],
     enabled: !!empresa?.id,
     networkMode: 'always',
     staleTime: 0,
+    gcTime: 0,
     refetchOnMount: 'always',
     refetchOnReconnect: 'always',
     queryFn: async () => {
+      const empresaId = empresa?.id;
+      if (!empresaId) return [];
+
+      const purgeLocalCobros = async (dropPendingQueue = false) => {
+        try {
+          const { offlineDb } = await import('@/lib/offlineDb');
+          const localCobros = await offlineDb.cobros
+            .where('empresa_id').equals(empresaId).toArray();
+          const localCobroIds = new Set(localCobros.map((c: any) => c.id).filter(Boolean));
+
+          await offlineDb.transaction('rw', offlineDb.cobros, offlineDb.cobro_aplicaciones, offlineDb.syncQueue, async () => {
+            await offlineDb.cobros.where('empresa_id').equals(empresaId).delete();
+            if (localCobroIds.size > 0) {
+              const apps = await offlineDb.cobro_aplicaciones.toArray();
+              await Promise.all(
+                apps
+                  .filter((app: any) => localCobroIds.has(app.cobro_id))
+                  .map((app: any) => offlineDb.cobro_aplicaciones.delete(app.id)),
+              );
+            }
+
+            if (dropPendingQueue) {
+              const queue = await offlineDb.syncQueue.toArray();
+              const queuedCobroIds = new Set<string>();
+              for (const item of queue) {
+                if (item.table === 'cobros' && item.data?.empresa_id === empresaId) {
+                  if (item.keyValue) queuedCobroIds.add(item.keyValue);
+                  if (item.data?.id) queuedCobroIds.add(item.data.id);
+                  if (item.id) await offlineDb.syncQueue.delete(item.id);
+                }
+              }
+              for (const item of queue) {
+                const cobroId = item.data?.cobro_id;
+                if (item.table === 'cobro_aplicaciones' && cobroId && queuedCobroIds.has(cobroId) && item.id) {
+                  await offlineDb.syncQueue.delete(item.id);
+                }
+              }
+            }
+          });
+        } catch { /* cache best-effort */ }
+      };
+
       const readCache = async () => {
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
           const cached = await offlineDb.cobros
-            .where('empresa_id').equals(empresa!.id).toArray();
+            .where('empresa_id').equals(empresaId).toArray();
           return cached as any[];
         } catch { return [] as any[]; }
       };
 
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const online = await hasRealConnection();
+      if (!online) {
         const cached = await readCache();
         return cached;
       }
@@ -64,26 +109,19 @@ function useCobros() {
         const { data, error } = await supabase
           .from('cobros')
           .select('*, clientes(id, nombre, telefono), cobro_aplicaciones(venta_id, monto_aplicado, ventas(id, folio, tipo))')
-          .eq('empresa_id', empresa!.id)
+          .eq('empresa_id', empresaId)
           .order('fecha', { ascending: false });
         if (error) throw error;
         try {
           const { offlineDb } = await import('@/lib/offlineDb');
-          // Limpieza total: registros viejos sin empresa_id o de otra sesión
-          // quedaban "fantasma" en la lista aunque el servidor ya no los tenga.
-          await offlineDb.cobros.clear();
+          await purgeLocalCobros(empresa?.licencia === '12324489' && (data?.length ?? 0) === 0);
           if (data && data.length > 0) await offlineDb.cobros.bulkPut(data as any[]);
         } catch { /* cache best-effort */ }
 
         return data ?? [];
       } catch (err) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          try {
-            const { offlineDb } = await import('@/lib/offlineDb');
-            await offlineDb.cobros.clear();
-          } catch { /* cache best-effort */ }
-          return [];
-        }
+        await purgeLocalCobros(false);
+        if (await hasRealConnection()) return [];
         const cached = await readCache();
         if (cached.length > 0) return cached;
         throw err;
@@ -155,9 +193,19 @@ export default function CobranzaPage() {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if (!empresa?.id || isLoading || (cobros?.length ?? 0) > 0) return;
     import('@/lib/offlineDb')
-      .then(({ offlineDb }) => offlineDb.cobros.clear())
+      .then(async ({ offlineDb }) => {
+        await offlineDb.cobros.where('empresa_id').equals(empresa.id).delete();
+        if (empresa.licencia === '12324489') {
+          const queue = await offlineDb.syncQueue.toArray();
+          await Promise.all(
+            queue
+              .filter(item => item.table === 'cobros' && item.data?.empresa_id === empresa.id && item.id)
+              .map(item => offlineDb.syncQueue.delete(item.id!)),
+          );
+        }
+      })
       .catch(() => undefined);
-  }, [empresa?.id, isLoading, cobros?.length]);
+  }, [empresa?.id, empresa?.licencia, isLoading, cobros?.length]);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
