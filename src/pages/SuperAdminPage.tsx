@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -21,6 +21,7 @@ import AdminPublicidadTab from '@/components/admin/AdminPublicidadTab';
 import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncompletosTab';
 import AdminCuponesTab from '@/components/admin/AdminCuponesTab';
+import AdminFeatureFlagsTab from '@/components/admin/AdminFeatureFlagsTab';
 import AdminWaCampaignsTab from '@/components/admin/AdminWaCampaignsTab';
 import AdminPosTab from '@/components/admin/AdminPosTab';
 import AdminWaBotTab from '@/components/admin/AdminWaBotTab';
@@ -31,7 +32,7 @@ import AdminBroadcastTab from '@/components/admin/AdminBroadcastTab';
 type TabKey =
   | 'dashboard' | 'empresas' | 'subscriptions' | 'invoices' | 'pagos' | 'whatsapp'
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
-  | 'incompletos' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast';
+  | 'incompletos' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast';
 
 const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -50,6 +51,7 @@ const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
   { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
   { key: 'cobros', label: 'Cobros', icon: Store },
   { key: 'incompletos', label: 'Registros incompletos', icon: UserX },
+  { key: 'flags', label: 'Funciones en pruebas', icon: FlaskConical },
   { key: 'cupones', label: 'Cupones', icon: Ticket },
   { key: 'campanas', label: 'Campañas WA', icon: Radio },
   { key: 'pos', label: 'Punto de Venta', icon: Calculator },
@@ -197,6 +199,7 @@ export default function SuperAdminPage() {
               {tab === 'publicidad' && <AdminPublicidadTab />}
               {tab === 'cobros' && <AdminCobrosTab />}
               {tab === 'incompletos' && <AdminRegistrosIncompletosTab />}
+              {tab === 'flags' && <AdminFeatureFlagsTab />}
               {tab === 'cupones' && <AdminCuponesTab />}
               {tab === 'campanas' && <AdminWaCampaignsTab />}
               {tab === 'pos' && <AdminPosTab />}
