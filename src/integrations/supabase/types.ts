@@ -3598,6 +3598,42 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          alcance: string
+          clave: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          licencias: string[]
+          nombre: string
+          notas_prueba: string | null
+          updated_at: string
+        }
+        Insert: {
+          alcance?: string
+          clave: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          licencias?: string[]
+          nombre: string
+          notas_prueba?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alcance?: string
+          clave?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          licencias?: string[]
+          nombre?: string
+          notas_prueba?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gastos: {
         Row: {
           concepto: string
