@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX, Ticket, Radio, Database, Calculator, ShieldAlert, Handshake, ShieldCheck, Bot, Sparkles, Menu, Wallet, FlaskConical, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminInactivosTab from '@/components/admin/AdminInactivosTab';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
@@ -34,29 +34,66 @@ type TabKey =
   | 'notifications' | 'payment_requests' | 'anuncios' | 'publicidad' | 'cobros'
   | 'incompletos' | 'flags' | 'cupones' | 'campanas' | 'pos' | 'partners' | 'inactivos' | 'control' | 'wa_bot' | 'broadcast';
 
-const NAV: { key: TabKey; label: string; icon: any; danger?: boolean }[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-  { key: 'empresas', label: 'Empresas', icon: Building2 },
-  { key: 'subscriptions', label: 'Suscripciones', icon: CreditCard },
-  { key: 'invoices', label: 'Facturas', icon: Receipt },
-  { key: 'pagos', label: 'Pagos', icon: Wallet },
-  { key: 'partners', label: 'Partners', icon: Handshake },
-  { key: 'control', label: 'Control', icon: ShieldCheck },
-  { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
-  { key: 'notifications', label: 'Historial', icon: Bell },
-  { key: 'broadcast', label: 'Mensajes en vivo', icon: Megaphone },
-  { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
-  { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
-  { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
-  { key: 'cobros', label: 'Cobros', icon: Store },
-  { key: 'incompletos', label: 'Registros incompletos', icon: UserX },
-  { key: 'flags', label: 'Funciones en pruebas', icon: FlaskConical },
-  { key: 'cupones', label: 'Cupones', icon: Ticket },
-  { key: 'campanas', label: 'Campañas WA', icon: Radio },
-  { key: 'pos', label: 'Punto de Venta', icon: Calculator },
-  { key: 'inactivos', label: 'Inactivos', icon: ShieldAlert, danger: true },
+type NavItem = { key: TabKey; label: string; icon: any; danger?: boolean };
+type NavGroup = { id: string; label: string; icon: any; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'general', label: 'General', icon: BarChart3,
+    items: [
+      { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+      { key: 'control', label: 'Control', icon: ShieldCheck },
+    ],
+  },
+  {
+    id: 'clientes', label: 'Empresas y usuarios', icon: Building2,
+    items: [
+      { key: 'empresas', label: 'Empresas', icon: Building2 },
+      { key: 'incompletos', label: 'Registros incompletos', icon: UserX },
+      { key: 'inactivos', label: 'Inactivos', icon: ShieldAlert, danger: true },
+    ],
+  },
+  {
+    id: 'facturacion', label: 'Facturación y cobros', icon: CreditCard,
+    items: [
+      { key: 'subscriptions', label: 'Suscripciones', icon: CreditCard },
+      { key: 'invoices', label: 'Facturas', icon: Receipt },
+      { key: 'pagos', label: 'Pagos', icon: Wallet },
+      { key: 'payment_requests', label: 'Pagos transferencia', icon: BanknoteIcon },
+      { key: 'cobros', label: 'Cobros', icon: Store },
+      { key: 'cupones', label: 'Cupones', icon: Ticket },
+      { key: 'pos', label: 'Punto de Venta', icon: Calculator },
+    ],
+  },
+  {
+    id: 'crecimiento', label: 'Crecimiento', icon: Handshake,
+    items: [
+      { key: 'partners', label: 'Partners', icon: Handshake },
+      { key: 'publicidad', label: 'Publicidad ✨', icon: Sparkles },
+      { key: 'anuncios', label: 'Anuncios', icon: Megaphone },
+      { key: 'campanas', label: 'Campañas WA', icon: Radio },
+    ],
+  },
+  {
+    id: 'comunicacion', label: 'Comunicación', icon: MessageCircle,
+    items: [
+      { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { key: 'wa_bot', label: 'Bot WhatsApp', icon: Bot },
+      { key: 'broadcast', label: 'Mensajes en vivo', icon: Megaphone },
+      { key: 'notifications', label: 'Historial', icon: Bell },
+    ],
+  },
+  {
+    id: 'plataforma', label: 'Plataforma', icon: FlaskConical,
+    items: [
+      { key: 'flags', label: 'Funciones en pruebas', icon: FlaskConical },
+    ],
+  },
 ];
+
+const GROUP_BY_TAB: Record<string, string> = Object.fromEntries(
+  NAV_GROUPS.flatMap(g => g.items.map(i => [i.key, g.id]))
+);
 
 interface NavListProps {
   tab: TabKey;
@@ -67,6 +104,17 @@ interface NavListProps {
 }
 
 function NavList({ tab, selectedEmpresaId, onSelect, signOut, navigate }: NavListProps) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+    [GROUP_BY_TAB[tab] ?? 'general']: true,
+  }));
+
+  useEffect(() => {
+    const g = GROUP_BY_TAB[tab];
+    if (g) setOpenGroups(prev => (prev[g] ? prev : { ...prev, [g]: true }));
+  }, [tab]);
+
+  const toggle = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
+
   return (
     <>
       <div className="px-4 py-4 border-b border-border flex items-center gap-2">
@@ -79,26 +127,51 @@ function NavList({ tab, selectedEmpresaId, onSelect, signOut, navigate }: NavLis
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        {NAV.map(item => {
-          const active = tab === item.key && !selectedEmpresaId;
+      <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+        {NAV_GROUPS.map(group => {
+          const isOpen = !!openGroups[group.id];
+          const hasActive = !selectedEmpresaId && group.items.some(i => i.key === tab);
           return (
-            <button
-              key={item.key}
-              onClick={() => onSelect(item.key)}
-              className={cn(
-                'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
-                active
-                  ? (item.danger ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground')
-                  : (item.danger ? 'text-destructive hover:bg-destructive/10' : 'text-foreground hover:bg-muted')
+            <div key={group.id}>
+              <button
+                onClick={() => toggle(group.id)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-colors',
+                  hasActive ? 'text-primary' : 'text-muted-foreground hover:bg-muted'
+                )}
+              >
+                <group.icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate flex-1 text-left">{group.label}</span>
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !isOpen && '-rotate-90')} />
+              </button>
+
+              {isOpen && (
+                <div className="mt-0.5 space-y-0.5 pl-2 border-l border-border ml-4">
+                  {group.items.map(item => {
+                    const active = tab === item.key && !selectedEmpresaId;
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => onSelect(item.key)}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
+                          active
+                            ? (item.danger ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground')
+                            : (item.danger ? 'text-destructive hover:bg-destructive/10' : 'text-foreground hover:bg-muted')
+                        )}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </button>
+            </div>
           );
         })}
       </nav>
+
 
       <div className="p-2 border-t border-border space-y-1">
         <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/super-admin/database-health')}>
@@ -146,7 +219,7 @@ export default function SuperAdminPage() {
     setMobileOpen(false);
   };
 
-  const activeLabel = NAV.find(n => n.key === tab)?.label ?? 'Panel Master';
+  const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(n => n.key === tab)?.label ?? 'Panel Master';
 
   return (
     <div className="min-h-[100dvh] bg-background flex w-full">
