@@ -7,6 +7,8 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
+import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
+
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
 import { buildManualSalePricingFromGross, buildSalePricingSnapshot, calculateSaleLineAmounts, calculateSaleLineEffectivePrices } from '@/lib/salePricing';
@@ -289,10 +291,9 @@ export function useVentaForm() {
     return m;
   }, [promoResults]);
 
-  // Combine totals with promo discounts using buildPosLinePricing (promo before rounding)
-  const finalTotals = useMemo(() => {
-    const r2 = (n: number) => Math.round(n * 100) / 100;
-    let promoEffective = 0;
+  // Descuento EFECTIVO de promoción por producto (después de impuestos/redondeo)
+  const promoEffectiveByProduct = useMemo(() => {
+    const m = new Map<string, number>();
     lineas.forEach(l => {
       if (!l.producto_id) return;
       const promoDisc = promoByProduct.get(l.producto_id) ?? 0;
@@ -311,15 +312,26 @@ export function useVentaForm() {
         redondeo: raw?.redondeo ?? 'ninguno',
       };
       const lp = buildPosLinePricing(pricingItem, promoDisc);
-      promoEffective += lp.effectiveDiscount;
+      if (lp.effectiveDiscount > 0) {
+        m.set(l.producto_id, (m.get(l.producto_id) ?? 0) + lp.effectiveDiscount);
+      }
     });
+    return m;
+  }, [promoByProduct, rawPricingMap, lineas, sinImpuestos]);
+
+  // Combine totals with promo discounts using buildPosLinePricing (promo before rounding)
+  const finalTotals = useMemo(() => {
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    let promoEffective = 0;
+    promoEffectiveByProduct.forEach(v => { promoEffective += v; });
     return {
       ...totals,
       descuento_total: r2(totals.descuento_total + promoEffective),
       descuento_promo: r2(promoEffective),
       total: r2(Math.max(0, totals.total - promoEffective)),
     };
-  }, [totals, promoByProduct, rawPricingMap, lineas, sinImpuestos]);
+  }, [totals, promoEffectiveByProduct]);
+
 
   const displayTotals = useMemo(() => {
     if (isNew || !readOnly) return finalTotals;
@@ -634,6 +646,8 @@ export function useVentaForm() {
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       const linePromises: Promise<any>[] = [];
+      const lineProductoIds: string[] = [];
+      const lineTotalByProduct = new Map<string, number>();
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
@@ -646,9 +660,33 @@ export function useVentaForm() {
         delete clean.impuestos_label;
         delete clean.productos;
         delete clean.unidades;
+        lineProductoIds.push(l.producto_id);
+        lineTotalByProduct.set(l.producto_id, (lineTotalByProduct.get(l.producto_id) ?? 0) + lineAmounts.total);
         linePromises.push(saveLinea.mutateAsync(clean));
       }
-      await Promise.all(linePromises);
+      const savedLines = await Promise.all(linePromises);
+
+      // Registrar el desglose de promociones aplicadas (solo informativo para reportes).
+      if (promoPersistHabilitado((empresa as any)?.licencia)) {
+        try {
+          const lineIdByProduct = new Map<string, string>();
+          savedLines.forEach((row: any, i) => {
+            const pid = lineProductoIds[i];
+            if (pid && row?.id && !lineIdByProduct.has(pid)) lineIdByProduct.set(pid, row.id);
+          });
+          const rows = buildPromoAplicadaRows({
+            ventaId,
+            promoResults,
+            effectiveByProduct: promoEffectiveByProduct,
+            lineIdByProduct,
+            lineTotalByProduct,
+          });
+          await replacePromocionesAplicadas(ventaId, rows);
+        } catch (e) {
+          console.error('No se pudo registrar promocion_aplicada', e);
+        }
+      }
+
       if (isNew && autoConfirm) {
         const saldo = finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);

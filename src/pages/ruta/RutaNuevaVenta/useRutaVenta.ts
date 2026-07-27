@@ -12,6 +12,8 @@ import { buildManualSalePricingFromGross, buildSalePricingSnapshot, getDisplayUn
 import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
+import { buildPromoAplicadaRows, promoPersistHabilitado } from '@/lib/promoPersist';
+
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea, DescuentoExtraTipo } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -712,18 +714,33 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     }, 0);
   }, [devoluciones, productos, cart, sinImpuestos]);
 
+  // Descuento EFECTIVO de promoción por producto (mismo cálculo que totals)
+  const promoEffectiveByProduct = useMemo(() => {
+    const m = new Map<string, number>();
+    cart.forEach(item => {
+      if (item.es_cambio) return;
+      const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
+      if (promoDisc <= 0) return;
+      const pricingItem = toPosPricingItem(item, sinImpuestos);
+      const lp = buildPosLinePricing(pricingItem, promoDisc);
+      const original = getOriginalLineBreakdown(item, sinImpuestos);
+      const eff = pricingItem.base_precio === 'con_impuestos'
+        ? r2(Math.max(0, original.total - lp.finalGross))
+        : lp.effectiveDiscount;
+      if (eff > 0) m.set(item.producto_id, (m.get(item.producto_id) ?? 0) + eff);
+    });
+    return m;
+  }, [cart, promoRawByProduct, sinImpuestos]);
+
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
     cart.forEach(item => {
       if (item.es_cambio) { items += item.cantidad; return; }
-      const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
-      const pricingItem = toPosPricingItem(item, sinImpuestos);
-      const lp = buildPosLinePricing(pricingItem, promoDisc);
       const original = getOriginalLineBreakdown(item, sinImpuestos);
       subtotal += original.subtotal;
       iva += original.iva;
       ieps += original.ieps;
-      descuentoPromo += pricingItem.base_precio === 'con_impuestos' ? r2(Math.max(0, original.total - lp.finalGross)) : lp.effectiveDiscount;
+      descuentoPromo += promoEffectiveByProduct.get(item.producto_id) ?? 0;
       items += item.cantidad;
     });
     const preExtra = r2(Math.max(0, subtotal + ieps + iva - descuentoPromo - descuentoDevolucion));
@@ -735,7 +752,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const totalDescuentos = r2(descuentoPromo + descuentoDevolucion + extraAmt);
     const total = r2(Math.max(0, preExtra - extraAmt));
     return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion), descuentoExtra: extraAmt };
-  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
+  }, [cart, promoEffectiveByProduct, descuentoDevolucion, sinImpuestos, canApplyDiscount, descuentoExtraValor, descuentoExtraTipo]);
+
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
@@ -866,7 +884,25 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: ventaClienteId, tipo: tipoVenta, vendedor_id: profile?.id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: null, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, descuento_extra: extraValSaved, descuento_extra_tipo: descuentoExtraTipo, descuento_extra_motivo: extraAmtSaved > 0 ? (descuentoExtraMotivo || null) : null, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
 
-      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); const ventaLineaId = crypto.randomUUID(); await queueOperation('venta_lineas', 'insert', { id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) { try { const apartTable = getOfflineTable('stock_apartado'); await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }); } catch { /* cache local; el trigger del backend crea el apartado real */ } } }
+      const promoLineIdByProduct = new Map<string, string>();
+      const promoLineTotalByProduct = new Map<string, number>();
+      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); const ventaLineaId = crypto.randomUUID(); if (!item.es_cambio) { if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, ventaLineaId); promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + breakdown.total); } await queueOperation('venta_lineas', 'insert', { id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) { try { const apartTable = getOfflineTable('stock_apartado'); await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }); } catch { /* cache local; el trigger del backend crea el apartado real */ } } }
+
+      // Desglose informativo de promociones (para reportes). No altera totales.
+      if (promoPersistHabilitado((empresa as any)?.licencia)) {
+        const promoRows = buildPromoAplicadaRows({
+          ventaId,
+          promoResults,
+          effectiveByProduct: promoEffectiveByProduct,
+          lineIdByProduct: promoLineIdByProduct,
+          lineTotalByProduct: promoLineTotalByProduct,
+        });
+        for (const row of promoRows) {
+          await queueOperation('promocion_aplicada', 'insert', row);
+        }
+      }
+
+
 
       // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
