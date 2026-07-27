@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { queueOperation, queueOperations } from '@/lib/syncQueue';
+import { queueOperation, queueOperations, queueInsertMany } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -886,7 +886,29 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
       const promoLineIdByProduct = new Map<string, string>();
       const promoLineTotalByProduct = new Map<string, number>();
-      for (const item of cart) { const breakdown = getOriginalLineBreakdown(item, sinImpuestos); const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null); const ventaLineaId = crypto.randomUUID(); if (!item.es_cambio) { if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, ventaLineaId); promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + breakdown.total); } await queueOperation('venta_lineas', 'insert', { id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() }); if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) { try { const apartTable = getOfflineTable('stock_apartado'); await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }); } catch { /* cache local; el trigger del backend crea el apartado real */ } } }
+      // Se construyen todas las líneas y se encolan en UN SOLO lote (insert-many):
+      // una venta de 50 productos = 1 subida al servidor, no 50 → aparece completa
+      // casi al instante en admin, sin la ventana en que faltaban líneas.
+      const lineasBatch: any[] = [];
+      for (const item of cart) {
+        const breakdown = getOriginalLineBreakdown(item, sinImpuestos);
+        const savedIvaPct = sinImpuestos ? 0 : item.iva_pct;
+        const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct;
+        const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null);
+        const ventaLineaId = crypto.randomUUID();
+        if (!item.es_cambio) {
+          if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, ventaLineaId);
+          promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + breakdown.total);
+        }
+        lineasBatch.push({ id: ventaLineaId, venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0, unidad_id: item.unidad_id || null, almacen_id: lineaAlmacenId, subtotal: breakdown.subtotal, iva_pct: savedIvaPct, iva_monto: breakdown.iva, ieps_pct: savedIepsPct, ieps_monto: breakdown.ieps, descuento_pct: 0, total: breakdown.total, lista_precio_id: (item as any).lista_precio_id ?? clienteListaPrecioId ?? null, precio_manual: (item as any).precio_manual ?? false, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, presentacion_id: item.presentacion_id ?? null, presentacion_nombre: item.presentacion_nombre ?? null, presentacion_factor: item.presentacion_factor ?? null, paquetes: item.paquetes ?? null, created_at: new Date().toISOString() });
+        if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
+          try {
+            const apartTable = getOfflineTable('stock_apartado');
+            await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+          } catch { /* cache local; el trigger del backend crea el apartado real */ }
+        }
+      }
+      await queueInsertMany('venta_lineas', lineasBatch, 'venta_id');
 
       // Desglose informativo de promociones (para reportes). No altera totales.
       if (promoPersistHabilitado((empresa as any)?.licencia)) {

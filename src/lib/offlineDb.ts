@@ -2,8 +2,10 @@ import Dexie, { type Table } from 'dexie';
 
 export interface SyncQueueItem {
   id?: number;
+  // 'insert-many': data es un ARRAY de filas que se suben en UNA sola petición
+  // (evita 50 round-trips para una venta de 50 líneas).
+  operation: 'insert' | 'update' | 'delete' | 'insert-many';
   table: string;
-  operation: 'insert' | 'update' | 'delete';
   data: any;
   keyField: string;
   keyValue: string;

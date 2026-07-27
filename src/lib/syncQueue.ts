@@ -12,7 +12,7 @@ let activeProcessPromise: Promise<{ success: number; failed: number }> | null = 
 
 type QueuedOperation = {
   table: string;
-  operation: 'insert' | 'update' | 'delete';
+  operation: 'insert' | 'update' | 'delete' | 'insert-many';
   data: any;
   keyField?: string;
 };
@@ -29,11 +29,21 @@ function sleep(ms: number) {
 // Add an operation to the sync queue and update local DB
 export async function queueOperation(
   table: string,
-  operation: 'insert' | 'update' | 'delete',
+  operation: 'insert' | 'update' | 'delete' | 'insert-many',
   data: any,
   keyField: string = 'id',
 ) {
   await queueOperations([{ table, operation, data, keyField }]);
+}
+
+/**
+ * Encola un lote de filas para subir en UNA sola petición (upsert masivo).
+ * Ideal para las líneas de una venta grande: 50 líneas = 1 subida, no 50.
+ * @param groupKey columna que agrupa el lote (p.ej. 'venta_id') para dedupe.
+ */
+export async function queueInsertMany(table: string, rows: any[], groupKey = 'id') {
+  if (!rows || rows.length === 0) return;
+  await queueOperations([{ table, operation: 'insert-many', data: rows, keyField: groupKey }]);
 }
 
 // Encola varias operaciones como una sola unidad local. Se usa para documentos
@@ -51,11 +61,15 @@ export async function queueOperations(operations: QueuedOperation[]) {
   await offlineDb.transaction('rw', Array.from(txTables), async () => {
     for (const op of operations) {
       const keyField = op.keyField ?? 'id';
-      const keyValue = op.data[keyField];
+      const isMany = op.operation === 'insert-many';
+      // Para lotes, la clave de dedupe es el grupo (p.ej. venta_id) tomado de la
+      // primera fila; así re-guardar la misma venta reemplaza su lote de líneas.
+      const keyValue = isMany ? (Array.isArray(op.data) && op.data.length ? op.data[0]?.[keyField] : undefined) : op.data[keyField];
       const localTable = getOfflineTable(op.table);
 
       if (localTable) {
         if (op.operation === 'delete') await localTable.delete(keyValue);
+        else if (isMany) await localTable.bulkPut(op.data);
         else await localTable.put(op.data);
       }
 
@@ -255,8 +269,35 @@ async function processSyncQueueInternal(): Promise<{ success: number; failed: nu
 }
 
 
+// Limpia una fila antes de subir: quita campos locales y objetos join anidados.
+function sanitizeRow(table: string, row: any): any {
+  const clean = { ...row };
+  delete clean._offline;
+  delete clean._localId;
+  const KNOWN_JOINS = ['clientes', 'vendedores', 'productos', 'unidades', 'tasas_iva', 'tasas_ieps', 'zonas', 'cobradores', 'tarifas', 'listas', 'almacenes', 'marcas'];
+  for (const key of KNOWN_JOINS) {
+    if (clean[key] && typeof clean[key] === 'object' && !Array.isArray(clean[key])) delete clean[key];
+  }
+  if (table === 'devoluciones') {
+    const validTipos = ['almacen', 'tienda'];
+    if (!validTipos.includes(clean.tipo)) clean.tipo = clean.cliente_id ? 'tienda' : 'almacen';
+  }
+  return clean;
+}
+
 async function processItem(item: SyncQueueItem) {
   const { table, operation, data, keyField, keyValue } = item;
+
+  // Lote: sube TODAS las filas en una sola petición (upsert masivo).
+  if (operation === 'insert-many') {
+    const rows = (Array.isArray(data) ? data : []).map(r => sanitizeRow(table, r));
+    if (rows.length === 0) return;
+    const { data: returned, error } = await (supabase.from as any)(table).upsert(rows).select();
+    if (error) throw error;
+    const localTable = getOfflineTable(table);
+    if (localTable && returned && returned.length > 0) await localTable.bulkPut(returned);
+    return;
+  }
 
   // Strip any local-only fields
   const cleanData = { ...data };
