@@ -56,25 +56,68 @@ export function useVentaDetalle() {
   // Saldo a favor del cliente (crédito por notas de crédito). Funciona offline.
   const { disponible: saldoFavorDisp } = useSaldoFavor(clienteId);
 
+  // Ventas del cliente desde la caché local (para fallbacks offline).
+  const ventasLocalesDelCliente = async () => {
+    const t = getOfflineTable('ventas');
+    const all = t ? ((await t.toArray().catch(() => [])) as any[]) : [];
+    return all.filter(v => v.cliente_id === clienteId);
+  };
+
   const { data: clienteData } = useQuery({
-    queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId,
-    queryFn: async () => { const { data } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito').eq('id', clienteId!).single(); return data; },
+    queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId, networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
+        if (error) throw error; return data;
+      } catch {
+        const t = getOfflineTable('clientes');
+        return t ? await t.get(clienteId!).catch(() => null) : null;
+      }
+    },
   });
 
   const { data: productos } = useQuery({
-    queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar',
-    queryFn: async () => { const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre'); return data ?? []; },
+    queryKey: ['ruta-productos-edit', empresa?.id], enabled: !!empresa?.id && view === 'editar', networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, tiene_iva, iva_pct, unidades:unidad_venta_id(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('se_puede_vender', true).eq('status', 'activo').order('nombre');
+        if (error) throw error; return data ?? [];
+      } catch {
+        const t = getOfflineTable('productos');
+        const all = t ? ((await t.toArray().catch(() => [])) as any[]) : [];
+        return all.filter(p => p.empresa_id === empresa!.id && p.se_puede_vender && p.status === 'activo')
+          .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      }
+    },
   });
 
   const { data: otrasPendientes } = useQuery({
-    queryKey: ['ruta-cuentas-pendientes-detalle', clienteId, id], enabled: !!clienteId && view === 'cobrar',
-    queryFn: async () => { const { data } = await supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ['borrador', 'confirmado', 'entregado', 'facturado']).order('fecha', { ascending: true }); return data ?? []; },
+    queryKey: ['ruta-cuentas-pendientes-detalle', clienteId, id], enabled: !!clienteId && view === 'cobrar', networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!).in('status', ['borrador', 'confirmado', 'entregado', 'facturado']).order('fecha', { ascending: true });
+        if (error) throw error; return data ?? [];
+      } catch {
+        return (await ventasLocalesDelCliente())
+          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id && ['borrador', 'confirmado', 'entregado', 'facturado'].includes(v.status))
+          .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      }
+    },
   });
 
   const { data: ventasPendientesCredito } = useQuery({
     queryKey: ['ruta-saldo-total-credito', clienteId, id],
-    enabled: !!clienteId && !!id,
-    queryFn: async () => { const { data } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!); return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0); },
+    enabled: !!clienteId && !!id, networkMode: 'always',
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase.from('ventas').select('saldo_pendiente').eq('cliente_id', clienteId!).gt('saldo_pendiente', 0).neq('id', id!);
+        if (error) throw error; return (data ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+      } catch {
+        return (await ventasLocalesDelCliente())
+          .filter(v => (v.saldo_pendiente ?? 0) > 0 && v.id !== id)
+          .reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+      }
+    },
   });
 
   const { data: devolucionesVenta } = useQuery({
