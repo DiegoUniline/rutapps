@@ -123,7 +123,10 @@ export function useVentaForm() {
       ...p,
       _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
     }));
-    if (form.tipo !== 'venta_directa') return enriched;
+    // Solo ocultamos productos sin stock cuando hay un almacén seleccionado
+    // (ahí sí conocemos la existencia real). Sin almacén no filtramos: de lo
+    // contrario el buscador aparece vacío y no se puede agregar nada.
+    if (form.tipo !== 'venta_directa' || !form.almacen_id) return enriched;
     return enriched.filter((p: any) => p.vender_sin_stock || (p._stock ?? 0) > 0);
   }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
 
