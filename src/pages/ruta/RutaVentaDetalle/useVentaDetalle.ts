@@ -409,8 +409,25 @@ export function useVentaDetalle() {
     } catch (e) { console.error('Error logging historial', e); }
   };
 
+  // Entregas NO canceladas de este pedido (desde la caché local, offline-safe).
+  // Un pedido con entregas no se puede cancelar ni volver a borrador: primero
+  // hay que cancelar/reversar sus entregas (ahí el stock regresa correctamente).
+  const entregasActivasDelPedido = async (): Promise<string[]> => {
+    const t = getOfflineTable('entregas');
+    if (!t) return [];
+    const all = (await t.toArray().catch(() => [])) as any[];
+    return all
+      .filter(e => e.pedido_id === venta?.id && e.status !== 'cancelado')
+      .map(e => e.folio || e.id);
+  };
+
   const handleCancelar = async () => {
     if (!venta) return;
+    const activas = await entregasActivasDelPedido();
+    if (activas.length > 0) {
+      toast.error(`Este pedido tiene entregas activas (${activas.join(', ')}). Cancela o reversa primero sus entregas.`);
+      return;
+    }
     setSaving(true);
     try {
       const prevStatus = venta.status;
@@ -458,6 +475,11 @@ export function useVentaDetalle() {
 
   const handleVolverBorrador = async () => {
     if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
+    const activasVB = await entregasActivasDelPedido();
+    if (activasVB.length > 0) {
+      toast.error(`Este pedido tiene entregas activas (${activasVB.join(', ')}). Cancela o reversa primero sus entregas.`);
+      return;
+    }
     if (['entregado', 'facturado'].includes(venta.status)) {
       toast.error('Una venta entregada no puede volver a borrador, solo cancelar');
       return;
