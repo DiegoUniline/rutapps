@@ -25,6 +25,7 @@ import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import TiendaAnnouncementModal from '@/components/TiendaAnnouncementModal';
 import SandboxBanner from '@/components/SandboxBanner';
 import { useProductosRealtime } from '@/hooks/useData';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -642,6 +643,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const location = useLocation();
   useProductosRealtime();
+  useFeatureFlags();
 
   useEffect(() => {
     if (sessionStorage.getItem('demo_welcome') === '1') {
