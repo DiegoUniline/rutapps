@@ -240,6 +240,25 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+async function clearLocalScope(table: CacheTable, empresaId: string, parentIds: string[] | null): Promise<void> {
+  const localTable = getOfflineTable(table);
+  if (!localTable) return;
+  const childScope = CHILD_SCOPES[table];
+  if (childScope && parentIds && parentIds.length > 0) {
+    await localTable.where(childScope.foreignKey).anyOf(parentIds).delete();
+    return;
+  }
+  if (table === 'empresas') {
+    await localTable.where('id').equals(empresaId).delete();
+    return;
+  }
+  if (TABLES_WITH_EMPRESA.has(table)) {
+    await localTable.where('empresa_id').equals(empresaId).delete();
+    return;
+  }
+  await localTable.clear();
+}
+
 async function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -379,8 +398,7 @@ async function downloadAllDataInternal(
         const isDeltaPull = !!cursor || !!lastTableSync;
 
         if (parentIds && parentIds.length === 0) {
-          const localTable = getOfflineTable(table);
-          if (localTable && !isDeltaPull) await localTable.clear();
+          if (!isDeltaPull) await clearLocalScope(table, empresaId, parentIds);
           await offlineDb.cacheTimestamps.put({
             table,
             lastSync: nowMs,
@@ -470,11 +488,11 @@ async function downloadAllDataInternal(
         };
 
         // 1) Descarga (delta = merge sin borrar; full = borrar y reemplazar).
-        //    SEGURIDAD: solo se borra la caché local si llegaron datos de
-        //    reemplazo. Una respuesta vacía transitoria NUNCA vacía la caché.
+        //    Si la respuesta full viene vacía y fue exitosa, también se borra
+        //    el scope local: así no quedan cobros/ventas fantasma tras borrados físicos.
         let allData = await paginate(isDeltaPull ? 'delta' : 'full');
         if (localTable) {
-          if (!isDeltaPull && allData.length > 0) await localTable.clear();
+          if (!isDeltaPull) await clearLocalScope(table, empresaId, parentIds);
           if (allData.length > 0) await localTable.bulkPut(allData);
         }
 
@@ -501,14 +519,10 @@ async function downloadAllDataInternal(
           const needsPeriodic = !lastFullAt || (nowMs - lastFullAt) > FULL_RECONCILE_MS;
           if (mismatch || needsPeriodic) {
             const full = await paginate('full');
-            // Solo reemplazar si llegaron datos; si vino vacío por un error
-            // transitorio, se conserva la caché local (nunca se vacía a ciegas).
-            if (full.length > 0) {
-              await localTable.clear();
-              await localTable.bulkPut(full);
-              allData = full;
-              newCursor = maxUpdatedAt(full);
-            }
+            await clearLocalScope(table, empresaId, parentIds);
+            if (full.length > 0) await localTable.bulkPut(full);
+            allData = full;
+            newCursor = maxUpdatedAt(full);
             lastFullAt = nowMs;
           }
         }
