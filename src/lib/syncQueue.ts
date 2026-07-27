@@ -127,7 +127,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   venta_lineas: 20, carga_lineas: 20, compra_lineas: 20, cotizacion_lineas: 20,
   traspaso_lineas: 20, conteo_lineas: 20, auditoria_lineas: 20, merma_lineas: 20,
   descarga_ruta_lineas: 20, cfdi_lineas: 20, entrega_lineas: 20,
-  devolucion_lineas: 25, cobro_aplicaciones: 25,
+  devolucion_lineas: 25, cobro_aplicaciones: 25, promocion_aplicada: 25,
   // Inventory side-effects last
   stock_almacen: 30, movimientos_inventario: 30,
 };
