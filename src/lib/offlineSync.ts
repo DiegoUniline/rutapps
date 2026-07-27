@@ -143,9 +143,11 @@ const TABLES_WITH_EMPRESA = new Set([
 ]);
 
 
-// Tables limited to recent data
+// Tables limited to recent data (ventana de 30 días por created_at).
+// ventas y cobros NO van aquí: usan ventana por updated_at (ver
+// UPDATED_AT_WINDOW_TABLES) para que sus ACTUALIZACIONES (saldo, status) bajen.
 const RECENT_TABLES = new Set([
-  'ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos',
+  'venta_lineas', 'cobro_aplicaciones', 'gastos',
   'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas', 'visitas',
 ]);
 
@@ -189,6 +191,18 @@ const UPDATED_AT_DELTA_TABLES = new Set([
   'stock_almacen',
   'stock_apartado',
 ]);
+
+// Tablas TRANSACCIONALES que se sincronizan por ventana de `updated_at` (últimos
+// 30 días de actividad). A diferencia de created_at, esto SÍ baja las
+// ACTUALIZACIONES: cuando se paga una venta, ventas.saldo_pendiente cambia (por
+// trigger) y su updated_at sube, así el móvil deja de mostrar "adeudo fantasma".
+// Igual con cancelaciones de cobros. Requieren updated_at + trigger (migración
+// 20260727120000). No usan chequeo de conteo (están acotadas por ventana).
+const UPDATED_AT_WINDOW_TABLES = new Set([
+  'ventas',
+  'cobros',
+]);
+const WINDOW_DAYS = 30;
 
 // Las tablas "full" (NO_DELTA sin updated_at) no se re-descargan en cada sync de
 // 30s: se refrescan como mucho cada esta ventana (un "Descargar todo" las fuerza).
@@ -328,6 +342,7 @@ async function downloadAllDataInternal(
         const cacheEntry = await offlineDb.cacheTimestamps.get(table);
         const nowMs = Date.now();
         const isUpdatedAtDelta = UPDATED_AT_DELTA_TABLES.has(table);
+        const isUpdatedAtWindow = UPDATED_AT_WINDOW_TABLES.has(table);
         const isNoDelta = NO_DELTA_TABLES.has(table);
 
         // AHORRO DE DATOS: las tablas "full" (sin updated_at) no se re-bajan en
@@ -350,8 +365,8 @@ async function downloadAllDataInternal(
         //  - cursor (updated_at): solo filas cambiadas desde el último cursor.
         //  - lastTableSync (created_at): delta clásico para tablas transaccionales.
         //  - null en ambos: descarga COMPLETA (primer sync o forzado).
-        const cursor = (!forceFullSync && isUpdatedAtDelta) ? (cacheEntry?.cursor ?? null) : null;
-        const lastTableSync = (!forceFullSync && !isNoDelta && !isUpdatedAtDelta && cacheEntry?.lastSync)
+        const cursor = (!forceFullSync && (isUpdatedAtDelta || isUpdatedAtWindow)) ? (cacheEntry?.cursor ?? null) : null;
+        const lastTableSync = (!forceFullSync && !isNoDelta && !isUpdatedAtDelta && !isUpdatedAtWindow && cacheEntry?.lastSync)
           ? cacheEntry.lastSync : null;
         const isDeltaPull = !!cursor || !!lastTableSync;
 
@@ -385,16 +400,24 @@ async function downloadAllDataInternal(
             if (childScope && parentChunk && parentChunk.length > 0) {
               q = q.in(childScope.foreignKey, parentChunk);
             }
-            // Ventana de 30 días para tablas transaccionales (acota cuánta
-            // historia se cachea). Aplica en delta y en full; si además hay
-            // lastTableSync (más reciente) gana ese, no baja de más.
+            // Ventana de 30 días por created_at para tablas transaccionales
+            // hijas/append (acota cuánta historia se cachea).
             if (RECENT_TABLES.has(table)) {
               const thirtyDaysAgo = new Date();
               thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
               q = q.gte('created_at', thirtyDaysAgo.toISOString());
             }
+            // Ventana por updated_at (ventas/cobros): cachea la actividad de los
+            // últimos 30 días; una venta vieja pagada hoy tiene updated_at de hoy
+            // y entra. Baja las ACTUALIZACIONES, no solo filas nuevas.
+            if (isUpdatedAtWindow) {
+              const windowStart = new Date();
+              windowStart.setDate(windowStart.getDate() - WINDOW_DAYS);
+              q = q.gte('updated_at', windowStart.toISOString());
+            }
             if (mode === 'delta') {
               if (lastTableSync) q = q.gte('created_at', new Date(lastTableSync - 5000).toISOString());
+              // cursor gana sobre la ventana (es más reciente) → solo lo cambiado.
               if (cursor) q = q.gte('updated_at', cursor);
             }
             return q;
@@ -447,7 +470,9 @@ async function downloadAllDataInternal(
           if (allData.length > 0) await localTable.bulkPut(allData);
         }
 
-        let newCursor = isUpdatedAtDelta ? maxUpdatedAt(allData, cacheEntry?.cursor) : cacheEntry?.cursor;
+        let newCursor = (isUpdatedAtDelta || isUpdatedAtWindow)
+          ? maxUpdatedAt(allData, cacheEntry?.cursor)
+          : cacheEntry?.cursor;
         let lastFullAt = isDeltaPull ? cacheEntry?.lastFullAt : nowMs;
 
         // 2) Robustez ante BORRADOS físicos (que un delta no ve): en tablas con
