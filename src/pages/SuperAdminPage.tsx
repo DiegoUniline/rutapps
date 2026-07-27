@@ -219,7 +219,7 @@ export default function SuperAdminPage() {
     setMobileOpen(false);
   };
 
-  const activeLabel = NAV.find(n => n.key === tab)?.label ?? 'Panel Master';
+  const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(n => n.key === tab)?.label ?? 'Panel Master';
 
   return (
     <div className="min-h-[100dvh] bg-background flex w-full">
