@@ -12,6 +12,8 @@ import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
+import { queueOperation } from '@/lib/syncQueue';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useQuery } from '@tanstack/react-query';
@@ -38,7 +40,7 @@ function saveLocalVisitedSet(set: Set<string>) {
 export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { empresa, profile, overrideEmpresaId, overrideVendedorId } = useAuth();
+  const { empresa, profile, user, overrideEmpresaId, overrideVendedorId } = useAuth();
   const isSAOverride = !!overrideEmpresaId;
   const effectiveVendedorId = isSAOverride ? overrideVendedorId : (profile?.id ?? null);
   const { clientesVisibilidad } = useDataVisibility('clientes');
@@ -114,23 +116,45 @@ export default function RutaClientes() {
     };
   }, []);
 
-  const markVisited = useCallback((clienteId: string) => {
+  const markVisited = useCallback(async (clienteId: string) => {
     setLocalVisited(prev => {
       const next = new Set(prev);
       next.add(clienteId);
       saveLocalVisitedSet(next);
       return next;
     });
-  }, []);
+    // ANTES: la marca de "visitado" solo quedaba en localStorage del teléfono,
+    // así que NO aparecía en el reporte de supervisor (que lee la tabla visitas).
+    // Solo se registraban las visitas que venían con venta. Ahora también se
+    // crea la fila en `visitas` (offline-safe). Id determinista por día para no
+    // duplicar si se re-marca.
+    if (!empresa?.id || !user?.id) return;
+    try {
+      const loc = locationService.getLastKnownLocation();
+      const id = await deterministicUuid('visita', empresa.id, clienteId, user.id, todayLocal());
+      await queueOperation('visitas', 'insert', {
+        id, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id,
+        tipo: 'sin_compra', motivo: null, notas: null,
+        gps_lat: loc?.lat ?? null, gps_lng: loc?.lng ?? null,
+        venta_id: null, fecha: new Date().toISOString(), created_at: new Date().toISOString(),
+      }, 'id');
+    } catch (e) { console.warn('No se pudo registrar la visita', e); }
+  }, [empresa?.id, user?.id]);
 
-  const unmarkVisited = useCallback((clienteId: string) => {
+  const unmarkVisited = useCallback(async (clienteId: string) => {
     setLocalVisited(prev => {
       const next = new Set(prev);
       next.delete(clienteId);
       saveLocalVisitedSet(next);
       return next;
     });
-  }, []);
+    // Borra la visita creada por la marca (mismo id determinista del día).
+    if (!empresa?.id || !user?.id) return;
+    try {
+      const id = await deterministicUuid('visita', empresa.id, clienteId, user.id, todayLocal());
+      await queueOperation('visitas', 'delete', { id }, 'id');
+    } catch (e) { console.warn('No se pudo quitar la visita', e); }
+  }, [empresa?.id, user?.id]);
 
   const captureGps = useCallback(async (cliente: any) => {
     const loc = locationService.getLastKnownLocation();
