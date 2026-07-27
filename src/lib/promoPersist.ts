@@ -14,15 +14,20 @@
  */
 import { supabase } from '@/lib/supabase';
 import type { PromoResult } from '@/hooks/usePromociones';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 
-/** Licencias con la persistencia activa. Vacío + `PROMO_PERSIST_ALL` = todas. */
-const LICENCIAS_HABILITADAS = new Set<string>(['12324489']);
-const PROMO_PERSIST_ALL = false;
+/**
+ * El alcance se administra desde Panel Master > "Funciones en pruebas"
+ * (bandera `promo_persist`). Las licencias de respaldo se usan solo si aún
+ * no se han cargado las banderas desde el servidor.
+ */
+const LICENCIAS_FALLBACK = new Set<string>(['12324489']);
 
 export function promoPersistHabilitado(licencia?: string | null): boolean {
-  if (PROMO_PERSIST_ALL) return true;
-  return !!licencia && LICENCIAS_HABILITADAS.has(String(licencia).trim());
+  const lic = String(licencia ?? '').trim();
+  return isFeatureEnabled('promo_persist', lic) || LICENCIAS_FALLBACK.has(lic);
 }
+
 
 export type PromoAplicadaRow = {
   id: string;
