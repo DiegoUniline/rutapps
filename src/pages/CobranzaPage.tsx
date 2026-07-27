@@ -42,6 +42,9 @@ function useCobros() {
     queryKey: ['cobros-desktop', empresa?.id],
     enabled: !!empresa?.id,
     networkMode: 'always',
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnReconnect: 'always',
     queryFn: async () => {
       const readCache = async () => {
         try {
@@ -143,6 +146,11 @@ export default function CobranzaPage() {
   const qc = useQueryClient();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (!empresa?.id) return;
+    qc.invalidateQueries({ queryKey: ['cobros-desktop', empresa.id] });
+  }, [empresa?.id, qc]);
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if (!empresa?.id || isLoading || (cobros?.length ?? 0) > 0) return;
