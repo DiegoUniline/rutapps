@@ -1867,6 +1867,7 @@ export type Database = {
           notif_wa_status: string | null
           referencia: string | null
           status: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -1883,6 +1884,7 @@ export type Database = {
           notif_wa_status?: string | null
           referencia?: string | null
           status?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -1899,6 +1901,7 @@ export type Database = {
           notif_wa_status?: string | null
           referencia?: string | null
           status?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -3416,6 +3419,7 @@ export type Database = {
           orden_entrega: number | null
           pedido_id: string | null
           status: Database["public"]["Enums"]["status_entrega"]
+          updated_at: string | null
           validado_at: string | null
           validado_por: string | null
           vendedor_id: string | null
@@ -3437,6 +3441,7 @@ export type Database = {
           orden_entrega?: number | null
           pedido_id?: string | null
           status?: Database["public"]["Enums"]["status_entrega"]
+          updated_at?: string | null
           validado_at?: string | null
           validado_por?: string | null
           vendedor_id?: string | null
@@ -3458,6 +3463,7 @@ export type Database = {
           orden_entrega?: number | null
           pedido_id?: string | null
           status?: Database["public"]["Enums"]["status_entrega"]
+          updated_at?: string | null
           validado_at?: string | null
           validado_por?: string | null
           vendedor_id?: string | null
@@ -8078,6 +8084,7 @@ export type Database = {
           total: number | null
           total_efectivo: number | null
           turno_id: string | null
+          updated_at: string | null
           vendedor_id: string | null
         }
         Insert: {
@@ -8117,6 +8124,7 @@ export type Database = {
           total?: number | null
           total_efectivo?: number | null
           turno_id?: string | null
+          updated_at?: string | null
           vendedor_id?: string | null
         }
         Update: {
@@ -8156,6 +8164,7 @@ export type Database = {
           total?: number | null
           total_efectivo?: number | null
           turno_id?: string | null
+          updated_at?: string | null
           vendedor_id?: string | null
         }
         Relationships: [
