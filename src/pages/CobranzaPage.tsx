@@ -199,8 +199,8 @@ export default function CobranzaPage() {
           const queue = await offlineDb.syncQueue.toArray();
           await Promise.all(
             queue
-              .filter(item => item.table === 'cobros' && item.data?.empresa_id === empresa.id && item.id)
-              .map(item => offlineDb.syncQueue.delete(item.id!)),
+              .filter(item => item.table === 'cobros' && item.data?.empresa_id === empresa.id && item.id !== undefined)
+              .map(item => item.id === undefined ? Promise.resolve() : offlineDb.syncQueue.delete(item.id)),
           );
         }
       })
