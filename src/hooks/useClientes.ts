@@ -111,12 +111,24 @@ export function useCliente(id?: string) {
   return useQuery({
     queryKey: ['cliente', id],
     staleTime: CATALOG_STALE,
+    // networkMode 'always' + fallback a IndexedDB: la pantalla de detalle de
+    // cliente ya no se queda cargando/en blanco sin conexión.
+    networkMode: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase.from('clientes')
-        .select('*, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
-        .eq('id', id!).single();
-      if (error) throw error;
-      return data as Cliente;
+      try {
+        const { data, error } = await supabase.from('clientes')
+          .select('*, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
+          .eq('id', id!).single();
+        if (error) throw error;
+        return data as Cliente;
+      } catch (err) {
+        // Offline: lee el cliente cacheado (campos propios; sin los joins).
+        const { getOfflineTable } = await import('@/lib/offlineDb');
+        const t = getOfflineTable('clientes');
+        const local = t ? await t.get(id!).catch(() => null) : null;
+        if (local) return local as Cliente;
+        throw err;
+      }
     },
     enabled: !!id,
   });
@@ -194,6 +206,12 @@ export function useDeleteCliente() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Offline-safe: encola el borrado suave (antes fallaba sin conexión).
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const { queueOperation } = await import('@/lib/syncQueue');
+        await queueOperation('clientes', 'update', { id, status: 'inactivo' }, 'id');
+        return;
+      }
       const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).eq('id', id);
       if (error) throw error;
     },

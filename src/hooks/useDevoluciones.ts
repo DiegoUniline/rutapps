@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { todayInTimezone } from '@/lib/utils';
+import { queueOperations } from '@/lib/syncQueue';
+import { getOfflineTable } from '@/lib/offlineDb';
 import { toast } from 'sonner';
 
 export function useDevoluciones(search?: string) {
@@ -33,13 +35,42 @@ export function useSaveDevolucion() {
       lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string; accion?: string; monto_credito?: number }[];
     }) => {
       if (!empresa?.id) throw new Error('Sin empresa');
+      const fecha = devolucion.fecha ?? todayInTimezone(empresa.zona_horaria);
+
+      // OFFLINE-SAFE: sin conexión encola todo (antes fallaba y no guardaba
+      // nada). El reingreso a inventario lo hace el trigger de BD al sincronizar
+      // la línea. carga_lineas se ajusta con la caché local.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const devId = crypto.randomUUID();
+        const ops: any[] = [
+          { table: 'devoluciones', operation: 'insert', data: { id: devId, ...devolucion, empresa_id: empresa.id, tipo: devolucion.tipo, fecha } },
+          ...lineas.map(l => ({
+            table: 'devolucion_lineas',
+            operation: 'insert' as const,
+            data: { id: crypto.randomUUID(), devolucion_id: devId, producto_id: l.producto_id, cantidad: l.cantidad, motivo: l.motivo, notas: l.notas || null, accion: l.accion ?? null, monto_credito: l.monto_credito ?? 0 },
+          })),
+        ];
+        if (devolucion.carga_id && lineas.length > 0) {
+          const clTable = getOfflineTable('carga_lineas');
+          if (clTable) {
+            const allCl = (await clTable.toArray().catch(() => [])) as any[];
+            for (const l of lineas) {
+              const cl = allCl.find(c => c.carga_id === devolucion.carga_id && c.producto_id === l.producto_id);
+              if (cl) ops.push({ table: 'carga_lineas', operation: 'update', data: { id: cl.id, cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + (l.cantidad ?? 0) } });
+            }
+          }
+        }
+        await queueOperations(ops);
+        return { id: devId };
+      }
+
       const { data: dev, error: devErr } = await supabase.from('devoluciones').insert({
         ...devolucion,
         empresa_id: empresa.id,
         tipo: devolucion.tipo as any,
         // Fecha en zona horaria de la empresa; evita que el server ponga
         // CURRENT_DATE (UTC) si el caller no la mandó.
-        fecha: devolucion.fecha ?? todayInTimezone(empresa.zona_horaria),
+        fecha,
       }).select('id').single();
       if (devErr) throw devErr;
 

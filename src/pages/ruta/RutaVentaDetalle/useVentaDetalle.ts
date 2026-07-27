@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { queueOperation, queueOperations } from '@/lib/syncQueue';
+import { getOfflineTable } from '@/lib/offlineDb';
 import { newLocalId } from '@/lib/localId';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -165,7 +166,20 @@ export function useVentaDetalle() {
         const { error: ventaErr } = await supabase.from('ventas').update(ventaUpdate).eq('id', id!);
         if (ventaErr) throw ventaErr;
       } else {
-        await queueOperation('ventas', 'update', { id: id!, ...ventaUpdate });
+        // Offline: encola el reemplazo COMPLETO de líneas (antes se perdían los
+        // cambios de productos: solo se guardaban los totales).
+        const oldLineas = ((venta as any)?.venta_lineas ?? []) as any[];
+        await queueOperations([
+          ...oldLineas
+            .filter(l => l?.id)
+            .map(l => ({ table: 'venta_lineas', operation: 'delete' as const, data: { id: l.id } })),
+          ...newLineas.map(nl => ({
+            table: 'venta_lineas',
+            operation: 'insert' as const,
+            data: { id: crypto.randomUUID(), ...nl },
+          })),
+          { table: 'ventas', operation: 'update' as const, data: { id: id!, ...ventaUpdate } },
+        ]);
       }
 
       toast.success('Venta actualizada');
@@ -357,21 +371,39 @@ export function useVentaDetalle() {
     setSaving(true);
     try {
       const prevStatus = venta.status;
-      const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
-      if (error) throw error;
-      // Cancel associated cobros
-      const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', venta.id);
-      if (apps && apps.length > 0) {
-        const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
-        for (const cid of cobroIds) {
-          const { data: allApps } = await supabase.from('cobro_aplicaciones').select('venta_id').eq('cobro_id', cid);
-          const onlyThisVenta = (allApps ?? []).every(a => a.venta_id === venta.id);
-          if (onlyThisVenta) {
-            await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
+      if (navigator.onLine) {
+        const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
+        if (error) throw error;
+        // Cancel associated cobros
+        const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', venta.id);
+        if (apps && apps.length > 0) {
+          const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
+          for (const cid of cobroIds) {
+            const { data: allApps } = await supabase.from('cobro_aplicaciones').select('venta_id').eq('cobro_id', cid);
+            const onlyThisVenta = (allApps ?? []).every(a => a.venta_id === venta.id);
+            if (onlyThisVenta) {
+              await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
+            }
           }
         }
+        await logHistorial(venta.id, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
+      } else {
+        // Offline: encola la cancelación (antes fallaba y no hacía nada).
+        // Los cobros aplicados SOLO a esta venta se cancelan usando la caché
+        // local de cobro_aplicaciones.
+        const ops: any[] = [{ table: 'ventas', operation: 'update', data: { id: venta.id, status: 'cancelado' } }];
+        const caTable = getOfflineTable('cobro_aplicaciones');
+        if (caTable) {
+          const allCa = (await caTable.toArray().catch(() => [])) as any[];
+          const cobroIds = [...new Set(allCa.filter(a => a.venta_id === venta.id).map(a => a.cobro_id))];
+          for (const cid of cobroIds) {
+            const appsDeCobro = allCa.filter(a => a.cobro_id === cid);
+            const onlyThisVenta = appsDeCobro.length > 0 && appsDeCobro.every(a => a.venta_id === venta.id);
+            if (onlyThisVenta) ops.push({ table: 'cobros', operation: 'update', data: { id: cid, status: 'cancelado' } });
+          }
+        }
+        await queueOperations(ops);
       }
-      await logHistorial(venta.id, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
@@ -390,9 +422,13 @@ export function useVentaDetalle() {
     setSaving(true);
     try {
       const prevStatus = venta.status;
-      const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
-      if (error) throw error;
-      await logHistorial(venta.id, 'vuelta_borrador', { status: { anterior: prevStatus, nuevo: 'borrador' } });
+      if (navigator.onLine) {
+        const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
+        if (error) throw error;
+        await logHistorial(venta.id, 'vuelta_borrador', { status: { anterior: prevStatus, nuevo: 'borrador' } });
+      } else {
+        await queueOperation('ventas', 'update', { id: venta.id, status: 'borrador' });
+      }
       toast.success('Venta regresada a borrador');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });

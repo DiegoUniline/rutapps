@@ -174,6 +174,14 @@ const NO_DELTA_TABLES = new Set([
   'tarifas',
   'tarifa_lineas',
   'lista_precios',
+  // Tablas chicas (que el vendedor NO crea offline, así que el clear+replace no
+  // arriesga borrar algo sin sincronizar) cuyas EDICIONES/BORRADOS deben llegar
+  // al móvil. Un delta por created_at nunca los propaga; el refresh completo sí.
+  // cliente_pedido_sugerido: además evita duplicados (se borra+reinserta con IDs
+  // nuevos en el servidor; el full replace limpia los viejos).
+  'almacenes',
+  'profiles',
+  'cliente_pedido_sugerido',
   'promociones',
 ]);
 
