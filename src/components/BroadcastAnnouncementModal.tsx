@@ -27,8 +27,7 @@ export default function BroadcastAnnouncementModal() {
   const { messages, isLoading, markAsRead } = useBroadcastMessages();
   const [open, setOpen] = useState(false);
 
-  const unseen = messages.filter((m) => !isSeenLocal(m.id));
-  const latest = unseen[0];
+  const latest = messages[0];
 
   useEffect(() => {
     if (isLoading || !latest) {
