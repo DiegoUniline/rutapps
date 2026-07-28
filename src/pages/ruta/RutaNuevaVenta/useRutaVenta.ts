@@ -3,6 +3,7 @@ import { todayInTimezone , todayLocal, roundMoney } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation, queueOperations, queueInsertMany } from '@/lib/syncQueue';
+import { deterministicUuid } from '@/lib/deterministicId';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -979,9 +980,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         let cuentaIdx = 0;
         const accountApplied = new Map<string, number>();
 
+        let pagoIdx = -1;
         for (const pago of pagos) {
+          pagoIdx++;
           if (pago.monto <= 0) continue;
-          const cobroId = crypto.randomUUID();
 
           // Track applications first to determine the actual covered amount
           // (the cobro must reflect only what was applied, not the cash received — change is not part of the cobro)
@@ -1013,6 +1015,14 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           const montoCobro = roundMoney(aplicaciones.reduce((s, a) => s + a.monto, 0));
           if (montoCobro <= 0) continue;
 
+          // Id DETERMINÍSTICO del cobro (mismo criterio que RutaCobrar): derivado
+          // de la venta que lo origina + el pago (índice, método, monto). Si el
+          // MISMO cobro se vuelve a encolar (doble-toque, reintento, resync) el id
+          // coincide y el upsert lo trata como el mismo cobro → NO duplica. Antes
+          // era crypto.randomUUID(): cada reenvío generaba un cobro nuevo (causa
+          // real del cobro duplicado y huérfano en ventas de contado offline).
+          const cobroId = await deterministicUuid('cobro-venta', ventaId, pagoIdx, pago.metodo_pago, montoCobro);
+
           const nowIso = new Date().toISOString();
           await queueOperations([
             {
@@ -1020,11 +1030,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
               operation: 'insert',
               data: { id: cobroId, empresa_id: empresa.id, cliente_id: ventaClienteId, user_id: user.id, monto: montoCobro, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: nowIso },
             },
-            ...aplicaciones.map(ap => ({
+            ...await Promise.all(aplicaciones.map(async ap => ({
               table: 'cobro_aplicaciones',
               operation: 'insert' as const,
-              data: { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: nowIso },
-            })),
+              // Id determinístico por (cobro, venta) → la aplicación tampoco se duplica.
+              data: { id: await deterministicUuid('capp', cobroId, ap.venta_id), cobro_id: cobroId, venta_id: ap.venta_id, monto_aplicado: ap.monto, created_at: nowIso },
+            }))),
           ]);
         }
 
