@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useBroadcastMessages } from '@/hooks/useBroadcastMessages';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Megaphone, AlertTriangle, Info, CheckCircle, XCircle, Bell, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
