@@ -812,6 +812,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <PublicidadPopup />
         <TiendaAnnouncementModal />
+        <BroadcastAnnouncementModal />
 
         {/* Bottom navigation – app style */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
@@ -962,6 +963,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PendingInvoiceModal />
       <PublicidadPopup />
       <TiendaAnnouncementModal />
+      <BroadcastAnnouncementModal />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
       </Suspense>
