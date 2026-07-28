@@ -130,6 +130,7 @@ const PartnerCupones = lazy(() => import("@/pages/partner/PartnerCupones"));
 const PartnerComisiones = lazy(() => import("@/pages/partner/PartnerComisiones"));
 const PartnerPerfil = lazy(() => import("@/pages/partner/PartnerPerfil"));
 const DatabaseHealthPage = lazy(() => import("@/pages/DatabaseHealthPage"));
+const SyncHealthPage = lazy(() => import("@/pages/SyncHealthPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
@@ -547,6 +548,7 @@ function AuthenticatedAppRoutes() {
             <Route path="/super-admin/partners" element={<SuperAdminPartnersPage />} />
             <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
             <Route path="/admin/database-health" element={<DatabaseHealthPage />} />
+            <Route path="/super-admin/sync-health" element={<SyncHealthPage />} />
             <Route path="/partner" element={<PartnerLayout />}>
               <Route index element={<PartnerDashboard />} />
               <Route path="empresas" element={<PartnerEmpresas />} />

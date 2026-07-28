@@ -177,6 +177,9 @@ function NavList({ tab, selectedEmpresaId, onSelect, signOut, navigate }: NavLis
         <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/super-admin/database-health')}>
           <Database className="h-4 w-4 mr-2" /> Salud de BD
         </Button>
+        <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/super-admin/sync-health')}>
+          <ShieldCheck className="h-4 w-4 mr-2" /> Salud de Sync
+        </Button>
         <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => navigate('/dashboard')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Volver a la app
         </Button>
