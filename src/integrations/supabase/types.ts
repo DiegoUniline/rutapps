@@ -8790,6 +8790,33 @@ export type Database = {
         }
         Returns: number
       }
+      admin_sync_duplicados: {
+        Args: never
+        Returns: {
+          cliente_id: string
+          cobro_aplicado: string
+          cobro_huerfano: string
+          empresa_id: string
+          fecha: string
+          folio: string
+          monto: number
+          seg_diferencia: number
+        }[]
+      }
+      admin_sync_health: { Args: never; Returns: Json }
+      admin_sync_recientes: {
+        Args: never
+        Returns: {
+          aplicado: boolean
+          cliente_id: string
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          metodo_pago: string
+          monto: number
+        }[]
+      }
       aplicar_cobro: {
         Args: {
           p_aplicaciones: Json
