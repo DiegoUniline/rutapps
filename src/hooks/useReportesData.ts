@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
+import { buildPromoReporting } from '@/lib/promoReporting';
+
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();
