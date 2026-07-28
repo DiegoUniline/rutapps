@@ -14,30 +14,36 @@ const TIPO_STYLES: Record<string, { icon: React.ElementType; color: string; bord
 
 const LOCAL_KEY_PREFIX = 'broadcast_announcement_seen_';
 
+function isSeenLocal(messageId: string) {
+  try {
+    return localStorage.getItem(`${LOCAL_KEY_PREFIX}${messageId}`) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export default function BroadcastAnnouncementModal() {
-  const { messages, isLoading, reads, markAsRead } = useBroadcastMessages();
+  const { messages, isLoading, markAsRead } = useBroadcastMessages();
   const [open, setOpen] = useState(false);
 
-  const unread = messages.filter((m) => !reads.has(m.id));
-  const latest = unread[0];
+  const unseen = messages.filter((m) => !isSeenLocal(m.id));
+  const latest = unseen[0];
 
   useEffect(() => {
     if (isLoading || !latest) {
       setOpen(false);
       return;
     }
-    const localKey = `${LOCAL_KEY_PREFIX}${latest.id}`;
-    const alreadySeen = localStorage.getItem(localKey);
-    if (!alreadySeen) {
-      const t = setTimeout(() => setOpen(true), 800);
-      return () => clearTimeout(t);
-    }
+    const t = setTimeout(() => setOpen(true), 800);
+    return () => clearTimeout(t);
   }, [latest, isLoading]);
 
   const handleClose = () => {
     if (latest) {
       markAsRead(latest.id);
-      localStorage.setItem(`${LOCAL_KEY_PREFIX}${latest.id}`, new Date().toISOString());
+      try {
+        localStorage.setItem(`${LOCAL_KEY_PREFIX}${latest.id}`, new Date().toISOString());
+      } catch {}
     }
     setOpen(false);
   };
@@ -83,10 +89,10 @@ export default function BroadcastAnnouncementModal() {
             </p>
           </div>
 
-          {unread.length > 1 && (
+          {unseen.length > 1 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
               <Bell className="h-3.5 w-3.5" />
-              Tienes {unread.length} avisos sin leer. Los encontrarás en la campanita del menú.
+              Tienes {unseen.length} avisos sin leer. Los encontrarás en la campanita del menú.
             </div>
           )}
 
