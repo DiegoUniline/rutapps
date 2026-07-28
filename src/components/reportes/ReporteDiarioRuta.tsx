@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn , todayLocal } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { buildPromoReporting } from '@/lib/promoReporting';
 
 
 export default function ReporteDiarioRuta() {
@@ -55,7 +56,7 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       let q = (supabase as any).from('ventas')
-        .select('id, folio, total, condicion_pago, status, tipo, fecha, cliente_id, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
+        .select('id, folio, total, condicion_pago, status, tipo, fecha, cliente_id, vendedor_id, profiles:vendedor_id(nombre), clientes(nombre), venta_lineas(id, producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
@@ -249,10 +250,7 @@ export default function ReporteDiarioRuta() {
   // después mediante una entrega.
   const pedidosLevantados = ventasActivas.filter((v: any) => v.tipo === 'pedido');
   const ventasDirectas = ventasActivas.filter((v: any) => v.tipo !== 'pedido');
-  const totalPedidos = pedidosLevantados.reduce((s: number, v: any) => {
-    const disc = (promoAplicadas || []).filter((p: any) => p.ventas?.id === v.id).reduce((a: number, p: any) => a + Number(p.descuento_aplicado || 0), 0);
-    return s + Math.max(0, (Number(v.total) || 0) - disc);
-  }, 0);
+  const totalPedidos = pedidosLevantados.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
   const TIPO_LABEL: Record<string, string> = { pedido: 'Pedido', venta_directa: 'Directa' };
 
   // --- Entregas programadas + estado ---
@@ -269,16 +267,14 @@ export default function ReporteDiarioRuta() {
   const totalEntregado = entregasHechas.reduce((s: number, e: any) => s + (Number(e.ventas?.total) || 0), 0);
 
   // Descuentos por promoción (producto gratis, etc.) — mapa por línea y por venta
-  const promoDescByLinea: Record<string, number> = {};
-  const promoDescByVenta: Record<string, number> = {};
-  (promoAplicadas || []).forEach((p: any) => {
-    const disc = Number(p.descuento_aplicado || 0);
-    if (p.venta_linea_id) promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] || 0) + disc;
-    const vid = p.ventas?.id;
-    if (vid) promoDescByVenta[vid] = (promoDescByVenta[vid] || 0) + disc;
+  const promoReporting = buildPromoReporting({
+    ventas: ventasActivas as any[],
+    lineas: ventasActivas.flatMap((v: any) => (v.venta_lineas || []).map((l: any) => ({ ...l, venta_id: v.id }))),
+    promoAplicadas: (promoAplicadas || []) as any[],
   });
-  const ventaTotalEfectivo = (v: any) => Math.max(0, (Number(v.total) || 0) - (promoDescByVenta[v.id] || 0));
-  const lineTotalEfectivo = (l: any) => Math.max(0, (Number(l.total) || 0) - (promoDescByLinea[l.id] || 0));
+  // `ventas.total` YA viene neto de promociones: no se vuelve a descontar.
+  const ventaTotalEfectivo = (v: any) => Math.max(0, Number(v.total) || 0);
+  const lineTotalEfectivo = (l: any) => promoReporting.lineTotalEfectivo(l);
 
   const totalContado = ventasContado.reduce((s: number, v: any) => s + ventaTotalEfectivo(v), 0);
   const totalCredito = ventasCredito.reduce((s: number, v: any) => s + ventaTotalEfectivo(v), 0);
