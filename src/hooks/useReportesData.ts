@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { totalEfectivoVenta } from '@/lib/ventaCerrada';
 import { SALDO_FAVOR_METODO } from '@/lib/saldoFavor';
+import { buildPromoReporting } from '@/lib/promoReporting';
+
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[], tipoFilter?: 'pedido' | 'venta_directa') {
   const { empresa } = useAuth();
@@ -94,16 +96,13 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       ]);
 
       // Descuento por línea proveniente de promociones (p.ej. producto gratis).
-      const promoDescByLinea: Record<string, number> = {};
-      for (const p of promoAplicadas as any[]) {
-        const lid = p.venta_linea_id;
-        if (!lid) continue;
-        promoDescByLinea[lid] = (promoDescByLinea[lid] ?? 0) + Number(p.descuento_aplicado ?? 0);
-      }
-      const lineTotalEfectivo = (l: any) => {
-        const disc = promoDescByLinea[l.id] ?? 0;
-        return Math.max(0, Number(l.total ?? 0) - disc);
-      };
+      // Incluye fallback prorrateado para ventas históricas sin desglose guardado.
+      const { descByLinea: promoDescByLinea, lineTotalEfectivo } = buildPromoReporting({
+        ventas: ventas as any[],
+        lineas: ventaLineas as any[],
+        promoAplicadas: promoAplicadas as any[],
+      });
+
 
       // If a vendor filter is active, attribute each cobro to the vendor(s) of the sales it was applied to.
       // Cobros without applications (anticipos) are attributed to the cliente's default vendedor via the clientes lookup below.

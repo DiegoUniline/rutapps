@@ -51,7 +51,7 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
       .eq("empresa_id", empresaId).eq("es_saldo_inicial", false)
       .gte("fecha", desde).lte("fecha", hasta).in("status", activeStatuses).range(f, t)),
     fetchAll((f, t) => admin.from("venta_lineas")
-      .select("id, producto_id, cantidad, total, productos(codigo, nombre, costo), ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))")
+      .select("id, venta_id, producto_id, cantidad, total, productos(codigo, nombre, costo), ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))")
       .eq("ventas.empresa_id", empresaId)
       .gte("ventas.fecha", desde).lte("ventas.fecha", hasta).in("ventas.status", activeStatuses).range(f, t)),
     fetchAll((f, t) => admin.from("promocion_aplicada")
@@ -70,10 +70,46 @@ export async function fetchReportesGenerales(empresaId: string, desde: string, h
       .eq("empresa_id", empresaId).eq("status", "activo").range(f, t)),
   ]);
 
+  // Descuento por línea: desglose real de `promocion_aplicada` y, para ventas
+  // históricas sin desglose, prorrateo de la diferencia entre la suma de líneas
+  // y `ventas.total`. Solo lectura: no altera ventas, líneas ni saldos.
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   const promoDescByLinea: Record<string, number> = {};
+  const ventaIdByLinea: Record<string, string> = {};
+  for (const l of ventaLineas as any[]) if (l.id && l.venta_id) ventaIdByLinea[l.id] = l.venta_id;
+  const ventasConDesglose = new Set<string>();
   for (const p of promoAplicadas as any[]) {
     if (!p.venta_linea_id) continue;
-    promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] ?? 0) + Number(p.descuento_aplicado || 0);
+    const monto = Number(p.descuento_aplicado || 0);
+    if (!(monto > 0)) continue;
+    promoDescByLinea[p.venta_linea_id] = (promoDescByLinea[p.venta_linea_id] ?? 0) + monto;
+    const vid = ventaIdByLinea[p.venta_linea_id];
+    if (vid) ventasConDesglose.add(vid);
+  }
+  const lineasByVenta = new Map<string, any[]>();
+  for (const l of ventaLineas as any[]) {
+    if (!l.venta_id) continue;
+    const arr = lineasByVenta.get(l.venta_id) ?? [];
+    arr.push(l);
+    lineasByVenta.set(l.venta_id, arr);
+  }
+  for (const v of ventas as any[]) {
+    if (ventasConDesglose.has(v.id)) continue;
+    const arr = lineasByVenta.get(v.id);
+    if (!arr?.length) continue;
+    const sumaLineas = r2(arr.reduce((s: number, l: any) => s + Number(l.total || 0), 0));
+    const gap = r2(sumaLineas - r2(Number(v.total || 0)));
+    if (gap <= 0.01 || sumaLineas <= 0 || gap > sumaLineas) continue;
+    let repartido = 0;
+    arr.forEach((l: any, i: number) => {
+      if (!l.id) return;
+      const lineTotal = Number(l.total || 0);
+      const isLast = i === arr.length - 1;
+      let monto = isLast ? r2(gap - repartido) : r2((gap * lineTotal) / sumaLineas);
+      monto = Math.min(Math.max(monto, 0), r2(lineTotal));
+      repartido = r2(repartido + monto);
+      if (monto > 0) promoDescByLinea[l.id] = (promoDescByLinea[l.id] ?? 0) + monto;
+    });
   }
   const lineTotalEfectivo = (l: any) => Math.max(0, Number(l.total || 0) - (promoDescByLinea[l.id] ?? 0));
 
