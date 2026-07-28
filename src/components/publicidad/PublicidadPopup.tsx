@@ -63,8 +63,10 @@ export default function PublicidadPopup() {
     }
   };
 
-  const handleClose = async () => {
-    if (!canClose) return;
+  // Marca el anuncio como VISTO (servidor + respaldo local) y lo cierra. Se usa
+  // tanto al cerrar como al dar clic en el CTA: cualquiera de las dos acciones
+  // cuenta como visto y el anuncio ya no vuelve a aparecer (en ningún dispositivo).
+  const dismissAsSeen = async () => {
     if (ad) {
       setDismissedAdId(ad.id);
       if (seenKey) {
@@ -75,6 +77,19 @@ export default function PublicidadPopup() {
     setOpen(false);
     await markSeen();
     await queryClient.invalidateQueries({ queryKey: ['publicidad', 'next-unseen', user?.id] });
+  };
+
+  const handleClose = async () => {
+    if (!canClose) return;
+    await dismissAsSeen();
+  };
+
+  // Clic en el CTA (p. ej. "Configurar" / abrir la página nueva): abre el enlace
+  // y marca visto de inmediato (no espera el contador). window.open va PRIMERO,
+  // síncrono, para que el navegador no lo bloquee como popup.
+  const handleCta = () => {
+    if (ad?.cta_url) window.open(ad.cta_url, '_blank', 'noopener,noreferrer');
+    void dismissAsSeen();
   };
 
   if (!ad) return null;
@@ -119,7 +134,7 @@ export default function PublicidadPopup() {
               {ad.cta_url && (
                 <Button
                   size="sm"
-                  onClick={() => window.open(ad.cta_url!, '_blank', 'noopener,noreferrer')}
+                  onClick={handleCta}
                   className="gap-1.5"
                 >
                   {ad.cta_label || 'Ver más'} <ExternalLink className="h-3.5 w-3.5" />
