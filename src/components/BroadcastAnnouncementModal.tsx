@@ -30,7 +30,7 @@ export default function BroadcastAnnouncementModal() {
   const latest = messages[0];
 
   useEffect(() => {
-    if (isLoading || !latest) {
+    if (isLoading || !latest || isSeenLocal(latest.id)) {
       setOpen(false);
       return;
     }
