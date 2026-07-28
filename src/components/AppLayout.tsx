@@ -20,6 +20,7 @@ import NotificationRuntime from '@/components/notifications/NotificationRuntime'
 import InternalNotificationBell from '@/components/notifications/InternalNotificationBell';
 import TiendaOrdersBell from '@/components/notifications/TiendaOrdersBell';
 import BroadcastBell from '@/components/BroadcastBell';
+import BroadcastAnnouncementModal from '@/components/BroadcastAnnouncementModal';
 import PublicidadPopup from '@/components/publicidad/PublicidadPopup';
 import PendingInvoiceModal from '@/components/PendingInvoiceModal';
 import TiendaAnnouncementModal from '@/components/TiendaAnnouncementModal';
