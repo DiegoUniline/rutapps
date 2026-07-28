@@ -5,6 +5,7 @@ import ProductSearchInput from '@/components/ProductSearchInput';
 import { ListaPrecioPicker, type ListaPrecioSelection } from '@/components/venta/ListaPrecioPicker';
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
+import type { PromoResult } from '@/hooks/usePromociones';
 
 interface Props {
   idx: number;
@@ -22,9 +23,10 @@ interface Props {
   canApplyDiscount?: boolean;
   sinImpuestos?: boolean;
   onChangeLineListaPrecio?: (idx: number, selection: ListaPrecioSelection) => void;
+  promoResults?: PromoResult[];
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -44,6 +46,8 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const displayLabel = displayCodigo || displayNombre
     ? `${displayCodigo}${displayCodigo && displayNombre ? ' · ' : ''}${displayNombre}`
     : '—';
+  const linePromos = (promoResults ?? []).filter((rp) => rp.producto_id === l.producto_id);
+  const linePromoDesc = r2(linePromos.reduce((s, rp) => s + (Number(rp.descuento) || 0), 0));
 
   if (isEmpty && readOnly) return null;
 
@@ -62,6 +66,11 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
               value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : (snapshotProd ? `${snapshotProd.codigo ?? ''}${snapshotProd.codigo && snapshotProd.nombre ? ' · ' : ''}${snapshotProd.nombre ?? ''}` : undefined)}
               onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly}
             />
+          )}
+          {linePromoDesc > 0 && (
+            <div className="text-[11px] text-primary font-medium mt-0.5">
+              🎁 {linePromos[0].descripcion || linePromos[0].nombre} · −{money(linePromoDesc)}
+            </div>
           )}
           {!isEmpty && (
             <div className="flex flex-wrap gap-1 mt-1">

@@ -6,6 +6,7 @@ import { ListaPrecioPicker, type ListaPrecioSelection } from '@/components/venta
 import { cn } from '@/lib/utils';
 import { calculateSaleLineAmounts, type SaleLinePricingLike } from '@/lib/salePricing';
 import type { VentaLinea } from '@/types';
+import type { PromoResult } from '@/hooks/usePromociones';
 
 interface Props {
   idx: number;
@@ -27,9 +28,10 @@ interface Props {
   canApplyDiscount?: boolean;
   sinImpuestos?: boolean;
   onChangeLineListaPrecio?: (idx: number, selection: ListaPrecioSelection) => void;
+  promoResults?: PromoResult[];
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$', currencyCode, canChangePrice = true, canApplyDiscount = true, sinImpuestos = false, onChangeLineListaPrecio, promoResults }: Props) {
   const { fmt } = useCurrency();
   const money = (value: number | null | undefined) => currencyCode ? formatCurrency(value, currencyCode) : fmt(value);
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -53,6 +55,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const embeddedProd = (l as any).productos;
   const prodDisplay = prod || embeddedProd;
   const isEmpty = !l.producto_id;
+  // Descuento de promoción que cae en ESTA línea (por producto), para mostrarlo
+  // a nivel de línea y no solo en el resumen "Promociones".
+  const linePromos = (promoResults ?? []).filter((r) => r.producto_id === l.producto_id);
+  const linePromoDesc = r2(linePromos.reduce((s, r) => s + (Number(r.descuento) || 0), 0));
   const lineData = l as any;
   const unidadLabel = lineData.unidad_label
     || (l as any).unidades?.abreviatura
@@ -100,6 +106,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
             onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly}
             registerRef={el => setCellRef(idx, 0, el)}
           />
+        )}
+        {linePromoDesc > 0 && (
+          <div className="text-[10px] text-primary font-medium mt-0.5">
+            🎁 {linePromos[0].descripcion || linePromos[0].nombre} · −{money(linePromoDesc)}
+          </div>
         )}
         {!isEmpty && (
           <div className="flex flex-wrap gap-1 md:hidden mt-0.5">
