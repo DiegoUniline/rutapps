@@ -95,12 +95,12 @@ export default function BroadcastAnnouncementModal() {
               </p>
             </div>
 
-            {unseen.length > 1 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-                <Bell className="h-3.5 w-3.5" />
-                Tienes {unseen.length} avisos sin leer. Los encontrarás en la campanita del menú.
-              </div>
-            )}
+          {unreadCount > 1 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+              <Bell className="h-3.5 w-3.5" />
+              Tienes {unreadCount} avisos sin leer. Los encontrarás en la campanita del menú.
+            </div>
+          )}
 
             <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
               <Button variant="outline" className="flex-1" onClick={handleClose}>
