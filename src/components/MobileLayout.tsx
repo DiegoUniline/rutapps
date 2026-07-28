@@ -10,7 +10,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
-import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { APP_VERSION } from '@/version';
 import { locationService } from '@/lib/locationService';
 import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 import { useRutaSesionActiva } from '@/hooks/useRutaSesion';
@@ -398,7 +398,7 @@ export default function MobileLayout() {
                 {isOnline ? 'Actualizar app' : 'Sin conexión'}
               </button>
               <div className="px-4 py-2 text-[10px] text-muted-foreground">
-                v{APP_VERSION} · {APP_BUILD_DATE}
+                v{APP_VERSION}
               </div>
             </div>
           </div>
