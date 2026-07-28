@@ -217,7 +217,17 @@ export default function VentaFormPage() {
 
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
-  const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
+  const almacenOptions = (() => {
+    const opts = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
+    // El almacén guardado en la venta puede no estar en el catálogo cargado
+    // (super admin viendo otra empresa, almacén inactivo, etc.). Lo agregamos
+    // para que el selector no se muestre vacío ni se pierda el valor.
+    const saved = form.almacen_id as string | null | undefined;
+    if (saved && !opts.some(o => o.value === saved)) {
+      opts.unshift({ value: saved, label: (form as any).almacenes?.nombre || 'Almacén de la venta' });
+    }
+    return opts;
+  })();
   const clienteSel = clientesList?.find(c => c.id === form.cliente_id);
   const clienteNombre = clienteSel?.nombre;
   const clienteNotasFiscales = (clienteSel as any)?.notas_fiscales as string | undefined;
