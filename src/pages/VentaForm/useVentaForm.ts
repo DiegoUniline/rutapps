@@ -8,6 +8,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
 import { buildPromoAplicadaRows, promoPersistHabilitado, replacePromocionesAplicadas } from '@/lib/promoPersist';
+import { aplicarPromoALinea, promoLineaHabilitado } from '@/lib/promoLinea';
 
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
@@ -651,10 +652,22 @@ export function useVentaForm() {
       const linePromises: Promise<any>[] = [];
       const lineProductoIds: string[] = [];
       const lineTotalByProduct = new Map<string, number>();
+      // Con la bandera activa, cada línea se guarda YA NETA de su promoción.
+      // `ventas.total` (y por tanto saldos y cobros) no cambia.
+      const netearLineas = promoLineaHabilitado((empresa as any)?.licencia);
+      const promoPendientePorProducto = new Map<string, number>(promoEffectiveByProduct);
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const pricedLine = applyEffectiveLinePricing(l, sinImpuestos) as any;
-        const lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
+        let lineAmounts = calculateSaleLineAmounts(pricedLine as any, sinImpuestos);
+        if (netearLineas) {
+          const pend = promoPendientePorProducto.get(l.producto_id) ?? 0;
+          if (pend > 0) {
+            const aplicar = Math.min(pend, lineAmounts.total);
+            lineAmounts = { ...lineAmounts, ...aplicarPromoALinea({ subtotal: lineAmounts.subtotal, iva: lineAmounts.iva, ieps: lineAmounts.ieps, total: lineAmounts.total }, aplicar) };
+            promoPendientePorProducto.set(l.producto_id, pend - aplicar);
+          }
+        }
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
         const linePayload = { ...pricedLine, venta_id: ventaId, subtotal: lineAmounts.subtotal, iva_pct: savedIvaPct, iva_monto: lineAmounts.iva, ieps_pct: savedIepsPct, ieps_monto: lineAmounts.ieps, total: lineAmounts.total };
