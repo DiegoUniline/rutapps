@@ -56,58 +56,70 @@ export default function BroadcastAnnouncementModal() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border-2 border-primary/20">
-        <div className={cn('px-5 pt-5 pb-3 border-b', style.bg)}>
-          <DialogHeader className="text-left space-y-2">
-            <div className="flex items-center gap-2">
-              <span className={cn('p-2 rounded-full bg-white dark:bg-background shadow-sm', style.color)}>
-                <Icon className="h-5 w-5" />
-              </span>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-primary" />
-                Aviso importante
-              </DialogTitle>
-            </div>
-            <DialogDescription className="sr-only">
-              Mensaje del administrador del sistema
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div className={cn('border-l-4 pl-3 py-2', style.border)}>
-            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-              {latest.mensaje}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              {new Date(latest.created_at).toLocaleString('es-MX', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
-          </div>
-
-          {unseen.length > 1 && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              <Bell className="h-3.5 w-3.5" />
-              Tienes {unseen.length} avisos sin leer. Los encontrarás en la campanita del menú.
-            </div>
+      <DialogPortal>
+        <DialogOverlay className="z-[100]" />
+        <DialogPrimitive.Content
+          className={cn(
+            'fixed left-[50%] top-[50%] z-[101] grid w-full max-w-md max-h-[90dvh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg border-2 border-primary/20'
           )}
-
-          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={handleClose}>
-              Entendido, cerrar
-            </Button>
-            <Button className="flex-1 gap-2" onClick={handleClose}>
-              <CheckCircle className="h-4 w-4" />
-              Aceptar
-            </Button>
+        >
+          <div className={cn('px-5 pt-5 pb-3 border-b', style.bg)}>
+            <DialogHeader className="text-left space-y-2">
+              <div className="flex items-center gap-2">
+                <span className={cn('p-2 rounded-full bg-white dark:bg-background shadow-sm', style.color)}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <DialogTitle className="text-base font-bold flex items-center gap-2">
+                  <Megaphone className="h-4 w-4 text-primary" />
+                  Aviso importante
+                </DialogTitle>
+              </div>
+              <DialogDescription className="sr-only">
+                Mensaje del administrador del sistema
+              </DialogDescription>
+            </DialogHeader>
           </div>
-        </div>
-      </DialogContent>
+
+          <div className="px-5 py-4 space-y-4">
+            <div className={cn('border-l-4 pl-3 py-2', style.border)}>
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                {latest.mensaje}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {new Date(latest.created_at).toLocaleString('es-MX', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+
+            {unseen.length > 1 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                <Bell className="h-3.5 w-3.5" />
+                Tienes {unseen.length} avisos sin leer. Los encontrarás en la campanita del menú.
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={handleClose}>
+                Entendido, cerrar
+              </Button>
+              <Button className="flex-1 gap-2" onClick={handleClose}>
+                <CheckCircle className="h-4 w-4" />
+                Aceptar
+              </Button>
+            </div>
+          </div>
+
+          <DialogPrimitive.Close className="absolute right-4 top-4 h-8 w-8 inline-flex items-center justify-center rounded-md bg-muted text-foreground border border-border shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
+          </DialogPrimitive.Close>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
