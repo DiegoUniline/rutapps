@@ -97,6 +97,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [searchDevProducto, setSearchDevProducto] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  // IDEMPOTENCIA (patrón local-first / idempotency key): el id de la venta se
+  // genera UNA sola vez por operación y se REUSA en cada reintento (error de red,
+  // reenvío). Así el upsert por PK del servidor deduplica: reintentar la MISMA
+  // venta nunca crea una segunda. Se limpia solo al terminar con éxito, para que
+  // la siguiente venta tome un id nuevo. Antes se generaba dentro del submit, así
+  // que cada reintento nacía con id nuevo → duplicados.
+  const pendingVentaIdRef = useRef<string | null>(null);
   const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
   // Apartado de stock en pedidos (solo si empresa.apartar_stock_pedidos === true)
   const [pedidoAlmacenId, setPedidoAlmacenId] = useState<string | null>(null);
@@ -833,7 +840,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     savingRef.current = true;
     setSaving(true);
     try {
-      const ventaId = crypto.randomUUID();
+      // Id estable de la venta: se genera una vez y se reusa en reintentos.
+      if (!pendingVentaIdRef.current) pendingVentaIdRef.current = crypto.randomUUID();
+      const ventaId = pendingVentaIdRef.current;
       // El folio lo asigna EXCLUSIVAMENTE el trigger de la BD (auto_folio_venta)
       // al insertar. Es la única fuente confiable y ya es seguro ante
       // concurrencia (advisory lock por empresa/prefijo).
@@ -891,12 +900,15 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // una venta de 50 productos = 1 subida al servidor, no 50 → aparece completa
       // casi al instante en admin, sin la ventana en que faltaban líneas.
       const lineasBatch: any[] = [];
-      for (const item of cart) {
+      for (let idx = 0; idx < cart.length; idx++) {
+        const item = cart[idx];
         const breakdown = getOriginalLineBreakdown(item, sinImpuestos);
         const savedIvaPct = sinImpuestos ? 0 : item.iva_pct;
         const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct;
         const lineaAlmacenId = (item as any).almacen_id ?? (apartadoActivoPedido && !item.es_cambio ? pedidoAlmacenId : null);
-        const ventaLineaId = crypto.randomUUID();
+        // Id determinístico por (venta, posición): reintentar reusa el mismo id
+        // → el upsert no duplica la línea.
+        const ventaLineaId = await deterministicUuid('vlinea', ventaId, idx);
         if (!item.es_cambio) {
           if (!promoLineIdByProduct.has(item.producto_id)) promoLineIdByProduct.set(item.producto_id, ventaLineaId);
           promoLineTotalByProduct.set(item.producto_id, (promoLineTotalByProduct.get(item.producto_id) ?? 0) + breakdown.total);
@@ -905,7 +917,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
         if (apartadoActivoPedido && !item.es_cambio && lineaAlmacenId) {
           try {
             const apartTable = getOfflineTable('stock_apartado');
-            await apartTable?.put({ id: crypto.randomUUID(), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+            await apartTable?.put({ id: await deterministicUuid('apart', ventaLineaId), empresa_id: empresa.id, venta_id: ventaId, venta_linea_id: ventaLineaId, producto_id: item.producto_id, almacen_id: lineaAlmacenId, cantidad: item.cantidad, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
           } catch { /* cache local; el trigger del backend crea el apartado real */ }
         }
       }
@@ -921,7 +933,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           lineTotalByProduct: promoLineTotalByProduct,
         });
         for (const row of promoRows) {
-          await queueOperation('promocion_aplicada', 'insert', row);
+          // Id determinístico por (venta, promoción, línea) → reintento no duplica.
+          const stableId = await deterministicUuid('promoapl', ventaId, row.promocion_id, row.venta_linea_id);
+          await queueOperation('promocion_aplicada', 'insert', { ...row, id: stableId });
         }
       }
 
@@ -930,13 +944,16 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       // ── Devoluciones: encolar DESPUÉS de venta + venta_lineas para garantizar
       // orden padre→hijo en el sync queue (evita FK 23503 y RLS 42501 en cascada).
       if (devoluciones.length > 0 && clienteId) {
-        const devId = crypto.randomUUID();
+        // Id determinístico de la devolución por venta → reintento no duplica.
+        const devId = await deterministicUuid('devventa', ventaId);
         const cargaIdForDev = activeCarga?.id || null;
         await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, vendedor_id: profile?.id || profile?.id || null, cliente_id: clienteId, carga_id: cargaIdForDev, venta_id: ventaId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+        let devLineaIdx = -1;
         for (const d of devoluciones) {
+          devLineaIdx++;
           const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
           await queueOperation('devolucion_lineas', 'insert', {
-            id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
+            id: await deterministicUuid('devlinea', devId, devLineaIdx), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
             motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
             monto_credito: montoCredito, created_at: new Date().toISOString(),
           });
@@ -1088,6 +1105,9 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           } catch { /* offline, seguir intentando */ }
         }
       })();
+      // Venta encolada con éxito → la siguiente venta toma un id nuevo.
+      // (Si algo falló arriba y se reintenta, se conserva el mismo id → idempotente.)
+      pendingVentaIdRef.current = null;
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 
