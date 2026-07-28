@@ -217,7 +217,6 @@ export default function MobileLayout() {
           <button
             onClick={() => {
               toast.info(`Versión ${APP_VERSION}`, {
-                description: `Compilada el ${APP_BUILD_DATE}`,
                 duration: 5000,
               });
             }}
