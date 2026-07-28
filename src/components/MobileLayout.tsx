@@ -22,6 +22,7 @@ import { useUnloadGuard } from '@/hooks/useUnloadGuard';
 import { useOnlineReconnect } from '@/hooks/useOnlineReconnect';
 import { usePendingQueue } from '@/hooks/usePendingQueue';
 import StockAdjustmentDialog from '@/components/StockAdjustmentDialog';
+import BroadcastAnnouncementModal from '@/components/BroadcastAnnouncementModal';
 
 import { requestPersistentStorage } from '@/lib/syncDiagnostics';
 import { refreshAppVersion } from '@/lib/appUpdate';
